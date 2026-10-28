@@ -1505,6 +1505,31 @@ function formRead(s, want) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
+function formWithHints(label, data, hints) {
+  let deferred5_0;
+  let deferred5_1;
+  try {
+    const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(hints, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.formWithHints(ptr0, len0, ptr1, len1, ptr2, len2);
+    var ptr4 = ret[0];
+    var len4 = ret[1];
+    if (ret[3]) {
+      ptr4 = 0;
+      len4 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred5_0 = ptr4;
+    deferred5_1 = len4;
+    return getStringFromWasm0(ptr4, len4);
+  } finally {
+    wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+  }
+}
 function keyDeliveryPayload(target, key, media) {
   const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -3465,13 +3490,13 @@ function cannotReach(hint, via = {}) {
   }
   return null;
 }
-async function firstOf(items, ask2, failed) {
+async function firstOf(items, ask3, failed) {
   if (!items.length) return null;
   return new Promise((resolve) => {
     let left = items.length;
     let done = false;
     for (const x of items) {
-      ask2(x).then(
+      ask3(x).then(
         (r) => {
           left--;
           if (r !== null && r !== void 0 && !done) {
@@ -3641,6 +3666,17 @@ async function lookUp(identity, hints, via = {}, into) {
       return hit ? hit.hints : null;
     }
   };
+}
+async function holdSequence(v, signer, l, places, via = {}) {
+  if (l.resolution.links.length < 2) return;
+  const homes = (l.resolution.homes ?? []).map((h) => h.hint);
+  const hints = [.../* @__PURE__ */ new Set([...homes, ...places])].filter((h) => !cannotReach(h, via));
+  for (const a of await actsBy(signer, hints, via)) {
+    try {
+      v.add(a);
+    } catch {
+    }
+  }
 }
 
 // src/web/node-crypto.ts
@@ -5777,6 +5813,7 @@ function typedBack(words2, positions, typed) {
 var form = (label, hex2) => formEncode(label, unhex(hex2));
 var idForm = (id) => form("mid", id);
 var actForm = (id) => form("mact", id);
+var idWhere = (id, hints) => formWithHints("mid", unhex(id), hints.filter((h) => /^https?:\/\//.test(h)));
 function readForm(typed, want) {
   const t = typed.trim();
   const squeezed = t.replace(/\s+/g, "");
@@ -5791,6 +5828,14 @@ function readForm(typed, want) {
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
+function readIdWhere(typed) {
+  const t = typed.trim().replace(/^.*#/, "");
+  const parts = t.split(/\s+/).filter(Boolean);
+  const beside = parts.slice(1).filter((p) => /^https?:\/\//.test(p));
+  const head = beside.length ? parts.filter((p) => !/^https?:\/\//.test(p)).join("") : t;
+  const r = readForm(head, "mid");
+  return { id: r.hex, hints: [.../* @__PURE__ */ new Set([...r.hints, ...beside])] };
+}
 
 // ../dub/src/carryin.ts
 var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
@@ -5852,7 +5897,6 @@ var grouped2 = (h) => h.match(/.{1,4}/g).join(" ");
 
 // src/read.ts
 var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function served(id, bytes, identitySpec) {
   let d;
   try {
@@ -5937,7 +5981,7 @@ function linesUnder(rd, binding) {
   return linesOf({ identity: rd.id, binding, own: [], acts: rd.acts });
 }
 function homesWords(homes, effective) {
-  const list3 = homes.map((h) => h.operator ? `${h.hint} (operator ${short(h.operator)})` : `${h.hint} (self-hosted: the identity is its own home)`).join("; ");
+  const list3 = homes.map((h) => h.operator ? `${h.hint} (operator ${h.operator})` : `${h.hint} (self-hosted: the identity is its own home)`).join("; ");
   const operators = new Set(homes.map((h) => h.operator ?? "own")).size;
   const k = /^Threshold\((\d+)\)$/.exec(effective ?? "")?.[1];
   const rule = !effective ? "" : k ? ` A change of its keys counts once homes of ${k} of its ${operators} operators hold it and sign receipts.` : /Own/.test(effective) ? " It is its own home: a change of its keys counts on its own signatures." : " One home decides: a change of its keys counts once that home signs its receipt.";
@@ -5967,6 +6011,8 @@ function recordWords(rd) {
   out.push({ heading: "Its chain and receipts", lines: chain });
   const succ = rd.look.verifier.succession(rd.id);
   if (succ.state !== "none") {
+    if (succ.successor && /^[0-9a-f]{64}$/.test(succ.successor)) succ.successor = idForm(succ.successor);
+    if (succ.confirmation && /^[0-9a-f]{64}$/.test(succ.confirmation)) succ.confirmation = actForm(succ.confirmation);
     out.push({
       heading: "Its succession",
       lines: [
@@ -6846,9 +6892,9 @@ var NEGOTIATION = 18;
 var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1";
 var ONE_TIME_LINE = "One-time key for my share of the chain key: ";
 var SIGNED = "Signed.";
-var negotiationPayload = (text2) => cborEncode(/* @__PURE__ */ new Map([[0, text2.normalize("NFC")]]));
+var negotiationPayload = (text2, format) => cborEncode(new Map([[0, text2.normalize("NFC")], ...format ? [[1, unhex(format)]] : []]));
 async function negotiate(by, to, o) {
-  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text, o.format), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
@@ -6877,7 +6923,9 @@ function readMessage(d) {
   const text2 = m.get(0);
   if (typeof text2 !== "string") return null;
   const link = d.objects?.[0];
+  const format = m.get(1) instanceof Uint8Array ? hex(m.get(1)) : null;
   return {
+    format,
     id: d.id,
     from: d.signer,
     to: d.to ?? [],
@@ -6929,7 +6977,7 @@ async function sealShare(by, share2, oneTime, relays) {
 }
 
 // ../collective/src/explain.ts
-var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function termsOf(payload) {
   return readTerms(payload, AGREEMENTS_SPECS);
 }
@@ -6943,7 +6991,7 @@ var KNOWN = {
   [REPO_SPECS.manifest]: "the release manifest cMIP (draft 1)"
 };
 var EXTENSIONS = /* @__PURE__ */ new Set([REPO_SPECS.manifest]);
-var specName = (h) => KNOWN[h] ?? `an unknown specification (${short2(h)})`;
+var specName = (h) => KNOWN[h] ?? `an unknown specification (${short(h)})`;
 function list(xs) {
   if (xs.length <= 1) return xs.join("");
   return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
@@ -7175,7 +7223,71 @@ var DEALER_SAY = [
   { text: "The practices Ki\u0161ib follows: the key alive only in memory, the rotation signed at once, the new shares dealt, the key overwritten, never written anywhere; the signed bytes kept to send again, not the key; exactly the threshold of papers collected, no more; the waiting one-time key expiring after an hour, shares sealed to it unopenable after; rebuild, rotate and deal in one sitting." },
   { text: "Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); the new signing key\u2019s words go to whoever holds that key (Edubba); every member\u2019s Dub and Edubba show the rotation." }
 ];
-var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var ROTATION_NOTICE_FORMAT = sha2562("Rotation notice cMIP, draft 1, test value until publication");
+var NOTICE_HEAD = "-- Dubsar rotation notice, draft 1 --";
+function noticeText(free, n) {
+  return [free, NOTICE_HEAD, `collective: ${n.collective}`, `fingerprint: ${n.fingerprint}`, `relays: ${n.relays.join(" ")}`, `expires: ${n.expires}`, `share: ${n.share}`].join("\n");
+}
+function readNotice(text2) {
+  const ls = text2.split("\n");
+  const at = ls.lastIndexOf(NOTICE_HEAD);
+  if (at < 0 || ls.length - at !== 6) return null;
+  const want = ["collective", "fingerprint", "relays", "expires", "share"];
+  const v = {};
+  for (let i = 0; i < 5; i++) {
+    const m = /^([a-z]+): (.+)$/.exec(ls[at + 1 + i]);
+    if (!m || m[1] !== want[i]) return null;
+    v[m[1]] = m[2];
+  }
+  const relays = v.relays.split(" ");
+  if (!/^[0-9a-f]{64}$/.test(v.collective) || !/^[0-9a-f]{64}$/.test(v.fingerprint)) return null;
+  if (!relays.length || relays.length > 8 || relays.some((r) => !/^https?:\/\/\S+$/.test(r))) return null;
+  if (!/^\d{1,12}$/.test(v.expires) || !/^\d{1,3}$/.test(v.share)) return null;
+  const share2 = Number(v.share);
+  if (share2 < 1 || share2 > 255) return null;
+  return { collective: v.collective, fingerprint: v.fingerprint, relays, expires: Number(v.expires), share: share2 };
+}
+async function noticesFor(member, hints, open, now2, via = {}) {
+  let inbox = [];
+  try {
+    inbox = (await lookUp(member, hints, via)).inbox(REPO_SPECS.agreements) ?? [];
+  } catch (e3) {
+    return { listed: [], problem: `The identity could not be read at ${hints.join(", ")}: ${message4(e3)}` };
+  }
+  if (!inbox.length) return { listed: [], problem: "This identity declares no inbox: no notice can reach it." };
+  const found = [];
+  for (const hint of inbox) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(hint, via).feed({ to: member, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
+        const opened2 = sealed.length ? await open(sealed) : [];
+        for (const o of opened2) {
+          if (!o) continue;
+          const m = readMessage(o.described);
+          if (!m || m.format !== ROTATION_NOTICE_FORMAT || !m.to.includes(member)) continue;
+          const n = readNotice(m.text);
+          if (!n || n.expires <= now2 || found.some((x) => x.fingerprint === n.fingerprint)) continue;
+          found.push({ ...n, member, from: m.from, message: m.id });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  const listed = [];
+  for (const x of found) {
+    try {
+      const c = await readCollective(x.collective, x.relays, via);
+      if (c.holders.includes(x.from)) listed.push(x);
+    } catch {
+    }
+  }
+  return { listed, problem: null };
+}
+var short2 = (id) => /^[0-9a-f]{64}$/.test(id) ? idForm(id) : id;
 var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 function encodeRequest(q) {
   return cborEncode(
@@ -7252,7 +7364,7 @@ async function readCollective(id, address2, via) {
   const rd = await readIdentity(id, address2, via, SPECS.identity);
   const r = rd.look.resolution;
   const agreement = declaredAgreement(rd);
-  if (!agreement) throw new Error(`${short3(id)} declares no agreement: it is not a collective Ki\u0161ib can rotate.`);
+  if (!agreement) throw new Error(`${short2(id)} declares no agreement: it is not a collective Ki\u0161ib can rotate.`);
   const bytes = await fetchAct(agreement, rd.places, via);
   if (!bytes) throw new Error(`Its agreement (${agreement}) was not found at ${rd.places.join(", ")}.`);
   const agreementPayload = describeAct(bytes).payload;
@@ -7385,15 +7497,15 @@ var CollectiveSitting = class _CollectiveSitting {
   over() {
     return this.stage === "expired" || this.stage === "done" && [...this.toShow.values()].every((s) => s.shown);
   }
-  view(now) {
-    if (this.stage === "waiting" && this.request && now > this.request.expires) this.expire();
+  view(now2) {
+    if (this.stage === "waiting" && this.request && now2 > this.request.expires) this.expire();
     const id = this.c?.rd.id ?? "";
     return {
       kind: "collective",
       id,
       act: this.act,
       stage: this.stage,
-      title: this.stage === "waiting" ? `A rotation of ${short3(id)} waits for its members\u2019 shares` : this.stage === "expired" ? "The rotation request expired" : `The rotation of ${short3(id)}`,
+      title: this.stage === "waiting" ? `A rotation of ${short2(id)} waits for its members\u2019 shares` : this.stage === "expired" ? "The rotation request expired" : `The rotation of ${short2(id)}`,
       lines: this.lines,
       ...this.request || this.room ? {
         request: {
@@ -7446,15 +7558,15 @@ var CollectiveSitting = class _CollectiveSitting {
       if (!changes.length) throw new Error("No member change is proposed under the agreement in force: propose one in Edubba (the collective\u2019s page, \u201CChange its members\u201D), have every member sign it, then come back.");
       const ch = changes[0];
       this.change = ch;
-      if (ch.missing.length) blocking.push(`The member change ${short3(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short3).join(", ")}.`);
+      if (ch.missing.length) blocking.push(`The member change ${actForm(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short2).join(", ")}.`);
       if (changes.filter((x) => !x.missing.length).length > 1) blocking.push("Several member changes are fully signed under the same agreement: Ki\u0161ib cannot tell which one the members mean. Say which in Edubba.");
       this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
-      const names = (m) => m === id ? "the collective" : short3(m);
+      const names = (m) => m === id ? "the collective" : short2(m);
       const shown = [];
       if (!this.room) {
         if (!a.founder?.trim() || !a.founderWords?.trim()) throw new Refused("Remote, the member who proposed the change gives their signing key\u2019s words: only they open the members\u2019 answers, with the one-time keys for their new shares. In the same room, tick \u201CEveryone is here\u201D.");
         const founder = readId(a.founder);
-        if (founder !== ch.proposer) throw new Error(`The change was proposed by ${short3(ch.proposer)}: that member starts the rotation, since the members\u2019 answers, with their one-time keys, are in their inbox.`);
+        if (founder !== ch.proposer) throw new Error(`The change was proposed by ${short2(ch.proposer)}: that member starts the rotation, since the members\u2019 answers, with their one-time keys, are in their inbox.`);
         founderSeed = seedOf(a.founderWords);
         const look = await lookCurrent(founder, founderSeed, c.rd.places, via);
         const enc = carriedKey(look, founderSeed);
@@ -7470,7 +7582,7 @@ var CollectiveSitting = class _CollectiveSitting {
           else shown.push(this.answers[m]?.oneTime ? { text: `${names(m)}: sealed to the one-time key its Dub made when it signed, as at the founding.`, tone: "ok" } : { text: `${names(m)}: no one-time key found in its answer: its new share is shown on this screen, once, to hand over in person.`, tone: "warn" });
         }
         const others = c.holders.filter((h) => h !== founder);
-        for (const h of others) if (!this.answers[h]) blocking.push(`No answer from ${short3(h)} was found in your inbox: Ki\u0161ib cannot tell it the rotation waits. Have it sign the change in Dub first.`);
+        for (const h of others) if (!this.answers[h]) blocking.push(`No answer from ${short2(h)} was found in your inbox: Ki\u0161ib cannot tell it the rotation waits. Have it sign the change in Dub first.`);
       } else {
         for (const m of ch.members) shown.push({ text: `${names(m)}: its new share is shown on this screen, once, to write down here.` });
       }
@@ -7496,22 +7608,22 @@ var CollectiveSitting = class _CollectiveSitting {
       const sections2 = [
         { heading: "Before you start: what this device will hold (F337)", lines: DEALER_SAY },
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith("Its lines")),
-        { heading: "The member change it completes", lines: [{ text: `Clone ${ch.clone}, proposed by ${short3(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short3(s)} ${ch.signatures[s] ? "\u2713" : "(not yet)"}`).join(", ")}.`, tone: ch.missing.length ? "warn" : "ok" }] },
+        { heading: "The member change it completes", lines: [{ text: `Clone ${actForm(ch.clone)}, proposed by ${short2(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short2(s)} ${ch.signatures[s] ? "\u2713" : "(not yet)"}`).join(", ")}.`, tone: ch.missing.length ? "warn" : "ok" }] },
         { heading: "The papers", lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members\u2019 paper shares rebuild the chain key (its agreement\u2019s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: "In the same room: the others type theirs into this Ki\u0161ib, one after another. Nothing is sent." } : { text: `Remote: each other member gives theirs in their own Ki\u0161ib, sealed to a one-time key made here, within an hour (until ${when(this.request.expires)} by this device\u2019s clock; MOR has no clock).` }] },
         { heading: "Its lines of acts: what the rotation keeps (Identity rule 35)", lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         { heading: "The new shares", lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] }
       ];
       const signs2 = [
-        `Ki\u0161ib signs one rotation of the collective ${short3(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
-        `The rotation declares the member change (clone ${short3(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective\u2019s lines, installs a new signing key (its words shown once, for ${short3(ch.holder)}, who holds it) and commits a new chain key.`,
-        this.room ? "Nothing is signed with anyone\u2019s signing key." : `As ${short3(this.founder.id)}: one message in each member\u2019s thread announcing the rotation, and, after it, each new share sealed to its member\u2019s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`
+        `Ki\u0161ib signs one rotation of the collective ${short2(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
+        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective\u2019s lines, installs a new signing key (its words shown once, for ${short2(ch.holder)}, who holds it) and commits a new chain key.`,
+        this.room ? "Nothing is signed with anyone\u2019s signing key." : `As ${short2(this.founder.id)}: one message in each member\u2019s thread announcing the rotation, and, after it, each new share sealed to its member\u2019s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`
       ];
       const s0 = founderSeed;
       founderSeed = null;
       wipe(s0);
       return {
         digest: sha2562(cborEncode(["MOR Ki\u0161ib collective rotation, version 1", this.fingerprint, this.room])),
-        title: `Rotate the collective ${short3(id)}`,
+        title: `Rotate the collective ${short2(id)}`,
         summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped2(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
         sections: sections2,
         signs: signs2,
@@ -7555,18 +7667,23 @@ var CollectiveSitting = class _CollectiveSitting {
           thread: a.thread,
           previous: a.previous,
           acks: [a.previous],
-          text: [
-            `A rotation of the collective ${c.rd.id} waits for your paper share, in Ki\u0161ib.`,
-            `Fingerprint: ${this.fingerprint}`,
-            `Open Ki\u0161ib, choose \u201CGive my share to a collective\u2019s rotation\u201D, and give the collective and this fingerprint. Ki\u0161ib shows the rotation in plain words before you type anything.`,
-            `It expires at ${when(q.expires)}.`
-          ].join("\n"),
+          // H97: the free text, as before, then the rotation notice cMIP's structured part, which the member's Kišib reads to fill in Waiting for you.
+          text: noticeText(
+            [
+              `A rotation of the collective ${c.rd.id} waits for your paper share, in Ki\u0161ib.`,
+              `Fingerprint: ${this.fingerprint}`,
+              `Open Ki\u0161ib, Collectives, \u201CWaiting for you\u201D: it is listed there, filled in, or give the collective and this fingerprint. Ki\u0161ib shows the rotation in plain words before you type anything.`,
+              `It expires at ${when(q.expires)}.`
+            ].join("\n"),
+            { collective: c.rd.id, fingerprint: this.fingerprint, relays: q.relays.filter((r) => /^https?:\/\//.test(r)).slice(0, 8), expires: q.expires, share: c.holders.indexOf(m) + 1 }
+          ),
+          format: ROTATION_NOTICE_FORMAT,
           // Kišib makes no line an app continues: its acts stay off the starter's homes (README, cost of point 7).
           home: false
         });
-        lines2.push({ text: `${short3(m)}: told, in its thread.`, tone: "ok" });
+        lines2.push({ text: `${short2(m)}: told, in its thread.`, tone: "ok" });
       } catch (e3) {
-        lines2.push({ text: `${short3(m)}: could not be told (${message4(e3)}). Give it the fingerprint another way.`, tone: "warn" });
+        lines2.push({ text: `${short2(m)}: could not be told (${message4(e3)}). Give it the fingerprint another way.`, tone: "warn" });
       }
     }
     this.lines = lines2;
@@ -7597,7 +7714,7 @@ var CollectiveSitting = class _CollectiveSitting {
     }
     const c = this.c;
     const tag = pickupTag(q.oneTime);
-    const said = [];
+    const said2 = [];
     for (const hint of q.relays) {
       let items = [];
       try {
@@ -7632,15 +7749,15 @@ var CollectiveSitting = class _CollectiveSitting {
         const value = g.get(2);
         if (this.papers.some((p) => p.x === x)) continue;
         if (!c.holders.includes(d.signer)) {
-          said.push({ text: `A share from ${short3(d.signer)}, who holds no share of this collective: not taken.`, tone: "warn" });
+          said2.push({ text: `A share from ${short2(d.signer)}, who holds no share of this collective: not taken.`, tone: "warn" });
           continue;
         }
         if (this.papers.some((p) => p.from === d.signer)) continue;
         this.papers.push({ x, value, from: d.signer });
-        said.push({ text: `Share ${x} from ${short3(d.signer)}${c.holders[x - 1] !== d.signer ? ` (numbered for ${short3(c.holders[x - 1] ?? "?")}: taken; the rebuild check decides)` : ""}.`, tone: "ok" });
+        said2.push({ text: `Share ${x} from ${short2(d.signer)}${c.holders[x - 1] !== d.signer ? ` (numbered for ${short2(c.holders[x - 1] ?? "?")}: taken; the rebuild check decides)` : ""}.`, tone: "ok" });
       }
     }
-    this.lines = [...this.lines.filter((l) => !/ shares are in\.$/.test(l.text)), ...said, { text: `${this.papers.length} of ${c.threshold} shares are in.`, tone: this.papers.length >= c.threshold ? "ok" : void 0 }];
+    this.lines = [...this.lines.filter((l) => !/ shares are in\.$/.test(l.text)), ...said2, { text: `${this.papers.length} of ${c.threshold} shares are in.`, tone: this.papers.length >= c.threshold ? "ok" : void 0 }];
   }
   /** Rebuild, rotate and deal, in one sitting (F337). */
   async rotate() {
@@ -7702,11 +7819,11 @@ var CollectiveSitting = class _CollectiveSitting {
       if (!this.room && this.founder && m !== this.founder.id && k) {
         try {
           const r = await sealShare(this.founder, share2, k, relays);
-          lines2.push({ text: `${short3(m)}: its new share is sealed to its one-time key, at ${r.left.join(", ")}. Its Dub shows it once.`, tone: "ok" });
+          lines2.push({ text: `${short2(m)}: its new share is sealed to its one-time key, at ${r.left.join(", ")}. Its Dub shows it once.`, tone: "ok" });
           wipe(share2);
           continue;
         } catch (e3) {
-          lines2.push({ text: `${short3(m)}: its share could not be left (${message4(e3)}): shown here instead.`, tone: "warn" });
+          lines2.push({ text: `${short2(m)}: its share could not be left (${message4(e3)}): shown here instead.`, tone: "warn" });
         }
       }
       this.toShow.set(m, { share: share2, x: i + 1, shown: false, fingerprint: dealt.fingerprint });
@@ -7746,7 +7863,7 @@ var CollectiveSitting = class _CollectiveSitting {
     if (this.stage === "sent" || this.stage === "waiting") throw new Error("Not yet: the collective\u2019s new words are shown once the homes\u2019 receipts are in.");
     this.stage = "counts";
     this.positions = void 0;
-    return { words: toWords(this.signing), holder: this.change.holder, say: [`These are the collective\u2019s new signing key\u2019s words, for ${short3(this.change.holder)}, who holds that key under the agreement: carry them to Edubba (the collective\u2019s page, \u201Ctake the new words\u201D).`, ...NEW_WORDS_SAY.slice(1)] };
+    return { words: toWords(this.signing), holder: this.change.holder, say: [`These are the collective\u2019s new signing key\u2019s words, for ${short2(this.change.holder)}, who holds that key under the agreement: carry them to Edubba (the collective\u2019s page, \u201Ctake the new words\u201D).`, ...NEW_WORDS_SAY.slice(1)] };
   }
   written() {
     if (!this.signing || this.stage !== "counts") throw new Error("No words are shown.");
@@ -7771,7 +7888,7 @@ var CollectiveSitting = class _CollectiveSitting {
       x: p.x,
       words: toWords(p.value),
       fingerprint: grouped2(s.fingerprint.slice(0, 32)),
-      say: [`The new share ${p.x} of the collective\u2019s chain key, for ${short3(holder)}. Write its number and its 24 words on new paper, labelled with the collective, and destroy the old paper.`, "It is shown once: when you say it is written, it is forgotten here."]
+      say: [`The new share ${p.x} of the collective\u2019s chain key, for ${short2(holder)}. Write its number and its 24 words on new paper, labelled with the collective, and destroy the old paper.`, "It is shown once: when you say it is written, it is forgotten here."]
     };
   }
   shareWritten(holder) {
@@ -7782,7 +7899,7 @@ var CollectiveSitting = class _CollectiveSitting {
   }
   // ---------------------------------------------------------------- a member
   /** A member reads a waiting rotation in plain words, by the collective and the fingerprint. */
-  static async readRequest(a, now) {
+  static async readRequest(a, now2) {
     const via = a.via ?? {};
     const id = readId(a.collective);
     const fp = readFingerprint(a.fingerprint);
@@ -7793,16 +7910,17 @@ var CollectiveSitting = class _CollectiveSitting {
       if (blob) break;
     }
     if (!blob) throw new Error(`No rotation request with this fingerprint was found at ${c.rd.places.join(", ")}. Check the fingerprint, or ask the starter.`);
+    if (sha2562(blob) !== fp) throw new Error("The request found does not match this fingerprint: nothing is read from it, and nothing is signed.");
     const q = decodeRequest(blob);
     if (q.collective !== id) throw new Error("This request is for another collective.");
-    if (now > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
+    if (now2 > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
     if (q.previous !== c.latest.act) throw new Error("The collective\u2019s keys changed since this request was made: it is stale, and its rotation could never count.");
     const change = (await changesOf(c, via)).find((x) => x.clone === q.clone) ?? null;
-    const names = (m) => m === id ? "the collective" : short3(m);
+    const names = (m) => m === id ? "the collective" : short2(m);
     const sections2 = [
-      { heading: "The rotation you are asked to give your share to", lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short3(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter\u2019s message, character by character.`, tone: "warn" }, { text: `It expires at ${when(q.expires)} (this device\u2019s clock).` }] },
-      { heading: "The member change it completes", lines: change ? [{ text: `Clone ${q.clone}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${q.clone}, not found here: Ki\u0161ib cannot read it back to you. Do not give your share unless you know it.`, tone: "bad" }] },
-      { heading: "What it keeps and creates", lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? "" : "s"} of the collective\u2019s acts.` }, { text: `A new chain key, created on the starter\u2019s device and dealt to ${q.members.length} members (${q.members.map(short3).join(", ")}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
+      { heading: "The rotation you are asked to give your share to", lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short2(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter\u2019s message, character by character.`, tone: "warn" }, { text: `It expires at ${when(q.expires)} (this device\u2019s clock).` }] },
+      { heading: "The member change it completes", lines: change ? [{ text: `Clone ${actForm(q.clone)}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${actForm(q.clone)}, not found here: Ki\u0161ib cannot read it back to you. Do not give your share unless you know it.`, tone: "bad" }] },
+      { heading: "What it keeps and creates", lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? "" : "s"} of the collective\u2019s acts.` }, { text: `A new chain key, created on the starter\u2019s device and dealt to ${q.members.length} members (${q.members.map(short2).join(", ")}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
       { heading: "What the starter\u2019s device will hold (F337)", lines: DEALER_SAY.slice(0, 2) }
     ];
     return { q, c, sections: sections2, change };
@@ -7815,8 +7933,8 @@ var CollectiveSitting = class _CollectiveSitting {
     try {
       const { q, c, sections: sections2 } = await _CollectiveSitting.readRequest(a, deps.now());
       const member = readId(a.member);
-      if (!c.holders.includes(member)) throw new Error(`${short3(member)} holds no share of this collective\u2019s chain key now.`);
-      if (c.holders[paper.x - 1] && c.holders[paper.x - 1] !== member) sections2.push({ heading: "Your paper", lines: [{ text: `Share ${paper.x} was dealt to ${short3(c.holders[paper.x - 1])}, not to you: check the paper. If it is yours, give it; the rebuild decides.`, tone: "warn" }] });
+      if (!c.holders.includes(member)) throw new Error(`${short2(member)} holds no share of this collective\u2019s chain key now.`);
+      if (c.holders[paper.x - 1] && c.holders[paper.x - 1] !== member) sections2.push({ heading: "Your paper", lines: [{ text: `Share ${paper.x} was dealt to ${short2(c.holders[paper.x - 1])}, not to you: check the paper. If it is yours, give it; the rebuild decides.`, tone: "warn" }] });
       seed = seedOf(a.memberWords);
       const look = await lookCurrent(member, seed, [.../* @__PURE__ */ new Set([...addresses(a.address), ...c.rd.places])], via);
       const fp = sha2562(encodeRequest(q));
@@ -7825,10 +7943,10 @@ var CollectiveSitting = class _CollectiveSitting {
       return {
         review: {
           digest: sha2562(cborEncode(["MOR Ki\u0161ib share given, version 1", fp, member, paper.x])),
-          title: `Give share ${paper.x} to the rotation of ${short3(c.rd.id)}`,
+          title: `Give share ${paper.x} to the rotation of ${short2(c.rd.id)}`,
           summary: [FORGOTTEN_SAY],
           sections: sections2,
-          signs: [`You sign, as ${short3(member)}, one private act carrying your share ${paper.x} and this rotation\u2019s fingerprint, sealed to the starter\u2019s one-time key: only the starter\u2019s Ki\u0161ib can open it, and only within the hour.`, "It starts a new line of your acts; nobody else can read it, and it voids nothing if your next change of keys leaves it out."],
+          signs: [`You sign, as ${short2(member)}, one private act carrying your share ${paper.x} and this rotation\u2019s fingerprint, sealed to the starter\u2019s one-time key: only the starter\u2019s Ki\u0161ib can open it, and only within the hour.`, "It starts a new line of your acts; nobody else can read it, and it voids nothing if your next change of keys leaves it out."],
           warning: null,
           blocking: []
         },
@@ -7887,7 +8005,7 @@ async function checkShare(a) {
         lines2.push({ text: `Share ${p.x}: this collective deals ${c.holders.length} shares, so there is no share ${p.x}. Copied wrong, or another collective\u2019s.`, tone: "bad" });
         continue;
       }
-      lines2.push({ text: `Share ${p.x} of ${c.holders.length}, held by ${short3(c.holders[p.x - 1])} by the agreement in force; any ${c.threshold} shares rebuild its chain key.` });
+      lines2.push({ text: `Share ${p.x} of ${c.holders.length}, held by ${short2(c.holders[p.x - 1])} by the agreement in force; any ${c.threshold} shares rebuild its chain key.` });
     }
     const xs = new Set(papers.map((p) => p.x));
     if (xs.size !== papers.length) throw new Error("Two of these papers carry the same number: each share once.");
@@ -8213,6 +8331,335 @@ async function airgap() {
   return kishib_airgap_exports;
 }
 
+// ../dub/src/names.ts
+var NAMING_SPEC = sha2562("Naming cMIP, draft 1, test value until publication");
+var NAME = 4;
+var NAME_WITHDRAWAL = 5;
+var MAX_NAME = 48;
+var FORBIDDEN = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "u");
+function nameProblem(name) {
+  if (name !== name.normalize("NFC")) return "it is not canonical text (NFC)";
+  if (!name.trim()) return "it is empty";
+  if (/^\s|\s$/u.test(name)) return "it starts or ends with a space";
+  if (FORBIDDEN.test(name)) return "it holds a line break, a control character or a direction override";
+  if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
+  return null;
+}
+async function namesOf(identity, places, via = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...routed, ...places])];
+  await holdSequence(v, identity, l, at, via);
+  const names = /* @__PURE__ */ new Map();
+  const withdrawn = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (seen.has(d.id) || d.spec !== SPECS.identity || d.signer !== identity) continue;
+          if (d.type !== NAME && d.type !== NAME_WITHDRAWAL) continue;
+          seen.add(d.id);
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          if (d.type === NAME_WITHDRAWAL) {
+            for (const [chain, target] of d.objects ?? []) if (chain === target) withdrawn.add(target);
+            continue;
+          }
+          const m = cborDecode(d.payload);
+          const name = m.get(0);
+          const cmip = m.get(1);
+          if (typeof name !== "string" || !(cmip instanceof Uint8Array) || hex(cmip) !== NAMING_SPEC) continue;
+          if (nameProblem(name)) continue;
+          names.set(d.id, { act: d.id, name });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
+}
+
+// ../kit/src/engine/names.ts
+var now = () => Date.now();
+var NameReader = class {
+  /** `keep`: how long a name read (or none) is kept, in milliseconds; a name not reached is asked again after a tenth of it. */
+  constructor(o = {}) {
+    this.o = o;
+  }
+  kept = /* @__PURE__ */ new Map();
+  reading = /* @__PURE__ */ new Map();
+  /** Its published name, as its homes give it; `fresh` asks again whatever was kept. */
+  read(id, places, fresh = false) {
+    const keep = this.o.keep ?? 3e5;
+    const k = this.kept.get(id);
+    if (k && !fresh && now() - k.at < (k.shown.state === "unreached" ? keep / 10 : keep)) return Promise.resolve(k.shown);
+    const r = this.reading.get(id);
+    if (r && !fresh) return r;
+    const p = (async () => {
+      let shown;
+      try {
+        const found = await namesOf(id, places, this.o.via ?? {});
+        const name = found.map((x) => x.name).pop();
+        shown = name ? { state: "name", name } : { state: "none" };
+      } catch {
+        shown = { state: "unreached" };
+      }
+      this.kept.set(id, { shown, at: now() });
+      this.reading.delete(id);
+      return shown;
+    })();
+    this.reading.set(id, p);
+    return p;
+  }
+  /** Several at once, by ID. */
+  async many(ids, places, fresh = false) {
+    const out = {};
+    await Promise.all([...new Set(ids)].filter((x) => /^[0-9a-f]{64}$/.test(x)).map(async (id) => out[id] = await this.read(id, places, fresh)));
+    return out;
+  }
+  /** What is kept of it now, without asking: "Loading…" where nothing is. */
+  now(id) {
+    return this.kept.get(id)?.shown ?? { state: "loading" };
+  }
+  /** Forget what was kept of one (its name was just changed here). */
+  forget(id) {
+    this.kept.delete(id);
+  }
+};
+
+// ../dub/src/people.ts
+var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
+var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
+var SEALED_LIST = 1;
+function sealedListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
+  );
+  return cborEncode(m);
+}
+function openerOf(identity, secrets) {
+  return async (sealed) => sealed.map((bytes) => {
+    for (const s of secrets) {
+      try {
+        return openSealed(bytes, identity, s);
+      } catch {
+      }
+    }
+    return null;
+  });
+}
+async function readSealedList(identity, keys, homes, via = {}) {
+  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch (e3) {
+    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
+    return out;
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed");
+        const opened2 = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened2) {
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const prev = m.get(1);
+            const follows = [];
+            for (const x of m.get(2)) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows.some((f) => f.id === id)) continue;
+              follows.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
+    }
+  }
+  const best = (from, version) => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version + 1);
+    if (next.length > 1) out.forked = true;
+    let pick = null;
+    for (const [id] of next) {
+      const below = best(id, version + 1);
+      const depth = below ? below.depth : version + 1;
+      const tip2 = below ? below.id : id;
+      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts.get(tip.id);
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
+}
+
+// ../kit/src/engine/people.ts
+async function readContacts(me, open, via = {}) {
+  if (!open || Array.isArray(open) && !open.length) return { contacts: [], version: 0, problem: "this app cannot open what is sealed to this identity, so its contacts cannot be read here" };
+  const l = await readSealedList(me.id, open, me.f.homes.map((h) => h.hint), via);
+  return { contacts: l.follows, version: l.version, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
+}
+function readNick(typed) {
+  const n = (typed ?? "").normalize("NFC").trim();
+  if (!n) return null;
+  if ([...n].length > MAX_NAME) throw new Error(`A nickname is at most ${MAX_NAME} characters. Nothing was signed.`);
+  if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(n)) throw new Error("A nickname holds no line break, control character or direction override. Nothing was signed.");
+  return n;
+}
+async function changeContacts(me, change, o) {
+  const via = o.via ?? {};
+  if (!o.open || Array.isArray(o.open) && !o.open.length) throw new Error(`${o.app} cannot open what is sealed to this identity, so its contacts cannot be changed from here. Nothing was signed.`);
+  const homes = me.f.homes.map((h) => h.hint);
+  const found = await readSealedList(me.id, o.open, homes, via);
+  if (!found.act && found.problems.length >= homes.length) throw new Error(`The contacts could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
+  const next = change(found.follows.map((f) => ({ ...f })));
+  if (!next) return [{ text: "Nothing changed.", tone: "ok" }];
+  const look = await lookUp(me.id, homes, via);
+  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key: its contacts cannot be sealed to it. Nothing was signed.");
+  if (Array.isArray(o.open) && !me.f.encryption.some((x) => x.secret && hex(xwingPublic(unhex(x.secret))) === hex(look.encryptionKey))) throw new Error(`The encryption key this identity publishes is not one ${o.app} holds: its contacts cannot be sealed from here. Nothing was signed.`);
+  let made;
+  try {
+    made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: next }), { public: false, to: [me.id] });
+  } finally {
+    await o.save?.();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+  let left = 0;
+  for (const h of homes) {
+    try {
+      await relayAt(h, via).putSealed(sealed);
+      left++;
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via, sealed: left > 0 });
+  await o.save?.();
+  const said2 = [];
+  if (found.forked) said2.push({ text: "Your contacts were forked at your homes: two apps changed them at once. The longer branch was continued.", tone: "warn" });
+  said2.push(left ? { text: `Your contacts are sealed to you and kept at your homes (version ${found.version + 1}): every app holding this identity reads them.`, tone: "ok" } : { text: "No home took your contacts: nothing changed there. Try again.", tone: "warn" });
+  return said2;
+}
+var addContact = (me, who2, o) => changeContacts(
+  me,
+  (now2) => {
+    if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+    const nick = readNick(who2.nick);
+    const had = now2.find((f) => f.id === who2.id);
+    if (had && (!nick || had.name === nick)) return null;
+    if (had) had.name = nick;
+    else now2.push({ id: who2.id, name: nick });
+    return now2;
+  },
+  o
+);
+var setNick = (me, who2, o) => changeContacts(
+  me,
+  (now2) => {
+    const nick = readNick(who2.nick);
+    const had = now2.find((f) => f.id === who2.id);
+    if (!had) {
+      if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+      now2.push({ id: who2.id, name: nick });
+      return now2;
+    }
+    if ((had.name ?? null) === nick) return null;
+    had.name = nick;
+    return now2;
+  },
+  o
+);
+var removeContact = (me, id, o) => changeContacts(me, (now2) => now2.some((f) => f.id === id) ? now2.filter((f) => f.id !== id) : null, o);
+
+// ../kit/src/engine/known.ts
+var HEX2 = /^[0-9a-f]{64}$/;
+var Known = class {
+  /** `app`: this app's name, as said ("Damgar"). */
+  constructor(app2, o = {}) {
+    this.app = app2;
+    this.names = new NameReader({ via: o.via });
+  }
+  names;
+  lists = /* @__PURE__ */ new Map();
+  /** The contacts sealed to the identity, read again at most once a minute (or now, `fresh`). */
+  async followed(me, open, via = {}, fresh = false) {
+    const c = this.lists.get(me.id);
+    if (c && !fresh && c.at + 6e4 > Date.now()) return c;
+    let r;
+    try {
+      r = await readContacts(me, open, via);
+    } catch (e3) {
+      r = { contacts: c?.contacts ?? [], problem: e3 instanceof Error ? e3.message : String(e3) };
+    }
+    this.lists.set(me.id, { ...r, at: Date.now() });
+    return r;
+  }
+  /** The names of these identities: the nickname given (none for oneself), and the name each published, read at `places` and its own homes. */
+  async named(me, open, ids, places, o = {}) {
+    const want = [...new Set(ids.filter((x) => HEX2.test(x)))].slice(0, 200);
+    const [{ contacts }, published] = await Promise.all([this.followed(me, open, o.via), this.names.many(want, places, !!o.fresh)]);
+    return Object.fromEntries(want.map((id) => [id, { nick: id === me.id ? null : contacts.find((f) => f.id === id)?.name ?? null, published: published[id] }]));
+  }
+  /** The list, each contact with its names (its published name read, or its state). */
+  async contacts(me, open, places, o = {}) {
+    const { contacts, problem } = await this.followed(me, open, o.via, o.fresh);
+    const published = await this.names.many(contacts.map((c) => c.id), places);
+    return { contacts: contacts.map((c) => ({ id: c.id, form: idForm(c.id), name: c.name, named: { nick: c.name, published: published[c.id] } })), problem };
+  }
+  /** Add a contact, with a nickname if given; set or take away a nickname; take a contact out. Each sealed as the people cMIP keeps the list. */
+  async change(me, a, o) {
+    const id = HEX2.test(a.id) ? a.id : readIdWhere(a.id.trim()).id;
+    a = { ...a, id };
+    const opts = { open: o.open, via: o.via, app: this.app, save: o.save };
+    const said2 = a.op === "add" ? await addContact(me, { id: a.id, nick: a.nick ?? null }, opts) : a.op === "nick" ? await setNick(me, { id: a.id, nick: a.nick ?? null }, opts) : await removeContact(me, a.id, opts);
+    this.lists.delete(me.id);
+    return said2;
+  }
+  /** Forget what was kept for an identity (it was removed, or its key changed). */
+  forget(id) {
+    this.lists.delete(id);
+    this.names.forget(id);
+  }
+};
+
 // src/nakisib-say.ts
 var NAKISIB_SAY = [
   "With Naki\u0161ib, the chain key never touches a connected device: your paper is typed only on an offline Mac that never connects, where Naki\u0161ib reads the request, shows its own summary, draws the new paper and signs. Ki\u0161ib carries the request there and the answer back, by a file on a USB stick, and sends it to the homes.",
@@ -8233,7 +8680,14 @@ var PAPER_LINES = [
 ];
 var LAST_OF_OLD_PAPER_SAY = "This paper already made an earlier change of these keys: until 21 October 2026 Ki\u0161ib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes\u2019 receipts are in; this paper is spent after it.";
 var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var openOr = (bytes, id, secret) => {
+  try {
+    return openSealed(bytes, id, secret);
+  } catch {
+    return null;
+  }
+};
+var short3 = (id) => /^[0-9a-f]{64}$/.test(id) ? idForm(id) : id;
 var unb642 = (t) => {
   try {
     return Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
@@ -8257,15 +8711,70 @@ var MADE_WORDS_SAY = [
   "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them: it keeps nothing of the identity."
 ];
 var PLAN_LIFE = 15 * 60 * 1e3;
+var NO_CONTACTS_SAY = {
+  web: "Ki\u0161ib on the web holds no identity, so it has no contacts list: your contacts are in the apps holding your identity (Dub, Damgar\u2026), and in Ki\u0161ib\u2019s program once its runner holds it",
+  off: "Ki\u0161ib\u2019s runner is off, so Ki\u0161ib holds no identity and has no contacts list to read: turn it on (Runner), and give it an identity (Runner, Add an identity to the runner)",
+  locked: "Ki\u0161ib is locked: its contacts list is read once the runner\u2019s passphrase is given (Runner)",
+  none: "Ki\u0161ib\u2019s runner holds no identity yet: give it one (Runner, Add an identity to the runner), and its contacts list is read here"
+};
 var Kishib = class {
   plans = /* @__PURE__ */ new Map();
   held = null;
   col = null;
   web;
   now;
+  /** Who is known (H96, H100, H106): the one contacts list and the names identities published, read by the kit's one reader. */
+  known;
+  holder;
+  /** The addresses given to Kišib in this program's life (homes, relays), in memory only: where names are read too. */
+  near = /* @__PURE__ */ new Set();
   constructor(opts = {}) {
     this.web = opts.web ?? false;
     this.now = opts.now ?? (() => Math.floor(Date.now() / 1e3));
+    this.holder = opts.holder ?? null;
+    this.known = new Known("Ki\u0161ib", { via: opts.via });
+  }
+  // ------------------------------------------------------------ names and contacts (hand test v3: H96, H100, H106, H109)
+  /** Addresses given in a form, kept in memory as places to read names at. Never written anywhere. */
+  heard(...typed) {
+    for (const t of typed) for (const x of String(t ?? "").split(/[\s,]+/)) if (/^https?:\/\/\S+$/.test(x) && this.near.size < 64) this.near.add(x.replace(/\/+$/, ""));
+  }
+  /** Where names are read: the homes of the identities held, and the addresses given here. */
+  places() {
+    const held2 = this.holder?.state === "on" ? this.holder.holding().flatMap((h) => h.homes) : [];
+    return [.../* @__PURE__ */ new Set([...held2, ...this.near])];
+  }
+  /** The identity whose contacts Kišib shows (`as`, else the first held), or why there is none. */
+  whose(as) {
+    if (this.web || !this.holder) return { problem: NO_CONTACTS_SAY.web };
+    if (this.holder.state !== "on") return { problem: NO_CONTACTS_SAY[this.holder.state] };
+    const held2 = this.holder.holding();
+    const id = as && held2.some((h) => h.id === as) ? as : held2[0]?.id;
+    if (!id) return { problem: NO_CONTACTS_SAY.none };
+    return this.holder.self(id);
+  }
+  /** The names of the IDs the page draws (H96, H106): the nickname given (where an identity is held), and the name each published. */
+  async names(a) {
+    const w = this.whose(a.as);
+    if ("me" in w) return this.known.named(w.me, w.open, a.ids, this.places(), { fresh: a.fresh });
+    const published = await this.known.names.many(a.ids.slice(0, 200), this.places(), !!a.fresh);
+    return Object.fromEntries(Object.entries(published).map(([id, p]) => [id, { nick: null, published: p }]));
+  }
+  /** The one contacts list (H100), each contact with its names; or why it cannot be read here (locked, off, the web: nothing read). */
+  async contacts(a = {}) {
+    const w = this.whose(a.as);
+    if (!("me" in w)) return { contacts: [], problem: w.problem };
+    return this.known.contacts(w.me, w.open, this.places(), { fresh: a.fresh });
+  }
+  /** The list changed (H109): a contact added with a nickname, a nickname set or taken away, a contact taken out; sealed as the people cMIP keeps it. */
+  /**
+   * Kišib shows the contacts, and changes none (fix round 7's reading, put
+   * to Nobody, allegedly): changing them signs an act, and the runner signs
+   * only for the apps paired with it (the runner cMIP), never for Kišib
+   * itself. They are changed in Dub, Damgar, Edubba or Ummia.
+   */
+  async contactChange(_a) {
+    throw new Error(CONTACTS_READ_ONLY);
   }
   // ------------------------------------------------------------ state
   state() {
@@ -8278,7 +8787,8 @@ var Kishib = class {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {}, ...h.chain || h.signing ? { words: h.chain ? "chain" : "signing" } : {}, ...h.request ? { nakisib: { fingerprint: h.fingerprint ?? "" } } : {} };
+    const link = h.kind === "make" && h.id ? { link: idWhere(h.id, [h.homes[0]?.hint, h.places.find((p) => !h.homes.some((x) => x.hint === p))].filter((x) => !!x)) } : {};
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...link, ...h.positions ? { positions: h.positions } : {}, ...h.chain || h.signing ? { words: h.chain ? "chain" : "signing" } : {}, ...h.request ? { nakisib: { fingerprint: h.fingerprint ?? "" } } : {} };
   }
   /** Drop everything this sitting holds: words, keys, bytes. */
   forget() {
@@ -8378,7 +8888,7 @@ var Kishib = class {
   async record(a) {
     const id = readId(a.id);
     const rd = await readIdentity(id, addresses(a.address), a.via ?? {}, SPECS.identity);
-    return { title: `The record of ${short4(id)}`, sections: recordWords(rd) };
+    return { title: `The record of ${short3(id)}`, sections: recordWords(rd) };
   }
   // ------------------------------------------------------------ must: rotate an identity
   /**
@@ -8443,9 +8953,9 @@ var Kishib = class {
         { heading: "The vault (Money: where payments above a limit must go)", lines: vault.lines }
       ];
       const signs2 = [
-        `Ki\u0161ib first shows the new paper\u2019s words (a fresh seed, the air-gapped Module\u2019s rule 3.3). Once three are typed back, it signs one rotation of ${short4(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once, committing the new paper\u2019s key.`,
+        `Ki\u0161ib first shows the new paper\u2019s words (a fresh seed, the air-gapped Module\u2019s rule 3.3). Once three are typed back, it signs one rotation of ${short3(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once, committing the new paper\u2019s key.`,
         "It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.",
-        successor ? `Your rotation names ${short4(successor)} as successor; the successor signs nothing here.` : "It signs nothing else."
+        successor ? `Your rotation names ${short3(successor)} as successor; the successor signs nothing here.` : "It signs nothing else."
       ];
       const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession, ...vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : []]));
       const s0 = seed;
@@ -8453,7 +8963,7 @@ var Kishib = class {
       return this.plan(
         {
           digest,
-          title: `Change the keys of ${short4(id)}`,
+          title: `Change the keys of ${short3(id)}`,
           summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, FORGOTTEN_SAY],
           sections: sections2,
           signs: signs2,
@@ -8483,7 +8993,7 @@ var Kishib = class {
               signing,
               chain: fresh,
               stage: "paper",
-              title: `The rotation of ${short4(id)}: first, the new paper`,
+              title: `The rotation of ${short3(id)}: first, the new paper`,
               lines: PAPER_LINES,
               drop: () => wipe(old),
               sign: async () => {
@@ -8508,7 +9018,7 @@ var Kishib = class {
                   wipe(current.seeds, old);
                 }
                 h.act = actId(h.bytes);
-                h.title = `The rotation of ${short4(id)}`;
+                h.title = `The rotation of ${short3(id)}`;
               }
             };
             this.held = h;
@@ -8547,11 +9057,11 @@ var Kishib = class {
     ];
     const digest = sha2562(cborEncode(["MOR Ki\u0161ib resend, version 1", id, s.id]));
     return this.plan(
-      { digest, title: `Send the same change of ${short4(id)}\u2019s keys again`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, FORGOTTEN_SAY], sections: sections2, signs: ["Ki\u0161ib signs nothing: it sends the exact same bytes again, to every home."], warning: null, blocking: [] },
+      { digest, title: `Send the same change of ${short3(id)}\u2019s keys again`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, FORGOTTEN_SAY], sections: sections2, signs: ["Ki\u0161ib signs nothing: it sends the exact same bytes again, to every home."], warning: null, blocking: [] },
       {
         wipe: () => void 0,
         run: async () => {
-          this.held = { kind: "identity", id, bytes, act: s.id, homes: r.homes, before: chainBefore(rd), with: [{ bytes, to: rd.places }], places: rd.places, signing: null, chain: null, stage: "sent", title: `The rotation of ${short4(id)}, sent again`, lines: [] };
+          this.held = { kind: "identity", id, bytes, act: s.id, homes: r.homes, before: chainBefore(rd), with: [{ bytes, to: rd.places }], places: rd.places, signing: null, chain: null, stage: "sent", title: `The rotation of ${short3(id)}, sent again`, lines: [] };
           return this.send();
         }
       }
@@ -8738,13 +9248,13 @@ var Kishib = class {
       { heading: "With Naki\u0161ib, Ki\u0161ib\u2019s offline companion", lines: NAKISIB_SAY.map((text2) => ({ text: text2 })) }
     ];
     const signs2 = [
-      `Ki\u0161ib signs nothing with a chain key. It makes the new signing key and writes the request for Naki\u0161ib: this change of ${short4(id)} at position ${latest.position + 1}, everything above but the next chain key, which Naki\u0161ib supplies.`,
+      `Ki\u0161ib signs nothing with a chain key. It makes the new signing key and writes the request for Naki\u0161ib: this change of ${short3(id)} at position ${latest.position + 1}, everything above but the next chain key, which Naki\u0161ib supplies.`,
       "Naki\u0161ib, on the offline Mac, reads the request\u2019s exact bytes and shows its own summary, takes your paper, draws the new paper, and signs on SIGN. Ki\u0161ib then reads its answer, checks that it is exactly this change (the air-gapped Module\u2019s rule 3.9), and sends the same bytes to every home, and again, unchanged, if they stall: never a second rotation."
     ];
     const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation with Naki\u0161ib, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession, ...vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : []]));
     const scheme = r.chainKeyScheme;
     return this.plan(
-      { digest, title: `Change the keys of ${short4(id)} with Naki\u0161ib`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, "No paper is typed here: Naki\u0161ib takes it, on the offline Mac."], sections: sections2, signs: signs2, warning: plan.warning, blocking },
+      { digest, title: `Change the keys of ${short3(id)} with Naki\u0161ib`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, "No paper is typed here: Naki\u0161ib takes it, on the offline Mac."], sections: sections2, signs: signs2, warning: plan.warning, blocking },
       {
         wipe: () => void 0,
         run: async (warned) => {
@@ -8790,7 +9300,7 @@ var Kishib = class {
             signing,
             chain: null,
             stage: "request",
-            title: `The change of keys of ${short4(id)}, with Naki\u0161ib`,
+            title: `The change of keys of ${short3(id)}, with Naki\u0161ib`,
             lines: [...NAKISIB_WAIT_SAY.map((text2, i) => ({ text: text2, ...i === 0 ? { tone: "warn" } : {} })), { text: `The new signing key\u2019s fingerprint, as Naki\u0161ib shows it: ${fp}.` }],
             request,
             fingerprint: fp
@@ -8827,7 +9337,7 @@ var Kishib = class {
       h.bytes = act2;
       h.act = actId(act2);
       h.stage = "sent";
-      h.title = `The change of keys of ${short4(h.id)}, signed by Naki\u0161ib`;
+      h.title = `The change of keys of ${short3(h.id)}, signed by Naki\u0161ib`;
       await this.send();
       h.lines = [{ text: "Naki\u0161ib\u2019s answer is exactly the change Ki\u0161ib asked for, signed with the chain key this identity committed to: sent to every home.", tone: "ok" }, ...h.lines];
       return this.state();
@@ -8857,7 +9367,7 @@ var Kishib = class {
       signing: null,
       chain: null,
       stage: "sent",
-      title: `The change of keys of ${short4(id)}, signed by Naki\u0161ib`,
+      title: `The change of keys of ${short3(id)}, signed by Naki\u0161ib`,
       lines: []
     };
     await this.send();
@@ -8963,7 +9473,7 @@ var Kishib = class {
                 { bytes: routes.act, to: [...hints, ...relays] },
                 { bytes: enc.act, to: [...hints, ...relays] }
               ];
-              h.title = `A new identity, ${short4(id)}`;
+              h.title = `A new identity, ${short3(id)}`;
             }
           };
           this.held = h;
@@ -9043,7 +9553,7 @@ var Kishib = class {
         {
           heading: "What changes",
           lines: [
-            { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${short4(h.operator)})`).join("; ")}. The old homes are left.`, tone: "warn" },
+            { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${h.operator})`).join("; ")}. The old homes are left.`, tone: "warn" },
             { text: "Every rotation above is abandoned: it can never count afterwards (Identity section 11).", tone: "warn" },
             { text: "A new signing key, made now; its words are shown once the new homes\u2019 receipts are in." },
             { text: `A new chain key, from a new paper made now on this device (key ${p} of its words): its words are shown first, and only once three are typed back are the escape and its endorsement signed. The stolen paper is then spent: whoever holds it can derive nothing that counts after this escape. ${PAPER_COUNTS_SAY}`, tone: "warn" }
@@ -9051,8 +9561,8 @@ var Kishib = class {
         }
       ];
       const signs2 = [
-        `With your chain key (key ${idx} of these words): one homeless rotation of ${short4(id)} at position ${p}, naming the new homes.`,
-        `With your signing key (bound by ${short4(q.act)}): one escape endorsement naming that rotation and listing ${rivals.length === 1 ? "the rotation above" : `the ${rivals.length} rotations above`} as abandoned.`,
+        `With your chain key (key ${idx} of these words): one homeless rotation of ${short3(id)} at position ${p}, naming the new homes.`,
+        `With your signing key (bound by ${actForm(q.act)}): one escape endorsement naming that rotation and listing ${rivals.length === 1 ? "the rotation above" : `the ${rivals.length} rotations above`} as abandoned.`,
         "Both keys together are the strongest proof of ownership MOR sees (Identity rule 53): an escape endorsed with the signing key cannot be voided by an objection. Someone holding both of your keys could do the same: keep them apart."
       ];
       const digest = sha2562(cborEncode(["MOR Ki\u0161ib escape, version 1", id, q.act, rivals.map((s) => s.id).sort(), newHomes.map((h) => h.hint), plan.kept.map((k) => [k.act, k.position, k.summary])]));
@@ -9062,7 +9572,7 @@ var Kishib = class {
       signingSeed = null;
       const qq = q;
       return this.plan(
-        { digest, title: `Escape position ${p} of ${short4(id)}, with both keys`, summary: [`Identity ${id}: someone else\u2019s rotation revealing your chain key stands at position ${p}.`, FORGOTTEN_SAY], sections: sections2, signs: signs2, warning: plan.warning, blocking: [] },
+        { digest, title: `Escape position ${p} of ${short3(id)}, with both keys`, summary: [`Identity ${id}: someone else\u2019s rotation revealing your chain key stands at position ${p}.`, FORGOTTEN_SAY], sections: sections2, signs: signs2, warning: plan.warning, blocking: [] },
         {
           wipe: () => wipe(s0, g0),
           run: async (warned) => {
@@ -9087,7 +9597,7 @@ var Kishib = class {
               signing,
               chain: fresh,
               stage: "paper",
-              title: `The escape of ${short4(id)}: first, the new paper`,
+              title: `The escape of ${short3(id)}: first, the new paper`,
               lines: PAPER_LINES,
               drop: () => wipe(oldChain, oldSigning),
               sign: async () => {
@@ -9116,7 +9626,7 @@ var Kishib = class {
                 }
                 h.bytes = bytes;
                 h.act = actId(bytes);
-                h.title = `The escape of ${short4(id)}`;
+                h.title = `The escape of ${short3(id)}`;
                 h.with = [
                   { bytes: endorsement, to: everywhere },
                   { bytes, to: rd.places }
@@ -9149,13 +9659,13 @@ var Kishib = class {
     try {
       const rd = await readIdentity(owner, addresses(a.address), via, SPECS.identity);
       const s = rd.look.verifier.succession(owner);
-      if (s.state === "none") throw new Error(`No succession is declared by ${short4(owner)}: there is nothing to confirm.`);
-      if (s.successor !== successor) throw new Error(`The succession ${short4(owner)} declares names ${s.successor ? short4(s.successor) : "another protocol"}, not ${short4(successor)}.`);
+      if (s.state === "none") throw new Error(`No succession is declared by ${short3(owner)}: there is nothing to confirm.`);
+      if (s.successor !== successor) throw new Error(`The succession ${short3(owner)} declares names ${s.successor ? short3(s.successor) : "another protocol"}, not ${short3(successor)}.`);
       if (s.state === "confirmed") throw new Error("This succession is already confirmed.");
       const look = await lookCurrent(successor, seed, [.../* @__PURE__ */ new Set([...addresses(a.address), ...rd.places])], via);
       const sections2 = [
-        { heading: "What it confirms", lines: [{ text: `${short4(owner)} declared, in its rotation ${s.rotation}, that ${short4(successor)} succeeds it.` }, { text: "Until the successor confirms, clients show it as declared and follow nobody (F300).", tone: "warn" }] },
-        { heading: "Who signs what", lines: [{ text: `${short4(owner)} signed the rotation that declares the succession, with its chain key. It signs nothing now.` }, { text: `You, ${short4(successor)}, sign one act with your signing key: a confirmation (Identity type 7) naming that rotation. It needs nothing from ${short4(owner)}.` }, { text: `${short4(owner)} goes on living: succession does not end it (Identity rule 39). Its followers and agreements may move across to you.` }] },
+        { heading: "What it confirms", lines: [{ text: `${short3(owner)} declared, in its rotation ${s.rotation}, that ${short3(successor)} succeeds it.` }, { text: "Until the successor confirms, clients show it as declared and follow nobody (F300).", tone: "warn" }] },
+        { heading: "Who signs what", lines: [{ text: `${short3(owner)} signed the rotation that declares the succession, with its chain key. It signs nothing now.` }, { text: `You, ${short3(successor)}, sign one act with your signing key: a confirmation (Identity type 7) naming that rotation. It needs nothing from ${short3(owner)}.` }, { text: `${short3(owner)} goes on living: succession does not end it (Identity rule 39). Its followers and agreements may move across to you.` }] },
         { heading: "A line of your acts", lines: [{ text: "This act starts a new line of your acts, made here. Your next change of keys keeps it only if it names it: Ki\u0161ib finds every line when it rotates.", tone: "warn" }] }
       ];
       const digest = sha2562(cborEncode(["MOR Ki\u0161ib succession confirmation, version 1", owner, successor, s.rotation]));
@@ -9163,7 +9673,7 @@ var Kishib = class {
       seed = null;
       const r = look.resolution;
       return this.plan(
-        { digest, title: `Confirm that ${short4(successor)} succeeds ${short4(owner)}`, summary: [FORGOTTEN_SAY], sections: sections2, signs: [`You sign, as ${short4(successor)}, one confirmation naming the rotation ${s.rotation}.`], warning: null, blocking: [] },
+        { digest, title: `Confirm that ${short3(successor)} succeeds ${short3(owner)}`, summary: [FORGOTTEN_SAY], sections: sections2, signs: [`You sign, as ${short3(successor)}, one confirmation naming the rotation ${s.rotation}.`], warning: null, blocking: [] },
         {
           wipe: () => wipe(s0),
           run: async () => {
@@ -9176,12 +9686,12 @@ var Kishib = class {
             const to = [.../* @__PURE__ */ new Set([...r.homes.map((h) => h.hint), ...rd.places])];
             const lines2 = [];
             for (const hint of to) lines2.push(await put(hint, made.act, chain));
-            this.held = { kind: "confirm", id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, chain: null, stage: "done", title: `${short4(successor)} confirmed the succession`, lines: lines2 };
+            this.held = { kind: "confirm", id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, chain: null, stage: "done", title: `${short3(successor)} confirmed the succession`, lines: lines2 };
             const v = await lookUp(owner, to, via);
             await lookUp(successor, to, via, v.verifier);
             v.verifier.add(made.act);
-            const now = v.verifier.succession(owner);
-            lines2.push(now.state === "confirmed" ? { text: "Read back as anyone would: the succession is confirmed, and clients follow it.", tone: "ok" } : { text: `Read back: ${now.state}.`, tone: "warn" });
+            const now2 = v.verifier.succession(owner);
+            lines2.push(now2.state === "confirmed" ? { text: "Read back as anyone would: the succession is confirmed, and clients follow it.", tone: "ok" } : { text: `Read back: ${now2.state}.`, tone: "warn" });
             lines2.push({ text: "Your signing words are forgotten here.", tone: "ok" });
             return this.sitting();
           }
@@ -9240,9 +9750,50 @@ var Kishib = class {
     return this.state();
   }
   /** A member: read a rotation waiting for its share, by the collective and its fingerprint, before typing anything. */
+  /**
+   * The rotations waiting for a member (the rotation notice cMIP, 2.1; H97),
+   * for Collectives › Waiting for you, prefilled. On the Mac with the runner
+   * on, at once, for every identity it holds (opened with the key it holds);
+   * elsewhere (the web, or no runner), only with the member's ID, a home and
+   * signing words, overwritten once read: Kišib holds nothing before.
+   */
+  async collectiveNotices(a) {
+    const via = a.via ?? {};
+    const now2 = this.now();
+    if (a.words?.trim()) {
+      const member = readId(a.member ?? "");
+      const hints = addresses(a.address ?? "");
+      let seed;
+      try {
+        seed = fromWords(a.words);
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was read.`);
+        throw e3;
+      }
+      const secret = encryptionSecret(seed);
+      seed.fill(0);
+      try {
+        const r = await noticesFor(member, hints, async (sealed) => sealed.map((b) => openOr(b, member, secret)), now2, via);
+        return { notices: r.listed, problem: r.problem, by: "words" };
+      } finally {
+        secret.fill(0);
+      }
+    }
+    const h = this.holder;
+    if (this.web || !h || h.state !== "on" || !h.holding().length) {
+      const why = this.web || !h ? "Ki\u0161ib holds nothing here" : h.state === "locked" ? "Ki\u0161ib\u2019s runner is locked: give its passphrase (Runner), or" : h.state === "off" ? "Ki\u0161ib\u2019s runner is off, so Ki\u0161ib holds nothing" : "Ki\u0161ib\u2019s runner holds no identity";
+      return { notices: [], problem: `${why}: give your ID, one of your homes and your signing words, and Ki\u0161ib reads the rotations waiting for you in your inbox, then forgets the words.`, by: null };
+    }
+    const notices = [];
+    for (const x of h.holding()) {
+      const r = await noticesFor(x.id, x.homes, h.self(x.id).open, now2, via);
+      notices.push(...r.listed);
+    }
+    return { notices, problem: null, by: "runner" };
+  }
   async collectiveRead(a) {
     const { c, sections: sections2 } = await CollectiveSitting.readRequest(a, this.now());
-    return { title: `A rotation of ${short4(c.rd.id)} asks for your share`, sections: sections2 };
+    return { title: `A rotation of ${short3(c.rd.id)} asks for your share`, sections: sections2 };
   }
   /** A member's share: reviewed with the paper and signing words, then, confirmed, sealed to the starter's one-time key. */
   async collectiveGive(a) {
@@ -9316,13 +9867,13 @@ function vaultEntryWords(e3) {
   const unit = unitOf(e3.unit)?.unit.name ?? `unit ${e3.unit.slice(0, 8)}\u2026`;
   return `${unit}, ${rail} (${where ?? "?"}\u2026): ${e3.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e3.unit, value: e3.limit }, units2)} must go to the vault, not the flow`}.`;
 }
-function vaultPlan(v, now) {
+function vaultPlan(v, now2) {
   const change = v ?? { change: "keep" };
   if (change.change === "keep") {
-    return { lines: now ? [{ text: "Kept as it is:" }, ...now.map((e3) => ({ text: vaultEntryWords(e3) }))] : [{ text: "None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3)." }], declaration: null };
+    return { lines: now2 ? [{ text: "Kept as it is:" }, ...now2.map((e3) => ({ text: vaultEntryWords(e3) }))] : [{ text: "None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3)." }], declaration: null };
   }
   if (change.change === "remove") {
-    if (!now) throw new Error("This identity declares no vault: there is none to remove.");
+    if (!now2) throw new Error("This identity declares no vault: there is none to remove.");
     return {
       lines: [{ text: "Removed: from this rotation on, every payment goes to the flow, whatever its size, and a thief holding the signing key could point the flow anywhere (Money rule 3).", tone: "warn" }],
       declaration: vaultDeclaration(MIRS.money, null)
@@ -9352,6 +9903,7 @@ function vaultPlan(v, now) {
     )
   };
 }
+var CONTACTS_READ_ONLY = "Ki\u0161ib shows your contacts and changes none: changing them signs an act, and Ki\u0161ib signs only for the apps paired with it. Add a contact or a nickname in Dub, Damgar, Edubba or Ummia; it is here at once. Nothing was signed.";
 
 // src/ops.ts
 var text = (v) => typeof v === "string" ? v : "";
@@ -9370,7 +9922,19 @@ function vaultOf(a) {
   };
 }
 async function run(k, op, a) {
+  k.heard(text(a.address), text(a.homes), text(a.relays));
   switch (op) {
+    // Who is known (hand test v3, H96, H100, H106, H109): the kit's names and its one contacts list.
+    case "names":
+      return k.names({ ids: list2(a.ids), fresh: a.fresh === true, as: text(a.as) || void 0 });
+    case "contacts":
+      return k.contacts({ as: text(a.as) || void 0, fresh: a.fresh === true });
+    case "contact add":
+      return k.contactChange({ op: "add", id: text(a.id), nick: text(a.nick), as: text(a.as) || void 0 });
+    case "contact nick":
+      return k.contactChange({ op: "nick", id: text(a.id), nick: text(a.nick), as: text(a.as) || void 0 });
+    case "contact remove":
+      return k.contactChange({ op: "remove", id: text(a.id), as: text(a.as) || void 0 });
     case "state":
       return k.state();
     case "forget":
@@ -9400,6 +9964,9 @@ async function run(k, op, a) {
       return k.confirmPlan({ owner: text(a.owner), successor: text(a.successor), address: text(a.address), words: text(a.words) });
     case "collective start":
       return k.collectiveStart({ collective: text(a.collective), address: text(a.address), founder: text(a.founder), founderWords: text(a.founderWords), number: text(a.number), shareWords: text(a.shareWords), room: a.room === true, leaveOut: list2(a.leaveOut) });
+    // H97: the rotations waiting for the member, from their inbox (the rotation notice cMIP).
+    case "collective notices":
+      return k.collectiveNotices({ member: text(a.member), address: text(a.address), words: text(a.words) });
     case "collective read":
       return k.collectiveRead({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address) });
     case "collective give":
@@ -9441,13 +10008,14 @@ var APPS = {
   ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
 };
 var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
-var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var KIT_STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
 ${tints}
 .k-page,.k-page *{box-sizing:border-box}
 html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
-.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+.k-page{font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
 :where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 :where(.k-page) button:disabled{opacity:.45;cursor:default}
 :where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
@@ -9458,7 +10026,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 :where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
 :where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
 .k-page [hidden]{display:none!important}
-.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
 .k-grow{flex:1}
 .k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
@@ -9468,6 +10036,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 /* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
 .k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
 .k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app .k-nm,.k-appname{font-family:"Gentium Book Plus",Georgia,serif;font-style:italic;font-weight:400;letter-spacing:.01em;font-size:1.12em}
 .k-app img{width:26px;height:26px;border-radius:6px}
 .k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
 .k-menu-btn:hover{color:var(--k-text)}
@@ -9479,7 +10048,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-on .k-count{background:var(--k-ink);color:var(--k-p)}
 .k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
 .k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-me .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
 .k-dot.k-c{border-radius:7px}
 .k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
@@ -9489,10 +10058,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
 
 /* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
-.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));gap:18px;padding:24px 28px 12px;overflow:auto}
 .k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
 .k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
-.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+/* the icon in the tile's own flow, at its top, the words at its bottom: they never overlap, at any width (H105); a short tile grows */
+.k-tile .k-ic{flex:none;width:58px;height:58px;color:var(--k-p);margin:-2px 0 auto;padding-bottom:10px;box-sizing:content-box}
 .k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
 .k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
 .k-tile .k-dm{position:absolute;right:24px;top:26px}
@@ -9534,11 +10104,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
 .k-act:last-child{border-bottom:0}
 .k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
-.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-sid,.k-act .k-actid{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
-.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
+.k-act .k-hint,.k-act .k-unstamped{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
@@ -9556,15 +10126,42 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act audio{display:block;width:100%;margin:6px 0}
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+.k-act .k-corrected{display:inline-block;margin:0 0 0 8px;font-size:11.5px;letter-spacing:.04em;color:var(--k-p);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px;vertical-align:2px}
+.k-act .k-corrected.k-on{background:var(--k-wash2)}
+.k-earlier{border-left:2px solid var(--k-edge);margin:0 0 8px;padding:0 0 0 10px;opacity:.82}
+.k-earlier .k-act{border-bottom:1px dashed var(--k-line)}
+.k-earlier-say{font-size:11.5px;color:var(--k-faint);margin:4px 0 0}
+
+/* an identity wherever its ID is shown (H96, H121): its names, the nickname first, the published name small and faint; its short ID under, a button */
+.k-who{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;vertical-align:top;max-width:100%;min-width:0}
+.k-who.k-inline{display:inline;vertical-align:baseline}
+.k-who.k-inline>.k-idbtn{margin-left:6px}
+.k-who.k-inline .k-names{display:inline}
+.k-who.k-inline .k-names>*+*{margin-left:6px}
+.k-names{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;min-width:0}
+.k-nick{font-weight:400;color:var(--k-text);overflow-wrap:anywhere}
+.k-pub{font-size:.82em;color:var(--k-faint);overflow-wrap:anywhere}
+.k-pub.k-state{font-style:italic}
+.k-you{font-size:12px;color:var(--k-soft)}
+.k-retry{font-size:12px;color:var(--k-soft);text-decoration:underline;text-underline-offset:2px}
+.k-idbtn{font:11.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);border-radius:6px;padding:0 2px;text-align:left}
+.k-idbtn:hover,.k-idbtn:focus-visible{background:var(--k-wash);outline:none}
+.k-idbtn.k-whole{overflow-wrap:anywhere;word-break:break-all;white-space:normal;background:var(--k-wash);color:var(--k-text);user-select:all;-webkit-user-select:all}
+.k-idbtn[data-k-copied]{color:var(--k-p)}
+.k-picker{min-width:280px}
+.k-picker input[type=search]{margin:4px 0 6px}
+.k-picker button{display:flex;align-items:center;gap:10px}
+.k-picker .k-names{flex:1}
 
 /* menus: what you take above a line, what changes something below */
 .k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
-.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop .k-t{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
 .k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
 .k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
 .k-pop button:disabled{color:var(--k-faint);opacity:1}
 .k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
 .k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop.k-anchored{position:absolute;left:8px;right:auto;top:auto;bottom:calc(100% + 6px);max-height:min(320px,40vh)}
 .k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
 
 /* the typing box: always in the same place, the bottom */
@@ -9596,15 +10193,36 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
 .k-panel.k-left{left:16px;right:auto}
 .k-panel h4{font-size:16px;font-weight:300}
+.k-ph{display:flex;align-items:center;gap:10px;padding:2px 2px 6px 8px}
+.k-panel .k-ph .k-round{width:28px;height:28px;font-size:16px}
+.k-confirm{width:min(440px,calc(100% - 28px))}
+.k-confirm .k-mh{margin-bottom:0}
+.k-confirm .k-box{margin:0;border:0;padding:0 4px 4px}
+.k-alarm-modal{border-color:var(--k-bad)}
+.k-keychanged h4{font-size:17px;margin:0 0 6px}
+.k-keychanged textarea{min-height:70px}
+.k-reminder{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 20px;border-bottom:1px solid var(--k-bad);font-size:13px;color:var(--k-text);background:rgba(196,100,95,.08);flex:none}
+.k-reminder span{flex:1;min-width:12em}
+.k-reminder.k-rules-ask{border-bottom-color:var(--k-edge);background:var(--k-wash)}
+.k-rule-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.k-rule{border:1px solid var(--k-line);border-radius:10px;padding:10px 12px}
+.k-rule p{margin:4px 0}
+.k-rule-not{border-color:var(--k-edge)}
+.k-rule-not .k-rule-on{font-weight:600}
+.k-rules-all{margin:10px 0 0}
 .k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
 .k-idrow.k-on{background:var(--k-wash2)}
 .k-idrow .k-n{font-size:14.5px}
-.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint)}
 .k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
 .k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
 .k-idline{display:flex;align-items:center;gap:4px}
 .k-idline>.k-idrow{flex:1;min-width:0}
 .k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-more:hover{color:var(--k-text)}
+.k-ownid{margin:2px 4px 8px 44px}
+.k-ownid .k-row{margin:6px 0 0;gap:6px}
+.k-idwhole{display:block;font-size:12px;color:var(--k-text);overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
 .k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
 .k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
 .k-panel .k-pane-in{padding:4px 6px}
@@ -9625,6 +10243,17 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-say>summary::-webkit-details-marker{display:none}
 .k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
 .k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-mor{display:inline-block;margin-left:10px;font-size:12px;color:var(--k-soft);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px;white-space:nowrap}
+a.k-mor:hover{color:var(--k-text)}
+.k-more-text .k-mor{margin-left:0;white-space:normal}
+/* a line opening a panel to work in (H99): a chevron, turning down when open */
+.k-fold{margin:8px 0;font-size:13.5px}
+.k-fold>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--k-soft)}
+.k-fold>summary::-webkit-details-marker{display:none}
+.k-fold>summary:hover{color:var(--k-text)}
+.k-chev{display:inline-grid;place-items:center;width:17px;height:17px;font-size:15px;line-height:1;color:var(--k-soft);transition:transform .15s}
+.k-fold[open]>summary .k-chev{transform:rotate(90deg)}
+.k-fold-body{margin:8px 0 2px}
 .k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
 .k-say .k-more-text p{margin:4px 0}
 .k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
@@ -9635,7 +10264,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
 .k-note ul{margin:4px 0 0;padding-left:1.1em}
 .k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
-.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status{position:fixed;z-index:900;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
 .k-status:empty{display:none}
 .k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
 .k-status .k-close{position:absolute;right:8px;top:8px}
@@ -9651,7 +10280,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-list{border-top:1px solid var(--k-line)}
 .k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
 .k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
-.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;margin:10px 0;background:var(--k-raise)}
 .k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
 .k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
 .k-box.k-fill{background:var(--k-wash);border-color:transparent}
@@ -9666,9 +10295,9 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-me .k-n,.k-me .k-s{display:none}
   .k-menu-btn .k-l{display:none}
   .k-switch button{padding:4px 11px}
-  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(min-content,1fr));gap:10px;padding:12px}
   .k-tile{padding:16px 18px;border-radius:18px}
-  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile .k-ic{width:40px;height:40px;padding-bottom:8px}
   .k-tile h2{font-size:24px}
   .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .k-tile .k-dm{right:16px;top:18px}
@@ -9694,20 +10323,44 @@ function shortForm(form2) {
   if (one < 0 || form2.length < one + 10) return form2;
   return `${form2.slice(0, one + 4)}\u2026${form2.slice(-3)}`;
 }
+var initial = (name, id) => (name?.trim()?.[0] ?? id.replace(/^m\w*1/, "")[0] ?? "?").toUpperCase();
+var NAME_WORDS = { loading: "Loading\u2026", none: "No name published", unreached: "Name not reached" };
+function nameOf(n) {
+  return n?.nick?.trim() || (n?.published?.state === "name" ? n.published.name : null);
+}
+function namesHtml(n, o = {}) {
+  const nick = n?.nick?.trim() || null;
+  const p = n?.published ?? { state: "loading" };
+  const pub = p.state === "name" ? p.name : null;
+  const state = p.state === "name" ? "" : `<span class="k-pub k-state" data-k-name-state="${p.state}">${NAME_WORDS[p.state]}</span>${p.state === "unreached" && o.retry !== false ? '<button type="button" class="k-retry" data-k-name-retry>Ask again</button>' : ""}`;
+  if (nick) return `<span class="k-nick" dir="auto">${e(nick)}</span>${pub && pub !== nick ? ` <span class="k-pub" dir="auto">${e(pub)}</span>` : ""}`;
+  if (pub) return `<span class="k-nick" dir="auto">${e(pub)}</span>`;
+  return state;
+}
+function namedOf(w) {
+  if (w.named) return w.named;
+  const nick = w.name && w.ownName && w.name !== w.ownName ? w.name : null;
+  const pub = w.ownName ?? (nick ? null : w.name ?? null);
+  return { nick, published: pub ? { state: "name", name: pub } : { state: "none" } };
+}
 function card(a, o = {}) {
   const s = a.signer;
-  const name = s.name ?? (s.collective ? "a collective" : "");
-  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ""}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">\u201C${e(s.ownName)}\u201D</span>` : ""}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}</button>`;
-  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${e(l.text)}</div>`).join("");
+  const named = namedOf(s);
+  const names = !nameOf(named) && s.collective && named.published?.state === "none" ? '<span class="k-nick">a collective</span>' : namesHtml(named, { retry: false });
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-names k-nm">${names}</span>${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}<span class="k-sid">${e(shortForm(s.form))}</span></button>`;
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${l.html ?? e(l.text)}</div>`).join("");
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
   const text2 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
-  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text2}${a.html ?? ""}${hint}${foot}</article>`;
+  const hint = (!a.when && a.unstamped ? `<div class="k-unstamped">${e(a.unstamped)}</div>` : "") + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "");
+  const earlier = a.earlier?.length ? `<div class="k-earlier" data-k-earlier hidden><div class="k-earlier-say">${a.earlier.length === 1 ? "The original, as signed" : `The original and ${a.earlier.length - 1} earlier correction${a.earlier.length > 2 ? "s" : ""}, as signed, oldest first`}</div>${a.earlier.map((x) => card(x)).join("")}</div>` : "";
+  const corrected = a.earlier?.length ? `<button type="button" class="k-corrected" data-k-corrected aria-expanded="false">Corrected</button>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}${a.earlier?.length ? " k-is-corrected" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${earlier}${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${corrected}${labels}${text2}${a.html ?? ""}${hint}${foot}</article>`;
 }
 function signerMenu(app2, w, own) {
   const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
-  return menu(`${w.name ? `${w.name} \xB7 ` : ""}${shortForm(w.form)}`, [
+  const n = nameOf(namedOf(w));
+  return menu(`${n ? `${n} \xB7 ` : ""}${shortForm(w.form)}`, [
     { key: "copy-id", label: "Copy ID" },
     { key: "copy-link", label: "Copy ID link" },
     { key: "profile", label: "Open profile" }
@@ -9732,6 +10385,9 @@ function top(o) {
 function appMark(name, icon) {
   return `<div class="k-app">${icon ? `<img src="${e(icon)}" alt="">` : ""}<span class="k-nm">${e(name)}</span></div>`;
 }
+function contactsButton(label = "Contacts") {
+  return `<button type="button" class="k-menu-btn" data-k-open="contacts" aria-haspopup="dialog"><span aria-hidden="true">\u2630</span><span class="k-l">${e(label)}</span></button>`;
+}
 var danger = (l) => `<span class="k-dm k-l${l}" title="danger ${l} of 3" aria-label="danger ${l} of 3"><i></i><i></i><i></i></span>`;
 function tiles(ts) {
   return `<div class="k-home">${ts.map((t) => `<button type="button" class="k-tile k-d${t.danger}${t.alert ? " k-alarm" : ""}" data-k-tile="${e(t.key)}">${ICONS[t.icon]}${danger(t.danger)}<h2>${e(t.name)}</h2><p>${e(t.say)}</p>${t.alert ? `<span class="k-alert">${e(t.alert)}</span>` : ""}</button>`).join("")}</div>`;
@@ -9740,15 +10396,39 @@ function opened(column2, on, pane) {
   const col = column2.map((c) => c === "-" ? '<div class="k-sep"></div>' : typeof c === "string" ? `<h3>${e(c)}</h3>` : `<button type="button" data-k-col="${e(c.key)}" class="${c.key === on ? "k-on" : ""}">${e(c.label)}${c.k != null ? `<span class="k-k">${e(c.k)}</span>` : ""}</button>`).join("");
   return `<div class="k-body k-opened${on ? " k-chosen" : ""}"><aside class="k-col">${col}</aside><section class="k-pane"><button type="button" class="k-back" data-k-back="column">\u2190 Back</button>${pane}</section></div>`;
 }
-function say2(line, more) {
+function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+  const mor = o.mor ? whatIsMor(o.mor === "offline") : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === "offline", true)}</p>` : ""}</div></details>`;
+}
+var MOR_HOME = "https://dubsar.org/";
+function whatIsMor(offline = false, long = false) {
+  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? "What is MOR? Read it at " : "What is MOR? "}<span class="k-mono">dubsar.org</span>${long ? ", on another device: this one never connects." : " (on another device)"}</span>`;
+  return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
 }
 var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
+var CLOSE_X = '<button type="button" class="k-round k-x" data-k-close aria-label="Close">\xD7</button>';
+function ownId(o) {
+  return `<div class="k-ownid" data-k-ownid><span class="k-mono k-idwhole">${e(o.form)}</span><div class="k-row"><button type="button" class="k-btn k-small" data-k-copy-id="${e(o.form)}">Copy ID</button><button type="button" class="k-btn k-small" data-k-share="${e(o.link)}">Share your ID link</button></div></div>`;
+}
+function labelOf(c) {
+  return (c.named ? nameOf(c.named) : null) ?? c.name ?? c.names?.[0] ?? shortForm(c.form);
+}
+function contactsPanel(o) {
+  const rows = o.contacts.map((c) => {
+    const n = c.named ?? namedOf({ name: c.name, ownName: c.names?.[0] ?? null });
+    const words2 = [labelOf(c), n.nick ?? "", n.published?.state === "name" ? n.published.name : "", ...c.names ?? [], c.form].join(" ").toLowerCase();
+    return `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e(words2)}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? " k-c" : ""} k-alt">${e(initial(labelOf(c), c.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(n, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(c.form))}</span></span></button>${o.nick ? `<button type="button" class="k-btn k-q k-small" data-k-nick="${e(c.id)}" title="Your own name for it, sealed: only you see it">Nickname\u2026</button>` : ""}${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ""}</div>`;
+  }).join("");
+  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
+}
 var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 var ICONS = {
   identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
-  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  // The runner: the seal of Kišib's menu bar (H111), as its state shows it there: hollow while off, filled while on, a padlock while locked.
+  runner: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z"/>'),
+  runnerOn: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z" fill="currentColor" fill-opacity=".85"/>'),
+  runnerLocked: SVG('<rect x="13" y="22" width="22" height="17" rx="3.5"/><path d="M17.5 22v-5a6.5 6.5 0 0 1 13 0v5"/><circle cx="24" cy="30.5" r="2"/>'),
   paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
   collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
   waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
@@ -9795,18 +10475,29 @@ function closeMenu() {
   openMenu = null;
 }
 function place(pop, button, prefer) {
+  if (pop.classList.contains("k-anchored")) return;
   const r = button.getBoundingClientRect();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
+  const vv = window.visualViewport;
+  const top2 = vv ? vv.offsetTop : 0;
+  const bottom = vv ? vv.offsetTop + vv.height : document.documentElement.clientHeight;
+  pop.style.maxHeight = "";
+  const w = pop.offsetWidth;
+  let h = pop.offsetHeight;
   let left = prefer === "above" ? r.right - w : r.left;
   left = Math.max(8, Math.min(left, vw - w - 8));
-  let topAt = prefer === "below" ? r.bottom + 6 : r.top - h - 6;
-  if (topAt + h > vh - 8) topAt = r.top - h - 6;
-  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  const roomAbove = r.top - 6 - (top2 + 8);
+  const roomBelow = bottom - 8 - (r.bottom + 6);
+  const above = prefer === "above" ? roomAbove >= h || roomAbove >= roomBelow : !(roomBelow >= h || roomBelow >= roomAbove);
+  const room = Math.max(above ? roomAbove : roomBelow, 80);
+  if (h > room) {
+    pop.style.maxHeight = `${Math.floor(room)}px`;
+    h = pop.offsetHeight;
+  }
+  let at = above ? r.top - 6 - h : r.bottom + 6;
+  at = Math.max(top2 + 8, Math.min(at, bottom - h - 8));
   pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+  pop.style.top = `${Math.round(at)}px`;
 }
 function popAt(button, html, prefer, pick, done) {
   closeMenu();
@@ -9814,10 +10505,22 @@ function popAt(button, html, prefer, pick, done) {
   holder.innerHTML = html;
   const pop = holder.firstElementChild;
   (button.closest(".k-page") ?? document.body).append(pop);
+  pop.style.zIndex = String(LAYER_BASE + stack.length * 2 + 2);
   place(pop, button, prefer);
   button.classList.add("k-open");
   button.setAttribute("aria-expanded", "true");
-  openMenu = { pop, button, done };
+  const again = () => place(pop, button, prefer);
+  window.visualViewport?.addEventListener("resize", again);
+  window.visualViewport?.addEventListener("scroll", again);
+  openMenu = {
+    pop,
+    button,
+    done: () => {
+      window.visualViewport?.removeEventListener("resize", again);
+      window.visualViewport?.removeEventListener("scroll", again);
+      done?.();
+    }
+  };
   pop.addEventListener("click", (ev) => {
     const item = ev.target.closest("button[data-k-item]");
     if (!item || item.disabled) return;
@@ -9838,14 +10541,31 @@ async function copied(item, text2) {
   setTimeout(closeMenu, ok ? 450 : 2400);
 }
 function attachCards(root, host) {
+  const actOf = (card2) => {
+    const own = host.act(card2.dataset.kAct);
+    if (own) return own;
+    const outer = card2.parentElement?.closest("[data-k-act]");
+    return outer ? (actOf(outer)?.earlier ?? []).find((x) => x.id === card2.dataset.kAct) : void 0;
+  };
   root.addEventListener("click", (ev) => {
+    const fold2 = ev.target.closest("[data-k-corrected]");
+    if (fold2) {
+      ev.stopPropagation();
+      const box = fold2.closest("[data-k-act]")?.querySelector(":scope > [data-k-earlier]");
+      if (box) {
+        box.hidden = !box.hidden;
+        fold2.setAttribute("aria-expanded", String(!box.hidden));
+        fold2.classList.toggle("k-on", !box.hidden);
+      }
+      return;
+    }
     const b = ev.target.closest("[data-k-menu]");
     if (!b) return;
     const card2 = b.closest("[data-k-act]");
     if (!card2) return;
     ev.stopPropagation();
     if (openMenu?.button === b) return closeMenu();
-    const a = host.act(card2.dataset.kAct);
+    const a = actOf(card2);
     if (!a) return;
     const which = b.dataset.kMenu;
     card2.classList.add("k-sel");
@@ -9866,28 +10586,181 @@ function attachCards(root, host) {
   });
 }
 function attachClosing(doc = document) {
+  if (attached.has(doc)) return;
+  attached.add(doc);
   doc.addEventListener("click", (ev) => {
-    if (!openMenu) return;
     const t = ev.target;
+    const x = t.closest("[data-k-status-close]");
+    if (x) {
+      const st = x.closest(".k-status");
+      if (st) st.innerHTML = "";
+      return;
+    }
+    const cid = t.closest("[data-k-copy-id]");
+    const share2 = t.closest("[data-k-share]");
+    if (cid || share2) {
+      const b = cid ?? share2;
+      const text2 = cid ? cid.dataset.kCopyId : share2.dataset.kShare;
+      void (async () => {
+        let said2 = "";
+        if (share2 && typeof navigator.share === "function") {
+          try {
+            await navigator.share({ title: "My ID on MOR", text: text2 });
+            return;
+          } catch (err) {
+            if (err.name === "AbortError") return;
+          }
+        }
+        said2 = await copy(text2) ? share2 ? "Copied: paste it where you share it" : "Copied" : "Select it and copy it";
+        const was = b.textContent;
+        b.textContent = said2;
+        setTimeout(() => {
+          if (b.isConnected) b.textContent = was;
+        }, 1600);
+      })();
+      return;
+    }
+    if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
   });
   doc.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape") return;
     if (openMenu) return closeMenu();
-    if (panel) return closePanel();
-    popup?.close();
+    const top2 = stack[stack.length - 1];
+    if (top2) return void leave(top2);
+    for (const st of doc.querySelectorAll(".k-status")) st.innerHTML = "";
+  });
+  const closeable = (root) => {
+    for (const st of root.querySelectorAll(".k-status")) {
+      if (st.firstElementChild && !st.querySelector(":scope > [data-k-status-close], :scope > .k-close")) {
+        const b = doc.createElement("button");
+        b.type = "button";
+        b.className = "k-round k-close";
+        b.dataset.kStatusClose = "";
+        b.setAttribute("aria-label", "Close");
+        b.textContent = "\xD7";
+        st.append(b);
+      }
+    }
+  };
+  new MutationObserver(() => closeable(doc)).observe(doc.documentElement, { childList: true, subtree: true });
+}
+var attached = /* @__PURE__ */ new WeakSet();
+var LAYER_BASE = 30;
+var stack = [];
+function restack() {
+  stack.forEach((l, i) => {
+    l.shade.style.zIndex = String(LAYER_BASE + i * 2);
+    l.box.style.zIndex = String(LAYER_BASE + i * 2 + 1);
+    l.box.toggleAttribute("data-k-under", i < stack.length - 1);
   });
 }
+function pushLayer(box, shade, close) {
+  closeMenu();
+  const l = { box, shade, close, dirty: false };
+  stack.push(l);
+  shade.addEventListener("click", () => {
+    if (stack[stack.length - 1] === l) void leave(l);
+  });
+  box.addEventListener("input", (ev) => {
+    const t = ev.target;
+    if ((t.tagName === "TEXTAREA" || t.tagName === "INPUT" && !/^(checkbox|radio|file|hidden|search)$/.test(t.type)) && t.value.trim()) l.dirty = true;
+  });
+  box.addEventListener("submit", () => l.dirty = false, true);
+  box.addEventListener("click", (ev) => {
+    const t = ev.target;
+    if (t.closest("[data-k-close]")?.closest("[data-k-stack]") === box) l.close();
+    else if (t.closest("[data-k-remove-no]") && box.matches("[data-k-confirm]")) l.close();
+  });
+  box.dataset.kStack = "";
+  restack();
+  return l;
+}
+function popLayer(box) {
+  const i = stack.findIndex((l) => l.box === box);
+  if (i < 0) return;
+  const above = stack.splice(i);
+  for (const l of above.slice(1).reverse()) l.close();
+  restack();
+}
+async function leave(l) {
+  if (l.dirty && !await askLeave(l.box.closest(".k-page") ?? document.body)) return;
+  l.close();
+}
+function askLeave(page) {
+  return new Promise((done) => {
+    const c = openConfirm(page, '<div class="k-box" data-k-leave><h4>Close it?</h4><p class="k-small k-soft">What you typed there is not kept.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-leave-yes>Close it</button><button type="button" class="k-btn k-q" data-k-leave-no>Keep writing</button></div></div>', () => done(false));
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-leave-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-leave-no]")) c.close();
+    });
+  });
+}
+function openConfirm(page, html, gone) {
+  const shade = document.createElement("div");
+  shade.className = "k-shade k-light";
+  const box = document.createElement("div");
+  box.className = "k-modal k-confirm";
+  box.setAttribute("role", "alertdialog");
+  box.setAttribute("aria-modal", "true");
+  box.dataset.kConfirm = "";
+  box.innerHTML = `<div class="k-mh"><span class="k-grow"></span><button type="button" class="k-round" data-k-close aria-label="Close">\xD7</button></div><div class="k-mbody">${html}</div>`;
+  page.append(shade, box);
+  let answered = false;
+  const close = (a = false) => {
+    answered ||= a;
+    if (!box.isConnected) return;
+    box.remove();
+    shade.remove();
+    popLayer(box);
+    if (!answered) gone?.();
+  };
+  pushLayer(box, shade, () => close());
+  box.querySelector(".k-mbody button")?.focus({ preventScroll: true });
+  return { box, close };
+}
 var panel = null;
+function openPanel(page, html, done) {
+  closePanel();
+  const shade = document.createElement("div");
+  shade.className = "k-shade k-light";
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const el = holder.firstElementChild;
+  page.append(shade, el);
+  panel = { el, shade, done };
+  pushLayer(el, shade, () => closePanel());
+  const find = el.querySelector("[data-k-find]");
+  find?.addEventListener("input", () => {
+    const q = find.value.trim().toLowerCase();
+    el.querySelectorAll("[data-k-contact]").forEach((r) => r.hidden = !!q && !r.dataset.kName.includes(q));
+  });
+  return el;
+}
+function redrawPanel(html) {
+  if (!panel) return null;
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const el = holder.firstElementChild;
+  panel.el.replaceChildren(...el.childNodes);
+  for (const a of [...el.attributes]) if (a.name !== "style") panel.el.setAttribute(a.name, a.value);
+  return panel.el;
+}
 function closePanel() {
   if (!panel) return;
   closeMenu();
-  panel.el.remove();
-  panel.shade.remove();
-  panel.done?.();
+  const p = panel;
   panel = null;
+  popLayer(p.el);
+  p.el.remove();
+  p.shade.remove();
+  p.done?.();
 }
+var panelOpen = () => panel?.el ?? null;
 var Popup = class {
   constructor(page, drawn = () => void 0) {
     this.page = page;
@@ -9907,7 +10780,6 @@ var Popup = class {
       this.scroll = [...this.page.querySelectorAll(".k-feed")].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement("div");
       this.shade.className = "k-shade";
-      this.shade.addEventListener("click", () => this.close());
       this.box = document.createElement("div");
       this.box.className = "k-modal";
       this.box.setAttribute("role", "dialog");
@@ -9919,6 +10791,7 @@ var Popup = class {
       });
       this.page.append(this.shade, this.box);
       popup = this;
+      pushLayer(this.box, this.shade, () => this.close());
     }
     this.stack.push({ title, html });
     return this.draw();
@@ -9936,6 +10809,7 @@ var Popup = class {
   }
   close() {
     closeMenu();
+    if (this.box) popLayer(this.box);
     this.box?.remove();
     this.shade?.remove();
     this.box = this.shade = null;
@@ -9944,9 +10818,9 @@ var Popup = class {
     if (popup === this) popup = null;
   }
   draw() {
-    const now = this.stack[this.stack.length - 1];
+    const now2 = this.stack[this.stack.length - 1];
     const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
-    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now.html}</div>`;
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now2.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now2.html}</div>`;
     const body = this.box.querySelector(".k-mbody");
     this.drawn(body);
     return body;
@@ -9965,7 +10839,7 @@ function stampCards(root, words2) {
     s.className = "k-when";
     s.textContent = w;
     a.prepend(s);
-    a.querySelector(".k-hint")?.remove();
+    a.querySelectorAll(".k-hint, .k-unstamped").forEach((h) => h.remove());
   }
 }
 function attachColumn(root, chose) {
@@ -9982,6 +10856,273 @@ function attachColumn(root, chose) {
     if (t.closest('[data-k-back="column"]') && opened2) opened2.classList.remove("k-chosen");
   });
 }
+function ask(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<div class="k-box" data-k-ask><h4>${escapeText(o.title)}</h4><p class="k-small k-soft">${escapeText(o.text)}</p><div class="k-row"><button type="button" class="k-btn ${o.alarm ? "k-alarm" : "k-p"}" data-k-ask-yes>${escapeText(o.yes)}</button><button type="button" class="k-btn k-q" data-k-ask-no>${escapeText(o.no ?? "Not now")}</button></div></div>`,
+      () => done(false)
+    );
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-ask-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-ask-no]")) c.close();
+    });
+  });
+}
+function askNick(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<form class="k-box" data-k-nick-form><h4>${escapeText(o.title)}</h4><label>A nickname (optional): only you see it, sealed to you</label><input name="nick" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" value="${escapeText(o.current ?? "")}"><div class="k-row"><button type="submit" class="k-btn k-p">${escapeText(o.yes ?? "Save")}</button><button type="button" class="k-btn k-q" data-k-nick-skip>${escapeText(o.skip ?? "Skip")}</button></div></form>`,
+      () => done(void 0)
+    );
+    const f = c.box.querySelector("form");
+    f.querySelector("input").focus();
+    f.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const v = f.elements.namedItem("nick").value.trim();
+      c.close(true);
+      done(v || null);
+    });
+    c.box.querySelector("[data-k-nick-skip]").addEventListener("click", () => {
+      c.close(true);
+      done(o.current ? o.current ?? null : null);
+    });
+  });
+}
+
+// ../kit/src/ids.ts
+function idForm2(hex2, label = "mid") {
+  if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
+  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8 | b) & 65535;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
+  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
+}
+function who(o) {
+  const form2 = o.form ?? idForm2(o.id, "mid");
+  return `<span class="k-who${o.inline ? " k-inline" : ""}" data-k-who="${e(o.id)}"${o.named ? ' data-k-named=""' : ""}><span class="k-names">${namesHtml(o.named ?? null)}${o.me ? '<span class="k-you">you</span>' : ""}${o.collective ? '<span class="k-tagc">collective</span>' : ""}</span>${idButton(form2, { person: o.id })}</span>`;
+}
+function idButton(form2, o = {}) {
+  return `<button type="button" class="k-idbtn" data-k-idform="${e(form2)}"${o.person ? ` data-k-person="${e(o.person)}"` : ""}${o.act ? ` data-k-act-id="${e(o.act)}"` : ""}${o.expand ? ' data-k-expand=""' : ""} title="Tap to show it whole">${e(shortForm(form2))}</button>`;
+}
+var actId2 = (id, o = {}) => idButton(idForm2(id, "mact"), { act: id, expand: o.expand });
+function hashButton(hex2) {
+  return `<button type="button" class="k-idbtn k-hash" data-k-idform="${e(hex2)}" data-k-short="${e(`${hex2.slice(0, 8)}\u2026${hex2.slice(-4)}`)}" title="Tap to show it whole">${e(`${hex2.slice(0, 8)}\u2026${hex2.slice(-4)}`)}</button>`;
+}
+var hosts = /* @__PURE__ */ new WeakMap();
+function attachIds(root, host) {
+  hosts.set(root, host);
+  root.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    const retry = t.closest("[data-k-name-retry]");
+    if (retry) {
+      ev.stopPropagation();
+      const w = retry.closest("[data-k-who]");
+      if (w) await fillNames(root, [w], true);
+      return;
+    }
+    const prof = t.closest("[data-k-open-profile]");
+    if (prof) {
+      ev.stopPropagation();
+      return host.profile?.(prof.dataset.kOpenProfile);
+    }
+    const b = t.closest(".k-idbtn");
+    if (!b || !root.contains(b)) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    closeMenu();
+    if (b.dataset.kExpand !== void 0 && b.dataset.kActId && host.act) return host.act(b.dataset.kActId, b);
+    const form2 = b.dataset.kIdform;
+    if (!b.classList.contains("k-whole")) {
+      b.classList.add("k-whole");
+      b.textContent = form2;
+      b.title = "Tap again to copy it";
+      if (b.dataset.kPerson && host.profile && !b.nextElementSibling?.matches("[data-k-open-profile]")) b.insertAdjacentHTML("afterend", `<button type="button" class="k-btn k-q k-small" data-k-open-profile="${e(b.dataset.kPerson)}">Open profile</button>`);
+      return;
+    }
+    const ok = await copy(form2);
+    b.textContent = ok ? "Copied" : "Select it: copying refused";
+    b.dataset.kCopied = ok ? "yes" : "no";
+    setTimeout(() => {
+      if (b.isConnected) b.textContent = form2;
+    }, 1200);
+  });
+  let queued = false;
+  const ask3 = () => {
+    if (queued) return;
+    queued = true;
+    queueMicrotask(async () => {
+      queued = false;
+      const ws = [...root.querySelectorAll("[data-k-who]:not([data-k-named])")];
+      if (ws.length) await fillNames(root, ws, false);
+    });
+  };
+  new MutationObserver(ask3).observe(root, { childList: true, subtree: true });
+  ask3();
+}
+async function fillNames(root, ws, fresh) {
+  const host = hosts.get(root);
+  for (const w of ws) w.dataset.kNamed = "";
+  if (!host?.names) {
+    for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "unreached" } }, { retry: false });
+    return;
+  }
+  if (fresh) for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "loading" } });
+  const ids = [...new Set(ws.map((w) => w.dataset.kWho))];
+  let got = {};
+  try {
+    got = await host.names(ids, fresh);
+  } catch {
+  }
+  for (const w of ws) {
+    if (!w.isConnected) continue;
+    const box = w.querySelector(".k-names");
+    const extra = [...box.querySelectorAll(".k-you, .k-tagc")].map((x) => x.outerHTML).join("");
+    box.innerHTML = namesHtml(got[w.dataset.kWho] ?? { published: { state: "unreached" } }) + extra;
+  }
+}
+var contactsButtonFor = (field) => `<button type="button" class="k-btn k-q k-small k-pick" data-k-pick-for="${e(field)}" aria-haspopup="dialog">Contacts</button>`;
+function attachContactsButtons(root, contacts, picked) {
+  root.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("[data-k-pick-for]");
+    if (!b) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const scope = b.closest("form") ?? root;
+    const key = b.dataset.kPickFor;
+    const field = scope.querySelector(`[name="${CSS.escape(key)}"], #${CSS.escape(key)}`);
+    if (!field) return;
+    const list3 = await contacts();
+    const byForm = new Map(list3.map((c) => [c.form ?? idForm2(c.id, "mid"), c]));
+    const row = (c) => {
+      const form2 = c.form ?? idForm2(c.id, "mid");
+      const words2 = [c.named.nick ?? "", c.named.published?.state === "name" ? c.named.published.name : "", form2].join(" ").toLowerCase();
+      return `<button type="button" role="option" data-k-picked="${e(form2)}" data-k-words="${e(words2)}"><span class="k-names">${namesHtml(c.named, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><span class="k-k">${e(shortForm(form2))}</span></button>`;
+    };
+    const pop = popAt(
+      b,
+      `<div class="k-pop k-picker" role="listbox" data-k-picker><div class="k-t">Contacts</div><input type="search" data-k-pick-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${list3.map(row).join("") || '<p class="k-small k-soft">No contacts yet: add one by its ID in Contacts, top left.</p>'}</div>`,
+      "below",
+      () => void 0
+    );
+    const find = pop.querySelector("[data-k-pick-find]");
+    find.focus({ preventScroll: true });
+    find.addEventListener("input", () => {
+      const q = find.value.trim().toLowerCase();
+      pop.querySelectorAll("[data-k-picked]").forEach((x) => x.hidden = !!q && !x.dataset.kWords.includes(q));
+    });
+    pop.addEventListener("click", (e22) => {
+      const p = e22.target.closest("[data-k-picked]");
+      if (!p) return;
+      e22.stopPropagation();
+      const form2 = p.dataset.kPicked;
+      if (picked?.(field, byForm.get(form2))) {
+        closeMenu();
+        return;
+      }
+      if (field.tagName === "TEXTAREA" || field.dataset.kSeveral !== void 0) {
+        const have = field.value.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean);
+        if (!have.includes(form2)) field.value = [...have, form2].join("\n");
+      } else field.value = form2;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+      closeMenu();
+      field.focus({ preventScroll: true });
+    });
+  });
+}
+function attachContacts(page, host) {
+  let list3 = [];
+  let problem = null;
+  const below = () => `<form data-k-contact-add class="k-contact-add"><div class="k-row"><input name="contact-id" data-k-id-field autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1\u2026, or an ID link)" required aria-label="Add by ID"></div><input name="contact-nick" autocomplete="off" placeholder="Your nickname for it (only you see it)" aria-label="Your nickname for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : '<p class="k-small k-soft">Sealed to you at your homes: every app holding this identity reads the same list. Your nicknames are seen by you alone.</p>'}`;
+  const html = () => host.readOnly ? contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), below: `${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : ""}<p class="k-small k-soft">${e(host.readOnly)}</p>` }) : contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: "Remove", below: below() });
+  const refresh = async (fresh = false) => {
+    try {
+      const r = await host.ask("contacts", fresh ? { fresh: true } : {});
+      list3 = r.contacts;
+      problem = r.problem;
+    } catch (err) {
+      problem = err instanceof Error ? err.message : String(err);
+    }
+  };
+  const open = async () => {
+    await refresh(true);
+    if (panelOpen()?.dataset.kPanel === "contacts") redrawPanel(html());
+    else openPanel(page, html());
+  };
+  const changed = async (op, a, done) => {
+    try {
+      const r = await host.ask(op, a);
+      host.said("done", `<strong>${e(done)}</strong>${r.lines?.length ? ` ${r.lines.map((l) => e(l.text)).join(" ")}` : ""}`);
+      await open();
+    } catch (err) {
+      host.said("error", e(err instanceof Error ? err.message : String(err)));
+    }
+  };
+  page.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (t.closest('[data-k-open="contacts"]')) return void open();
+    const panel2 = t.closest('[data-k-panel="contacts"]');
+    if (!panel2) return;
+    const opened2 = t.closest("[data-k-contact-open]");
+    if (opened2 && host.profile) return host.profile(opened2.dataset.kContactOpen);
+    const nickB = t.closest("[data-k-nick]");
+    if (nickB) {
+      const c = list3.find((x) => x.id === nickB.dataset.kNick);
+      const nick = await askNick(page, { title: `Nickname for ${c?.named.published?.state === "name" ? c.named.published.name : shortForm(c?.form ?? "")}`, current: c?.name ?? null, yes: "Save", skip: "Keep it as it is" });
+      if (nick === void 0 || nick === (c?.name ?? null)) return;
+      return changed("contact nick", { id: nickB.dataset.kNick, nick: nick ?? "" }, nick ? "Nickname saved." : "Nickname taken away.");
+    }
+    const rm = t.closest("[data-k-contact-do]");
+    if (rm) {
+      const c = list3.find((x) => x.id === rm.dataset.kContactDo);
+      if (!await ask(page, { title: `Remove ${c?.name ?? shortForm(c?.form ?? "")} from your contacts?`, text: "Taken out of the one list, in every app holding this identity. Nobody is told.", yes: "Remove", no: "Keep it" })) return;
+      return changed("contact remove", { id: rm.dataset.kContactDo }, "Removed from your contacts.");
+    }
+  });
+  page.addEventListener("submit", (ev) => {
+    const f = ev.target.closest("form[data-k-contact-add]");
+    if (!f) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const d = new FormData(f);
+    void changed("contact add", { id: String(d.get("contact-id") ?? "").trim(), nick: String(d.get("contact-nick") ?? "").trim() }, "Added to your contacts.");
+  });
+  attachContactsButtons(page, async () => {
+    if (!list3.length) await refresh();
+    return list3.map((c) => ({ id: c.id, form: c.form, named: c.named }));
+  });
+  return { open, list: () => list3, refresh: () => refresh(true) };
+}
 
 // ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
@@ -9989,19 +11130,20 @@ var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><stro
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
-var STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{font:300 15px/1.55 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 main{max-width:600px;margin:0 auto;padding:0 16px 64px}
 a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
 h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
 h2{font-size:17px;margin:28px 0 10px}
 h3{font-size:15px;margin:0 0 6px}
 p{margin:8px 0}
-code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+code,.mono{font:13px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .small{font-size:13px;color:var(--soft)}
 button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
 button:hover{border-color:var(--faint)}
@@ -10028,7 +11170,7 @@ label.check input{width:auto}
 .count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
 .count:empty{display:none}
 .me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.fp{font:12px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
 .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
 .who .name{color:var(--text);font-weight:400}
 .who .dn{color:var(--soft)}
@@ -10076,7 +11218,7 @@ details[open]>summary::before{content:"\u2212 "}
 .people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
 .people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
 .people ul{margin:0;padding:0}
-.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .words span{white-space:nowrap}
 .words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
 .say{padding-left:1.1em;color:var(--soft);font-size:14px}
@@ -10085,7 +11227,7 @@ details[open]>summary::before{content:"\u2212 "}
 .typed{display:flex;flex-wrap:wrap;gap:10px}
 .typed label{margin:0}
 .typed input{width:10em}
-.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+.id{font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
 dl.facts dt{color:var(--faint)}
 dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
@@ -10121,14 +11263,14 @@ details>summary::before{color:var(--tint)}
 // ../dub/src/page/view.ts
 var TEST_ONLY2 = "Test identities only, until MOR is frozen";
 var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
-var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>Two risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
 <li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
 var PAGE_STYLE2 = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .dub-banner strong{font-weight:400;color:var(--k-text)}
 .dub-banner ol{margin:4px 0;padding-left:1.4em}
 .dub-center{max-width:820px;margin:0 auto;width:100%}
@@ -10151,9 +11293,18 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
 .dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
 .dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-notes .dub-thread{overflow:auto}
+.dub-pad{padding:10px 14px}
+.dub-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.dub-note-latest{border:1px solid var(--k-line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.dub-note-draft{border-top:1px solid var(--k-line);padding:8px 0}
+.dub-note-form textarea{width:100%;min-height:220px}
 .dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .dub-thread .dub-head h2{font-size:20px}
 .dub-cc{font-size:12.5px;color:var(--k-soft)}
+#ccs{display:contents}
+#ccs .k-chip{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ccs .k-chip .k-x{margin-left:4px;flex:none}
 .dub-field{display:flex;gap:8px;align-items:center}
 .dub-field input{flex:1}
 .dub-modal-form textarea{min-height:5em}
@@ -10162,7 +11313,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
 .dub-ways input{margin-top:4px}
 .dub-ways .k-small{display:block}
-.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-hand{width:100%;min-height:6em;font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
 @media (max-width:600px){
   .dub-banner{padding:5px 10px}
@@ -10178,7 +11329,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
 function actFormOf(hex2, label = "mact") {
   if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
-  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -10205,12 +11356,12 @@ function actFormOf(hex2, label = "mact") {
   const hrp = [...label].map((c) => c.charCodeAt(0));
   const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
 }
 
 // src/page/panel.ts
 var PANEL_STYLE = `
-body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
 .k-rp{padding:14px 18px 10px}
 .k-rp h3{font-weight:300;font-size:19px;margin:0 0 2px}
 .k-rp p{margin:4px 0}
@@ -10218,13 +11369,17 @@ body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15p
 .k-rp-check{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--k-text);margin:8px 0}
 .k-rp .k-btn{border-radius:999px;padding:8px 16px;font:inherit;cursor:pointer;border:1px solid var(--k-edge);background:none;color:var(--k-text)}
 .k-rp .k-btn.k-p{background:var(--k-p);color:#0a0c10;border-color:var(--k-p)}
-.k-rp .k-btn.k-q{border-color:transparent;color:var(--k-soft)}`;
+.k-rp .k-btn.k-q{border-color:transparent;color:var(--k-soft)}
+.k-rp .k-tap{cursor:pointer;font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);border-bottom:1px dotted var(--k-edge)}
+.k-rp .k-tap .k-whole{display:none}
+.k-rp .k-tap:focus .k-short{display:none}
+.k-rp .k-tap:focus .k-whole{display:inline;overflow-wrap:anywhere;user-select:all}`;
 
 // src/page/view.ts
-var NAME = "Ki\u0161ib";
+var NAME2 = "Ki\u0161ib";
 var TEST_ONLY3 = "Test identities only, until MOR is frozen";
 var TINT3 = { layer: APPS.kishib.colour, pastel: APPS.kishib.pastel };
-var WEB_BANNER3 = `<details class="k-say kishib-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+var WEB_BANNER3 = `<details class="k-say kishib-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>The words you type here are your chain key: whoever serves this page\u2019s code at that moment could copy them, and with them change your identity\u2019s keys, or keep a collective\u2019s whole key.</li>
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
@@ -10233,13 +11388,13 @@ var STYLE2 = `${KIT_STYLE}
 ${PANEL_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.kishib-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.kishib-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .kishib-banner strong{font-weight:400;color:var(--k-text)}
 .kishib-banner ol{margin:4px 0;padding-left:1.4em}
 .k-home.kishib-three>.k-tile:last-child{grid-column:1 / -1}
 .kishib-foot{flex:none;padding:0 28px 10px}
 .kishib-holds{display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;padding:4px 6px 4px 14px;border:1px solid var(--k-line);border-radius:999px;font-size:14px}
-.kishib-holds .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.kishib-holds .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .kishib-door{flex:1;display:grid;place-items:center;padding:20px}
 .kishib-door .k-box{max-width:560px;width:100%;padding:28px 32px;border-radius:22px;background:var(--k-raise);border-color:var(--k-line)}
 .kishib-door .k-ic{width:44px;height:44px;color:var(--k-p)}
@@ -10258,8 +11413,8 @@ li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
 .kishib-must{border:1px solid var(--k-bad);border-radius:14px;padding:12px 16px;margin:10px 0}
 .kishib-signs{border:1px solid var(--k-edge);border-radius:12px;padding:8px 14px;margin:10px 0;font-size:14px}
-.kishib-fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);letter-spacing:.04em}
-.kishib-full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere}
+.kishib-fpr{font:15px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);letter-spacing:.04em}
+.kishib-full{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere}
 .kishib-typed{display:flex;gap:12px;flex-wrap:wrap}
 .kishib-typed label{flex:1;min-width:120px}
 .kishib-seg{display:inline-flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
@@ -10281,7 +11436,41 @@ li.warn{color:var(--k-soft)}
   .k-top .k-tabs{display:none}
   .kishib-door .k-box{padding:20px}
 }`;
-var lines = (ls) => `<ul class="kishib-lines">${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function hexOfForm(form2) {
+  const one = form2.lastIndexOf("1");
+  let acc = 0;
+  let bits = 0;
+  const out = [];
+  for (const c of form2.slice(one + 1, -6)) {
+    const v = CHARSET.indexOf(c);
+    if (v < 0) return null;
+    acc = (acc << 5 | v) & 4095;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      out.push(acc >> bits & 255);
+    }
+  }
+  const hex2 = out.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return out.length === 32 && idForm2(hex2, form2.slice(0, one)) === form2 ? hex2 : null;
+}
+var ID_IN_TEXT = /\bm(?:id|act)1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}\b|\b[0-9a-f]{64}\b/g;
+function said(text2) {
+  return e(text2).replace(ID_IN_TEXT, (x) => {
+    if (x.startsWith("mid1")) {
+      const id = hexOfForm(x);
+      return id ? who({ id, form: x, inline: true }) : x;
+    }
+    if (x.startsWith("mact1")) {
+      const id = hexOfForm(x);
+      return id ? actId2(id) : x;
+    }
+    return hashButton(x);
+  });
+}
+var idFormOf = (id) => idForm2(id, "mid");
+var lines = (ls) => `<ul class="kishib-lines">${ls.map((l) => `<li class="${e(l.tone ?? "")}">${said(l.text)}</li>`).join("")}</ul>`;
 var TILES = [
   { key: "identities", name: "Identities", say: "Make an identity. Read any identity\u2019s record. Confirm a succession.", icon: "identities", danger: 1 },
   { key: "runner", name: "Runner", say: "Off. In this program only, never on the web: when on, Ki\u0161ib signs for the apps you approve, from keys it keeps, encrypted.", icon: "runner", danger: 2 },
@@ -10292,21 +11481,24 @@ var tilesFor = (web) => TILES.filter((t) => !web || t.key !== "runner");
 function holds(web, r) {
   if (!web && r?.state === "locked") return `<button type="button" class="kishib-holds" data-action="holds" title="Ki\u0161ib\u2019s runner is locked: give its passphrase"><span class="k-n">Runner locked</span><span class="k-s">passphrase</span><span class="k-dot k-alt">\u2013</span></button>`;
   if (web || !r?.on) return `<button type="button" class="kishib-holds" data-action="holds" title="What Ki\u0161ib holds"><span class="k-n">Holds nothing</span><span class="k-s">${web ? "web" : "runner off"}</span><span class="k-dot k-alt">\u2013</span></button>`;
-  const names = r.held.map((h) => h.name ?? shortForm(h.form));
-  const shown = names.length ? names.length <= 2 ? names.join(", ") : `${names.length} identities` : "nothing yet";
+  const names = r.held.map((h) => h.name);
+  const shown = names.length ? names.length <= 2 && names.every(Boolean) ? names.join(", ") : `${names.length} ${names.length === 1 ? "identity" : "identities"}` : "nothing yet";
   return `<button type="button" class="kishib-holds" data-action="holds" title="What Ki\u0161ib\u2019s runner holds"><span class="k-n">Holds ${e(shown)}</span><span class="k-s">runner on</span><span class="k-dot">${e(String(names.length))}</span></button>`;
 }
 function topBar(web, tab, r) {
   const tabs = tab ? `<nav class="k-tabs" aria-label="Ki\u0161ib">${tilesFor(web).map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}</button>`).join("")}</nav>` : "";
-  return top({ left: `<button type="button" class="k-btn k-q kishib-home-btn" data-action="home-tiles" title="The four tiles">${appMark(NAME, "icon.png")}</button>${tabs}`, right: holds(web, r) });
+  return top({ left: `${contactsButton()}<button type="button" class="k-btn k-q kishib-home-btn" data-action="home-tiles" title="The four tiles">${appMark(NAME2, "icon.png")}</button>${tabs}`, right: holds(web, r) });
 }
 function home(web, r) {
   const ts = tilesFor(web).map(
-    (t) => t.key === "runner" && r?.on ? { ...t, say: `On: ${r.held.length} ${r.held.length === 1 ? "identity" : "identities"} held, ${r.apps.filter((a) => a.state === "approved").length} ${r.apps.filter((a) => a.state === "approved").length === 1 ? "app" : "apps"} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ""}. Ki\u0161ib signs for the apps you approve.` } : t.key === "runner" && r?.state === "locked" ? { ...t, say: "Locked: what it keeps is encrypted on this Mac. Give its passphrase, and it signs again for the apps you approved." } : t
+    (t) => (
+      // H111: the Runner tile shows the menu bar's seal as the runner's state shows it there: filled while on, a padlock while locked, hollow while off.
+      t.key === "runner" && r?.on ? { ...t, icon: "runnerOn", say: `On: ${r.held.length} ${r.held.length === 1 ? "identity" : "identities"} held, ${r.apps.filter((a) => a.state === "approved").length} ${r.apps.filter((a) => a.state === "approved").length === 1 ? "app" : "apps"} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ""}. Ki\u0161ib signs for the apps you approve.` } : t.key === "runner" && r?.state === "locked" ? { ...t, icon: "runnerLocked", say: "Locked: what it keeps is encrypted on this Mac. Give its passphrase, and it signs again for the apps you approved." } : t
+    )
   );
   const locked = !web && r?.state === "locked" ? unlockBox(r) : "";
   return `${topBar(web, null, r)}<div class="k-body k-col-flex">${locked}${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? " kishib-three" : ""}"`)}</div>
-<div class="kishib-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Ki\u0161ib\u2019s folder, encrypted under its passphrase."])}</div>`;
+<div class="kishib-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Ki\u0161ib\u2019s folder, encrypted under its passphrase."], { mor: true })}</div>`;
 }
 function column(tab, web, r) {
   switch (tab) {
@@ -10323,6 +11515,8 @@ function column(tab, web, r) {
     case "runner":
       return [
         { key: "onoff", label: "On or off" },
+        // H89: an identity added where one works with the runner, in its own column entry.
+        { key: "add", label: "Add an identity to the runner", k: r?.on ? r.held.length : void 0 },
         { key: "apps", label: "Apps", k: r?.apps.length ?? 0 },
         { key: "waiting", label: "Waiting", k: (r?.waiting.length ?? 0) + (r?.memberAsks.length ?? 0) },
         { key: "signed", label: "Signed", k: r?.signed.length ?? 0 }
@@ -10357,7 +11551,7 @@ function door(web, tab, r) {
 <p class="k-soft">${tab === "paper" ? "Here the chain key\u2019s 24 words are typed, used for one act, and forgotten. Ki\u0161ib writes nothing of them to this device." : "Here a collective\u2019s paper shares are typed, used for one rotation, and forgotten."} Be alone with this screen.</p>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="open-door">Open ${tab === "paper" ? "Paper" : "Collectives"}</button><button type="button" class="k-btn k-q" data-action="home-tiles">Not now</button></div></div></div>`;
 }
-var idField = (name, label, required = true) => `<label>${label} (mid1\u2026, or its hexadecimal)</label><input name="${name}" type="text" autocomplete="off" spellcheck="false"${required ? " required" : ""}>`;
+var idField = (name, label, required = true) => `<label>${label} (mid1\u2026, or its hexadecimal)</label><div class="k-row"><input name="${name}" class="k-grow" type="text" autocomplete="off" spellcheck="false"${required ? " required" : ""}>${contactsButtonFor(name)}</div>`;
 var words = (name, label) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
 var address = `<label>One of its homes</label><input name="address" type="text" placeholder="https://" required>`;
 var forgotten = say2("What you type is used for this act alone, then overwritten.", ["Nothing is written to this device. Close Ki\u0161ib, and nothing of your words remains."]);
@@ -10451,14 +11645,14 @@ function part(tab, key, web, r) {
         `${idField("id", "The identity")}${address}${words("words", "Its chain key\u2019s 24 words")}${words("signingWords", "Its signing key\u2019s 24 words, the key you held before the other change")}<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`
       );
     case "collectives/give":
-      return f(
+      return `${noticesBox(web, r)}${f(
         "give",
         "Waiting for you: give your share",
-        "A member who started a rotation sent you its fingerprint (in Dub, in the proposal\u2019s thread). Ki\u0161ib reads the rotation back to you first. Your share goes sealed to a one-time key that expires within the hour.",
+        "A member who started a rotation told you in the proposal\u2019s thread (in Dub): listed above, filled in, or give the collective and its fingerprint here. Ki\u0161ib reads the rotation back to you first, checked against the collective\u2019s chain. Your share goes sealed to a one-time key that expires within the hour.",
         `${idField("collective", "The collective")}<label>The rotation\u2019s fingerprint (64 characters)</label><input name="fingerprint" type="text" autocomplete="off" spellcheck="false" required>${address}
 <div class="k-row"><button type="button" class="k-btn" data-action="read request">Read the rotation first</button></div><div id="request"></div>
 ${idField("member", "Your ID")}<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("shareWords", "Your share\u2019s 24 words")}${words("memberWords", "Your signing key\u2019s 24 words (to sign the small act that carries your share)")}`
-      );
+      )}`;
     case "collectives/start":
     case "collectives/room": {
       const room = key === "room";
@@ -10481,6 +11675,8 @@ ${idField("member", "Your ID")}<label>Your share\u2019s number</label><input nam
       );
     case "runner/onoff":
       return runnerOnOff(r);
+    case "runner/add":
+      return runnerAdd(r);
     case "runner/apps":
       return runnerApps(r);
     case "runner/waiting":
@@ -10490,6 +11686,19 @@ ${idField("member", "Your ID")}<label>Your share\u2019s number</label><input nam
     default:
       return "";
   }
+}
+function noticesBox(web, r) {
+  if (!web && r?.on && r.held.length) return `<div class="k-box" id="notices" data-auto><h3>Rotations waiting for you</h3><p class="k-small k-soft">Reading the inbox of the identities the runner holds\u2026</p></div>`;
+  return `<div class="k-box" id="notices"><h3>Rotations waiting for you</h3><p class="k-small k-soft">Ki\u0161ib holds nothing here: give your ID, one of your homes and your signing words, and it reads the rotations waiting for you in your inbox, then forgets the words.${web ? "" : " On this Mac, with the runner on and holding you, they are listed at once."}</p>
+<form id="form-notices" data-kind="notices" autocomplete="off">${idField("member", "Your ID")}${address}${words("words", "Your signing key\u2019s 24 words")}<div class="k-row"><button type="submit" class="k-btn">Find them</button><span class="k-small k-faint">reads only; nothing is signed</span></div></form><div id="notices-list"></div></div>`;
+}
+function noticesList(ns, problem) {
+  if (problem) return `<p class="k-small k-soft">${said(problem)}</p>`;
+  if (!ns.length) return '<p class="k-small k-soft">No rotation waits for you.</p>';
+  return ns.map(
+    (n) => `<div class="kishib-wait" data-notice="${e(n.fingerprint)}"><p>${who({ id: n.collective, collective: true, inline: true })} \xB7 fingerprint ${hashButton(n.fingerprint)} \xB7 your share ${n.share} \xB7 expires ${e(when2(n.expires))}</p><p class="k-small k-soft">Started by ${who({ id: n.from, inline: true })}, for ${who({ id: n.member, inline: true })}.</p>
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="notice-pick" data-collective="${e(idForm2(n.collective, "mid"))}" data-fingerprint="${e(n.fingerprint)}" data-relays="${e(n.relays.join(" "))}" data-share="${n.share}" data-member="${e(idForm2(n.member, "mid"))}">Read it, then give my share</button></div></div>`
+  ).join("");
 }
 var when2 = (s) => new Date(s * 1e3).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 function unlockBox(r) {
@@ -10524,38 +11733,47 @@ function held(r) {
     return `<h2>Held by the runner</h2><p class="k-soft">The runner is off: Ki\u0161ib holds nothing. Turned on (Runner), it keeps the signing keys of the identities you give it here, encrypted under its passphrase, and signs with them for the apps you approve.</p><div class="k-row"><button type="button" class="k-btn" data-tab="runner">Open Runner</button></div>`;
   }
   const rows = r.held.map(
-    (h) => `<div class="kishib-app" data-held="${e(h.id)}"><div class="k-row"><span class="k-dot">${e((h.name ?? "M")[0].toUpperCase())}</span><div class="k-grow"><h3>${e(h.name ?? "No name")}</h3><span class="k-mono k-soft">${e(shortForm(h.form))}</span></div><button type="button" class="k-btn k-q" data-action="held-record" data-id="${e(h.id)}">Its record</button><button type="button" class="k-btn k-q" data-action="held-remove" data-id="${e(h.id)}">Remove</button></div>
+    // H96, H106: its names as read (Loading…, the name, No name published, Name not reached), its short ID a tap; H88: its ID whole, Copy ID, Share your ID link.
+    (h) => `<div class="kishib-app" data-held="${e(h.id)}"><div class="k-row"><span class="k-dot">${e((h.name ?? "M")[0].toUpperCase())}</span><div class="k-grow"><h3>${who({ id: h.id, form: h.form })}</h3></div><button type="button" class="k-btn k-q" data-action="held-record" data-id="${e(h.id)}">Its record</button><button type="button" class="k-btn k-q" data-action="held-remove" data-id="${e(h.id)}">Remove</button></div>
+${ownId({ form: h.form, link: h.link })}
 <p class="k-small k-soft">${h.apps.length ? `Used by ${e(h.apps.join(", "))}.` : "No app uses it yet."}</p>
-${h.members.length ? `<div class="kishib-members"><p class="k-small">Its own keys for its collectives, held here with it (encrypted):</p>${h.members.map((m) => `<div class="k-row" data-member="${e(m.collective)}"><span class="k-mono k-grow">${e(shortForm(m.form))}</span><span class="k-small k-faint">added ${e(when2(m.added))}</span><button type="button" class="k-btn k-q" data-action="member-remove" data-id="${e(h.id)}" data-collective="${e(m.collective)}">Remove</button></div>`).join("")}</div>` : ""}
+${h.members.length ? `<div class="kishib-members"><p class="k-small">Its own keys for its collectives, held here with it (encrypted):</p>${h.members.map((m) => `<div class="k-row" data-member="${e(m.collective)}"><span class="k-grow">${who({ id: m.collective, form: m.form, collective: true, inline: true })}</span><span class="k-small k-faint">added ${e(when2(m.added))}</span><button type="button" class="k-btn k-q" data-action="member-remove" data-id="${e(h.id)}" data-collective="${e(m.collective)}">Remove</button></div>`).join("")}</div>` : ""}
 ${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain key: the signing key the runner holds no longer counts, and it signs nothing for it. Give the new signing key\u2019s words.<form class="kishib-renew" data-renew="${e(h.id)}"><input type="hidden" name="id" value="${e(h.id)}"><label>One of its homes</label><input name="address" placeholder="https://" required><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Take the new words</button></div></form></div>` : ""}</div>`
   ).join("");
   return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase, with their own keys for their collectives. Remove one, and Ki\u0161ib forgets its keys; the apps using it through Ki\u0161ib stop signing as it.</p>${memberAsks(r)}${rows || '<p class="k-soft">None yet.</p>'}
+<div class="k-row"><button type="button" class="k-btn" data-action="runner-add">Add an identity to the runner</button><span class="k-small k-faint">in Runner, beside its apps</span></div>`;
+}
+function runnerAdd(r) {
+  if (!r?.on) return notOn(r, "Add an identity to the runner", "The runner is off: turn it on first (On or off), knowing the risk.");
+  const list3 = r.held.length ? `<div class="k-small k-soft kishib-held-now">Held now (Identities, Held here, for each one\u2019s record and keys): ${r.held.map((h) => `<span data-held="${e(h.id)}">${who({ id: h.id, form: h.form, inline: true })}</span>`).join(", ")}</div>` : "";
+  return `<h2>Add an identity to the runner</h2><p class="k-soft k-small">Ki\u0161ib keeps its signing key on this Mac, encrypted under the runner\u2019s passphrase, and signs with it for the apps you approve (Apps). Never the chain key.</p>${list3}
 <form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key\u2019s words, as Dub shows them (its identity\u2019s menu, Words): Ki\u0161ib checks they give the key its homes serve. Never the chain key\u2019s words.</p>${idField("id", "The identity")}${address}${words("words", "Its signing key\u2019s 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on, encrypted</span></div></form>`;
 }
 function memberAsks(r) {
   return r.memberAsks.map(
-    (x) => `<div class="kishib-wait" data-member-ask="${e(x.id)}"><h3>${e(x.app)} asks Ki\u0161ib to hold ${e(x.name ?? "this identity")}\u2019s key for a collective</h3><p class="k-small k-soft">The collective ${e(shortForm(x.form))} \xB7 asked ${e(when2(x.at))}. Ki\u0161ib opens the key sealed to ${e(x.name ?? "this identity")} at its homes and keeps it here, encrypted. Acting as the collective, ${e(x.app)} then asks, and Ki\u0161ib\u2019s panel shows each act before Ki\u0161ib signs it; the key never goes to ${e(x.app)}.</p>
+    (x) => `<div class="kishib-wait" data-member-ask="${e(x.id)}"><h3>${e(x.app)} asks Ki\u0161ib to hold ${who({ id: x.identity, inline: true })}\u2019s key for a collective</h3><p class="k-small k-soft">The collective ${who({ id: x.collective, form: x.form, collective: true, inline: true })} \xB7 asked ${e(when2(x.at))}. Ki\u0161ib opens the key sealed to ${e(x.name ?? "this identity")} at its homes and keeps it here, encrypted. Acting as the collective, ${e(x.app)} then asks, and Ki\u0161ib\u2019s panel shows each act before Ki\u0161ib signs it; the key never goes to ${e(x.app)}.</p>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="member-answer" data-ask="${e(x.id)}" data-yes="1">Add it</button><button type="button" class="k-btn k-q" data-action="member-answer" data-ask="${e(x.id)}" data-yes="0">Refuse</button></div></div>`
   ).join("");
 }
 var OPEN_WORDS = "may open what is sealed to this identity";
 var openSay = (app2) => `Chosen for each identity (decided: \u201Cper identity, per app\u201D). ${app2} then reads the private messages sent to that identity, and its sealed contacts list, through Ki\u0161ib, without a panel each time (an opening signs nothing; Ki\u0161ib returns the act and the key of that one act, never the identity\u2019s keys). Each opening is listed in Signed. Revoke ${app2}, and it ends.`;
+var need = (app2, n) => n.opening ? `<p class="k-small k-soft kishib-need" data-need="opening">${e(app2)} says it needs this \u201C${e(n.opening.why)}\u201D; without it, \u201C${e(n.opening.without)}\u201D.</p>` : "";
 function runnerApps(r) {
   if (!r?.on) return notOn(r, "Apps", "The runner is off: no app is paired. Turn it on first (On or off).");
-  const name = (id) => r.held.find((h) => h.id === id)?.name ?? shortForm(r.held.find((h) => h.id === id)?.form ?? id);
+  const name = (id) => who({ id, inline: true });
   const waiting = r.apps.filter((a) => a.state === "waiting").map(
     (a) => `<div class="kishib-app" data-pairing="${e(a.id)}"><h3>${e(a.name)} asks to pair</h3><p class="k-small k-soft">From ${e(a.origin)}, on this computer. Its code: <b class="kishib-fpr">${e(a.code)}</b>: approve only if ${e(a.name)} shows the same.</p>
-<p class="k-small">The identities ${e(a.name)} may use through Ki\u0161ib, and, for each, whether ${e(a.name)} ${OPEN_WORDS}:</p>${r.held.map((h) => `<div class="k-row kishib-allow"><label class="kishib-check k-grow"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${e(h.name ?? "No name")} <span class="k-mono k-faint">${e(shortForm(h.form))}</span></label><label class="kishib-check"><input type="checkbox" name="open" value="${e(h.id)}"> ${OPEN_WORDS}</label></div>`).join("") || '<p class="k-small k-soft">Ki\u0161ib holds no identity yet: give one first (Identities, Held here).</p>'}
+<p class="k-small">The identities ${e(a.name)} may use through Ki\u0161ib, and, for each, whether ${e(a.name)} ${OPEN_WORDS}:</p>${r.held.map((h) => `<div class="k-row kishib-allow"><label class="kishib-check k-grow"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${who({ id: h.id, form: h.form, inline: true })}</label><label class="kishib-check"><input type="checkbox" name="open" value="${e(h.id)}"> ${OPEN_WORDS}</label></div>${need(a.name, a.needs)}`).join("") || '<p class="k-small k-soft">Ki\u0161ib holds no identity yet: give one first (Runner, Add an identity to the runner).</p>'}
 <p class="k-small k-faint">Opening is off unless chosen. ${e(openSay(a.name))} Without it, ${e(a.name)} sends private messages as that identity but cannot read the answers.</p>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="approve" data-pairing="${e(a.id)}">Approve</button><button type="button" class="k-btn k-q" data-action="refuse" data-pairing="${e(a.id)}">Refuse</button></div></div>`
   ).join("");
   const kinds = r.kinds;
-  const approved = r.apps.filter((a) => a.state === "approved").map(
+  const approved = r.apps.filter((a) => a.state === "approved").map((a, i) => ({ a, i })).sort((x, y) => (y.a.approved ?? 0) - (x.a.approved ?? 0) || y.i - x.i).map(({ a }) => a).map(
     (a) => `<div class="kishib-app" data-app="${e(a.id)}"><div class="k-row"><div class="k-grow"><h3>${e(a.name)}</h3><span class="k-small k-faint">${e(a.origin)} \xB7 paired ${a.approved ? e(when2(a.approved)) : ""}</span></div><button type="button" class="k-btn k-alarm" data-action="revoke" data-pairing="${e(a.id)}">Revoke</button></div>
-<p class="k-small k-soft">Signs as ${e(a.identities.map(name).join(", ") || "no identity")}.</p>
+<p class="k-small k-soft">Signs as ${a.identities.map(name).join(", ") || "no identity"}.</p>
 <div class="kishib-kinds">${kinds.filter((k) => !k.always).map((k) => `<div><span>${e(a.name)} \xB7 ${e(k.name)}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.yes.includes(k.kind) ? "" : "k-on"}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="0">Ask</button><button type="button" class="${a.yes.includes(k.kind) ? "k-on" : ""}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="1">Yes</button></span></div>`).join("")}<div><span class="k-soft">Money acts, agreements, relying on another\u2019s act, keys, and acts Ki\u0161ib cannot read</span><span class="k-r k-small k-faint">always ask</span></div>
 ${a.identities.map(
-      (id) => `<div data-open="${e(a.id)}" data-identity="${e(id)}"><span>${e(a.name)} ${OPEN_WORDS.replace("this identity", e(name(id)))}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.opens.includes(id) ? "" : "k-on"}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="0">No</button><button type="button" class="${a.opens.includes(id) ? "k-on" : ""}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="1">Yes</button></span></div>`
+      (id) => `<div data-open="${e(a.id)}" data-identity="${e(id)}"><span>${e(a.name)} ${e(OPEN_WORDS).replace("this identity", name(id))}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.opens.includes(id) ? "" : "k-on"}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="0">No</button><button type="button" class="${a.opens.includes(id) ? "k-on" : ""}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="1">Yes</button></span></div>${need(a.name, a.needs)}`
     ).join("")}</div>
 <p class="k-small k-faint">${a.opens.length ? e(openSay(a.name)) : `${e(a.name)} sends private messages as these identities but cannot read the answers.`}</p></div>`
   ).join("");
@@ -10564,7 +11782,7 @@ ${a.identities.map(
 function runnerWaiting(r) {
   if (!r?.on) return notOn(r, "Waiting", "The runner is off.");
   const ws = r.waiting.map(
-    (w) => `<div class="kishib-wait" data-request="${e(w.request)}"><h3>${e(w.title)}</h3><p class="k-small k-soft">As ${e(w.name ?? "this identity")} \xB7 asked ${e(when2(w.at))}</p><div class="kishib-review">${w.words.map((x) => `<p dir="auto">${e(x)}</p>`).join("")}</div>
+    (w) => `<div class="kishib-wait" data-request="${e(w.request)}"><h3>${e(w.title)}</h3><p class="k-small k-soft">${w.as ? said(w.as) : `As ${who({ id: w.identity, inline: true })}`} \xB7 asked ${e(when2(w.at))}</p><div class="kishib-review">${w.words.map((x) => `<p dir="auto">${said(x)}</p>`).join("")}</div>
 ${w.always ? '<p class="k-small k-faint">Money, agreements, relying on another\u2019s act, and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}\u2019s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="answer" data-yes="1" data-request="${e(w.request)}">Sign it</button><button type="button" class="k-btn k-q" data-action="answer" data-yes="0" data-request="${e(w.request)}">Decline</button></div></div>`
   ).join("");
@@ -10575,19 +11793,19 @@ function runnerSigned(r) {
   return `<h2>Signed</h2><p class="k-soft k-small">Every act the runner signed, and everything it opened for an app, newest first; kept, encrypted, until the runner is turned off.</p><div class="k-feedwrap"><div class="k-feed" id="signed">${r.signed.length ? "" : '<p class="k-empty">Nothing signed yet.</p>'}</div></div>`;
 }
 function sections(ss) {
-  return ss.map((s) => `<h3>${e(s.heading)}</h3>${lines(s.lines)}`).join("");
+  return ss.map((s) => `<h3>${said(s.heading)}</h3>${lines(s.lines)}`).join("");
 }
 function review(r, mustRead, change) {
   const blocked = r.blocking.length > 0;
   const must = mustRead ? r.sections[0] : null;
   const rest = mustRead ? r.sections.slice(1) : r.sections;
-  return `${change ? steps(1) : ""}<h2>${e(r.title)}</h2>
-${r.summary.map((s) => `<p class="k-small k-soft">${e(s)}</p>`).join("")}
-${must ? `<div class="kishib-must" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="kishib-check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
+  return `${change ? steps(1) : ""}<h2>${said(r.title)}</h2>
+${r.summary.map((s) => `<p class="k-small k-soft">${said(s)}</p>`).join("")}
+${must ? `<div class="kishib-must" id="mustread"><h3>${said(must.heading)}</h3>${lines(must.lines)}<label class="kishib-check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
 <div class="kishib-review">${sections(rest)}</div>
 ${blocked ? note("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
-${r.warning ? `<div class="k-alarmbox">${e(r.warning)}<label class="kishib-check"><input type="checkbox" id="warned"> I have read this: go on as it says</label></div>` : ""}
-<div class="kishib-signs"><span class="k-small k-faint">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
+${r.warning ? `<div class="k-alarmbox">${said(r.warning)}<label class="kishib-check"><input type="checkbox" id="warned"> I have read this: go on as it says</label></div>` : ""}
+<div class="kishib-signs"><span class="k-small k-faint">What is signed</span>${r.signs.map((s) => `<p>${said(s)}</p>`).join("")}</div>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button type="button" class="k-btn k-q" data-action="forget">Cancel, and forget the words</button></div>`;
 }
 function wordsShown(ws, say22, label, step) {
@@ -10616,21 +11834,25 @@ function sitting(s) {
     if (q.have >= q.need) acts.push(btn("rotate collective", "Rebuild, rotate and deal now", true));
   }
   const paper = s.stage === "waiting" && q?.room && q.have < q.need ? `<form id="paper"><label>The next share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("words", "Its 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Add this paper</button></div></form>` : "";
-  const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="kishib-lines">${s.shares.map((x) => `<li>Share ${x.x}, for <span class="k-mono">${e(x.holder.slice(0, 8))}\u2026${e(x.holder.slice(-4))}</span>: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
+  const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="kishib-lines">${s.shares.map((x) => `<li>Share ${x.x}, for ${who({ id: x.holder, inline: true })}: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
   const done = s.stage === "done" || s.stage === "expired";
   const step = s.kind === "identity" ? { paper: 2, sent: 3, counts: 4, shown: s.words === "signing" ? 4 : 2, done: 5 }[s.stage] : void 0;
-  return `${step !== void 0 ? steps(step) : ""}<h2>${e(s.title)}</h2>${req}<div class="kishib-review">${lines(s.lines)}</div>${paper}${shares}
+  const made = s.kind === "make" && s.id && s.link ? `<div class="kishib-review" id="made-id"><p class="k-small k-soft">Its ID, to give to whoever may write to it, or to bring it into the apps:</p>${ownId({ form: idForm2(s.id), link: s.link })}</div>` : "";
+  return `${step !== void 0 ? steps(step) : ""}<h2>${said(s.title)}</h2>${req}<div class="kishib-review">${lines(s.lines)}</div>${made}${paper}${shares}
 <div class="k-row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("forget", "Done", true) : ""}</div>${answer}`;
 }
 var tabOf = (s) => s.kind === "make" || s.kind === "confirm" ? "identities" : s.kind === "collective" ? "collectives" : "paper";
 function pairing() {
-  return `${top({ left: appMark(NAME, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box"><h2>Pair this browser</h2>
+  return `${top({ left: appMark(NAME2, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box"><h2>Pair this browser</h2>
 <p class="k-small k-soft">This page acts for the Ki\u0161ib program running on this machine. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="k-row"><input id="pair-code" class="k-grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
 <button type="submit" class="k-btn k-p">Pair</button></form><div id="pair-status"></div></div></div>`;
 }
 function alone(html) {
-  return `${top({ left: appMark(NAME, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box">${html}</div></div>`;
+  return `${top({ left: appMark(NAME2, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box">${html}</div></div>`;
+}
+function quitDone(off) {
+  return `<div class="k-body"><div class="k-box" id="quit-done"><h2>Ki\u0161ib has quit</h2><p class="k-soft">Its program has ended${off ? "" : ", and the runner is locked"}. Open Ki\u0161ib again from your Applications (or its seal in the menu bar).</p></div></div>`;
 }
 
 // src/page/ui.ts
@@ -10652,7 +11874,7 @@ function mount(app2, b) {
       return;
     }
     const s = $("status") ?? $("result");
-    const html = note("error", e(errorOf(err)));
+    const html = note("error", said(errorOf(err)));
     if (s) {
       s.innerHTML = html;
       s.scrollIntoView({ block: "nearest" });
@@ -10661,6 +11883,11 @@ function mount(app2, b) {
   const done = (html) => {
     const s = $("status");
     if (s) s.innerHTML = note("done", html);
+  };
+  const tell = (kind, html) => {
+    const s = $("status");
+    if (s) s.innerHTML = note(kind, html);
+    else app2.insertAdjacentHTML("beforeend", `<div id="status" class="k-status">${note(kind, html)}</div>`);
   };
   async function act(f) {
     const was = [...app2.querySelectorAll("button")].map((x) => [x, x.disabled]);
@@ -10686,6 +11913,13 @@ function mount(app2, b) {
     }
     app2.innerHTML = tabPage(b.web, tab, part2, pane ?? part(tab, part2 ?? "", b.web, r), r);
     if (tab === "runner" && part2 === "signed") drawSigned();
+    void notices();
+  }
+  async function notices() {
+    const box = app2.querySelector("#notices[data-auto]");
+    if (!box) return;
+    const r = await b.ask("collective notices", {}).catch((err) => ({ notices: [], problem: errorOf(err) }));
+    if (box.isConnected) box.innerHTML = `<h3>Rotations waiting for you</h3>${noticesList(r.notices, r.problem)}`;
   }
   async function show(s) {
     state = s;
@@ -10713,6 +11947,7 @@ function mount(app2, b) {
     draw();
   }
   const drawn = /* @__PURE__ */ new Map();
+  const label = (text2) => ({ text: text2, html: said(text2) });
   function drawSigned() {
     const box = $("signed");
     if (!box || !runner) return;
@@ -10726,8 +11961,9 @@ function mount(app2, b) {
         form: actFormOf(s.act),
         signer: { id: s.identity, form: form2, link: form2, name: s.name, me: true },
         kind: s.opened ? `${s.app} \xB7 opened \xB7 ${kind}` : `${s.app} \xB7 ${kind}`,
-        text: s.words.join(" "),
-        labels: [{ text: s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.lane ? "signed without asking: a lane\u2019s record, to the identity itself" : s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.as ? `as the collective ${shortForm(actFormOf(s.as, "mid"))}, with its member key` : s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}` }],
+        // H121: the IDs in its words, each a tap showing it whole.
+        html: `<div class="k-txt" dir="auto">${s.words.map(said).join(" ")}</div>`,
+        labels: [label(s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.lane ? "signed without asking: a lane\u2019s record, to the identity itself" : s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.as ? `as the collective ${actFormOf(s.as, "mid")}, with its member key` : s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}`)],
         verified: false
       };
       drawn.set(a.id, { act: a, s });
@@ -10746,25 +11982,30 @@ function mount(app2, b) {
     async choose(key, a) {
       const s = drawn.get(a.id)?.s;
       if (!s) return;
-      if (key === "profile") {
-        tab = "identities";
-        part2 = "record";
-        draw();
-        const f = app2.querySelector("#form-record");
-        if (f) f.elements.namedItem("id").value = a.signer.form;
-        return;
-      }
+      if (key === "profile") return openRecord(a.signer.form);
       if (key === "why" && s.opened) {
-        popup2.show("An opening", `${lines([{ text: `Ki\u0161ib opened, for ${s.app}, what was sealed to this identity: ${s.times === 1 ? "once" : `${s.times} times`}. An opening signs nothing; ${s.app} reads the act inside, not the identity\u2019s key.` }])}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${e(w)}</p>`).join("")}</div>`);
+        popup2.show("An opening", `${lines([{ text: `Ki\u0161ib opened, for ${s.app}, what was sealed to this identity: ${s.times === 1 ? "once" : `${s.times} times`}. An opening signs nothing; ${s.app} reads the act inside, not the identity\u2019s key.` }])}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${said(w)}</p>`).join("")}</div>`);
         return;
       }
       if (key === "why") {
         const body = popup2.show("Why it\u2019s valid", `<p class="k-small k-soft">Reading its standing at its homes\u2026</p>`);
         const r = await b.ask("runner standing", { act: s.act, identity: s.identity }).catch((e3) => ({ lines: [{ text: errorOf(e3), tone: "warn" }] }));
-        if (body.isConnected) popup2.replace(`${lines(r.lines)}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${e(w)}</p>`).join("")}</div>`);
+        if (body.isConnected) popup2.replace(`${lines(r.lines)}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${said(w)}</p>`).join("")}</div>`);
       }
     }
   });
+  function openRecord(form2) {
+    tab = "identities";
+    part2 = "record";
+    draw();
+    const f = app2.querySelector("#form-record");
+    if (f) f.elements.namedItem("id").value = form2;
+  }
+  attachIds(app2, {
+    names: (ids, fresh) => b.ask("names", { ids, fresh: !!fresh }),
+    profile: (id) => openRecord(idFormOf(id))
+  });
+  attachContacts(app2, { app: "Ki\u0161ib", ask: (op, a) => b.ask(op, a), profile: (id) => openRecord(idFormOf(id)), said: tell, readOnly: "Shown here, changed in Dub, Damgar, Edubba or Ummia: changing them signs an act, and Ki\u0161ib signs only for the apps paired with it." });
   attachColumn(app2, async (key) => {
     part2 = key;
     const runnerTab = tab === "runner";
@@ -10776,6 +12017,7 @@ function mount(app2, b) {
     const st = $("status");
     if (st) st.innerHTML = "";
     if (tab === "runner" && key === "signed") drawSigned();
+    void notices();
   });
   const values = (form2) => {
     const out = {};
@@ -10839,6 +12081,13 @@ function mount(app2, b) {
       return done("The new signing key\u2019s words are taken: the runner signs for this identity again, with its new key.");
     }
     await withFiles(form2, a);
+    if (id === "form-notices") {
+      const r = await act(() => b.ask("collective notices", { member: a.member, address: a.address, words: a.words }));
+      clear(form2);
+      const list3 = $("notices-list");
+      if (r && list3) list3.innerHTML = noticesList(r.notices, r.problem);
+      return;
+    }
     if (id === "nakisib-answer" || id === "nakisib-late") {
       const s = await act(() => b.ask("nakisib answer", a));
       if (s) await show({ ...s, runner: runner ?? void 0 });
@@ -10851,7 +12100,7 @@ function mount(app2, b) {
         const r = await act(() => b.ask(kind === "check" ? "check words" : "record", a));
         if (!r) return;
         clear(form2);
-        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${e(r.title)}</h3>${r.lines ? lines(r.lines) : sections(r.sections ?? [])}</div>`;
+        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${said(r.title)}</h3>${r.lines ? lines(r.lines) : sections(r.sections ?? [])}</div>`;
         return;
       }
       case "checkshare": {
@@ -10859,7 +12108,7 @@ function mount(app2, b) {
         const r = await act(() => b.ask("check share", { collective: a.collective, address: a.address, numbers: [a.number, ...more.map((m) => m[1])], shares: [a.shareWords, ...more.map((m) => m[2])] }));
         if (!r) return;
         clear(form2);
-        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${e(r.title)}</h3>${lines(r.lines)}</div>`;
+        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${said(r.title)}</h3>${lines(r.lines)}</div>`;
         return;
       }
       case "unlock": {
@@ -10875,7 +12124,9 @@ function mount(app2, b) {
         if (!r) return;
         runner = r;
         draw();
-        return done("Kept by the runner, on this Mac: approve it for an app in Runner, Apps.");
+        const typed = String(a.id ?? "").trim();
+        const h = r.held.find((x) => x.id === typed || x.form === typed || typed.startsWith(`${x.form}?`));
+        return done(`Kept by the runner, on this Mac: approve it for an app in Runner, Apps.${h ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: h.form, link: h.link })}` : ""}`);
       }
       default:
         if (PLANS[kind]) {
@@ -10913,8 +12164,13 @@ function mount(app2, b) {
         part2 = null;
         door2 = null;
         return draw();
+      // H89: top right shows what Kišib holds and the runner's state, as in every app; it opens the runner, where identities are added.
       case "holds":
-        return openTab(b.web ? "identities" : runner?.on ? "identities" : "runner");
+        return openTab(b.web ? "identities" : "runner");
+      case "runner-add":
+        tab = "runner";
+        part2 = "add";
+        return draw();
       case "open-door":
         door2 = tab;
         return draw();
@@ -10927,11 +12183,28 @@ function mount(app2, b) {
         }
         return;
       }
+      // H97: a rotation listed, tapped: the form filled in from its notice, then the rotation read from its request, checked against the collective's chain (2.3).
+      case "notice-pick": {
+        const f = app2.querySelector("#form-give");
+        if (!f) return;
+        const set = (name, value) => {
+          const el2 = f.elements.namedItem(name);
+          if (el2) el2.value = value;
+        };
+        set("collective", d.collective ?? "");
+        set("fingerprint", d.fingerprint ?? "");
+        set("address", d.relays ?? "");
+        set("number", d.share ?? "");
+        set("member", d.member ?? "");
+        f.querySelector('[data-action="read request"]')?.click();
+        f.querySelector('[name="shareWords"]')?.scrollIntoView({ block: "center" });
+        return;
+      }
       case "read request": {
         const form2 = t.closest("form");
         const a = values(form2);
         const r = await act(() => b.ask("collective read", { collective: a.collective, fingerprint: a.fingerprint, address: a.address }));
-        if (r) $("request").innerHTML = `<div class="kishib-review"><h3>${e(r.title)}</h3>${sections(r.sections)}</div>`;
+        if (r) $("request").innerHTML = `<div class="kishib-review"><h3>${said(r.title)}</h3>${sections(r.sections)}</div>`;
         return;
       }
       case "sign": {
@@ -10958,9 +12231,9 @@ function mount(app2, b) {
         const w = await act(() => b.ask("words show"));
         if (!w) return;
         const st = state?.sitting;
-        const label = w.holder ? "The collective\u2019s new signing key\u2019s words" : st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
+        const label2 = w.holder ? "The collective\u2019s new signing key\u2019s words" : st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
         const pane = $("pane");
-        if (pane) pane.innerHTML = wordsShown(w.words, w.say, label, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null);
+        if (pane) pane.innerHTML = wordsShown(w.words, w.say, label2, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null);
         return;
       }
       case "written": {
@@ -10995,13 +12268,13 @@ function mount(app2, b) {
         if (!r) return;
         runner = r;
         draw();
-        return done("The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Ki\u0161ib.");
+        return done("The runner is on, its file encrypted under your passphrase. Give it an identity (Runner, Add an identity to the runner), then pair an app: in Dub, the identity panel, + Add, Use one from Ki\u0161ib.");
       }
       case "quit": {
-        if (!confirm("Quit Ki\u0161ib? Its program ends, and the runner, if on, is locked: the apps sign through it no more until Ki\u0161ib is opened again and its passphrase given. Nothing is erased.")) return;
+        if (!await ask(app2, { title: "Quit Ki\u0161ib?", text: "Its program ends, and the runner, if on, is locked: the apps sign through it no more until Ki\u0161ib is opened again and its passphrase given. Nothing is erased.", yes: "Quit Ki\u0161ib" })) return;
         const r = await act(() => b.ask("quit"));
         if (!r) return;
-        app2.innerHTML = `<div class="k-body"><div class="k-box" id="quit-done"><h2>Ki\u0161ib has quit</h2><p class="k-soft">Its program has ended${runner?.state === "off" ? "" : ", and the runner is locked"}. Open Ki\u0161ib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+        app2.innerHTML = quitDone(runner?.state === "off");
         return;
       }
       case "runner-lock": {
@@ -11011,10 +12284,10 @@ function mount(app2, b) {
         draw();
         return done("Locked: the runner signs and opens nothing until its passphrase is given again. Nothing was erased.");
       }
+      // H90: Off, or the button below it, asks the same question in the page (never the browser's own dialog), then turns it off.
       case "runner-off-ask":
-        return $("runner-state")?.nextElementSibling?.scrollIntoView({ block: "center" });
       case "runner-off": {
-        if (!confirm("Turn the runner off? It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.")) return;
+        if (!await ask(app2, { title: "Turn the runner off?", text: "It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.", yes: "Turn it off, and erase everything", alarm: true })) return;
         const r = await act(() => b.ask("runner off"));
         if (!r) return;
         runner = r;
@@ -11029,13 +12302,14 @@ function mount(app2, b) {
         if (r) {
           runner = r;
           draw();
-          done("Approved: the app may now use the identities chosen, each act shown in Ki\u0161ib\u2019s panel inside its window.");
+          app2.querySelector(`[data-app="${CSS.escape(d.pairing)}"]`)?.scrollIntoView({ block: "nearest" });
+          done("Approved: the app may now use the identities chosen, each act shown in Ki\u0161ib\u2019s panel inside its window. Its setting up is here, below.");
         }
         return;
       }
       case "refuse":
       case "revoke": {
-        if (d.action === "revoke" && !confirm("Revoke this app? It signs through Ki\u0161ib no more, and what waits from it is dropped.")) return;
+        if (d.action === "revoke" && !await ask(app2, { title: "Revoke this app?", text: "It signs through Ki\u0161ib no more, and what waits from it is dropped.", yes: "Revoke it" })) return;
         const r = await act(() => b.ask("runner revoke", { pairing: d.pairing }));
         if (r) {
           runner = r;
@@ -11061,7 +12335,7 @@ function mount(app2, b) {
         return;
       }
       case "member-remove": {
-        if (!confirm("Forget this collective\u2019s key here? The app using the identity through Ki\u0161ib can no longer act as the collective. The key itself stays sealed to the identity at its homes.")) return;
+        if (!await ask(app2, { title: "Forget this collective\u2019s key here?", text: "The app using the identity through Ki\u0161ib can no longer act as the collective. The key itself stays sealed to the identity at its homes.", yes: "Forget it here" })) return;
         const r = await act(() => b.ask("runner member remove", { identity: d.id, collective: d.collective }));
         if (r) {
           runner = r;
@@ -11094,7 +12368,7 @@ function mount(app2, b) {
         return;
       }
       case "held-remove": {
-        if (!confirm("Remove this identity from the runner? Ki\u0161ib forgets its signing key; the apps using it through Ki\u0161ib stop signing as it. The identity itself is not touched.")) return;
+        if (!await ask(app2, { title: "Remove this identity from the runner?", text: "Ki\u0161ib forgets its signing key; the apps using it through Ki\u0161ib stop signing as it. The identity itself is not touched.", yes: "Remove it" })) return;
         const r = await act(() => b.ask("runner remove", { id: d.id }));
         if (r) {
           runner = r;
@@ -11115,14 +12389,25 @@ function mount(app2, b) {
     }
   });
   if (!b.web) {
+    let missed = 0;
     setInterval(async () => {
-      if (document.hidden || tab === null || !runner?.on) return;
+      if (document.hidden || !runner || app2.querySelector("#quit-done")) return;
       let r;
       try {
         r = await b.ask("runner state");
-      } catch {
+        missed = 0;
+      } catch (err) {
+        if (b.unpaired?.(err)) return;
+        if (++missed >= 2) app2.innerHTML = quitDone(runner.state === "off");
         return;
       }
+      if (r.state !== runner.state) {
+        runner = r;
+        popup2.close();
+        draw();
+        return;
+      }
+      if (!runner.on) return;
       const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
       runner = r;
       if (!changed) return;
@@ -11136,8 +12421,8 @@ function mount(app2, b) {
 // src/web/app.ts
 var app = document.getElementById("app");
 var kishib = new Kishib({ web: true });
-var ask = (op, a = {}) => run(kishib, op, a);
-var ui = mount(app, { web: true, ask, start });
+var ask2 = (op, a = {}) => run(kishib, op, a);
+var ui = mount(app, { web: true, ask: ask2, start });
 async function start() {
   if (!crypto?.getRandomValues) {
     app.innerHTML = alone(note("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here."));

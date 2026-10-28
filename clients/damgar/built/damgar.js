@@ -1398,7 +1398,7 @@ function actId(bytes) {
     wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
   }
 }
-function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now3) {
+function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now4) {
   const ptr0 = passArray8ToWasm0(offer_act, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ptr1 = passArray8ToWasm0(ticket, wasm.__wbindgen_malloc);
@@ -1407,7 +1407,7 @@ function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now3) {
   const len2 = WASM_VECTOR_LEN;
   const ptr3 = passStringToWasm0(leaf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len3 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, now3);
+  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, now4);
   if (ret[3]) {
     throw takeFromExternrefTable0(ret[2]);
   }
@@ -1550,6 +1550,31 @@ function formRead(s, want) {
     throw takeFromExternrefTable0(ret[1]);
   }
   return takeFromExternrefTable0(ret[0]);
+}
+function formWithHints(label, data, hints) {
+  let deferred5_0;
+  let deferred5_1;
+  try {
+    const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(hints, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.formWithHints(ptr0, len0, ptr1, len1, ptr2, len2);
+    var ptr4 = ret[0];
+    var len4 = ret[1];
+    if (ret[3]) {
+      ptr4 = 0;
+      len4 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred5_0 = ptr4;
+    deferred5_1 = len4;
+    return getStringFromWasm0(ptr4, len4);
+  } finally {
+    wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+  }
 }
 function keyDeliveryPayload(target, key, media) {
   const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -3512,13 +3537,13 @@ function cannotReach(hint, via = {}) {
   }
   return null;
 }
-async function firstOf(items, ask2, failed) {
+async function firstOf(items, ask3, failed) {
   if (!items.length) return null;
   return new Promise((resolve) => {
     let left = items.length;
     let done = false;
     for (const x of items) {
-      ask2(x).then(
+      ask3(x).then(
         (r) => {
           left--;
           if (r !== null && r !== void 0 && !done) {
@@ -5171,9 +5196,9 @@ var LINK_SAY = [
 
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
-var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
+var negotiationPayload = (text3, format) => cborEncode(new Map([[0, text3.normalize("NFC")], ...format ? [[1, unhex(format)]] : []]));
 async function negotiate(by, to, o) {
-  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text, o.format), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
@@ -5410,14 +5435,14 @@ async function collectiveNow(collective, hints, via = {}) {
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
 }
-async function signAndAsk(me, collective, key, act, ask2, text3, hints, via = {}) {
+async function signAndAsk(me, collective, key, act, ask3, text3, hints, via = {}) {
   const at = await chainFor(collective, key, hints, via);
   const made = signAsMember(collective, key, at, { ...act, public: true });
   const places = await publishAt([made.act], hints, via);
   if (!places.length) throw new Error("No relay took the act: nothing counts. Try again.");
   const asked = [];
   const notAsked = [];
-  for (const h of ask2) {
+  for (const h of ask3) {
     try {
       const l = await lookUp(h, hints, via);
       const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
@@ -5521,9 +5546,9 @@ async function termsOf(id, hints, via) {
   return null;
 }
 async function readCollective(me, id, hints, via) {
-  const now3 = await collectiveNow(id, hints, via);
-  if (!now3.agreement) return { id, agreement: null, area: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
-  const t = await termsOf(now3.agreement, hints, via);
+  const now4 = await collectiveNow(id, hints, via);
+  if (!now4.agreement) return { id, agreement: null, area: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
+  const t = await termsOf(now4.agreement, hints, via);
   const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
   const area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
   const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
@@ -5532,7 +5557,7 @@ async function readCollective(me, id, hints, via) {
   if (!area) why = "Its constitution draws no Money area: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
   else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (\u201C${area.name}\u201D): your key does not count there.`;
   else if (!key) why = "No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change.";
-  return { id, agreement: now3.agreement, area, key, why };
+  return { id, agreement: now4.agreement, area, key, why };
 }
 var withinCap = (area, amount) => !area.cap || area.cap.unit === amount.unit && amount.value <= area.cap.value;
 function promiseSay(c, me, a, names) {
@@ -5553,8 +5578,8 @@ var promiseDigest = (c, payload) => sha2562(new Uint8Array([...new TextEncoder()
 ${c.id}
 `), ...payload]));
 var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
-async function signPromise(me, c, payload, ask2, text3, hints, via) {
-  return signAndAsk(me, c.id, c.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask2, text3, hints, via);
+async function signPromise(me, c, payload, ask3, text3, hints, via) {
+  return signAndAsk(me, c.id, c.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask3, text3, hints, via);
 }
 async function standing(c, act, amount, hints, via) {
   const area = c.area;
@@ -7756,6 +7781,16 @@ function newChainKey(seed) {
 // ../dub/src/people.ts
 var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
 var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
+var SEALED_LIST = 1;
+function sealedListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
+  );
+  return cborEncode(m);
+}
 function openerOf(identity, secrets) {
   return async (sealed) => sealed.map((bytes) => {
     for (const s of secrets) {
@@ -7766,6 +7801,101 @@ function openerOf(identity, secrets) {
     }
     return null;
   });
+}
+async function readSealedList(identity, keys, homes, via = {}) {
+  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch (e3) {
+    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
+    return out;
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed");
+        const opened2 = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened2) {
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const prev = m.get(1);
+            const follows = [];
+            for (const x of m.get(2)) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows.some((f) => f.id === id)) continue;
+              follows.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
+    }
+  }
+  const best = (from, version2) => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version2 + 1);
+    if (next.length > 1) out.forked = true;
+    let pick = null;
+    for (const [id] of next) {
+      const below = best(id, version2 + 1);
+      const depth = below ? below.depth : version2 + 1;
+      const tip2 = below ? below.id : id;
+      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts.get(tip.id);
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
+}
+
+// ../genesis/src/forms.ts
+var form = (label, hex2) => formEncode(label, unhex(hex2));
+var idForm = (id) => form("mid", id);
+var idWhere = (id, hints) => formWithHints("mid", unhex(id), hints.filter((h) => /^https?:\/\//.test(h)));
+function readForm(typed, want) {
+  const t = typed.trim();
+  const squeezed = t.replace(/\s+/g, "");
+  if (want !== "mkey" && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
+  if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1\u2026`);
+  try {
+    const r = formRead(t, want);
+    return { hex: r.data, hints: r.hints, bare: r.bare };
+  } catch (e3) {
+    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
+  }
+}
+var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
+var readId = (typed) => readForm(typed, "mid").hex;
+var readActId = (typed) => readForm(typed, "mact").hex;
+function readIdWhere(typed) {
+  const t = typed.trim().replace(/^.*#/, "");
+  const parts = t.split(/\s+/).filter(Boolean);
+  const beside = parts.slice(1).filter((p) => /^https?:\/\//.test(p));
+  const head = beside.length ? parts.filter((p) => !/^https?:\/\//.test(p)).join("") : t;
+  const r = readForm(head, "mid");
+  return { id: r.hex, hints: [.../* @__PURE__ */ new Set([...r.hints, ...beside])] };
 }
 
 // ../dub/src/names.ts
@@ -7829,24 +7959,181 @@ async function namesOf(identity, places, via = {}) {
   return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
 }
 
-// ../genesis/src/forms.ts
-var form = (label, hex2) => formEncode(label, unhex(hex2));
-var idForm = (id) => form("mid", id);
-function readForm(typed, want) {
-  const t = typed.trim();
-  const squeezed = t.replace(/\s+/g, "");
-  if (want !== "mkey" && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
-  if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1\u2026`);
-  try {
-    const r = formRead(t, want);
-    return { hex: r.data, hints: r.hints, bare: r.bare };
-  } catch (e3) {
-    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
+// ../kit/src/engine/names.ts
+var now2 = () => Date.now();
+var NameReader = class {
+  /** `keep`: how long a name read (or none) is kept, in milliseconds; a name not reached is asked again after a tenth of it. */
+  constructor(o = {}) {
+    this.o = o;
   }
+  kept = /* @__PURE__ */ new Map();
+  reading = /* @__PURE__ */ new Map();
+  /** Its published name, as its homes give it; `fresh` asks again whatever was kept. */
+  read(id, places, fresh = false) {
+    const keep = this.o.keep ?? 3e5;
+    const k = this.kept.get(id);
+    if (k && !fresh && now2() - k.at < (k.shown.state === "unreached" ? keep / 10 : keep)) return Promise.resolve(k.shown);
+    const r = this.reading.get(id);
+    if (r && !fresh) return r;
+    const p = (async () => {
+      let shown;
+      try {
+        const found = await namesOf(id, places, this.o.via ?? {});
+        const name = found.map((x) => x.name).pop();
+        shown = name ? { state: "name", name } : { state: "none" };
+      } catch {
+        shown = { state: "unreached" };
+      }
+      this.kept.set(id, { shown, at: now2() });
+      this.reading.delete(id);
+      return shown;
+    })();
+    this.reading.set(id, p);
+    return p;
+  }
+  /** Several at once, by ID. */
+  async many(ids, places, fresh = false) {
+    const out = {};
+    await Promise.all([...new Set(ids)].filter((x) => /^[0-9a-f]{64}$/.test(x)).map(async (id) => out[id] = await this.read(id, places, fresh)));
+    return out;
+  }
+  /** What is kept of it now, without asking: "Loading…" where nothing is. */
+  now(id) {
+    return this.kept.get(id)?.shown ?? { state: "loading" };
+  }
+  /** Forget what was kept of one (its name was just changed here). */
+  forget(id) {
+    this.kept.delete(id);
+  }
+};
+
+// ../kit/src/engine/people.ts
+async function readContacts(me, open, via = {}) {
+  if (!open || Array.isArray(open) && !open.length) return { contacts: [], version: 0, problem: "this app cannot open what is sealed to this identity, so its contacts cannot be read here" };
+  const l = await readSealedList(me.id, open, me.f.homes.map((h) => h.hint), via);
+  return { contacts: l.follows, version: l.version, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
 }
-var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
-var readId = (typed) => readForm(typed, "mid").hex;
-var readActId = (typed) => readForm(typed, "mact").hex;
+function readNick(typed) {
+  const n = (typed ?? "").normalize("NFC").trim();
+  if (!n) return null;
+  if ([...n].length > MAX_NAME) throw new Error(`A nickname is at most ${MAX_NAME} characters. Nothing was signed.`);
+  if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(n)) throw new Error("A nickname holds no line break, control character or direction override. Nothing was signed.");
+  return n;
+}
+async function changeContacts(me, change, o) {
+  const via = o.via ?? {};
+  if (!o.open || Array.isArray(o.open) && !o.open.length) throw new Error(`${o.app} cannot open what is sealed to this identity, so its contacts cannot be changed from here. Nothing was signed.`);
+  const homes = me.f.homes.map((h) => h.hint);
+  const found = await readSealedList(me.id, o.open, homes, via);
+  if (!found.act && found.problems.length >= homes.length) throw new Error(`The contacts could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
+  const next = change(found.follows.map((f) => ({ ...f })));
+  if (!next) return [{ text: "Nothing changed.", tone: "ok" }];
+  const look = await lookUp(me.id, homes, via);
+  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key: its contacts cannot be sealed to it. Nothing was signed.");
+  if (Array.isArray(o.open) && !me.f.encryption.some((x) => x.secret && hex(xwingPublic(unhex(x.secret))) === hex(look.encryptionKey))) throw new Error(`The encryption key this identity publishes is not one ${o.app} holds: its contacts cannot be sealed from here. Nothing was signed.`);
+  let made;
+  try {
+    made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: next }), { public: false, to: [me.id] });
+  } finally {
+    await o.save?.();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+  let left = 0;
+  for (const h of homes) {
+    try {
+      await relayAt(h, via).putSealed(sealed);
+      left++;
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via, sealed: left > 0 });
+  await o.save?.();
+  const said = [];
+  if (found.forked) said.push({ text: "Your contacts were forked at your homes: two apps changed them at once. The longer branch was continued.", tone: "warn" });
+  said.push(left ? { text: `Your contacts are sealed to you and kept at your homes (version ${found.version + 1}): every app holding this identity reads them.`, tone: "ok" } : { text: "No home took your contacts: nothing changed there. Try again.", tone: "warn" });
+  return said;
+}
+var addContact = (me, who2, o) => changeContacts(
+  me,
+  (now4) => {
+    if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+    const nick = readNick(who2.nick);
+    const had = now4.find((f) => f.id === who2.id);
+    if (had && (!nick || had.name === nick)) return null;
+    if (had) had.name = nick;
+    else now4.push({ id: who2.id, name: nick });
+    return now4;
+  },
+  o
+);
+var setNick = (me, who2, o) => changeContacts(
+  me,
+  (now4) => {
+    const nick = readNick(who2.nick);
+    const had = now4.find((f) => f.id === who2.id);
+    if (!had) {
+      if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+      now4.push({ id: who2.id, name: nick });
+      return now4;
+    }
+    if ((had.name ?? null) === nick) return null;
+    had.name = nick;
+    return now4;
+  },
+  o
+);
+var removeContact = (me, id, o) => changeContacts(me, (now4) => now4.some((f) => f.id === id) ? now4.filter((f) => f.id !== id) : null, o);
+
+// ../kit/src/engine/known.ts
+var HEX2 = /^[0-9a-f]{64}$/;
+var Known = class {
+  /** `app`: this app's name, as said ("Damgar"). */
+  constructor(app2, o = {}) {
+    this.app = app2;
+    this.names = new NameReader({ via: o.via });
+  }
+  names;
+  lists = /* @__PURE__ */ new Map();
+  /** The contacts sealed to the identity, read again at most once a minute (or now, `fresh`). */
+  async followed(me, open, via = {}, fresh = false) {
+    const c = this.lists.get(me.id);
+    if (c && !fresh && c.at + 6e4 > Date.now()) return c;
+    let r;
+    try {
+      r = await readContacts(me, open, via);
+    } catch (e3) {
+      r = { contacts: c?.contacts ?? [], problem: e3 instanceof Error ? e3.message : String(e3) };
+    }
+    this.lists.set(me.id, { ...r, at: Date.now() });
+    return r;
+  }
+  /** The names of these identities: the nickname given (none for oneself), and the name each published, read at `places` and its own homes. */
+  async named(me, open, ids, places, o = {}) {
+    const want = [...new Set(ids.filter((x) => HEX2.test(x)))].slice(0, 200);
+    const [{ contacts }, published] = await Promise.all([this.followed(me, open, o.via), this.names.many(want, places, !!o.fresh)]);
+    return Object.fromEntries(want.map((id) => [id, { nick: id === me.id ? null : contacts.find((f) => f.id === id)?.name ?? null, published: published[id] }]));
+  }
+  /** The list, each contact with its names (its published name read, or its state). */
+  async contacts(me, open, places, o = {}) {
+    const { contacts, problem } = await this.followed(me, open, o.via, o.fresh);
+    const published = await this.names.many(contacts.map((c) => c.id), places);
+    return { contacts: contacts.map((c) => ({ id: c.id, form: idForm(c.id), name: c.name, named: { nick: c.name, published: published[c.id] } })), problem };
+  }
+  /** Add a contact, with a nickname if given; set or take away a nickname; take a contact out. Each sealed as the people cMIP keeps the list. */
+  async change(me, a, o) {
+    const id = HEX2.test(a.id) ? a.id : readIdWhere(a.id.trim()).id;
+    a = { ...a, id };
+    const opts = { open: o.open, via: o.via, app: this.app, save: o.save };
+    const said = a.op === "add" ? await addContact(me, { id: a.id, nick: a.nick ?? null }, opts) : a.op === "nick" ? await setNick(me, { id: a.id, nick: a.nick ?? null }, opts) : await removeContact(me, a.id, opts);
+    this.lists.delete(me.id);
+    return said;
+  }
+  /** Forget what was kept for an identity (it was removed, or its key changed). */
+  forget(id) {
+    this.lists.delete(id);
+    this.names.forget(id);
+  }
+};
 
 // src/units.ts
 var u = moneySpecs().units;
@@ -8285,7 +8572,7 @@ function carriedKey(look, seed) {
 }
 
 // src/accepted.ts
-var SEALED_LIST = 1;
+var SEALED_LIST2 = 1;
 var PUBLISHED_LIST = 0;
 function listPayload(a, withdrawn = false) {
   const m = /* @__PURE__ */ new Map([[0, a.version]]);
@@ -8342,7 +8629,7 @@ async function readActs(identity, keys, homes, via) {
         const opened2 = sealed.length ? await open(sealed) : [];
         for (const o of opened2) {
           const d = o?.described;
-          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST2 || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);
           else l.verifier.add(o.act);
           if (l.verifier.status(d.id) !== "valid") continue;
@@ -8428,7 +8715,7 @@ async function changeAccepted(me, change, opts) {
     const payload = listPayload({ version: read4.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
-      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
+      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST2, payload, { public: false, to: [me.id] });
     } finally {
       await opts.save();
     }
@@ -8474,6 +8761,7 @@ var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with it
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Damgar then goes on, in new lines.";
 var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
 var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Ki\u0161ib: Runner, Apps, Damgar, \u201Cmay open what is sealed to\u201D this identity.";
+var KISIB_NO_OPEN_LIST_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it. To allow it, tick it in Ki\u0161ib: Runner \u203A Apps, beside Damgar, \u201Cmay open what is sealed to\u201D this identity.";
 var NO_KEY_SAY = "Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key\u2019s words.";
 var REQUEST_KEY_SAY = [
   "Damgar makes an on-chain request key and keeps it here, beside the signing key. It signs, for each payment, the request that binds a fresh address to that payment alone. It answers address requests by itself when they arrive through MOR.",
@@ -8502,7 +8790,7 @@ var ACCOUNT_NOTES = [
 var NO_BOOK = () => ({ after: {}, acts: {}, drafts: {}, requestsIn: {}, requestsOut: {}, invoices: {}, payments: {}, pointers: [], published: null });
 var list = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
 var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var now2 = () => Math.floor(Date.now() / 1e3);
+var now3 = () => Math.floor(Date.now() / 1e3);
 var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var b642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var railName = (m) => m === SPEC.lightning.hash ? "Lightning" : m === SPEC.onchain.hash ? "on-chain" : `rail Module ${m.slice(0, 8)}\u2026`;
@@ -8534,14 +8822,21 @@ var Damgar = class {
     return this.line(me, via).catch(() => null);
   }
   queue = Promise.resolve();
-  /** Display names read (the naming cMIP), by identity, for a few minutes (memory only): the panel shows names, not hashes. */
-  names = /* @__PURE__ */ new Map();
-  async nameOf(id, places, via) {
-    const c = this.names.get(id);
-    if (c && c.at + 300 > now2()) return c.name;
-    const name = (await namesOf(id, places, via).catch(() => [])).map((x) => x.name).pop() ?? null;
-    this.names.set(id, { name, at: now2() });
-    return name;
+  /**
+   * Who is known, as in every app (H96, H100, H106, H109): the one contacts
+   * list (the people cMIP's, sealed to the identity at its homes, nicknames
+   * included) and the names identities published (the naming cMIP), read by
+   * the kit's one name reader, kept a few minutes in memory only.
+   */
+  known = new Known("Damgar");
+  /** An identity's published name as read (H96): the name, none published, or not reached (never "no name" for silence). */
+  published(id, places) {
+    return this.known.names.read(id, places);
+  }
+  /** Its display name (the naming cMIP), where one was read; null otherwise. */
+  async nameOf(id, places, _via) {
+    const n = await this.published(id, places);
+    return n.state === "name" ? n.name : null;
   }
   /** The accepted list as last read, by identity (memory only). */
   lists = /* @__PURE__ */ new Map();
@@ -8917,10 +9212,14 @@ var Damgar = class {
   // ------------------------------------------------------------ what is accepted (the accepted cMIP, F340)
   async accepted(me, fresh = false) {
     const c = this.lists.get(me.id);
-    if (c && !fresh && c.at + 60 > now2()) return c.list;
+    if (c && !fresh && c.at + 60 > now3()) return c.list;
     const { open } = await this.opener(me);
-    const l = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
-    this.lists.set(me.id, { list: l, at: now2() });
+    const sealed = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
+    const here = (await this.store.read(me.id, "settings"))?.acceptedHere ?? [];
+    const entries = new Map(sealed.entries);
+    for (const h of here) if (!entries.has(h)) entries.set(h, labelOf(h) ?? null);
+    const l = { ...sealed, entries };
+    this.lists.set(me.id, { list: l, at: now3() });
     return l;
   }
   acceptedSet(l) {
@@ -8932,13 +9231,27 @@ var Damgar = class {
    * accepted cMIP, 1.3). Written on the latest version read, checked again
    * before sending (F340).
    */
-  setAccepted(keys) {
+  setAccepted(keys, where = "list") {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       await this.current(me);
       const want = new Set(keys);
       const unknownKey = keys.find((k) => !ACCEPTABLE.some((a) => a.key === k));
       if (unknownKey) throw new Error(`Damgar lists no \u201C${unknownKey}\u201D.`);
+      if (where === "here") {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, "settings", { ...s, acceptedHere: hashes, acceptLater: false });
+        this.lists.delete(me.id);
+        return { lines: [{ text: "Followed in Damgar only: your list is unchanged, so the other apps still ask.", tone: "ok" }] };
+      }
+      const { open, problem } = await this.opener(me);
+      if (!open) {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, "settings", { ...s, acceptedHere: hashes, acceptLater: false });
+        this.lists.delete(me.id);
+        const cause = problem === RUNNER_NO_OPEN_SAY ? KISIB_NO_OPEN_LIST_SAY : `The rules you follow cannot be sealed to this identity: ${problem ?? NO_KEY_SAY}`;
+        return { lines: [{ text: cause, tone: "warn" }, { text: "Kept in Damgar only, for now: Damgar follows them here; the other apps do not see them until they are sealed. Save them again once it is allowed.", tone: "ok" }] };
+      }
       const r = await changeAccepted(
         me,
         (entries) => {
@@ -8947,12 +9260,14 @@ var Damgar = class {
             else entries.delete(h);
           }
         },
-        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open: (await this.opener(me)).open }
+        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open }
       );
-      this.lists.set(me.id, { list: r.list, at: now2() });
+      if (s.acceptedHere?.length || s.acceptLater) await this.store.write(me.id, "settings", { ...s, acceptedHere: void 0, acceptLater: void 0 });
+      this.lists.delete(me.id);
+      await this.accepted(me, true);
       const lines2 = [];
       if (r.list.merged.length) lines2.push({ text: `Two apps had changed the accepted list at once. Both changes were merged: ${r.list.merged.join(" ")}`, tone: "warn" });
-      lines2.push(r.written ? { text: `What you accept is sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: "ok" } : { text: "Nothing changed." });
+      lines2.push(r.written ? { text: `Your rules are sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: "ok" } : { text: "Nothing changed." });
       for (const a of ACCEPTABLE) {
         if (!want.has(a.key)) continue;
         const missing = a.needs.filter((n) => !want.has(n));
@@ -8973,7 +9288,7 @@ var Damgar = class {
       await this.saveBook(me.id, book);
       return {
         lines: [
-          on ? { text: `What you accept is published at ${s.relays.join(", ")}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: "warn" } : { text: "The published list is withdrawn: it is private again. Earlier versions stay readable as acts.", tone: "ok" }
+          on ? { text: `Your rules are published at ${s.relays.join(", ")}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: "warn" } : { text: "The published list is withdrawn: it is private again. Earlier versions stay readable as acts.", tone: "ok" }
         ]
       };
     });
@@ -8984,7 +9299,9 @@ var Damgar = class {
     const held = [];
     for (const id of await this.store.held()) {
       const f = await this.store.identity(id);
-      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: f ? await this.nameOf(id, f.f.homes.map((h) => h.hint), f.via) : null });
+      const s2 = f ? await this.store.read(id, "settings") ?? { relays: [], via: {} } : null;
+      const published = f && s2 ? await this.published(id, [...f.f.homes.map((h) => h.hint), ...s2.relays]) : { state: "unreached" };
+      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: published.state === "name" ? published.name : null, named: { nick: null, published } });
     }
     const me = active ? await this.load(active) : null;
     const out = { web: !!this.opts.web, settingsSaved: false, stage: "identity", held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
@@ -9002,8 +9319,16 @@ var Damgar = class {
       encryption: me.f.encryption.length > 0,
       line: line ?? noLine(me.f),
       // The collectives under it (decided: acting as a collective is the identity panel's gesture): those Damgar acts for, added here.
-      collectives: await Promise.all((s.collectives ?? []).map(async (c) => ({ id: c, form: idForm(c), short: short(c), name: await this.nameOf(c, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via) }))),
+      collectives: await Promise.all(
+        (s.collectives ?? []).map(async (c) => {
+          const published = await this.published(c, [...me.f.homes.map((h) => h.hint), ...s.relays]);
+          return { id: c, form: idForm(c), short: short(c), name: published.state === "name" ? published.name : null, named: { nick: null, published } };
+        })
+      ),
       name: held.find((h) => h.id === me.id)?.name ?? null,
+      named: held.find((h) => h.id === me.id)?.named ?? null,
+      // H88: its ID link (the ID with where it lives: one home, one relay), for Share your ID link.
+      link: idWhere(me.id, [...me.f.homes.map((h) => h.hint).slice(0, 1), ...s.relays.filter((r) => !me.f.homes.some((h) => h.hint === r)).slice(0, 1)]),
       runner: !me.f.signingSecret
     };
     let l;
@@ -9015,13 +9340,82 @@ var Damgar = class {
     const set = this.acceptedSet(l);
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }));
     out.list = { version: l.version, merged: l.merged, published: !!book.published && !book.published.withdrawn, problems: l.problems };
-    out.stage = l.version === 0 ? "accept" : "ready";
+    out.stage = l.version === 0 && !s.acceptLater && !s.acceptedHere?.length ? "accept" : "ready";
+    out.list.here = s.acceptedHere?.length ?? 0;
     out.settingsSaved = !!s.settingsSaved;
     out.counts = {
       toSign: Object.values(book.drafts).filter((d) => d.stage === "new").length + Object.values(book.requestsIn).filter((r) => r.stage === "new" || r.stage === "debt").length + Object.values(book.invoices).filter((i) => i.stage === "new").length + Object.values(book.laneRequests ?? {}).filter((r) => r.stage === "new").length + Object.values(book.payments).filter((p) => p.side === "in" && p.claims.length > 0 && !p.receipts.length).length,
       toPay: Object.values(book.payments).filter((p) => p.side === "out" && p.stage === "to pay").length
     };
     return out;
+  }
+  // ------------------------------------------------------------ who is known (H96, H100, H106, H109, H119)
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given in the one contacts list (sealed, the
+   * person's own) and the name each published, read at the identity's homes
+   * and relays. `fresh`: asked again (a retry). With no identity in use (the
+   * first screen), the names published only, each held identity's read at
+   * its own homes.
+   */
+  async names(a) {
+    const ids = [...new Set(a.ids.filter((x) => /^[0-9a-f]{64}$/.test(x)))].slice(0, 200);
+    const active = await this.store.active();
+    const me = active ? await this.load(active) : null;
+    if (!me) {
+      const out = {};
+      for (const id of ids) {
+        const f = await this.store.identity(id).catch(() => null);
+        out[id] = { nick: null, published: f ? await this.known.names.read(id, f.f.homes.map((h) => h.hint), !!a.fresh) : { state: "unreached" } };
+      }
+      return out;
+    }
+    const { s, hints } = await this.ctx();
+    const { open } = await this.opener(me);
+    return this.known.named(me, open, ids, hints, { via: s.via, fresh: a.fresh });
+  }
+  /** The one contacts list (H100), each contact with its names; why it cannot be read here, where it cannot. */
+  async contacts(a = {}) {
+    const { me, s, hints } = await this.ctx();
+    const { open, problem } = await this.opener(me);
+    const r = await this.known.contacts(me, open, hints, { via: s.via, fresh: a.fresh });
+    return { contacts: r.contacts, problem: open ? r.problem : problem === RUNNER_NO_OPEN_SAY ? "Ki\u0161ib does not let Damgar open what is sealed to this identity, so its contacts are not read here" : problem ?? r.problem };
+  }
+  /** Add a contact (with a nickname, H109), give or change its nickname, or take it out: sealed as the people cMIP keeps the list, seen in every app. */
+  contactChange(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      if (!a.id.trim()) throw new Error("Give its ID (mid1\u2026, or an ID link). Nothing was signed.");
+      const { open } = await this.opener(me);
+      let said;
+      try {
+        said = await this.known.change(me, a, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was signed.`);
+        throw e3;
+      }
+      return { lines: said };
+    });
+  }
+  /**
+   * The first-use step on the rules, left for later (H112): Damgar opens,
+   * every money act under a rule not followed shown unknown (Development
+   * rule 10); Settings, Rules I follow, at any time.
+   */
+  acceptLater() {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.store.write(me.id, "settings", { ...s, acceptLater: true });
+      return { lines: [{ text: "Later, then: until you choose the rules you follow (Settings, Rules I follow), every money act is shown unknown, and nothing is signed for it.", tone: "ok" }] };
+    });
+  }
+  /** Back to the first page (H112): no identity in use; those held are kept, to choose again. */
+  firstBack() {
+    return this.serial(async () => {
+      await this.store.setActive(null);
+      return { lines: [] };
+    });
   }
   /** Settings were saved (H45): from now on its sections start folded. */
   settingsSaved() {
@@ -9123,7 +9517,7 @@ var Damgar = class {
       const text3 = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
       const made = await signPromise(me, r.c, r.payload, r.say.others, text3, r.places, s.via);
       await this.store.saveIdentity(me);
-      book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now2() } };
+      book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now3() } };
       await this.saveBook(me.id, book);
       const st = await standing(r.c, made.act, r.amount, r.places, s.via).catch(() => null);
       const lines2 = [{ text: `Signed for the collective with your own key: act ${short(made.act)}, public at ${made.places.join(", ")}.`, tone: "ok" }];
@@ -9219,6 +9613,12 @@ var Damgar = class {
           return `its signer was not found (${message2(e3)})`;
         }
       };
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== "new" || book.acts[id] || fresh.some((f) => f.described.id === id)) continue;
+        const act = b642(x.act);
+        const key = x.key ? b642(x.key) : void 0;
+        fresh.push({ act, key, described: key ? openWithKey(act, key) : describeAct(act) });
+      }
       for (const o of fresh) {
         const d = o.described;
         if (!d.signer || !d.payload) continue;
@@ -9229,6 +9629,13 @@ var Damgar = class {
           st = a.backing === "backed" || a.backing === "binds" ? "valid" : a.backing === "disputed" ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
+        if (underGrant && (!a || a.backing === "unknown")) {
+          const was = book.uncounted?.[d.id];
+          if (!was) lines2.push({ text: `${short(d.signer)} sent something signed under a lane that cannot count yet: in Waiting, To receive.`, tone: "warn" });
+          (book.uncounted ??= {})[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : void 0, from: d.signer, found: was?.found ?? now3(), why: a ? this.waitingWhy(a) : "the grant it was signed under was not found at the places asked yet", stage: was?.stage ?? "new" };
+          continue;
+        }
+        if (book.uncounted?.[d.id]) delete book.uncounted[d.id];
         if (st !== "valid") {
           problems.push(`An act from ${short(d.signer)} that does not count (${st}): set aside.`);
           continue;
@@ -9245,6 +9652,12 @@ var Damgar = class {
       await this.saveBook(me.id, book);
       return { lines: lines2, problems };
     });
+  }
+  /** Why an act under a lane cannot count yet, in plain words first (H107). */
+  waitingWhy(a) {
+    const l = a.limits;
+    if (l && l.within === null && /clock|stamp|expiry/i.test(l.why)) return `its lane has an expiry judged by a timestamp clock, which has not placed this act yet; until it does, nobody can tell it was signed in time (the grant limits cMIP, 3.1). ${a.words}`;
+    return a.words;
   }
   /** On whose authority an act under a grant stands: its grant, its acceptance and the grantor's revocations read at these places and the signer's homes (`clients/grants`). */
   async authority(o, places, via) {
@@ -9263,7 +9676,7 @@ var Damgar = class {
   }
   /** Put one act that arrived where it belongs in the book. Inside `serial`. */
   async file(me, s, book, d, lines2) {
-    const t = now2();
+    const t = now3();
     const signer = d.signer;
     if (d.spec && MESSAGES_SPECS.includes(d.spec)) {
       const unread = (why) => {
@@ -9348,8 +9761,8 @@ var Damgar = class {
       (book.shared ??= {})[d.id] = { payer: typeof a.payer === "string" ? a.payer : "", payee: a.payee, amount: a.amount, fulfils: a.fulfils, purchase: !!a.purchase, at: t };
       lines2.push({ text: `A payment to a deal you share in was receipted in its payee\u2019s name (${short(a.payee)}): in the account.`, tone: "ok" });
     } else if (a.type === "obligation" && a.creditor === me.id && a.debtor === signer) {
-      const ask2 = Object.entries(book.requestsOut).find(([id, x]) => x.to === signer && !x.obligation && this.requestOf(book, id)?.pointer === a.pointer);
-      if (ask2) ask2[1].obligation = d.id;
+      const ask3 = Object.entries(book.requestsOut).find(([id, x]) => x.to === signer && !x.obligation && this.requestOf(book, id)?.pointer === a.pointer);
+      if (ask3) ask3[1].obligation = d.id;
       lines2.push({ text: `${short(signer)} accepted a debt to you, signed: in the account. ${DEBT_SAY}`, tone: "ok" });
     }
   }
@@ -9482,7 +9895,7 @@ var Damgar = class {
       request: ir.answers,
       ticket: null,
       stage: "asked",
-      at: now2()
+      at: now3()
     };
     book.payments[f.hash] = p;
     inv.payment = f.hash;
@@ -9731,7 +10144,7 @@ var Damgar = class {
       request: a.answers,
       ticket: null,
       stage: "asked",
-      at: now2(),
+      at: now3(),
       how,
       referral: a.referral ?? null,
       service,
@@ -9835,6 +10248,25 @@ var Damgar = class {
           lines: [
             { text: `It cannot be read here (${x.why}): unknown. Nothing is guessed from it, and nothing can be signed for it.`, tone: "warn" },
             { text: "It may come from a newer app or another draft of the money messages cMIP. Setting it aside signs nothing and sends nothing." }
+          ],
+          amount: null,
+          unknown: true,
+          offers: ["decline"],
+          found: x.found
+        });
+      }
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== "new") continue;
+        items.push({
+          id,
+          kind: "uncounted",
+          from: this.who(x.from, me.id),
+          app: null,
+          title: `Waiting to count: sent by ${short(x.from)} under a lane`,
+          lines: [
+            { text: `It cannot count yet: ${x.why}`, tone: "warn" },
+            { text: "Damgar looks again each time it looks for what arrived; once it counts, it shows here as a payment to answer. Until then nothing is answered and nothing signed (unknown, as Development rule 10 says)." },
+            { text: "Setting it aside signs nothing and sends nothing." }
           ],
           amount: null,
           unknown: true,
@@ -9993,7 +10425,7 @@ var Damgar = class {
       const id = sha2562(payload);
       if (book.drafts[id]) throw new Error(book.drafts[id].stage === "new" ? "This payment is already waiting, in Waiting \u203A To pay." : "This payment was already signed or declined here.");
       (book.pasted ??= {})[id] = base64(payload);
-      book.drafts[id] = { found: now2(), stage: "new", payment: null };
+      book.drafts[id] = { found: now3(), stage: "new", payment: null };
       book.me = me.id;
       const item = await this.readDraftItem(me, s, book, id, this.acceptedSet(await this.accepted(me)));
       await this.saveBook(me.id, book);
@@ -10082,7 +10514,7 @@ var Damgar = class {
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
-      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now2() };
+      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now3() };
       await this.saveBook(me.id, book);
     });
     const signed = await this.signDraft(pasted.id);
@@ -10111,7 +10543,7 @@ var Damgar = class {
         const ptr = look.verifier.moneyPointer(MONEY, me.id);
         if (!ptr.act) throw new Error("You have no payee pointer yet: say where you are paid, in Settings, before asking to be paid. Nothing was signed.");
         const req = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.request, requestPayload({ amount: dr.amount, whatFor: dr.whatFor, pointer: ptr.act }), dr.other);
-        book.requestsOut[req] = { to: dr.other, at: now2(), obligation: null, payment: null };
+        book.requestsOut[req] = { to: dr.other, at: now3(), obligation: null, payment: null };
         x.stage = "signed";
         await this.saveBook(me.id, book);
         return { lines: [{ text: `The request was sent to ${short(dr.other)}, sealed. Their Damgar offers them to pay it, or accept it as a debt.`, tone: "ok" }] };
@@ -10138,6 +10570,7 @@ var Damgar = class {
       if (book.drafts[id]?.stage === "new") book.drafts[id].stage = "declined";
       else if (book.laneRequests?.[id]?.stage === "new") book.laneRequests[id].stage = "declined";
       else if (book.requestsIn[id] && (book.requestsIn[id].stage === "new" || book.requestsIn[id].stage === "debt")) book.requestsIn[id].stage = "declined";
+      else if (book.uncounted?.[id]?.stage === "new") book.uncounted[id].stage = "set aside";
       else if (book.unread?.[id]?.stage === "new") {
         book.unread[id].stage = "set aside";
         await this.saveBook(me.id, book);
@@ -10880,7 +11313,7 @@ var Damgar = class {
       const r = readLaneRequest(this.opened(book, id).payload);
       const { limits, total } = readAsked(r.limits);
       const grant = await this.grantLaneActs(me, s, { key: r.key, kinds: r.kinds, limits });
-      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now2(), revoked: null, here: false, role: null, total };
+      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now3(), revoked: null, here: false, role: null, total };
       x.stage = "granted";
       x.grant = grant;
       await this.saveBook(me.id, book);
@@ -10915,7 +11348,7 @@ var Damgar = class {
       const grant = await this.grantLaneActs(me, s, { key: hex(k.public[1]), kinds: g.kinds, limits });
       keys.lanes = [...keys.lanes ?? [], { grant, label: g.label, secret: hex(k.secret), strand: [], kinds: g.kinds, limits, role: a.role }];
       await this.store.write(me.id, "keys", keys);
-      (book.lanes ??= {})[grant] = { label: g.label, app: "Damgar", key: hex(k.public[1]), kinds: g.kinds, limits, at: now2(), revoked: null, here: true, role: a.role };
+      (book.lanes ??= {})[grant] = { label: g.label, app: "Damgar", key: hex(k.public[1]), kinds: g.kinds, limits, at: now3(), revoked: null, here: true, role: a.role };
       await this.saveBook(me.id, book);
       return { lines: [{ text: `\u201C${g.label}\u201D is granted: Damgar signs within it by itself while \u201CFollow every step by hand\u201D is off.`, tone: "ok" }] };
     });
@@ -10987,7 +11420,7 @@ var Damgar = class {
           acts = (await actsUnder(me.id, grant, hints, s.via)).map((a) => ({ id: a.id, said: this.actSaid(book, a) }));
         } catch {
         }
-        const expired = l.limits?.expiry?.clock === "timestamp" && now2() > l.limits.expiry.time;
+        const expired = l.limits?.expiry?.clock === "timestamp" && now3() > l.limits.expiry.time;
         const under = l.here ? null : await this.underLane(me, s, book, grant, hints).catch(() => null);
         const unitOfLane = l.total?.unit ?? l.limits?.cap?.unit ?? null;
         const used = under && unitOfLane ? spent(under.payments.map((p) => ({ amount: p.amount, refused: p.stage === "refused" })), unitOfLane) : null;
@@ -11006,7 +11439,10 @@ var Damgar = class {
           spent: used !== null ? shown(used) : null,
           left: l.total && used !== null ? shown(Math.max(0, l.total.value - used)) : null,
           over: l.total && used !== null && used > l.total.value ? shown(used - l.total.value) : null,
-          payments: under?.payments.map((p) => ({ key: p.key, to: this.who(p.payee, me.id), amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims })) ?? [],
+          // What is paid apart from what is only asked (H107): asked holds its amount against the cap in all, but no money has moved.
+          paid: under && unitOfLane ? shown(spent(under.payments.filter((p) => p.stage === "paid").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          asked: under && unitOfLane ? shown(spent(under.payments.filter((p) => p.stage === "asked").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          payments: under ? await Promise.all(under.payments.map(async (p) => ({ key: p.key, to: { ...this.who(p.payee, me.id), name: await this.nameOf(p.payee, hints, s.via).catch(() => null) }, amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims }))) : [],
           sealed: under?.sealed ?? 0
         });
       }
@@ -11173,7 +11609,7 @@ var Damgar = class {
         request: null,
         ticket: null,
         stage: "asked",
-        at: now2(),
+        at: now3(),
         vault: true
       };
       const lines2 = [];
@@ -11263,7 +11699,7 @@ var Damgar = class {
         why = `its lane \u201C${l.label}\u201D does not reach this act`;
         continue;
       }
-      const refused = refuseBeforeSigning(l.limits, { spec, type, payload }, MONEY, now2());
+      const refused = refuseBeforeSigning(l.limits, { spec, type, payload }, MONEY, now3());
       if (refused) {
         why = `\u201C${l.label}\u201D: ${refused}`;
         continue;
@@ -11332,6 +11768,24 @@ var Damgar = class {
     });
   }
   /**
+   * Where an identity is paid, as anyone reads it (H100: "Currencies and
+   * rails accepted can live on the profile page"): its payee pointer in
+   * force, each rail by name, with what it names (a node, a key, its
+   * network, so its unit). Null where it publishes none.
+   */
+  async pointerOf(id) {
+    const { me, s } = await this.ctx();
+    const { look, acts } = await this.payee(id, me, s);
+    const ptr = look.verifier.moneyPointer(MONEY, id);
+    if (!ptr.act || !acts.get(ptr.act)?.payload) return null;
+    const pp = moneyRead(0, acts.get(ptr.act).payload).act;
+    const unitOn = (module2, address) => {
+      const a = module2 === SPEC.lightning.hash ? readLightningAddress(address) : module2 === SPEC.onchain.hash ? readOnchainAddress(address) : null;
+      return a ? `${a.network === 0 ? "bitcoin" : NETWORKS[a.network]} satoshis` : "a unit this app does not read";
+    };
+    return { version: ptr.version, rails: pp.rails.map((r) => ({ name: railName(r.module), said: unitOn(r.module, new Uint8Array(r.address)) })) };
+  }
+  /**
    * Review a new payee pointer (Money type 0): the rails in order of
    * preference, with each rail Module's stated costs (a client MUST show
    * them before a rail is declared). Nothing is signed until `publishRails`
@@ -11359,6 +11813,13 @@ var Damgar = class {
       if (!/^[0-9a-f]{64}$/.test(key)) throw new Error("The Bitcoin key is an x-only key: 64 hexadecimal characters (or 66, starting 02 or 03).");
       const secret = requestSecret ?? hex(newSecret());
       out.push({ module: SPEC.onchain.hash, address: onchainAddress({ network: a.network, key, request: onchainKey(unhex(secret)) }), requestSecret: secret });
+    }
+    if (a.order?.length) {
+      const rank = (m) => {
+        const i = a.order.indexOf(m === SPEC.lightning.hash ? "lightning" : "onchain");
+        return i < 0 ? a.order.length : i;
+      };
+      out.sort((x, y) => rank(x.module) - rank(y.module));
     }
     return out;
   }
@@ -11602,6 +12063,10 @@ async function runOp(d, op, a) {
   switch (op) {
     case "state":
       return d.state();
+    case "accept later":
+      return d.acceptLater();
+    case "first back":
+      return d.firstBack();
     case "clock words":
       return d.clockWords(list2(a.ids));
     case "bring":
@@ -11619,7 +12084,7 @@ async function runOp(d, op, a) {
     case "check":
       return d.check();
     case "accept":
-      return d.setAccepted(list2(a.keys));
+      return d.setAccepted(list2(a.keys), a.in === "here" ? "here" : "list");
     case "publish list":
       return d.publishList(a.on === true);
     case "look":
@@ -11651,9 +12116,9 @@ async function runOp(d, op, a) {
     case "rails":
       return d.rails();
     case "rails review":
-      return d.railsReview({ lightning: text2(a.lightning), onchain: text2(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true });
+      return d.railsReview({ lightning: text2(a.lightning), onchain: text2(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list2(a.order) : void 0 });
     case "rails publish":
-      return d.publishRails({ lightning: text2(a.lightning), onchain: text2(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, digest: text2(a.digest) });
+      return d.publishRails({ lightning: text2(a.lightning), onchain: text2(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list2(a.order) : void 0, digest: text2(a.digest) });
     case "relays":
       return d.setRelays(list2(a.relays));
     case "lanes":
@@ -11716,6 +12181,16 @@ async function runOp(d, op, a) {
       return d.runnerDrop({ request: text2(a.request) });
     case "runner unpair":
       return d.runnerUnpair();
+    case "names":
+      return d.names({ ids: list2(a.ids), fresh: a.fresh === true });
+    case "contacts":
+      return d.contacts({ fresh: a.fresh === true });
+    case "contact add":
+      return d.contactChange({ op: "add", id: text2(a.id), nick: text2(a.nick) });
+    case "contact nick":
+      return d.contactChange({ op: "nick", id: text2(a.id), nick: text2(a.nick) });
+    case "contact remove":
+      return d.contactChange({ op: "remove", id: text2(a.id) });
     case "answer address":
       return d.answerAddress(text2(a.id));
     default:
@@ -11732,13 +12207,14 @@ var APPS = {
   ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
 };
 var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
-var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var KIT_STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
 ${tints}
 .k-page,.k-page *{box-sizing:border-box}
 html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
-.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+.k-page{font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
 :where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 :where(.k-page) button:disabled{opacity:.45;cursor:default}
 :where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
@@ -11749,7 +12225,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 :where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
 :where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
 .k-page [hidden]{display:none!important}
-.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
 .k-grow{flex:1}
 .k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
@@ -11759,6 +12235,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 /* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
 .k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
 .k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app .k-nm,.k-appname{font-family:"Gentium Book Plus",Georgia,serif;font-style:italic;font-weight:400;letter-spacing:.01em;font-size:1.12em}
 .k-app img{width:26px;height:26px;border-radius:6px}
 .k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
 .k-menu-btn:hover{color:var(--k-text)}
@@ -11770,7 +12247,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-on .k-count{background:var(--k-ink);color:var(--k-p)}
 .k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
 .k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-me .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
 .k-dot.k-c{border-radius:7px}
 .k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
@@ -11780,10 +12257,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
 
 /* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
-.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));gap:18px;padding:24px 28px 12px;overflow:auto}
 .k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
 .k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
-.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+/* the icon in the tile's own flow, at its top, the words at its bottom: they never overlap, at any width (H105); a short tile grows */
+.k-tile .k-ic{flex:none;width:58px;height:58px;color:var(--k-p);margin:-2px 0 auto;padding-bottom:10px;box-sizing:content-box}
 .k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
 .k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
 .k-tile .k-dm{position:absolute;right:24px;top:26px}
@@ -11825,11 +12303,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
 .k-act:last-child{border-bottom:0}
 .k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
-.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-sid,.k-act .k-actid{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
-.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
+.k-act .k-hint,.k-act .k-unstamped{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
@@ -11847,15 +12325,42 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act audio{display:block;width:100%;margin:6px 0}
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+.k-act .k-corrected{display:inline-block;margin:0 0 0 8px;font-size:11.5px;letter-spacing:.04em;color:var(--k-p);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px;vertical-align:2px}
+.k-act .k-corrected.k-on{background:var(--k-wash2)}
+.k-earlier{border-left:2px solid var(--k-edge);margin:0 0 8px;padding:0 0 0 10px;opacity:.82}
+.k-earlier .k-act{border-bottom:1px dashed var(--k-line)}
+.k-earlier-say{font-size:11.5px;color:var(--k-faint);margin:4px 0 0}
+
+/* an identity wherever its ID is shown (H96, H121): its names, the nickname first, the published name small and faint; its short ID under, a button */
+.k-who{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;vertical-align:top;max-width:100%;min-width:0}
+.k-who.k-inline{display:inline;vertical-align:baseline}
+.k-who.k-inline>.k-idbtn{margin-left:6px}
+.k-who.k-inline .k-names{display:inline}
+.k-who.k-inline .k-names>*+*{margin-left:6px}
+.k-names{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;min-width:0}
+.k-nick{font-weight:400;color:var(--k-text);overflow-wrap:anywhere}
+.k-pub{font-size:.82em;color:var(--k-faint);overflow-wrap:anywhere}
+.k-pub.k-state{font-style:italic}
+.k-you{font-size:12px;color:var(--k-soft)}
+.k-retry{font-size:12px;color:var(--k-soft);text-decoration:underline;text-underline-offset:2px}
+.k-idbtn{font:11.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);border-radius:6px;padding:0 2px;text-align:left}
+.k-idbtn:hover,.k-idbtn:focus-visible{background:var(--k-wash);outline:none}
+.k-idbtn.k-whole{overflow-wrap:anywhere;word-break:break-all;white-space:normal;background:var(--k-wash);color:var(--k-text);user-select:all;-webkit-user-select:all}
+.k-idbtn[data-k-copied]{color:var(--k-p)}
+.k-picker{min-width:280px}
+.k-picker input[type=search]{margin:4px 0 6px}
+.k-picker button{display:flex;align-items:center;gap:10px}
+.k-picker .k-names{flex:1}
 
 /* menus: what you take above a line, what changes something below */
 .k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
-.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop .k-t{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
 .k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
 .k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
 .k-pop button:disabled{color:var(--k-faint);opacity:1}
 .k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
 .k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop.k-anchored{position:absolute;left:8px;right:auto;top:auto;bottom:calc(100% + 6px);max-height:min(320px,40vh)}
 .k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
 
 /* the typing box: always in the same place, the bottom */
@@ -11887,15 +12392,36 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
 .k-panel.k-left{left:16px;right:auto}
 .k-panel h4{font-size:16px;font-weight:300}
+.k-ph{display:flex;align-items:center;gap:10px;padding:2px 2px 6px 8px}
+.k-panel .k-ph .k-round{width:28px;height:28px;font-size:16px}
+.k-confirm{width:min(440px,calc(100% - 28px))}
+.k-confirm .k-mh{margin-bottom:0}
+.k-confirm .k-box{margin:0;border:0;padding:0 4px 4px}
+.k-alarm-modal{border-color:var(--k-bad)}
+.k-keychanged h4{font-size:17px;margin:0 0 6px}
+.k-keychanged textarea{min-height:70px}
+.k-reminder{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 20px;border-bottom:1px solid var(--k-bad);font-size:13px;color:var(--k-text);background:rgba(196,100,95,.08);flex:none}
+.k-reminder span{flex:1;min-width:12em}
+.k-reminder.k-rules-ask{border-bottom-color:var(--k-edge);background:var(--k-wash)}
+.k-rule-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.k-rule{border:1px solid var(--k-line);border-radius:10px;padding:10px 12px}
+.k-rule p{margin:4px 0}
+.k-rule-not{border-color:var(--k-edge)}
+.k-rule-not .k-rule-on{font-weight:600}
+.k-rules-all{margin:10px 0 0}
 .k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
 .k-idrow.k-on{background:var(--k-wash2)}
 .k-idrow .k-n{font-size:14.5px}
-.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint)}
 .k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
 .k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
 .k-idline{display:flex;align-items:center;gap:4px}
 .k-idline>.k-idrow{flex:1;min-width:0}
 .k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-more:hover{color:var(--k-text)}
+.k-ownid{margin:2px 4px 8px 44px}
+.k-ownid .k-row{margin:6px 0 0;gap:6px}
+.k-idwhole{display:block;font-size:12px;color:var(--k-text);overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
 .k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
 .k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
 .k-panel .k-pane-in{padding:4px 6px}
@@ -11916,6 +12442,17 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-say>summary::-webkit-details-marker{display:none}
 .k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
 .k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-mor{display:inline-block;margin-left:10px;font-size:12px;color:var(--k-soft);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px;white-space:nowrap}
+a.k-mor:hover{color:var(--k-text)}
+.k-more-text .k-mor{margin-left:0;white-space:normal}
+/* a line opening a panel to work in (H99): a chevron, turning down when open */
+.k-fold{margin:8px 0;font-size:13.5px}
+.k-fold>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--k-soft)}
+.k-fold>summary::-webkit-details-marker{display:none}
+.k-fold>summary:hover{color:var(--k-text)}
+.k-chev{display:inline-grid;place-items:center;width:17px;height:17px;font-size:15px;line-height:1;color:var(--k-soft);transition:transform .15s}
+.k-fold[open]>summary .k-chev{transform:rotate(90deg)}
+.k-fold-body{margin:8px 0 2px}
 .k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
 .k-say .k-more-text p{margin:4px 0}
 .k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
@@ -11926,7 +12463,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
 .k-note ul{margin:4px 0 0;padding-left:1.1em}
 .k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
-.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status{position:fixed;z-index:900;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
 .k-status:empty{display:none}
 .k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
 .k-status .k-close{position:absolute;right:8px;top:8px}
@@ -11942,7 +12479,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-list{border-top:1px solid var(--k-line)}
 .k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
 .k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
-.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;margin:10px 0;background:var(--k-raise)}
 .k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
 .k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
 .k-box.k-fill{background:var(--k-wash);border-color:transparent}
@@ -11957,9 +12494,9 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-me .k-n,.k-me .k-s{display:none}
   .k-menu-btn .k-l{display:none}
   .k-switch button{padding:4px 11px}
-  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(min-content,1fr));gap:10px;padding:12px}
   .k-tile{padding:16px 18px;border-radius:18px}
-  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile .k-ic{width:40px;height:40px;padding-bottom:8px}
   .k-tile h2{font-size:24px}
   .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .k-tile .k-dm{right:16px;top:18px}
@@ -11986,20 +12523,43 @@ function shortForm(form2) {
   return `${form2.slice(0, one2 + 4)}\u2026${form2.slice(-3)}`;
 }
 var initial = (name, id) => (name?.trim()?.[0] ?? id.replace(/^m\w*1/, "")[0] ?? "?").toUpperCase();
+var NAME_WORDS = { loading: "Loading\u2026", none: "No name published", unreached: "Name not reached" };
+function nameOf(n) {
+  return n?.nick?.trim() || (n?.published?.state === "name" ? n.published.name : null);
+}
+function namesHtml(n, o = {}) {
+  const nick = n?.nick?.trim() || null;
+  const p = n?.published ?? { state: "loading" };
+  const pub = p.state === "name" ? p.name : null;
+  const state = p.state === "name" ? "" : `<span class="k-pub k-state" data-k-name-state="${p.state}">${NAME_WORDS[p.state]}</span>${p.state === "unreached" && o.retry !== false ? '<button type="button" class="k-retry" data-k-name-retry>Ask again</button>' : ""}`;
+  if (nick) return `<span class="k-nick" dir="auto">${e(nick)}</span>${pub && pub !== nick ? ` <span class="k-pub" dir="auto">${e(pub)}</span>` : ""}`;
+  if (pub) return `<span class="k-nick" dir="auto">${e(pub)}</span>`;
+  return state;
+}
+function namedOf(w) {
+  if (w.named) return w.named;
+  const nick = w.name && w.ownName && w.name !== w.ownName ? w.name : null;
+  const pub = w.ownName ?? (nick ? null : w.name ?? null);
+  return { nick, published: pub ? { state: "name", name: pub } : { state: "none" } };
+}
 function card(a, o = {}) {
   const s = a.signer;
-  const name = s.name ?? (s.collective ? "a collective" : "");
-  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ""}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">\u201C${e(s.ownName)}\u201D</span>` : ""}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}</button>`;
-  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${e(l.text)}</div>`).join("");
+  const named2 = namedOf(s);
+  const names = !nameOf(named2) && s.collective && named2.published?.state === "none" ? '<span class="k-nick">a collective</span>' : namesHtml(named2, { retry: false });
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-names k-nm">${names}</span>${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}<span class="k-sid">${e(shortForm(s.form))}</span></button>`;
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${l.html ?? e(l.text)}</div>`).join("");
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
   const text3 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
-  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
+  const hint = (!a.when && a.unstamped ? `<div class="k-unstamped">${e(a.unstamped)}</div>` : "") + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "");
+  const earlier = a.earlier?.length ? `<div class="k-earlier" data-k-earlier hidden><div class="k-earlier-say">${a.earlier.length === 1 ? "The original, as signed" : `The original and ${a.earlier.length - 1} earlier correction${a.earlier.length > 2 ? "s" : ""}, as signed, oldest first`}</div>${a.earlier.map((x) => card(x)).join("")}</div>` : "";
+  const corrected = a.earlier?.length ? `<button type="button" class="k-corrected" data-k-corrected aria-expanded="false">Corrected</button>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}${a.earlier?.length ? " k-is-corrected" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${earlier}${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${corrected}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
 }
 function signerMenu(app2, w, own) {
   const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
-  return menu(`${w.name ? `${w.name} \xB7 ` : ""}${shortForm(w.form)}`, [
+  const n = nameOf(namedOf(w));
+  return menu(`${n ? `${n} \xB7 ` : ""}${shortForm(w.form)}`, [
     { key: "copy-id", label: "Copy ID" },
     { key: "copy-link", label: "Copy ID link" },
     { key: "profile", label: "Open profile" }
@@ -12026,7 +12586,12 @@ function appMark(name, icon) {
 }
 function meButton(o) {
   const shown = o.as ?? o;
-  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(shown.name ?? "No name")}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+  const n = namedOf(shown);
+  const label = nameOf(n) ?? NAME_WORDS[n.published?.state === "name" ? "none" : n.published?.state ?? "loading"];
+  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(label)}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+}
+function contactsButton(label = "Contacts") {
+  return `<button type="button" class="k-menu-btn" data-k-open="contacts" aria-haspopup="dialog"><span aria-hidden="true">\u2630</span><span class="k-l">${e(label)}</span></button>`;
 }
 var danger = (l) => `<span class="k-dm k-l${l}" title="danger ${l} of 3" aria-label="danger ${l} of 3"><i></i><i></i><i></i></span>`;
 function tiles(ts) {
@@ -12036,24 +12601,52 @@ function opened(column2, on, pane) {
   const col = column2.map((c) => c === "-" ? '<div class="k-sep"></div>' : typeof c === "string" ? `<h3>${e(c)}</h3>` : `<button type="button" data-k-col="${e(c.key)}" class="${c.key === on ? "k-on" : ""}">${e(c.label)}${c.k != null ? `<span class="k-k">${e(c.k)}</span>` : ""}</button>`).join("");
   return `<div class="k-body k-opened${on ? " k-chosen" : ""}"><aside class="k-col">${col}</aside><section class="k-pane"><button type="button" class="k-back" data-k-back="column">\u2190 Back</button>${pane}</section></div>`;
 }
-function say2(line, more) {
+function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+  const mor = o.mor ? whatIsMor(o.mor === "offline") : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === "offline", true)}</p>` : ""}</div></details>`;
+}
+var MOR_HOME = "https://dubsar.org/";
+function whatIsMor(offline = false, long = false) {
+  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? "What is MOR? Read it at " : "What is MOR? "}<span class="k-mono">dubsar.org</span>${long ? ", on another device: this one never connects." : " (on another device)"}</span>`;
+  return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
+}
+function fold(line, body, o = {}) {
+  return `<details class="k-fold"${o.open ? " open" : ""}${o.attrs ? ` ${o.attrs}` : ""}><summary>${e(line)}<span class="k-chev" aria-hidden="true">\u203A</span></summary><div class="k-fold-body">${body}</div></details>`;
 }
 var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
 function identityPanel(o) {
-  const row = (x, sub, owner, why) => `<div class="k-idline"><button type="button" class="k-idrow${x.on ? " k-on" : ""}${sub ? " k-sub" : ""}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ""}${x.on ? ' aria-current="true"' : ""}${why ? " disabled" : ""}><span class="k-dot${sub ? " k-c" : ""}${x.on ? "" : " k-alt"}">${e(initial(x.name, x.form))}</span><span><span class="k-n" dir="auto">${e(x.name ?? "No name")}${sub ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ""}</span></button>${sub ? "" : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its menu">\u22EF</button>`}</div>`;
-  const ids = o.ids.map((x) => row(x, false, x.id) + x.collectives.map((c) => row(c, true, x.id, c.why)).join("")).join("");
+  const row = (x, sub, owner, why) => `<div class="k-idline"><button type="button" class="k-idrow${x.on ? " k-on" : ""}${sub ? " k-sub" : ""}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ""}${x.on ? ' aria-current="true"' : ""}${why ? " disabled" : ""}><span class="k-dot${sub ? " k-c" : ""}${x.on ? "" : " k-alt"}">${e(initial(x.name, x.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(namedOf(x), { retry: false })}${sub ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ""}</span></button>${sub ? "" : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its settings" aria-label="Its settings">${GEAR}</button>`}</div>`;
+  const ids = o.ids.map((x) => row(x, false, x.id) + (x.on ? ownId({ form: x.form, link: x.link ?? x.form }) : "") + x.collectives.map((c) => row(c, true, x.id, c.why)).join("")).join("");
   const add = `<button type="button" class="k-idrow${o.adding ? " k-on" : ""}" data-k-add="toggle"><span class="k-soft">+ Add</span></button>${o.adding ? `<div class="k-pane-in">${o.add.map((a) => `<button type="button" class="k-idrow" data-k-add="${e(a.key)}"${a.empty ? " disabled" : ""}><span><span class="k-n">${e(a.label)}</span><br><span class="k-small k-soft">${e(a.say)}</span></span></button>`).join("")}</div>` : ""}`;
-  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity">${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ""}</div>`;
+  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity"><div class="k-ph"><h4>Identities</h4><span class="k-grow"></span>${CLOSE_X}</div>${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ""}</div>`;
+}
+var CLOSE_X = '<button type="button" class="k-round k-x" data-k-close aria-label="Close">\xD7</button>';
+var GEAR = '<svg class="k-gear" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+function ownId(o) {
+  return `<div class="k-ownid" data-k-ownid><span class="k-mono k-idwhole">${e(o.form)}</span><div class="k-row"><button type="button" class="k-btn k-small" data-k-copy-id="${e(o.form)}">Copy ID</button><button type="button" class="k-btn k-small" data-k-share="${e(o.link)}">Share your ID link</button></div></div>`;
 }
 function removeSaid(app2, name) {
   return `<div class="k-box" data-k-remove><h4>Remove ${e(name)} from ${e(app2)}?</h4><p class="k-small k-soft">${e(app2)} forgets ${e(name)}\u2019s signing words, and what it kept about it, on this device. ${e(name)} itself is not touched: its acts, its homes and the other apps keep it. To use it here again, bring it with its words.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-remove-yes>Remove it</button><button type="button" class="k-btn k-q" data-k-remove-no>Keep it</button></div></div>`;
 }
+function labelOf2(c) {
+  return (c.named ? nameOf(c.named) : null) ?? c.name ?? c.names?.[0] ?? shortForm(c.form);
+}
+function contactsPanel(o) {
+  const rows = o.contacts.map((c) => {
+    const n = c.named ?? namedOf({ name: c.name, ownName: c.names?.[0] ?? null });
+    const words = [labelOf2(c), n.nick ?? "", n.published?.state === "name" ? n.published.name : "", ...c.names ?? [], c.form].join(" ").toLowerCase();
+    return `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e(words)}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? " k-c" : ""} k-alt">${e(initial(labelOf2(c), c.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(n, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(c.form))}</span></span></button>${o.nick ? `<button type="button" class="k-btn k-q k-small" data-k-nick="${e(c.id)}" title="Your own name for it, sealed: only you see it">Nickname\u2026</button>` : ""}${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ""}</div>`;
+  }).join("");
+  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
+}
 var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 var ICONS = {
   identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
-  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  // The runner: the seal of Kišib's menu bar (H111), as its state shows it there: hollow while off, filled while on, a padlock while locked.
+  runner: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z"/>'),
+  runnerOn: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z" fill="currentColor" fill-opacity=".85"/>'),
+  runnerLocked: SVG('<rect x="13" y="22" width="22" height="17" rx="3.5"/><path d="M17.5 22v-5a6.5 6.5 0 0 1 13 0v5"/><circle cx="24" cy="30.5" r="2"/>'),
   paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
   collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
   waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
@@ -12103,18 +12696,29 @@ function closeMenu() {
   openMenu = null;
 }
 function place(pop, button, prefer) {
+  if (pop.classList.contains("k-anchored")) return;
   const r = button.getBoundingClientRect();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
+  const vv = window.visualViewport;
+  const top2 = vv ? vv.offsetTop : 0;
+  const bottom = vv ? vv.offsetTop + vv.height : document.documentElement.clientHeight;
+  pop.style.maxHeight = "";
+  const w = pop.offsetWidth;
+  let h = pop.offsetHeight;
   let left = prefer === "above" ? r.right - w : r.left;
   left = Math.max(8, Math.min(left, vw - w - 8));
-  let topAt = prefer === "below" ? r.bottom + 6 : r.top - h - 6;
-  if (topAt + h > vh - 8) topAt = r.top - h - 6;
-  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  const roomAbove = r.top - 6 - (top2 + 8);
+  const roomBelow = bottom - 8 - (r.bottom + 6);
+  const above = prefer === "above" ? roomAbove >= h || roomAbove >= roomBelow : !(roomBelow >= h || roomBelow >= roomAbove);
+  const room = Math.max(above ? roomAbove : roomBelow, 80);
+  if (h > room) {
+    pop.style.maxHeight = `${Math.floor(room)}px`;
+    h = pop.offsetHeight;
+  }
+  let at = above ? r.top - 6 - h : r.bottom + 6;
+  at = Math.max(top2 + 8, Math.min(at, bottom - h - 8));
   pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+  pop.style.top = `${Math.round(at)}px`;
 }
 function popAt(button, html, prefer, pick, done) {
   closeMenu();
@@ -12122,10 +12726,22 @@ function popAt(button, html, prefer, pick, done) {
   holder.innerHTML = html;
   const pop = holder.firstElementChild;
   (button.closest(".k-page") ?? document.body).append(pop);
+  pop.style.zIndex = String(LAYER_BASE + stack.length * 2 + 2);
   place(pop, button, prefer);
   button.classList.add("k-open");
   button.setAttribute("aria-expanded", "true");
-  openMenu = { pop, button, done };
+  const again = () => place(pop, button, prefer);
+  window.visualViewport?.addEventListener("resize", again);
+  window.visualViewport?.addEventListener("scroll", again);
+  openMenu = {
+    pop,
+    button,
+    done: () => {
+      window.visualViewport?.removeEventListener("resize", again);
+      window.visualViewport?.removeEventListener("scroll", again);
+      done?.();
+    }
+  };
   pop.addEventListener("click", (ev) => {
     const item = ev.target.closest("button[data-k-item]");
     if (!item || item.disabled) return;
@@ -12146,14 +12762,31 @@ async function copied(item, text3) {
   setTimeout(closeMenu, ok ? 450 : 2400);
 }
 function attachCards(root, host) {
+  const actOf = (card2) => {
+    const own = host.act(card2.dataset.kAct);
+    if (own) return own;
+    const outer = card2.parentElement?.closest("[data-k-act]");
+    return outer ? (actOf(outer)?.earlier ?? []).find((x) => x.id === card2.dataset.kAct) : void 0;
+  };
   root.addEventListener("click", (ev) => {
+    const fold2 = ev.target.closest("[data-k-corrected]");
+    if (fold2) {
+      ev.stopPropagation();
+      const box = fold2.closest("[data-k-act]")?.querySelector(":scope > [data-k-earlier]");
+      if (box) {
+        box.hidden = !box.hidden;
+        fold2.setAttribute("aria-expanded", String(!box.hidden));
+        fold2.classList.toggle("k-on", !box.hidden);
+      }
+      return;
+    }
     const b = ev.target.closest("[data-k-menu]");
     if (!b) return;
     const card2 = b.closest("[data-k-act]");
     if (!card2) return;
     ev.stopPropagation();
     if (openMenu?.button === b) return closeMenu();
-    const a = host.act(card2.dataset.kAct);
+    const a = actOf(card2);
     if (!a) return;
     const which = b.dataset.kMenu;
     card2.classList.add("k-sel");
@@ -12174,18 +12807,142 @@ function attachCards(root, host) {
   });
 }
 function attachClosing(doc = document) {
+  if (attached.has(doc)) return;
+  attached.add(doc);
   doc.addEventListener("click", (ev) => {
-    if (!openMenu) return;
     const t = ev.target;
+    const x = t.closest("[data-k-status-close]");
+    if (x) {
+      const st = x.closest(".k-status");
+      if (st) st.innerHTML = "";
+      return;
+    }
+    const cid = t.closest("[data-k-copy-id]");
+    const share2 = t.closest("[data-k-share]");
+    if (cid || share2) {
+      const b = cid ?? share2;
+      const text3 = cid ? cid.dataset.kCopyId : share2.dataset.kShare;
+      void (async () => {
+        let said = "";
+        if (share2 && typeof navigator.share === "function") {
+          try {
+            await navigator.share({ title: "My ID on MOR", text: text3 });
+            return;
+          } catch (err) {
+            if (err.name === "AbortError") return;
+          }
+        }
+        said = await copy(text3) ? share2 ? "Copied: paste it where you share it" : "Copied" : "Select it and copy it";
+        const was = b.textContent;
+        b.textContent = said;
+        setTimeout(() => {
+          if (b.isConnected) b.textContent = was;
+        }, 1600);
+      })();
+      return;
+    }
+    if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
   });
   doc.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape") return;
     if (openMenu) return closeMenu();
-    if (panel) return closePanel();
-    popup?.close();
+    const top2 = stack[stack.length - 1];
+    if (top2) return void leave(top2);
+    for (const st of doc.querySelectorAll(".k-status")) st.innerHTML = "";
   });
+  const closeable = (root) => {
+    for (const st of root.querySelectorAll(".k-status")) {
+      if (st.firstElementChild && !st.querySelector(":scope > [data-k-status-close], :scope > .k-close")) {
+        const b = doc.createElement("button");
+        b.type = "button";
+        b.className = "k-round k-close";
+        b.dataset.kStatusClose = "";
+        b.setAttribute("aria-label", "Close");
+        b.textContent = "\xD7";
+        st.append(b);
+      }
+    }
+  };
+  new MutationObserver(() => closeable(doc)).observe(doc.documentElement, { childList: true, subtree: true });
+}
+var attached = /* @__PURE__ */ new WeakSet();
+var LAYER_BASE = 30;
+var stack = [];
+function restack() {
+  stack.forEach((l, i) => {
+    l.shade.style.zIndex = String(LAYER_BASE + i * 2);
+    l.box.style.zIndex = String(LAYER_BASE + i * 2 + 1);
+    l.box.toggleAttribute("data-k-under", i < stack.length - 1);
+  });
+}
+function pushLayer(box, shade, close) {
+  closeMenu();
+  const l = { box, shade, close, dirty: false };
+  stack.push(l);
+  shade.addEventListener("click", () => {
+    if (stack[stack.length - 1] === l) void leave(l);
+  });
+  box.addEventListener("input", (ev) => {
+    const t = ev.target;
+    if ((t.tagName === "TEXTAREA" || t.tagName === "INPUT" && !/^(checkbox|radio|file|hidden|search)$/.test(t.type)) && t.value.trim()) l.dirty = true;
+  });
+  box.addEventListener("submit", () => l.dirty = false, true);
+  box.addEventListener("click", (ev) => {
+    const t = ev.target;
+    if (t.closest("[data-k-close]")?.closest("[data-k-stack]") === box) l.close();
+    else if (t.closest("[data-k-remove-no]") && box.matches("[data-k-confirm]")) l.close();
+  });
+  box.dataset.kStack = "";
+  restack();
+  return l;
+}
+function popLayer(box) {
+  const i = stack.findIndex((l) => l.box === box);
+  if (i < 0) return;
+  const above = stack.splice(i);
+  for (const l of above.slice(1).reverse()) l.close();
+  restack();
+}
+async function leave(l) {
+  if (l.dirty && !await askLeave(l.box.closest(".k-page") ?? document.body)) return;
+  l.close();
+}
+function askLeave(page) {
+  return new Promise((done) => {
+    const c = openConfirm(page, '<div class="k-box" data-k-leave><h4>Close it?</h4><p class="k-small k-soft">What you typed there is not kept.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-leave-yes>Close it</button><button type="button" class="k-btn k-q" data-k-leave-no>Keep writing</button></div></div>', () => done(false));
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-leave-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-leave-no]")) c.close();
+    });
+  });
+}
+function openConfirm(page, html, gone) {
+  const shade = document.createElement("div");
+  shade.className = "k-shade k-light";
+  const box = document.createElement("div");
+  box.className = "k-modal k-confirm";
+  box.setAttribute("role", "alertdialog");
+  box.setAttribute("aria-modal", "true");
+  box.dataset.kConfirm = "";
+  box.innerHTML = `<div class="k-mh"><span class="k-grow"></span><button type="button" class="k-round" data-k-close aria-label="Close">\xD7</button></div><div class="k-mbody">${html}</div>`;
+  page.append(shade, box);
+  let answered = false;
+  const close = (a = false) => {
+    answered ||= a;
+    if (!box.isConnected) return;
+    box.remove();
+    shade.remove();
+    popLayer(box);
+    if (!answered) gone?.();
+  };
+  pushLayer(box, shade, () => close());
+  box.querySelector(".k-mbody button")?.focus({ preventScroll: true });
+  return { box, close };
 }
 var panel = null;
 function openPanel(page, html, done) {
@@ -12196,8 +12953,8 @@ function openPanel(page, html, done) {
   holder.innerHTML = html;
   const el = holder.firstElementChild;
   page.append(shade, el);
-  shade.addEventListener("click", () => closePanel());
   panel = { el, shade, done };
+  pushLayer(el, shade, () => closePanel());
   const find = el.querySelector("[data-k-find]");
   find?.addEventListener("input", () => {
     const q = find.value.trim().toLowerCase();
@@ -12210,17 +12967,19 @@ function redrawPanel(html) {
   const holder = document.createElement("div");
   holder.innerHTML = html;
   const el = holder.firstElementChild;
-  panel.el.replaceWith(el);
-  panel.el = el;
-  return el;
+  panel.el.replaceChildren(...el.childNodes);
+  for (const a of [...el.attributes]) if (a.name !== "style") panel.el.setAttribute(a.name, a.value);
+  return panel.el;
 }
 function closePanel() {
   if (!panel) return;
   closeMenu();
-  panel.el.remove();
-  panel.shade.remove();
-  panel.done?.();
+  const p = panel;
   panel = null;
+  popLayer(p.el);
+  p.el.remove();
+  p.shade.remove();
+  p.done?.();
 }
 var panelOpen = () => panel?.el ?? null;
 var Popup = class {
@@ -12242,7 +13001,6 @@ var Popup = class {
       this.scroll = [...this.page.querySelectorAll(".k-feed")].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement("div");
       this.shade.className = "k-shade";
-      this.shade.addEventListener("click", () => this.close());
       this.box = document.createElement("div");
       this.box.className = "k-modal";
       this.box.setAttribute("role", "dialog");
@@ -12254,6 +13012,7 @@ var Popup = class {
       });
       this.page.append(this.shade, this.box);
       popup = this;
+      pushLayer(this.box, this.shade, () => this.close());
     }
     this.stack.push({ title, html });
     return this.draw();
@@ -12271,6 +13030,7 @@ var Popup = class {
   }
   close() {
     closeMenu();
+    if (this.box) popLayer(this.box);
     this.box?.remove();
     this.shade?.remove();
     this.box = this.shade = null;
@@ -12279,9 +13039,9 @@ var Popup = class {
     if (popup === this) popup = null;
   }
   draw() {
-    const now3 = this.stack[this.stack.length - 1];
+    const now4 = this.stack[this.stack.length - 1];
     const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
-    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now3.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now3.html}</div>`;
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now4.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now4.html}</div>`;
     const body = this.box.querySelector(".k-mbody");
     this.drawn(body);
     return body;
@@ -12300,7 +13060,7 @@ function stampCards(root, words) {
     s.className = "k-when";
     s.textContent = w;
     a.prepend(s);
-    a.querySelector(".k-hint")?.remove();
+    a.querySelectorAll(".k-hint, .k-unstamped").forEach((h) => h.remove());
   }
 }
 function attachColumn(root, chose) {
@@ -12349,6 +13109,10 @@ function openSlot(page, o) {
   frame.src = url.href;
   box.append(by, frame);
   page.append(shade, box);
+  pushLayer(box, shade, () => {
+    slot.close();
+    o.closed?.();
+  });
   const listen = (ev) => {
     if (ev.source === frame.contentWindow) o.message?.(ev.data);
   };
@@ -12357,6 +13121,7 @@ function openSlot(page, o) {
     frame,
     close() {
       window.removeEventListener("message", listen);
+      popLayer(box);
       box.remove();
       shade.remove();
     }
@@ -12366,6 +13131,564 @@ function openSlot(page, o) {
     o.closed?.();
   });
   return slot;
+}
+var keyWarned = /* @__PURE__ */ new Set();
+var keyBox = null;
+function keyChanged(page, w) {
+  if (keyBox && keyBox.id !== w?.id) {
+    keyBox.close(true);
+    keyBox = null;
+  }
+  for (const r of page.querySelectorAll("[data-k-keychanged]")) if (r.dataset.kKeychanged !== w?.id) r.remove();
+  if (!w) return;
+  const remind = () => {
+    if (page.querySelector(`[data-k-keychanged="${CSS.escape(w.id)}"]`)) return;
+    const line = document.createElement("div");
+    line.className = "k-reminder";
+    line.dataset.kKeychanged = w.id;
+    line.setAttribute("role", "alert");
+    const text3 = document.createElement("span");
+    text3.textContent = `${w.name}\u2019s signing key was changed elsewhere: this app signs nothing more with the old one.`;
+    const again = document.createElement("button");
+    again.type = "button";
+    again.className = "k-btn k-small";
+    again.textContent = "Give the new words";
+    again.addEventListener("click", () => {
+      keyWarned.delete(w.id);
+      keyChanged(page, w);
+    });
+    line.append(text3, again);
+    (page.querySelector(".k-top") ?? page.firstElementChild)?.after(line);
+  };
+  if (keyWarned.has(w.id)) return remind();
+  if (keyBox?.id === w.id) return;
+  const c = openConfirm(page, `<div class="k-keychanged" data-k-keychanged-box><h4>${escapeText(w.name)}: a signing key changed elsewhere</h4><p class="k-small">${escapeText(w.say)}</p>${w.form}</div>`, () => {
+    keyBox = null;
+    keyWarned.add(w.id);
+    remind();
+  });
+  c.box.classList.add("k-alarm-modal");
+  keyBox = { id: w.id, close: c.close };
+}
+function ask(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<div class="k-box" data-k-ask><h4>${escapeText(o.title)}</h4><p class="k-small k-soft">${escapeText(o.text)}</p><div class="k-row"><button type="button" class="k-btn ${o.alarm ? "k-alarm" : "k-p"}" data-k-ask-yes>${escapeText(o.yes)}</button><button type="button" class="k-btn k-q" data-k-ask-no>${escapeText(o.no ?? "Not now")}</button></div></div>`,
+      () => done(false)
+    );
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-ask-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-ask-no]")) c.close();
+    });
+  });
+}
+function askNick(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<form class="k-box" data-k-nick-form><h4>${escapeText(o.title)}</h4><label>A nickname (optional): only you see it, sealed to you</label><input name="nick" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" value="${escapeText(o.current ?? "")}"><div class="k-row"><button type="submit" class="k-btn k-p">${escapeText(o.yes ?? "Save")}</button><button type="button" class="k-btn k-q" data-k-nick-skip>${escapeText(o.skip ?? "Skip")}</button></div></form>`,
+      () => done(void 0)
+    );
+    const f = c.box.querySelector("form");
+    f.querySelector("input").focus();
+    f.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const v = f.elements.namedItem("nick").value.trim();
+      c.close(true);
+      done(v || null);
+    });
+    c.box.querySelector("[data-k-nick-skip]").addEventListener("click", () => {
+      c.close(true);
+      done(o.current ? o.current ?? null : null);
+    });
+  });
+}
+
+// ../kit/src/ids.ts
+function idForm2(hex2, label = "mid") {
+  if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8 | b) & 65535;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
+  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+}
+function who(o) {
+  const form2 = o.form ?? idForm2(o.id, "mid");
+  return `<span class="k-who${o.inline ? " k-inline" : ""}" data-k-who="${e(o.id)}"${o.named ? ' data-k-named=""' : ""}><span class="k-names">${namesHtml(o.named ?? null)}${o.me ? '<span class="k-you">you</span>' : ""}${o.collective ? '<span class="k-tagc">collective</span>' : ""}</span>${idButton(form2, { person: o.id })}</span>`;
+}
+function idButton(form2, o = {}) {
+  return `<button type="button" class="k-idbtn" data-k-idform="${e(form2)}"${o.person ? ` data-k-person="${e(o.person)}"` : ""}${o.act ? ` data-k-act-id="${e(o.act)}"` : ""}${o.expand ? ' data-k-expand=""' : ""} title="Tap to show it whole">${e(shortForm(form2))}</button>`;
+}
+var actId2 = (id, o = {}) => idButton(idForm2(id, "mact"), { act: id, expand: o.expand });
+function hashButton(hex2) {
+  return `<button type="button" class="k-idbtn k-hash" data-k-idform="${e(hex2)}" data-k-short="${e(`${hex2.slice(0, 8)}\u2026${hex2.slice(-4)}`)}" title="Tap to show it whole">${e(`${hex2.slice(0, 8)}\u2026${hex2.slice(-4)}`)}</button>`;
+}
+var hosts = /* @__PURE__ */ new WeakMap();
+function attachIds(root, host) {
+  hosts.set(root, host);
+  root.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    const retry = t.closest("[data-k-name-retry]");
+    if (retry) {
+      ev.stopPropagation();
+      const w = retry.closest("[data-k-who]");
+      if (w) await fillNames(root, [w], true);
+      return;
+    }
+    const prof = t.closest("[data-k-open-profile]");
+    if (prof) {
+      ev.stopPropagation();
+      return host.profile?.(prof.dataset.kOpenProfile);
+    }
+    const b = t.closest(".k-idbtn");
+    if (!b || !root.contains(b)) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    closeMenu();
+    if (b.dataset.kExpand !== void 0 && b.dataset.kActId && host.act) return host.act(b.dataset.kActId, b);
+    const form2 = b.dataset.kIdform;
+    if (!b.classList.contains("k-whole")) {
+      b.classList.add("k-whole");
+      b.textContent = form2;
+      b.title = "Tap again to copy it";
+      if (b.dataset.kPerson && host.profile && !b.nextElementSibling?.matches("[data-k-open-profile]")) b.insertAdjacentHTML("afterend", `<button type="button" class="k-btn k-q k-small" data-k-open-profile="${e(b.dataset.kPerson)}">Open profile</button>`);
+      return;
+    }
+    const ok = await copy(form2);
+    b.textContent = ok ? "Copied" : "Select it: copying refused";
+    b.dataset.kCopied = ok ? "yes" : "no";
+    setTimeout(() => {
+      if (b.isConnected) b.textContent = form2;
+    }, 1200);
+  });
+  let queued = false;
+  const ask3 = () => {
+    if (queued) return;
+    queued = true;
+    queueMicrotask(async () => {
+      queued = false;
+      const ws = [...root.querySelectorAll("[data-k-who]:not([data-k-named])")];
+      if (ws.length) await fillNames(root, ws, false);
+    });
+  };
+  new MutationObserver(ask3).observe(root, { childList: true, subtree: true });
+  ask3();
+}
+async function fillNames(root, ws, fresh) {
+  const host = hosts.get(root);
+  for (const w of ws) w.dataset.kNamed = "";
+  if (!host?.names) {
+    for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "unreached" } }, { retry: false });
+    return;
+  }
+  if (fresh) for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "loading" } });
+  const ids = [...new Set(ws.map((w) => w.dataset.kWho))];
+  let got = {};
+  try {
+    got = await host.names(ids, fresh);
+  } catch {
+  }
+  for (const w of ws) {
+    if (!w.isConnected) continue;
+    const box = w.querySelector(".k-names");
+    const extra = [...box.querySelectorAll(".k-you, .k-tagc")].map((x) => x.outerHTML).join("");
+    box.innerHTML = namesHtml(got[w.dataset.kWho] ?? { published: { state: "unreached" } }) + extra;
+  }
+}
+var contactsButtonFor = (field) => `<button type="button" class="k-btn k-q k-small k-pick" data-k-pick-for="${e(field)}" aria-haspopup="dialog">Contacts</button>`;
+function attachContactsButtons(root, contacts, picked) {
+  root.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("[data-k-pick-for]");
+    if (!b) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const scope = b.closest("form") ?? root;
+    const key = b.dataset.kPickFor;
+    const field = scope.querySelector(`[name="${CSS.escape(key)}"], #${CSS.escape(key)}`);
+    if (!field) return;
+    const list3 = await contacts();
+    const byForm = new Map(list3.map((c) => [c.form ?? idForm2(c.id, "mid"), c]));
+    const row = (c) => {
+      const form2 = c.form ?? idForm2(c.id, "mid");
+      const words = [c.named.nick ?? "", c.named.published?.state === "name" ? c.named.published.name : "", form2].join(" ").toLowerCase();
+      return `<button type="button" role="option" data-k-picked="${e(form2)}" data-k-words="${e(words)}"><span class="k-names">${namesHtml(c.named, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><span class="k-k">${e(shortForm(form2))}</span></button>`;
+    };
+    const pop = popAt(
+      b,
+      `<div class="k-pop k-picker" role="listbox" data-k-picker><div class="k-t">Contacts</div><input type="search" data-k-pick-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${list3.map(row).join("") || '<p class="k-small k-soft">No contacts yet: add one by its ID in Contacts, top left.</p>'}</div>`,
+      "below",
+      () => void 0
+    );
+    const find = pop.querySelector("[data-k-pick-find]");
+    find.focus({ preventScroll: true });
+    find.addEventListener("input", () => {
+      const q = find.value.trim().toLowerCase();
+      pop.querySelectorAll("[data-k-picked]").forEach((x) => x.hidden = !!q && !x.dataset.kWords.includes(q));
+    });
+    pop.addEventListener("click", (e22) => {
+      const p = e22.target.closest("[data-k-picked]");
+      if (!p) return;
+      e22.stopPropagation();
+      const form2 = p.dataset.kPicked;
+      if (picked?.(field, byForm.get(form2))) {
+        closeMenu();
+        return;
+      }
+      if (field.tagName === "TEXTAREA" || field.dataset.kSeveral !== void 0) {
+        const have = field.value.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean);
+        if (!have.includes(form2)) field.value = [...have, form2].join("\n");
+      } else field.value = form2;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+      closeMenu();
+      field.focus({ preventScroll: true });
+    });
+  });
+}
+function attachContacts(page, host) {
+  let list3 = [];
+  let problem = null;
+  const below = () => `<form data-k-contact-add class="k-contact-add"><div class="k-row"><input name="contact-id" data-k-id-field autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1\u2026, or an ID link)" required aria-label="Add by ID"></div><input name="contact-nick" autocomplete="off" placeholder="Your nickname for it (only you see it)" aria-label="Your nickname for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : '<p class="k-small k-soft">Sealed to you at your homes: every app holding this identity reads the same list. Your nicknames are seen by you alone.</p>'}`;
+  const html = () => host.readOnly ? contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), below: `${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : ""}<p class="k-small k-soft">${e(host.readOnly)}</p>` }) : contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: "Remove", below: below() });
+  const refresh = async (fresh = false) => {
+    try {
+      const r = await host.ask("contacts", fresh ? { fresh: true } : {});
+      list3 = r.contacts;
+      problem = r.problem;
+    } catch (err) {
+      problem = err instanceof Error ? err.message : String(err);
+    }
+  };
+  const open = async () => {
+    await refresh(true);
+    if (panelOpen()?.dataset.kPanel === "contacts") redrawPanel(html());
+    else openPanel(page, html());
+  };
+  const changed = async (op, a, done) => {
+    try {
+      const r = await host.ask(op, a);
+      host.said("done", `<strong>${e(done)}</strong>${r.lines?.length ? ` ${r.lines.map((l) => e(l.text)).join(" ")}` : ""}`);
+      await open();
+    } catch (err) {
+      host.said("error", e(err instanceof Error ? err.message : String(err)));
+    }
+  };
+  page.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (t.closest('[data-k-open="contacts"]')) return void open();
+    const panel2 = t.closest('[data-k-panel="contacts"]');
+    if (!panel2) return;
+    const opened2 = t.closest("[data-k-contact-open]");
+    if (opened2 && host.profile) return host.profile(opened2.dataset.kContactOpen);
+    const nickB = t.closest("[data-k-nick]");
+    if (nickB) {
+      const c = list3.find((x) => x.id === nickB.dataset.kNick);
+      const nick = await askNick(page, { title: `Nickname for ${c?.named.published?.state === "name" ? c.named.published.name : shortForm(c?.form ?? "")}`, current: c?.name ?? null, yes: "Save", skip: "Keep it as it is" });
+      if (nick === void 0 || nick === (c?.name ?? null)) return;
+      return changed("contact nick", { id: nickB.dataset.kNick, nick: nick ?? "" }, nick ? "Nickname saved." : "Nickname taken away.");
+    }
+    const rm = t.closest("[data-k-contact-do]");
+    if (rm) {
+      const c = list3.find((x) => x.id === rm.dataset.kContactDo);
+      if (!await ask(page, { title: `Remove ${c?.name ?? shortForm(c?.form ?? "")} from your contacts?`, text: "Taken out of the one list, in every app holding this identity. Nobody is told.", yes: "Remove", no: "Keep it" })) return;
+      return changed("contact remove", { id: rm.dataset.kContactDo }, "Removed from your contacts.");
+    }
+  });
+  page.addEventListener("submit", (ev) => {
+    const f = ev.target.closest("form[data-k-contact-add]");
+    if (!f) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const d = new FormData(f);
+    void changed("contact add", { id: String(d.get("contact-id") ?? "").trim(), nick: String(d.get("contact-nick") ?? "").trim() }, "Added to your contacts.");
+  });
+  attachContactsButtons(page, async () => {
+    if (!list3.length) await refresh();
+    return list3.map((c) => ({ id: c.id, form: c.form, named: c.named }));
+  });
+  return { open, list: () => list3, refresh: () => refresh(true) };
+}
+
+// ../kit/src/qr.ts
+var ECC_PER_BLOCK = {
+  L: [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+  M: [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
+  Q: [-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+  H: [-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+};
+var BLOCKS = {
+  L: [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
+  M: [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
+  Q: [-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
+  H: [-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81]
+};
+var FORMAT_BITS = { L: 1, M: 0, Q: 3, H: 2 };
+function rawModules(ver) {
+  let r = (16 * ver + 128) * ver + 64;
+  if (ver >= 2) {
+    const n = Math.floor(ver / 7) + 2;
+    r -= (25 * n - 10) * n - 55;
+    if (ver >= 7) r -= 36;
+  }
+  return r;
+}
+var dataCodewords = (ver, l) => Math.floor(rawModules(ver) / 8) - ECC_PER_BLOCK[l][ver] * BLOCKS[l][ver];
+function gfMul(x, y) {
+  let z = 0;
+  for (let i = 7; i >= 0; i--) {
+    z = z << 1 ^ (z >>> 7) * 285;
+    z ^= (y >>> i & 1) * x;
+  }
+  return z & 255;
+}
+function rsDivisor(degree) {
+  const r = new Array(degree).fill(0);
+  r[degree - 1] = 1;
+  let root = 1;
+  for (let i = 0; i < degree; i++) {
+    for (let j = 0; j < r.length; j++) {
+      r[j] = gfMul(r[j], root);
+      if (j + 1 < r.length) r[j] ^= r[j + 1];
+    }
+    root = gfMul(root, 2);
+  }
+  return r;
+}
+function rsRemainder(data, div) {
+  const r = new Array(div.length).fill(0);
+  for (const b of data) {
+    const f = b ^ r.shift();
+    r.push(0);
+    div.forEach((c, i) => r[i] ^= gfMul(c, f));
+  }
+  return r;
+}
+function codewords(data, ver, l) {
+  const nBlocks = BLOCKS[l][ver];
+  const ecLen = ECC_PER_BLOCK[l][ver];
+  const raw = Math.floor(rawModules(ver) / 8);
+  const nShort = nBlocks - raw % nBlocks;
+  const shortLen = Math.floor(raw / nBlocks);
+  const div = rsDivisor(ecLen);
+  const blocks = [];
+  for (let i = 0, k = 0; i < nBlocks; i++) {
+    const d = data.slice(k, k + shortLen - ecLen + (i < nShort ? 0 : 1));
+    k += d.length;
+    const ec = rsRemainder(d, div);
+    if (i < nShort) d.push(0);
+    blocks.push([...d, ...ec]);
+  }
+  const out = [];
+  for (let i = 0; i < blocks[0].length; i++) blocks.forEach((b, j) => (i !== shortLen - ecLen || j >= nShort) && out.push(b[i]));
+  return out;
+}
+function alignment(ver, size) {
+  if (ver === 1) return [];
+  const n = Math.floor(ver / 7) + 2;
+  const step = Math.floor((ver * 8 + n * 3 + 5) / (n * 4 - 4)) * 2;
+  const r = [6];
+  for (let pos = size - 7; r.length < n; pos -= step) r.splice(1, 0, pos);
+  return r;
+}
+function qr(text3, o = {}) {
+  const level = o.level ?? "M";
+  const bytes = [...new TextEncoder().encode(text3)];
+  let ver = 1;
+  for (; ver <= 40; ver++) if (4 + (ver < 10 ? 8 : 16) + bytes.length * 8 <= dataCodewords(ver, level) * 8) break;
+  if (ver > 40) throw new Error("Too long for a QR code.");
+  const bits = [];
+  const put = (v, n) => {
+    for (let i2 = n - 1; i2 >= 0; i2--) bits.push(v >>> i2 & 1);
+  };
+  put(4, 4);
+  put(bytes.length, ver < 10 ? 8 : 16);
+  for (const b of bytes) put(b, 8);
+  const cap = dataCodewords(ver, level) * 8;
+  put(0, Math.min(4, cap - bits.length));
+  put(0, (8 - bits.length % 8) % 8);
+  for (let pad = 236; bits.length < cap; pad ^= 236 ^ 17) put(pad, 8);
+  const data = [];
+  for (let i2 = 0; i2 < bits.length; i2 += 8) data.push(parseInt(bits.slice(i2, i2 + 8).join(""), 2));
+  const all = codewords(data, ver, level);
+  const size = ver * 4 + 17;
+  const m = Array.from({ length: size }, () => new Array(size).fill(false));
+  const fn = Array.from({ length: size }, () => new Array(size).fill(false));
+  const set = (x, y, d) => {
+    m[y][x] = d;
+    fn[y][x] = true;
+  };
+  for (let i2 = 0; i2 < size; i2++) {
+    set(6, i2, i2 % 2 === 0);
+    set(i2, 6, i2 % 2 === 0);
+  }
+  const finder = (cx, cy) => {
+    for (let dy = -4; dy <= 4; dy++)
+      for (let dx = -4; dx <= 4; dx++) {
+        const x = cx + dx;
+        const y = cy + dy;
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4);
+      }
+  };
+  finder(3, 3);
+  finder(size - 4, 3);
+  finder(3, size - 4);
+  const al = alignment(ver, size);
+  for (let i2 = 0; i2 < al.length; i2++)
+    for (let j = 0; j < al.length; j++) {
+      if (i2 === 0 && j === 0 || i2 === 0 && j === al.length - 1 || i2 === al.length - 1 && j === 0) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(al[i2] + dx, al[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+  const format = (mask) => {
+    const d = FORMAT_BITS[level] << 3 | mask;
+    let rem = d;
+    for (let i2 = 0; i2 < 10; i2++) rem = rem << 1 ^ (rem >>> 9) * 1335;
+    const b = (d << 10 | rem) ^ 21522;
+    const bit = (i2) => (b >>> i2 & 1) !== 0;
+    for (let i2 = 0; i2 <= 5; i2++) set(8, i2, bit(i2));
+    set(8, 7, bit(6));
+    set(8, 8, bit(7));
+    set(7, 8, bit(8));
+    for (let i2 = 9; i2 < 15; i2++) set(14 - i2, 8, bit(i2));
+    for (let i2 = 0; i2 < 8; i2++) set(size - 1 - i2, 8, bit(i2));
+    for (let i2 = 8; i2 < 15; i2++) set(8, size - 15 + i2, bit(i2));
+    set(8, size - 8, true);
+  };
+  format(0);
+  if (ver >= 7) {
+    let rem = ver;
+    for (let i2 = 0; i2 < 12; i2++) rem = rem << 1 ^ (rem >>> 11) * 7973;
+    const b = ver << 12 | rem;
+    for (let i2 = 0; i2 < 18; i2++) {
+      const d = (b >>> i2 & 1) !== 0;
+      const a = size - 11 + i2 % 3;
+      const c = Math.floor(i2 / 3);
+      set(a, c, d);
+      set(c, a, d);
+    }
+  }
+  let i = 0;
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right = 5;
+    for (let v = 0; v < size; v++)
+      for (let j = 0; j < 2; j++) {
+        const x = right - j;
+        const upward = (right + 1 & 2) === 0;
+        const y = upward ? size - 1 - v : v;
+        if (!fn[y][x] && i < all.length * 8) {
+          m[y][x] = (all[i >>> 3] >>> 7 - (i & 7) & 1) !== 0;
+          i++;
+        }
+      }
+  }
+  const masked = (mask) => {
+    const r = m.map((row) => [...row]);
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        if (fn[y][x]) continue;
+        const inv = [(x + y) % 2 === 0, y % 2 === 0, x % 3 === 0, (x + y) % 3 === 0, (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, x * y % 2 + x * y % 3 === 0, (x * y % 2 + x * y % 3) % 2 === 0, ((x + y) % 2 + x * y % 3) % 2 === 0][mask];
+        if (inv) r[y][x] = !r[y][x];
+      }
+    return r;
+  };
+  const withFormat = (grid, mask) => {
+    const keep = m.map((row) => [...row]);
+    format(mask);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (fn[y][x]) grid[y][x] = m[y][x];
+    for (let y = 0; y < size; y++) m[y] = keep[y];
+    return grid;
+  };
+  if (o.mask !== void 0) return { size, dark: withFormat(masked(o.mask), o.mask) };
+  let best = null;
+  let bestScore = Infinity;
+  for (let k = 0; k < 8; k++) {
+    const g = withFormat(masked(k), k);
+    const sc = penalty(g);
+    if (sc < bestScore) [best, bestScore] = [g, sc];
+  }
+  return { size, dark: best };
+}
+function penalty(g) {
+  const size = g.length;
+  let r = 0;
+  const line = (at) => {
+    let color = false;
+    let run2 = 0;
+    const hist = [0, 0, 0, 0, 0, 0, 0];
+    const add = (len) => {
+      if (hist[0] === 0) len += size;
+      hist.pop();
+      hist.unshift(len);
+    };
+    const count = () => {
+      const n = hist[1];
+      const core = n > 0 && hist[2] === n && hist[3] === n * 3 && hist[4] === n && hist[5] === n;
+      return (core && hist[0] >= n * 4 && hist[6] >= n ? 1 : 0) + (core && hist[6] >= n * 4 && hist[0] >= n ? 1 : 0);
+    };
+    for (let i = 0; i < size; i++) {
+      if (at(i) === color) {
+        run2++;
+        if (run2 === 5) r += 3;
+        else if (run2 > 5) r++;
+      } else {
+        add(run2);
+        if (!color) r += count() * 40;
+        color = at(i);
+        run2 = 1;
+      }
+    }
+    if (color) {
+      add(run2);
+      run2 = 0;
+    }
+    add(run2 + size);
+    r += count() * 40;
+  };
+  for (let y = 0; y < size; y++) line((x) => g[y][x]);
+  for (let x = 0; x < size; x++) line((y) => g[y][x]);
+  for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) if (g[y][x] === g[y][x + 1] && g[y][x] === g[y + 1][x] && g[y][x] === g[y + 1][x + 1]) r += 3;
+  const dark = g.flat().filter(Boolean).length;
+  const total = size * size;
+  r += (Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1) * 10;
+  return r;
+}
+function qrSvg(text3, o = {}) {
+  const { size, dark } = qr(text3, { level: o.level });
+  const q = 4;
+  const n = size + q * 2;
+  let d = "";
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (dark[y][x]) d += `M${x + q} ${y + q}h1v1h-1z`;
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  return `<svg class="k-qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" width="${o.px ?? 220}" height="${o.px ?? 220}" shape-rendering="crispEdges" role="img" aria-label="${esc(o.label ?? "QR code")}"><rect width="${n}" height="${n}" fill="#fff"/><path fill="#000" d="${d}"/></svg>`;
 }
 
 // ../genesis/src/card-words.ts
@@ -12384,19 +13707,20 @@ var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><stro
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
-var STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{font:300 15px/1.55 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 main{max-width:600px;margin:0 auto;padding:0 16px 64px}
 a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
 h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
 h2{font-size:17px;margin:28px 0 10px}
 h3{font-size:15px;margin:0 0 6px}
 p{margin:8px 0}
-code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+code,.mono{font:13px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .small{font-size:13px;color:var(--soft)}
 button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
 button:hover{border-color:var(--faint)}
@@ -12423,7 +13747,7 @@ label.check input{width:auto}
 .count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
 .count:empty{display:none}
 .me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.fp{font:12px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
 .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
 .who .name{color:var(--text);font-weight:400}
 .who .dn{color:var(--soft)}
@@ -12471,7 +13795,7 @@ details[open]>summary::before{content:"\u2212 "}
 .people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
 .people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
 .people ul{margin:0;padding:0}
-.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .words span{white-space:nowrap}
 .words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
 .say{padding-left:1.1em;color:var(--soft);font-size:14px}
@@ -12480,7 +13804,7 @@ details[open]>summary::before{content:"\u2212 "}
 .typed{display:flex;flex-wrap:wrap;gap:10px}
 .typed label{margin:0}
 .typed input{width:10em}
-.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+.id{font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
 dl.facts dt{color:var(--faint)}
 dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
@@ -12516,14 +13840,14 @@ details>summary::before{color:var(--tint)}
 // ../dub/src/page/view.ts
 var TEST_ONLY2 = "Test identities only, until MOR is frozen";
 var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
-var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>Two risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
 <li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
 var PAGE_STYLE2 = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .dub-banner strong{font-weight:400;color:var(--k-text)}
 .dub-banner ol{margin:4px 0;padding-left:1.4em}
 .dub-center{max-width:820px;margin:0 auto;width:100%}
@@ -12546,9 +13870,18 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
 .dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
 .dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-notes .dub-thread{overflow:auto}
+.dub-pad{padding:10px 14px}
+.dub-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.dub-note-latest{border:1px solid var(--k-line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.dub-note-draft{border-top:1px solid var(--k-line);padding:8px 0}
+.dub-note-form textarea{width:100%;min-height:220px}
 .dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .dub-thread .dub-head h2{font-size:20px}
 .dub-cc{font-size:12.5px;color:var(--k-soft)}
+#ccs{display:contents}
+#ccs .k-chip{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ccs .k-chip .k-x{margin-left:4px;flex:none}
 .dub-field{display:flex;gap:8px;align-items:center}
 .dub-field input{flex:1}
 .dub-modal-form textarea{min-height:5em}
@@ -12557,7 +13890,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
 .dub-ways input{margin-top:4px}
 .dub-ways .k-small{display:block}
-.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-hand{width:100%;min-height:6em;font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
 @media (max-width:600px){
   .dub-banner{padding:5px 10px}
@@ -12604,10 +13937,11 @@ function actFormOf(hex2, label = "mact") {
 }
 
 // src/page/view.ts
+var whoOf = (w, inline = true) => who({ id: w.id, me: !!w.me, inline });
 var NAME2 = "Damgar";
 var TEST_ONLY3 = "Test identities and test networks only, until MOR is frozen. No real money";
 var TINT3 = { layer: APPS.damgar.colour, pastel: APPS.damgar.pastel };
-var WEB_BANNER3 = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+var WEB_BANNER3 = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment you bring an identity here could copy its signing key, and the on-chain request key Damgar makes: with them, sign claims and receipts as you, and commit your side to payments you did not intend.</li>
 <li>This browser\u2019s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
 <li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
@@ -12615,7 +13949,7 @@ var WEB_BANNER3 = `<details class="k-say damgar-banner" id="for-testing-only" ro
 var STYLE2 = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .damgar-banner strong{font-weight:400;color:var(--k-text)}
 .damgar-banner ol{margin:4px 0;padding-left:1.4em}
 .damgar-foot{flex:none;padding:0 28px 10px}
@@ -12629,7 +13963,11 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .damgar-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
-.damgar-copy{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
+.damgar-qr{display:inline-block;line-height:0;border-radius:8px;overflow:hidden;max-width:100%}
+.damgar-qr svg{max-width:100%;height:auto}
+.damgar-wallet{margin:6px 0 8px}
+.damgar-wallet a.k-btn{text-decoration:none;display:inline-flex;align-items:center}
+.damgar-copy{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
 .damgar-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
 .damgar-v.valid{color:var(--k-text);border-color:var(--k-p)}
 .damgar-v.invalid{color:var(--k-bad);border-color:var(--k-bad)}
@@ -12662,19 +14000,19 @@ var TILES = [
   { key: "waiting", name: "Waiting", say: "Payments to read, sign and pay in your wallet; invoices to make, receipts to sign; one pasted by hand; to the vault.", icon: "waiting", danger: 3 },
   { key: "account", name: "Account", say: "In, out, pending, owed. Per unit, never summed across units. What other apps paid under their lanes.", icon: "account", danger: 1 },
   { key: "lanes", name: "Lanes", say: "What each app may pay without asking: a cap per act, a cap in all, kinds, an expiry.", icon: "lanes", danger: 2 },
-  { key: "settings", name: "Settings", say: "Where you are paid (the vault set in Ki\u0161ib), what you accept, homes and relays, every step by hand.", icon: "settings", danger: 2 }
+  { key: "settings", name: "Settings", say: "Where you are paid (the vault set in Ki\u0161ib), the rules you follow, homes and relays, every step by hand.", icon: "settings", danger: 2 }
 ];
 function topBar(s, tab, acting) {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Damgar">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}${t.key === "waiting" && s.counts.toSign + s.counts.toPay ? `<span class="k-count">${s.counts.toSign + s.counts.toPay}</span>` : ""}</button>`).join("")}</nav>` : "";
-  const me = i ? meButton({ name: i.name ?? (i.runner ? "via Ki\u0161ib" : shortForm(i.form)), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : "";
-  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME2, "icon.png")}</button>${tabs}`, right: me });
+  const me = i ? meButton({ name: i.name, form: i.form, named: i.named ?? null, as: acting ? { name: acting.name, form: acting.form, named: acting.named ?? null } : null }) : "";
+  return top({ left: `<div class="k-row">${contactsButton()}<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME2, "icon.png")}</button></div>${tabs}`, right: me });
 }
 function home(s, web, acting) {
   const n = s.counts;
   const ts = TILES.map((t) => t.key === "waiting" && n.toSign + n.toPay ? { ...t, say: `To sign: ${n.toSign} \xB7 to pay: ${n.toPay}. Each read in plain words before you sign; paid only in your own wallet.` } : t);
   return `${topBar(s, null, acting)}<div class="k-body k-col-flex">${tiles(ts)}</div>
-<div class="damgar-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity."])}</div>`;
+<div class="damgar-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity."], { mor: true })}</div>`;
 }
 function column(tab, s, c, acting) {
   switch (tab) {
@@ -12682,7 +14020,7 @@ function column(tab, s, c, acting) {
       return [
         { key: "to-pay", label: "To pay", k: c.toPay },
         { key: "to-receive", label: "To receive", k: c.toReceive },
-        ...acting ? ["-", { key: "collective", label: `For ${acting.name ?? shortForm(acting.form)}` }] : [],
+        ...acting ? ["-", { key: "collective", label: `For ${acting.name ?? "the collective"}` }] : [],
         "-",
         { key: "paste", label: "+ Paste an act to sign" },
         { key: "vault", label: "To the vault" }
@@ -12692,7 +14030,7 @@ function column(tab, s, c, acting) {
     case "lanes":
       return [{ key: "asked", label: "Asked", k: c.asked }, { key: "in-force", label: "In force", k: c.inForce }, { key: "own", label: "Damgar\u2019s own" }, "-", { key: "ended", label: "Ended", k: c.ended }];
     case "settings":
-      return [{ key: "paid", label: "Where you are paid" }, { key: "accept", label: "What you accept" }, { key: "relays", label: "Homes and relays" }, "-", { key: "manual", label: "Every step by hand" }];
+      return [{ key: "paid", label: "Where you are paid" }, { key: "accept", label: "Rules I follow" }, { key: "relays", label: "Homes and relays" }, "-", { key: "manual", label: "Every step by hand" }];
   }
 }
 var firstPart = (tab) => ({ waiting: "to-pay", account: "summary", lanes: "in-force", settings: "paid" })[tab];
@@ -12721,7 +14059,7 @@ function firstScreen(web, part = "bring") {
 }
 function bringForm() {
   return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key\u2019s words, as Dub, Edubba or Ki\u0161ib show them (never the chain key\u2019s).</p>
-<label>Its ID (mid1\u2026, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
+<label>Its ID (mid1\u2026, or its hexadecimal)</label><div class="k-row"><input name="id" class="k-grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor("id")}</div>
 <label>Its signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
@@ -12742,7 +14080,7 @@ function makeWords(r) {
 }
 function runnerForm(r) {
   if (!r.available) return `<p class="k-small k-soft">Ki\u0161ib\u2019s runner is in the computer\u2019s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
-  const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? "Use it" : "Use it here"}</button></div>`).join("")}</div>` : "";
+  const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div><span>${who({ id: x.id, named: x.name ? { published: { state: "name", name: x.name } } : null, inline: true })}</span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? "Use it" : "Use it here"}</button></div>`).join("")}</div>` : "";
   return `${r.problem ? note("error", e(r.problem)) : ""}
 ${say2("Ki\u0161ib keeps the identity\u2019s signing key on this Mac; Damgar holds none.", ["Pairing starts here and is approved in Ki\u0161ib (Runner, Apps), comparing the code. Then every money act Damgar would sign is a request to Ki\u0161ib, and Ki\u0161ib\u2019s panel appears inside Damgar\u2019s window: money always asks. Allow \u201Cmay open what is sealed to this identity\u201D in Ki\u0161ib, or Damgar cannot read what waits for it."])}
 ${r.state === "approved" ? `<p class="k-small">Ki\u0161ib approved Damgar (code ${e(r.code ?? "")}). The identities it lets Damgar use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Damgar in Ki\u0161ib.</p>'}` : r.state === "waiting" ? `<p>Approve Damgar in Ki\u0161ib (Runner, Apps), comparing this code: <span class="k-mono">${e(r.code ?? "")}</span></p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">I approved it in Ki\u0161ib</button></div>` : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Ask Ki\u0161ib to pair</button></div>`}`;
@@ -12754,10 +14092,10 @@ function acceptList(items) {
   ).join("")}</ul>`;
 }
 function acceptScreen(s) {
-  return `<div class="damgar-first">${appMark(NAME2, "icon.png")}<h2>What you accept</h2>
+  return `<div class="damgar-first">${appMark(NAME2, "icon.png")}<h2>Rules I follow</h2>
 ${say2("Damgar signs only under what you accept here; anything else is shown unknown, never signed.", ["Every money act names the specifications it follows. Damgar reads, checks and signs only under those you accept; an act under any other is shown unknown, as the core treats a specification it does not implement. Your choice is sealed to your identity and kept at its homes, so every app holding it reads the same list; changeable in Settings."])}
 ${s.list.problems.length ? note("", lines(s.list.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
-<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Accept these</button></div></form><div id="status" class="k-status"></div></div>`;
+<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Add these to my list</button><button type="submit" class="k-btn" data-in="here">In Damgar only</button><button type="button" class="k-btn" data-action="accept-later">Later</button><span class="k-grow"></span><button type="button" class="k-btn k-q" data-action="first-back">\u2190 Another identity</button></div><p class="k-small k-soft">Later: every money act is shown unknown until you choose, in Settings, Rules I follow.</p></form><div id="status" class="k-status"></div></div>`;
 }
 var IDENTITY_MENU = [
   ["words", "Words", ""],
@@ -12781,11 +14119,8 @@ function renewForm() {
 }
 function collectiveForm(cs) {
   return `<p class="k-small k-soft">A collective whose Money area you hold: Damgar acts for it with your own key for it, sealed to you when you signed its founding. Then choose it under this identity in the panel: Waiting shows its part.</p>
-${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(c.form))}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join("")}</div>` : ""}
-<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
-}
-function spent2(sayIt) {
-  return `<div class="k-alarmbox" id="spent">${e(sayIt)} <button type="button" class="k-btn k-small" data-action="renew">Give the new words</button></div>`;
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span>${who({ id: c.id, collective: true, inline: true })}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join("")}</div>` : ""}
+<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required>${contactsButtonFor("id")}<button type="submit" class="k-btn k-p">Act for it</button></form>`;
 }
 var verdict = (v) => `<span class="damgar-v ${e(v.answer)}" title="${e(v.why)}">${e(v.answer)}</span>`;
 var btn = (action, id, label, primary = false, key = "id") => `<button type="button" class="k-btn${primary ? " k-p" : " k-q"}" data-action="${e(action)}" data-${key}="${e(id)}">${e(label)}</button>`;
@@ -12816,12 +14151,19 @@ function itemActs(t) {
 <form class="invoice" data-id="${e(t.id)}"><label>The invoice your wallet made (BOLT 11)</label><textarea name="invoice" required spellcheck="false" placeholder="lnbcrt\u2026"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Check it and send it</button></div></form>` : "";
   return `${t.amount ? `<p>${e(t.amount.said)}</p>` : ""}${lines(t.lines)}${invoice}<div class="damgar-acts">${offers2}</div>`;
 }
+function openInWallet(key, invoice) {
+  const webln = typeof globalThis !== "undefined" && !!globalThis.webln;
+  const link = `lightning:${invoice}`;
+  return `<div class="damgar-wallet" data-wallet="${e(key)}"><div class="k-row">${webln ? `<button type="button" class="k-btn k-p" data-action="webln" data-key="${e(key)}" data-invoice="${e(invoice)}">Pay with your browser\u2019s wallet</button>` : ""}<a class="k-btn${webln ? "" : " k-p"}" href="${e(link)}" data-open-wallet>Open in wallet</a></div>
+${fold("Its QR code, for a wallet on your phone", `<div class="damgar-qr">${qrSvg(link, { level: "M", label: "The invoice, as a QR code" })}</div>`)}
+<p class="k-small k-soft">${webln ? "Your browser\u2019s wallet asks you to approve it, then hands the proof back here by itself." : "Your wallet asks you to approve it; then paste its proof below."} Nothing is paid without your approval in the wallet.</p></div>`;
+}
 function payment(p, forPay = false) {
-  const proofs = p.proofs.length ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === "claim" ? "Claim" : "Receipt"} by ${e(x.by.me ? "you" : x.by.short)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || "the rail\u2019s own evidence holds")}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ""}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== "valid" ? ` \xB7 the act itself: ${e(x.standing)}` : ""}</div>`).join("")}</div>` : "";
-  const pay = forPay && p.pay ? p.pay.invoice ? `<label>Pay this invoice in your wallet</label><div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
+  const proofs = p.proofs.length ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === "claim" ? "Claim" : "Receipt"} by ${whoOf(x.by)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || "the rail\u2019s own evidence holds")}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ""}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== "valid" ? ` \xB7 the act itself: ${e(x.standing)}` : ""}</div>`).join("")}</div>` : "";
+  const pay = forPay && p.pay ? p.pay.invoice ? `<label>Pay this invoice in your wallet</label>${openInWallet(p.key, p.pay.invoice)}<div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
 <form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once paid: the preimage (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>` : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="damgar-copy">${e(p.pay.address ?? "")}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.address ?? "")}">Copy the address</button>
 ${p.stage === "paid" ? `<div class="k-row"><button type="button" data-action="recheck" data-key="${e(p.key)}" class="k-btn k-p">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction\u2019s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>`}` : "";
-  const vaultInvoice = forPay && p.vaultInvoice ? `<p class="k-small k-soft">Make an invoice on your vault\u2019s node (${e(p.vaultInvoice.node.slice(0, 16))}\u2026) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault\u2019s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
+  const vaultInvoice = forPay && p.vaultInvoice ? `<p class="k-small k-soft">Make an invoice on your vault\u2019s node (${hashButton(p.vaultInvoice.node)}) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault\u2019s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
 <form class="vault-invoice" data-key="${e(p.key)}"><label>The invoice your vault\u2019s node made</label><input name="invoice" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it</button></div></form>` : "";
   const ticket = p.ticket ? `<p class="k-small k-soft">An anchor\u2019s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? "" : " Not checked here: this Damgar follows no chain, so whether that block is within the tier\u2019s reach of today\u2019s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer."}</p>` : "";
   return `<p>${e(p.amount.said)} \xB7 ${e(p.railName)}${p.to === "vault" ? ", to the vault" : ""}</p>${p.whatFor ? `<p class="k-small k-soft">For \u201C${e(p.whatFor)}\u201D</p>` : ""}${ticket}${lines(p.lines)}${vaultInvoice}${pay}${proofs}`;
@@ -12839,7 +14181,7 @@ function vaultPane(r, problem, waiting) {
   if (!v) return `<h2>To the vault</h2><p class="k-soft">Your identity\u2019s chain declares no vault: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Ki\u0161ib (Paper, Change the vault).</p>`;
   return `<h2>To the vault</h2>
 ${say2("From your wallet to your vault, one way only.", ["Damgar binds the payment, you pay it in your wallet (on regtest, the test wallet) and paste the proof back. It names the act that declared your vault, a transfer to yourself (the payment cMIP, draft 4). Withdrawing needs the chain key and stays in Ki\u0161ib."])}
-<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join("; "))}. Declared in your chain (act ${e(v.declaredBy.slice(0, 12))}\u2026), with the chain key: changed only in Ki\u0161ib.</p>
+<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join("; "))}. Declared in your chain (act ${actId2(v.declaredBy)}), with the chain key: changed only in Ki\u0161ib.</p>
 <form id="vault-transfer"><label>To</label><select name="entry">${v.entries.map((x, i) => `<option value="${i}">${e(x.railName)}, ${e(x.unit.said)}</option>`).join("")}</select>
 <label>Amount (whole units)</label><input name="value" inputmode="numeric" autocomplete="off" required>
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="vault-review"></div>${waiting}`;
@@ -12850,20 +14192,18 @@ ${r.costs.length ? `<div class="damgar-costs"><h3>Before you send</h3>${lines(r.
 ${r.blocking.length ? note("error", lines(r.blocking.map((t) => ({ text: t, tone: "warn" })))) : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it here</button></div>`}`;
 }
 function collectivePane(c, name) {
-  if (!c) return `<h2>For ${e(name)}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity\u2019s menu (A collective under it).</p>`;
+  if (!c) return `<h2>For ${name}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity\u2019s menu (A collective under it).</p>`;
   const area = c.area;
-  const acts = c.acts.length ? lines(
-    c.acts.map((a) => {
-      const st = a.standing;
-      const keys = st?.areas[0];
-      return { text: `${a.amount.value.toLocaleString("en")} to ${a.to.slice(0, 8)}\u2026${a.whatFor ? ` (${a.whatFor})` : ""}: ${st ? st.met ? "counts for the collective" : "does not count yet" : "not read"}${keys ? `, ${keys.signers.length} of ${keys.needed} keys${keys.limits === "above" ? ", above the cap" : ""}` : ""} \xB7 ${a.act.slice(0, 12)}\u2026`, tone: st?.met ? "ok" : "warn" };
-    })
-  ) : '<p class="k-small k-soft">No promise signed here yet.</p>';
-  return `<h2>For ${e(name)}</h2>
+  const acts = c.acts.length ? `<ul class="damgar-lines">${c.acts.map((a) => {
+    const st = a.standing;
+    const keys = st?.areas[0];
+    return `<li class="${st?.met ? "ok" : "warn"}">${e(a.amount.value.toLocaleString("en"))} to ${who({ id: a.to, inline: true })}${a.whatFor ? ` (${e(a.whatFor)})` : ""}: ${e(st ? st.met ? "counts for the collective" : "does not count yet" : "not read")}${keys ? e(`, ${keys.signers.length} of ${keys.needed} keys${keys.limits === "above" ? ", above the cap" : ""}`) : ""} \xB7 ${actId2(a.act)}</li>`;
+  }).join("")}</ul>` : '<p class="k-small k-soft">No promise signed here yet.</p>';
+  return `<h2>For ${name}</h2>
 ${say2("Damgar acts for it with your own key for it.", ["Made as you signed its founding and sealed to you at your homes. Within the area\u2019s cap, your key alone; above it, another holder\u2019s key too, as its constitution writes it."])}
 ${area ? `<p class="k-small k-soft">Its Money area, \u201C${e(area.name)}\u201D: ${area.holders.length} holder${area.holders.length === 1 ? "" : "s"}, ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more` : ""}.</p>` : ""}
 ${c.why ? note("error", e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h3>A promise to pay, from the collective</h3>
-<label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
+<label>To whom (an ID)</label><div class="k-row"><input name="to" type="text" class="k-grow" required autocomplete="off" spellcheck="false">${contactsButtonFor("to")}</div>
 <label>How much (regtest satoshis)</label><input name="value" type="text" inputmode="numeric" required>
 <label>What for</label><input name="whatFor" type="text">
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div><div class="promise-read"></div></form>`}
@@ -12874,7 +14214,7 @@ function promiseRead(r) {
 }
 var amounts = (xs) => xs.length ? xs.map((x) => e(x.said)).join("<br>") : '<span class="k-faint">none</span>';
 function summaryPane(a) {
-  const asks = a.asks.length ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === "out" ? "You asked" : "Asked of you by"} <span class="k-mono">${e(shortForm(formOf(x.other.id, "mid")))}</span>: ${e(x.amount.said)}${x.whatFor ? `, for \u201C${e(x.whatFor)}\u201D` : ""}</span><span class="k-r">${e(x.state)}</span></div>`).join("")}</div>` : "";
+  const asks = a.asks.length ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === "out" ? "You asked" : "Asked of you by"} ${whoOf(x.other)}: ${e(x.amount.said)}${x.whatFor ? `, for \u201C${e(x.whatFor)}\u201D` : ""}</span><span class="k-r">${e(x.state)}</span></div>`).join("")}</div>` : "";
   return `<h2>Summary</h2>
 ${say2("Per unit, never summed across units. Each verified from the rail\u2019s evidence.", a.notes)}
 <div class="damgar-totals"><div class="k-box k-fill"><dl class="k-facts">${a.totals.map((t) => `<dt>${e(t.label)}</dt><dd>${amounts(t.amounts)}</dd>`).join("")}</dl></div></div>
@@ -12883,7 +14223,8 @@ ${asks}${a.problems.length ? note("", lines(a.problems.map((t) => ({ text: t, to
 function laneTotal(l) {
   if (!l.total) return "";
   const over = l.over ? `<span class="damgar-over"> \xB7 overspent by ${e(l.over.said)}</span>` : "";
-  return `<dt>In all</dt><dd>${e(l.total.said)}${l.spent ? ` \xB7 ${e(l.spent.said)} spent, ${e(l.left?.said ?? "")} left` : " \xB7 not read yet"}${over}</dd>`;
+  const parts = l.spent ? [l.paid && l.paid.value ? `${l.paid.said} paid` : null, l.asked && l.asked.value ? `${l.asked.said} asked, not paid yet` : null].filter(Boolean).join(", ") : "";
+  return `<dt>In all</dt><dd>${e(l.total.said)}${l.spent ? ` \xB7 ${e(l.spent.said)} spent${parts ? ` (${e(parts)})` : ""}, ${e(l.left?.said ?? "")} left` : " \xB7 not read yet"}${over}</dd>`;
 }
 function lane(l, actions = true) {
   const until = l.until ? new Date(l.until * 1e3).toISOString().slice(0, 16).replace("T", " ") + " UTC" : null;
@@ -12904,7 +14245,7 @@ ${say2("What an app may sign and pay without asking you each time.", ["A lane le
 ${manual ? note("", "Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.") : ""}
 ${ls.map((l) => lane(l)).join("") || '<p class="k-empty">No lane in force. An app asks for one (in Dub: the identity\u2019s menu, \u201CA lane from Damgar\u201D), and it waits in Asked.</p>'}
 <h3>The clock for lanes</h3><p class="k-small k-soft">A lane\u2019s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.${dubsar ? " Prefilled with the Dubsar clock, the one every app of the suite relies on; a lane\u2019s grant names the clock, so its words say which." : ""}</p>
-<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? "")}" spellcheck="false"><button type="submit" class="k-btn">Save the clock</button></form>`;
+<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? "")}" spellcheck="false">${contactsButtonFor("clock")}<button type="submit" class="k-btn">Save the clock</button></form>`;
 }
 function ownPane(ls, units, l, web) {
   const unitOptions = units.map((u2) => `<option value="${e(u2.hash)}"${/regtest/.test(u2.label) ? " selected" : ""}>${e(u2.label)}</option>`).join("");
@@ -12924,19 +14265,34 @@ ${web ? note("", "The web client never makes a link to a node: use Damgar on you
 <label>The node\u2019s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
 <div class="k-row"><button type="submit" class="k-btn">Check it and keep it</button></div></form>`}`;
 }
-function paidPane(r, problem) {
-  const pointer = r?.pointer ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? " (its chain is forked: the last pointer before the fork counts)" : ""} \xB7 <span class="k-mono">${e(shortForm(formOf(r.pointer.act)))}</span></dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? "" : " (a rail Module you do not accept)"}</dd>`).join("")}</dl></div>` : '<p class="k-soft">You have no payee pointer yet: nobody can pay you until you say where.</p>';
-  const vault = r?.vault ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity\u2019s chain (act ${e(r.vault.declaredBy.slice(0, 12))}\u2026), with the chain key: changed only in Ki\u0161ib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>` : '<p class="k-small k-soft">None declared: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Ki\u0161ib.</p>';
+var RAIL_FIELDS = {
+  lightning: {
+    fields: (v) => `<label>Your wallet\u2019s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false" value="${e(v.lightning ?? "")}">`,
+    network: true
+  },
+  onchain: {
+    fields: (v) => `<label>A Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false" value="${e(v.onchain ?? "")}"><label class="damgar-check"><input type="checkbox" name="newRequestKey"${v.newRequestKey === "on" ? " checked" : ""}> Make a new on-chain request key (the old one then no longer counts for new payments)</label>`,
+    network: true
+  }
+};
+var railsAccepted = (accept) => accept.filter((a) => a.kind === "Module" && a.accepted && RAIL_FIELDS[a.key]);
+function railsForm(accept, chosen, values) {
+  const can = railsAccepted(accept);
+  if (!can.length) return `<p class="k-soft">You accept no rail Module yet: accept one in Settings, Rules I follow (the Lightning rail, the on-chain rail), then choose it here.</p>`;
+  const cards = chosen.map((k) => can.find((a) => a.key === k)).filter((a) => !!a).map((a, n) => `<div class="k-box damgar-rail" data-rail-card="${e(a.key)}"><div class="k-row"><h4 class="k-grow">${n + 1}. ${e(a.name)}</h4><button type="button" class="k-btn k-q k-small" data-action="rail-remove" data-rail="${e(a.key)}">Remove</button></div><p class="k-small k-soft">${e(a.does)}</p>${RAIL_FIELDS[a.key].fields(values)}</div>`).join("");
+  const left = can.filter((a) => !chosen.includes(a.key));
+  const add = left.length ? `<div class="k-row damgar-rail-add"><select name="rail-add" aria-label="A rail to add">${left.map((a) => `<option value="${e(a.key)}">${e(a.name)}</option>`).join("")}</select><button type="button" class="k-btn" data-action="rail-add">${chosen.length ? "+ Add a rail" : "Choose this rail"}</button></div>` : "";
+  const network = chosen.some((k) => RAIL_FIELDS[k]?.network) ? `<label>Network</label><select name="network"><option value="3"${values.network !== "2" ? " selected" : ""}>regtest</option><option value="2"${values.network === "2" ? " selected" : ""}>signet</option></select>` : "";
+  return `<form id="rails">${chosen.length ? "" : '<p class="k-small k-soft">First choose a rail: the page then asks only what that rail needs.</p>'}${cards}${add}${network}${chosen.length ? '<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div>' : ""}</form>`;
+}
+function paidPane(r, problem, accept = [], chosen = [], values = {}) {
+  const pointer = r?.pointer ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? " (its chain is forked: the last pointer before the fork counts)" : ""} \xB7 ${actId2(r.pointer.act)}</dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? "" : " (a rail Module you do not accept)"}</dd>`).join("")}</dl></div>` : '<p class="k-soft">You have no payee pointer yet: nobody can pay you until you say where.</p>';
+  const vault = r?.vault ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity\u2019s chain (act ${actId2(r.vault.declaredBy)}), with the chain key: changed only in Ki\u0161ib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>` : '<p class="k-small k-soft">None declared: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Ki\u0161ib.</p>';
   return `<h2>Where you are paid</h2>
 ${say2("Your payee pointer: where payments to you go, with each rail\u2019s costs.", ["Read back with each rail\u2019s stated costs before it is signed. A new pointer replaces the one in force for new payments."])}
 ${problem ? note("error", e(problem)) : pointer}
-<details class="k-box"><summary>Change it</summary>
-<form id="rails"><label>Lightning: your wallet\u2019s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false">
-<label>On-chain: a Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false">
-<label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
-<label class="damgar-check"><input type="checkbox" name="newRequestKey"> Make a new on-chain request key (the old one then no longer counts for new payments)</label>
-<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="rails-review"></div></details>
-${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: <span class="k-mono">${e(r.requestKey.slice(0, 16))}\u2026</span></p>` : ""}
+${fold("Change it", `<div id="rails-at">${railsForm(accept, chosen, values)}</div><div id="rails-review"></div>`, { attrs: 'id="rails-fold"', open: !!values.open })}
+${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: ${hashButton(r.requestKey)}</p>` : ""}
 <div class="k-box"><h3>The vault</h3>${vault}</div>`;
 }
 function railsReview(r) {
@@ -12945,10 +14301,11 @@ ${r.costs.length ? `<div class="damgar-costs"><h3>What each rail costs you, stat
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="rails publish" data-digest="${e(r.digest)}">Sign and publish it</button></div>`;
 }
 function acceptPane(s) {
-  return `<h2>What you accept</h2>
+  return `<h2>Rules I follow</h2>
 ${say2(`Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ""}: every app holding it reads it.`, ["Each app changes only its part; Damgar the Money layer\u2019s. An act under something you do not accept is shown unknown, and never signed."])}
 ${s.list.merged.length ? note("", `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ""}
-<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Save what I accept</button></div></form>
+${s.list.here ? note("", "Kept in Damgar only: the rules ticked below are not sealed to this identity yet, so the other apps do not see them. Save them again once they can be sealed.") : ""}
+<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Save to my list</button><button type="submit" class="k-btn" data-in="here">In Damgar only</button></div><p class="k-small k-soft">Save to my list: sealed to this identity, every app reads it. In Damgar only: kept here, your list unchanged, so the other apps still ask; a rule already on your list stays on it.</p></form>
 <div class="k-row"><span class="k-grow k-small k-soft">${s.list.published ? "Published: anyone can read which specifications you accept." : "Private: sealed to yourself (the default)."}</span><button type="button" class="k-btn" data-action="publish list" data-on="${s.list.published ? "false" : "true"}">${s.list.published ? "Make it private again" : "Publish it"}</button></div>`;
 }
 function relaysPane(s, chain) {
@@ -12960,7 +14317,7 @@ function manualPane(on) {
   return `<h2>Every step by hand</h2><p class="k-soft">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
 <label class="damgar-check"><input type="checkbox" id="manual"${on ? " checked" : ""}> Follow every step by hand (a clear demonstration of the real process)</label>`;
 }
-var actChoice = (acts) => acts.length > 1 ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? " checked" : ""}> <span>${e(x.said)} <span class="k-mono k-faint">${e(shortForm(formOf(x.id)))}</span></span></label>`).join("")}</div>` : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> <span class="k-mono k-faint">${e(shortForm(formOf(acts[0].id)))}</span></p>`;
+var actChoice = (acts) => acts.length > 1 ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? " checked" : ""}> <span>${e(x.said)} ${actId2(x.id)}</span></label>`).join("")}</div>` : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> ${actId2(acts[0].id)}</p>`;
 var noAct = '<p class="k-soft">This card is not yet an act on MOR (a draft waiting to be signed here): there is nothing to rely on or anchor.</p>';
 function relyForm(acts) {
   if (!acts.length) return noAct;
@@ -12970,13 +14327,13 @@ function anchorForm(acts, offers2, service = "", chosen = "") {
   if (!acts.length) return noAct;
   const which = chosen ? acts.filter((x) => x.id === chosen) : acts;
   return `<form id="anchor-offers">${say2("An anchor puts this act\u2019s fingerprint on the Bitcoin chain, through a pooled anchoring service, paid here.", ["Anyone may anchor any act (the anchoring cMIP). The service is sent a leaf (the act\u2019s fingerprint mixed with a random secret Damgar keeps), never the act. Damgar signs the payment\u2019s request at once; you pay the invoice in To pay; it shows in Account \u203A Anchors. Round 1 runs on regtest: its coins are worth nothing."])}${actChoice(which.length ? which : acts)}
-<label>The anchoring service\u2019s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow"><button type="submit" class="k-btn">Read its offer</button></div></form>${offers2 === null ? "" : offers2.length ? `<form id="anchor" data-service="${e(service)}" data-act="${e(chosen)}"><div class="damgar-ways">${offers2.flatMap((o) => o.tiers.map((t, i) => `<label class="k-row"><input type="radio" name="tier" value="${e(o.act)}:${t.tier}"${i === 0 ? " checked" : ""}> <span>${e(t.words)}${o.words ? ` <span class="k-small k-soft">${e(o.words)}</span>` : ""}</span></label>`)).join("")}</div><div class="k-row"><button type="submit" class="k-btn k-p">Anchor it: sign the payment\u2019s request</button></div></form>` : '<p class="k-small k-soft">No standing offer of that service was found.</p>'}`;
+<label>The anchoring service\u2019s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow">${contactsButtonFor("service")}<button type="submit" class="k-btn">Read its offer</button></div></form>${offers2 === null ? "" : offers2.length ? `<form id="anchor" data-service="${e(service)}" data-act="${e(chosen)}"><div class="damgar-ways">${offers2.flatMap((o) => o.tiers.map((t, i) => `<label class="k-row"><input type="radio" name="tier" value="${e(o.act)}:${t.tier}"${i === 0 ? " checked" : ""}> <span>${e(t.words)}${o.words ? ` <span class="k-small k-soft">${e(o.words)}</span>` : ""}</span></label>`)).join("")}</div><div class="k-row"><button type="submit" class="k-btn k-p">Anchor it: sign the payment\u2019s request</button></div></form>` : '<p class="k-small k-soft">No standing offer of that service was found.</p>'}`;
 }
 
 // src/page/ui.ts
 var errorOf = (err) => err instanceof Error ? err.message : String(err);
 var TABS = ["waiting", "account", "lanes", "settings"];
-var RECEIVE = /* @__PURE__ */ new Set(["invoice", "address", "receipt"]);
+var RECEIVE = /* @__PURE__ */ new Set(["invoice", "address", "receipt", "uncounted"]);
 function mount(app2, b) {
   const $ = (id) => document.getElementById(id);
   app2.classList.add("k-page", "k-damgar");
@@ -13017,11 +14374,23 @@ function mount(app2, b) {
       return;
     }
     const m = errorOf(err);
-    if (/^This identity’s signing key was changed elsewhere/.test(m) && !$("spent")) app2.querySelector(".k-top")?.insertAdjacentHTML("afterend", spent2(m));
+    if (/^This identity’s signing key was changed elsewhere/.test(m)) return warnKey(m);
     say3("error", e(m));
   };
+  function warnKey(said) {
+    const i = state?.identity;
+    keyChanged(app2, said && i ? { id: i.id, name: i.name ?? "This identity", say: said, form: renewForm() } : null);
+  }
   const done = (r) => {
     if (r?.lines?.length) say3("done", lines(r.lines));
+  };
+  const broughtSay = (r) => {
+    const first = state?.stage === "accept" ? app2.querySelector(".damgar-first h2") : null;
+    if (first) {
+      first.insertAdjacentHTML("beforebegin", `<div class="k-box damgar-own">${ownIdNow()}</div>`);
+      return done(r);
+    }
+    say3("done", `${lines(r.lines)}${ownIdNow()}`);
   };
   async function act(f) {
     const was = [...app2.querySelectorAll("button")].map((x) => [x, x.disabled]);
@@ -13037,7 +14406,7 @@ function mount(app2, b) {
   }
   let slot = null;
   const raw = b.ask.bind(b);
-  const NOT_WATCHED = /* @__PURE__ */ new Set(["runner asking", "runner", "state", "runner drop", "to sign", "pay", "account", "lanes", "rails", "collectives"]);
+  const NOT_WATCHED = /* @__PURE__ */ new Set(["runner asking", "runner", "state", "runner drop", "to sign", "pay", "account", "lanes", "rails", "collectives", "names", "contacts"]);
   b.ask = async (op, a) => {
     if (b.web || NOT_WATCHED.has(op) || !state?.identity?.runner) return raw(op, a);
     let over = false;
@@ -13076,8 +14445,31 @@ function mount(app2, b) {
       slot = null;
     }
   };
+  const contacts = attachContacts(app2, { app: "Damgar", ask: (op, a) => b.ask(op, a), said: (kind, html) => say3(kind, html) });
+  attachIds(app2, { names: (ids, fresh) => b.ask("names", { ids, fresh: !!fresh }) });
+  const signerNames = /* @__PURE__ */ new Map();
+  async function nameSigners(root) {
+    const ids = [...new Set([...root.querySelectorAll("[data-k-signer]")].map((x) => x.dataset.kSigner))].filter((id) => /^[0-9a-f]{64}$/.test(id));
+    if (!ids.length) return;
+    try {
+      for (const [id, n] of Object.entries(await b.ask("names", { ids }))) signerNames.set(id, n);
+    } catch {
+      for (const id of ids) if (!signerNames.has(id)) signerNames.set(id, { published: { state: "unreached" } });
+    }
+    for (const c of root.querySelectorAll("[data-k-signer]")) {
+      const n = signerNames.get(c.dataset.kSigner);
+      const box = c.querySelector(":scope > .k-signer .k-names");
+      if (!n || !box) continue;
+      box.innerHTML = namesHtml(n, { retry: false });
+      const d = drawn.get(c.dataset.kAct);
+      if (d) d.act.signer.named = n;
+    }
+  }
+  const ownIdNow = () => state?.identity ? `<p class="k-small k-soft">Its ID, to give to whoever pays it or is paid by it:</p>${ownId({ form: state.identity.form, link: state.identity.link ?? state.identity.form })}` : "";
   async function show(s) {
     state = s;
+    if (s.identity?.id !== shownFor) railsChosen = null;
+    shownFor = s.identity?.id ?? null;
     if (timer) clearInterval(timer);
     timer = null;
     closePanel();
@@ -13091,9 +14483,8 @@ function mount(app2, b) {
       return;
     }
     await draw();
-    void b.ask("check").then((c) => {
-      if (!c.current && c.say && !$("spent")) app2.querySelector(".k-top")?.insertAdjacentHTML("afterend", spent2(c.say));
-    }).catch(() => void 0);
+    void contacts.refresh();
+    void b.ask("check").then((c) => warnKey(c.current ? null : c.say)).catch(() => void 0);
     timer = setInterval(() => {
       if (document.visibilityState === "visible" && tab === "waiting" && (part === "to-pay" || part === "to-receive") && !app2.querySelector("textarea:focus,input:focus") && !popup2.open && !panelOpen()) void refresh(true);
     }, 2e4);
@@ -13119,15 +14510,29 @@ function mount(app2, b) {
   }
   const pane = () => $("pane");
   let filling = 0;
+  const held = /* @__PURE__ */ new Map();
+  const heldKey = () => `${meId()}\0${acting?.id ?? ""}\0${tab}\0${part}`;
   async function fill() {
     const p = pane();
     if (!p) return;
     const mine = ++filling;
+    const key = heldKey();
+    const before = held.get(key);
+    if (p.dataset.shown !== key) {
+      p.dataset.shown = key;
+      if (before) {
+        p.innerHTML = `<p class="k-small k-faint damgar-looking" role="status">Looking\u2026</p>${before.html}`;
+        drawn.clear();
+        for (const [id, c] of before.drawn) drawn.set(id, c);
+      } else p.innerHTML = '<p class="k-empty damgar-looking" role="status">Looking\u2026</p>';
+    }
     try {
       const html = await partHtml();
       if (mine !== filling || !p.isConnected) return void (cards = []);
       p.innerHTML = html;
       drawCards();
+      held.set(key, { html, drawn: [...drawn] });
+      void nameSigners(p);
       const ids = cardsUntimed(p);
       if (ids.length)
         void b.ask("clock words", { ids }).then((w) => p.isConnected && stampCards(p, w)).catch(() => void 0);
@@ -13137,6 +14542,15 @@ function mount(app2, b) {
       fail(err);
     }
     drawCounts();
+  }
+  let lookedFor = "";
+  function lookThenFill(which) {
+    if (lookedFor === which) return void (lookedFor = "");
+    void b.ask("look").catch(() => void 0).then(async () => {
+      if (part !== which) return;
+      lookedFor = which;
+      await fill();
+    });
   }
   async function refresh(quiet = false) {
     const looked = await b.ask("look").catch((err) => {
@@ -13167,7 +14581,7 @@ function mount(app2, b) {
   const meId = () => state?.identity?.id ?? "";
   const kitWho = (w) => {
     const form2 = formOf(w.id, "mid");
-    return { id: w.id, form: form2, link: form2, name: w.me ? state?.identity?.name ?? null : null, me: w.me };
+    return { id: w.id, form: form2, link: form2, name: null, named: signerNames.get(w.id) ?? { published: { state: "loading" } }, me: w.me, followed: contacts.list().some((c) => c.id === w.id) };
   };
   const cardOf = (x) => {
     const a = { id: x.id, form: formOf(x.id), signer: kitWho(x.who), kind: x.kind ?? null, text: x.text, html: x.html, labels: x.labels, verified: !!x.verified, alarm: x.alarm ?? null };
@@ -13180,14 +14594,14 @@ function mount(app2, b) {
     cards = [];
   }
   const itemCard = (t) => cardOf({ id: t.id, who: t.from, kind: `${t.kind === "draft" ? t.byHand ? "pasted by hand" : t.app ? `from ${t.app}` : "a draft" : t.kind === "lane" ? `lane \xB7 from ${t.app ?? "an app"}` : t.kind}`, text: t.title, html: `<div class="k-box">${itemActs(t)}</div>`, labels: t.unknown ? [{ text: "unknown here: nothing can be signed for it", tone: "warn" }] : [], verified: !t.unknown, lines: t.lines, acts: [] });
-  const shortOf = (w) => shortForm(formOf(w.id, "mid"));
+  const byWords = (x) => x.by.me ? "you" : x.kind === "claim" ? "the payer" : "the payee";
   const paymentCard = (p, forPay) => {
     const bad = p.proofs.some((x) => x.rail.answer === "invalid");
     const unverified = p.proofs.length > 0 && !bad && !p.proofs.some((x) => x.rail.answer === "valid");
     const first = p.proofs[0];
     const acts = [
-      ...p.proofs.filter((x) => x.kind === "receipt").map((x) => ({ id: x.act, said: `The receipt, by ${x.by.me ? "you" : shortOf(x.by)}` })),
-      ...p.proofs.filter((x) => x.kind === "claim").map((x) => ({ id: x.act, said: `The claim, by ${x.by.me ? "you" : shortOf(x.by)}` })),
+      ...p.proofs.filter((x) => x.kind === "receipt").map((x) => ({ id: x.act, said: `The receipt, by ${byWords(x)}` })),
+      ...p.proofs.filter((x) => x.kind === "claim").map((x) => ({ id: x.act, said: `The claim, by ${byWords(x)}` })),
       ...p.request ? [{ id: p.request, said: "The invoice request that began it" }] : []
     ];
     return cardOf({
@@ -13195,12 +14609,13 @@ function mount(app2, b) {
       id: first?.act ?? p.request ?? p.key,
       who: first ? first.by : p.side === "out" ? { id: meId(), short: "", me: true } : p.other,
       kind: p.to === "vault" && p.other.me ? "to your vault" : p.side === "out" ? "you pay" : "paid to you",
-      text: `${p.side === "out" ? p.other.me ? "To your vault" : `To ${shortOf(p.other)}` : `From ${shortOf(p.other)}`} \xB7 ${p.amount.said}`,
-      html: `<div class="k-box">${payment(p, forPay)}</div>`,
+      text: `${p.side === "out" ? p.other.me ? "To your vault \xB7 " : "" : ""}${p.amount.said}`,
+      // H96, H121: whom it pays, or who paid, by their names; the short ID a button.
+      html: `${p.other.me ? "" : `<p class="k-small">${p.side === "out" ? "To" : "From"} ${whoOf(p.other)}</p>`}<div class="k-box">${payment(p, forPay)}</div>`,
       labels: [...p.deal ? [{ text: `under the deal \u201C${p.deal}\u201D` }] : [], { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === "claim" ? "claim" : "receipt"}: ${x.how}`))].map((text3) => ({ text: text3 })), ...unverified ? [{ text: unverifiedSaid(p), tone: "warn" }] : []],
       verified: confirmed(p),
       alarm: bad ? "A proof that does not hold" : null,
-      lines: [...p.lines, ...p.proofs.map((x) => ({ text: `${x.kind === "claim" ? "Claim" : "Receipt"} by ${x.by.me ? "you" : x.by.short}: the rail says ${x.rail.answer}${x.rail.why ? ` (${x.rail.why})` : ""}; beside it ${x.beside.answer}${x.beside.why ? ` (${x.beside.why})` : ""}; ${x.how}.`, tone: x.rail.answer === "invalid" ? "bad" : void 0 }))]
+      lines: [...p.lines, ...p.proofs.map((x) => ({ text: `${x.kind === "claim" ? "Claim" : "Receipt"} by ${byWords(x)}: the rail says ${x.rail.answer}${x.rail.why ? ` (${x.rail.why})` : ""}; beside it ${x.beside.answer}${x.beside.why ? ` (${x.beside.why})` : ""}; ${x.how}.`, tone: x.rail.answer === "invalid" ? "bad" : void 0 }))]
     });
   };
   attachCards(app2, {
@@ -13214,9 +14629,21 @@ function mount(app2, b) {
       const c = drawn.get(a.id);
       if (!c) return;
       if (key === "why") return void popup2.show("Why it\u2019s valid", `${lines(c.lines)}<p class="k-small k-faint">Each judged from the rail\u2019s own evidence, with what you accept.</p>`);
-      if (key === "profile") return void popup2.show(a.signer.me ? "You" : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd class="k-mono">${e(a.signer.form)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-small" data-action="copy" data-text="${e(a.signer.form)}">Copy ID</button></div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
-      if (key === "follow" || key === "mute" || key === "unfollow" || key === "unmute") return void popup2.show("Contacts are Dub\u2019s", '<p class="k-soft">Damgar keeps no contacts: follow and mute in Dub, from their card or profile. Damgar shows who paid and whom you paid by their IDs.</p>');
-      if (key === "tip") return void popup2.show(`Tip ${shortForm(a.signer.form)}`, tipForm(a.signer.id));
+      if (key === "profile") return void popup2.show(a.signer.me ? "You" : nameOf(a.signer.named) ?? "Their profile", `<p>${whoOf({ id: a.signer.id, me: a.signer.me }, false)}</p><dl class="k-facts"><dt>ID</dt><dd class="k-mono">${e(a.signer.form)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-small" data-action="copy" data-text="${e(a.signer.form)}">Copy ID</button></div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
+      if (key === "follow") {
+        const nick = await askNick(app2, { title: `Follow ${nameOf(a.signer.named) ?? "this identity"}: add to contacts`, current: null, yes: "Add to contacts", skip: "Add without a nickname" });
+        if (nick === void 0) return;
+        const r = await act(() => b.ask("contact add", { id: a.signer.id, nick: nick ?? "" }));
+        if (r) await contacts.refresh(), done(r);
+        return;
+      }
+      if (key === "unfollow") {
+        const r = await act(() => b.ask("contact remove", { id: a.signer.id }));
+        if (r) await contacts.refresh(), done(r);
+        return;
+      }
+      if (key === "mute" || key === "unmute") return void popup2.show("Muting is Dub\u2019s", '<p class="k-soft">Damgar keeps no muted list: mute in Dub, from their card or profile. Your contacts, top left, are the one list every app reads.</p>');
+      if (key === "tip") return void popup2.show(`Tip ${nameOf(a.signer.named) ?? ""}`.trim(), `<p class="k-small">To ${whoOf({ id: a.signer.id })}</p>${tipForm(a.signer.id)}`);
       if (key === "rely") return void popup2.show("Rely on it", relyForm(c.acts));
       if (key === "anchor") {
         anchoring = c.acts;
@@ -13233,7 +14660,7 @@ function mount(app2, b) {
       if (part === "paste") return pastePane();
       if (part === "collective") {
         const r = await b.ask("collectives");
-        return collectivePane(r.collectives.find((c) => c.id === acting?.id) ?? null, acting?.name ?? shortForm(acting?.form ?? ""));
+        return collectivePane(r.collectives.find((c) => c.id === acting?.id) ?? null, acting ? who({ id: acting.id, collective: true, inline: true }) : "");
       }
       const items = (await b.ask("to sign")).items;
       const pays = (await b.ask("pay")).payments;
@@ -13259,16 +14686,26 @@ function mount(app2, b) {
     }
     if (tab === "account") {
       if (part === "under") {
-        await b.ask("look").catch(() => void 0);
+        lookThenFill("under");
         const l = await b.ask("lanes");
         const apps = l.lanes.filter((x) => !x.here);
-        return `<h2>Under the lanes</h2>${say2("What other apps paid under their lanes: they finish those payments themselves; the record is kept here.", ["Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3><dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: `under \u201C${x.label}\u201D`, text: `To ${shortOf(p.to)} \xB7 ${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""}`, labels: [{ text: p.stage === "paid" ? "paid: its claim signed under the lane" : p.stage === "refused" ? "refused by the payee: not counted" : "asked: its invoice request signed under the lane" }], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: "Its claim, signed under the lane" })), ...p.request ? [{ id: p.request, said: "Its invoice request, signed under the lane" }] : []] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
+        const stageOf = (p) => {
+          const who2 = p.to.name ?? "the payee";
+          return p.stage === "paid" ? "Paid: its claim signed under the lane" : p.stage === "refused" ? `Refused by ${who2}: not counted` : `Asked: waiting for ${who2}\u2019s invoice`;
+        };
+        const tally = (x) => {
+          const ps = x.payments ?? [];
+          const n = (st) => ps.filter((p) => p.stage === st).length;
+          return `<p class="k-small k-soft" data-under-tally>Paid: ${n("paid") ? `${n("paid")}${x.paid ? `, ${e(x.paid.said)}` : ""}` : "none yet"} \xB7 Asked, not paid yet: ${n("asked") ? `${n("asked")}${x.asked ? `, ${e(x.asked.said)}` : ""}` : "none"}${n("refused") ? ` \xB7 Refused: ${n("refused")}` : ""}</p>`;
+        };
+        return `<h2>Under the lanes</h2>${say2("What other apps asked and paid under their lanes: they finish those payments themselves; the record is kept here.", ["Asked: the app signed an invoice request under the lane; nothing has moved until the payee answers with an invoice and it is paid in the wallet. Paid: its claim is signed, with the rail\u2019s proof.", "Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3>${tally(x)}<dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: null, text: `${stageOf(p)}
+${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""} \xB7 under \u201C${x.label}\u201D`, html: `<p class="k-small">To ${whoOf(p.to)}</p>`, labels: [], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: "Its claim, signed under the lane" })), ...p.request ? [{ id: p.request, said: "Its invoice request, signed under the lane" }] : []] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
       }
       const a = await b.ask("account");
       if (part === "payments") return `<h2>Payments</h2>${say2("Each payment a card: its claim and receipt, how each was signed, and whether each verifies.", ["Paid and confirmed: settled, its receipt and a claim each valid by the rail\u2019s own evidence. Open a card\u2019s ID for why it is valid."])}<div class="k-feed" id="account-feed">${a.payments.map((p) => paymentCard(p, false)).join("") || '<p class="k-empty">No payment yet.</p>'}</div>`;
       if (part === "shared") {
         const ds = a.shared ?? [];
-        return `<h2>Shared deals</h2>${say2("The deals you share in with other people: what was paid to each, and what its split service paid you.", ["Each payment to a deal is receipted by its split service in the name of the deal\u2019s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here."])}${ds.map((d) => `<h3>\u201C${e(d.name)}\u201D <span class="k-small k-soft k-mono">${e(shortForm(formOf(d.version)))}</span></h3><div class="k-feed">${[
+        return `<h2>Shared deals</h2>${say2("The deals you share in with other people: what was paid to each, and what its split service paid you.", ["Each payment to a deal is receipted by its split service in the name of the deal\u2019s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here."])}${ds.map((d) => `<h3>\u201C${e(d.name)}\u201D ${actId2(d.version)}</h3><div class="k-feed">${[
           ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: d.collective ? `${x.kind === "a tip" ? "A tip" : "A sale"} of the collective\u2019s work \xB7 your share ${x.amount.said}` : `${x.kind === "a tip" ? "A tip" : "A sale"} to the deal \xB7 ${x.amount.said}`, labels: [{ text: x.standing, ...x.rail.answer === "valid" ? {} : { tone: "warn" } }], verified: x.rail.answer === "valid", lines: [] })),
           ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: "", me: true }, kind: "your payout", text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ""}`, labels: [{ text: x.paid ? "paid to you by its split service, its rail answer valid" : "named in its split; its payment here is not yet shown valid by its rail: unknown" }], verified: x.paid, lines: [] }))
         ].join("") || '<p class="k-empty">Nothing yet.</p>'}</div>`).join("") || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'}`;
@@ -13285,7 +14722,7 @@ function mount(app2, b) {
         counts.asked = items.length;
         return `<h2>Asked</h2>${say2("Lanes other apps asked for, read in plain words, to grant or decline.", ["An app asks through MOR, sealed to you. Granting signs a public grant of this identity to itself, naming the key that app holds."])}<div class="k-feed">${items.map(itemCard).join("") || '<p class="k-empty">No lane asked.</p>'}</div>`;
       }
-      if (part === "in-force") await b.ask("look").catch(() => void 0);
+      if (part === "in-force") lookThenFill("in-force");
       const l = await b.ask("lanes");
       counts = { ...counts, inForce: l.lanes.filter((x) => x.state === "in force" && !x.here).length, ended: l.lanes.filter((x) => x.state !== "in force").length };
       if (part === "own") return ownPane(l.lanes.filter((x) => x.here && x.state === "in force"), units().map((u2) => ({ ...u2, label: u2.label.replace(" satoshis", "") })), l, b.web);
@@ -13306,9 +14743,27 @@ function mount(app2, b) {
       } catch (e3) {
         problem = errorOf(e3);
       }
-      return paidPane(r, problem);
+      if (!railsChosen) railsChosen = (r?.pointer?.rails ?? []).map((x) => s.accept.find((a) => a.hashes.includes(x.module))?.key).filter((k) => !!k && !!RAIL_FIELDS[k]);
+      return paidPane(r, problem, s.accept, railsChosen, {});
     }
     return "";
+  }
+  let railsChosen = null;
+  let shownFor = null;
+  const railValues = () => {
+    const f = app2.querySelector("form#rails");
+    if (!f) return {};
+    const out = {};
+    for (const [k, x] of new FormData(f)) out[k] = String(x);
+    return out;
+  };
+  function redrawRails(chosen) {
+    railsChosen = chosen;
+    const at = $("rails-at");
+    if (!at || !state) return;
+    at.innerHTML = railsForm(state.accept, chosen, railValues());
+    const review = $("rails-review");
+    if (review) review.innerHTML = "";
   }
   let adding = false;
   function panelHtml(inside) {
@@ -13316,9 +14771,12 @@ function mount(app2, b) {
     const ids = s.held.map((h) => ({
       id: h.id,
       form: formOf(h.id, "mid"),
-      name: h.name ?? (h.runner ? "via Ki\u0161ib" : shortForm(formOf(h.id, "mid"))),
+      // H96: its name as read (Loading…, its name, No name published, Name not reached); H88: the one in use with its ID whole, Copy ID and Share your ID link.
+      name: h.name ?? null,
+      named: h.named ?? null,
+      link: h.active ? s.identity?.link ?? void 0 : void 0,
       on: h.active && !acting,
-      collectives: h.active ? (s.identity?.collectives ?? []).map((c) => ({ id: c.id, form: c.form, name: c.name ?? shortForm(c.form), on: acting?.id === c.id })) : []
+      collectives: h.active ? (s.identity?.collectives ?? []).map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named ?? null, on: acting?.id === c.id })) : []
     }));
     return identityPanel({ ids, adding, add: ADD(b.web), foot: b.web ? "This browser: the web client, for testing only." : "This app: Damgar on this computer. Money acts always show Ki\u0161ib\u2019s panel for an identity used through it.", inside });
   }
@@ -13328,12 +14786,14 @@ function mount(app2, b) {
   }
   async function identityMenu(button, id) {
     const items = IDENTITY_MENU.filter(([k]) => state?.held.find((h) => h.id === id)?.runner ? k !== "renew" : true).map(([key, label, hint], i, all) => ({ key, label, hint: hint || void 0, line: i === all.length - 1 }));
-    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${e(shortForm(formOf(id, "mid")))}</div>${items.map((m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${m.key}">${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`).join("")}</div>`, "below", async (key) => {
+    const held2 = state?.held.find((h) => h.id === id);
+    const called = nameOf(held2?.named) ?? held2?.name ?? null;
+    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${e(called ?? "Its settings")}</div>${items.map((m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${m.key}">${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`).join("")}</div>`, "below", async (key) => {
       if (id !== state?.identity?.id && key !== "remove") {
         await act(() => b.ask("use", { id }));
         state = await b.ask("state");
       }
-      if (key === "remove") return void redrawPanel(panelHtml(removeSaid("Damgar", shortForm(formOf(id, "mid"))).replace("data-k-remove>", `data-k-remove data-id="${e(id)}">`)));
+      if (key === "remove") return void openConfirm(app2, removeSaid("Damgar", called ?? "this identity").replace("data-k-remove>", `data-k-remove data-id="${e(id)}">`));
       closePanel();
       if (key === "words") {
         const c = await act(() => b.ask("carry"));
@@ -13395,7 +14855,7 @@ function mount(app2, b) {
       const id2 = use.dataset.kUse;
       if (use.dataset.kUnder) {
         const c = state?.identity?.collectives.find((x) => x.id === id2);
-        acting = acting?.id === id2 || !c ? null : { id: id2, form: c.form, name: c.name ?? shortForm(c.form) };
+        acting = acting?.id === id2 || !c ? null : { id: id2, form: c.form, name: c.name, named: c.named ?? null };
         closePanel();
         if (acting) [tab, part] = ["waiting", "collective"];
         else if (tab === "waiting" && part === "collective") part = "to-pay";
@@ -13422,7 +14882,7 @@ function mount(app2, b) {
       if (r) {
         popup2.close();
         await show(await b.ask("state"));
-        done(r);
+        broughtSay(r);
       }
       return;
     }
@@ -13442,6 +14902,45 @@ function mount(app2, b) {
       case "home-tiles":
         tab = null;
         return void await draw();
+      // H112: the first-use step never locks the app: Later, or back to the first page.
+      // H117: the browser's own wallet (WebLN), where there is one: it asks the person to approve, and its proof is taken back here.
+      case "webln": {
+        const w = window.webln;
+        if (!w) return;
+        try {
+          await w.enable();
+          const r = await w.sendPayment(el.dataset.invoice);
+          const f = app2.querySelector(`form.paid[data-key="${CSS.escape(el.dataset.key)}"]`);
+          const proof = f?.querySelector("input[name=proof]");
+          if (f && proof && /^[0-9a-f]{64}$/i.test(r.preimage)) {
+            proof.value = r.preimage;
+            f.requestSubmit();
+          } else fail(new Error("Your browser\u2019s wallet gave no proof Damgar can read: paste the preimage from it below."));
+        } catch (err) {
+          fail(new Error(`Your browser\u2019s wallet did not pay it (${errorOf(err)}). Nothing was signed.`));
+        }
+        return;
+      }
+      case "rail-add": {
+        const k = app2.querySelector('form#rails select[name="rail-add"]')?.value;
+        if (k) redrawRails([...railsChosen ?? [], k]);
+        return;
+      }
+      case "rail-remove":
+        return redrawRails((railsChosen ?? []).filter((k) => k !== el.dataset.rail));
+      case "accept-later": {
+        const r = await act(() => b.ask("accept later"));
+        if (r) {
+          await show(await b.ask("state"));
+          done(r);
+        }
+        return;
+      }
+      case "first-back": {
+        const r = await act(() => b.ask("first back"));
+        if (r) await show(await b.ask("state"));
+        return;
+      }
       case "renew":
         return void popup2.show("New words from Ki\u0161ib", renewForm());
       case "copy": {
@@ -13568,7 +15067,7 @@ function mount(app2, b) {
     switch (fid) {
       case "bring": {
         const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
-        if (r) popup2.close(), await show(await b.ask("state")), done(r);
+        if (r) popup2.close(), await show(await b.ask("state")), broughtSay(r);
         return;
       }
       case "make": {
@@ -13579,12 +15078,12 @@ function mount(app2, b) {
       case "make-confirm": {
         const typed = [...f.querySelectorAll("input")].map((x) => x.value.trim());
         const r = await act(() => b.ask("make confirm", { typed }));
-        if (r) popup2.close(), await show(await b.ask("state")), done(r);
+        if (r) popup2.close(), await show(await b.ask("state")), broughtSay(r);
         return;
       }
       case "renew": {
         const r = await act(() => b.ask("renew", { words: str(fd, "words") }));
-        if (r) popup2.close(), app2.querySelector("#spent")?.remove(), await show(await b.ask("state")), done(r);
+        if (r) popup2.close(), keyChanged(app2, null), await show(await b.ask("state")), done(r);
         return;
       }
       case "collective-add": {
@@ -13598,7 +15097,8 @@ function mount(app2, b) {
       case "accept": {
         const keys = [...f.querySelectorAll("input[name=accept]:checked")].map((x) => x.value);
         const first = state?.stage === "accept";
-        const r = await act(() => b.ask("accept", { keys, where: first ? "first" : "settings" }));
+        const kept = ev.submitter?.getAttribute("data-in") === "here" ? "here" : "list";
+        const r = await act(() => b.ask("accept", { keys, where: first ? "first" : "settings", in: kept }));
         if (r) {
           state = await b.ask("state");
           if (first) await show(state);
@@ -13662,7 +15162,8 @@ function mount(app2, b) {
         return;
       }
       case "rails": {
-        const a = { lightning: str(fd, "lightning"), onchain: str(fd, "onchain"), network: Number(str(fd, "network") || 3), newRequestKey: fd.get("newRequestKey") === "on" };
+        const on = railsChosen ?? [];
+        const a = { lightning: on.includes("lightning") ? str(fd, "lightning") : "", onchain: on.includes("onchain") ? str(fd, "onchain") : "", network: Number(str(fd, "network") || 3), newRequestKey: fd.get("newRequestKey") === "on", order: on };
         const r = await act(() => b.ask("rails review", a));
         if (r) {
           reviewed = a;
@@ -13785,8 +15286,8 @@ var WebKeep = class _WebKeep {
 // src/web/app.ts
 var app = document.getElementById("app");
 var damgar;
-var ask = (op, a = {}) => run(damgar, op, a);
-var ui = mount(app, { web: true, ask, start });
+var ask2 = (op, a = {}) => run(damgar, op, a);
+var ui = mount(app, { web: true, ask: ask2, start });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
     app.innerHTML = alone(`${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`);
