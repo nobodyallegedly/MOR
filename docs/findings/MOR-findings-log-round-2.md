@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F403. The Dubsar Suite's fix round 7: hand test v3's rows built, app-only (28 October 2026)
+
+**Found by Nobody, allegedly, in hand test v3's free run** (24 to 26 October 2026; `docs/human-tests-v3-findings.md`, H82 to H126). **Built** on the suite's apps and its kit, nothing compiled into the shared WebAssembly changed (`604aa9b5632d0bef8b17687e664317d7f841767d26f5ea4e7a13d553b30dd8fb`, the same in every release); the report: `docs/fixes-r7-report.md`.
+
+**What it is.** The bugs first (a tip under a lane reaching the payee, the feed's order, the key-changed warning following the identity in use, one stack of pop-ups, the runner turned off from the page, the iPad's @ suggestions, the tiles at 390 px, Damgar's tabs and icon); then the kit, every app at once (one name reader, one contacts list with nicknames, short IDs as taps, one's own ID shareable, corrections in place, two signs, What is MOR?, Rules I follow, Atkinson Hyperlegible and Gentium Book Plus bundled); then each app's rows (Kišib's runner column, rotation notices and stated needs; Damgar's rails, profile and Open in wallet; Dub's Notes; Edubba's member rows and the core's kinds of act; Nakišib's paper in words only; the test wallet's link values).
+
+**Three drafts, the suite's** (for Nobody, allegedly, to approve): the runner cMIP, draft 4 (an app states why it needs to open what is sealed, and what it cannot do without it; shown, never ticking anything); the notes cMIP, draft 1 (a note, a private text act sealed to oneself; versions by correction; retired by an empty version); the rotation notice cMIP, draft 1 (a structured part at the end of the starter's message, the free text kept; a text format, no act type).
+
+**Readings taken, said in the report:** Development rule 10 applied to money only, the other rules asked and recorded (H93, a question); Kišib shows the contacts and changes none, since the runner cMIP lets Kišib sign only for paired apps (a question); Text and Envelopes together kept as a choice of the grid beside the five layers, since the core counts them as one area layer (H120); the kinds of act read from the core's Rust type tables at build time, the WebAssembly exposing none (H120); the windows' titles name the suite where they named MOR (the desktop entries).
+
+**Nothing for the MOR lead to change**; one note: the signing key as a string (H104) needs a Module draft of its own, beside the identity carry Module (`modules/`), outside this round.
+
 ## F398. Baked, claimed, offered, published: one word per step, and the price leaves the upload (24 October 2026)
 
 **Found by Nobody, allegedly, walking Q-A12** (a co-owned work sold by one owner): "We have a terminology problem, a publication means two things? The upload and the deal with a publisher." Envelopes' type 0 "publication" is the act that carries media (fingerprint, lock, size, where to fetch, optionally a price and `for`); Agreements uses "publication" for a publisher's release (rule 15, "a publication carries two agreements"), and "publish" is also used for putting any act on relays.
