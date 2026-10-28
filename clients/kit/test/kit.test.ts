@@ -69,8 +69,14 @@ const SIZES = [
 ] as const;
 
 async function open(size: (typeof SIZES)[number]) {
-  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, permissions: ['clipboard-read', 'clipboard-write'] });
+  // WebKit knows no clipboard permissions and reads the clipboard only on a paste: there, what the page writes is kept and read back from the page.
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, permissions: WEBKIT ? [] : ['clipboard-read', 'clipboard-write'] });
   const page = await context.newPage();
+  if (WEBKIT)
+    await page.addInitScript(() => {
+      let kept = '';
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void (kept = t), readText: async () => kept } });
+    });
   const problems: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error' || /Content Security Policy/i.test(m.text())) problems.push(m.text());

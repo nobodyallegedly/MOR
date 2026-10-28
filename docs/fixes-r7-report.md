@@ -125,6 +125,11 @@ Taken by the tests (`MOR_SCREENSHOTS=DIR`), kept in `docs/fixes-r7/`:
 
 **WebKit.** The kit's browser tests (H84, H99 tapped, H102, H105, the type at 390 px) also run in WebKit on GitHub's machines (`.github/workflows/suite-webkit.yml`); Playwright's WebKit cannot be downloaded in this session's container. The app-by-app tests run in Chromium.
 
+**CI, after opening the pull request.** Two checks failed on the first run, and both are fixed:
+
+- **browsers (WebKit).** WebKit knows no clipboard permissions, so the kit's tests could not open a page there. In WebKit the test now keeps what the page copies and reads it back from the page. The words the kit copies are checked exactly as in Chromium.
+- **seal (macOS).** This round did not cause it. GitHub's macOS machines now start without Cargo's home folder (`~/.cargo`), and the WebAssembly build scripts (`clients/genesis/scripts/build-wasm.sh`, `clients/kishib/scripts/build-airgap-wasm.sh`) went into it to name it. The scripts now make it first, the way Cargo would on its first download. The shared WebAssembly comes out byte for byte the same (604aa9b5…8dd8fb). The job ran here only because Kišib's files changed. On main it passed on 24 October, before the machines changed.
+
 ## 3. For the MOR lead
 
 Nothing for the MOR lead to change. One note:

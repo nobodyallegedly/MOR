@@ -14,6 +14,8 @@
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 root=$(cd "$here/../.." && pwd)
+# Cargo makes its home on its first download; made here first, so that it can be named.
+mkdir -p "${CARGO_HOME:-$HOME/.cargo}"
 cargo_home=$(cd "${CARGO_HOME:-$HOME/.cargo}" && pwd)
 target="$here/airgap/target"
 us=$(printf '\037')
