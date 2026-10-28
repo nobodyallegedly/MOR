@@ -503,9 +503,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   /** The window: the top, then the part chosen (or a profile). */
   function draw() {
     const s = state!;
-    const body = profileOf ? `<div class="k-body"><section class="k-pane" id="profile"><p class="k-empty">Reading the profile…</p></section></div>` : part === 'public' ? v.publicPart(s, lens, layers) : part === 'private' ? '' : v.purchasesPart(shelf);
+    const body = profileOf ? `<div class="k-body"><section class="k-pane" id="profile"><p class="k-empty">Reading the profile…</p></section></div>` : part === 'public' ? v.publicPart(s, lens, layers) : part === 'private' || part === 'notes' ? '' : v.purchasesPart(shelf);
     app.innerHTML = `${v.topBar(s, profileOf ? null : part)}${body}`;
     if (part === 'private' && !profileOf) drawPrivate();
+    if (part === 'notes' && !profileOf) drawNotes();
     if (part === 'public' && !profileOf) {
       drawFeed();
       drawTyping();
@@ -632,6 +633,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     drawCc();
     wireNames();
     if (open) void seen(msgs.filter((m) => !m.seen && m.dir === 'in').map((m) => m.key));
+  }
+
+  // ---------------------------------------------------------------- Notes (H122)
+
+  let notes: { notes: v.NoteShown[]; problems: string[]; opening: string | null } | null = null;
+  let noteOpen: string | null = null;
+  let noteEditing = false;
+
+  function drawNotes() {
+    if (part !== 'notes' || profileOf) return;
+    const html = v.notesPart({ notes: notes?.notes ?? null, open: noteOpen, editing: noteEditing, problems: notes?.problems ?? [], opening: notes?.opening ?? null });
+    const body = app.querySelector('.k-body');
+    if (body) body.outerHTML = html;
+    else app.insertAdjacentHTML('beforeend', html);
+  }
+
+  async function readNotes() {
+    try {
+      notes = await b.ask<NonNullable<typeof notes>>('notes');
+    } catch (err) {
+      notes = { notes: [], problems: [errorOf(err)], opening: null };
+    }
+    drawNotes();
   }
 
   // ---------------------------------------------------------------- the profile
@@ -1100,7 +1124,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       // Keys that arrived for what was bought are looked for first: a file opens once its key is here.
       if (part === 'purchases') void readPayments().then(readBought);
       if (part === 'private') void readInbox();
+      if (part === 'notes') void readNotes();
       return;
+    }
+    // Notes (H122): one chosen, + New note, Edit, Retire, back to the list.
+    const noteB = t.closest<HTMLElement>('[data-note]');
+    if (noteB) {
+      noteOpen = noteB.dataset.note!;
+      noteEditing = false;
+      return drawNotes();
     }
     const lensB = t.closest<HTMLElement>('[data-k-lens]');
     if (lensB) {
@@ -1207,6 +1239,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     switch (d.action) {
       case 'unsay':
         return say('', '');
+      case 'note-new':
+        noteOpen = 'new';
+        noteEditing = false;
+        drawNotes();
+        return void app.querySelector<HTMLTextAreaElement>('#note textarea')?.focus();
+      case 'notes-list':
+        noteOpen = null;
+        noteEditing = false;
+        return drawNotes();
+      case 'note-edit':
+        noteEditing = true;
+        drawNotes();
+        return void app.querySelector<HTMLTextAreaElement>('#note textarea')?.focus();
+      case 'note-cancel':
+        noteEditing = false;
+        return drawNotes();
+      case 'note-retire': {
+        if (!(await ask(app, { title: 'Retire this note?', text: 'A last version is signed marking it dropped. Nothing is erased: it stays readable, with its earlier drafts.', yes: 'Retire it', no: 'Keep it' }))) return;
+        const r = await busy('Signing and sealing to you…', () => b.ask<{ id: string; lines: v.Line[] }>('note retire', { latest: d.latest }));
+        if (!r) return;
+        say('done', v.lines(r.lines));
+        return readNotes();
+      }
       case 'runner-again':
         if (closedAsk) showPanel(closedAsk, closedAsk.origin);
         return say('', '');
@@ -1426,6 +1481,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const d = new FormData(form);
     const body = form.closest<HTMLElement>('.k-mbody');
     switch (name) {
+      case 'note': {
+        const corrects = form.dataset.corrects ?? null;
+        const r = await busy('Signing and sealing to you…', () => b.ask<{ id: string; lines: v.Line[] }>('note write', { text: String(d.get('text') ?? ''), corrects }));
+        if (!r) return;
+        noteEditing = false;
+        if (!corrects) noteOpen = r.id;
+        say('done', v.lines(r.lines));
+        return readNotes();
+      }
       case 'begin': {
         const r = await busy('Asking each home who runs it, and making the identity…', () =>
           b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')), name: String(d.get('name') ?? '') }),

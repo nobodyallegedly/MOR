@@ -18,8 +18,8 @@
 // through the host's `names`. Nothing here knows MOR beyond the form of an
 // ID written for people.
 
-import { e, namesHtml, shortForm, type Named } from './html.ts';
-import { closeMenu, copy, popAt } from './dom.ts';
+import { contactsPanel, e, namesHtml, shortForm, type Named } from './html.ts';
+import { askNick, ask, closeMenu, copy, openPanel, panelOpen, popAt, redrawPanel } from './dom.ts';
 
 // ---------------------------------------------------------------- the form of an ID
 
@@ -247,4 +247,96 @@ export function attachContactsButtons(root: HTMLElement, contacts: () => Promise
       field.focus({ preventScroll: true });
     });
   });
+}
+
+/** What an app answers for its contacts (H100, H109, H119): its engine's operations, by name, and what it does with a contact. */
+export interface ContactsHost {
+  /** This app's name, as said ("Damgar"). */
+  app: string;
+  /** One of the app's operations: `contacts` (`{ contacts, problem }`), `contact add` / `contact nick` / `contact remove` (`{ lines }`), `names`. */
+  ask<T>(op: string, a?: Record<string, unknown>): Promise<T>;
+  /** Open an identity's profile, where the app has one. */
+  profile?(id: string): void;
+  /** Say something done, or a refusal. */
+  said(kind: 'done' | 'error', html: string): void;
+}
+
+interface Shown {
+  id: string;
+  form: string;
+  name: string | null;
+  named: Named;
+}
+
+/**
+ * Contacts, top left, the same in every app (H100): the one list, the
+ * people cMIP's, sealed to the identity at its homes; each contact's names
+ * (H96), Nickname… (H109), Remove; + Add by ID, with a nickname. Wires the
+ * Contacts button (`contactsButton`), every Contacts button beside a field
+ * taking an ID (H119), and every ID's names and taps (H121) in `page`.
+ */
+export function attachContacts(page: HTMLElement, host: ContactsHost): { open(): Promise<void>; list(): Shown[]; refresh(): Promise<void> } {
+  let list: Shown[] = [];
+  let problem: string | null = null;
+  const below = () =>
+    `<form data-k-contact-add class="k-contact-add"><div class="k-row"><input name="contact-id" data-k-id-field autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1…, or an ID link)" required aria-label="Add by ID"></div><input name="contact-nick" autocomplete="off" placeholder="Your nickname for it (only you see it)" aria-label="Your nickname for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : '<p class="k-small k-soft">Sealed to you at your homes: every app holding this identity reads the same list. Your nicknames are seen by you alone.</p>'}`;
+  const html = () => contactsPanel({ contacts: list.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: 'Remove', below: below() });
+  const refresh = async () => {
+    try {
+      const r = await host.ask<{ contacts: Shown[]; problem: string | null }>('contacts');
+      list = r.contacts;
+      problem = r.problem;
+    } catch (err) {
+      problem = err instanceof Error ? err.message : String(err);
+    }
+  };
+  const open = async () => {
+    await refresh();
+    if (panelOpen()?.dataset.kPanel === 'contacts') redrawPanel(html());
+    else openPanel(page, html());
+  };
+  const changed = async (op: string, a: Record<string, unknown>, done: string) => {
+    try {
+      const r = await host.ask<{ lines: { text: string }[] }>(op, a);
+      host.said('done', `<strong>${e(done)}</strong>${r.lines?.length ? ` ${r.lines.map((l) => e(l.text)).join(' ')}` : ''}`);
+      await open();
+    } catch (err) {
+      host.said('error', e(err instanceof Error ? err.message : String(err)));
+    }
+  };
+  page.addEventListener('click', async (ev) => {
+    const t = ev.target as HTMLElement;
+    if (t.closest('[data-k-open="contacts"]')) return void open();
+    const panel = t.closest('[data-k-panel="contacts"]');
+    if (!panel) return;
+    const opened = t.closest<HTMLElement>('[data-k-contact-open]');
+    if (opened && host.profile) return host.profile(opened.dataset.kContactOpen!);
+    const nickB = t.closest<HTMLElement>('[data-k-nick]');
+    if (nickB) {
+      const c = list.find((x) => x.id === nickB.dataset.kNick);
+      const nick = await askNick(page, { title: `Nickname for ${c?.named.published?.state === 'name' ? c.named.published.name : shortForm(c?.form ?? '')}`, current: c?.name ?? null, yes: 'Save', skip: 'Keep it as it is' });
+      if (nick === undefined || nick === (c?.name ?? null)) return;
+      return changed('contact nick', { id: nickB.dataset.kNick, nick: nick ?? '' }, nick ? 'Nickname saved.' : 'Nickname taken away.');
+    }
+    const rm = t.closest<HTMLElement>('[data-k-contact-do]');
+    if (rm) {
+      const c = list.find((x) => x.id === rm.dataset.kContactDo);
+      if (!(await ask(page, { title: `Remove ${c?.name ?? shortForm(c?.form ?? '')} from your contacts?`, text: 'Taken out of the one list, in every app holding this identity. Nobody is told.', yes: 'Remove', no: 'Keep it' }))) return;
+      return changed('contact remove', { id: rm.dataset.kContactDo }, 'Removed from your contacts.');
+    }
+  });
+  page.addEventListener('submit', (ev) => {
+    const f = (ev.target as HTMLElement).closest<HTMLFormElement>('form[data-k-contact-add]');
+    if (!f) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const d = new FormData(f);
+    void changed('contact add', { id: String(d.get('contact-id') ?? '').trim(), nick: String(d.get('contact-nick') ?? '').trim() }, 'Added to your contacts.');
+  });
+  // Every field taking an ID: the one list beside it (H119).
+  attachContactsButtons(page, async () => {
+    if (!list.length) await refresh();
+    return list.map((c) => ({ id: c.id, form: c.form, named: c.named }));
+  });
+  return { open, list: () => list, refresh };
 }

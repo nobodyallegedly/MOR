@@ -68,6 +68,7 @@ import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { RunnerLink } from './runner.ts';
 import type { DamgarLink, Woken } from './damgar-link.ts';
 import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
+import { readNotes, writeNote, type Note } from './notes.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -141,8 +142,8 @@ export interface Settings {
   rulesHere?: string[];
 }
 
-/** The rules Dub runs (H93): its money (Damgar's code, in Dub), its people, names, corrections and collectives. */
-export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys');
+/** The rules Dub runs (H93): its money (Damgar's code, in Dub), its people, names, corrections, collectives and notes. */
+export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys', 'notes');
 const MONEY_RULES = ['payment', 'messages', 'grant-limits'];
 
 /**
@@ -1615,6 +1616,38 @@ export class Dub {
       lines.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(', ')}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: 'ok' });
       if (of) lines.push({ text: `Written in your own name, with the collective ${this.nameOf(of, me.id, p)} appended: it binds nothing, and the reader’s app shows it only where your membership checks.` });
       return { lines };
+    });
+  }
+
+  // ------------------------------------------------------------ Notes (H122)
+
+  /** The notes sealed to this identity at its homes, the latest first; opened here, or through Kišib's runner where it may open. */
+  async notes(): Promise<{ notes: Note[]; problems: string[]; opening: string | null }> {
+    const { me, s } = await this.ctx();
+    const { open, problem } = await this.opener(me);
+    if (!open) return { notes: [], problems: [], opening: problem };
+    const r = await readNotes(me, open, s.via);
+    return { ...r, opening: null };
+  }
+
+  /** A new note, or a new version of one (Edit: `corrects` the version replaced); nothing is updated. */
+  noteWrite(a: { text: string; corrects?: string | null }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (s.acting) throw new Error('Notes are your own: switch back to yourself to write one. Nothing was signed.');
+      await this.current(me);
+      const id = await writeNote(me, { text: a.text, corrects: a.corrects ?? null }, { via: s.via, sign: (f) => this.signed(me, f) });
+      return { id, lines: [{ text: a.corrects ? 'A new version, signed and sealed to you at your homes. The earlier ones stay, under Earlier drafts.' : 'Signed and sealed to you at your homes: only you can open it, from any app holding this identity.', tone: 'ok' }] };
+    });
+  }
+
+  /** Retire a note: a last version with no text, marking it dropped. It stays, readable, with its drafts. */
+  noteRetire(a: { latest: string }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      const id = await writeNote(me, { text: '', corrects: a.latest }, { via: s.via, sign: (f) => this.signed(me, f) });
+      return { id, lines: [{ text: 'Retired: a last version marks it dropped. It stays, readable, with its earlier drafts.', tone: 'ok' }] };
     });
   }
 

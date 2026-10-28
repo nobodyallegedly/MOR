@@ -32,6 +32,7 @@ import {
   type KitLabel,
   type KitWho,
   whatIsMor,
+  fold,
 } from '../../../kit/src/index.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { PUBLISH_WARNING, type Item, type Line, type Message, type PayWays, type Purchase, type State, type Suggested, type Who } from '../shapes.ts';
@@ -91,6 +92,12 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
 .dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
 .dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-notes .dub-thread{overflow:auto}
+.dub-pad{padding:10px 14px}
+.dub-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.dub-note-latest{border:1px solid var(--k-line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.dub-note-draft{border-top:1px solid var(--k-line);padding:8px 0}
+.dub-note-form textarea{width:100%;min-height:220px}
 .dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .dub-thread .dub-head h2{font-size:20px}
 .dub-cc{font-size:12.5px;color:var(--k-soft)}
@@ -320,7 +327,7 @@ function whenWords(t: number): string {
 
 // ---------------------------------------------------------------- the frame
 
-export type Part = 'public' | 'private' | 'purchases';
+export type Part = 'public' | 'private' | 'notes' | 'purchases';
 
 /** The top of Dub: Contacts and the app top left, the switch in the middle, the identity top right. */
 export function topBar(s: State, part: Part | null): string {
@@ -331,6 +338,7 @@ export function topBar(s: State, part: Part | null): string {
     [
       { key: 'public', label: 'Public' },
       { key: 'private', label: 'Private' },
+      { key: 'notes', label: 'Notes' },
       { key: 'purchases', label: 'Purchases' },
     ],
     part ?? '',
@@ -474,6 +482,57 @@ ${typingBox({
 })}${usable.length ? '<p class="k-clock">A collective appended binds nothing; the reader’s app shows it only where your membership checks. Everyone sees the Cc.</p>' : ''}`
     : '<p class="k-empty">Choose a conversation, or start a new one.</p>';
   return `<div class="k-body dub-private${open ? ' k-chosen' : ''}"><aside class="dub-convs"><input class="dub-find" type="search" id="find-conv" placeholder="Find a conversation…" autocomplete="off" aria-label="Find a conversation"><div class="dub-list">${list}<button type="button" class="dub-conv" data-action="new-conv"><span class="k-soft">+ A new conversation</span></button></div><div id="private-notes"></div></aside><section class="dub-thread" id="private">${thread}</section></div>`;
+}
+
+// ---------------------------------------------------------------- Notes (H122)
+
+/** A note as the page is given it (`../notes.ts`). */
+export interface NoteShown {
+  id: string;
+  versions: { id: string; text: string; position: number; corrects: string | null }[];
+  retired: boolean;
+}
+
+/** A note's first line, as the list shows it. */
+const firstLine = (n: NoteShown) => {
+  const t = (n.retired ? (n.versions[1]?.text ?? '') : n.versions[0].text).split('\n').find((l) => l.trim()) ?? '';
+  return t.trim().slice(0, 80) || 'An empty note';
+};
+
+/**
+ * Notes, laid out as Private (his words: "instead of identities the left
+ * bar offers the past notes"): the notes on the left, latest first, + New
+ * note at the top; the one chosen on the right, its latest version, Edit
+ * (a new version correcting it), Retire, and Earlier drafts, each as signed.
+ */
+export function notesPart(o: { notes: NoteShown[] | null; open: string | null; editing: boolean; problems: string[]; opening: string | null }): string {
+  const list = (o.notes ?? [])
+    .map(
+      (n) =>
+        `<button type="button" class="dub-conv${o.open === n.id ? ' k-on' : ''}" data-note="${e(n.id)}"><span><span class="k-n" dir="auto">${e(firstLine(n))}</span><span class="dub-l">${n.retired ? 'Retired' : n.versions.length > 1 ? `${n.versions.length} versions` : 'One version'}</span></span></button>`,
+    )
+    .join('');
+  const chosen = o.open ? (o.notes ?? []).find((n) => n.id === o.open) ?? null : null;
+  const box = (text: string, corrects: string | null) =>
+    `<form id="note" class="dub-note-form"${corrects ? ` data-corrects="${e(corrects)}"` : ''}><textarea name="text" rows="12" maxlength="20000" placeholder="Write a note: sealed to you, only you can open it" aria-label="The note" dir="auto">${e(text)}</textarea><div class="k-row"><button type="submit" class="k-btn k-p">${corrects ? 'Sign the new version' : 'Sign and keep'}</button>${corrects ? '<button type="button" class="k-btn k-q" data-action="note-cancel">Cancel</button>' : ''}</div></form>`;
+  let right: string;
+  if (o.open === 'new') right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">← Back</button><h2>A new note</h2></div>${box('', null)}${say('Sealed to you, kept at your homes.', ['A note is a private text act sealed to this identity alone, left at its homes: any app holding the identity opens it (through Kišib where Kišib holds it and lets the app open). Nothing is ever updated: Edit signs a new version, the earlier ones kept under Earlier drafts.'])}`;
+  else if (chosen) {
+    const [latest, ...earlier] = chosen.versions;
+    const shown = chosen.retired ? (earlier[0] ?? latest) : latest;
+    const drafts = (chosen.retired ? earlier.slice(1) : earlier)
+      .map((x, i, all) => `<div class="dub-note-draft" data-note-draft="${e(x.id)}"><p class="k-small k-soft">Version ${all.length - i} ${actId(x.id)}</p><div class="dub-note-text" dir="auto">${e(x.text)}</div></div>`)
+      .join('');
+    right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">← Back</button><h2 dir="auto">${e(firstLine(chosen))}</h2>${chosen.retired ? '<span class="k-chip">Retired</span>' : ''}<span class="k-grow"></span>${actId(shown.id)}</div>
+${
+  o.editing && !chosen.retired
+    ? box(latest.text, latest.id)
+    : `<div class="dub-note-text dub-note-latest" dir="auto">${e(shown.text)}</div>${chosen.retired ? '<p class="k-small k-soft">Retired: dropped, kept readable with its drafts.</p>' : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="note-edit">Edit</button><button type="button" class="k-btn k-q" data-action="note-retire" data-latest="${e(latest.id)}">Retire</button></div>`}`
+}
+${drafts ? fold(`Earlier drafts (${chosen.retired ? earlier.length - 1 : earlier.length})`, drafts) : '<p class="k-small k-faint">No earlier drafts.</p>'}`;
+  } else right = '<p class="k-empty">Choose a note, or write a new one.</p>';
+  const problems = [...(o.opening ? [o.opening] : []), ...o.problems].map((x) => `<p class="k-clock">${e(x)}</p>`).join('');
+  return `<div class="k-body dub-private dub-notes${o.open ? ' k-chosen' : ''}"><aside class="dub-convs"><div class="dub-list"><button type="button" class="dub-conv" data-action="note-new"><span class="k-soft">+ New note</span></button>${o.notes === null ? '<p class="k-small k-soft dub-pad">Reading your notes at your homes…</p>' : list || '<p class="k-small k-soft dub-pad">No notes yet.</p>'}</div><div class="dub-pad">${problems}</div></aside><section class="dub-thread" id="notes">${right}</section></div>`;
 }
 
 // ---------------------------------------------------------------- Purchases

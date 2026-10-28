@@ -31,6 +31,9 @@ export const OPS = [
   'names',
   'rules',
   'rules approve',
+  'notes',
+  'note write',
+  'note retire',
   'runner',
   'runner pair',
   'runner take',
@@ -113,6 +116,12 @@ const payKind = (v: unknown): 'tip' | 'buy' | 'vow' | 'pay' => (v === 'tip' || v
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
   switch (op) {
+    case 'notes':
+      return dub.notes();
+    case 'note write':
+      return dub.noteWrite({ text: typeof a.text === 'string' ? a.text : '', corrects: text(a.corrects) || null });
+    case 'note retire':
+      return dub.noteRetire({ latest: text(a.latest) });
     case 'rules':
       return dub.rules();
     case 'rules approve':
