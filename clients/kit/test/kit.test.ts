@@ -370,6 +370,27 @@ for (const size of SIZES) {
   });
 }
 
+test('H105: a tile’s icon and its words never overlap, at 390 px wide (a tall and a short phone), light and dark', async () => {
+  for (const height of [844, 600]) {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      const context = await browser.newContext({ viewport: { width: 390, height }, colorScheme });
+      const page = await context.newPage();
+      await page.goto(base);
+      await page.locator('[data-k-part="tiles"]').click();
+      await page.locator('.k-tile').first().waitFor();
+      const overlaps = await page.locator('.k-tile').evaluateAll((ts) =>
+        ts.flatMap((t) => {
+          const ic = t.querySelector('.k-ic')!.getBoundingClientRect();
+          return [...t.querySelectorAll('h2, p')].map((w) => w.getBoundingClientRect()).filter((w) => w.height && ic.bottom > w.top + 0.5 && ic.top < w.bottom && ic.right > w.left && ic.left < w.right).map(() => t.querySelector('h2')!.textContent);
+        }),
+      );
+      assert.deepEqual(overlaps, [], `no overlap at 390×${height}, ${colorScheme}`);
+      if (shots) await page.screenshot({ path: join(shots, `kit-tiles-390x${height}-${colorScheme}.png`), fullPage: true });
+      await context.close();
+    }
+  }
+});
+
 test('H84: @ suggestions at the iPad’s size with its keyboard up: just above the typing box, within the part of the page seen', async () => {
   const context = await browser.newContext({ viewport: { width: 820, height: 1180 }, hasTouch: true });
   // The keyboard, as the iPad's Safari makes it: the page keeps its height, the part seen (the visual viewport) shortened and scrolled.

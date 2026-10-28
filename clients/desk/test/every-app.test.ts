@@ -6,6 +6,8 @@
 // - H102 (with H91): Remove from the identity panel, its confirmation drawn
 //   on top of the panel, in view; Keep it returns to the panel; Escape
 //   closes the top one only; the panel's ×.
+// - H105: every app's tiles at 390 px wide, a tall and a short phone, light
+//   and dark: no icon over its words.
 // - H82, H83: an identity whose signing key was changed elsewhere: the
 //   warning a pop-up over the page, with the box for the new words; closed,
 //   a one-line reminder under the top; switching to an identity whose key
@@ -19,6 +21,7 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { ACCEPTABLE } from '../../damgar/src/specs.ts';
 import { closeAll, damgar, dub, edubba, start, type Relay } from '../../damgar/test/world.ts';
 import { closeAll as closeUmmia, ummia } from '../../ummia/test/world.ts';
+import { closeAll as closeKishib, kishib } from '../../kishib/test/world.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { unhex } from '../../genesis/src/core.ts';
 import { encryptionSecret, toWords } from '../../../modules/carry/src/carry.ts';
@@ -34,6 +37,8 @@ let browser: Browser;
 const apps: { name: string; url: () => string; bring: (id: string, words: string) => Promise<unknown> }[] = [];
 let MAX = '';
 const problems: string[] = [];
+/** The pages that open on tiles: Kišib's (no identity needed) beside the others. */
+const tiled: { name: string; url: () => string }[] = [];
 
 before(async () => {
   homes = [await start('home'), await start('home')];
@@ -55,6 +60,8 @@ before(async () => {
   await u.c.ask('bring', { id: max.id, words: max.words, address: H[0] });
   await u.c.ask('settings', { relays: R, track: R });
   apps.push({ name: 'Ummia', url: () => `${u.app.base}/#pair=${u.app.access.newCode()}`, bring: (id, words) => u.c.ask('bring', { id, words, address: H[0] }) });
+  const k = await kishib();
+  tiled.push({ name: 'Kišib', url: () => `${k.app.base}/#pair=${k.app.access.newCode()}` }, ...apps.filter((a) => a.name !== 'Dub'));
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
@@ -62,6 +69,7 @@ after(async () => {
   await browser?.close();
   await closeAll();
   await closeUmmia();
+  await closeKishib();
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
 
@@ -172,6 +180,33 @@ test('H82, H83: in every app, a key changed elsewhere: a pop-up over the page, c
       throw new Error(`${a.name}: ${err instanceof Error ? err.message : String(err)}`);
     }
     await page.context().close();
+  }
+  assert.deepEqual(problems, []);
+});
+
+test('H105: every app’s tiles at 390 px wide, light and dark: a tile’s icon never over its words', async () => {
+  for (const a of tiled) {
+    for (const height of [844, 664]) {
+      for (const colorScheme of ['light', 'dark'] as const) {
+        const context = await browser.newContext({ viewport: { width: 390, height }, colorScheme });
+        const page = await context.newPage();
+        page.on('pageerror', (err) => problems.push(err.message));
+        await page.goto(a.url());
+        const home = page.locator('[data-action="home-tiles"]');
+        await page.locator('.k-tile, [data-action="home-tiles"]').first().waitFor({ timeout: 90_000 });
+        if (!(await page.locator('.k-tile').count())) await home.first().click();
+        await page.locator('.k-tile').first().waitFor({ timeout: 60_000 });
+        const overlaps = await page.locator('.k-tile').evaluateAll((ts) =>
+          ts.flatMap((t) => {
+            const ic = t.querySelector('.k-ic')!.getBoundingClientRect();
+            return [...t.querySelectorAll('h2, p')].map((w) => w.getBoundingClientRect()).filter((w) => w.height && ic.bottom > w.top + 0.5 && ic.top < w.bottom && ic.right > w.left && ic.left < w.right).map(() => t.querySelector('h2')!.textContent);
+          }),
+        );
+        assert.deepEqual(overlaps, [], `${a.name} at 390×${height}, ${colorScheme}`);
+        await shot(page, `${a.name}-tiles-390x${height}-${colorScheme}`);
+        await context.close();
+      }
+    }
   }
   assert.deepEqual(problems, []);
 });

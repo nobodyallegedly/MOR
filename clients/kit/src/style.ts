@@ -79,10 +79,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
 
 /* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
-.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));gap:18px;padding:24px 28px 12px;overflow:auto}
 .k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
 .k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
-.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+/* the icon in the tile's own flow, at its top, the words at its bottom: they never overlap, at any width (H105); a short tile grows */
+.k-tile .k-ic{flex:none;width:58px;height:58px;color:var(--k-p);margin:-2px 0 auto;padding-bottom:10px;box-sizing:content-box}
 .k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
 .k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
 .k-tile .k-dm{position:absolute;right:24px;top:26px}
@@ -267,9 +268,9 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-me .k-n,.k-me .k-s{display:none}
   .k-menu-btn .k-l{display:none}
   .k-switch button{padding:4px 11px}
-  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(min-content,1fr));gap:10px;padding:12px}
   .k-tile{padding:16px 18px;border-radius:18px}
-  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile .k-ic{width:40px;height:40px;padding-bottom:8px}
   .k-tile h2{font-size:24px}
   .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .k-tile .k-dm{right:16px;top:18px}
