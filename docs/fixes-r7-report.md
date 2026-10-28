@@ -58,15 +58,18 @@
 - **dubsar.org's display client:** uses the suite's type.
 
 ### Screenshots to look at first
-Taken by the tests with `MOR_SCREENSHOTS=DIR`; a set is kept in `docs/fixes-r7/`:
+Taken by the tests (`MOR_SCREENSHOTS=DIR`), kept in `docs/fixes-r7/`:
 
-1. `every-app-Dub-rules.png`, `every-app-Ummia-rules-approved.png`: Rules I follow (H93).
-2. `h122-note-edited.png`, `h122-retired.png`: Notes (H122).
-3. `wallet-h92-two-rails.png`, `wallet-h117-open-in-wallet.png`, `wallet-h117-webln.png`: Damgar (H92, H117).
-4. `mac-26-found-agreements-kinds.png`: Edubba's grid, the core's kinds (H120).
-5. `names-02-contacts.png`, `names-03-contacts.png`: Contacts top left, a nickname (H100, H109).
-6. `every-app-*-remove-*.png`, `every-app-*-key-changed.png`, `every-app-*-tiles-390x*.png`: H102, H82, H105 in every app.
-7. `kit-h99-signs.png`: the two signs (H99).
+1. `h93-dub-rules.png`, `h93-ummia-rules-approved.png`: Rules I follow, asked; approved, one in the app only, one on the list.
+2. `h122-note-edited.png`, `h122-retired.png`: Dub's Notes.
+3. `h92-two-rails.png`, `h117-open-in-wallet.png`, `h117-webln.png`: Damgar's rails, Open in wallet with its QR, the browser's wallet first.
+4. `h120-agreements-kinds.png`: Edubba's grid, every kind of act under Agreements from the core's own types.
+5. `h97-waiting-for-you.png`: Kišib's Waiting for you, the rotation filled in from the starter's message.
+6. `h102-stack-remove-on-top-phone.png`, `h102-edubba-remove-phone.png`: Remove asked on top of the panel.
+7. `h82-dub-key-changed.png`: a key changed elsewhere, the pop-up with the box for the new words.
+8. `h105-kishib-tiles-390x664-dark.png`, `h105-edubba-tiles-390x844-light.png`: the tiles at a phone's width.
+9. `h84-mention-ipad-keyboard.png`: the @ suggestions above the iPad's keyboard.
+10. `h99-signs.png`: the "?" and the chevron, tapped.
 
 ## 2. Row by row
 
