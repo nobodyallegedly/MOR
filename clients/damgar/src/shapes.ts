@@ -157,7 +157,8 @@ export interface State {
   };
   accept: Accept[];
   /** Where the accepted list stands: its version, whether it was forked and merged, published or private. */
-  list: { version: number; merged: string[]; published: boolean; problems: string[] };
+  /** `here`: how many rules are followed in Damgar only, not sealed (H112). */
+  list: { version: number; merged: string[]; published: boolean; problems: string[]; here?: number };
   counts: { toSign: number; toPay: number };
 }
 

@@ -570,6 +570,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'home-tiles':
         tab = null;
         return void (await draw());
+      // H112: the first-use step never locks the app: Later, or back to the first page.
+      case 'accept-later': {
+        const r = await act(() => b.ask<Lines>('accept later'));
+        if (r) {
+          await show(await b.ask<State>('state'));
+          done(r);
+        }
+        return;
+      }
+      case 'first-back': {
+        const r = await act(() => b.ask<Lines>('first back'));
+        if (r) await show(await b.ask<State>('state'));
+        return;
+      }
       case 'renew':
         return void popup.show('New words from Kišib', v.renewForm());
       case 'copy': {

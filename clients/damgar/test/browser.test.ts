@@ -601,6 +601,76 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   assert.deepEqual(problems, []);
 });
 
+test('H112: through Kišib’s runner with the opening unticked, the first use never locks Damgar: the cause and the way said, the rules kept in Damgar only; Later; back to the first page; sealed once ticked', async () => {
+  const H = homes.map((h) => h.base);
+  const R = [relay.base];
+  const max = await dub(H, R);
+  await max.c.ask('name', { name: 'Max' });
+  const k = await kishib();
+  await k.c.ask('runner on', { read: true, passphrase: 'test passphrase, not a real one', again: 'test passphrase, not a real one' });
+  await k.c.ask('runner give', { id: max.id, address: H[0], words: max.words });
+  const g = await damgar(null, undefined, { kishib: k.dir });
+  const { page: gp } = await open(`${g.app.base}/#pair=${g.app.access.newCode()}`);
+  await sees(gp, '[data-add="kishib"]', 'first');
+  await gp.locator('[data-add="kishib"]').click();
+  await gp.locator('[data-action="runner-pair"]').click();
+  await sees(gp, '[data-action="runner-look"]', 'code');
+  const code = /([0-9A-Z]{4}-[0-9A-Z]{4})/.exec(await gp.locator('#first-part').innerText())![1];
+  const st = await k.c.ask<{ apps: { id: string; code: string }[] }>('runner state');
+  const app = st.apps.find((x) => x.code === code)!;
+  // Approved without “may open what is sealed to” Max.
+  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], opens: [] });
+  await gp.locator('[data-action="runner-look"]').click();
+  await gp.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(gp, 'form#accept', 'accept');
+  // Later and a way back, on the first-use step.
+  assert.ok(await gp.getByRole('button', { name: 'Later' }).isVisible());
+  assert.ok(await gp.getByRole('button', { name: '← Another identity' }).isVisible());
+  await shot(gp, 'h112-01-accept');
+  // Accepting: refused to be sealed, the cause and the way said (Kišib, Runner › Apps), kept in Damgar only; the app opens.
+  for (const box of await gp.locator('input[name=accept]').all()) await box.check();
+  await gp.getByRole('button', { name: 'Accept these' }).click();
+  await sees(gp, '.k-tile', 'tiles, not stuck');
+  const said = await gp.locator('#status').innerText();
+  assert.match(said, /Kišib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it\. To allow it, tick it in Kišib: Runner › Apps, beside Damgar/);
+  assert.match(said, /Kept in Damgar only/);
+  await shot(gp, 'h112-02-kept-here');
+  // Back to the first page from the identity panel's state: a new Damgar for the same identity, its first step left for later.
+  const g2 = await damgar(null, undefined, { kishib: k.dir });
+  const { page: g2p } = await open(`${g2.app.base}/#pair=${g2.app.access.newCode()}`);
+  await sees(g2p, '[data-add="kishib"]', 'first 2');
+  await g2p.locator('[data-add="kishib"]').click();
+  await g2p.locator('[data-action="runner-pair"]').click();
+  await sees(g2p, '[data-action="runner-look"]', 'code 2');
+  const code2 = /([0-9A-Z]{4}-[0-9A-Z]{4})/.exec(await g2p.locator('#first-part').innerText())![1];
+  const app2 = (await k.c.ask<{ apps: { id: string; code: string }[] }>('runner state')).apps.find((x) => x.code === code2)!;
+  await k.c.ask('runner approve', { pairing: app2.id, identities: [max.id], opens: [] });
+  await g2p.locator('[data-action="runner-look"]').click();
+  await g2p.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(g2p, 'form#accept', 'accept 2');
+  await g2p.getByRole('button', { name: '← Another identity' }).click();
+  await sees(g2p, '[data-add="kishib"]', 'back to the first page');
+  await shot(g2p, 'h112-03-back');
+  // Chosen again from those held: the step again, then Later.
+  await g2p.locator('[data-add="kishib"]').click();
+  await sees(g2p, `[data-runner-take="${max.id}"], [data-action="runner-look"]`, 'kishib again');
+  if (!(await g2p.locator(`[data-runner-take="${max.id}"]`).count())) await g2p.locator('[data-action="runner-look"]').click();
+  await g2p.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(g2p, 'form#accept', 'accept 3');
+  await g2p.getByRole('button', { name: 'Later' }).click();
+  await sees(g2p, '.k-tile', 'tiles after later');
+  // Ticked in Kišib: the rules saved again in Settings are sealed, through Kišib's panel.
+  await k.c.ask('runner opening', { pairing: app.id, identity: max.id, on: true });
+  await go(gp, 'settings', 'accept');
+  assert.match(await gp.locator('#pane').innerText(), /Kept in Damgar only/);
+  await gp.locator('#pane').getByRole('button', { name: 'Save what I accept' }).click();
+  await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
+  await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
+  await sees(gp, '#status .k-note.k-done', 'sealed');
+  assert.match(await gp.locator('#status').innerText(), /sealed to this identity and kept at its homes/);
+  assert.deepEqual(problems, []);
+});
+
 test('Edubba’s pieces by clicks: a payment prepared for Damgar; a collective’s act anchored, its service’s offer read; Kišib’s vault fields', async () => {
   const H = homes.map((h) => h.base);
   const R = [relay.base];

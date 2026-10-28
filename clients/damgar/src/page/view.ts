@@ -230,7 +230,7 @@ export function acceptScreen(s: State): string {
   return `<div class="damgar-first">${appMark(NAME, 'icon.png')}<h2>What you accept</h2>
 ${say('Damgar signs only under what you accept here; anything else is shown unknown, never signed.', ['Every money act names the specifications it follows. Damgar reads, checks and signs only under those you accept; an act under any other is shown unknown, as the core treats a specification it does not implement. Your choice is sealed to your identity and kept at its homes, so every app holding it reads the same list; changeable in Settings.'])}
 ${s.list.problems.length ? note('', lines(s.list.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
-<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Accept these</button></div></form><div id="status" class="k-status"></div></div>`;
+<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Accept these</button><button type="button" class="k-btn" data-action="accept-later">Later</button><span class="k-grow"></span><button type="button" class="k-btn k-q" data-action="first-back">← Another identity</button></div><p class="k-small k-soft">Later: every money act is shown unknown until you choose, in Settings, Rules I follow.</p></form><div id="status" class="k-status"></div></div>`;
 }
 
 // ---------------------------------------------------------------- the identity's own menu, its parts in the pop-up
@@ -499,6 +499,7 @@ export function acceptPane(s: State): string {
   return `<h2>What you accept</h2>
 ${say(`Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ''}: every app holding it reads it.`, ['Each app changes only its part; Damgar the Money layer’s. An act under something you do not accept is shown unknown, and never signed.'])}
 ${s.list.merged.length ? note('', `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ''}
+${s.list.here ? note('', 'Kept in Damgar only: the rules ticked below are not sealed to this identity yet, so the other apps do not see them. Save them again once they can be sealed.') : ''}
 <form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Save what I accept</button></div></form>
 <div class="k-row"><span class="k-grow k-small k-soft">${s.list.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button type="button" class="k-btn" data-action="publish list" data-on="${s.list.published ? 'false' : 'true'}">${s.list.published ? 'Make it private again' : 'Publish it'}</button></div>`;
 }

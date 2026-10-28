@@ -19,6 +19,8 @@ export const OPS = [
   'carry',
   'check',
   'accept',
+  'accept later',
+  'first back',
   'publish list',
   'look',
   'to sign',
@@ -92,6 +94,10 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
   switch (op) {
     case 'state':
       return d.state();
+    case 'accept later':
+      return d.acceptLater();
+    case 'first back':
+      return d.firstBack();
     case 'clock words':
       return d.clockWords(list(a.ids));
     case 'bring':

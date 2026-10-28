@@ -124,6 +124,8 @@ export const RUNNER_OLD_KEY_SAY = 'This identity’s keys were changed with its 
 export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Kišib, never here.';
 /** Said where Kišib does not let Damgar open what is sealed to an identity. */
 export const RUNNER_NO_OPEN_SAY = 'Kišib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Kišib: Runner, Apps, Damgar, “may open what is sealed to” this identity.';
+/** H112: the rules followed cannot be sealed through Kišib's runner: the cause and the way. */
+export const KISIB_NO_OPEN_LIST_SAY = 'Kišib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it. To allow it, tick it in Kišib: Runner › Apps, beside Damgar, “may open what is sealed to” this identity.';
 export const NO_KEY_SAY =
   'Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key’s words.';
 
@@ -175,6 +177,14 @@ export interface Settings {
   collectives?: string[];
   /** Something was saved from Settings (H45): from then on its sections start folded; before, all open. */
   settingsSaved?: boolean;
+  /**
+   * Specifications followed in Damgar only, by hash (H93's "in this app
+   * only"; H112: where the sealed list cannot be written, the change is kept
+   * here, said, never stuck): read with the sealed list, never sealed.
+   */
+  acceptedHere?: string[];
+  /** The first-use step on the rules was left for later (H112): money acts under rules not followed are shown unknown. */
+  acceptLater?: boolean;
 }
 
 /** How an act was signed, as the account shows it (round 2, 2b). */
@@ -794,7 +804,12 @@ export class Damgar {
     const c = this.lists.get(me.id);
     if (c && !fresh && c.at + 60 > now()) return c.list;
     const { open } = await this.opener(me);
-    const l = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
+    const sealed = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
+    // Followed in Damgar only (H93, H112): read beside the sealed list, never written into it.
+    const here = (await this.store.read<Settings>(me.id, 'settings'))?.acceptedHere ?? [];
+    const entries = new Map(sealed.entries);
+    for (const h of here) if (!entries.has(h)) entries.set(h, labelOf(h) ?? null);
+    const l = { ...sealed, entries };
     this.lists.set(me.id, { list: l, at: now() });
     return l;
   }
@@ -816,6 +831,16 @@ export class Damgar {
       const want = new Set(keys);
       const unknownKey = keys.find((k) => !ACCEPTABLE.some((a) => a.key === k));
       if (unknownKey) throw new Error(`Damgar lists no “${unknownKey}”.`);
+      // H112: where the list cannot be sealed to the identity (Kišib does not let Damgar open what is sealed to it, or no key is held), the cause and
+      // the way are said, and the choice is kept in Damgar only, so nothing is stuck: other apps do not see it until it is sealed.
+      const { open, problem } = await this.opener(me);
+      if (!open) {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, 'settings', { ...s, acceptedHere: hashes, acceptLater: false } satisfies Settings);
+        this.lists.delete(me.id);
+        const cause = problem === RUNNER_NO_OPEN_SAY ? KISIB_NO_OPEN_LIST_SAY : `The rules you follow cannot be sealed to this identity: ${problem ?? NO_KEY_SAY}`;
+        return { lines: [{ text: cause, tone: 'warn' }, { text: 'Kept in Damgar only, for now: Damgar follows them here; the other apps do not see them until they are sealed. Save them again once it is allowed.', tone: 'ok' }] };
+      }
       const r = await changeAccepted(
         me,
         (entries) => {
@@ -824,9 +849,12 @@ export class Damgar {
             else entries.delete(h);
           }
         },
-        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open: (await this.opener(me)).open },
+        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open },
       );
-      this.lists.set(me.id, { list: r.list, at: now() });
+      // Sealed now: what was kept in Damgar only is in the list.
+      if (s.acceptedHere?.length || s.acceptLater) await this.store.write(me.id, 'settings', { ...s, acceptedHere: undefined, acceptLater: undefined } satisfies Settings);
+      this.lists.delete(me.id);
+      await this.accepted(me, true);
       const lines: Line[] = [];
       if (r.list.merged.length) lines.push({ text: `Two apps had changed the accepted list at once. Both changes were merged: ${r.list.merged.join(' ')}`, tone: 'warn' });
       lines.push(r.written ? { text: `What you accept is sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: 'ok' } : { text: 'Nothing changed.' });
@@ -898,7 +926,9 @@ export class Damgar {
     const set = this.acceptedSet(l);
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }) satisfies Accept);
     out.list = { version: l.version, merged: l.merged, published: !!book.published && !book.published.withdrawn, problems: l.problems };
-    out.stage = l.version === 0 ? 'accept' : 'ready';
+    // H112: a first-use step never locks the app: Later (or rules kept in Damgar only) lets it in.
+    out.stage = l.version === 0 && !s.acceptLater && !s.acceptedHere?.length ? 'accept' : 'ready';
+    out.list.here = s.acceptedHere?.length ?? 0;
     out.settingsSaved = !!s.settingsSaved;
     out.counts = {
       toSign:
@@ -910,6 +940,27 @@ export class Damgar {
       toPay: Object.values(book.payments).filter((p) => p.side === 'out' && p.stage === 'to pay').length,
     };
     return out;
+  }
+
+  /**
+   * The first-use step on the rules, left for later (H112): Damgar opens,
+   * every money act under a rule not followed shown unknown (Development
+   * rule 10); Settings, Rules I follow, at any time.
+   */
+  acceptLater(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.store.write(me.id, 'settings', { ...s, acceptLater: true } satisfies Settings);
+      return { lines: [{ text: 'Later, then: until you choose the rules you follow (Settings, Rules I follow), every money act is shown unknown, and nothing is signed for it.', tone: 'ok' }] };
+    });
+  }
+
+  /** Back to the first page (H112): no identity in use; those held are kept, to choose again. */
+  firstBack(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      await this.store.setActive(null);
+      return { lines: [] };
+    });
   }
 
   /** Settings were saved (H45): from now on its sections start folded. */
