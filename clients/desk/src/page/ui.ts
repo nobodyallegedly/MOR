@@ -15,7 +15,7 @@
 import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type Constitution, type Done, type Line, type Permissions, type RealCollective, type ShareHere, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -659,6 +659,7 @@ async function collectivesPart(): Promise<string> {
             signer: who(id, { name: col.name, collective: true }),
             text: x.text,
             when: x.when ?? null,
+            unstamped: x.when ? null : NOT_STAMPED,
             hint: x.hint ?? null,
             html: x.pictures.map((src) => `<figure><img alt="A picture of the post" src="${v.e(src)}"></figure>`).join(''),
             labels: [...(x.corrects ? [{ text: `correction of ${shortForm(v.formOf(x.corrects))}` }] : []), ...(x.correctedBy.length ? [{ text: `corrected by ${x.correctedBy.map((y) => shortForm(v.formOf(y))).join(', ')}` }] : [])],

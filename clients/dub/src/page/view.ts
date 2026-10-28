@@ -9,6 +9,7 @@
 import {
   APPS,
   KIT_STYLE,
+  NOT_STAMPED,
   appMark,
   card,
   clockLine,
@@ -162,6 +163,7 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
     form: it.form,
     signer: kitWho(it.who, collectives.includes(it.who.id)),
     when: it.when ?? null,
+    unstamped: it.unstamped && !it.when ? NOT_STAMPED : null,
     hint: it.hint ?? null,
     kind: it.what ? it.what : it.vow ? 'vow' : it.sealed ? `sealed ${it.sealed.media}` : null,
     labels,

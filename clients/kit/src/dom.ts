@@ -316,7 +316,7 @@ export function stampCards(root: ParentNode, words: Record<string, string>): voi
     s.className = 'k-when';
     s.textContent = w;
     a.prepend(s);
-    a.querySelector('.k-hint')?.remove();
+    a.querySelectorAll('.k-hint').forEach((h) => h.remove());
   }
 }
 

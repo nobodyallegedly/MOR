@@ -69,6 +69,12 @@ export interface KitAct {
    * order anything (Envelopes rule 6, "Hints never decide").
    */
   hint?: string | null;
+  /**
+   * Where the feed is ordered by a clock and this act has no time yet: the
+   * app's words for it ("not yet stamped by the Dubsar clock"), shown faint;
+   * it is placed by its signer's own sequence until stamped (H110).
+   */
+  unstamped?: string | null;
   /** What it is, in a word or two, where it is not a plain post (a vow, a release, a display name…). */
   kind?: string | null;
   labels?: KitLabel[];
@@ -85,6 +91,9 @@ export interface KitAct {
   own?: boolean;
 }
 
+/** The faint words on a card the suite's clock has not stamped yet, in a feed it orders (H110). */
+export const NOT_STAMPED = 'not yet stamped by the Dubsar clock';
+
 /** One act's card: the signer's short ID and name top left, the act's short ID bottom right, each opening its own menu (click or tap; never hover). */
 export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const s = a.signer;
@@ -94,7 +103,7 @@ export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : '';
   const text = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? '')}</div>` : '';
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">✓</span>' : ''}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ''}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '';
+  const hint = (!a.when && a.unstamped ? `<div class="k-hint k-unstamped">${e(a.unstamped)}</div>` : '') + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '');
   return `<article class="k-act${o.selected ? ' k-sel' : ''}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ''}${signer}${labels}${text}${a.html ?? ''}${hint}${foot}</article>`;
 }
 

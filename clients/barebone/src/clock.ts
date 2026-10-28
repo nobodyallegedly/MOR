@@ -99,3 +99,41 @@ export async function clockWords(ids: string[], hints: string[], via: Via): Prom
   for (const id of ids) if (t.has(id)) out[id] = byClock(t.get(id)!);
   return out;
 }
+
+/**
+ * Newest first by the clock's word, for any feed the suite draws (H110). An
+ * act the clock has not stamped yet is placed by its signer's own sequence:
+ * it follows every act of its signer with a lower position, so it is never
+ * below that signer's latest stamped act; and, as the feed reader shows
+ * unstamped acts (`signedOrder`, the display client's), it comes first, as
+ * the newest, until the clock stamps it and it moves into the clock's order.
+ * Never ordered by the signer's hint. Stable otherwise: acts with neither a
+ * time nor a position keep the order given.
+ */
+export function newestFirst<T>(xs: T[], times: Map<string, number>, o: { id: (x: T) => string; signer: (x: T) => string | null | undefined; position?: (x: T) => number | null | undefined }): T[] {
+  const at = new Map(xs.map((x, i) => [x, i]));
+  const pos = (x: T) => o.position?.(x) ?? null;
+  // Each act's time for the order: its stamp, never later than the next act of its signer (which names it), so one
+  // signer's sequence always holds; an act not stamped yet comes first, as the newest.
+  const eff = new Map<T, number>(xs.map((x) => [x, times.get(o.id(x)) ?? Infinity]));
+  const bySigner = new Map<string, T[]>();
+  for (const x of xs) {
+    const s = o.signer(x);
+    if (s && pos(x) !== null) bySigner.set(s, [...(bySigner.get(s) ?? []), x]);
+  }
+  for (const line of bySigner.values()) {
+    line.sort((a, b) => pos(b)! - pos(a)!);
+    for (let i = 1; i < line.length; i++) eff.set(line[i], Math.min(eff.get(line[i])!, eff.get(line[i - 1])!));
+  }
+  // Ties keep the order given, each signer's acts taking that signer's places in its own sequence (higher position first).
+  const slot = new Map(at);
+  for (const line of bySigner.values()) {
+    const places = line.map((x) => at.get(x)!).sort((a, b) => a - b);
+    line.forEach((x, i) => slot.set(x, places[i]));
+  }
+  return [...xs].sort((a, b) => {
+    const [ea, eb] = [eff.get(a)!, eff.get(b)!];
+    if (ea !== eb) return ea === Infinity ? -1 : eb === Infinity ? 1 : eb - ea;
+    return slot.get(a)! - slot.get(b)!;
+  });
+}

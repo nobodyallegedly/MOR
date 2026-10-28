@@ -41,7 +41,7 @@ import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
 import { standingWords } from '../../reader/src/read.ts';
-import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, timeWords } from '../../barebone/src/clock.ts';
+import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, newestFirst, timeWords } from '../../barebone/src/clock.ts';
 import { APPENDED_FORMAT, appendedOf, appendedRef, membership } from './appended.ts';
 import { draftPayload, type Draft } from '../../damgar/src/messages.ts';
 import { offers as anchorOffers, type Offer } from '../../ummia/src/anchor.ts';
@@ -224,6 +224,7 @@ export function randomBelow(n: number): number {
 interface Described {
   id: string;
   signer?: string;
+  position?: number;
   public: boolean;
   to?: string[];
   spec?: string;
@@ -1097,6 +1098,7 @@ export class Dub {
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
       it.when = fp.time ? byClock(fp.time) : null;
+      it.unstamped = !!dubsarClock() && !fp.time;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
       // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
@@ -1199,7 +1201,8 @@ export class Dub {
     }
     // H54: where a clock is named, the acts it stamped by its word, newest first; the others keep the relay's order after them.
     const times = await clockTimes([...new Set([...s.relays, ...hints])], s.via);
-    if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
+    // H110: an act the clock has not stamped yet is placed by its signer's own sequence (first, as the newest), never below the acts it follows.
+    if (times.size) picked.splice(0, picked.length, ...newestFirst(picked, times, { id: (x) => x.d.id, signer: (x) => x.d.signer, position: (x) => x.d.position }));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge = new Judge([...new Set([...s.relays, ...hints])], s.via);
     const items: Item[] = [];
@@ -1218,7 +1221,10 @@ export class Dub {
       }
       items.push({ id: d.id, form: actForm(d.id), who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: null, seen: true, what: whatAct(d) });
     }
-    for (const it of items) it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+    for (const it of items) {
+      it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+      it.unstamped = !!dubsarClock() && !it.when;
+    }
     const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: items.filter((x) => x.when).length, shown: items.length } : null;
     return { items, hidden, left, problems, clock };
   }
@@ -2105,6 +2111,7 @@ export class Dub {
         if (!fp.post) continue;
         const it = { ...this.item(fp.post, me.id, p, s, 'feed', fp.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
         it.when = fp.time ? byClock(fp.time) : null;
+        it.unstamped = !!dubsarClock() && !fp.time;
         items.push(it);
       }
       return {

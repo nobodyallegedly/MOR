@@ -5,7 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
 import type { LookItem, Looked, SpecPage } from '../look.ts';
@@ -253,6 +253,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         verified: x.verified,
         alarm: x.alarm,
         when: x.when,
+        unstamped: x.when ? null : NOT_STAMPED,
         hint: x.hint,
         own: x.signer === meId(),
       },

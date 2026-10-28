@@ -75,6 +75,8 @@ export interface Item {
   form: string;
   /** When, by the clock this feed names (H54), in words; null where not stamped. */
   when?: string | null;
+  /** The feed is ordered by a clock that has not stamped this act yet (H110): said faint, placed by its signer's own sequence. */
+  unstamped?: boolean;
   /** The signer's own hint (field 9), as written: shown labelled as its own where no clock stamped the act. */
   hint?: string | null;
   /** Films it shows (H52). */
