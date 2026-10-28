@@ -59,6 +59,7 @@ cd ../ummia && npm install && sh scripts/make-app.sh
 
 ## Sitting 4. Damgar and money (about 60 minutes)
 
+*The regtest network has been running since 19 October and its last block is old: if a payment is refused because a node is "not synced", press **Mine** once in the test wallet.*
 1. Open **Damgar**: Waiting three bars, Account one, Lanes two, Settings two. Each tile's column. Top right: Max, by name.
 2. **A tip, by hand**: in Dub, a post's act ID › **Tip** › **By hand**; copy. In Damgar, **Waiting › + Paste an act to sign**, Read it, Sign it; when the invoice comes, pay it in the test wallet, paste the preimage, **Check it and sign my claim**.
 3. **Ask Damgar**: Tip › Ask Damgar: **Damgar's gold panel inside Dub's window**; Authorise and sign. Once with Damgar closed: it waits in Damgar.
@@ -103,19 +104,37 @@ cd ../ummia && npm install && sh scripts/make-app.sh
 6. River's **Publishing › A shared post** (the same people); a tip on it from Dub: the line says it is shared, the tip is split. A tip on River's own unshared post: to River alone.
 7. Refused in plain words: shares not adding to 100; the service as one of the people; a person by an ID alone.
 
-## Sitting 9. Ummia, the developers' app
+## Sitting 9. Ummia, the developers' app (about 40 minutes)
 
-*Added when Ummia's round reports: publishing a cMIP with its card, its page, Look's points and filters, following a developer's releases, Choose by layer.*
+1. **Bring Max** into Ummia (Bring one: its ID, its signing words from Dub, a home). Identity menu › **Relays**: where your acts go, and the relays Look asks. Four tiles: Look one bar, Discuss one, Publish two, Choose two.
+2. **Publish › A cMIP or Module**: a short text (`# cMIP: My notes, draft 1` and a line). **Read it back, with its hash**: the hash first; **Copy**; **Sign and publish**.
+3. **Its card** appears: the title, a summary, "Start a discussion thread" ticked; read back, sign.
+4. **Look**: the cMIP with your card's title. **Its page**: the card, the thread, you as creator. In Dub, the card is a plain post; reply to the thread from Dub. In Ummia, **Discuss › Discussions**: Dub's reply is there; **Reply, as a signed document**.
+5. **Published here › A later card**: a new summary; on its page the new one counts, "1 earlier card, superseded".
+6. **Following a developer**: a second identity publishes two releases of one folder (0.3, then 0.4 naming 0.3). In Max's Look, the 0.4 card says what changed since 0.3. Its signer's menu › **Follow their releases**: **Saved** gains their releases; Dub's contacts include them (the same follow list). **Its line** shows both.
+7. **Choose**: on the second identity's cMIP card, the act menu › **Add to accepted list**. **Choose › Every layer** lists it; filtered by layer, Development shows it and Money does not. **+ Accept by hash**, **Remove**, **Publish it**.
+8. **A core text's page**: Look › A specification's page, the Text MIR's hash: its own heading as its title, no card signed for the core. **Write a card of your own** (through Kišib's panel if Max is used through Kišib): shown as your word.
 
-## Sitting 10. The phone (after a server session)
+## Sitting 10. The phone
 
-*Once the releases built on main are served at `*.dubsar.org`.*
+*The releases built on main are served (Mac and server session, 24 October). Noted there: Damgar's and Edubba's banners take two lines on a phone, even at 430 pixels; Kišib's "?" wraps at 375. Only Kišib shows its tiles before an identity is there; the others open on making or bringing one.*
 1. **Dub** in Safari: the banner one line with a "?"; make or bring an identity; post; @ by name (Dub's own list, not the keyboard's); a card's IDs open as a sheet from the bottom; Private full screen with a back arrow; a profile's Message and Pay.
 2. **Kišib**: three tiles, no Runner; a tile's column first, then the part, a back arrow; Paper's quiet door.
 3. **Damgar**: the banner; make or bring; the tiles stack; Waiting, then ← Back for its column.
 4. **Edubba**: three tiles, no Agents; bring an identity; Collectives › To sign.
 
+## Sitting 11. Nakišib, two Macs (about 60 minutes)
+
+*The offline M1 Mac and the everyday Mac. Test identities only: the real identity is born at step 17. Nakišib's zip was built on the everyday Mac on 24 October; its fingerprint, **e5bd1a7d566be0a2885dc6aa0ddcdad84dfdd6bee8d43afe86771d866672d465**, written on paper, must reach the offline Mac by another road than the stick.*
+
+1. **Prepare the offline Mac, once**: erase it (Erase All Content and Settings), set it up with no Apple Account, no Wi-Fi joined, Bluetooth and location off; from then on nothing plugged in but power and the stick. The Wi-Fi icon crossed out.
+2. **Carry Nakišib**: `~/Applications/Nakisib.zip` to the stick. On the offline Mac, into Documents; Terminal, `shasum -a 256 ` and drag the zip in: **every character the same as the paper**, or delete it and start again. Unzip, move Nakišib to Applications, Control-click › Open the first time. Its own window (not Safari), the stone seal in the Dock, "This Mac should never connect again.", three tiles, "Offline · keeps nothing secret".
+3. **A test identity from Nakišib's commitment**: Nakišib › A new identity › **Draw a paper of 24 words**; write them; three back (a wrong one refused). Write the commitment to the stick. On the everyday Mac, Kišib › Identities › **Make one with Nakišib**: the file, homes and relays; read back (the same commitment as Nakišib showed); sign; its signing words; bring it into Dub and post once. *(If Kišib says its Nakišib part is missing: `cd clients/kishib && npm run airgap`, then reopen Kišib.)*
+4. **A change of keys through Nakišib**: Kišib › Paper › **Change keys with Nakišib**, read back, sign, **Write the request for Nakišib** (to the stick). Nakišib › Change keys › the file: "CONSEQUENTIAL — READ BEFORE SIGNING", the new signing key's fingerprint the same as Kišib's. Type the paper (a wrong word first: refused); **the new paper** shown, written, three back (one wrong first: nothing signed); the Module's summary ("FRESH SEED"); type **SIGN**; write the answer to the stick. Kišib › **Read Nakišib's answer**: "exactly the change Kišib asked for", then "It counts"; the new signing words; give them to Dub.
+5. **Its memory**: Nakišib › What it signed: one line. The same request again: the same bytes. A second change with the **first** paper: refused ("an earlier, spent one"); with the new paper: it works.
+6. **Nothing kept**: quit Nakišib; in Finder, Home › `mor-nakisib`: one file, `memory.cbor`, nothing else.
+
 ## Also to check on the Mac, once
 
-- **The Dubsar clock** is the right one: in Kišib, **Read a record** for `1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453`: its genesis found at home1 and home2, its acts stamps of the timestamp clock Module. (The build session could not reach the homes.)
-- **Known, not yet built** (no finding needed): test collectives still offered in Edubba (to be removed); the connector's draft tools (to be removed); the "Dubsar" titles; the deal's own payee identity (to go once F392 is on main); a collective's proposal signed with the member key held in Kišib; Nakišib.
+- **The Dubsar clock** is checked: the Mac and server session of 24 October found `1c743854…f453` is the clock running, still stamping. dubsar.org's feed labels it "the dubsar.org clock"; the apps say "the Dubsar clock": the same identity.
+- **Known, not yet built** (no finding needed): test collectives still offered in Edubba (to be removed); the connector's draft tools (to be removed); the "Dubsar" titles; the deal's own payee identity (to go once F392 is on main); a collective's proposal signed with the member key held in Kišib; in Nakišib, collectives' shares, the clean-device key and rule 8a's two rare exceptions (refused, pointing to `mor-signer`).
