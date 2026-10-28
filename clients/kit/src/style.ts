@@ -186,6 +186,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
 .k-panel.k-left{left:16px;right:auto}
 .k-panel h4{font-size:16px;font-weight:300}
+.k-ph{display:flex;align-items:center;gap:10px;padding:2px 2px 6px 8px}
+.k-panel .k-ph .k-round{width:28px;height:28px;font-size:16px}
+.k-confirm{width:min(440px,calc(100% - 28px))}
+.k-confirm .k-mh{margin-bottom:0}
+.k-confirm .k-box{margin:0;border:0;padding:0 4px 4px}
 .k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
 .k-idrow.k-on{background:var(--k-wash2)}
 .k-idrow .k-n{font-size:14.5px}
@@ -225,7 +230,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
 .k-note ul{margin:4px 0 0;padding-left:1.1em}
 .k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
-.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status{position:fixed;z-index:900;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
 .k-status:empty{display:none}
 .k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
 .k-status .k-close{position:absolute;right:8px;top:8px}

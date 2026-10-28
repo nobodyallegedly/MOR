@@ -15,7 +15,7 @@
 import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type Constitution, type Done, type Line, type Permissions, type RealCollective, type ShareHere, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -897,7 +897,8 @@ async function identityMenu(button: HTMLElement, id: string) {
   const i = state.identities.find((x) => x.id === id);
   if (!i) return;
   popAt(button, v.idMenu(i), 'below', async (key) => {
-    if (key === 'remove') return void redrawPanel(panelHtml(v.removeBox(i.name).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`)));
+    // Said plainly first, on top of the panel (H102).
+    if (key === 'remove') return void openConfirm(app, v.removeBox(i.name).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
     closePanel();
     if (key === 'name') popup.show('Name', v.inside(v.nameForm(i)));
     else if (key === 'line') popup.show('Line and homes', v.inside(v.lineShown(i)));

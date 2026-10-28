@@ -5,7 +5,7 @@
 // and part were open (`damgar:at`), and in memory which collective is acted
 // as; nothing of a key or a payment.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Account, LaneShown, PaymentShown, Rails, State, ToSign, Who } from '../shapes.ts';
 
@@ -454,7 +454,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         await act(() => b.ask('use', { id }));
         state = await b.ask<State>('state');
       }
-      if (key === 'remove') return void redrawPanel(panelHtml(removeSaid('Damgar', shortForm(v.formOf(id, 'mid'))).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`)));
+      // Said plainly first, on top of the panel (H102).
+      if (key === 'remove') return void openConfirm(app, removeSaid('Damgar', shortForm(v.formOf(id, 'mid'))).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
       closePanel();
       if (key === 'words') {
         const c = await act(() => b.ask<{ grouped: string; words: string[] }>('carry'));

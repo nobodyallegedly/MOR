@@ -5,7 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
 import type { LookItem, Looked, SpecPage } from '../look.ts';
@@ -397,7 +397,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         await act(() => b.ask('use', { id }));
         state = await b.ask<State>('state');
       }
-      if (key === 'remove') return void redrawPanel(panelHtml(removeSaid('Ummia', shortForm(v.formOf(id, 'mid'))).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`)));
+      // Said plainly first, on top of the panel (H102).
+      if (key === 'remove') return void openConfirm(app, removeSaid('Ummia', shortForm(v.formOf(id, 'mid'))).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
       closePanel();
       if (key === 'words') {
         const c = await act(() => b.ask<{ grouped: string; words: string[] }>('carry'));

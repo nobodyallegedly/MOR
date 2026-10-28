@@ -319,8 +319,11 @@ export function identityPanel(o: { ids: PanelIdentity[]; adding: boolean; add: {
       ? `<div class="k-pane-in">${o.add.map((a) => `<button type="button" class="k-idrow" data-k-add="${e(a.key)}"${a.empty ? ' disabled' : ''}><span><span class="k-n">${e(a.label)}</span><br><span class="k-small k-soft">${e(a.say)}</span></span></button>`).join('')}</div>`
       : ''
   }`;
-  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity">${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ''}</div>`;
+  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity"><div class="k-ph"><h4>Identities</h4><span class="k-grow"></span>${CLOSE_X}</div>${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ''}</div>`;
 }
+
+/** The × top right of every pop-up, sheet and panel (H91): it closes what it is in. */
+export const CLOSE_X = '<button type="button" class="k-round k-x" data-k-close aria-label="Close">×</button>';
 
 /** Remove, said plainly first: what goes, and what does not. */
 export function removeSaid(app: string, name: string): string {
@@ -357,7 +360,7 @@ export function contactsPanel(o: { contacts: Contact[]; below: string; action?: 
   const rows = o.contacts
     .map((c) => `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e([labelOf(c), ...(c.names ?? [])].join(' ').toLowerCase())}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? ' k-c' : ''} k-alt">${e(initial(labelOf(c), c.form))}</span><span><span class="k-n" dir="auto">${e(labelOf(c))}${c.collective ? '<span class="k-tagc">collective</span>' : ''}</span><br><span class="k-s">${e(shortForm(c.form))}${twice.has(labelOf(c).toLowerCase()) ? '' : ''}</span></span></button>${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ''}</div>`)
     .join('');
-  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-row"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span></div><input type="search" data-k-find placeholder="Find a contact by name…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
+  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find a contact by name…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
 }
 
 /** The suggestions for @ or To…: names first, a faint short ID only where two names collide. */

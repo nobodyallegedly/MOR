@@ -85,6 +85,8 @@ export function popAt(button: HTMLElement, html: string, prefer: 'below' | 'abov
   holder.innerHTML = html;
   const pop = holder.firstElementChild as HTMLElement;
   (button.closest('.k-page') ?? document.body).append(pop);
+  // A menu is drawn above whatever is open (H102).
+  pop.style.zIndex = String(LAYER_BASE + stack.length * 2 + 2);
   place(pop, button, prefer);
   button.classList.add('k-open');
   button.setAttribute('aria-expanded', 'true');
@@ -148,27 +150,172 @@ export function attachCards(root: HTMLElement, host: CardHost): void {
 
 // ---------------------------------------------------------------- closing what is open
 
-/** One listener on the document: a click outside a pop or Escape closes it (then a panel, then the pop-up thread). */
+/**
+ * One listener on the document: a click outside a menu closes it; Escape
+ * closes the menu open, else whatever was opened last (asking first where a
+ * form in it was typed in), else the note under the top (H91, H102).
+ */
 export function attachClosing(doc: Document = document): void {
+  if (attached.has(doc)) return;
+  attached.add(doc);
   doc.addEventListener('click', (ev) => {
-    if (!openMenu) return;
     const t = ev.target as HTMLElement;
+    // The × of a note under the top (H91): it goes, nothing else changes.
+    const x = t.closest<HTMLElement>('[data-k-status-close]');
+    if (x) {
+      const st = x.closest<HTMLElement>('.k-status');
+      if (st) st.innerHTML = '';
+      return;
+    }
+    if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
   });
   doc.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (openMenu) return closeMenu();
-    if (panel) return closePanel();
-    popup?.close();
+    const top = stack[stack.length - 1];
+    if (top) return void leave(top);
+    for (const st of doc.querySelectorAll<HTMLElement>('.k-status')) st.innerHTML = '';
   });
+  // Every note under the top gets its ×, whoever writes it (H91: nothing stays until a refresh).
+  const closeable = (root: ParentNode) => {
+    for (const st of root.querySelectorAll<HTMLElement>('.k-status')) {
+      if (st.firstElementChild && !st.querySelector(':scope > [data-k-status-close], :scope > .k-close')) {
+        const b = doc.createElement('button');
+        b.type = 'button';
+        b.className = 'k-round k-close';
+        b.dataset.kStatusClose = '';
+        b.setAttribute('aria-label', 'Close');
+        b.textContent = '×';
+        st.append(b);
+      }
+    }
+  };
+  new MutationObserver(() => closeable(doc)).observe(doc.documentElement, { childList: true, subtree: true });
+}
+const attached = new WeakSet<Document>();
+
+// ---------------------------------------------------------------- one stack of what is open (H102, H91)
+
+/**
+ * Everything that opens over the page (a pop-up, a panel, another app's
+ * frame, a confirmation) is one layer of one stack: whatever opens last is
+ * drawn on top, each layer over its own shade, so the one beneath is dimmed;
+ * closing one returns to the one beneath (and closes what was opened above
+ * it). Each has its × top right; Escape and a tap outside close the top one,
+ * asking first where a form in it was typed in; nothing ever needs a
+ * refresh to go.
+ */
+export interface Layer {
+  box: HTMLElement;
+  shade: HTMLElement;
+  close(): void;
+  /** Something typed in it and not sent: closing by Escape or a tap outside asks first. */
+  dirty: boolean;
+}
+
+const LAYER_BASE = 30;
+const stack: Layer[] = [];
+
+function restack(): void {
+  stack.forEach((l, i) => {
+    l.shade.style.zIndex = String(LAYER_BASE + i * 2);
+    l.box.style.zIndex = String(LAYER_BASE + i * 2 + 1);
+    l.box.toggleAttribute('data-k-under', i < stack.length - 1);
+  });
+}
+
+/** Put a box and its shade on the stack, on top; its own `close` takes them away. */
+export function pushLayer(box: HTMLElement, shade: HTMLElement, close: () => void): Layer {
+  // A menu that led here has done its work.
+  closeMenu();
+  const l: Layer = { box, shade, close, dirty: false };
+  stack.push(l);
+  shade.addEventListener('click', () => {
+    if (stack[stack.length - 1] === l) void leave(l);
+  });
+  box.addEventListener('input', (ev) => {
+    const t = ev.target as HTMLInputElement | HTMLTextAreaElement;
+    if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !/^(checkbox|radio|file|hidden|search)$/.test((t as HTMLInputElement).type))) && t.value.trim()) l.dirty = true;
+  });
+  box.addEventListener('submit', () => (l.dirty = false), true);
+  box.addEventListener('click', (ev) => {
+    const t = ev.target as HTMLElement;
+    if (t.closest('[data-k-close]')?.closest('[data-k-stack]') === box) l.close();
+    else if (t.closest('[data-k-remove-no]') && box.matches('[data-k-confirm]')) l.close();
+  });
+  box.dataset.kStack = '';
+  restack();
+  return l;
+}
+
+/** Take a layer off the stack, and everything opened above it. Its own `close` removes its elements. */
+export function popLayer(box: HTMLElement): void {
+  const i = stack.findIndex((l) => l.box === box);
+  if (i < 0) return;
+  const above = stack.splice(i);
+  for (const l of above.slice(1).reverse()) l.close();
+  restack();
+}
+
+/** The layer on top, if any. */
+export const topLayer = (): HTMLElement | null => stack[stack.length - 1]?.box ?? null;
+
+/** Close a layer as Escape or a tap outside does: asking first where something typed in it would be lost. */
+async function leave(l: Layer): Promise<void> {
+  if (l.dirty && !(await askLeave(l.box.closest('.k-page') ?? document.body))) return;
+  l.close();
+}
+
+/** "Close it? What you typed is not kept": a small confirmation, on top. */
+function askLeave(page: Element): Promise<boolean> {
+  return new Promise((done) => {
+    const c = openConfirm(page as HTMLElement, '<div class="k-box" data-k-leave><h4>Close it?</h4><p class="k-small k-soft">What you typed there is not kept.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-leave-yes>Close it</button><button type="button" class="k-btn k-q" data-k-leave-no>Keep writing</button></div></div>', () => done(false));
+    c.box.addEventListener('click', (ev) => {
+      const t = ev.target as HTMLElement;
+      if (t.closest('[data-k-leave-yes]')) {
+        c.close(true);
+        done(true);
+      } else if (t.closest('[data-k-leave-no]')) c.close();
+    });
+  });
+}
+
+/**
+ * A confirmation over whatever is open (Remove said plainly, Close it?): on
+ * top of the stack, its own × and shade. `gone` is called when it goes
+ * without an answer.
+ */
+export function openConfirm(page: HTMLElement, html: string, gone?: () => void): { box: HTMLElement; close(answered?: boolean): void } {
+  const shade = document.createElement('div');
+  shade.className = 'k-shade k-light';
+  const box = document.createElement('div');
+  box.className = 'k-modal k-confirm';
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-modal', 'true');
+  box.dataset.kConfirm = '';
+  box.innerHTML = `<div class="k-mh"><span class="k-grow"></span><button type="button" class="k-round" data-k-close aria-label="Close">×</button></div><div class="k-mbody">${html}</div>`;
+  page.append(shade, box);
+  let answered = false;
+  const close = (a = false) => {
+    answered ||= a;
+    if (!box.isConnected) return;
+    box.remove();
+    shade.remove();
+    popLayer(box);
+    if (!answered) gone?.();
+  };
+  pushLayer(box, shade, () => close());
+  box.querySelector<HTMLButtonElement>('.k-mbody button')?.focus({ preventScroll: true });
+  return { box, close };
 }
 
 // ---------------------------------------------------------------- panels (identities, contacts)
 
 let panel: { el: HTMLElement; shade: HTMLElement; done?: () => void } | null = null;
 
-/** Open a panel (its HTML from `identityPanel` or `contactsPanel`) over a light shade; one at a time. */
+/** Open a panel (its HTML from `identityPanel` or `contactsPanel`) over a light shade; one at a time, on the stack. */
 export function openPanel(page: HTMLElement, html: string, done?: () => void): HTMLElement {
   closePanel();
   const shade = document.createElement('div');
@@ -177,8 +324,8 @@ export function openPanel(page: HTMLElement, html: string, done?: () => void): H
   holder.innerHTML = html;
   const el = holder.firstElementChild as HTMLElement;
   page.append(shade, el);
-  shade.addEventListener('click', () => closePanel());
   panel = { el, shade, done };
+  pushLayer(el, shade, () => closePanel());
   const find = el.querySelector<HTMLInputElement>('[data-k-find]');
   find?.addEventListener('input', () => {
     const q = find.value.trim().toLowerCase();
@@ -193,18 +340,21 @@ export function redrawPanel(html: string): HTMLElement | null {
   const holder = document.createElement('div');
   holder.innerHTML = html;
   const el = holder.firstElementChild as HTMLElement;
-  panel.el.replaceWith(el);
-  panel.el = el;
-  return el;
+  // The same layer, its contents drawn again: its place in the stack kept.
+  panel.el.replaceChildren(...el.childNodes);
+  for (const a of [...el.attributes]) if (a.name !== 'style') panel.el.setAttribute(a.name, a.value);
+  return panel.el;
 }
 
 export function closePanel(): void {
   if (!panel) return;
   closeMenu();
-  panel.el.remove();
-  panel.shade.remove();
-  panel.done?.();
+  const p = panel;
   panel = null;
+  popLayer(p.el);
+  p.el.remove();
+  p.shade.remove();
+  p.done?.();
 }
 
 export const panelOpen = () => panel?.el ?? null;
@@ -241,7 +391,6 @@ export class Popup {
       this.scroll = [...this.page.querySelectorAll('.k-feed')].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement('div');
       this.shade.className = 'k-shade';
-      this.shade.addEventListener('click', () => this.close());
       this.box = document.createElement('div');
       this.box.className = 'k-modal';
       this.box.setAttribute('role', 'dialog');
@@ -253,6 +402,7 @@ export class Popup {
       });
       this.page.append(this.shade, this.box);
       popup = this;
+      pushLayer(this.box, this.shade, () => this.close());
     }
     this.stack.push({ title, html });
     return this.draw();
@@ -273,6 +423,7 @@ export class Popup {
 
   close(): void {
     closeMenu();
+    if (this.box) popLayer(this.box);
     this.box?.remove();
     this.shade?.remove();
     this.box = this.shade = null;
@@ -491,6 +642,11 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
   frame.src = url.href;
   box.append(by, frame);
   page.append(shade, box);
+  // On the stack (H102): above whatever was open; Escape or a tap outside closes it as its × does.
+  pushLayer(box, shade, () => {
+    slot.close();
+    o.closed?.();
+  });
   // A sandboxed frame has an opaque origin ("null"): the message is taken only from that frame's window.
   const listen = (ev: MessageEvent) => {
     if (ev.source === frame.contentWindow) o.message?.(ev.data);
@@ -500,6 +656,7 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
     frame,
     close() {
       window.removeEventListener('message', listen);
+      popLayer(box);
       box.remove();
       shade.remove();
     },

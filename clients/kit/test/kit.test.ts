@@ -223,6 +223,76 @@ for (const size of SIZES) {
     await close();
   });
 
+  test(`H102 and H91, at ${size.name} size: one stack, whatever opens last on top; × on each; Escape and a tap outside close the top one, a form typed in asking first; a note’s ×`, async () => {
+    const { page, problems, close } = await open(size);
+    const onTop = (sel: string) =>
+      page.locator(sel).first().evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 40));
+        return !!at && el.contains(at) && r.top >= 0 && r.bottom <= window.innerHeight + 1;
+      });
+    // The identity panel, its × top right; Remove from its menu: the confirmation drawn over the panel, never beneath it.
+    await page.locator('[data-k-open="identity"]').click();
+    const panel = page.locator('[data-k-panel="identity"]');
+    await panel.waitFor();
+    assert.equal(await panel.locator('[data-k-close]').count(), 1, 'the panel’s ×');
+    await page.locator('[data-k-idmenu]').first().click();
+    await page.getByRole('menuitem', { name: 'Remove from Demo…' }).click();
+    const confirm = page.locator('[data-k-confirm]');
+    await confirm.waitFor();
+    assert.ok(await onTop('[data-k-confirm]'), 'the confirmation is on top, in view');
+    const z = await page.evaluate(() => [Number(getComputedStyle(document.querySelector('[data-k-panel]')!).zIndex), Number(getComputedStyle(document.querySelector('[data-k-confirm]')!).zIndex)]);
+    assert.ok(z[1] > z[0], `confirmation ${z[1]} above panel ${z[0]}`);
+    await shot(page, size.name, 'stack-remove-on-top');
+    // Keep it: the confirmation goes, the panel stays beneath.
+    await confirm.locator('[data-k-remove-no]').click();
+    await confirm.waitFor({ state: 'detached' });
+    assert.ok(await panel.isVisible());
+    // Remove again, then Escape: only the top one closes.
+    await page.locator('[data-k-idmenu]').first().click();
+    await page.getByRole('menuitem', { name: 'Remove from Demo…' }).click();
+    await confirm.waitFor();
+    await page.keyboard.press('Escape');
+    await confirm.waitFor({ state: 'detached' });
+    assert.ok(await panel.isVisible(), 'Escape closed the confirmation only');
+    // The panel's ×.
+    await panel.locator('[data-k-close]').click();
+    await panel.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.k-shade').count(), 0, 'nothing left over the page');
+    // A pop-up with a form: a tap outside closes it at once while nothing is typed; typed in, it asks first.
+    await page.evaluate(() => window.openForm());
+    const modal = page.locator('.k-modal').first();
+    await modal.waitFor();
+    assert.equal(await modal.locator('[data-k-popup="close"]').count(), 1, 'the pop-up’s ×');
+    await page.mouse.click(5, size.height - 5);
+    await modal.waitFor({ state: 'detached' });
+    await page.evaluate(() => window.openForm());
+    await page.locator('#demo-form textarea').fill('Half a thought');
+    await page.keyboard.press('Escape');
+    const leave = page.locator('[data-k-leave]');
+    await leave.waitFor();
+    assert.ok(await onTop('[data-k-confirm]'), 'asked on top');
+    await page.locator('[data-k-leave-no]').click();
+    await leave.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('#demo-form textarea').inputValue(), 'Half a thought', 'kept writing');
+    await page.mouse.click(5, size.height - 5);
+    await leave.waitFor();
+    await shot(page, size.name, 'stack-close-it');
+    await page.locator('[data-k-leave-yes]').click();
+    await page.locator('#demo-form').waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.k-shade').count(), 0, 'nothing left over the page');
+    // A note under the top: its ×, and Escape, take it away.
+    await page.evaluate(() => window.sayNote('Saved.'));
+    await page.locator('#status [data-k-status-close]').click();
+    assert.equal(await page.locator('#status').innerText(), '');
+    await page.evaluate(() => window.sayNote('Saved again.'));
+    await page.locator('#status [data-k-status-close]').waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#status').innerText(), '');
+    assert.deepEqual(problems, []);
+    await close();
+  });
+
   test(`@ and To… by names, two names colliding, at ${size.name} size`, async () => {
     const { page, problems, close } = await open(size);
     const ta = page.locator('#post textarea');

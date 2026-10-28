@@ -24,6 +24,7 @@ import {
   profile as profilePage,
   redrawPanel,
   removeSaid,
+  openConfirm,
   shortForm,
   type Contact,
   type KitAct,
@@ -879,8 +880,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'use':
         return use(id, null);
       case 'remove':
-        redrawPanel(identityHtml(false, runnerKind ? v.runnerRemoveSaid(name) : removeSaid('Dub', name)));
-        app.querySelector<HTMLElement>('[data-k-remove-yes]')!.dataset.id = id;
+        // Said plainly first, on top of the panel (H102).
+        openConfirm(app, runnerKind ? v.runnerRemoveSaid(name) : removeSaid('Dub', name)).box.querySelector<HTMLElement>('[data-k-remove-yes]')!.dataset.id = id;
         return;
       case 'name':
         closePanel();
