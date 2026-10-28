@@ -346,8 +346,19 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await modal.locator('form#correct textarea').fill('Hello, from a page, corrected.');
   await modal.getByRole('button', { name: 'Sign the correction' }).click();
   await done(page, /Correction/);
-  await page.locator('#feed .k-act', { hasText: 'Hello, from a page, corrected.' }).locator('.k-label', { hasText: 'Correction of' }).waitFor({ timeout: 60_000 });
-  await cardOf(page, hello.id).locator('.k-label', { hasText: 'Corrected by' }).waitFor();
+  // H103: the corrected version in the original's place, labelled Corrected; pressed, the original unfolds above it, as signed.
+  const corrected = page.locator('#feed > .k-act.k-is-corrected', { hasText: 'Hello, from a page, corrected.' });
+  await corrected.waitFor({ timeout: 60_000 });
+  assert.equal(await page.locator('#feed > .k-act', { hasText: /^[\s\S]*Hello, from a page\.[\s\S]*$/ }).filter({ hasNotText: 'corrected.' }).count(), 0, 'the original is not shown on its own');
+  const earlier = corrected.locator('[data-k-earlier]');
+  assert.equal(await earlier.isVisible(), false);
+  await corrected.locator('[data-k-corrected]').click();
+  await earlier.locator('.k-act', { hasText: 'Hello, from a page.' }).waitFor();
+  const [orig, latest] = await Promise.all([earlier.boundingBox(), corrected.locator(':scope > .k-txt').boundingBox()]);
+  assert.ok(orig && latest && orig.y < latest.y, 'the original above the correction');
+  await shot(page, '10b-corrected-unfolded');
+  await corrected.locator('[data-k-corrected]').click();
+  assert.equal(await earlier.isVisible(), false, 'folded again');
   // Correct it shows only on one's own acts.
   await theirs.locator('.k-actid').click();
   assert.equal(await page.getByRole('menuitem', { name: 'Correct it' }).count(), 0);
@@ -459,9 +470,10 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   // Mute, from the signer's menu: nothing of it shown; unmuted in Contacts.
   await page.locator('[data-k-part="public"]').click();
   await signerMenu(cardOf(page, theirPost.post.id), 'Mute');
+  await page.locator('[data-k-ask-yes]').click();
   await page.waitForFunction((id) => !document.querySelector(`#feed [data-k-act="${id}"]`), theirPost.post.id, { timeout: 60_000 });
   await page.locator('[data-k-open="contacts"]').click();
-  await page.locator('[data-k-panel="contacts"] details.k-say summary', { hasText: 'Muted (1)' }).click();
+  await page.locator('[data-k-panel="contacts"] details.k-fold summary', { hasText: 'Muted (1)' }).click();
   await page.locator('[data-k-panel="contacts"]').getByRole('button', { name: 'Unmute' }).click();
   await cardOf(page, theirPost.post.id).waitFor({ timeout: 60_000 });
   await page.keyboard.press('Escape');
@@ -551,7 +563,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await page.locator('[data-k-part="public"]').click();
   await page.locator('#feed .k-act').first().waitFor({ timeout: 60_000 });
   await shot(page, '01-public', 'phone');
-  await page.locator('#feed .k-act').first().locator('.k-actid').click();
+  await page.locator('#feed > .k-act').first().locator(':scope > .k-foot > .k-actid').click();
   await page.locator('.k-pop').waitFor();
   const sheet = (await page.locator('.k-pop').boundingBox())!;
   assert.ok(sheet.x <= 10 && sheet.x + sheet.width >= 380, 'a sheet across the phone');

@@ -28,6 +28,7 @@ const untilOf = (v: unknown): number | null => {
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',
+  'names',
   'runner',
   'runner pair',
   'runner take',
@@ -110,6 +111,8 @@ const payKind = (v: unknown): 'tip' | 'buy' | 'vow' | 'pay' => (v === 'tip' || v
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
   switch (op) {
+    case 'names':
+      return dub.names_({ ids: Array.isArray(a.ids) ? a.ids.map(String) : [], fresh: a.fresh === true });
     case 'state':
       return dub.state();
     case 'begin':

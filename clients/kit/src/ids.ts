@@ -197,7 +197,7 @@ export const contactsButtonFor = (field: string) => `<button type="button" class
  * fills the field with its `mid1…` (added on a new line where the field takes
  * several). Typing or pasting an ID still works.
  */
-export function attachContactsButtons(root: HTMLElement, contacts: () => Promise<PickContact[]> | PickContact[]): void {
+export function attachContactsButtons(root: HTMLElement, contacts: () => Promise<PickContact[]> | PickContact[], picked?: (field: HTMLInputElement | HTMLTextAreaElement, c: PickContact) => boolean): void {
   root.addEventListener('click', async (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-pick-for]');
     if (!b) return;
@@ -208,6 +208,7 @@ export function attachContactsButtons(root: HTMLElement, contacts: () => Promise
     const field = scope.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${CSS.escape(key)}"], #${CSS.escape(key)}`);
     if (!field) return;
     const list = await contacts();
+    const byForm = new Map(list.map((c) => [c.form ?? idForm(c.id, 'mid'), c]));
     const row = (c: PickContact) => {
       const form = c.form ?? idForm(c.id, 'mid');
       const words = [c.named.nick ?? '', c.named.published?.state === 'name' ? c.named.published.name : '', form].join(' ').toLowerCase();
@@ -230,6 +231,11 @@ export function attachContactsButtons(root: HTMLElement, contacts: () => Promise
       if (!p) return;
       e2.stopPropagation();
       const form = p.dataset.kPicked!;
+      // The app's own way to take it (a To… or a Cc that keeps the name shown), where it has one.
+      if (picked?.(field, byForm.get(form)!)) {
+        closeMenu();
+        return;
+      }
       // A field taking several (a textarea, or marked so): one more line; else the field is the one chosen.
       if (field.tagName === 'TEXTAREA' || field.dataset.kSeveral !== undefined) {
         const have = field.value.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean);

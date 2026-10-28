@@ -148,14 +148,33 @@ async function copied(item: HTMLButtonElement, text: string) {
  * bottom halves the app's.
  */
 export function attachCards(root: HTMLElement, host: CardHost): void {
+  /** An act drawn here: the app's, or an earlier version unfolded inside a corrected card (H103). */
+  const actOf = (card: HTMLElement): KitAct | undefined => {
+    const own = host.act(card.dataset.kAct!);
+    if (own) return own;
+    const outer = card.parentElement?.closest<HTMLElement>('[data-k-act]');
+    return outer ? (actOf(outer)?.earlier ?? []).find((x) => x.id === card.dataset.kAct) : undefined;
+  };
   root.addEventListener('click', (ev) => {
+    // H103: Corrected unfolds the earlier versions above, and folds them again.
+    const fold = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-corrected]');
+    if (fold) {
+      ev.stopPropagation();
+      const box = fold.closest<HTMLElement>('[data-k-act]')?.querySelector<HTMLElement>(':scope > [data-k-earlier]');
+      if (box) {
+        box.hidden = !box.hidden;
+        fold.setAttribute('aria-expanded', String(!box.hidden));
+        fold.classList.toggle('k-on', !box.hidden);
+      }
+      return;
+    }
     const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-menu]');
     if (!b) return;
     const card = b.closest<HTMLElement>('[data-k-act]');
     if (!card) return;
     ev.stopPropagation();
     if (openMenu?.button === b) return closeMenu();
-    const a = host.act(card.dataset.kAct!);
+    const a = actOf(card);
     if (!a) return;
     const which = b.dataset.kMenu as 'signer' | 'act';
     card.classList.add('k-sel');

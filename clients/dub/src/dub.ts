@@ -53,6 +53,7 @@ import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
+import type { Named, NameShown } from '../../kit/src/html.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, openerOf, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type Opened, type Opener, type People } from './people.ts';
 import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, RecordingShown, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
@@ -261,7 +262,8 @@ export class Dub {
   }
   private queue: Promise<unknown> = Promise.resolve();
   /** Display names found, by ID, and when (this app's memory only). */
-  private names = new Map<string, { names: string[]; at: number }>();
+  /** Display names read (the naming cMIP), by identity: what was found, or that its homes were not reached (H96: never "no name" for that). */
+  private names = new Map<string, { names: string[]; at: number; unreached?: boolean }>();
 
   /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
   /** Money, round 2: a lane asked here, payments signed under it, sealed posts (`money.ts`). */
@@ -332,6 +334,7 @@ export class Dub {
       link: /^[0-9a-f]{64}$/.test(id) ? idWhere(id, hints) : id,
       short: fingerprint(id),
       names: this.names.get(id)?.names ?? [],
+      published: this.published(id),
       pet: f?.name ?? null,
       me: id === me,
       followed: !!f,
@@ -340,17 +343,41 @@ export class Dub {
   }
 
   /** Read the display names of these identities, where not read lately. A name not found is no name: silence proves nothing. */
-  private async warm(ids: string[], places: string[], via: Via): Promise<void> {
-    const due = [...new Set(ids)].filter((id) => (this.names.get(id)?.at ?? 0) + NAMES_FOR < now());
+  private async warm(ids: string[], places: string[], via: Via, fresh = false): Promise<void> {
+    // A name not reached is asked again sooner than one read.
+    const due = [...new Set(ids)].filter((id) => /^[0-9a-f]{64}$/.test(id)).filter((id) => fresh || (this.names.get(id)?.at ?? 0) + (this.names.get(id)?.unreached ? NAMES_FOR / 10 : NAMES_FOR) < now());
     await Promise.all(
       due.map(async (id) => {
         try {
           this.names.set(id, { names: (await namesOf(id, places, via)).map((n) => n.name), at: now() });
         } catch {
-          // its homes did not answer: its fingerprint alone is shown
+          // its homes did not answer: "Name not reached", never "no name" (silence proves nothing)
+          this.names.set(id, { names: this.names.get(id)?.names ?? [], at: now(), unreached: true });
         }
       }),
     );
+  }
+
+  /** An identity's published name as read (H96): the name, none published, not reached, or not read yet. */
+  private published(id: string): NameShown {
+    const n = this.names.get(id);
+    if (!n) return { state: 'loading' };
+    if (n.names.length) return { state: 'name', name: n.names[n.names.length - 1] };
+    return n.unreached ? { state: 'unreached' } : { state: 'none' };
+  }
+
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given here (the people cMIP's, sealed) and the
+   * name each published, read at its homes. `fresh`: asked again (a retry).
+   */
+  names_(a: { ids: string[]; fresh?: boolean }): Promise<Record<string, Named>> {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const ids = a.ids.filter((x) => /^[0-9a-f]{64}$/.test(x)).slice(0, 200);
+      await this.warm(ids, [...new Set([...hints, ...this.inboxPlaces(p)])], s.via, !!a.fresh);
+      return Object.fromEntries(ids.map((id) => [id, { nick: id === me.id ? null : (p.follows.find((f) => f.id === id)?.name ?? null), published: this.published(id) }]));
+    });
   }
 
   // ------------------------------------------------------------ state
@@ -360,6 +387,9 @@ export class Dub {
     const held: Held[] = [];
     for (const id of await this.store.held()) {
       const s = await this.store.settings(id);
+      // H96: each one's published name read at its own homes (kept a while), so the top right and the panel say it, or why not.
+      const f = await this.store.identity(id).catch(() => null);
+      await this.warm([id], [...(f?.f.homes.map((h) => h.hint) ?? []), ...s.relays], s.via);
       held.push({ id, grouped: groupId(id), who: this.whoFrom(id, active, null), active: id === active, kind: s.kind });
     }
     const pend = await this.store.pending();
@@ -2222,7 +2252,7 @@ export class Dub {
       if ((describeAct(act) as Described).signer !== me.id) throw new Error('Only this identity’s own acts are corrected here (a reply is the way to answer another’s). Nothing was signed.');
       await this.current(me);
       const made = await this.signed(me, () => post(me, { text, relays: s.relays, corrects: [id, me.id] }));
-      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: readers show it with “corrected by”.`, tone: 'ok' }] };
+      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: the feed shows the correction in its place, labelled Corrected, the original a tap away (H103).`, tone: 'ok' }] };
     });
   }
 

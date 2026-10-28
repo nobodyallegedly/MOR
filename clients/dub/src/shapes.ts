@@ -4,6 +4,7 @@
 // never a word, except the words a person asked to see.
 
 import type { LineShown } from '../../genesis/src/card-words.ts';
+import type { NameShown } from '../../kit/src/html.ts';
 /** Said before a follow list is first published (the people cMIP, 3.5), word for word. */
 export const PUBLISH_WARNING =
   'Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.';
@@ -20,6 +21,8 @@ export interface Who {
   short: string;
   /** Its display names that count (the naming cMIP, section 3): free text, not unique. */
   names: string[];
+  /** Its published name as read (H96): the name, none published, not reached, or not read yet. */
+  published?: NameShown;
   /** The name the person gave it in this app (the people cMIP), never published. */
   pet: string | null;
   me: boolean;

@@ -26,6 +26,9 @@ import {
   top,
   typingBox,
   type KitAct,
+  actId,
+  who,
+  contactsButtonFor,
   type KitLabel,
   type KitWho,
 } from '../../../kit/src/index.ts';
@@ -120,8 +123,9 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 
 /** An identity as the kit's card shows it: the name given here, else its display name; its own display name beneath where it differs. */
 export function kitWho(w: Who, collective = false): KitWho {
-  const own = w.names[0] ?? null;
-  return { id: w.id, form: w.form, link: w.link, name: w.pet ?? own, ownName: w.pet && own && own !== w.pet ? own : null, me: w.me, followed: w.followed, muted: w.muted, collective };
+  const own = w.names[w.names.length - 1] ?? null;
+  // H96: the nickname first, the name it published beside it (or its state: Loading…, No name published, Name not reached).
+  return { id: w.id, form: w.form, link: w.link, name: w.pet ?? own, ownName: w.pet && own && own !== w.pet ? own : null, named: { nick: w.pet, published: w.published ?? (own ? { state: 'name', name: own } : { state: 'loading' }) }, me: w.me, followed: w.followed, muted: w.muted, collective };
 }
 
 /** The name an identity is called by, here. */
@@ -135,7 +139,12 @@ const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
 export function itemAct(it: Item, collectives: string[] = []): KitAct {
   const labels: KitLabel[] = [];
   if (it.repost) labels.push({ text: `↻ ${nameOf(it.repost.by)} reposted ${nameOf(it.repost.of)}’s sealed post` });
-  for (const a of it.answers) labels.push({ text: `↳ answers ${a.who ? nameOf(a.who) : 'an act not found'}${a.snippet ? ` · “${a.snippet}”` : ` · ${shortForm(a.id.length === 64 ? actFormOf(a.id) : a.id)}`}` });
+  // H95: whom and what it answers, each a button: the identity's names (Open profile), the act answered (expanded above the reply).
+  for (const a of it.answers)
+    labels.push({
+      text: `↳ answers ${a.who ? nameOf(a.who) : 'an act not found'}${a.snippet ? ` · “${a.snippet}”` : ` · ${shortForm(a.id.length === 64 ? actFormOf(a.id) : a.id)}`}`,
+      html: `↳ answers ${a.who ? who({ id: a.who.id, form: a.who.form, named: { nick: a.who.pet, published: a.who.published ?? { state: 'loading' } }, inline: true }) : 'an act not found'}${a.snippet ? ` · “${e(a.snippet)}”` : ''} · ${a.id.length === 64 ? `<span class="dub-answers" data-answers="${e(a.id)}" data-answers-signer="${e(a.who?.id ?? '')}">${actId(a.id, { expand: true })}</span>` : e(a.id)}`,
+    });
   if (it.corrects) labels.push({ text: `Correction of ${shortForm(actFormOf(it.corrects))}, which stays as signed` });
   if (it.correctedBy?.length) labels.push({ text: `Corrected by ${it.correctedBy.map((c) => shortForm(actFormOf(c))).join(', ')}: shown as it was signed` });
   if (it.authority) labels.push({ text: it.authority.words, tone: it.authority.backed ? undefined : 'warn' });
@@ -325,7 +334,7 @@ export function topBar(s: State, part: Part | null): string {
     ],
     part ?? '',
   );
-  const right = meButton({ name: i.who.names[0] ?? null, form: i.form, as: acting ? { name: acting.name ?? 'a collective', form: acting.form } : null });
+  const right = meButton({ name: i.who.names[0] ?? null, form: i.form, named: { nick: null, published: i.who.published ?? { state: 'loading' } }, as: acting ? { name: acting.name ?? 'a collective', form: acting.form } : null });
   return top({ left, center, right });
 }
 
@@ -337,7 +346,7 @@ ${makeForm(web, suggested)}${bringForm(web)}${web ? '' : `<div class="k-box" id=
 ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}</section></div>`;
 }
 
-const via = `<details class="k-say"><summary>Another way to reach an address (rarely needed)<span class="k-help">?</span></summary><div class="k-more-text"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
+const via = `<details class="k-fold"><summary>Another way to reach an address (rarely needed)<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
 const lns = (xs?: string[]) => e((xs ?? []).join('\n'));
 
 /** Make a new identity: its chain key's words shown once. */
@@ -421,7 +430,7 @@ export function publicPart(s: State, lens: Lens, layers: string[]): string {
   )}${lens === 'relay' ? pointRow('Showing', LAYERS.map((l) => ({ key: l.key, label: l.label, on: layers.includes(l.key) })), 'layer') : ''}`;
   const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><label title="A recording (M4A)">♪<span class="dub-l"> Audio</span><input name="audio" type="file" accept=".m4a,audio/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
   return `<div class="k-body"><section class="k-pane dub-center" id="public">${feedBox({ id: 'feed', above, cards: '', empty: 'Reading the feed…', below: '<div id="feed-foot"></div>' })}
-${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: '<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false"><button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>' })}</section></div>`;
+${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: `<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false">${contactsButtonFor('to')}<button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>` })}</section></div>`;
 }
 
 /** The foot of the feed box: whose clock orders it, and what was not shown. */
@@ -459,7 +468,7 @@ ${typingBox({
   placeholder: `Write to ${nameOf(open.with)}…`,
   button: 'Send',
   opts: `<span class="k-chip">As ${e(i.who.names[0] ?? 'yourself')}</span>${usable.map((c) => `<button type="button" class="k-chip" data-append="${e(c.id)}" aria-pressed="false">+ of ${e(c.name ?? shortForm(c.form))}</button>`).join('')}<span id="ccs"></span><button type="button" class="k-chip" data-action="cc">+ Cc</button><button type="button" class="k-chip" data-action="askpaid">+ Ask to be paid</button>`,
-  extra: '<div class="dub-field" id="cc-field" hidden><input id="cc" placeholder="Cc: a contact’s name, or an ID" aria-label="Cc" spellcheck="false"><button type="button" class="k-btn k-q" data-action="uncc">Done</button></div>',
+  extra: `<div class="dub-field" id="cc-field" hidden><input id="cc" placeholder="Cc: a contact’s name, or an ID" aria-label="Cc" spellcheck="false">${contactsButtonFor('cc')}<button type="button" class="k-btn k-q" data-action="uncc">Done</button></div>`,
   tools: '',
 })}${usable.length ? '<p class="k-clock">A collective appended binds nothing; the reader’s app shows it only where your membership checks. Everyone sees the Cc.</p>' : ''}`
     : '<p class="k-empty">Choose a conversation, or start a new one.</p>';
@@ -644,7 +653,7 @@ ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser'
 export function contactsBelow(s: State): string {
   const i = s.identity!;
   return `<form id="follow" class="dub-modal-form"><input name="id" autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1…, or an ID link)" required aria-label="Add by ID"><input name="name" autocomplete="off" placeholder="Your name for it (sealed to you)" aria-label="Your name for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>
-${i.muted.length ? `<details class="k-say"><summary>Muted (${i.muted.length})<span class="k-help">?</span></summary><div class="k-more-text">${i.muted.map((m) => `<div class="k-row"><span dir="auto">${e(nameOf(m))}</span><span class="k-mono k-faint">${e(shortForm(m.form))}</span><button type="button" class="k-btn k-q" data-action="unmute" data-id="${e(m.id)}">Unmute</button></div>`).join('')}</div></details>` : ''}
+${i.muted.length ? `<details class="k-fold"><summary>Muted (${i.muted.length})<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body">${i.muted.map((m) => `<div class="k-row"><span dir="auto">${e(nameOf(m))}</span><span class="k-mono k-faint">${e(shortForm(m.form))}</span><button type="button" class="k-btn k-q" data-action="unmute" data-id="${e(m.id)}">Unmute</button></div>`).join('')}</div></details>` : ''}
 <label class="k-row"><input type="checkbox" id="publish-list" ${i.list === 'published' ? 'checked' : ''}> Publish whom ${e(i.who.names[0] ?? 'this identity')} follows</label>
 ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for them stay sealed.' : 'Your names for them stay sealed to you. The same list in Public and Private.', [
   i.encryption

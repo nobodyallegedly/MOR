@@ -88,6 +88,8 @@ export interface KitWho {
 export interface KitLabel {
   text: string;
   tone?: 'warn' | 'bad';
+  /** The app's own markup for it, already escaped (a reply's IDs as buttons, H95); `text` is then what it says in words. */
+  html?: string;
 }
 
 /** An act as a card shows it. */
@@ -128,6 +130,13 @@ export interface KitAct {
   corrects?: { id: string; signer: string | null } | null;
   /** One's own act: "Correct it" shows. */
   own?: boolean;
+  /**
+   * Shown in the place of what it corrects (H103): the earlier versions,
+   * the original first, each as signed, expanding above it when its
+   * "Corrected" label is pressed. Only corrections signed by the
+   * original's signer are shown so; any other is a reply.
+   */
+  earlier?: KitAct[];
 }
 
 /** The faint words on a card the suite's clock has not stamped yet, in a feed it orders (H110). */
@@ -148,12 +157,56 @@ export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const named = namedOf(s);
   const names = !nameOf(named) && s.collective && named.published?.state === 'none' ? '<span class="k-nick">a collective</span>' : namesHtml(named, { retry: false });
   const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-names k-nm">${names}</span>${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ''}${s.me ? '<span class="k-dn">you</span>' : ''}<span class="k-sid">${e(shortForm(s.form))}</span></button>`;
-  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === 'bad' ? ' k-bad' : l.tone === 'warn' ? ' k-warn' : ''}">${e(l.text)}</div>`).join('');
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === 'bad' ? ' k-bad' : l.tone === 'warn' ? ' k-warn' : ''}">${l.html ?? e(l.text)}</div>`).join('');
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : '';
   const text = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? '')}</div>` : '';
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">✓</span>' : ''}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ''}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
   const hint = (!a.when && a.unstamped ? `<div class="k-hint k-unstamped">${e(a.unstamped)}</div>` : '') + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '');
-  return `<article class="k-act${o.selected ? ' k-sel' : ''}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ''}${signer}${labels}${text}${a.html ?? ''}${hint}${foot}</article>`;
+  // H103: a correction in the original's place, labelled Corrected; pressing it unfolds the earlier versions above, as signed.
+  const earlier = a.earlier?.length
+    ? `<div class="k-earlier" data-k-earlier hidden><div class="k-earlier-say">${a.earlier.length === 1 ? 'The original, as signed' : `The original and ${a.earlier.length - 1} earlier correction${a.earlier.length > 2 ? 's' : ''}, as signed, oldest first`}</div>${a.earlier.map((x) => card(x)).join('')}</div>`
+    : '';
+  const corrected = a.earlier?.length ? `<button type="button" class="k-corrected" data-k-corrected aria-expanded="false">Corrected</button>` : '';
+  return `<article class="k-act${o.selected ? ' k-sel' : ''}${a.earlier?.length ? ' k-is-corrected' : ''}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${earlier}${a.when ? `<span class="k-when">${e(a.when)}</span>` : ''}${signer}${corrected}${labels}${text}${a.html ?? ''}${hint}${foot}</article>`;
+}
+
+/**
+ * A feed's acts, newest first, with corrections in place (H103): each act a
+ * correction by its own signer replaced is shown as its latest version,
+ * labelled Corrected, the earlier ones (the original first) unfolding above
+ * it. A correction signed by anyone else stays where it is, as a reply.
+ */
+export function inPlace(acts: KitAct[]): KitAct[] {
+  const byId = new Map(acts.map((a) => [a.id, a]));
+  const rootOf = (a: KitAct): KitAct => {
+    let r = a;
+    const seen = new Set<string>();
+    while (r.corrects && !seen.has(r.id)) {
+      seen.add(r.id);
+      const up = byId.get(r.corrects.id);
+      if (!up || up.signer.id !== a.signer.id) break;
+      r = up;
+    }
+    return r;
+  };
+  const groups = new Map<string, KitAct[]>();
+  for (const a of acts) groups.set(rootOf(a).id, [...(groups.get(rootOf(a).id) ?? []), a]);
+  const out: KitAct[] = [];
+  const done = new Set<string>();
+  for (const a of acts) {
+    const g = groups.get(rootOf(a).id)!;
+    if (g.length < 2) {
+      out.push(a);
+      continue;
+    }
+    const key = rootOf(a).id;
+    if (done.has(key)) continue;
+    done.add(key);
+    // The newest shown (the feed is newest first), what it corrects said by its label; the others oldest first above it.
+    const [latest, ...rest] = g;
+    out.push({ ...latest, labels: (latest.labels ?? []).filter((l) => !/^correction of /i.test(l.text)), earlier: rest.reverse().map((x) => ({ ...x, labels: (x.labels ?? []).filter((l) => !/^(corrected by|correction of) /i.test(l.text)) })) });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- menus
