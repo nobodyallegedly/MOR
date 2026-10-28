@@ -25,6 +25,7 @@ import {
   redrawPanel,
   removeSaid,
   inPlace,
+  ownId,
   ask,
   askNick,
   attachIds,
@@ -821,6 +822,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
   }
 
+  /** H88: one's own ID whole, with Copy ID and Share your ID link, at the end of making or bringing an identity. */
+  const ownIdNow = () => (state?.identity ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: state.identity.form, link: state.identity.who.link })}` : '');
+
   /** Nickname…: the person's own name for a contact (H109), sealed to them, seen in every app; empty takes it away. */
   async function nickname(id: string) {
     const w = state?.identity?.follows.find((f) => f.id === id);
@@ -1409,7 +1413,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           shown = null;
           part = 'public';
           await b.start();
-          say('done', `<strong>The identity is born.</strong>${v.lines(r.lines)}`);
+          say('done', `<strong>The identity is born.</strong>${v.lines(r.lines)}${ownIdNow()}`);
         }
         return;
       }
@@ -1421,7 +1425,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           inbox = null;
           part = 'public';
           await b.start();
-          say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}`);
+          say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}${ownIdNow()}`);
         }
         return;
       }

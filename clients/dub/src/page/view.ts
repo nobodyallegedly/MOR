@@ -31,6 +31,7 @@ import {
   contactsButtonFor,
   type KitLabel,
   type KitWho,
+  whatIsMor,
 } from '../../../kit/src/index.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { PUBLISH_WARNING, type Item, type Line, type Message, type PayWays, type Purchase, type State, type Suggested, type Who } from '../shapes.ts';
@@ -54,7 +55,7 @@ export const TINT = { layer: APPS.dub.colour, pastel: APPS.dub.pastel } as const
  * HTML itself (`static/web.html`, written there by the build), outside what
  * the script draws, so it shows even when the script does not run.
  */
-export const WEB_BANNER = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>Two risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment an identity is made here could copy its keys.</li>
 <li>This browser’s storage, where the identity’s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
@@ -343,7 +344,7 @@ export function firstScreen(web: boolean, suggested: Suggested): string {
   return `${top({ left: appMark(NAME, 'icon.png'), right: '' })}<div class="k-body"><section class="dub-first" id="first"><div id="status-here"></div>
 <h2>Identity</h2><p class="k-soft">Dub opens once an identity is here.</p>
 ${makeForm(web, suggested)}${bringForm(web)}${web ? '' : `<div class="k-box" id="from-kishib"><h4>Use one from Kišib</h4><p class="k-small k-soft">Through Kišib’s runner, on this Mac: Kišib keeps the signing key and shows each act before it signs it; Dub holds no key.</p><div class="k-row"><button type="button" class="k-btn" data-k-add="kishib">Use one from Kišib</button></div></div>`}
-${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}</section></div>`;
+${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`], { mor: true })}</section></div>`;
 }
 
 const via = `<details class="k-fold"><summary>Another way to reach an address (rarely needed)<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
@@ -644,7 +645,7 @@ export function appFoot(s: State, web: boolean): string {
   return `${web ? '' : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
 <h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org’s feed names. A choice of clock comes later, when there are better clocks.</p>
 ${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order, and show the signer’s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar.'])}
-${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}`;
+${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`], { mor: true })}`;
 }
 
 // ---------------------------------------------------------------- contacts

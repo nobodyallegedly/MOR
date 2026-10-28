@@ -12,7 +12,7 @@
 // the program, from relays or typed by a person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, feedBox, identityPanel, meButton, opened, removeSaid, say, shortForm, tiles, top, typingBox, type ColumnEntry, type PanelIdentity, type Tile } from '../../../kit/src/html.ts';
+import { appMark, e, feedBox, identityPanel, meButton, opened, removeSaid, say, shortForm, tiles, top, typingBox, type ColumnEntry, type PanelIdentity, type Tile, whatIsMor } from '../../../kit/src/html.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { shownAct, shownId } from '../../../genesis/src/shown.ts';
 import { PARTS_STYLE, WEB_KEPT_SAY, setWeb as setPartsWeb } from './parts.ts';
@@ -42,7 +42,7 @@ export const TINT = { layer: APPS.edubba.colour, pastel: APPS.edubba.pastel } as
  * (`static/web.html`, written there by the build), so it shows even when the
  * script does not run.
  */
-export const WEB_BANNER = `<details class="k-say edubba-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}; regtest or signet only.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say edubba-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}; regtest or signet only.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, sign as you (proposals, signatures, a collective’s acts) and read its private messages.</li>
 <li>This browser’s storage keeps, as they are and not locked: the signing and encryption keys of each identity you bring; the signing key of each collective you found here; and, while you sign as a member, the one-time key for your share until you have written the share down. That storage can be lost (cleared, a private window, the browser tidying up), or read by what runs in this page.</li>
 <li>Founding a collective here deals its chain key in this page: for a moment this page holds the whole chain key, in its memory, never in its storage; your share and any shown hand to hand wait there, an hour at most, until shown, and a reload or a closed tab loses them. If this page’s code or this device were not honest, it could keep the chain key and later act alone. For a collective that matters, found it in Edubba on a computer.</li>
@@ -140,7 +140,7 @@ export function home(s: State, as: Acting | null, alarms: string): string {
     { key: 'vows', name: 'Vows', say: 'Simple vows; track contests by pointing at people, collectives or relays.', icon: 'vows', danger: 2 },
   ];
   return `${topBar(s, null, as)}${alarms}<div class="k-body">${tiles(ts.filter((t) => tabsHere().includes(t.key)))}</div>
-<div class="edubba-foot">${say(TEST_ONLY, [WEB ? 'The web client is for testing only: the banner above says its risks.' : 'Every key is held in software in this program’s folders: a prototype, never for a real identity.'])}</div>`;
+<div class="edubba-foot">${say(TEST_ONLY, [WEB ? 'The web client is for testing only: the banner above says its risks.' : 'Every key is held in software in this program’s folders: a prototype, never for a real identity.'], { mor: true })}</div>`;
 }
 
 /** Each tile's column. */

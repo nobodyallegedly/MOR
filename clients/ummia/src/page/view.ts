@@ -12,7 +12,7 @@
 // escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, meButton, note, opened, pointRow, say, shortForm, tiles, top, type ColumnEntry, type Tile } from '../../../kit/src/html.ts';
+import { appMark, e, meButton, note, opened, pointRow, say, shortForm, tiles, top, type ColumnEntry, type Tile, whatIsMor } from '../../../kit/src/html.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import type { Actor } from '../acting.ts';
@@ -39,7 +39,7 @@ export const TINT = { layer: APPS.ummia.colour, pastel: APPS.ummia.pastel } as c
  * (`static/web.html`, written there by the build), so it shows even when the
  * script does not run.
  */
-export const WEB_BANNER = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, publish specifications, MIP drafts and reports as you, and read your accepted list.</li>
 <li>This browser’s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
@@ -174,7 +174,7 @@ export function topBar(s: State, tab: Tab | null): string {
 /** The four tiles and their danger marks. */
 export function home(s: State, web: boolean): string {
   return `${topBar(s, null)}<div id="spent-at"></div><div class="k-body k-col-flex">${tiles(TILES)}</div>
-<div class="ummia-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'The signing key is held in software in this program’s folder: a prototype, never for a real identity.'])}</div>`;
+<div class="ummia-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'The signing key is held in software in this program’s folder: a prototype, never for a real identity.'], { mor: true })}</div>`;
 }
 
 /** Each tab's column. */

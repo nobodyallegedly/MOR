@@ -450,15 +450,22 @@ test('H90: Off on Kišib’s page turns the runner off (asked in the page), runn
   await k.c.ask('runner on', { read: true, passphrase: PASS, again: PASS });
   await kp.locator('.kishib-holds', { hasText: /Holds/ }).waitFor();
   await kp.click('[data-action="home-tiles"]').catch(() => undefined);
+  // H111: the Runner tile shows the menu bar's seal, filled while on.
+  await kp.locator('[data-k-tile="runner"] svg path[fill="currentColor"]').waitFor({ timeout: 15_000 });
   await seal('/seal/lock', 'POST');
   await kp.locator('#unlock, form#unlock, [data-runner-state="locked"], .kishib-holds:has-text("locked")').first().waitFor({ timeout: 15_000 }).catch(async () => {
     assert.match(await kp.locator('body').innerText(), /[Ll]ocked/);
   });
   assert.match(await kp.locator('body').innerText(), /[Ll]ocked/);
+  await kp.click('[data-action="home-tiles"]').catch(() => undefined);
+  // H111: a padlock while locked.
+  await kp.locator('[data-k-tile="runner"] svg rect').waitFor({ timeout: 15_000 });
   await shot(kp, 'h90-02-locked-from-the-seal');
   // Turned off from the seal: the page says off.
   await seal('/seal/off', 'POST');
   await kp.waitForFunction(() => /runner off/.test(document.querySelector('.kishib-holds')?.textContent ?? ''), undefined, { timeout: 15_000 });
+  // H111: hollow while off.
+  if (await kp.locator('[data-k-tile="runner"]').count()) assert.equal(await kp.locator('[data-k-tile="runner"] svg path[fill="currentColor"], [data-k-tile="runner"] svg rect').count(), 0);
   // Quit from the seal: the page says Kišib has quit.
   await k.c.ask('runner on', { read: true, passphrase: PASS, again: PASS });
   await kp.waitForFunction(() => !/runner off/.test(document.querySelector('.kishib-holds')?.textContent ?? ''), undefined, { timeout: 15_000 });

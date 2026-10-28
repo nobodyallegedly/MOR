@@ -8,7 +8,7 @@
 // program, from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, danger, e, ICONS, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile } from '../../../kit/src/html.ts';
+import { appMark, danger, e, ICONS, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile, whatIsMor } from '../../../kit/src/html.ts';
 import { PANEL_STYLE } from './panel.ts';
 import type { Line, Review, Section, Sitting, State } from '../shapes.ts';
 import type { RunnerView } from '../runner.ts';
@@ -29,7 +29,7 @@ export const TINT = { layer: APPS.kishib.colour, pastel: APPS.kishib.pastel } as
  * (`static/web.html`, written there by the build), so it shows even when the
  * script does not run.
  */
-export const WEB_BANNER = `<details class="k-say kishib-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say kishib-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>The words you type here are your chain key: whoever serves this page’s code at that moment could copy them, and with them change your identity’s keys, or keep a collective’s whole key.</li>
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective’s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Kišib keeps nothing in this browser’s storage; but nothing can prove a device forgot what it held.</li></ol>
@@ -124,16 +124,17 @@ export function topBar(web: boolean, tab: Tab | null, r: RunnerView | null): str
 /** The first screen: four tiles (three on the web), their danger marks, the test notice in one line. */
 export function home(web: boolean, r: RunnerView | null): string {
   const ts = tilesFor(web).map((t) =>
+    // H111: the Runner tile shows the menu bar's seal as the runner's state shows it there: filled while on, a padlock while locked, hollow while off.
     t.key === 'runner' && r?.on
-      ? { ...t, say: `On: ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} held, ${r.apps.filter((a) => a.state === 'approved').length} ${r.apps.filter((a) => a.state === 'approved').length === 1 ? 'app' : 'apps'} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ''}. Kišib signs for the apps you approve.` }
+      ? { ...t, icon: 'runnerOn' as const, say: `On: ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} held, ${r.apps.filter((a) => a.state === 'approved').length} ${r.apps.filter((a) => a.state === 'approved').length === 1 ? 'app' : 'apps'} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ''}. Kišib signs for the apps you approve.` }
       : t.key === 'runner' && r?.state === 'locked'
-        ? { ...t, say: 'Locked: what it keeps is encrypted on this Mac. Give its passphrase, and it signs again for the apps you approved.' }
+        ? { ...t, icon: 'runnerLocked' as const, say: 'Locked: what it keeps is encrypted on this Mac. Give its passphrase, and it signs again for the apps you approved.' }
         : t,
   );
   // Draft 2: Kišib started with the runner on asks its passphrase first.
   const locked = !web && r?.state === 'locked' ? unlockBox(r) : '';
   return `${topBar(web, null, r)}<div class="k-body k-col-flex">${locked}${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? ' kishib-three' : ''}"`)}</div>
-<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder, encrypted under its passphrase.'])}</div>`;
+<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder, encrypted under its passphrase.'], { mor: true })}</div>`;
 }
 
 /** Each tab's column. */

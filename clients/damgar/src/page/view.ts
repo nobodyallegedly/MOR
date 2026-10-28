@@ -9,7 +9,7 @@
 // from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, meButton, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile } from '../../../kit/src/html.ts';
+import { appMark, e, meButton, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile, whatIsMor } from '../../../kit/src/html.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
@@ -29,7 +29,7 @@ export const TINT = { layer: APPS.damgar.colour, pastel: APPS.damgar.pastel } as
  * (`static/web.html`, written there by the build), so it shows even when the
  * script does not run.
  */
-export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key, and the on-chain request key Damgar makes: with them, sign claims and receipts as you, and commit your side to payments you did not intend.</li>
 <li>This browser’s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
 <li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
@@ -119,7 +119,7 @@ export function home(s: State, web: boolean, acting: Acting | null): string {
   const n = s.counts;
   const ts = TILES.map((t) => (t.key === 'waiting' && n.toSign + n.toPay ? { ...t, say: `To sign: ${n.toSign} · to pay: ${n.toPay}. Each read in plain words before you sign; paid only in your own wallet.` } : t));
   return `${topBar(s, null, acting)}<div class="k-body k-col-flex">${tiles(ts)}</div>
-<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'])}</div>`;
+<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'], { mor: true })}</div>`;
 }
 
 /** Each tab's column. Acting as a collective, Waiting gains its own part. */
