@@ -21,7 +21,7 @@ import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STYLE } from '../src/shell/view.ts';
-import { DISPLAY_FILES } from '../src/released.ts';
+import { DISPLAY_FILES, FONT_FILES } from '../src/released.ts';
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const args = process.argv.slice(2);
@@ -65,7 +65,7 @@ const put = (name: string, bytes: Uint8Array | string) => {
   writeFileSync(tmp, bytes);
   renameSync(tmp, `${out}/${name}`);
 };
-const keep = new Set(['gateway.js', 'gateway.css', 'index.html', 'mor_wasm_bg.wasm', 'BUILT-WITH.txt']);
+const keep = new Set(['gateway.js', 'gateway.css', 'index.html', 'mor_wasm_bg.wasm', 'BUILT-WITH.txt', ...FONT_FILES]);
 for (const f of readdirSync(out)) if (!keep.has(f) && !f.endsWith('.tmp')) rmSync(`${out}/${f}`, { recursive: true, force: true });
 const bundled = await build({
   entryPoints: [here('src/shell/app.ts')],
@@ -87,6 +87,8 @@ put('gateway.js', bundled.outputFiles[0].contents);
 put('gateway.css', STYLE + '\n');
 put('index.html', readFileSync(here('static/index.html')));
 put('mor_wasm_bg.wasm', readFileSync(here('../genesis/wasm/mor_wasm_bg.wasm')));
+// The suite's type, from the kit's fonts (H123).
+for (const f of FONT_FILES) put(f, readFileSync(here(`../kit/fonts/${f}`)));
 
 if (release) {
   // What made these bytes, so that anyone can rebuild them from source.

@@ -29,7 +29,7 @@ import { LISTING_STYLE, listingHtml } from './listing-view.ts';
 import { filmPlayer, layOver } from './film.ts';
 import { preparePage } from './page.ts';
 import { openPopup, type Listed } from './popup.ts';
-import { ACT_STYLE, bar, briefWords, failingWords, verifiedWords, type BarState, type FilmLine } from './view.ts';
+import { ACT_STYLE, bar, fontFaces, briefWords, failingWords, verifiedWords, type BarState, type FilmLine } from './view.ts';
 
 const barEl = document.getElementById('mor-bar')!;
 const view = document.getElementById('mor-view')!;
@@ -120,7 +120,7 @@ async function showActs(frame: HTMLIFrameElement, settings: SiteSettings): Promi
 async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds: Author[][], clocks: (Author | null)[]): Promise<void> {
   const doc = frame.contentDocument;
   if (!doc || !feeds.length) return;
-  const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: 'text/css' }));
+  const style = URL.createObjectURL(new Blob([`${fontFaces(location.origin)}\n${FEED_STYLE}`], { type: 'text/css' }));
   for (const box of [...doc.querySelectorAll<HTMLElement>('.mor-feed[data-feed]')]) {
     const i = Number(box.dataset.feed);
     const authors = feeds[i];
@@ -164,7 +164,7 @@ async function showFeeds(frame: HTMLIFrameElement, settings: SiteSettings, feeds
 async function showListings(frame: HTMLIFrameElement, settings: SiteSettings, listings: ListingAsked[]): Promise<void> {
   const doc = frame.contentDocument;
   if (!doc || !listings.length) return;
-  const style = URL.createObjectURL(new Blob([LISTING_STYLE], { type: 'text/css' }));
+  const style = URL.createObjectURL(new Blob([`${fontFaces(location.origin)}\n${LISTING_STYLE}`], { type: 'text/css' }));
   for (const box of [...doc.querySelectorAll<HTMLElement>('.mor-listing[data-listing]')]) {
     const i = Number(box.dataset.listing);
     const asked = listings[i];

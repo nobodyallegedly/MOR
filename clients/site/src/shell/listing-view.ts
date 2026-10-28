@@ -20,7 +20,7 @@ import { KINDS, NO_CREATOR_KINDS, roleWords, type Draft, type Extension, type Fo
 export const LISTING_STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 "Atkinson Hyperlegible Next",system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 .l-any{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:15px}
 .l-any strong{display:block;font-size:17px}
 .l-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
