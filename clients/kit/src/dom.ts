@@ -719,3 +719,25 @@ export function keyChanged(page: HTMLElement, w: { id: string; name: string; say
   c.box.classList.add('k-alarm-modal');
   keyBox = { id: w.id, close: c.close };
 }
+
+/**
+ * A question asked in the page, never the browser's own dialog (which some
+ * browsers and app windows answer “no” without showing it, H90): on top of
+ * the stack, its × and Escape meaning no. Resolves true for yes.
+ */
+export function ask(page: HTMLElement, o: { title: string; text: string; yes: string; no?: string; alarm?: boolean }): Promise<boolean> {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<div class="k-box" data-k-ask><h4>${escapeText(o.title)}</h4><p class="k-small k-soft">${escapeText(o.text)}</p><div class="k-row"><button type="button" class="k-btn ${o.alarm ? 'k-alarm' : 'k-p'}" data-k-ask-yes>${escapeText(o.yes)}</button><button type="button" class="k-btn k-q" data-k-ask-no>${escapeText(o.no ?? 'Not now')}</button></div></div>`,
+      () => done(false),
+    );
+    c.box.addEventListener('click', (ev) => {
+      const t = ev.target as HTMLElement;
+      if (t.closest('[data-k-ask-yes]')) {
+        c.close(true);
+        done(true);
+      } else if (t.closest('[data-k-ask-no]')) c.close();
+    });
+  });
+}

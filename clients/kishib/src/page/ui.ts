@@ -4,7 +4,7 @@
 // browser). It keeps nothing in the browser's storage, not even which
 // screen was open: a reload opens on the four tiles.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, Popup, stampCards, shortForm, type KitAct } from '../../../kit/src/index.ts';
+import { ask, attachCards, attachClosing, attachColumn, card, cardsUntimed, Popup, stampCards, shortForm, type KitAct } from '../../../kit/src/index.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import * as v from './view.ts';
 
@@ -430,10 +430,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
       }
       case 'quit': {
-        if (!confirm('Quit Kišib? Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.')) return;
+        if (!(await ask(app, { title: 'Quit Kišib?', text: 'Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.', yes: 'Quit Kišib' }))) return;
         const r = await act(() => b.ask<{ quit: boolean }>('quit'));
         if (!r) return;
-        app.innerHTML = `<div class="k-body"><div class="k-box" id="quit-done"><h2>Kišib has quit</h2><p class="k-soft">Its program has ended${runner?.state === 'off' ? '' : ', and the runner is locked'}. Open Kišib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+        app.innerHTML = v.quitDone(runner?.state === 'off');
         return;
       }
       case 'runner-lock': {
@@ -443,10 +443,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         draw();
         return done('Locked: the runner signs and opens nothing until its passphrase is given again. Nothing was erased.');
       }
+      // H90: Off, or the button below it, asks the same question in the page (never the browser's own dialog), then turns it off.
       case 'runner-off-ask':
-        return $<HTMLElement>('runner-state')?.nextElementSibling?.scrollIntoView({ block: 'center' });
       case 'runner-off': {
-        if (!confirm('Turn the runner off? It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.')) return;
+        if (!(await ask(app, { title: 'Turn the runner off?', text: 'It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.', yes: 'Turn it off, and erase everything', alarm: true }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner off'));
         if (!r) return;
         runner = r;
@@ -467,7 +467,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       }
       case 'refuse':
       case 'revoke': {
-        if (d.action === 'revoke' && !confirm('Revoke this app? It signs through Kišib no more, and what waits from it is dropped.')) return;
+        if (d.action === 'revoke' && !(await ask(app, { title: 'Revoke this app?', text: 'It signs through Kišib no more, and what waits from it is dropped.', yes: 'Revoke it' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner revoke', { pairing: d.pairing }));
         if (r) {
           runner = r;
@@ -493,7 +493,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return;
       }
       case 'member-remove': {
-        if (!confirm('Forget this collective’s key here? The app using the identity through Kišib can no longer act as the collective. The key itself stays sealed to the identity at its homes.')) return;
+        if (!(await ask(app, { title: 'Forget this collective’s key here?', text: 'The app using the identity through Kišib can no longer act as the collective. The key itself stays sealed to the identity at its homes.', yes: 'Forget it here' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner member remove', { identity: d.id, collective: d.collective }));
         if (r) {
           runner = r;
@@ -526,7 +526,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return;
       }
       case 'held-remove': {
-        if (!confirm('Remove this identity from the runner? Kišib forgets its signing key; the apps using it through Kišib stop signing as it. The identity itself is not touched.')) return;
+        if (!(await ask(app, { title: 'Remove this identity from the runner?', text: 'Kišib forgets its signing key; the apps using it through Kišib stop signing as it. The identity itself is not touched.', yes: 'Remove it' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner remove', { id: d.id }));
         if (r) {
           runner = r;
@@ -547,16 +547,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     }
   });
 
-  // What waits in the runner (a pairing asked, a request whose panel was closed) shows without a reload.
+  // What waits in the runner (a pairing asked, a request whose panel was closed) shows without a reload; and the page follows the
+  // runner's state wherever it changes (H90: locked, turned off or quit from the seal in the menu bar), on every screen.
   if (!b.web) {
+    let missed = 0;
     setInterval(async () => {
-      if (document.hidden || tab === null || !runner?.on) return;
+      if (document.hidden || !runner || app.querySelector('#quit-done')) return;
       let r: v.RunnerView;
       try {
         r = await b.ask<v.RunnerView>('runner state');
-      } catch {
+        missed = 0;
+      } catch (err) {
+        if (b.unpaired?.(err)) return;
+        // Twice unanswered: Kišib's program has ended (quit from the seal).
+        if (++missed >= 2) app.innerHTML = v.quitDone(runner.state === 'off');
         return;
       }
+      if (r.state !== runner.state) {
+        runner = r;
+        popup.close();
+        draw();
+        return;
+      }
+      if (!runner.on) return;
       const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
       runner = r;
       if (!changed) return;

@@ -565,3 +565,8 @@ export function alone(html: string): string {
 }
 
 export { danger };
+
+/** Kišib's program has ended (quit here, or from its seal in the menu bar). */
+export function quitDone(off: boolean): string {
+  return `<div class="k-body"><div class="k-box" id="quit-done"><h2>Kišib has quit</h2><p class="k-soft">Its program has ended${off ? '' : ', and the runner is locked'}. Open Kišib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+}
