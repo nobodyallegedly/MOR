@@ -220,7 +220,9 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const ids: string[] = [];
   for (const [name, mine] of [['Me', true], ['Ana', false], ['Bo', false]] as const) ids.push((await confirm({ kind: 'identity', name, mine })).acts[0]);
   await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: {} });
-  const col = (await c.ask<any>('state')).collectives[0];
+  // The collective client's own collectives are no longer listed in Edubba's state (test collectives removed from Edubba, decided): found by its store.
+  assert.ok(!(await c.ask<any>('state')).collectives.some((x: any) => x.name === 'Tablet house'), 'no test collective among Edubba’s collectives');
+  const col = app.collectives.list().find((x) => x.name === 'Tablet house')!;
   assert.equal(col.name, 'Tablet house');
   const p = await c.ask<any>('collective permissions', { collective: col.id });
   const text = p.items[0];

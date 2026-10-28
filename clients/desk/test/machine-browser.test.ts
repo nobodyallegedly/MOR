@@ -82,6 +82,10 @@ test('at the desk: the terms shown, then signed; a stranger’s message notified
   // Edubba's first-use window: Machine, allegedly, an identity held here, owned by Nobody, allegedly.
   const s = app.store.book().identities;
   const id = (n: string) => s.find((i) => i.name === n)!.id;
+  // H125: the Agents follow the identity in use: Nobody, allegedly, its owner, chosen in the identity panel.
+  await page.click('[data-k-open=identity]');
+  await page.click(`.k-panel [data-k-use="${id('Nobody, allegedly')}"]`);
+  await page.locator('.k-panel').waitFor({ state: 'detached', timeout: 30_000 }).catch(() => page.keyboard.press('Escape'));
   await page.click('[data-k-tile=agents]');
   await page.selectOption('#agent-add select[name=agent]', id('Machine, allegedly'));
   await page.selectOption('#agent-add select[name=owner]', id('Nobody, allegedly'));

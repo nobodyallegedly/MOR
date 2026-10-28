@@ -122,7 +122,7 @@ test('H110: two posts in a row, the second on top before the clock stamps it and
     const s = items.find((i) => i.id === second);
     assert.equal(s.when, null, op);
     assert.equal(s.unstamped, true, op);
-    assert.match(card(itemAct(s)), /class="k-hint k-unstamped">not yet stamped by the Dubsar clock</, op);
+    assert.match(card(itemAct(s)), /class="k-unstamped">not yet stamped by the Dubsar clock</, op);
     assert.doesNotMatch(card(itemAct(items.find((i) => i.id === first))), /not yet stamped/, op);
   }
 

@@ -161,7 +161,7 @@ export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : '';
   const text = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? '')}</div>` : '';
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">✓</span>' : ''}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ''}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  const hint = (!a.when && a.unstamped ? `<div class="k-hint k-unstamped">${e(a.unstamped)}</div>` : '') + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '');
+  const hint = (!a.when && a.unstamped ? `<div class="k-unstamped">${e(a.unstamped)}</div>` : '') + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '');
   // H103: a correction in the original's place, labelled Corrected; pressing it unfolds the earlier versions above, as signed.
   const earlier = a.earlier?.length
     ? `<div class="k-earlier" data-k-earlier hidden><div class="k-earlier-say">${a.earlier.length === 1 ? 'The original, as signed' : `The original and ${a.earlier.length - 1} earlier correction${a.earlier.length > 2 ? 's' : ''}, as signed, oldest first`}</div>${a.earlier.map((x) => card(x)).join('')}</div>`

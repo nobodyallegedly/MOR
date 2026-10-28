@@ -539,7 +539,7 @@ export function stampCards(root: ParentNode, words: Record<string, string>): voi
     s.className = 'k-when';
     s.textContent = w;
     a.prepend(s);
-    a.querySelectorAll('.k-hint').forEach((h) => h.remove());
+    a.querySelectorAll('.k-hint, .k-unstamped').forEach((h) => h.remove());
   }
 }
 

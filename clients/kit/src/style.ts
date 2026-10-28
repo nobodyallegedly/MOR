@@ -145,7 +145,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
-.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
+.k-act .k-hint,.k-act .k-unstamped{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
@@ -171,7 +171,10 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 
 /* an identity wherever its ID is shown (H96, H121): its names, the nickname first, the published name small and faint; its short ID under, a button */
 .k-who{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;vertical-align:top;max-width:100%;min-width:0}
-.k-who.k-inline{flex-direction:row;align-items:baseline;gap:8px;flex-wrap:wrap}
+.k-who.k-inline{display:inline;vertical-align:baseline}
+.k-who.k-inline>.k-idbtn{margin-left:6px}
+.k-who.k-inline .k-names{display:inline}
+.k-who.k-inline .k-names>*+*{margin-left:6px}
 .k-names{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;min-width:0}
 .k-nick{font-weight:400;color:var(--k-text);overflow-wrap:anywhere}
 .k-pub{font-size:.82em;color:var(--k-faint);overflow-wrap:anywhere}
