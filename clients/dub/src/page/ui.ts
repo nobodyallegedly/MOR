@@ -25,6 +25,7 @@ import {
   redrawPanel,
   removeSaid,
   openConfirm,
+  keyChanged,
   shortForm,
   type Contact,
   type KitAct,
@@ -433,13 +434,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   async function check() {
     try {
       const c = await b.ask<{ current: boolean; say: string | null }>('check');
-      const old = $('spent-box');
-      if (c.current) old?.remove();
-      else if (!old) {
-        const holder = document.createElement('div');
-        holder.innerHTML = v.spent(c.say ?? '');
-        app.querySelector('.k-top')?.after(holder.firstElementChild!);
-      }
+      // H82, H83: the identity in use only, as a pop-up; closed, a line under the top.
+      const me = state?.identity;
+      keyChanged(app, c.current || !me ? null : { id: me.id, name: me.who.names[0] ?? shortForm(v.actFormOf(me.id, 'mid')), say: c.say ?? '', form: v.renewForm() });
     } catch {
       // its homes did not answer: said when something is signed
     }

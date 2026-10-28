@@ -667,3 +667,55 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
   });
   return slot;
 }
+
+// ---------------------------------------------------------------- a key changed elsewhere (H82, H83)
+
+/** The identities whose warning was closed: a one-line reminder under the top instead (this page's memory). */
+const keyWarned = new Set<string>();
+let keyBox: { id: string; close(answered?: boolean): void } | null = null;
+
+/**
+ * The warning that the identity in use had its signing key changed
+ * elsewhere, with the app's box for the new words: a pop-up over the page
+ * (the tiles left whole); closed, a one-line reminder stays under the top,
+ * whose button opens it again (H82). It belongs to the identity in use:
+ * called with null, or with another identity, whatever was shown for an
+ * earlier one goes (H83). The app calls it whenever it checks the identity
+ * in use, and on every switch.
+ */
+export function keyChanged(page: HTMLElement, w: { id: string; name: string; say: string; form: string } | null): void {
+  if (keyBox && keyBox.id !== w?.id) {
+    keyBox.close(true);
+    keyBox = null;
+  }
+  for (const r of page.querySelectorAll<HTMLElement>('[data-k-keychanged]')) if (r.dataset.kKeychanged !== w?.id) r.remove();
+  if (!w) return;
+  const remind = () => {
+    if (page.querySelector(`[data-k-keychanged="${CSS.escape(w.id)}"]`)) return;
+    const line = document.createElement('div');
+    line.className = 'k-reminder';
+    line.dataset.kKeychanged = w.id;
+    line.setAttribute('role', 'alert');
+    const text = document.createElement('span');
+    text.textContent = `${w.name}’s signing key was changed elsewhere: this app signs nothing more with the old one.`;
+    const again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'k-btn k-small';
+    again.textContent = 'Give the new words';
+    again.addEventListener('click', () => {
+      keyWarned.delete(w.id);
+      keyChanged(page, w);
+    });
+    line.append(text, again);
+    (page.querySelector('.k-top') ?? page.firstElementChild)?.after(line);
+  };
+  if (keyWarned.has(w.id)) return remind();
+  if (keyBox?.id === w.id) return;
+  const c = openConfirm(page, `<div class="k-keychanged" data-k-keychanged-box><h4>${escapeText(w.name)}: a signing key changed elsewhere</h4><p class="k-small">${escapeText(w.say)}</p>${w.form}</div>`, () => {
+    keyBox = null;
+    keyWarned.add(w.id);
+    remind();
+  });
+  c.box.classList.add('k-alarm-modal');
+  keyBox = { id: w.id, close: c.close };
+}

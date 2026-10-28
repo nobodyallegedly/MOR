@@ -299,10 +299,7 @@ export function relaysForm(s: State): string {
 <dl class="k-facts"><dt>Homes</dt><dd>${e(s.identity?.homes.join(', ') ?? '')} (the identity’s chain names them; changed in Kišib)</dd></dl>`;
 }
 
-/** A key changed elsewhere: the warning, the box for the new words right under it. */
-export function spent(sayIt: string): string {
-  return `<div class="k-alarmbox" id="spent">${e(sayIt)}</div><div class="k-box" id="spent-words">${renewForm()}</div>`;
-}
+
 
 // ---------------------------------------------------------------- a review, before anything is signed
 

@@ -654,9 +654,9 @@ ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for 
 ])}`;
 }
 
-/** The spent key, said plainly, and the new signing key's words taken. */
-export function spent(said: string): string {
-  return `<div class="k-alarmbox" id="spent-box"><p>${e(said)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form></div>`;
+/** The new signing key's words taken, where the key was changed elsewhere (in the kit's warning, H82). */
+export function renewForm(): string {
+  return `<form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 
 // ---------------------------------------------------------------- an identity used through Kišib (the Dubsar runner cMIP)

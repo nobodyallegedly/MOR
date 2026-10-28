@@ -5,7 +5,7 @@
 // and part were open (`damgar:at`), and in memory which collective is acted
 // as; nothing of a key or a payment.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Account, LaneShown, PaymentShown, Rails, State, ToSign, Who } from '../shapes.ts';
 
@@ -72,9 +72,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       return;
     }
     const m = errorOf(err);
-    if (/^This identity’s signing key was changed elsewhere/.test(m) && !$('spent')) app.querySelector('.k-top')?.insertAdjacentHTML('afterend', v.spent(m));
+    // H82, H83: the identity in use's key changed elsewhere: the kit's warning, a pop-up with the box for the new words.
+    if (/^This identity’s signing key was changed elsewhere/.test(m)) return warnKey(m);
     say('error', v.e(m));
   };
+  /** The kit's warning for the identity in use (H82), or none: it never stays for another identity (H83). */
+  function warnKey(said: string | null) {
+    const i = state?.identity;
+    keyChanged(app, said && i ? { id: i.id, name: i.name ?? shortForm(i.form), say: said, form: v.renewForm() } : null);
+  }
   const done = (r: Lines | undefined) => {
     if (r?.lines?.length) say('done', v.lines(r.lines));
   };
@@ -153,9 +159,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       return;
     }
     await draw();
-    void b.ask<{ current: boolean; say: string | null }>('check').then((c) => {
-      if (!c.current && c.say && !$('spent')) app.querySelector('.k-top')?.insertAdjacentHTML('afterend', v.spent(c.say));
-    }).catch(() => undefined);
+    void b.ask<{ current: boolean; say: string | null }>('check').then((c) => warnKey(c.current ? null : c.say)).catch(() => undefined);
     // While Waiting is in view, what arrived is looked for every 20 seconds.
     timer = setInterval(() => {
       if (document.visibilityState === 'visible' && tab === 'waiting' && (part === 'to-pay' || part === 'to-receive') && !app.querySelector('textarea:focus,input:focus') && !popup.open && !panelOpen()) void refresh(true);
@@ -733,7 +737,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
       case 'renew': {
         const r = await act(() => b.ask<Lines>('renew', { words: str(fd, 'words') }));
-        if (r) (popup.close(), app.querySelector('#spent')?.remove(), await show(await b.ask<State>('state')), done(r));
+        if (r) (popup.close(), keyChanged(app, null), await show(await b.ask<State>('state')), done(r));
         return;
       }
       case 'collective-add': {

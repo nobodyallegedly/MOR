@@ -265,9 +265,6 @@ ${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${
 <form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
 }
 
-export function spent(sayIt: string): string {
-  return `<div class="k-alarmbox" id="spent">${e(sayIt)} <button type="button" class="k-btn k-small" data-action="renew">Give the new words</button></div>`;
-}
 
 // ---------------------------------------------------------------- what waits
 

@@ -492,13 +492,30 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   const before = (await app.dub.state()).identity!.line.acts;
   await page.locator('#post textarea').fill('Signed with a retired key?');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
-  await page.locator('#spent-box', { hasText: /changed elsewhere[\s\S]*Kišib/ }).waitFor({ timeout: 60_000 });
+  // H82: the warning a pop-up over the page, with the box for the new words; the page beneath left whole.
+  const warned = page.locator('[data-k-keychanged-box]');
+  await warned.waitFor({ timeout: 60_000 });
+  assert.match(await warned.innerText(), /changed elsewhere[\s\S]*Kišib/);
   assert.equal((await app.dub.state()).identity!.line.acts, before, 'nothing signed with the retired key (H80)');
   await shot(page, '19-key-changed-elsewhere');
+  // Closed: a one-line reminder under the top.
+  await page.locator('[data-k-confirm] [data-k-close]').click();
+  const line = page.locator('.k-reminder[data-k-keychanged]');
+  await line.waitFor();
+  // H83: switching to an identity whose key is fine, the warning goes; back, the reminder again.
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`.k-panel [data-k-use="${me}"]`).click();
+  await page.locator('.k-me', { hasText: 'Max' }).waitFor({ timeout: 60_000 }).catch(() => undefined);
+  await page.waitForFunction(() => !document.querySelector('[data-k-keychanged]'), undefined, { timeout: 60_000 });
+  assert.equal(await page.locator('[data-k-keychanged-box]').count(), 0, 'no warning for an identity whose key is fine');
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`.k-panel [data-k-use="${g.id}"]`).click();
+  await line.waitFor({ timeout: 60_000 });
+  await line.getByRole('button', { name: 'Give the new words' }).click();
   await page.locator('form#renew textarea').fill(toWords(unhex(g.f.signingSecret)).join(' '));
   await page.getByRole('button', { name: 'Use the new words' }).click();
   await done(page, 'The new words are in use');
-  assert.equal(await page.locator('#spent-box').count(), 0);
+  assert.equal(await page.locator('[data-k-keychanged], [data-k-keychanged-box]').count(), 0);
 
   // Remove, said plainly first (H58): nothing removed until confirmed.
   await page.locator('[data-k-open="identity"]').click();

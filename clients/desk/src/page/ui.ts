@@ -15,7 +15,7 @@
 import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type Constitution, type Done, type Line, type Permissions, type RealCollective, type ShareHere, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, keyChanged, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -225,7 +225,9 @@ async function offerRenew(changed?: { id: string; name: string; say: string; kin
 /** Keys changed elsewhere (H80), and the seller's alarms (Agreements rule 45b), drawn under the top. */
 let spentNow: { id: string; name: string; say: string; kind: 'identity' | 'collective' }[] = [];
 function alarmsHtml(): string {
-  const forms = spentNow.map((x) => (x.kind === 'collective' ? `<p class="small"><strong>${v.e(x.name)}</strong></p>${v.renewCollectiveForm(x.id)}` : v.renewIdentityForm(x.id, x.name))).join('');
+  // H83: only what belongs to the identity in use: its own key (the kit's warning, a pop-up: H82), and the collectives it acts in.
+  const mine = spentNow.filter((x) => x.kind === 'collective' && state.collectives.some((col) => col.id === x.id));
+  const forms = mine.map((x) => `<p class="small"><strong>${v.e(x.name)}</strong></p>${v.renewCollectiveForm(x.id)}`).join('');
   let hidden: string[] = [];
   try {
     hidden = JSON.parse(sessionStorage.getItem('edubba:alarms-seen') ?? '[]') as string[];
@@ -234,9 +236,15 @@ function alarmsHtml(): string {
   }
   const alarms = state.identities.flatMap((i) => i.received.filter((x) => x.alarm && !hidden.includes(x.key)).map((x) => ({ name: i.name, alarm: x.alarm, act: x.act, key: x.key })));
   const seller = alarms.length ? v.sellerAlarms(alarms).replace('</div>', `<div class="k-row"><button type="button" class="k-btn k-small" data-action="alarms-seen" data-keys="${v.e(JSON.stringify(alarms.map((a) => a.key)))}">Seen: hide until Edubba opens again</button></div></div>`) : '';
-  return `<div id="e-alarms">${v.spent(spentNow, forms)}${seller}</div>`;
+  return `<div id="e-alarms">${v.spent(mine, forms)}${seller}</div>`;
+}
+/** The kit's warning for the identity in use (H82), or none (H83). */
+function syncKey() {
+  const own = spentNow.find((x) => x.kind === 'identity' && x.id === state.acting);
+  keyChanged(app, own ? { id: own.id, name: own.name, say: own.say, form: v.renewIdentityForm(own.id, own.name) } : null);
 }
 function drawAlarms() {
+  syncKey();
   const at = $('e-alarms');
   const html = alarmsHtml();
   if (at) at.outerHTML = html;
@@ -442,6 +450,7 @@ async function draw() {
   drawn.clear();
   if (!tab) {
     app.innerHTML = v.home(state, as, alarms());
+    syncKey();
     return;
   }
   if (!v.tabsHere().includes(tab)) tab = 'collectives';
@@ -450,6 +459,7 @@ async function draw() {
   typed = (pane() ? typingNow(pane()!) : null) ?? typed;
   const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount, deals: pubCache?.deals?.filter((d) => d.state === 'waiting').length || undefined, dealsToSign: dealsToSignCount };
   app.innerHTML = v.tabPage(state, tab, part, k, as, alarms(), counts());
+  syncKey();
   await fill();
 }
 

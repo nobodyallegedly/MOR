@@ -5,7 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
 import type { LookItem, Looked, SpecPage } from '../look.ts';
@@ -68,10 +68,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     s.innerHTML = `${v.note(kind, html)}<button type="button" class="k-round k-close" data-action="status-close" aria-label="Close">×</button>`;
   }
-  const spentShown = (m: string) => {
-    if ($('spent')) return;
-    const where = $('spent-at') ?? app.querySelector('.k-top');
-    where?.insertAdjacentHTML(where.id === 'spent-at' ? 'afterbegin' : 'afterend', v.spent(m));
+  // H82, H83: the kit's warning, a pop-up with the box for the new words, for the identity in use only.
+  const spentShown = (m: string | null) => {
+    const i = state?.identity;
+    keyChanged(app, m && i ? { id: i.id, name: shortForm(v.formOf(i.id, 'mid')), say: m, form: v.renewForm() } : null);
   };
   const fail = (err: unknown) => {
     if (b.unpaired?.(err)) {
@@ -155,9 +155,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     await draw();
     void b
       .ask<{ current: boolean; say: string | null }>('check')
-      .then((c) => {
-        if (!c.current && c.say) spentShown(c.say);
-      })
+      .then((c) => spentShown(c.current ? null : c.say))
       .catch(() => undefined);
     void readCounts();
   }
@@ -736,7 +734,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
       case 'renew': {
         const r = await act(() => b.ask<Lines>('renew', { words: str(fd, 'words') }));
-        if (r) (popup.close(), app.querySelector('#spent')?.remove(), app.querySelector('#spent-words')?.remove(), await show(await b.ask<State>('state')), done(r));
+        if (r) (popup.close(), spentShown(null), await show(await b.ask<State>('state')), done(r));
         return;
       }
       case 'collective-add': {

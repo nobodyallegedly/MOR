@@ -6,6 +6,10 @@
 // - H102 (with H91): Remove from the identity panel, its confirmation drawn
 //   on top of the panel, in view; Keep it returns to the panel; Escape
 //   closes the top one only; the panel's ×.
+// - H82, H83: an identity whose signing key was changed elsewhere: the
+//   warning a pop-up over the page, with the box for the new words; closed,
+//   a one-line reminder under the top; switching to an identity whose key
+//   is fine, nothing of it stays; back, the reminder again.
 //
 // Real homes and a relay on local ports. Test identities only.
 
@@ -15,6 +19,9 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { ACCEPTABLE } from '../../damgar/src/specs.ts';
 import { closeAll, damgar, dub, edubba, start, type Relay } from '../../damgar/test/world.ts';
 import { closeAll as closeUmmia, ummia } from '../../ummia/test/world.ts';
+import { TestIdentity } from '../../genesis/src/identity.ts';
+import { unhex } from '../../genesis/src/core.ts';
+import { encryptionSecret, toWords } from '../../../modules/carry/src/carry.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -23,8 +30,9 @@ const SIZES = { mac: { width: 1280, height: 800 }, phone: { width: 390, height: 
 let homes: Relay[];
 let relay: Relay;
 let browser: Browser;
-/** Each app's page, with an identity in use: its address (paired once per page opened). */
-const apps: { name: string; url: () => string }[] = [];
+/** Each app's page, with an identity in use: its address (paired once per page opened), and how it brings another identity. */
+const apps: { name: string; url: () => string; bring: (id: string, words: string) => Promise<unknown> }[] = [];
+let MAX = '';
 const problems: string[] = [];
 
 before(async () => {
@@ -34,18 +42,19 @@ before(async () => {
   const R = [relay.base];
   const max = await dub(H, R);
   await max.c.ask('name', { name: 'Max' });
-  apps.push({ name: 'Dub', url: () => `${max.app.base}/#pair=${max.app.access.newCode()}` });
+  MAX = max.id;
+  apps.push({ name: 'Dub', url: () => `${max.app.base}/#pair=${max.app.access.newCode()}`, bring: (id, words) => max.c.ask('bring', { id, words, address: H[0] }) });
   const g = await damgar();
   await g.c.ask('bring', { id: max.id, words: max.words, address: H[0] });
   await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) });
-  apps.push({ name: 'Damgar', url: () => `${g.app.base}/#pair=${g.app.access.newCode()}` });
+  apps.push({ name: 'Damgar', url: () => `${g.app.base}/#pair=${g.app.access.newCode()}`, bring: async (id, words) => (await g.c.ask('bring', { id, words, address: H[0] }), await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) })) });
   const e = await edubba(H, R);
   await e.c.ask('bring', { name: 'Max', id: max.id, words: max.words, address: H[0], linked: false });
-  apps.push({ name: 'Edubba', url: () => `${e.app.base}/#pair=${e.app.access.newCode()}` });
+  apps.push({ name: 'Edubba', url: () => `${e.app.base}/#pair=${e.app.access.newCode()}`, bring: async (id, words) => (await e.c.ask('bring', { name: 'Changed elsewhere', id, words, address: H[0], linked: false }), await e.c.ask('acting as', { id })) });
   const u = await ummia();
   await u.c.ask('bring', { id: max.id, words: max.words, address: H[0] });
   await u.c.ask('settings', { relays: R, track: R });
-  apps.push({ name: 'Ummia', url: () => `${u.app.base}/#pair=${u.app.access.newCode()}` });
+  apps.push({ name: 'Ummia', url: () => `${u.app.base}/#pair=${u.app.access.newCode()}`, bring: (id, words) => u.c.ask('bring', { id, words, address: H[0] }) });
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
@@ -64,7 +73,10 @@ async function open(url: string, size: { width: number; height: number }): Promi
   });
   page.on('pageerror', (err) => problems.push(err.message));
   await page.goto(url);
-  await page.locator('[data-k-open="identity"]').first().waitFor({ timeout: 90_000 });
+  await page.locator('[data-k-open="identity"]').first().waitFor({ timeout: 90_000 }).catch(async (err) => {
+    await shot(page, `open-failed-${new URL(url).port}`);
+    throw new Error(`${(await page.locator('body').innerText()).slice(0, 600)}: ${err instanceof Error ? err.message : String(err)}`);
+  });
   return page;
 }
 
@@ -119,3 +131,47 @@ for (const size of ['mac', 'phone'] as const) {
     assert.deepEqual(problems, []);
   });
 }
+
+test('H82, H83: in every app, a key changed elsewhere: a pop-up over the page, closed to a line under the top; it follows the identity in use', async () => {
+  // An identity held in every app beside Max, its signing key then changed elsewhere (a rotation, as Kišib makes one).
+  const g = TestIdentity.create({ homes: [homes[0].home] });
+  await g.publishGenesis();
+  await g.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }, { scope: null, hints: [relay.base], kind: 1 }]);
+  await g.publishEncryptionKey(encryptionSecret(unhex(g.f.signingSecret)));
+  const words = toWords(unhex(g.f.signingSecret)).join(' ');
+  for (const a of apps) await a.bring(g.id, words);
+  // The apps' own lines are left out (their acts void): only the warning matters here.
+  const { plan } = await g.planRotation({});
+  await g.prepareRotation({ warned: plan.warning ?? undefined });
+  await g.submitRotation();
+  assert.ok((await g.settleRotation()).counts);
+  for (const a of apps) {
+    const page = await open(a.url(), SIZES.mac);
+    try {
+      const box = page.locator('[data-k-keychanged-box]');
+      await box.waitFor({ timeout: 90_000 });
+      assert.match(await box.innerText(), /changed elsewhere/, a.name);
+      assert.ok(await onTop(page, '[data-k-confirm]'), `${a.name}: the warning on top`);
+      assert.equal(await box.locator('textarea').count(), 1, `${a.name}: the box for the new words in it`);
+      await shot(page, `${a.name}-key-changed`);
+      await page.locator('[data-k-confirm] [data-k-close]').click();
+      const line = page.locator('.k-reminder[data-k-keychanged]');
+      await line.waitFor();
+      // Max, whose key is fine: nothing of the warning stays.
+      await page.locator('[data-k-open="identity"]').first().click();
+      await page.locator(`.k-panel [data-k-use="${MAX}"]`).click();
+      await page.waitForFunction(() => !document.querySelector('[data-k-keychanged], [data-k-keychanged-box]'), undefined, { timeout: 60_000 });
+      await page.waitForTimeout(1500);
+      assert.equal(await page.locator('[data-k-keychanged], [data-k-keychanged-box]').count(), 0, `${a.name}: nothing for Max`);
+      // Back: the line again.
+      await page.locator('[data-k-open="identity"]').first().click();
+      await page.locator(`.k-panel [data-k-use="${g.id}"]`).click();
+      await line.waitFor({ timeout: 60_000 });
+    } catch (err) {
+      await shot(page, `${a.name}-key-failed`);
+      throw new Error(`${a.name}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    await page.context().close();
+  }
+  assert.deepEqual(problems, []);
+});

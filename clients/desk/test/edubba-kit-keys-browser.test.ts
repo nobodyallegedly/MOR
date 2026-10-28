@@ -111,10 +111,23 @@ test('H80 after Kišib: the warning under the top, the box for the new words rig
   const p = await postAs(them, { text: 'Relied on after the change of keys.', relays: [relay.base] });
 
   await page.reload();
-  const warn = page.locator('#spent', { hasText: 'This identity’s signing key was changed elsewhere' });
+  // H82: a pop-up over the page, with the box for the new words; the tiles left whole.
+  const warn = page.locator('[data-k-keychanged-box]', { hasText: 'This identity’s signing key was changed elsewhere' });
   await warn.waitFor({ timeout: 60_000 });
   await warn.locator('form#identity-renew').waitFor();
   await shot(page, 'mac-61-key-changed-box');
+  // H83: it belongs to the identity in use: switching to one whose key is fine, it goes; back, it is there again.
+  const other = (await c.ask<{ identities: { id: string; name: string }[] }>('state')).identities.find((i) => i.id !== g.id)!;
+  await page.keyboard.press('Escape');
+  await page.locator('.k-reminder[data-k-keychanged]').waitFor();
+  await page.click('[data-k-open=identity]');
+  await page.locator(`.k-panel [data-k-use="${other.id}"]`).click();
+  await page.waitForFunction(() => !document.querySelector('[data-k-keychanged], [data-k-keychanged-box]'), undefined, { timeout: 60_000 });
+  await page.click('[data-k-open=identity]');
+  await page.locator(`.k-panel [data-k-use="${g.id}"]`).click();
+  await page.locator('.k-reminder[data-k-keychanged]').waitFor({ timeout: 60_000 });
+  await page.locator('.k-reminder[data-k-keychanged]').getByRole('button', { name: 'Give the new words' }).click();
+  await warn.locator('form#identity-renew').waitFor();
 
   // Relying (the act's menu's Rely on it, through the program's own path): refused in the same words, nothing at the home.
   const homeActs = async () => (await relayAt(homes[0].base).feed({ signer: g.id })).items.length;
@@ -126,16 +139,16 @@ test('H80 after Kišib: the warning under the top, the box for the new words rig
   assert.equal(await homeActs(), atHome, 'nothing signed reached its home');
 
   // Wrong words (the old chain paper's): refused, the box still there.
-  const box = page.locator('#spent form#identity-renew');
+  const box = page.locator('[data-k-keychanged-box] form#identity-renew');
   await box.locator('textarea[name=words]').fill(toWords(seed).join(' '));
   await box.locator('button[type=submit]').click();
-  await page.locator('#spent .k-note.k-error, #spent form .k-note.k-error', { hasText: 'do not give this identity’s current signing key' }).first().waitFor({ timeout: 60_000 });
+  await page.locator('[data-k-keychanged-box] .k-note.k-error', { hasText: 'do not give this identity’s current signing key' }).first().waitFor({ timeout: 60_000 });
   assert.equal(await box.count(), 1);
   // The right words: taken, the warning gone.
   await box.locator('textarea[name=words]').fill(fresh.join(' '));
   await box.locator('button[type=submit]').click();
   await done('The new signing key is taken');
-  assert.equal(await page.locator('#spent').count(), 0);
+  assert.equal(await page.locator('[data-k-keychanged], [data-k-keychanged-box]').count(), 0);
   await shot(page, 'mac-62-new-words-taken');
   const ok = await c.ask<{ id: string }>('witness', { identity: g.id, act: p.id, shown: (await import('../../genesis/src/witness.ts')).WITNESS_EXPLANATION, typed: 'RELY' });
   assert.match(ok.id, /^[0-9a-f]{64}$/);
