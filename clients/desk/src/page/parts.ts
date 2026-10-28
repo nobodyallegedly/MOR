@@ -25,6 +25,7 @@ import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, Ag
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import { shownAct, shownId } from '../../../genesis/src/shown.ts';
 import { GRID_STYLE } from './grid-view.ts';
+import { actId, contactsButtonFor, who } from '../../../kit/src/ids.ts';
 
 export { e };
 
@@ -126,9 +127,9 @@ ${TEXT}
 .e-in dl.facts dt,.e-in dl.card-of dt{color:var(--k-faint)}.e-in dl dd{margin:0}
 .e-in label.share{display:flex;align-items:center;gap:10px}.e-in label.share input{width:8em}`;
 
-/** A fingerprint, shortened on screen, whole on hover. */
+/** An act's ID, short (H121): a button, one tap shows it whole (`mact1…`), a second copies it. */
 export function fp(h: string): string {
-  return `<code title="${e(h)}">${e(h.slice(0, 8))}…${e(h.slice(-4))}</code>`;
+  return /^[0-9a-f]{64}$/.test(h) ? actId(h) : `<code>${e(h)}</code>`;
 }
 
 /** A name as the program gives it, without the fingerprint it appends: the fingerprint is shown beside it. */
@@ -267,14 +268,14 @@ export function agentView(name: string, v: AgentView): string {
 <p class="small">What it reads: what is sent to it, and its feed (its own posts and those it follows). Under a nudge, Claude is given its feed too.</p>
 <section class="card"><h3>Those it follows (${v.follows.length})</h3>
 <p class="small">Kept here, private (the people cMIP): never published.</p>
-${v.follows.length ? `<ul class="plain">${v.follows.map((f) => `<li>${e(f.name ?? '')} ${fp(f.id)} <button class="quiet" data-action="agent-unfollow" data-id="${e(f.id)}">Unfollow</button></li>`).join('')}</ul>` : '<p class="empty small">Nobody yet.</p>'}
-<form id="agent-follow" class="row"><input name="who" type="text" class="grow" placeholder="An identity's ID" required><input name="name" type="text" placeholder="A name for it (kept here)" class="pet"><button type="submit">Follow for it</button></form></section>
+${v.follows.length ? `<ul class="plain">${v.follows.map((f) => `<li>${f.name ? `${e(f.name)} ` : ''}${who({ id: f.id, inline: true })} <button class="quiet" data-action="agent-unfollow" data-id="${e(f.id)}">Unfollow</button></li>`).join('')}</ul>` : '<p class="empty small">Nobody yet.</p>'}
+<form id="agent-follow" class="row"><input name="who" type="text" class="grow" placeholder="An identity's ID" required>${contactsButtonFor('who')}<input name="name" type="text" placeholder="A name for it (kept here)" class="pet"><button type="submit">Follow for it</button></form></section>
 <h3>Its feed</h3>
 ${v.problems.map((p) => `<p class="small">${e(p)}</p>`).join('')}
 ${
   v.feed
     .map(
-      (p) => `<div class="post"><div class="who"><span class="name">${e(bare(p.signerName.replace(/ \(itself\)$/, '')))}${p.signerName.endsWith('(itself)') ? ' <span class="you">itself</span>' : ''}</span>${fp(p.signer)}${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div><div class="text" dir="auto">${e(p.text)}</div>${p.pictures
+      (p) => `<div class="post"><div class="who"><span class="name">${e(bare(p.signerName.replace(/ \(itself\)$/, '')))}${p.signerName.endsWith('(itself)') ? ' <span class="you">itself</span>' : ''}</span>${who({ id: p.signer, inline: true })}${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div><div class="text" dir="auto">${e(p.text)}</div>${p.pictures
         .map((src) => `<figure><img alt="A picture of the post" src="${e(src)}"></figure>`)
         .join('')}</div>`,
     )
@@ -316,7 +317,7 @@ export const MONEY_SAY = 'Prepared here, not signed here: Edubba seals a draft t
 
 /** A payment form, prepared for Damgar: to whom, how much, in which unit (filled by the page from `money units`), what for. */
 function payForm(id: string, identity: string, to = ''): string {
-  return `<form id="${e(id)}" data-identity="${e(identity)}" class="money"><label>To: an identity’s ID</label><input name="to" type="text" value="${e(to)}" autocomplete="off" spellcheck="false" required>
+  return `<form id="${e(id)}" data-identity="${e(identity)}" class="money"><label>To: an identity’s ID</label><div class="row tight"><input name="to" type="text" class="grow" value="${e(to)}" autocomplete="off" spellcheck="false" required>${contactsButtonFor('to')}</div>
 <div class="row"><label>Amount, in the unit’s smallest part <input name="value" type="text" inputmode="numeric" class="narrow" required></label><label>Unit <select name="unit" data-units></select></label></div>
 <label>What for (optional)</label><input name="whatFor" type="text">
 <p class="small">${e(MONEY_SAY)}</p><div class="row"><button type="submit">Prepare it for Damgar</button></div></form>`;
@@ -326,10 +327,10 @@ function payForm(id: string, identity: string, to = ''): string {
 export function realMoney(s: State, id: string, members: string[]): string {
   const acting = s.acting ?? '';
   return `${foldCard('e-real-pay', 'collective-pay', 'Pay a member (prepared for Damgar)', `<p class="small">From ${e(s.identities.find((i) => i.id === acting)?.name ?? 'the identity acting here')}: your own payment, never the collective’s (collective payments are round 2).</p>
-<div class="row">${members.filter((m) => m !== acting).map((m) => `<button type="button" data-action="pay-member" data-member="${e(m)}">${person(s, m)}</button>`).join('')}</div>${payForm('pay-member', acting)}`, false)}
+<div class="row">${members.filter((m) => m !== acting).map((m) => `<button type="button" data-action="pay-member" data-member="${e(m)}">${e(nm(s, m) || 'A member')}</button>`).join('')}</div>${payForm('pay-member', acting)}`, false)}
 ${foldCard('e-real-anchor', 'collective-anchor', 'Anchor one of its acts on Bitcoin (optional)', `<ul class="say">${ANCHOR_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
 <form id="anchor-offers" data-collective="${e(id)}"><label>The act</label><select name="act" data-anchorable="${e(id)}"></select>
-<label>The anchoring service: its ID</label><div class="row"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false" required><button type="submit">Read its offer</button></div></form>
+<label>The anchoring service: its ID</label><div class="row"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('service')}<button type="submit">Read its offer</button></div></form>
 <div id="e-anchor-offer"></div><h4>Anchors asked</h4><div id="e-anchors"><p class="small">Reading…</p></div>`, false)}`;
 }
 
@@ -355,7 +356,7 @@ ${o.tiers.map((t, i) => `<label class="check"><input type="radio" name="tier" va
 }
 
 export function anchors(xs: { act: string; label: string; service: string; tier: number; state: string; lines: Line[] }[]): string {
-  return xs.length ? xs.map((x) => `<div class="item"><span class="tag">${e(x.state)}</span> ${e(x.label)} ${fp(x.act)} <span class="small">by ${fp(x.service)}, tier ${x.tier}</span>${lines(x.lines)}</div>`).join('') : '<p class="empty small">None asked yet.</p>';
+  return xs.length ? xs.map((x) => `<div class="item"><span class="tag">${e(x.state)}</span> ${e(x.label)} ${fp(x.act)} <span class="small">by ${who({ id: x.service, inline: true })}, tier ${x.tier}</span>${lines(x.lines)}</div>`).join('') : '<p class="empty small">None asked yet.</p>';
 }
 
 export function newIdentity(): string {
@@ -366,7 +367,7 @@ export function newIdentity(): string {
 <section class="card"><h3>Bring an identity you have</h3>
 <p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it.</p>
 <form id="bring-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
-<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its ID</label><div class="row tight"><input name="id" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
 <label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
 <p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
@@ -378,7 +379,7 @@ function bringIdentityWeb(): string {
   return `<h2>Bring an identity you have</h2><section class="card">
 <p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it. A new identity is made in Dub, or in Edubba on a computer.</p>
 <form id="bring-identity"><label>Its name, kept in this browser</label><input name="name" type="text" placeholder="A name" required>
-<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" placeholder="mid1…" required>
+<label>Its ID</label><div class="row tight"><input name="id" type="text" class="grow" autocomplete="off" spellcheck="false" placeholder="mid1…" required>${contactsButtonFor('id')}</div>
 <label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
 <p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. ${e(WEB_KEPT_SAY)}</p>
@@ -432,7 +433,7 @@ export function browsers(s: State): string {
 /** "+ Bring an existing collective" (H15): by its ID, read from its homes, one of your identities among its members. */
 export function bringCollective(): string {
   return `<h2>Bring an existing collective</h2><section class="card"><form id="bring-collective">
-<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its ID</label><div class="row tight"><input name="id" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
 <label>A name for it, ${kept()}</label><input name="name" type="text" required>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form>
 <p class="small">Edubba reads it from the homes and relays in Settings: its chain, and its agreement in force as Agreements read it. It is brought only if one of your identities held here (or in the collective client’s folder) is among the parties of that agreement. Edubba holds none of its keys: nothing is signed for it by bringing it, and nothing can be signed with its key here.</p></section>`;
@@ -501,7 +502,7 @@ export function memoryCard(r: NotesRead): string {
   const live = r.notes.filter((n) => !n.dropped);
   const dropped = r.notes.filter((n) => n.dropped);
   const one = (n: NotesRead['notes'][number]) =>
-    `<div class="item"><span class="small">${KIND_WORDS[n.kind]}${n.kind === 'person' ? ` ${e(bare(n.aboutName))} ${n.about ? fp(n.about) : ''}` : ''} · ${fp(n.id)}${n.dropped ? ` · dropped${n.dropped.by === 'owner' ? ' at your request' : ' by it'}${n.dropped.why ? `: ${e(n.dropped.why)}` : ''}` : ''}</span><div class="text" dir="auto">${e(n.text)}</div>${
+    `<div class="item"><span class="small">${KIND_WORDS[n.kind]}${n.kind === 'person' ? ` ${e(bare(n.aboutName))} ${n.about ? who({ id: n.about, inline: true }) : ''}` : ''} · ${fp(n.id)}${n.dropped ? ` · dropped${n.dropped.by === 'owner' ? ' at your request' : ' by it'}${n.dropped.why ? `: ${e(n.dropped.why)}` : ''}` : ''}</span><div class="text" dir="auto">${e(n.text)}</div>${
       n.dropped ? '' : `<div class="row"><button class="quiet" data-action="note-retire" data-note="${e(n.id)}">Retire this note</button></div>`
     }</div>`;
   return foldCard(
@@ -563,7 +564,7 @@ ${list.map(one).join('')}
 <form id="grant-form"><h4>Grant it authority</h4>
 <div class="row"><label class="check"><input type="checkbox" name="kinds" value="posts" checked> Posts and messages</label><label class="check"><input type="checkbox" name="kinds" value="publications"> Publications</label><label class="check"><input type="checkbox" name="kinds" value="money"> Money acts (promises to pay, claims, receipts)</label></div>
 <div class="row"><label>At most per act <input name="cap" type="number" min="0" class="narrow" placeholder="no cap"> regtest satoshis</label></div>
-<div class="row"><label>Until <input name="until" type="datetime-local"></label><label class="grow">by the timestamp clock <input name="clock" type="text" placeholder="its ID (64 hex digits)" spellcheck="false"></label></div>
+<div class="row"><label>Until <input name="until" type="datetime-local"></label><label class="grow">by the timestamp clock <input name="clock" type="text" placeholder="its ID (64 hex digits)" spellcheck="false"></label>${contactsButtonFor('clock')}</div>
 <p class="small">An expiry is judged by the clock you name, which stamps each act: until it does, whether an act came before the expiry is unknown to anyone checking (the grant limits cMIP).</p>
 <div class="row"><button type="submit">Read the grant back</button></div></form>
 <div id="e-grant-shown"></div>`,
@@ -640,7 +641,7 @@ export function publishingTab(p: PublishingShown): string {
   const works = p.works.length
     ? p.works
         .map(
-          (w) => `<div class="item" data-work="${e(w.publication)}"><h3>${e(w.title)}</h3><div class="meta">${w.media === 'picture' ? 'a picture' : 'a text'} · ${w.price.toLocaleString('en')} ${e(p.unit)} · ${w.collective ? `by the collective ${fp(w.as)}` : 'by yourself'} · ${new Date(w.at * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
+          (w) => `<div class="item" data-work="${e(w.publication)}"><h3>${e(w.title)}</h3><div class="meta">${w.media === 'picture' ? 'a picture' : 'a text'} · ${w.price.toLocaleString('en')} ${e(p.unit)} · ${w.collective ? `by the collective ${who({ id: w.as, collective: true, inline: true })}` : 'by yourself'} · ${new Date(w.at * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
 <p class="small">${e(w.words)}</p>
 <p class="small">${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${fp(w.offer)}.</p></div>`,
         )
@@ -656,7 +657,7 @@ ${chooserHtml(p.actors, p.as)}
 <label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
 <div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
 <details class="judged"><summary>Judge the referral: paid by a split service (optional)</summary><p class="small">${e(JUDGED_SAY)}</p>
-<label>The split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false">
+<label>The split service: its ID</label><div class="row tight"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false">${contactsButtonFor('service')}</div>
 <label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></details>
 <div class="row"><button type="submit">Read it back</button></div></form>
 <div id="e-pub-review"></div></div>
@@ -668,10 +669,10 @@ ${chooserHtml(p.actors, p.as)}
 <div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label></div>
 <div class="row"><button type="submit">Read it back</button></div></form>
 <div id="e-vow-review"></div>
-${p.vows.length ? `<h3>Vows published here</h3>${p.vows.map((v) => `<div class="item"><h3>${e(v.title)}</h3><div class="meta">${v.price.toLocaleString('en')} ${e(p.unit)} · ${v.collective ? `by the collective ${fp(v.as)}` : 'by yourself'}</div><p class="small">${e(v.words)}</p></div>`).join('')}` : ''}</div>
+${p.vows.length ? `<h3>Vows published here</h3>${p.vows.map((v) => `<div class="item"><h3>${e(v.title)}</h3><div class="meta">${v.price.toLocaleString('en')} ${e(p.unit)} · ${v.collective ? `by the collective ${who({ id: v.as, collective: true, inline: true })}` : 'by yourself'}</div><p class="small">${e(v.words)}</p></div>`).join('')}` : ''}</div>
 <div class="card"><h2>Look up an identity’s vow sales</h2>
 <p class="small">Asked of the relays you name, with the filters they already have: no index is kept. A sale shows where its buyer made it public.</p>
-<form id="pub-vow-sales" class="stack"><label>The identity (mid1… or hex)</label><input name="identity" type="text" autocomplete="off" spellcheck="false" value="${e(p.as ?? '')}">
+<form id="pub-vow-sales" class="stack"><label>The identity (mid1… or hex)</label><div class="row tight"><input name="identity" type="text" class="grow" autocomplete="off" spellcheck="false" value="${e(p.as ?? '')}">${contactsButtonFor('identity')}</div>
 <label>Relays to ask, one per line</label><textarea name="relays" rows="2" spellcheck="false"></textarea>
 <div class="row"><button type="submit">Look it up</button></div></form>
 <div id="e-vow-sales"></div></div>
@@ -697,10 +698,9 @@ ${c.flags.length ? `<ul>${c.flags.map((f) => `<li>${e(f.text)} <span class="smal
 const STANDS: Record<string, string> = { signed: 'signed', declined: 'declined', waiting: 'not yet' };
 const nm = (s: State, id: string) => s.identities.find((i) => i.id === id)?.name ?? s.contacts.find((c) => c.id === id)?.name ?? '';
 
-/** An identity in a real collective's lists: its name here, beside its fingerprint. */
-export function person(s: State, id: string): string {
-  const n = nm(s, id);
-  return `${n ? `<span class="name">${e(n)}</span> ` : ''}${fp(id)}`;
+/** An identity in a real collective's lists (H96, H106, H121): its names (the nickname, the name it published, faint), its short ID under them, a button. */
+export function person(_s: State, id: string): string {
+  return who({ id, inline: true });
 }
 
 /** Where a contact comes from, in a few words. */
@@ -713,18 +713,10 @@ export function contactPicks(s: State, picked: string[], skip: string[] = []): s
     ? `<div class="picks">${rows
         .map(
           (c) =>
-            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${e(c.name)} ${fp(c.id)} <span class="small">${whence(c)}</span></label>`,
+            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${who({ id: c.id, inline: true })} <span class="small">${whence(c)}</span></label>`,
         )
         .join('')}</div>`
-    : '<p class="small">No contact yet: add one below, or type IDs.</p>';
-}
-
-/** The contacts card: add by ID with a name, kept here; remove. */
-export function contactsCard(s: State): string {
-  return `<section class="card" id="e-contacts"><h3>Contacts (${s.contacts.length})</h3>
-<p class="small">Identities you add by ID, with a name you give them, ${kept()} and never published; those your agents follow; and those in the follow list sealed to an identity held here (as Dub keeps it, with the names given there: people cMIP draft 2). <button class="quiet" data-action="real-lists">Read the follow lists again</button></p>
-${s.contacts.length ? `<ul class="plain feed">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">${whence(c)}</span>`}</li>`).join('')}</ul>` : ''}
-<form id="contact-add" class="row"><input name="id" type="text" class="grow" placeholder="An identity’s ID" autocomplete="off" spellcheck="false" required><input name="name" type="text" class="pet" placeholder="Its name here" required><button type="submit">Add</button></form></section>`;
+    : '<p class="small">No contact yet: add one in Contacts, top left, or type IDs below.</p>';
 }
 
 /** "+ Found a real collective": the founder held here, the members from the contacts or typed, the rules; then a review. */
@@ -738,14 +730,14 @@ ${note('', 'How: each member reads the founding terms in plain words and signs o
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
-<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('typed')}</div>
 <h3>Who decides what</h3>
 <p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign.</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
 <label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
 <div id="e-real-review"></div>
-${contactsCard(s)}`;
+<p class="small">Your contacts are the one list, top left (Contacts): sealed to you at your homes, the same in every app. <button class="quiet" data-action="real-lists">Read the follow lists again</button></p>`;
 }
 
 /** Who has signed a proposal, who declined, who has not; for a founding, how each share travels. */
@@ -763,7 +755,7 @@ export function proposalStatus(s: State, p: RealProposal): string {
   const next =
     p.kind === 'founding'
       ? p.founded
-        ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
+        ? `<p class="small">Founded: ${who({ id: p.founded, collective: true, inline: true })}.</p>`
         : `<div class="card"><h4>Before you found: what this device will hold</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
       : p.kind === 'money'
         ? p.rotated
@@ -909,9 +901,9 @@ export function moneyCard(s: State, id: string, c: RealCollective): string {
 <span class="label">Each member’s share, in %</span>
 ${members.map((m, i) => `<label class="share">${person(s, m)} <input name="share" data-member="${e(m)}" type="number" min="0" max="100" step="0.0001" value="${i === members.length - 1 ? +(100 - even * (members.length - 1)).toFixed(4) : even}" required></label>`).join('')}
 <label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0" required>
-<label>Its split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its split service: its ID</label><div class="row tight"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('service')}</div>
 <label>The key the service made for this collective (64 hexadecimal characters, as it gives it)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false" required>
-<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea>
+<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('keepers')}</div>
 <label>How many keepers must record an act</label><input name="keepersNeeded" type="number" min="1" step="1" value="1">
 <div class="row"><button type="submit">Review it</button></div></form>`,
     false,

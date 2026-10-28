@@ -63,10 +63,14 @@ ${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}’
     .join(' ')}</td></tr>`;
 }
 
-/** The grid of a founding or a member change. `form`: the form it belongs to. */
-export function gridTable(form: string, g: Grid, name: (id: string) => string): string {
+/**
+ * The grid of a founding or a member change. `form`: the form it belongs to.
+ * `name`: a member in words, in the sentences; `head`: a member as its
+ * column shows it, its names and its short ID as a button (H106, H121).
+ */
+export function gridTable(form: string, g: Grid, name: (id: string) => string, head?: (id: string) => string): string {
   const n = g.members.length;
-  const cols = g.members.map((m) => `<th scope="col" title="${e(m)}">${e(name(m))}</th>`).join('');
+  const cols = g.members.map((m) => `<th scope="col">${head ? head(m) : e(name(m))}</th>`).join('');
   const span = `colspan="${n}"`;
   const band = (t: string) => `<tr class="band"><th class="rowname" colspan="${n + 3}">${e(t)}</th></tr>`;
   const c = g.constitution;

@@ -16,6 +16,7 @@ import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type 
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, keyChanged, rulesAsk, attachRules, rulesPart, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { actId, askNick, attachContacts, attachIds, hashButton, idButton, nameOf as nameOfNamed, namesHtml, ownId, contactsButtonFor, who as whoHtml, type Named } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -72,9 +73,41 @@ const grids = new Map<string, Grid>();
 /** The grids the person changed: until then, a founding's grid is drawn afresh for the members chosen. */
 const touched = new Set<string>();
 
-const nameOf = (id: string) => state.identities.find((i) => i.id === id)?.name ?? state.contacts.find((x) => x.id === id)?.name ?? state.collectives.find((x) => x.id === id)?.name ?? null;
-const gridName = (id: string) => nameOf(id) ?? `${id.slice(0, 8)}…`;
-const shown = (id: string) => nameOf(id) ?? shortForm(v.idForm(id));
+// ---------------------------------------------------------------- names (H96, H106)
+
+/** The names read for the IDs drawn: the nickname (sealed, the person's own), the name published; asked of the program by the kit's `attachIds`, kept for this page. */
+const namesKnown: Record<string, Named> = {};
+async function askNames(ids: string[], fresh = false): Promise<Record<string, Named>> {
+  const r = await c.ask<Record<string, Named>>('names', { ids, fresh });
+  Object.assign(namesKnown, r);
+  return r;
+}
+
+/** An ID written for people (`mid1…`), read back to its hexadecimal in the page, where a person typed or chose one; anything else as it was. The program checks it again. */
+function hexOf(x: string): string {
+  const t = x.trim().replace(/[?#].*$/, '');
+  if (/^[0-9a-f]{64}$/.test(t)) return t;
+  const m = /^mid1([qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58})$/.exec(t.toLowerCase());
+  if (!m) return x.trim();
+  const five = [...m[1].slice(0, -6)].map((ch) => 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'.indexOf(ch));
+  let acc = 0;
+  let bits = 0;
+  let out = '';
+  for (const v5 of five) {
+    acc = (acc << 5) | v5;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      out += ((acc >> bits) & 255).toString(16).padStart(2, '0');
+    }
+  }
+  return out.length === 64 ? out : x.trim();
+}
+
+/** A name for an identity, in words: the name given here, else its nickname or the name it published as read; null where none is known yet. */
+const nameOf = (id: string) => state.identities.find((i) => i.id === id)?.name ?? state.contacts.find((x) => x.id === id)?.name ?? state.collectives.find((x) => x.id === id)?.name ?? nameOfNamed(namesKnown[id]) ?? null;
+/** In words where no button can be (a sentence, a button's label): never a bare short ID (H121). */
+const shown = (id: string) => nameOf(id) ?? 'an identity with no name here';
 
 /** The members a form names now: the founder first, then the boxes ticked, then the IDs typed. */
 function formMembers(fid: string): string[] {
@@ -82,7 +115,7 @@ function formMembers(fid: string): string[] {
   if (!form) return [];
   const founder = (form.elements.namedItem('founder') as HTMLSelectElement | null)?.value;
   const picked = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
-  const typed = String((form.elements.namedItem('typed') as HTMLTextAreaElement | null)?.value ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  const typed = String((form.elements.namedItem('typed') as HTMLTextAreaElement | null)?.value ?? '').split(/\n+/).map((x) => hexOf(x)).filter(Boolean);
   return [...new Set([...(founder ? [founder] : []), ...picked, ...typed])];
 }
 
@@ -90,7 +123,8 @@ function drawGrid(fid: string): void {
   const g = grids.get(fid);
   const box = $(`e-grid-${fid}`);
   if (!g || !box) return;
-  box.innerHTML = gridTable(fid, g, gridName);
+  // H106, H121: each member's column shows its names and its short ID, a button; the sentences name it in words (its column's number where no name is known).
+  box.innerHTML = gridTable(fid, g, (id) => nameOf(id) ?? `member ${g.members.indexOf(id) + 1}`, (id) => whoHtml({ id, named: namesKnown[id] ?? null }));
 }
 
 /** The grid follows the members chosen: new columns empty (the constitution's box filled where every member had one), removed ones gone. */
@@ -354,8 +388,24 @@ const drawn = new Map<string, Drawn>();
 
 const who = (id: string, o: { name?: string | null; collective?: boolean } = {}): KitWho => {
   const form = v.idForm(id);
-  return { id, form, link: form, name: o.name ?? nameOf(id), me: id === state.acting, collective: o.collective, followed: state.contacts.some((x) => x.id === id) };
+  const name = o.name ?? nameOf(id);
+  // H96: its names as read where they are; else the name given here first, the published one read once the cards are drawn (`nameCards`).
+  return { id, form, link: form, name, named: namesKnown[id] ? { ...namesKnown[id], nick: namesKnown[id].nick ?? name } : { nick: name, published: { state: 'loading' } }, me: id === state.acting, collective: o.collective, followed: state.contacts.some((x) => x.id === id) };
 };
+
+/** H96, H106: the cards drawn get their signers' names as read (the nickname, the published name faint), in place. */
+async function nameCards(root: HTMLElement) {
+  const acts = [...root.querySelectorAll<HTMLElement>('.k-act[data-k-signer]')];
+  const ids = [...new Set(acts.map((a) => a.dataset.kSigner!))].filter((x) => /^[0-9a-f]{64}$/.test(x));
+  if (!ids.length) return;
+  const got = await askNames(ids).catch(() => ({}) as Record<string, Named>);
+  for (const a of acts) {
+    const n = got[a.dataset.kSigner!];
+    const box = a.querySelector(':scope > .k-signer .k-names');
+    if (!n || !box || !a.isConnected) continue;
+    box.innerHTML = namesHtml({ nick: n.nick ?? drawn.get(a.dataset.kAct!)?.act.signer.name ?? null, published: n.published }, { retry: false });
+  }
+}
 
 /** A card drawn, and kept for its menus. */
 function cardOf(a: Omit<KitAct, 'form'> & { form?: string }, extra: Omit<Drawn, 'act'> = {}): string {
@@ -379,14 +429,113 @@ const host: CardHost = {
 attachCards(app, host);
 attachClosing();
 
+// ---------------------------------------------------------------- IDs and contacts (H96, H100, H106, H109, H119, H121)
+
+/** An identity's profile, as Edubba has one: its ID whole, Copy ID, Follow; its feed and messages are Dub's, its record Kišib's. */
+function profileOf(id: string, collective = false) {
+  const form = v.idForm(id);
+  const followed = state.contacts.some((x) => x.id === id) || contactsUi.list().some((x) => x.id === id);
+  popup.show(nameOf(id) ?? 'An identity', v.inside(`${whoHtml({ id, named: namesKnown[id] ?? null, collective })}<p class="small">${collective ? 'A collective' : 'An identity'}: <code>${v.e(form)}</code></p><div class="row"><button data-action="copy" data-text="${v.e(form)}">Copy ID</button>${followed || id === state.acting ? '' : `<button data-action="contact-add-from" data-id="${v.e(id)}">Follow: add to contacts</button>`}</div><p class="small">Its feed and messages are in Dub; its full record is in Kišib.</p>`));
+}
+
+/** Follow: add to contacts (H109): a nickname asked at once, optional ("only you see it"); sealed to the identity in use with its contacts. */
+async function follow(id: string, name: string | null) {
+  const nick = await askNick(app, { title: `Follow ${name ?? 'this identity'}: add to contacts`, yes: 'Add to contacts', skip: 'Add without a nickname' });
+  if (nick === undefined) return;
+  popup.close();
+  const r = await busy('Sealing your contacts at your homes…', () => c.ask<{ lines: Line[] }>('contact add', { id, nick: nick ?? '' }));
+  if (!r) return;
+  await contactsChanged(id);
+  say('done', `<strong>Added to your contacts.</strong> ${v.lines(r.lines)}`);
+}
+
+/** After the one list changed: what is drawn from it (the member picks, the names) read again; a founding or a member change being filled is kept. */
+async function contactsChanged(id?: string) {
+  if (id) delete namesKnown[id];
+  else for (const k of Object.keys(namesKnown)) delete namesKnown[k];
+  state = await c.ask<State>('state');
+  await contactsUi.refresh();
+  const fid = $('real-found') ? 'real-found' : $('real-change') ? 'real-change' : null;
+  if (!fid) return;
+  const picked = new Set([...app.querySelectorAll<HTMLInputElement>(`#${fid} input[name=member]:checked`)].map((x) => x.value));
+  const values = new Map([...app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`#${fid} input:not([type=checkbox]),#${fid} textarea,#${fid} select`)].map((x) => [x.name, x.value]));
+  const grid = grids.get(fid);
+  const was = touched.has(fid);
+  await fill();
+  if (grid) grids.set(fid, grid);
+  if (was) touched.add(fid);
+  for (const x of app.querySelectorAll<HTMLInputElement>(`#${fid} input[name=member]`)) x.checked = picked.has(x.value);
+  for (const [n, val] of values) {
+    const x = $<HTMLFormElement>(fid)?.elements.namedItem(n) as HTMLInputElement | null;
+    if (x && 'value' in x) x.value = val;
+  }
+  await syncGrid(fid);
+}
+
+// Every ID drawn: its names asked of the program, its short form a button (one tap whole, a second copies, Open profile beside a person's).
+attachIds(app, { names: (ids, fresh) => askNames(ids, !!fresh), profile: (id) => profileOf(id) });
+// Contacts, top left: the one list (H100), nicknames (H109), and the Contacts button beside every field taking an ID (H119).
+const contactsUi = attachContacts(app, {
+  app: 'Edubba',
+  ask: async <T,>(op: string, a?: Record<string, unknown>) => {
+    const r = await c.ask<T>(op, a);
+    if (op.startsWith('contact ')) await contactsChanged(typeof a?.id === 'string' && /^[0-9a-f]{64}$/.test(a.id) ? a.id : undefined).catch(() => undefined);
+    return r;
+  },
+  profile: (id) => profileOf(id),
+  said: (kind, html) => say(kind, html),
+});
+
+/**
+ * H121: a short ID in words the program or another app's reading wrote (a
+ * fingerprint `abcd1234…ef12`, a `mid1abc…xyz` or `mact1abc…xyz`), in
+ * read-backs, agreements and To sign, made a button where the page knows
+ * the ID it shortens: one tap shows it whole, a second copies it. One the
+ * page does not know stays as written.
+ */
+function tapIds(root: Node) {
+  if (!state) return;
+  const acts = new Set([...state.proposals.map((p) => p.act), ...drawn.keys()]);
+  const ids = new Set([...state.identities.map((i) => i.id), ...state.contacts.map((x) => x.id), ...state.collectives.map((x) => x.id), ...state.proposals.flatMap((p) => [p.founder, ...p.signers, ...(p.collective ? [p.collective] : [])]), ...Object.keys(namesKnown)]);
+  const all = [...ids, ...acts].filter((x) => /^[0-9a-f]{64}$/.test(x));
+  const SHORT = /([0-9a-f]{8})…([0-9a-f]{4})|(m(?:id|act)1[0-9a-z]{3})…([0-9a-z]{3})/g;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const found: Text[] = [];
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    const el = n.parentElement;
+    if (!el || el.closest('button, .k-idbtn, textarea, input, select, option, .k-me, .k-idrow, script, style') || !/…/.test(n.textContent ?? '')) continue;
+    SHORT.lastIndex = 0;
+    if (SHORT.test(n.textContent ?? '')) found.push(n as Text);
+  }
+  for (const t of found) {
+    const html = v.e(t.textContent ?? '').replace(SHORT, (whole, h8: string, h4: string, f: string, f3: string) => {
+      const id = all.find((x) => (h8 ? x.startsWith(h8) && x.endsWith(h4) : (acts.has(x) ? v.formOf(x) : v.idForm(x)).startsWith(f) && (acts.has(x) ? v.formOf(x) : v.idForm(x)).endsWith(f3)));
+      if (!id) return whole;
+      return acts.has(id) && !ids.has(id) ? actId(id) : idButton(v.idForm(id), { person: id });
+    });
+    if (html === v.e(t.textContent ?? '')) continue;
+    const span = document.createElement('span');
+    span.innerHTML = html;
+    t.replaceWith(...span.childNodes);
+  }
+}
+new MutationObserver((ms) => {
+  for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) tapIds(n.nodeType === 3 ? n.parentNode ?? n : n);
+}).observe(app, { childList: true, subtree: true });
+
+// H119: a contact chosen for "Shared with" is written by its nickname: a person is named there by your name for them, never by an ID alone.
+app.addEventListener('input', (ev) => {
+  const el = ev.target as HTMLInputElement;
+  if (!/^with\d$/.test(el.name) || !/^mid1/.test(el.value.trim())) return;
+  const nick = contactsUi.list().find((x) => x.form === el.value.trim())?.name;
+  if (nick) el.value = nick;
+});
+
 async function choose(key: string, a: KitAct) {
   const d = drawn.get(a.id);
   switch (key) {
-    case 'profile': {
-      const w = a.signer;
-      popup.show(w.name ?? shortForm(w.form), v.inside(`<p class="small">${w.collective ? 'A collective' : 'An identity'}: <code>${v.e(w.form)}</code></p><div class="row"><button data-action="copy" data-text="${v.e(w.form)}">Copy ID</button>${state.contacts.some((x) => x.id === w.id) ? '' : `<button data-action="contact-add-from" data-id="${v.e(w.id)}">Follow: add to contacts</button>`}</div><p class="small">Its feed and messages are in Dub; its full record is in Kišib.</p>`));
-      return;
-    }
+    case 'profile':
+      return profileOf(a.signer.id, !!a.signer.collective);
     case 'open':
     case 'why': {
       const id = key === 'open' ? (a.answers?.id ?? a.corrects?.id ?? '') : a.id;
@@ -401,11 +550,12 @@ async function choose(key: string, a: KitAct) {
       return;
     }
     case 'follow':
-      return void popup.show('Follow: add to contacts', v.inside(`<form id="contact-add" class="row"><input name="id" type="hidden" value="${v.e(a.signer.id)}"><input name="name" type="text" class="pet" placeholder="Its name here" value="${v.e(a.signer.name ?? '')}" required><button type="submit" class="primary">Add</button></form><p class="small">Edubba’s contacts are kept ${web ? 'in this browser' : 'on this Mac'} and never published; Dub’s follow list is read into them.</p>`));
+      return follow(a.signer.id, a.signer.name);
     case 'unfollow':
       return void (await busy('Removing…', async () => {
-        await c.ask('real contact remove', { id: a.signer.id });
-        await refresh();
+        await c.ask('contact remove', { id: a.signer.id });
+        await contactsChanged(a.signer.id);
+        await draw();
       }));
     case 'mute':
     case 'unmute':
@@ -421,7 +571,7 @@ async function choose(key: string, a: KitAct) {
       return;
     }
     case 'anchor': {
-      popup.show('Anchor it', v.inside(`<ul class="say">${v.ANCHOR_SAY.map((t) => `<li>${v.e(t)}</li>`).join('')}</ul><form id="anchor-any" data-act="${v.e(a.id)}"><label>The anchoring service: its ID</label><div class="row"><input name="service" class="grow" autocomplete="off" spellcheck="false" required><button type="submit">Read its offer</button></div></form><div id="e-anchor-any"></div>`));
+      popup.show('Anchor it', v.inside(`<ul class="say">${v.ANCHOR_SAY.map((t) => `<li>${v.e(t)}</li>`).join('')}</ul><form id="anchor-any" data-act="${v.e(a.id)}"><label>The anchoring service: its ID</label><div class="row"><input name="service" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('service')}<button type="submit">Read its offer</button></div></form><div id="e-anchor-any"></div>`));
       return;
     }
     case 'correct': {
@@ -471,6 +621,7 @@ async function draw() {
   if (!tab) {
     app.innerHTML = v.home(state, as, alarms());
     syncKey();
+    void syncHeld();
     return;
   }
   if (!v.tabsHere().includes(tab)) tab = 'collectives';
@@ -480,7 +631,22 @@ async function draw() {
   const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount, deals: pubCache?.deals?.filter((d) => d.state === 'waiting').length || undefined, dealsToSign: dealsToSignCount };
   app.innerHTML = v.tabPage(state, tab, part, k, as, alarms(), counts());
   syncKey();
+  void syncHeld();
   await fill();
+}
+
+/** H96: the identities held whose published names were not read yet when `state` answered: asked, then the top right (and the panel, if open) drawn again. */
+async function syncHeld() {
+  const ids = Object.entries(state.held ?? {})
+    .filter(([, h]) => h.named.published?.state === 'loading')
+    .map(([id]) => id);
+  if (!ids.length) return;
+  const got = await askNames(ids).catch(() => null);
+  if (!got) return;
+  for (const id of ids) if (state.held?.[id] && got[id]?.published) state.held[id].named = { ...state.held[id].named, published: got[id].published };
+  const me = app.querySelector('.k-top .k-me');
+  if (me) me.outerHTML = v.me(state, as);
+  if (panelOpen()?.dataset.kPanel === 'identity') redrawPanel(panelHtml());
 }
 
 const pane = () => $('pane');
@@ -523,6 +689,7 @@ async function fill() {
     }
     await after();
     void timeCards(p);
+    void nameCards(p);
   } catch (err) {
     if (mine !== filling) return;
     p.innerHTML = '';
@@ -584,13 +751,13 @@ async function agentsPart(): Promise<string> {
       .filter((m) => m.act)
       .map((m) => ({
         time: m.time,
-        html: cardOf({ id: m.act!, signer: who(m.from === 'owner' ? d.owner! : agent, { name: m.from === 'owner' ? shown(d.owner!) : name }), kind: m.from === 'owner' ? 'sealed prompt' : 'sealed answer', text: m.text, labels: m.note ? [{ text: m.note }] : [], verified: true }),
+        html: cardOf({ id: m.act!, signer: who(m.from === 'owner' ? d.owner! : agent, { name: m.from === 'owner' ? nameOf(d.owner!) : name }), kind: m.from === 'owner' ? 'sealed prompt' : 'sealed answer', text: m.text, labels: m.note ? [{ text: m.note }] : [], verified: true }),
       }));
     for (const h of d.history)
       if (h.act && !inTalk.has(h.act) && h.verdict !== 'prompted')
         items.push({
           time: h.time,
-          html: cardOf({ id: h.act, signer: who(h.signer, { name: h.signer === agent ? name : shown(h.signer) }), kind: h.verdict === 'under grant' ? 'under a grant' : h.verdict, text: h.text ?? h.title, labels: [{ text: `what it did: ${h.title}` }, ...(h.cause ? [{ text: `because: ${h.cause}` }] : [])], verified: true }),
+          html: cardOf({ id: h.act, signer: who(h.signer, { name: h.signer === agent ? name : nameOf(h.signer) }), kind: h.verdict === 'under grant' ? 'under a grant' : h.verdict, text: h.text ?? h.title, labels: [{ text: `what it did: ${h.title}` }, ...(h.cause ? [{ text: `because: ${h.cause}` }] : [])], verified: true }),
         });
     items.sort((x, y) => x.time - y.time);
     for (const x of items) cards.push(x.html);
@@ -688,7 +855,7 @@ async function collectivesPart(): Promise<string> {
             unstamped: x.when ? null : NOT_STAMPED,
             hint: x.hint ?? null,
             html: x.pictures.map((src) => `<figure><img alt="A picture of the post" src="${v.e(src)}"></figure>`).join(''),
-            labels: [...(x.corrects ? [{ text: `correction of ${shortForm(v.formOf(x.corrects))}` }] : []), ...(x.correctedBy.length ? [{ text: `corrected by ${x.correctedBy.map((y) => shortForm(v.formOf(y))).join(', ')}` }] : [])],
+            labels: [...(x.corrects ? [{ text: `correction of ${shortForm(v.formOf(x.corrects))}`, html: `correction of ${actId(x.corrects)}` }] : []), ...(x.correctedBy.length ? [{ text: `corrected by ${x.correctedBy.map((y) => shortForm(v.formOf(y))).join(', ')}`, html: `corrected by ${x.correctedBy.map((y) => actId(y)).join(', ')}` }] : [])],
             corrects: x.corrects ? { id: x.corrects, signer: id } : null,
             verified: x.standing === 'valid',
             alarm: x.standing === 'valid' ? null : x.standing,
@@ -711,7 +878,7 @@ async function collectivesPart(): Promise<string> {
     };
     const resigned = rc.resigned ?? [];
     return `${head}${v.inside(`<h3>Its members (${rc.members.length})</h3><ul class="plain">${rc.members.map((m) => `<li>${v.person(state, m)}${m === rc.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
-<p class="small">Its chain key: one share per member, kept on paper, any ${rc.threshold} rebuilding it. ${rc.fingerprint ? `Dealing fingerprint <code>${v.e(rc.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s app.'} No app holds a share.</p>
+<p class="small">Its chain key: one share per member, kept on paper, any ${rc.threshold} rebuilding it. ${rc.fingerprint ? `Dealing fingerprint ${hashButton(rc.fingerprint)}.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s app.'} No app holds a share.</p>
 ${rc.pending ? v.note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}
 ${resigned.length ? `<section class="card" id="e-resigned"><h3>Leaving alone (rule 70)</h3><ul class="plain">${resigned.map((r) => `<li>${v.person(state, r.member)} resigned, act ${v.fp(r.act)}. ${r.registered ? `Registered at the collective’s line ${v.fp(r.registered)}: now change its members without them, below.` : `<button data-action="real-register-resignation" data-collective="${v.e(id)}" data-act="${v.e(r.act)}">Register a resignation: at the collective’s line</button>`}</li>`).join('')}</ul><p class="small">A member can always leave alone: nobody else signs a resignation. It takes effect at the collective’s line registering it.</p></section>` : ''}
 ${v.sharesHere(state, id, rc.toShow)}<div id="e-shares-here"></div>
@@ -720,7 +887,7 @@ ${v.foldCard('e-real-change', 'collective-change', 'Change its members', `<form 
 <p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app, each naming a new key of their own; then it waits for Kišib.</p>
 <div class="picks">${rc.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${v.e(m)}" checked> ${v.person(state, m)}</label>`).join('')}</div>
 ${v.contactPicks(state, [], rc.members)}
-<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('typed')}</div>
 <h3>Who decides what, after the change</h3>
 <div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
@@ -783,7 +950,7 @@ async function publishingPart(): Promise<string> {
           signer: who(w.as, { collective: w.collective }),
           kind: `protected ${w.media === 'picture' ? 'picture' : w.media === 'video' ? 'film' : w.media === 'audio' ? 'recording' : 'text'}`,
           text: w.title,
-          html: `<div class="k-small k-soft">${w.price.toLocaleString('en')} ${v.e(p.unit)} · ${v.e(w.words)}<br>${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${v.e(shortForm(v.formOf(w.offer)))}.</div>`,
+          html: `<div class="k-small k-soft">${w.price.toLocaleString('en')} ${v.e(p.unit)} · ${v.e(w.words)}<br>${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${actId(w.offer)}.</div>`,
           verified: true,
         }),
       )
@@ -796,13 +963,13 @@ async function publishingPart(): Promise<string> {
     type Contested = { by: Record<string, Record<string, v.ContestsBeside>>; problems: string[] };
     const contested: Contested = sold.length ? await c.ask<Contested>('publishing sales contests').catch((e) => ({ by: {}, problems: [errorOf(e)] })) : { by: {}, problems: [] };
     const rows = sold
-      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${v.e(shown(buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(buyer)))}</span></span><span class="k-r">key delivered · ${v.e(shortForm(v.formOf(act)))}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.publication]?.[buyer])}`).join('')}</div></div>`)
+      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${whoHtml({ id: buyer, inline: true })}</span><span class="k-r">key delivered · ${actId(act)}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.publication]?.[buyer])}`).join('')}</div></div>`)
       .join('');
     // Shared works (this round): the sales told to you as a party of a deal or a member of a collective, the buyer's contest beside each (decided with the MOR lead, 23 October 2026).
     type SharedSales = { sales: { kind: 'deal' | 'collective'; title: string; buyer: string; receipt: string; claim: string | null; beside: v.ContestsBeside }[]; problems: string[] };
     const sh = await c.ask<SharedSales>('publishing shared sales').catch((e) => ({ sales: [], problems: [errorOf(e)] }) as SharedSales);
     const shared = sh.sales
-      .map((x) => `<div class="k-box"><h4>${v.e(x.title)} <span class="k-small k-soft">${x.kind === 'deal' ? 'a shared deal' : 'a collective'}</span></h4><div class="k-list"><div><span>Bought by ${v.e(shown(x.buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(x.buyer)))}</span></span><span class="k-r">receipt ${v.e(shortForm(v.formOf(x.receipt)))}${x.claim ? ` · their claim ${v.e(shortForm(v.formOf(x.claim)))}` : ''}</span></div>${v.contestsBeside(x.beside)}</div></div>`)
+      .map((x) => `<div class="k-box"><h4>${v.e(x.title)} <span class="k-small k-soft">${x.kind === 'deal' ? 'a shared deal' : 'a collective'}</span></h4><div class="k-list"><div><span>Bought by ${whoHtml({ id: x.buyer, inline: true })}</span><span class="k-r">receipt ${actId(x.receipt)}${x.claim ? ` · their claim ${actId(x.claim)}` : ''}</span></div>${v.contestsBeside(x.beside)}</div></div>`)
       .join('');
     return v.salesPane(rows, [...contested.problems, ...sh.problems], shared);
   }
@@ -816,7 +983,7 @@ async function publishingPart(): Promise<string> {
           signer: who(state.acting ?? ''),
           kind: `a shared ${d.kind === 'work' ? 'file' : d.kind}`,
           text: d.title,
-          html: `<div class="k-small k-soft">${d.shares.map(([id, n]) => `${v.e(shown(id))} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')}${d.referral ? ` · ${(d.referral / 10_000).toLocaleString('en')}% off the top to a reposter` : ''}<br>Its own payee ${v.e(shortForm(v.idForm(d.payee)))} · its split service ${v.e(shown(d.service))}<br>${d.state === 'announced' ? 'Every person signed: announced.' : `Waiting: ${v.e(d.signed)}. Nothing is announced yet.`}</div>`,
+          html: `<div class="k-small k-soft">${d.shares.map(([id, n]) => `${whoHtml({ id, inline: true })} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')}${d.referral ? ` · ${(d.referral / 10_000).toLocaleString('en')}% off the top to a reposter` : ''}<br>Its own payee ${idButton(v.idForm(d.payee), { person: d.payee })} · its split service ${whoHtml({ id: d.service, inline: true })}<br>${d.state === 'announced' ? 'Every person signed: announced.' : `Waiting: ${v.e(d.signed)}. Nothing is announced yet.`}</div>`,
           labels: d.state === 'waiting' ? [{ text: 'waiting for signatures', tone: 'warn' as const }] : [{ text: 'announced' }],
           verified: d.state === 'announced',
         }),
@@ -889,7 +1056,7 @@ async function vowsPart(): Promise<string> {
               text: s.promise ? `Not kept: ${s.promise}` : s.state === 'confirmed' ? 'It was kept.' : s.amount ? `Bought for ${s.amount.value.toLocaleString('en')}.` : 'Bought.',
               answers: { id: vw.name, signer: vw.signer },
               labels: [
-                { text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}` },
+                { text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}`, html: `↳ answers ${whoHtml({ id: vw.signer, inline: true })}’s vow · ${actId(vw.name)}` },
                 // S7e (Q53): a sale whose answer rests on a rail answer not given here reads unknown, never pending or paid.
                 ...v.saleUnknown(s),
                 // F386: a contest in the purchase's form marks no sale; shown beside it, so it is not lost (and not counted with the vow's own form).
@@ -1086,6 +1253,12 @@ async function picker(target: string, path?: string) {
 async function refresh() {
   state = await c.ask<State>('state');
   await draw();
+}
+
+/** H88: one's own ID, whole, with Copy ID and Share your ID link, at the end of making or bringing an identity. */
+function ownIdNow(id: string): string {
+  const link = state.held?.[id]?.link;
+  return link ? `<p class="small">Its ID, to give to whoever may write to it:</p>${ownId({ form: v.idForm(id), link })}` : '';
 }
 
 async function afterDone(d: Done | undefined) {
@@ -1292,8 +1465,7 @@ app.addEventListener('click', async (ev) => {
       return;
     }
     case 'contact-add-from':
-      popup.replace(v.inside(`<form id="contact-add" class="row"><input name="id" type="hidden" value="${v.e(d.id ?? '')}"><input name="name" type="text" class="pet" placeholder="Its name here" required><button type="submit" class="primary">Add</button></form>`));
-      return;
+      return void (await follow(d.id ?? '', nameOf(d.id ?? '')));
     case 'runner-pair': {
       const r = await busy('', () => c.ask<{ code: string }>('runner pair'));
       if (r) await runnerPart(b.closest<HTMLElement>('#first-part, .k-mbody')!);
@@ -1453,9 +1625,6 @@ app.addEventListener('click', async (ev) => {
       }
       return;
     }
-    case 'contact-remove':
-      if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
-      return;
     case 'pay-member': {
       const f = $<HTMLFormElement>('pay-member');
       const to = f?.elements.namedItem('to') as HTMLInputElement | null;
@@ -1650,7 +1819,8 @@ app.addEventListener('submit', async (ev) => {
       if (r) {
         popup.close();
         await useIdentity(r.acts[0]);
-        await afterDone(r);
+        await refresh();
+        say('done', `${v.done(r)}${ownIdNow(r.acts[0])}`);
       }
       return;
     }
@@ -1659,7 +1829,8 @@ app.addEventListener('submit', async (ev) => {
       if (r) {
         popup.close();
         await useIdentity(r.acts[0]);
-        await afterDone(r);
+        await refresh();
+        say('done', `${v.done(r)}${ownIdNow(r.acts[0])}`);
       }
       return;
     }
@@ -1759,7 +1930,7 @@ app.addEventListener('submit', async (ev) => {
       const r = await busy('Signing the witness act…', () => ask<{ id: string }>('witness', { identity: form.dataset.identity, act: form.dataset.act, shown: WITNESS_EXPLANATION, typed: words(d.get('typed')) }), form);
       if (r) {
         popup.close();
-        say('done', `<strong>Witness act signed and sent.</strong> Act <code>${v.e(shortForm(v.formOf(r.id)))}</code>.`);
+        say('done', `<strong>Witness act signed and sent.</strong> Act ${actId(r.id)}.`);
       }
       return;
     }
@@ -1787,22 +1958,6 @@ app.addEventListener('submit', async (ev) => {
         popup.close();
         await fill();
         say('done', v.lines(r.lines));
-      }
-      return;
-    }
-    case 'contact-add': {
-      const r = await busy('Adding…', () => c.ask('real contact add', { id: words(d.get('id')), name: words(d.get('name')) }), form);
-      if (!r) return;
-      state = await c.ask<State>('state');
-      if (popup.open && form.closest('.k-modal')) return void (popup.close(), say('done', 'Added to your contacts.'));
-      // A founding form being filled is kept: only the contacts are drawn again.
-      const picked = new Set([...app.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value));
-      const values = new Map([...app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('#real-found input:not([type=checkbox]),#real-found textarea,#real-found select')].map((x) => [x.name, x.value]));
-      await fill();
-      for (const x of app.querySelectorAll<HTMLInputElement>('input[name=member]')) if (picked.has(x.value)) x.checked = true;
-      for (const [n, val] of values) {
-        const x = $<HTMLFormElement>('real-found')?.elements.namedItem(n) as HTMLInputElement | null;
-        if (x) x.value = val;
       }
       return;
     }
@@ -1920,6 +2075,12 @@ app.addEventListener('submit', async (ev) => {
       const at = words(d.get('at'));
       if (!at) return;
       const relay = /^https?:\/\//.test(at);
+      // An ID typed or chosen from Contacts (H119): kept by its hexadecimal, drawn with its names (H96).
+      const hex = relay ? '' : hexOf(at);
+      if (/^[0-9a-f]{64}$/.test(hex)) {
+        keepPoints([...points().filter((x) => x.key !== hex), { key: hex, label: nameOf(hex) ?? 'an identity', relay: false }]);
+        return void (await fill());
+      }
       const label = relay ? at.replace(/^https?:\/\//, '').replace(/\/$/, '') : (state.identities.find((i) => i.name === at || i.id === at)?.name ?? state.contacts.find((x) => x.name === at)?.name ?? (at.length > 16 ? shortForm(at) : at));
       const key = relay ? at : (state.identities.find((i) => i.name === at)?.id ?? state.contacts.find((x) => x.name === at)?.id ?? state.collectives.find((x) => x.name === at)?.id ?? at);
       keepPoints([...points().filter((x) => x.key !== key), { key, label, relay }]);

@@ -54,6 +54,7 @@ import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { readSealedList, type Followed } from '../../dub/src/people.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Store } from './store.ts';
+import { CARRIED } from './known.ts';
 
 const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
@@ -212,9 +213,25 @@ export class Real {
     return existsSync(this.contactsPath()) ? (JSON.parse(readFileSync(this.contactsPath(), 'utf8')) as { id: string; name: string }[]) : [];
   }
 
-  /** The contacts list: added here, then those Edubba's agents follow (each once). */
+  /** Edubba's own list from before (H100), as kept here: what `known.ts` carries into the sealed lists, once. */
+  macList(): { id: string; name: string }[] {
+    return this.ownContacts();
+  }
+
+  /** H100: Edubba's own list was carried into the sealed lists (`known.ts`): only they are read from then on. */
+  retired(): boolean {
+    const p = this.store.path(CARRIED);
+    return existsSync(p) && (JSON.parse(readFileSync(p, 'utf8')) as { done?: boolean }).done === true;
+  }
+
+  /** The follow list sealed to an identity held here, as just read or changed (`known.ts`). */
+  setListed(identity: string, follows: Followed[]): void {
+    this.listed.set(identity, follows);
+  }
+
+  /** The contacts list: added here (until carried into the sealed lists, H100), then those Edubba's agents follow, then the sealed lists (each once). */
   contacts(): Contact[] {
-    const out: Contact[] = this.ownContacts().map((c) => ({ ...c, from: 'added' as const }));
+    const out: Contact[] = this.retired() ? [] : this.ownContacts().map((c) => ({ ...c, from: 'added' as const }));
     const names = new Map(this.store.book().identities.map((i) => [i.id, i.name]));
     for (const agent of this.store.agentIds()) {
       for (const f of this.store.people(agent).follows) {

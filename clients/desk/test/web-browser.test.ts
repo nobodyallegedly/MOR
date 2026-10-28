@@ -408,11 +408,18 @@ test('a real collective founded in the web client, its members made in Dub on th
   await part(ed, '+ Found a collective');
   await banner(ed, 'the founding form');
   assert.match(await ed.locator('#pane').innerText(), /This is a web page/);
+  // H100, H109: contacts are the one list, top left, sealed to the identity in use; each added by its ID with a nickname.
   for (const [id, name] of [[anaId, 'Ana'], [boId, 'Bo'], [cyId, 'Cy']]) {
-    await ed.fill('#contact-add input[name=id]', shownId(id));
-    await ed.fill('#contact-add input[name=name]', name);
-    await ed.click('#contact-add button[type=submit]');
-    await ed.locator('#e-contacts li', { hasText: name }).waitFor({ timeout: 30_000 });
+    await ed.click('[data-k-open="contacts"]');
+    const panel = ed.locator('.k-panel[data-k-panel="contacts"]');
+    await panel.locator('input[name=contact-id]').fill(shownId(id));
+    await panel.locator('input[name=contact-nick]').fill(name);
+    await panel.getByRole('button', { name: 'Add to contacts' }).click();
+    await ed.locator(`.k-panel[data-k-panel="contacts"] [data-k-contact="${id}"]`, { hasText: name }).waitFor({ timeout: 60_000 });
+    // What was said, top centre, closed first: it lies over the panel's ×.
+    await ed.locator('#e-status [data-action=status-close]').click();
+    await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-close]').click();
+    await ed.locator(`#real-found input[name=member][value="${id}"]`).waitFor({ timeout: 30_000 });
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
   for (const id of [anaId, boId]) await ed.check(`#real-found input[name=member][value="${id}"]`);

@@ -293,12 +293,18 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await part(ed, '+ Found a collective');
   await ed.locator('#pane', { hasText: 'each member is a person with their own identity, on their own device' }).waitFor();
   await shot(ed, 'edubba-collectives-list');
-  await ed.locator('#e-contacts').waitFor();
+  // H100, H109: contacts are the one list, top left, sealed to the identity in use; each added by ID with a nickname.
   for (const [id, name] of [[webId, 'Ana (web)'], [macId, 'Bo (Mac)']]) {
-    await ed.fill('#contact-add input[name=id]', id);
-    await ed.fill('#contact-add input[name=name]', name);
-    await ed.click('#contact-add button[type=submit]');
-    await ed.locator('#e-contacts li', { hasText: name }).waitFor({ timeout: 30_000 });
+    await ed.click('[data-k-open="contacts"]');
+    const panel = ed.locator('.k-panel[data-k-panel="contacts"]');
+    await panel.locator('input[name=contact-id]').fill(id);
+    await panel.locator('input[name=contact-nick]').fill(name);
+    await panel.getByRole('button', { name: 'Add to contacts' }).click();
+    await ed.locator(`.k-panel[data-k-panel="contacts"] [data-k-contact="${id}"]`, { hasText: name }).waitFor({ timeout: 60_000 });
+    // What was said, top centre, closed first: it lies over the panel's ×.
+    await ed.locator('#e-status [data-action=status-close]').click();
+    await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-close]').click();
+    await ed.locator(`#real-found input[name=member][value="${id}"]`).waitFor({ timeout: 30_000 });
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
   for (const id of [webId, macId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
@@ -495,9 +501,12 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await mac.dub.follow({ id: 'ab'.repeat(32), name: 'Ezra, met in Dub' });
   await use(ed, nobody, 'Nobody, allegedly');
   await part(ed, '+ Found a collective');
-  await ed.click('#e-contacts [data-action=real-lists]');
-  await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).innerText(), /in Nobody, allegedly’s follow list/);
+  await ed.click('#pane [data-action=real-lists]');
+  // The one list (H100): in Contacts, top left, with the nickname given in Dub; and among the members to choose from.
+  await ed.locator('#real-found label.check', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
+  assert.match(await ed.locator('#real-found label.check', { hasText: 'Ezra, met in Dub' }).innerText(), /in Nobody, allegedly’s follow list/);
+  await ed.click('[data-k-open="contacts"]');
+  await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-contact]', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
   await shot(ed, 'edubba-contacts-from-list');
   assert.deepEqual(problems, []);
 });

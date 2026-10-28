@@ -180,6 +180,8 @@ export interface State {
   acting: string | null;
   /** Rules I follow (H93): the rules Edubba runs, and where each is followed, for the identity in use. */
   rules: import('../../../kit/src/engine/rules.ts').RulesShown | null;
+  /** H88, H96: each identity held here with its names (the name Edubba gives it as a nickname, the name it published, or why not yet) and its ID link. */
+  held?: Record<string, { named: import('../../../kit/src/html.ts').Named; link: string }>;
   /** The collectives under each identity held here, for the identity panel (decided): those it is a member of, founded here, and those brought naming it. */
   under: Record<string, { id: string; name: string; real: boolean }[]>;
   /** The web client (for testing only). */

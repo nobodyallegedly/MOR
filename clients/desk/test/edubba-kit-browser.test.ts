@@ -328,9 +328,9 @@ test('the identity panel: identities, + Add with three ways, the menu, Remove sa
   await page.locator('.k-pop button', { hasText: 'Line and homes' }).waitFor();
   await shot(page, 'mac-51-identity-menu');
   await page.locator('.k-pop button', { hasText: 'Remove from Edubba' }).click();
-  await page.locator('.k-panel [data-k-remove]', { hasText: 'Max itself is not touched' }).waitFor();
+  await page.locator('[data-k-confirm] [data-k-remove]', { hasText: 'Max itself is not touched' }).waitFor();
   await shot(page, 'mac-52-remove-said');
-  await page.click('.k-panel [data-k-remove-no]');
+  await page.click('[data-k-confirm] [data-k-remove-no]');
   await page.click('.k-panel [data-action=this-app]');
   await page.locator('.k-modal #desk-settings').waitFor();
   await shot(page, 'mac-53-this-app');
