@@ -588,7 +588,7 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
 <div class="k-row"><input name="total" inputmode="numeric" placeholder="In all, for the whole lane (optional)" class="k-grow"></div>
 <label>Until (optional), judged on a timestamp clock: its ID${s.identity!.laneClock ? `, prefilled with ${e(s.identity!.laneClock.name)}` : ''}</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.laneClock?.id ?? '')}"></div>
-<p class="k-small k-soft">The clock is written in the lane’s grant, so the lane’s words name it: change it here before asking, if you wish.</p>
+<p class="k-small k-soft">The clock is written in the lane’s grant, so the lane’s words name it: change it here before asking, if you wish. With an Until, a payment under the lane counts for whoever you pay only once that clock has stamped it (the Dubsar clock does within a minute or so): until then it waits in their Damgar, said.</p>
 <div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
 <h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }

@@ -46,7 +46,7 @@ export interface Accept {
 export interface ToSign {
   /** The act it comes from (a draft, a request, an invoice request, a claim). */
   id: string;
-  kind: 'draft' | 'request' | 'invoice' | 'address' | 'receipt' | 'lane' | 'unknown';
+  kind: 'draft' | 'request' | 'invoice' | 'address' | 'receipt' | 'lane' | 'unknown' | 'uncounted';
   from: Who;
   /** Prepared in another app: its name. */
   app: string | null;
@@ -181,7 +181,10 @@ export interface LaneShown {
   left?: Shown | null;
   over?: Shown | null;
   /** An app's payments under it, read from the acts whose keys it delivered to this identity: the record kept here (Account › Under the lanes). */
-  payments?: { key: string; to: Who; amount: Shown; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[];
+  /** Of what is spent in all: what is paid (its claim signed), and what is only asked (its invoice request signed, nothing moved yet) (H107). */
+  paid?: Shown | null;
+  asked?: Shown | null;
+  payments?: { key: string; to: Who & { name?: string | null }; amount: Shown; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[];
   /** Acts under it whose keys were not delivered here: sealed, not counted. */
   sealed?: number;
 }

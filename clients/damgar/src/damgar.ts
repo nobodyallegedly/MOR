@@ -237,6 +237,14 @@ export interface Book {
   invoices: Record<string, { from: string; found: number; stage: 'new' | 'answered' | 'refused'; payment: string | null; why: string | null }>;
   /** Money messages this Damgar cannot read (a type it does not know, a payload not as the cMIP writes it): shown unknown, never guessed (money messages cMIP, 6.1). Absent in books written before. */
   unread?: Record<string, { from: string; found: number; type: number; why: string; stage: 'new' | 'set aside' }>;
+  /**
+   * Acts signed under someone's grant (a lane) that cannot count yet: its
+   * backing unknown (H107: an expiry its clock has not placed, or a grant
+   * not found yet). Kept, shown in Waiting, To receive, as waiting to count,
+   * judged again at every look; filed once they count, set aside once they
+   * cannot (Development rule 10: unknown until then, nothing answered).
+   */
+  uncounted?: Record<string, { act: string; key?: string; from: string; found: number; why: string; stage: 'new' | 'set aside' }>;
   payments: Record<string, Payment>;
   /** Payments to a deal between separate people this identity is a party of, receipted by its split service in the deal's payee's name and sealed to every party (this round), by receipt. */
   shared?: Record<string, { payer: string; payee: string; amount: Amount; fulfils: string; purchase: boolean; at: number }>;
@@ -1117,6 +1125,13 @@ export class Damgar {
           return `its signer was not found (${message(e)})`;
         }
       };
+      // What waited to count, judged again (H107).
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== 'new' || book.acts[id] || fresh.some((f) => f.described.id === id)) continue;
+        const act = b64(x.act);
+        const key = x.key ? b64(x.key) : undefined;
+        fresh.push({ act, key, described: (key ? openWithKey(act, key) : describeAct(act)) as Described });
+      }
       for (const o of fresh) {
         const d = o.described;
         if (!d.signer || !d.payload) continue;
@@ -1128,6 +1143,14 @@ export class Damgar {
           st = a.backing === 'backed' || a.backing === 'binds' ? 'valid' : a.backing === 'disputed' ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
+        // Under a grant whose backing is unknown, or whose grant is not found yet: it waits to count, in To receive, judged again at each look (H107).
+        if (underGrant && (!a || a.backing === 'unknown')) {
+          const was = book.uncounted?.[d.id];
+          if (!was) lines.push({ text: `${short(d.signer)} sent something signed under a lane that cannot count yet: in Waiting, To receive.`, tone: 'warn' });
+          (book.uncounted ??= {})[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : undefined, from: d.signer, found: was?.found ?? now(), why: a ? this.waitingWhy(a) : 'the grant it was signed under was not found at the places asked yet', stage: was?.stage ?? 'new' };
+          continue;
+        }
+        if (book.uncounted?.[d.id]) delete book.uncounted[d.id];
         if (st !== 'valid') {
           problems.push(`An act from ${short(d.signer)} that does not count (${st}): set aside.`);
           continue;
@@ -1144,6 +1167,13 @@ export class Damgar {
       await this.saveBook(me.id, book);
       return { lines, problems };
     });
+  }
+
+  /** Why an act under a lane cannot count yet, in plain words first (H107). */
+  private waitingWhy(a: Authority): string {
+    const l = a.limits;
+    if (l && l.within === null && /clock|stamp|expiry/i.test(l.why)) return `its lane has an expiry judged by a timestamp clock, which has not placed this act yet; until it does, nobody can tell it was signed in time (the grant limits cMIP, 3.1). ${a.words}`;
+    return a.words;
   }
 
   /** On whose authority an act under a grant stands: its grant, its acceptance and the grantor's revocations read at these places and the signer's homes (`clients/grants`). */
@@ -1786,6 +1816,25 @@ export class Damgar {
           found: x.found,
         });
       }
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== 'new') continue;
+        items.push({
+          id,
+          kind: 'uncounted',
+          from: this.who(x.from, me.id),
+          app: null,
+          title: `Waiting to count: sent by ${short(x.from)} under a lane`,
+          lines: [
+            { text: `It cannot count yet: ${x.why}`, tone: 'warn' },
+            { text: 'Damgar looks again each time it looks for what arrived; once it counts, it shows here as a payment to answer. Until then nothing is answered and nothing signed (unknown, as Development rule 10 says).' },
+            { text: 'Setting it aside signs nothing and sends nothing.' },
+          ],
+          amount: null,
+          unknown: true,
+          offers: ['decline'],
+          found: x.found,
+        });
+      }
       for (const [id, x] of Object.entries(book.requestsIn)) {
         if (x.stage !== 'new' && x.stage !== 'debt') continue;
         const r = this.requestOf(book, id);
@@ -2094,6 +2143,7 @@ export class Damgar {
       if (book.drafts[id]?.stage === 'new') book.drafts[id].stage = 'declined';
       else if (book.laneRequests?.[id]?.stage === 'new') book.laneRequests[id].stage = 'declined';
       else if (book.requestsIn[id] && (book.requestsIn[id].stage === 'new' || book.requestsIn[id].stage === 'debt')) book.requestsIn[id].stage = 'declined';
+      else if (book.uncounted?.[id]?.stage === 'new') book.uncounted[id].stage = 'set aside';
       else if (book.unread?.[id]?.stage === 'new') {
         book.unread[id].stage = 'set aside';
         await this.saveBook(me.id, book);
@@ -3030,7 +3080,10 @@ export class Damgar {
           spent: used !== null ? shown(used) : null,
           left: l.total && used !== null ? shown(Math.max(0, l.total.value - used)) : null,
           over: l.total && used !== null && used > l.total.value ? shown(used - l.total.value) : null,
-          payments: under?.payments.map((p) => ({ key: p.key, to: this.who(p.payee, me.id), amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims })) ?? [],
+          // What is paid apart from what is only asked (H107): asked holds its amount against the cap in all, but no money has moved.
+          paid: under && unitOfLane ? shown(spentOf(under.payments.filter((p) => p.stage === 'paid').map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          asked: under && unitOfLane ? shown(spentOf(under.payments.filter((p) => p.stage === 'asked').map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          payments: under ? await Promise.all(under.payments.map(async (p) => ({ key: p.key, to: { ...this.who(p.payee, me.id), name: await this.nameOf(p.payee, hints, s.via).catch(() => null) }, amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims }))) : [],
           sealed: under?.sealed ?? 0,
         });
       }

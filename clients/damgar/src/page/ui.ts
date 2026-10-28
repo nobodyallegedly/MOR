@@ -22,7 +22,7 @@ type LanesRead = { lanes: LaneShown[]; manual: boolean; link: boolean; linkSay: 
 const errorOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const TABS: v.Tab[] = ['waiting', 'account', 'lanes', 'settings'];
 /** What waits to be received rather than paid. */
-const RECEIVE = new Set<ToSign['kind']>(['invoice', 'address', 'receipt']);
+const RECEIVE = new Set<ToSign['kind']>(['invoice', 'address', 'receipt', 'uncounted']);
 
 export function mount(app: HTMLElement, b: Backend): { show(state: State): Promise<void> } {
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -359,9 +359,19 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         await b.ask('look').catch(() => undefined);
         const l = await b.ask<LanesRead>('lanes');
         const apps = l.lanes.filter((x) => !x.here);
-        return `<h2>Under the lanes</h2>${v.say('What other apps paid under their lanes: they finish those payments themselves; the record is kept here.', ['Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Kišib’s runner in that app) is counted as sealed, and said.'])}${
+        // The stage first, in plain words (H107): asked is not paid. A tip under a lane is only asked until the payee answers with an invoice and it is paid in the wallet.
+        const stageOf = (p: NonNullable<LaneShown['payments']>[number]) => {
+          const who = p.to.name ?? shortOf(p.to);
+          return p.stage === 'paid' ? 'Paid: its claim signed under the lane' : p.stage === 'refused' ? `Refused by ${who}: not counted` : `Asked: waiting for ${who}’s invoice`;
+        };
+        const tally = (x: LaneShown) => {
+          const ps = x.payments ?? [];
+          const n = (st: string) => ps.filter((p) => p.stage === st).length;
+          return `<p class="k-small k-soft" data-under-tally>Paid: ${n('paid') ? `${n('paid')}${x.paid ? `, ${v.e(x.paid.said)}` : ''}` : 'none yet'} · Asked, not paid yet: ${n('asked') ? `${n('asked')}${x.asked ? `, ${v.e(x.asked.said)}` : ''}` : 'none'}${n('refused') ? ` · Refused: ${n('refused')}` : ''}</p>`;
+        };
+        return `<h2>Under the lanes</h2>${v.say('What other apps asked and paid under their lanes: they finish those payments themselves; the record is kept here.', ['Asked: the app signed an invoice request under the lane; nothing has moved until the payee answers with an invoice and it is paid in the wallet. Paid: its claim is signed, with the rail’s proof.', 'Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Kišib’s runner in that app) is counted as sealed, and said.'])}${
           apps
-            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3><dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: `under “${x.label}”`, text: `To ${shortOf(p.to)} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''}`, labels: [{ text: p.stage === 'paid' ? 'paid: its claim signed under the lane' : p.stage === 'refused' ? 'refused by the payee: not counted' : 'asked: its invoice request signed under the lane' }], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: 'Its claim, signed under the lane' })), ...(p.request ? [{ id: p.request, said: 'Its invoice request, signed under the lane' }] : [])] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
+            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3>${tally(x)}<dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: null, text: `${stageOf(p)}\nTo ${p.to.name ? `${p.to.name} (${shortOf(p.to)})` : shortOf(p.to)} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''} · under “${x.label}”`, labels: [], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: 'Its claim, signed under the lane' })), ...(p.request ? [{ id: p.request, said: 'Its invoice request, signed under the lane' }] : [])] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
             .join('') || '<p class="k-empty">No app holds a lane of this identity.</p>'
         }`;
       }
