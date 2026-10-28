@@ -20290,12 +20290,11 @@ function typingBox(o) {
 }
 function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  const mor = o.mor ? whatIsMor(o.mor === "offline") : "";
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === "offline", true)}</p>` : ""}</div></details>`;
+  const mor = o.mor ? o.mor() : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${o.mor(true)}</p>` : ""}</div></details>`;
 }
 var MOR_HOME = "https://dubsar.org/";
-function whatIsMor(offline = false, long = false) {
-  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? "What is MOR? Read it at " : "What is MOR? "}<span class="k-mono">dubsar.org</span>${long ? ", on another device: this one never connects." : " (on another device)"}</span>`;
+function whatIsMor(long = false) {
   return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
 }
 function fold(line, body, o = {}) {
@@ -21552,7 +21551,7 @@ function firstScreen(web, suggested2) {
   return `${top({ left: appMark(NAME2, "icon.png"), right: "" })}<div class="k-body"><section class="dub-first" id="first"><div id="status-here"></div>
 <h2>Identity</h2><p class="k-soft">Dub opens once an identity is here.</p>
 ${makeForm(web, suggested2)}${bringForm(web)}${web ? "" : `<div class="k-box" id="from-kishib"><h4>Use one from Ki\u0161ib</h4><p class="k-small k-soft">Through Ki\u0161ib\u2019s runner, on this Mac: Ki\u0161ib keeps the signing key and shows each act before it signs it; Dub holds no key.</p><div class="k-row"><button type="button" class="k-btn" data-k-add="kishib">Use one from Ki\u0161ib</button></div></div>`}
-${say2(`${TEST_ONLY2}.`, [`Every key is held in software${web ? " in this browser" : " in this program\u2019s folder"}: a prototype, never for a real identity.`], { mor: true })}</section></div>`;
+${say2(`${TEST_ONLY2}.`, [`Every key is held in software${web ? " in this browser" : " in this program\u2019s folder"}: a prototype, never for a real identity.`], { mor: whatIsMor })}</section></div>`;
 }
 var via = `<details class="k-fold"><summary>Another way to reach an address (rarely needed)<span class="k-chev" aria-hidden="true">\u203A</span></summary><div class="k-fold-body"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
 var lns = (xs) => e((xs ?? []).join("\n"));
@@ -21757,7 +21756,7 @@ function appFoot(s, web) {
   return `${web ? "" : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
 <h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org\u2019s feed names. A choice of clock comes later, when there are better clocks.</p>
 ${say2("A clock orders what is shown; it never decides what is true.", ["A timestamp clock signs \u201CI held these acts at this time\u201D: its word only. Acts it did not stamp keep their signer\u2019s own order, and show the signer\u2019s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar."])}
-${say2(`${TEST_ONLY2}.`, [`Every key is held in software${web ? " in this browser" : " in this program\u2019s folder"}: a prototype, never for a real identity.`], { mor: true })}`;
+${say2(`${TEST_ONLY2}.`, [`Every key is held in software${web ? " in this browser" : " in this program\u2019s folder"}: a prototype, never for a real identity.`], { mor: whatIsMor })}`;
 }
 function contactsBelow(s) {
   const i = s.identity;

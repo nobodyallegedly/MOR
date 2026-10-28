@@ -12603,12 +12603,11 @@ function opened(column2, on, pane) {
 }
 function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  const mor = o.mor ? whatIsMor(o.mor === "offline") : "";
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === "offline", true)}</p>` : ""}</div></details>`;
+  const mor = o.mor ? o.mor() : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${o.mor(true)}</p>` : ""}</div></details>`;
 }
 var MOR_HOME = "https://dubsar.org/";
-function whatIsMor(offline = false, long = false) {
-  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? "What is MOR? Read it at " : "What is MOR? "}<span class="k-mono">dubsar.org</span>${long ? ", on another device: this one never connects." : " (on another device)"}</span>`;
+function whatIsMor(long = false) {
   return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
 }
 function fold(line, body, o = {}) {
@@ -14012,7 +14011,7 @@ function home(s, web, acting) {
   const n = s.counts;
   const ts = TILES.map((t) => t.key === "waiting" && n.toSign + n.toPay ? { ...t, say: `To sign: ${n.toSign} \xB7 to pay: ${n.toPay}. Each read in plain words before you sign; paid only in your own wallet.` } : t);
   return `${topBar(s, null, acting)}<div class="k-body k-col-flex">${tiles(ts)}</div>
-<div class="damgar-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity."], { mor: true })}</div>`;
+<div class="damgar-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity."], { mor: whatIsMor })}</div>`;
 }
 function column(tab, s, c, acting) {
   switch (tab) {

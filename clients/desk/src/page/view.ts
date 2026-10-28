@@ -141,7 +141,7 @@ export function home(s: State, as: Acting | null, alarms: string): string {
     { key: 'vows', name: 'Vows', say: 'Simple vows; track contests by pointing at people, collectives or relays.', icon: 'vows', danger: 2 },
   ];
   return `${topBar(s, null, as)}${alarms}<div class="k-body">${tiles(ts.filter((t) => tabsHere().includes(t.key)))}</div>
-<div class="edubba-foot">${say(TEST_ONLY, [WEB ? 'The web client is for testing only: the banner above says its risks.' : 'Every key is held in software in this program’s folders: a prototype, never for a real identity.'], { mor: true })}</div>`;
+<div class="edubba-foot">${say(TEST_ONLY, [WEB ? 'The web client is for testing only: the banner above says its risks.' : 'Every key is held in software in this program’s folders: a prototype, never for a real identity.'], { mor: whatIsMor })}</div>`;
 }
 
 /** Each tile's column. */

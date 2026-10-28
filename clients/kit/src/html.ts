@@ -368,25 +368,27 @@ export function typingBox(o: { id: string; placeholder: string; button: string; 
  * A disclaimer in one line; the "?" opens the rest. Never a finding number
  * (H76). The "?" only ever unfolds an explanation (H99); a line opening a
  * panel to work in is a `fold`, with a chevron. `mor`: What is MOR? beside
- * the "?" and in what it opens (H94).
+ * the "?" and in what it opens (H94): `whatIsMor`, or `whatIsMorOffline` in
+ * Nakišib. Given, not chosen here, so that a page bundles only the one it
+ * uses (Nakišib's names no address).
  */
-export function say(line: string, more: string[] | string, o: { mor?: boolean | 'offline' } = {}): string {
+export function say(line: string, more: string[] | string, o: { mor?: (long?: boolean) => string } = {}): string {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join('') : more;
-  const mor = o.mor ? whatIsMor(o.mor === 'offline') : '';
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === 'offline', true)}</p>` : ''}</div></details>`;
+  const mor = o.mor ? o.mor() : '';
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${o.mor(true)}</p>` : ''}</div></details>`;
 }
 
 /** Where to learn what MOR is (H94): dubsar.org's front page. */
 export const MOR_HOME = 'https://dubsar.org/';
 
-/**
- * What is MOR? (H94): a button opening dubsar.org's front page in a new tab,
- * the app left as it was. `offline` (Nakišib, which never connects): the
- * address as text, to type on another device; nothing opened.
- */
-export function whatIsMor(offline = false, long = false): string {
-  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? 'What is MOR? Read it at ' : 'What is MOR? '}<span class="k-mono">dubsar.org</span>${long ? ', on another device: this one never connects.' : ' (on another device)'}</span>`;
+/** What is MOR? (H94): a button opening dubsar.org's front page in a new tab, the app left as it was. */
+export function whatIsMor(long = false): string {
   return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? 'What is MOR? dubsar.org’s front page, in a new tab' : 'What is MOR?'}</a>`;
+}
+
+/** What is MOR? in Nakišib, which never connects: the address as text, to type on another device; nothing opened, and no address in its page. */
+export function whatIsMorOffline(long = false): string {
+  return `<span class="k-mor k-mor-text" data-k-mor>${long ? 'What is MOR? Read it at ' : 'What is MOR? '}<span class="k-mono">dubsar.org</span>${long ? ', on another device: this one never connects.' : ' (on another device)'}</span>`;
 }
 
 /**

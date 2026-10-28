@@ -37,8 +37,8 @@ test('H120: the grid offers one choice per layer; Text and Envelopes apart reach
   ];
   const { governance, blocking } = governanceOf(g, '');
   assert.deepEqual(blocking, [], 'Text and Envelopes apart do not overlap');
-  assert.deepEqual(governance.areas[0].kinds, kindsFor(1, 'text').map((k) => ({ spec: k.spec, type: k.type })));
-  assert.equal(governance.areas[1].kinds.length, kindsFor(1, 'envelopes').length);
+  assert.deepEqual(governance.areas![0].kinds, kindsFor(1, 'text').map((k) => ({ spec: k.spec, type: k.type })));
+  assert.equal(governance.areas![1].kinds.length, kindsFor(1, 'envelopes').length);
   // Read back for a member change: each area as chosen.
   const back = gridOf(governance, members);
   assert.deepEqual(back.areas.map((a) => [a.layer, a.part ?? null, a.kinds?.length ?? null]), [[1, 'text', null], [1, 'envelopes', null], [3, null, 1]]);

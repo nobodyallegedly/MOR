@@ -10398,12 +10398,11 @@ function opened(column2, on, pane) {
 }
 function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  const mor = o.mor ? whatIsMor(o.mor === "offline") : "";
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === "offline", true)}</p>` : ""}</div></details>`;
+  const mor = o.mor ? o.mor() : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${o.mor(true)}</p>` : ""}</div></details>`;
 }
 var MOR_HOME = "https://dubsar.org/";
-function whatIsMor(offline = false, long = false) {
-  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? "What is MOR? Read it at " : "What is MOR? "}<span class="k-mono">dubsar.org</span>${long ? ", on another device: this one never connects." : " (on another device)"}</span>`;
+function whatIsMor(long = false) {
   return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
 }
 var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
@@ -11498,7 +11497,7 @@ function home(web, r) {
   );
   const locked = !web && r?.state === "locked" ? unlockBox(r) : "";
   return `${topBar(web, null, r)}<div class="k-body k-col-flex">${locked}${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? " kishib-three" : ""}"`)}</div>
-<div class="kishib-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Ki\u0161ib\u2019s folder, encrypted under its passphrase."], { mor: true })}</div>`;
+<div class="kishib-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Ki\u0161ib\u2019s folder, encrypted under its passphrase."], { mor: whatIsMor })}</div>`;
 }
 function column(tab, web, r) {
   switch (tab) {

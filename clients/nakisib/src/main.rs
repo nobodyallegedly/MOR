@@ -35,9 +35,12 @@ const ASSETS: &[(&str, &str, &[u8])] = &[
     ("/", "text/html; charset=utf-8", include_bytes!("../built/index.html")),
     ("/nakisib.js", "text/javascript; charset=utf-8", include_bytes!("../built/nakisib.js")),
     ("/nakisib.css", "text/css; charset=utf-8", include_bytes!("../built/nakisib.css")),
-    ("/inter_light.woff2", "font/woff2", include_bytes!("../built/inter_light.woff2")),
-    ("/inter_regular.woff2", "font/woff2", include_bytes!("../built/inter_regular.woff2")),
-    ("/inter_license.txt", "text/plain; charset=utf-8", include_bytes!("../built/inter_license.txt")),
+    ("/atkinson_next.woff2", "font/woff2", include_bytes!("../built/atkinson_next.woff2")),
+    ("/atkinson_next_license.txt", "text/plain; charset=utf-8", include_bytes!("../built/atkinson_next_license.txt")),
+    ("/atkinson_mono.woff2", "font/woff2", include_bytes!("../built/atkinson_mono.woff2")),
+    ("/atkinson_mono_license.txt", "text/plain; charset=utf-8", include_bytes!("../built/atkinson_mono_license.txt")),
+    ("/gentium_book_plus_italic.woff2", "font/woff2", include_bytes!("../built/gentium_book_plus_italic.woff2")),
+    ("/gentium_book_plus_license.txt", "text/plain; charset=utf-8", include_bytes!("../built/gentium_book_plus_license.txt")),
     ("/icon.png", "image/png", include_bytes!("../built/icon.png")),
 ];
 

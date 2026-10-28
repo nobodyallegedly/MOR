@@ -1,7 +1,8 @@
 // Build Nakišib's page into built/, which its program carries inside
 // itself (src/main.rs, include_bytes!): the page, its script (Nakišib's page
 // code and the kit, bundled, not minified, so anyone can read what runs),
-// its stylesheet, Inter and its licence, and its icon. Run it after changing
+// its stylesheet, the suite's fonts (Atkinson Hyperlegible Next and Mono,
+// Gentium Book Plus italic) and their licences, and its icon. Run it after changing
 // src/page/ or the kit, then build the program again:
 //
 //   npm run build        (then: cargo build --release)

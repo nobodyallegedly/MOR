@@ -138,7 +138,7 @@ export function home(s: State, web: boolean, acting: Acting | null): string {
   const n = s.counts;
   const ts = TILES.map((t) => (t.key === 'waiting' && n.toSign + n.toPay ? { ...t, say: `To sign: ${n.toSign} · to pay: ${n.toPay}. Each read in plain words before you sign; paid only in your own wallet.` } : t));
   return `${topBar(s, null, acting)}<div class="k-body k-col-flex">${tiles(ts)}</div>
-<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'], { mor: true })}</div>`;
+<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'], { mor: whatIsMor })}</div>`;
 }
 
 /** Each tab's column. Acting as a collective, Waiting gains its own part. */

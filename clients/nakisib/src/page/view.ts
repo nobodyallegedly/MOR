@@ -5,7 +5,7 @@
 // program says and hands each choice back to it.
 
 import { KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, ICONS, note, opened, say, tiles, top, type ColumnEntry } from '../../../kit/src/html.ts';
+import { appMark, e, ICONS, note, opened, say, tiles, top, type ColumnEntry, whatIsMorOffline } from '../../../kit/src/html.ts';
 
 export const NAME = 'Nakišib';
 
@@ -114,7 +114,7 @@ export function home(): string {
     { key: 'rotation', name: 'Change keys', say: 'Read a request from Kišib: your paper, a new paper, SIGN.', icon: 'paper', danger: 3 },
     { key: 'first', name: 'A new identity', say: 'Its first paper, and the commitment Kišib makes the identity from.', icon: 'identities', danger: 3 },
     { key: 'signed', name: 'What it signed', say: 'Its memory: each change it signed. Nothing secret in it.', icon: 'choose', danger: 1 },
-  ]).replace('class="k-home"', 'class="k-home nk-three"')}</div><div class="nk-homefoot">${say('What “never connect” means, and what Nakišib keeps', NEVER_MORE, { mor: 'offline' })}</div>${FOOT}`;
+  ]).replace('class="k-home"', 'class="k-home nk-three"')}</div><div class="nk-homefoot">${say('What “never connect” means, and what Nakišib keeps', NEVER_MORE, { mor: whatIsMorOffline })}</div>${FOOT}`;
 }
 
 const COLUMN: ColumnEntry[] = ['Nakišib', { key: 'rotation', label: 'Change keys' }, { key: 'first', label: 'A new identity' }, { key: 'signed', label: 'What it signed' }];

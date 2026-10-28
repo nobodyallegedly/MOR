@@ -187,7 +187,7 @@ export function home(web: boolean, r: RunnerView | null): string {
   // Draft 2: Kišib started with the runner on asks its passphrase first.
   const locked = !web && r?.state === 'locked' ? unlockBox(r) : '';
   return `${topBar(web, null, r)}<div class="k-body k-col-flex">${locked}${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? ' kishib-three' : ''}"`)}</div>
-<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder, encrypted under its passphrase.'], { mor: true })}</div>`;
+<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder, encrypted under its passphrase.'], { mor: whatIsMor })}</div>`;
 }
 
 /** Each tab's column. */

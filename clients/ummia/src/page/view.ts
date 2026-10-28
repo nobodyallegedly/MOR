@@ -193,7 +193,7 @@ export function topBar(s: State, tab: Tab | null): string {
 /** The four tiles and their danger marks. */
 export function home(s: State, web: boolean): string {
   return `${topBar(s, null)}<div id="spent-at"></div><div class="k-body k-col-flex">${tiles(TILES)}</div>
-<div class="ummia-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'The signing key is held in software in this program’s folder: a prototype, never for a real identity.'], { mor: true })}</div>`;
+<div class="ummia-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'The signing key is held in software in this program’s folder: a prototype, never for a real identity.'], { mor: whatIsMor })}</div>`;
 }
 
 /** Each tab's column. */
