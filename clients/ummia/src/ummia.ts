@@ -46,9 +46,9 @@ import { OURS as DAMGAR_PART, labelOf as damgarLabel } from '../../damgar/src/sp
 import type { ChainSource } from '../../damgar/src/chain.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
 import { clockWords } from '../../barebone/src/clock.ts';
-import { idForm } from '../../genesis/src/forms.ts';
+import { idForm, idWhere } from '../../genesis/src/forms.ts';
 import { CARD_SAY, LIMITS, builtIn, cardText, readCardText, publishCard, publishDiscussion, readActId, type CardFields } from './cards.ts';
-import { contacts as readContacts, follow as followIn, FOLLOW_SAY } from './follows.ts';
+import { FOLLOW_SAY } from './follows.ts';
 import { FILTERS, look as lookAt, specPage, type Filter, type Looked, type PointKind, type SpecPage } from './look.ts';
 import { textPayload as longformPayload } from '../../longform/src/act.ts';
 import { leaveInInbox } from '../../barebone/src/post.ts';
@@ -62,6 +62,9 @@ import { KINDS, TASKS, prepareSpec, publishSpec, readHash, type SpecForm } from 
 import { LIMIT_SAY, actsOf, track, type Tracked } from './track.ts';
 import type { AcceptedEntry, Done, Line, Review, State } from './shapes.ts';
 import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
+import { Known, type KnownContacts } from '../../kit/src/engine/known.ts';
+import { heldSecrets } from '../../kit/src/engine/people.ts';
+import type { Named } from '../../kit/src/html.ts';
 
 /** The rules Ummia runs (H93): long-form drafts and discussions, releases, and names. */
 export const UMMIA_RULES = rulesOf('long-form', 'release-manifest', 'naming');
@@ -87,6 +90,12 @@ export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signi
 /** Said where an encryption key is not held. */
 export const NO_KEY_SAY =
   'Ummia holds no encryption key for this identity, so nothing sealed to it opens here and nothing can be sealed to it from here: the accepted list cannot be read or changed, and an anchor’s payment cannot be prepared for Damgar.';
+
+/** Said where the contacts list cannot be opened here: no encryption key held (H100). */
+export const CONTACTS_NO_KEY_SAY = 'Ummia holds no encryption key of this identity, so its contacts, sealed to it at its homes, do not open here';
+
+/** Said where the contacts list cannot be opened for an identity used through Kišib's runner (H100). */
+export const CONTACTS_RUNNER_SAY = 'Kišib’s runner holds this identity’s keys and Ummia none, so its contacts, sealed to it at its homes, do not open in Ummia: see and change them in Dub';
 
 /** Said where the accepted list is shown (F340). */
 export const ACCEPTED_SAY = [
@@ -197,6 +206,8 @@ export async function releaseArea(collective: string, places: string[], via: Via
 export class Ummia {
   /** This app's line as the homes hold it, for its card (H80's question 2). */
   private readonly line = lineReader('Ummia');
+  /** Who is known (H96, H100): the one contacts list and the names identities published, read as every app reads them. */
+  private readonly known = new Known('Ummia');
 
   /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
   private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
@@ -501,7 +512,18 @@ export class Ummia {
   async state(): Promise<State> {
     const active = await this.store.active();
     const heldIds = await this.store.held();
-    const held = await Promise.all(heldIds.map(async (id) => ({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !(await this.store.identity(id))?.f.signingSecret })));
+    const held = await Promise.all(
+      heldIds.map(async (id) => {
+        const f = await this.store.identity(id);
+        const hs: Settings = { relays: [], track: [], reports: null, via: {}, ...((await this.store.read<Settings>(id, 'settings')) ?? {}) };
+        const homes = f?.f.homes.map((h) => h.hint) ?? [];
+        // H96: each one's published name, read at its own homes (kept a while), so the top right and the panel say it, or why not.
+        const published = f ? await this.known.names.read(id, this.namePlaces(f, hs)) : ({ state: 'unreached' } as const);
+        // H88: its ID link, with one home and one relay, so whoever is given it finds it.
+        const link = idWhere(id, [...homes.slice(0, 1), ...hs.relays.filter((r) => !homes.includes(r)).slice(0, 1)]);
+        return { id, grouped: groupId(id), short: short(id), form: idForm(id), link, named: { nick: null, published } satisfies Named, active: id === active, runner: !f?.f.signingSecret };
+      }),
+    );
     const me = active ? await this.load(active) : null;
     const out: State = {
       web: !!this.opts.web,
@@ -525,6 +547,9 @@ export class Ummia {
       id: me.id,
       grouped: groupId(me.id),
       short: short(me.id),
+      form: idForm(me.id),
+      link: held.find((h) => h.id === me.id)!.link,
+      named: held.find((h) => h.id === me.id)!.named,
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
@@ -533,6 +558,9 @@ export class Ummia {
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
+    // H96: the collectives it acts for, named as every identity is (their published names; a contact's nickname first).
+    const cs = out.actors.filter((x) => x.kind === 'collective').map((x) => x.id);
+    out.names = cs.length ? await this.known.named(me, this.opener(me).open, cs, this.namePlaces(me, s), { via: s.via }).catch(() => ({})) : {};
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
     out.saved = s.saved ?? [];
     out.rules = await this.rulesNow(me, s);
@@ -1094,10 +1122,12 @@ export class Ummia {
       said = idForm(id);
       out = await lookAt(this.lookRelays(s), { signers: [id], filters, layer, via: s.via, hints });
     } else if (kind === 'contacts') {
-      const c = await readContacts(me, s.via);
-      said = `your contacts (${c.follows.length})`;
-      out = await lookAt(this.lookRelays(s), { signers: c.follows.map((f) => f.id), filters, layer, via: s.via, hints });
-      if (c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${c.problem}.`, tone: 'warn' });
+      // The one contacts list (H100), read afresh: a contact added in any app is pointed at here.
+      const { open, problem } = this.opener(me);
+      const c = await this.known.followed(me, open, s.via, true);
+      said = `your contacts (${c.contacts.length})`;
+      out = await lookAt(this.lookRelays(s), { signers: c.contacts.map((f) => f.id), filters, layer, via: s.via, hints });
+      if (problem ?? c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${problem ?? c.problem}.`, tone: 'warn' });
     } else {
       if (!value) throw new Error('Point at a release by its act ID (mact1…, or hexadecimal).');
       const id = readActId(value);
@@ -1146,24 +1176,67 @@ export class Ummia {
     });
   }
 
-  /** The follow list sealed to this identity: Look's "my contacts". */
-  async contactsList(): Promise<{ follows: { id: string; form: string; name: string | null }[]; problem: string | null; say: string }> {
-    const { me, s } = await this.ctx();
-    const c = await readContacts(me, s.via);
-    return { follows: c.follows.map((f) => ({ ...f, form: idForm(f.id) })), problem: c.problem, say: FOLLOW_SAY };
+  // ------------------------------------------------------------ who is known (H96, H100, H106, H109, H119)
+
+  /**
+   * How Ummia opens what is sealed to an identity (its contacts): with the
+   * encryption keys it holds. One used through Kišib's runner, or brought
+   * without its encryption key, has none here: `open` is null and `problem`
+   * says so, plainly.
+   */
+  private opener(me: TestIdentity): { open: Uint8Array[] | null; problem: string | null } {
+    const keys = heldSecrets(me);
+    if (keys.length) return { open: keys, problem: null };
+    return { open: null, problem: me.f.signingSecret ? CONTACTS_NO_KEY_SAY : CONTACTS_RUNNER_SAY };
   }
 
-  /** Follow: add to contacts (the same follow list as Dub's). */
-  follow(a: { id: string; name?: string | null }): Promise<{ lines: Line[] }> {
+  /** Where an identity's names are read: its homes, the relays its acts go to, the relays Look asks. */
+  private namePlaces(me: TestIdentity, s: Settings): string[] {
+    return list([...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track]);
+  }
+
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given in the one contacts list (the people
+   * cMIP's, sealed) and the name each published (the naming cMIP's), read
+   * by the kit's one name reader. `fresh`: asked again (a retry).
+   */
+  async names(a: { ids: string[]; fresh?: boolean }): Promise<Record<string, Named>> {
+    // Before any identity is in use (Use one from Kišib, on the first screen): no contacts yet, and no place to ask known here, so a name not found reads "Name not reached" (silence proves nothing).
+    if (!(await this.store.active())) {
+      const published = await this.known.names.many(a.ids.slice(0, 200), [], !!a.fresh);
+      return Object.fromEntries(Object.entries(published).map(([id, p]) => [id, { nick: null, published: p }]));
+    }
+    const { me, s } = await this.ctx();
+    return this.known.named(me, this.opener(me).open, a.ids, this.namePlaces(me, s), { via: s.via, fresh: !!a.fresh });
+  }
+
+  /** The one contacts list (H100), each with its names: the same list Dub, Damgar and Edubba read, sealed to the identity at its homes. Read again each time it is asked for. */
+  async contacts(): Promise<KnownContacts & { say: string }> {
+    const { me, s } = await this.ctx();
+    const { open, problem } = this.opener(me);
+    const r = await this.known.contacts(me, open, this.namePlaces(me, s), { via: s.via, fresh: true });
+    return { ...r, problem: problem ?? r.problem, say: FOLLOW_SAY };
+  }
+
+  /** The contacts list changed (H109): a contact added (with a nickname, where given), its nickname set or taken away, or taken out. */
+  contactChange(a: { op: 'add' | 'nick' | 'remove'; id: string; nick?: string | null }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
+      const { open, problem } = this.opener(me);
+      if (!open) throw new Error(`${problem}. Nothing was signed.`);
+      // Signing a new version of the list: only with a key still current.
       await this.current(me);
-      try {
-        return { lines: await followIn(me, { id: readId(a.id), name: a.name?.trim().slice(0, 64) || null }, s.via) };
-      } finally {
-        await this.store.saveIdentity(me);
-      }
+      const said = await this.known.change(me, a, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      return { lines: said.map((x) => ({ text: x.text, tone: x.tone })) };
     });
+  }
+
+  /** Follow: add to contacts, with a nickname where given (H109): the one list, as Contacts top left adds to it. */
+  async follow(a: { id: string; name?: string | null }): Promise<{ lines: Line[] }> {
+    const r = await this.contactChange({ op: 'add', id: readId(a.id), nick: a.name?.trim() || null });
+    if (r.lines[0]?.text === 'Nothing changed.') return { lines: [{ text: 'Already in your contacts: nothing to change.', tone: 'ok' }] };
+    return { lines: [{ text: 'Added to your contacts.', tone: 'ok' }, ...r.lines] };
   }
 
   /** Follow their releases (decided: "the same follow list, but here it filters"): added to contacts, and a saved point of Look showing their releases. */

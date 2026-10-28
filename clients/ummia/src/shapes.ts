@@ -2,6 +2,7 @@
 // and the web client.
 
 import type { LineShown } from '../../genesis/src/card-words.ts';
+import type { Named } from '../../kit/src/html.ts';
 export interface Line {
   text: string;
   tone?: 'ok' | 'warn' | 'bad';
@@ -29,11 +30,28 @@ export interface State {
   rules?: import('../../kit/src/engine/rules.ts').RulesShown;
   /** The identity window first; then the app. */
   stage: 'identity' | 'ready';
-  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: no key of it here. */ runner?: boolean }[];
+  held: {
+    id: string;
+    grouped: string;
+    short: string;
+    /** Its ID written for people (`mid1…`). */
+    form: string;
+    /** Its ID link (`mid1…?r=…`): Share your ID link (H88). */
+    link: string;
+    /** Its names (H96): the name it published, or why none is shown. */
+    named: Named;
+    active: boolean;
+    /** Used through Kišib's runner: no key of it here. */ runner?: boolean;
+  }[];
   identity: null | {
     id: string;
     grouped: string;
     short: string;
+    form: string;
+    /** Its ID link, with one home and one relay (H88). */
+    link: string;
+    /** Its names (H96). */
+    named: Named;
     homes: string[];
     relays: string[];
     encryption: boolean;
@@ -45,6 +63,8 @@ export interface State {
   /** Who acts (the shared chooser, `acting.ts`). */
   actors: import('./acting.ts').Actor[];
   acting: string | null;
+  /** The names of the collectives it acts for (H96), by ID. */
+  names?: Record<string, Named>;
   settings: { relays: string[]; track: string[]; reports: string | null };
   /** Look's saved points. */
   saved: import('./ummia.ts').Saved[];

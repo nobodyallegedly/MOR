@@ -214,8 +214,8 @@ test('Look: one feed, pointed and filtered; a release saying what changed; Follo
   assert.ok(f.lines.some((l) => /Added to your contacts/.test(l.text)), JSON.stringify(f.lines));
   const st = await b.ummia.c.ask<{ saved: { label: string; point: { kind: string; value: string }; filters: string[] }[] }>('state');
   assert.deepEqual(st.saved.map((x) => [x.label, x.point.kind, x.filters.join()]), [['Max’s releases', 'id', 'releases']]);
-  const mine = await b.ummia.c.ask<{ follows: { id: string; name: string | null }[] }>('contacts');
-  assert.deepEqual(mine.follows.map((x) => [x.id, x.name]), [[a.id, 'Max']]);
+  const mine = await b.ummia.c.ask<{ contacts: { id: string; name: string | null }[] }>('contacts');
+  assert.deepEqual(mine.contacts.map((x) => [x.id, x.name]), [[a.id, 'Max']]);
   const contacts = await b.ummia.c.ask<Looked>('look', { point: { kind: 'contacts', value: '' }, filters: ['releases'] });
   assert.ok(contacts.items.some((x) => x.id === r2.done.acts[0]));
   // Dub, holding the same identity, reads the follow list Ummia wrote.
