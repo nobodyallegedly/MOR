@@ -33,7 +33,7 @@ cat > "$entry" <<DESKTOP
 Type=Application
 Version=1.0
 Name=Dub
-Comment=MOR: one person's public and private life (test identities only)
+Comment=Dubsar Suite, on MOR: one person's public and private life (test identities only)
 Exec="$launch"
 Icon=$data/mor/dub.png
 Terminal=false

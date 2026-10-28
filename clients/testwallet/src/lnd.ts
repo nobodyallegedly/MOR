@@ -18,6 +18,8 @@ export interface Decoded {
 /** What the wallet asks of a node. Tests give one in memory. */
 export interface Node {
   name: string;
+  /** What Damgar's receive-only link asks for (H114): the node's REST address, its receive-only permission file (invoices only) and its certificate, as `up.sh` made them; none where unknown. */
+  link?: { address: string; macaroon: string; cert: string } | null;
   info(): Promise<{ key: string; network: string; height: number; synced: boolean }>;
   balances(): Promise<{ channels: number; onchain: number; unconfirmed: number }>;
   decode(invoice: string): Promise<Decoded>;
@@ -35,7 +37,7 @@ export interface Node {
 
 const hexOf = (b64: string) => Buffer.from(b64 ?? '', 'base64').toString('hex');
 
-export function lnd(o: { name: string; rest: number; lnddir: string }): Node {
+export function lnd(o: { name: string; rest: number; lnddir: string; receive?: string }): Node {
   const ca = readFileSync(join(o.lnddir, 'tls.cert'));
   const mac = readFileSync(join(o.lnddir, 'data/chain/bitcoin/regtest/admin.macaroon')).toString('hex');
   const call = (method: string, path: string, body?: unknown): Promise<any> =>
@@ -71,6 +73,7 @@ export function lnd(o: { name: string; rest: number; lnddir: string }): Node {
     });
   return {
     name: o.name,
+    link: o.receive ? { address: `https://127.0.0.1:${o.rest}`, macaroon: o.receive, cert: join(o.lnddir, 'tls.cert') } : null,
     async info() {
       const v = await call('GET', '/v1/getinfo');
       return { key: v.identity_pubkey, network: v.chains?.[0]?.network ?? '', height: Number(v.block_height), synced: !!v.synced_to_chain };

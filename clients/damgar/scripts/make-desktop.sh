@@ -33,7 +33,7 @@ cat > "$entry" <<DESKTOP
 Type=Application
 Version=1.0
 Name=Damgar
-Comment=MOR: money acts gathered, signed and verified; no wallet (test identities and test networks only)
+Comment=Dubsar Suite, on MOR: money acts gathered, signed and verified; no wallet (test identities and test networks only)
 Exec="$launch"
 Icon=$data/mor/damgar.png
 Terminal=false

@@ -31,7 +31,7 @@ cat > "$entry" <<DESKTOP
 Type=Application
 Version=1.0
 Name=Edubba
-Comment=MOR: agents, identities and collectives (test identities only)
+Comment=Dubsar Suite, on MOR: agents, identities and collectives (test identities only)
 Exec="$launch"
 Icon=$data/mor/edubba.png
 Terminal=false

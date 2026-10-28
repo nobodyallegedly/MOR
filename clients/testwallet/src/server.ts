@@ -41,6 +41,9 @@ const sat = (v: unknown, what: string): number => {
   return n;
 };
 
+/** An invoice as pasted: bare, or a `lightning:` link holding it. */
+export const invoiceOf = (t: string) => t.replace(/^lightning:(\/\/)?/i, '').trim();
+
 export async function answer(w: Wallet, a: Record<string, unknown>): Promise<unknown> {
   const node = () => {
     const n = w.nodes.find((x) => x.name === a.node);
@@ -50,11 +53,12 @@ export async function answer(w: Wallet, a: Record<string, unknown>): Promise<unk
   const text = (k: string) => String(a[k] ?? '').trim();
   switch (a.op) {
     case 'nodes':
-      return Promise.all(w.nodes.map(async (n) => ({ name: n.name, ...(await n.info()), ...(await n.balances()) })));
+      return Promise.all(w.nodes.map(async (n) => ({ name: n.name, ...(await n.info()), ...(await n.balances()), link: n.link ?? null })));
+    // A `lightning:` link pasted whole is read as its invoice (H117): this page cannot answer such links itself.
     case 'decode':
-      return node().decode(text('invoice'));
+      return node().decode(invoiceOf(text('invoice')));
     case 'pay':
-      return node().pay(text('invoice'));
+      return node().pay(invoiceOf(text('invoice')));
     case 'invoice': {
       const dh = text('descriptionHash').toLowerCase();
       if (dh && !/^[0-9a-f]{64}$/.test(dh)) throw new Error('A description hash is 64 hexadecimal characters (Damgar shows it beside the payment).');
@@ -126,7 +130,7 @@ export async function serve(w: Wallet, port = 0): Promise<{ server: Server; base
 }
 
 /** The nodes of the network `up.sh` started in `run`, as it wrote them in `nodes.json`. */
-export function nodesOf(run: string): { name: string; rest: number; lnddir: string }[] {
+export function nodesOf(run: string): { name: string; rest: number; lnddir: string; receive?: string }[] {
   try {
     return JSON.parse(readFileSync(join(run, 'nodes.json'), 'utf8')).nodes;
   } catch {

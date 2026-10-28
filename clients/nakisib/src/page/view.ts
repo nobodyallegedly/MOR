@@ -149,7 +149,7 @@ ${v.already === 'same' ? '' : paperForm()}`;
 }
 
 function paperForm(): string {
-  return `<form id="paper" class="k-box k-fill" autocomplete="off"><h3>Your paper</h3>${p('The chain key’s paper this identity uses now: its 24 words, or the 72 characters of a hex paper. Nakišib uses it for this request only and overwrites it once signed; the Module checks again everything above with it.', 'k-small k-soft')}
+  return `<form id="paper" class="k-box k-fill" autocomplete="off"><h3>Your paper</h3>${p('The chain key’s paper this identity uses now: its 24 words (the only form Dubsar apps take). Nakišib uses it for this request only and overwrites it once signed; the Module checks again everything above with it.', 'k-small k-soft')}
 <label>The paper</label><textarea name="words" rows="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <div class="k-row"><button type="submit" class="k-btn k-p">Use this paper</button><span class="k-small k-faint">Nothing is signed yet.</span></div></form>`;
 }
@@ -195,7 +195,7 @@ ${w.length ? `<div class="k-row">${btn('forget', 'Done', true)}</div>` : ''}`;
 export function firstStart(): string {
   return `${steps(FIRST_STEPS, 0)}<h2>A new identity’s first paper</h2>
 ${p('For an identity Kišib makes (“Make an identity with Nakišib”): Nakišib draws the paper here, shows it once, asks three parts back, then writes only its commitment for Kišib. The paper never leaves this Mac, and Nakišib forgets it.', 'k-soft')}
-<div class="k-row">${btn('first', 'Draw a paper of 24 words', true, ' data-module="words"')}${btn('first', 'Draw a hex paper (72 characters)', false, ' data-module="hex"')}</div>`;
+<div class="k-row">${btn('first', 'Draw a paper of 24 words', true, ' data-module="words"')}</div>`;
 }
 
 export function firstReady(s: State, typed: boolean): string {

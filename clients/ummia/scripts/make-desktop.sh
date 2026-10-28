@@ -33,7 +33,7 @@ cat > "$entry" <<DESKTOP
 Type=Application
 Version=1.0
 Name=Ummia
-Comment=MOR: the developers' app: releases, specifications, tracking, MIPs, reports (test identities only)
+Comment=Dubsar Suite, on MOR: the developers' app: releases, specifications, tracking, MIPs, reports (test identities only)
 Exec="$launch"
 Icon=$data/mor/ummia.png
 Terminal=false

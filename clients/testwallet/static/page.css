@@ -16,3 +16,4 @@ button:disabled { opacity: .5; }
 .mono, .out code { font: 12px ui-monospace, monospace; word-break: break-all; }
 .out { margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--box); }
 .out.error { border-color: var(--label); color: var(--label); }
+details.link { margin: 6px 0 10px 24px; } details.link code { word-break: break-all; }
