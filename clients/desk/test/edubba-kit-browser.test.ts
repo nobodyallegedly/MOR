@@ -269,6 +269,18 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   await col('+ Found a collective');
   await page.locator('#real-found').waitFor();
   await shot(page, 'mac-25-found');
+  // H118: you and one other, + Add a member; H120: one choice per layer, each kind the core defines, in words.
+  assert.equal(await page.locator('#real-found [data-member-row]').count(), 2);
+  await page.fill('#real-found input[name=member-2]', 'cd'.repeat(32));
+  await page.locator('#real-found input[name=member-2]').dispatchEvent('change');
+  const area = page.locator('#e-grid-real-found tr[data-area="0"]');
+  await area.waitFor({ timeout: 30_000 });
+  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Text', 'Envelopes', 'Text and Envelopes, together', 'Money', 'Agreements', 'Development']);
+  await area.locator('select[data-grid-layer]').selectOption('3');
+  await page.locator('#e-grid-real-found tr[data-area="0"] [data-grid-some]').check();
+  const kinds = await page.locator('#e-grid-real-found tr.kinds').innerText();
+  for (const k of ['work claims', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
+  await shot(page, 'mac-26-found-agreements-kinds');
 });
 
 test('Publishing: who acts, what; an audio (M4A) stripped by the audio Module, read back, signed; Published here', async () => {

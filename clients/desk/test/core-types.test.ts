@@ -24,3 +24,25 @@ test('H120: the kinds offered are the core’s own types, every one named in wor
   assert.ok(!GRID_LAYERS.find((l) => l.key === 'envelopes')!.kinds.some((k) => k.type === 2), 'Envelopes type 2 is retired');
   assert.deepEqual(GRID_LAYERS.map((l) => l.name), ['Text', 'Envelopes', 'Money', 'Agreements', 'Development']);
 });
+
+test('H120: the grid offers one choice per layer; Text and Envelopes apart reach different acts, together the whole layer', async () => {
+  const { LAYERS, governanceOf, defaultGrid, kindsFor, gridOf } = await import('../src/grid.ts');
+  assert.deepEqual(LAYERS.map((l) => l.name), ['Text', 'Envelopes', 'Text and Envelopes, together', 'Money', 'Agreements', 'Development']);
+  const members = ['aa'.repeat(32), 'bb'.repeat(32)];
+  const g = defaultGrid(members);
+  g.areas = [
+    { name: 'Posts', layer: 1, part: 'text', holders: members, number: 1 },
+    { name: 'Media', layer: 1, part: 'envelopes', holders: members, number: 2 },
+    { name: 'Claims', layer: 3, kinds: kindsFor(3).filter((k) => k.type === 3).map((k) => `${k.spec}:${k.type}`), holders: members, number: 2 },
+  ];
+  const { governance, blocking } = governanceOf(g, '');
+  assert.deepEqual(blocking, [], 'Text and Envelopes apart do not overlap');
+  assert.deepEqual(governance.areas[0].kinds, kindsFor(1, 'text').map((k) => ({ spec: k.spec, type: k.type })));
+  assert.equal(governance.areas[1].kinds.length, kindsFor(1, 'envelopes').length);
+  // Read back for a member change: each area as chosen.
+  const back = gridOf(governance, members);
+  assert.deepEqual(back.areas.map((a) => [a.layer, a.part ?? null, a.kinds?.length ?? null]), [[1, 'text', null], [1, 'envelopes', null], [3, null, 1]]);
+  // The whole layer and a part of it overlap: refused, said.
+  g.areas.push({ name: 'Everything published', layer: 1, holders: members, number: 1 });
+  assert.ok(governanceOf(g, '').blocking.some((b) => /reach the same acts/.test(b)));
+});

@@ -152,23 +152,22 @@ test('H88, H96, H100, H106, H109, H119, H121: Edubba’s names, its one contacts
   await page.locator('[data-k-col="found"]').click();
   const found = page.locator('form#real-found');
   await found.waitFor();
-  await found.locator('[data-k-pick-for="typed"]').click();
+  // H118: the founding opens with two members, you and one other; the other chosen from Contacts beside its field.
+  assert.equal(await found.locator('[data-member-row]').count(), 2);
+  await found.locator('[data-k-pick-for="member-2"]').click();
   await page.locator(`[data-k-picker] [data-k-picked="${shownId(cy.id)}"]`).click();
-  assert.equal((await found.locator('textarea[name=typed]').inputValue()).trim(), shownId(cy.id));
+  assert.equal((await found.locator('input[name=member-2]').inputValue()).trim(), shownId(cy.id));
   // H106: the grid's columns name their members: the founder by her names, the one chosen by its nickname.
   const grid = page.locator('#e-grid-real-found');
   await grid.locator(`[data-k-who="${ana.id}"] .k-pub`, { hasText: 'Ana Published' }).waitFor({ timeout: 60_000 });
   await grid.locator(`[data-k-who="${cy.id}"] .k-nick`, { hasText: 'Cy nick' }).waitFor({ timeout: 60_000 });
-  // The contacts to choose members from, by their names.
-  await found.locator(`label.check [data-k-who="${cy.id}"] .k-nick`, { hasText: 'Cy nick' }).waitFor({ timeout: 60_000 });
 
   // H121: no short ID anywhere on the page without its tap; a tap shows it whole.
   assert.deepEqual(await bareShortIds(page), [], 'the founding: no short ID without its tap');
-  const b = found.locator(`label.check [data-k-who="${cy.id}"] .k-idbtn`);
+  const b = grid.locator(`[data-k-who="${cy.id}"] .k-idbtn`).first();
   assert.match(await b.innerText(), /^mid1.{3}…/);
   await b.click();
   assert.equal((await b.innerText()).trim(), shownId(cy.id), 'one tap: whole');
-  assert.equal(await found.locator('input[name=member]:checked').count(), 0, 'the tap chose nobody');
   await b.click();
   await page.waitForFunction((el) => /Copied|copying refused/.test(el!.textContent ?? ''), await b.elementHandle());
 

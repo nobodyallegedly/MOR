@@ -8,7 +8,7 @@
 // Claims of works stay under Agreements, where the core puts them (his
 // words: "My bad, move claim where it belongs.").
 
-import { MIRS } from '../../genesis/src/core.ts';
+import { MIRS } from './mirs.ts';
 import { CORE_TYPES } from './core-types.ts';
 
 /** Each type's words, by layer and the core's constant. */

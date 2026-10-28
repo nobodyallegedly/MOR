@@ -109,14 +109,30 @@ const nameOf = (id: string) => state.identities.find((i) => i.id === id)?.name ?
 /** In words where no button can be (a sentence, a button's label): never a bare short ID (H121). */
 const shown = (id: string) => nameOf(id) ?? 'an identity with no name here';
 
-/** The members a form names now: the founder first, then the boxes ticked, then the IDs typed. */
+/** The members a form names now (H118): the founder first, then each member's row, in order. */
 function formMembers(fid: string): string[] {
   const form = $<HTMLFormElement>(fid);
   if (!form) return [];
   const founder = (form.elements.namedItem('founder') as HTMLSelectElement | null)?.value;
-  const picked = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
-  const typed = String((form.elements.namedItem('typed') as HTMLTextAreaElement | null)?.value ?? '').split(/\n+/).map((x) => hexOf(x)).filter(Boolean);
-  return [...new Set([...(founder ? [founder] : []), ...picked, ...typed])];
+  const rows = [...form.querySelectorAll<HTMLInputElement>('input[data-member-id]')].map((x) => hexOf(x.value)).filter(Boolean);
+  return [...new Set([...(founder ? [founder] : []), ...rows])];
+}
+
+/** + Add a member, and a row removed (H118): the two a collective needs stay; the grid follows. */
+async function memberRowsChanged(fid: string, add: boolean, row?: HTMLElement) {
+  const box = app.querySelector<HTMLElement>(`[data-member-rows="${CSS.escape(fid)}"]`);
+  if (!box) return;
+  if (add) {
+    const n = Math.max(0, ...[...box.querySelectorAll<HTMLElement>('[data-member-row]')].map((x) => Number(x.dataset.memberRow))) + 1;
+    box.insertAdjacentHTML('beforeend', v.memberRow(n, '', true));
+    box.querySelector<HTMLInputElement>(`[name="member-${n}"]`)?.focus();
+  } else row?.remove();
+  // A change keeps at least two rows: the last two cannot be removed.
+  if (fid === 'real-change') {
+    const left = box.querySelectorAll('[data-member-row]');
+    if (left.length <= 2) box.querySelectorAll('[data-action="member-remove"]').forEach((b) => b.remove());
+  }
+  await syncGrid(fid);
 }
 
 function drawGrid(fid: string): void {
@@ -130,6 +146,9 @@ function drawGrid(fid: string): void {
 /** The grid follows the members chosen: new columns empty (the constitution's box filled where every member had one), removed ones gone. */
 async function syncGrid(fid: string): Promise<void> {
   const members = formMembers(fid);
+  // The same members (a field left after its change was already taken): nothing redrawn, so a tap on the grid is never lost under a redraw.
+  const had = grids.get(fid);
+  if (had && $(`e-grid-${fid}`)?.querySelector('table.grid') && had.members.length === members.length && had.members.every((m, i) => m === members[i])) return;
   let g = fid === 'real-found' && !touched.has(fid) ? undefined : grids.get(fid);
   if (!g) {
     if (fid === 'real-change') {
@@ -183,7 +202,11 @@ function gridEvent(el: HTMLElement): boolean {
     else row(d.gridNum.split(':')[1])!.number = n;
   } else if (d.gridLayer !== undefined) {
     const l = row(d.gridLayer)!;
-    l.layer = Number((el as HTMLSelectElement).value);
+    // H120: the core's layer, and within Text and Envelopes' one of them only.
+    const [layer, part] = (el as HTMLSelectElement).value.split(':');
+    l.layer = Number(layer);
+    if (part === 'text' || part === 'envelopes') l.part = part;
+    else delete l.part;
     if (l.kinds) l.kinds = [];
     if (l.layer !== 2) delete l.cap;
   } else if (d.gridSome !== undefined) {
@@ -457,14 +480,17 @@ async function contactsChanged(id?: string) {
   await contactsUi.refresh();
   const fid = $('real-found') ? 'real-found' : $('real-change') ? 'real-change' : null;
   if (!fid) return;
-  const picked = new Set([...app.querySelectorAll<HTMLInputElement>(`#${fid} input[name=member]:checked`)].map((x) => x.value));
   const values = new Map([...app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(`#${fid} input:not([type=checkbox]),#${fid} textarea,#${fid} select`)].map((x) => [x.name, x.value]));
   const grid = grids.get(fid);
   const was = touched.has(fid);
   await fill();
   if (grid) grids.set(fid, grid);
   if (was) touched.add(fid);
-  for (const x of app.querySelectorAll<HTMLInputElement>(`#${fid} input[name=member]`)) x.checked = picked.has(x.value);
+  // The member rows added (H118) drawn again, then every value put back.
+  const box = app.querySelector<HTMLElement>(`[data-member-rows="${CSS.escape(fid)}"]`);
+  for (const n of [...values.keys()].filter((k) => /^member-\d+$/.test(k)).map((k) => Number(k.slice(7)))) {
+    if (box && !box.querySelector(`[name="member-${n}"]`)) box.insertAdjacentHTML('beforeend', v.memberRow(n, '', true));
+  }
   for (const [n, val] of values) {
     const x = $<HTMLFormElement>(fid)?.elements.namedItem(n) as HTMLInputElement | null;
     if (x && 'value' in x) x.value = val;
@@ -884,10 +910,8 @@ ${resigned.length ? `<section class="card" id="e-resigned"><h3>Leaving alone (ru
 ${v.sharesHere(state, id, rc.toShow)}<div id="e-shares-here"></div>
 ${state.proposals.filter((p) => p.collective === id && p.kind === 'clone').map((p) => v.proposalStatus(state, p)).join('')}
 ${v.foldCard('e-real-change', 'collective-change', 'Change its members', `<form id="real-change" data-collective="${v.e(id)}">
-<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app, each naming a new key of their own; then it waits for Kišib.</p>
-<div class="picks">${rc.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${v.e(m)}" checked> ${v.person(state, m)}</label>`).join('')}</div>
-${v.contactPicks(state, [], rc.members)}
-<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('typed')}</div>
+<p class="small">Who is a member after the change: the members in force, each removable, and + Add a member (a collective keeps at least two). Every member whose voice remains signs it, and each joining member, each in their own app, each naming a new key of their own; then it waits for Kišib.</p>
+${v.memberRows('real-change', false, rc.members)}
 <h3>Who decides what, after the change</h3>
 <div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
@@ -1299,7 +1323,7 @@ app.addEventListener('change', async (ev) => {
     return;
   }
   const form = el.closest('form');
-  if (form && (form.id === 'real-found' || form.id === 'real-change') && (el.name === 'member' || el.name === 'typed' || el.name === 'founder')) return void (await syncGrid(form.id));
+  if (form && (form.id === 'real-found' || form.id === 'real-change') && (el.dataset.memberId !== undefined || el.name === 'founder')) return void (await syncGrid(form.id));
   if (el.dataset.action !== 'real-byhand') return;
   try {
     await c.ask('real by hand', { act: el.dataset.act, member: el.dataset.member, on: el.checked });
@@ -1616,6 +1640,13 @@ app.addEventListener('click', async (ev) => {
       const input = (el instanceof HTMLInputElement ? el : ((el as HTMLFormElement | null)?.elements.namedItem('folder') ?? null)) as HTMLInputElement | null;
       if (input) input.value = d.path!;
       return popup.close();
+    }
+    case 'member-add':
+      return void (await memberRowsChanged(d.form!, true));
+    case 'member-remove': {
+      const form = b.closest('form');
+      if (form) await memberRowsChanged(form.id, false, b.closest<HTMLElement>('[data-member-row]') ?? undefined);
+      return;
     }
     case 'real-lists': {
       const r = await busy('Reading the follow lists sealed to your identities…', () => c.ask<{ read: number; problems: string[] }>('real lists'));
@@ -2014,12 +2045,12 @@ app.addEventListener('submit', async (ev) => {
     }
     case 'real-found':
     case 'real-change': {
-      const members = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
-      const typed = words(d.get('typed')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+      // H118: each member's row, in order (the founder named apart).
+      const members = [...form.querySelectorAll<HTMLInputElement>('input[data-member-id]')].map((x) => x.value.trim()).filter(Boolean);
       const r = await busy('Making it, and reading it back…', () =>
         fid === 'real-found'
-          ? c.ask<Review>('real found prepare', { name: words(d.get('name')), founder: words(d.get('founder')), members: [...members, ...typed], grid: grids.get('real-found'), words: words(d.get('words')) })
-          : c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed], grid: grids.get('real-change') }),
+          ? c.ask<Review>('real found prepare', { name: words(d.get('name')), founder: words(d.get('founder')), members, grid: grids.get('real-found'), words: words(d.get('words')) })
+          : c.ask<Review>('real change prepare', { collective: form.dataset.collective, members, grid: grids.get('real-change') }),
       );
       if (r) {
         realReview = { plan: r.plan, digest: r.digest };

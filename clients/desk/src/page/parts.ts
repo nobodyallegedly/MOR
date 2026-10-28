@@ -25,7 +25,7 @@ import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, Ag
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import { shownAct, shownId } from '../../../genesis/src/shown.ts';
 import { GRID_STYLE } from './grid-view.ts';
-import { actId, contactsButtonFor, who } from '../../../kit/src/ids.ts';
+import { actId, contactsButtonFor, idForm, who } from '../../../kit/src/ids.ts';
 
 export { e };
 
@@ -703,20 +703,21 @@ export function person(_s: State, id: string): string {
   return who({ id, inline: true });
 }
 
-/** Where a contact comes from, in a few words. */
-const whence = (c: State['contacts'][number]) => (c.from === 'added' ? '' : 'agent' in c.from ? `followed by ${e(c.from.agent)}` : `in ${e(c.from.list)}’s follow list`);
+/**
+ * One member's row (H118, as splits do it): an ID, typed, pasted, or chosen
+ * from Contacts beside it; removable unless it is one of the two a
+ * collective needs.
+ */
+export function memberRow(n: number, value: string, removable: boolean): string {
+  return `<div class="member-row row tight" data-member-row="${n}"><input name="member-${n}" data-member-id value="${e(value)}" spellcheck="false" autocomplete="off" placeholder="mid1…, or a contact" aria-label="Member ${n}">${contactsButtonFor(`member-${n}`)}${removable ? `<button type="button" class="quiet" data-action="member-remove" aria-label="Remove member ${n}">Remove</button>` : ''}</div>`;
+}
 
-/** The contacts list, with checkboxes to choose members (H18). */
-export function contactPicks(s: State, picked: string[], skip: string[] = []): string {
-  const rows = s.contacts.filter((c) => !skip.includes(c.id));
-  return rows.length
-    ? `<div class="picks">${rows
-        .map(
-          (c) =>
-            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${who({ id: c.id, inline: true })} <span class="small">${whence(c)}</span></label>`,
-        )
-        .join('')}</div>`
-    : '<p class="small">No contact yet: add one in Contacts, top left, or type IDs below.</p>';
+/** The members of a founding (you, and one other) or of a change (those in force): rows, then + Add a member (H118). */
+export function memberRows(fid: string, founder: boolean, members: string[]): string {
+  const rows = founder
+    ? [`<div class="member-row" data-member-row="1"><span class="small">You, the founder chosen above</span></div>`, memberRow(2, '', false)]
+    : members.map((m, i) => memberRow(i + 1, idForm(m), members.length > 2));
+  return `<div class="member-rows" data-member-rows="${e(fid)}">${rows.join('')}</div><div class="row"><button type="button" data-action="member-add" data-form="${e(fid)}">+ Add a member</button></div>`;
 }
 
 /** "+ Found a real collective": the founder held here, the members from the contacts or typed, the rules; then a review. */
@@ -729,8 +730,7 @@ ${note('', 'How: each member reads the founding terms in plain words and signs o
 <section class="card"><form id="real-found">
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
-<label>Its other members, from your contacts</label>${contactPicks(s, [])}
-<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('typed')}</div>
+<label>Its members: you, and at least one other (each by ID, or chosen from Contacts beside it)</label>${memberRows('real-found', true, [])}
 <h3>Who decides what</h3>
 <p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign.</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
