@@ -127,7 +127,7 @@ Taken by the tests (`MOR_SCREENSHOTS=DIR`), kept in `docs/fixes-r7/`:
 
 **CI, after opening the pull request.** Two checks failed on the first run, and both are fixed:
 
-- **browsers (WebKit).** WebKit knows no clipboard permissions, so the kit's tests could not open a page there. In WebKit the test now keeps what the page copies and reads it back from the page. The words the kit copies are checked exactly as in Chromium.
+- **browsers (WebKit).** WebKit knows no clipboard permissions, so the kit's tests could not open a page there. In WebKit the test now keeps what the page copies and reads it back from the page. The words the kit copies are checked exactly as in Chromium. The second run brought two differences that are WebKit's own, not the kit's: a name line ends in a line break in its `innerText`, and the host's deliberate read of the sandboxed frame is refused with a console error. The test now allows both, in WebKit only.
 - **seal (macOS).** This round did not cause it. GitHub's macOS machines now start without Cargo's home folder (`~/.cargo`), and the WebAssembly build scripts (`clients/genesis/scripts/build-wasm.sh`, `clients/kishib/scripts/build-airgap-wasm.sh`) went into it to name it. The scripts now make it first, the way Cargo would on its first download. The shared WebAssembly comes out byte for byte the same (604aa9b5…8dd8fb). The job ran here only because Kišib's files changed. On main it passed on 24 October, before the machines changed.
 
 ## 3. For the MOR lead

@@ -72,11 +72,12 @@ async function open(size: (typeof SIZES)[number]) {
   // WebKit knows no clipboard permissions and reads the clipboard only on a paste: there, what the page writes is kept and read back from the page.
   const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, permissions: WEBKIT ? [] : ['clipboard-read', 'clipboard-write'] });
   const page = await context.newPage();
+  // Given as text: a function here would carry the test's compiled helpers (`__name`), unknown in the page.
   if (WEBKIT)
-    await page.addInitScript(() => {
+    await page.addInitScript(`{
       let kept = '';
-      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void (kept = t), readText: async () => kept } });
-    });
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { kept = t; }, readText: async () => kept } });
+    }`);
   const problems: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error' || /Content Security Policy/i.test(m.text())) problems.push(m.text());
@@ -318,7 +319,7 @@ for (const size of SIZES) {
     // The two called Pa carry a faint short ID; Ph, alone with its name, carries none.
     assert.equal(await pop.locator('[data-k-pick] .k-k').count(), 2);
     assert.match(offered[0], /Pa\s*mid1bbx…m4k/);
-    assert.match(offered[2], /^P?\s*Ph$/);
+    assert.match(offered[2], /^P?\s*Ph\s*$/);
     await shot(page, size.name, 'mention');
     await pop.locator('[data-k-pick]').nth(1).click();
     assert.equal(await ta.inputValue(), 'Thursday then. @Pa ');
@@ -468,6 +469,7 @@ test('the slot: another app’s panel in a frame the host cannot read or change'
   await shot(page, 'mac', 'slot');
   await page.locator('.k-frame .k-round').click();
   assert.equal(await page.locator('.k-frame').count(), 0);
-  assert.deepEqual(problems, []);
+  // WebKit says the host's own read was refused in the console: what this test expects, not a problem.
+  assert.deepEqual(problems.filter((p) => !(WEBKIT && /^Blocked a frame at .* from accessing a frame at "null"\.\s+The frame being accessed is sandboxed/.test(p))), []);
   await close();
 });
