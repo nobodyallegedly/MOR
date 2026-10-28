@@ -106,12 +106,9 @@ export function deliveredToItself(r: RunnerRequest): { target: string; key: Uint
   }
 }
 
-const short = (form: string) => {
-  const one = form.indexOf('1');
-  return one < 0 || form.length < one + 10 ? form : `${form.slice(0, one + 4)}…${form.slice(-3)}`;
-};
-const who = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? short(idForm(id)) : id);
-const act = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? short(actForm(id)) : id);
+// H121: IDs written whole; Kišib's page and its panel show each short, a tap showing it whole.
+const who = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
+const act = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? actForm(id) : id);
 const UNITS = new Set(UNITS_MODULES.flatMap((m) => m.units.map((u) => u.hash)));
 const map = (b: Uint8Array): Map<number, unknown> | null => {
   try {
@@ -132,13 +129,13 @@ export function wordsOf(r: RunnerRequest, app: string): string[] {
     if (format === CORRECTIONS_SPEC) out.push('A correction of an earlier act of its own:');
     else if (format === POST_SPECS.longform) out.push('A long-form document:');
     else if (format === APPENDED_FORMAT) out.push('A message with a collective appended (it binds nothing):');
-    else if (format) out.push(`A text in the format ${format.slice(0, 12)}…:`);
+    else if (format) out.push(`A text in the format ${format}:`);
     out.push(`“${String(m.get(0) ?? '')}”`);
   } else if (r.spec === SPECS.envelopes && r.type === PUBLICATION && m) {
     const module = m.get(0) instanceof Uint8Array ? hex(m.get(0) as Uint8Array) : '';
     const what = module === POST_SPECS.jpeg ? 'A picture (JPEG)' : module === POST_SPECS.video ? 'A film (MP4)' : 'A publication';
     const work = m.get(1) instanceof Uint8Array ? hex(m.get(1) as Uint8Array) : '';
-    out.push(`${what}, ${Number(m.get(3) ?? 0).toLocaleString('en')} bytes, its work hash ${work.slice(0, 16)}…`);
+    out.push(`${what}, ${Number(m.get(3) ?? 0).toLocaleString('en')} bytes, its work hash ${work}`);
   } else if (r.spec === SPECS.envelopes && r.type === WITHDRAWAL) {
     out.push('Withdraws a publication of its own.');
   } else if (r.spec === SPECS.identity && r.type === NAME && m) {
@@ -172,7 +169,7 @@ export function wordsOf(r: RunnerRequest, app: string): string[] {
       out.push('A money message Kišib cannot read in full.');
     }
   } else if (kind === 'money' || kind === 'agreements' || kind === 'keys' || kind === 'other') {
-    const layer = r.spec === MIRS.agreements ? 'the Agreements MIR' : r.spec === MIRS.money ? 'the Money MIR' : r.spec === SPECS.identity ? 'the Identity MIR' : r.spec === SPECS.envelopes ? 'the Envelopes MIR' : `the specification ${r.spec.slice(0, 12)}…`;
+    const layer = r.spec === MIRS.agreements ? 'the Agreements MIR' : r.spec === MIRS.money ? 'the Money MIR' : r.spec === SPECS.identity ? 'the Identity MIR' : r.spec === SPECS.envelopes ? 'the Envelopes MIR' : `the specification ${r.spec}`;
     out.push(`An act of ${layer}, type ${r.type}, ${r.payload.length} bytes: Kišib does not read it in plain words.`);
   }
   for (const x of r.refs ?? []) out.push(`It names ${act(refAct(x))}${refSigner(x) ? ` by ${who(refSigner(x)!)}` : ''}.`);

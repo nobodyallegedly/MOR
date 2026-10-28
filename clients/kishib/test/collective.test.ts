@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MIRS, SPECS, Verifier, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
+import { actForm } from '../../genesis/src/forms.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -49,7 +50,8 @@ test('a collective rotation from two of three paper shares, remote, completes th
   assert.match(r.sections[0].lines[2].text, /the app rather than the web page/);
   assert.deepEqual(r.blocking, [], JSON.stringify(r.blocking));
   const change = r.sections.find((s) => s.heading === 'The member change it completes')!;
-  assert.ok(change.lines.some((l) => l.text.includes(clone)));
+  // H121: the clone named by its act ID, written whole (the page shows it short, with its tap).
+  assert.ok(change.lines.some((l) => l.text.includes(actForm(clone))));
   const dealt = r.sections.find((s) => s.heading === 'The new shares')!;
   assert.ok(dealt.lines.some((l) => /you, the starter/.test(l.text)));
   assert.equal(dealt.lines.filter((l) => /sealed to the one-time key/.test(l.text)).length, 2, JSON.stringify(dealt));

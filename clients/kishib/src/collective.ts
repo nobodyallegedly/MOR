@@ -66,7 +66,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { actsBy, checkWarned, planLines, type LinePlan } from '../../genesis/src/lines.ts';
 import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
-import { readId } from '../../genesis/src/forms.ts';
+import { actForm, idForm, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, carriedKey, servedChain } from '../../dub/src/carryin.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, FOUNDING_AGREEMENT, REPO_SPECS } from '../../repo/src/specs.ts';
@@ -104,7 +104,8 @@ export interface CollectiveDeps {
   web: boolean;
 }
 
-const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+// H121: an identity written whole (`mid1…`); Kišib's page shows it short, its names beside, a tap showing it whole.
+const short = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 interface Described {
@@ -460,7 +461,7 @@ export class CollectiveSitting {
       if (!changes.length) throw new Error('No member change is proposed under the agreement in force: propose one in Edubba (the collective’s page, “Change its members”), have every member sign it, then come back.');
       const ch = changes[0];
       this.change = ch;
-      if (ch.missing.length) blocking.push(`The member change ${short(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short).join(', ')}.`);
+      if (ch.missing.length) blocking.push(`The member change ${actForm(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short).join(', ')}.`);
       if (changes.filter((x) => !x.missing.length).length > 1) blocking.push('Several member changes are fully signed under the same agreement: Kišib cannot tell which one the members mean. Say which in Edubba.');
       this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
       const names = (m: string) => (m === id ? 'the collective' : short(m));
@@ -512,14 +513,14 @@ export class CollectiveSitting {
       const sections: Section[] = [
         { heading: 'Before you start: what this device will hold (F337)', lines: DEALER_SAY },
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith('Its lines')),
-        { heading: 'The member change it completes', lines: [{ text: `Clone ${ch.clone}, proposed by ${short(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short(s)} ${ch.signatures[s] ? '✓' : '(not yet)'}`).join(', ')}.`, tone: ch.missing.length ? 'warn' : 'ok' }] },
+        { heading: 'The member change it completes', lines: [{ text: `Clone ${actForm(ch.clone)}, proposed by ${short(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short(s)} ${ch.signatures[s] ? '✓' : '(not yet)'}`).join(', ')}.`, tone: ch.missing.length ? 'warn' : 'ok' }] },
         { heading: 'The papers', lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members’ paper shares rebuild the chain key (its agreement’s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: 'In the same room: the others type theirs into this Kišib, one after another. Nothing is sent.' } : { text: `Remote: each other member gives theirs in their own Kišib, sealed to a one-time key made here, within an hour (until ${when(this.request!.expires)} by this device’s clock; MOR has no clock).` }] },
         { heading: 'Its lines of acts: what the rotation keeps (Identity rule 35)', lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         { heading: 'The new shares', lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] },
       ];
       const signs = [
         `Kišib signs one rotation of the collective ${short(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
-        `The rotation declares the member change (clone ${short(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective’s lines, installs a new signing key (its words shown once, for ${short(ch.holder)}, who holds it) and commits a new chain key.`,
+        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective’s lines, installs a new signing key (its words shown once, for ${short(ch.holder)}, who holds it) and commits a new chain key.`,
         this.room ? 'Nothing is signed with anyone’s signing key.' : `As ${short(this.founder!.id)}: one message in each member’s thread announcing the rotation, and, after it, each new share sealed to its member’s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`,
       ];
       const s0 = founderSeed;
@@ -832,7 +833,7 @@ export class CollectiveSitting {
     const names = (m: string) => (m === id ? 'the collective' : short(m));
     const sections: Section[] = [
       { heading: 'The rotation you are asked to give your share to', lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter’s message, character by character.`, tone: 'warn' }, { text: `It expires at ${when(q.expires)} (this device’s clock).` }] },
-      { heading: 'The member change it completes', lines: change ? [{ text: `Clone ${q.clone}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${q.clone}, not found here: Kišib cannot read it back to you. Do not give your share unless you know it.`, tone: 'bad' }] },
+      { heading: 'The member change it completes', lines: change ? [{ text: `Clone ${actForm(q.clone)}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${actForm(q.clone)}, not found here: Kišib cannot read it back to you. Do not give your share unless you know it.`, tone: 'bad' }] },
       { heading: 'What it keeps and creates', lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? '' : 's'} of the collective’s acts.` }, { text: `A new chain key, created on the starter’s device and dealt to ${q.members.length} members (${q.members.map(short).join(', ')}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
       { heading: 'What the starter’s device will hold (F337)', lines: DEALER_SAY.slice(0, 2) },
     ];

@@ -259,6 +259,8 @@ export interface ContactsHost {
   profile?(id: string): void;
   /** Say something done, or a refusal. */
   said(kind: 'done' | 'error', html: string): void;
+  /** Shown, not changed here (Kišib, which signs only for the apps paired with it): why, said below the list; no add, Nickname… or Remove. */
+  readOnly?: string;
 }
 
 interface Shown {
@@ -280,18 +282,22 @@ export function attachContacts(page: HTMLElement, host: ContactsHost): { open():
   let problem: string | null = null;
   const below = () =>
     `<form data-k-contact-add class="k-contact-add"><div class="k-row"><input name="contact-id" data-k-id-field autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1…, or an ID link)" required aria-label="Add by ID"></div><input name="contact-nick" autocomplete="off" placeholder="Your nickname for it (only you see it)" aria-label="Your nickname for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : '<p class="k-small k-soft">Sealed to you at your homes: every app holding this identity reads the same list. Your nicknames are seen by you alone.</p>'}`;
-  const html = () => contactsPanel({ contacts: list.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: 'Remove', below: below() });
-  const refresh = async () => {
+  const html = () =>
+    host.readOnly
+      ? contactsPanel({ contacts: list.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), below: `${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : ''}<p class="k-small k-soft">${e(host.readOnly)}</p>` })
+      : contactsPanel({ contacts: list.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: 'Remove', below: below() });
+  const refresh = async (fresh = false) => {
     try {
-      const r = await host.ask<{ contacts: Shown[]; problem: string | null }>('contacts');
+      const r = await host.ask<{ contacts: Shown[]; problem: string | null }>('contacts', fresh ? { fresh: true } : {});
       list = r.contacts;
       problem = r.problem;
     } catch (err) {
       problem = err instanceof Error ? err.message : String(err);
     }
   };
+  // Opened, read afresh: a contact added in another app is here at once (H100).
   const open = async () => {
-    await refresh();
+    await refresh(true);
     if (panelOpen()?.dataset.kPanel === 'contacts') redrawPanel(html());
     else openPanel(page, html());
   };
@@ -338,5 +344,5 @@ export function attachContacts(page: HTMLElement, host: ContactsHost): { open():
     if (!list.length) await refresh();
     return list.map((c) => ({ id: c.id, form: c.form, named: c.named }));
   });
-  return { open, list: () => list, refresh };
+  return { open, list: () => list, refresh: () => refresh(true) };
 }

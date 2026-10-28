@@ -35,6 +35,8 @@ export interface Sitting {
   kind: 'identity' | 'escape' | 'collective' | 'confirm' | 'make';
   /** The identity or collective. */
   id: string;
+  /** A new identity's ID link (`mid1…?r=…`), once made (H88): Share your ID link, at the end of making it. */
+  link?: string;
   /** The act signed, if any: the rotation (or escape, or confirmation). */
   act: string | null;
   stage:

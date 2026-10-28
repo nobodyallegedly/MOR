@@ -33,7 +33,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { CODE, RelayError, relayAt, type Via } from '../../genesis/src/transport.ts';
 import { checkWarned, planLines, readCards, type LinePlan } from '../../genesis/src/lines.ts';
 import { encryptionSecret, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
-import { readId } from '../../genesis/src/forms.ts';
+import { actForm, idForm, idWhere, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { bindingOf, homesWords, linesUnder, placing, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
 import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } from './words.ts';
@@ -41,6 +41,10 @@ import { fingerprint, grouped, type Line, type Review, type Section, type Sittin
 import { CollectiveSitting, EXPIRY, checkShare, type CollectiveDeps } from './collective.ts';
 import { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY } from './common.ts';
 import { airgap } from './airgap.ts';
+import { Known, type KnownContacts } from '../../kit/src/engine/known.ts';
+import type { Opener, Said } from '../../kit/src/engine/people.ts';
+import type { Named } from '../../kit/src/html.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { NAKISIB_LOST_SAY, NAKISIB_SAY, NAKISIB_WAIT_SAY } from './nakisib-say.ts';
 
 export { NAKISIB_LOST_SAY, NAKISIB_SAY, NAKISIB_WAIT_SAY };
@@ -66,7 +70,8 @@ export const LAST_OF_OLD_PAPER_SAY =
   'This paper already made an earlier change of these keys: until 21 October 2026 Kišib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes’ receipts are in; this paper is spent after it.';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+// H121: an identity written whole (`mid1…`); Kišib's page shows it short, its names beside, a tap showing it whole.
+const short = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
 const unb64 = (t: string): Uint8Array => {
   try {
     return Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
@@ -143,7 +148,30 @@ export interface Options {
   web?: boolean;
   /** This device's clock, in seconds (the one-time key's expiry, F337): MOR has none. */
   now?: () => number;
+  /** What holds identities' keys: the runner, on the program only (never on the web). */
+  holder?: Holder;
+  via?: Via;
 }
+
+/**
+ * What holds identities' keys for Kišib (the runner, `runner.ts`): whose
+ * contacts Kišib shows, and where it reads names (hand test v3, H100).
+ */
+export interface Holder {
+  readonly state: 'off' | 'locked' | 'on';
+  /** The identities held, with their homes, while on. */
+  holding(): { id: string; homes: string[] }[];
+  /** A held identity, as the one contacts list needs it: opened with its key, signed on Kišib's own line. */
+  self(id: string): { me: TestIdentity; open: Opener };
+}
+
+/** Said where Kišib has no contacts list to read (H100), by why: the kit's Contacts panel says it. */
+export const NO_CONTACTS_SAY = {
+  web: 'Kišib on the web holds no identity, so it has no contacts list: your contacts are in the apps holding your identity (Dub, Damgar…), and in Kišib’s program once its runner holds it',
+  off: 'Kišib’s runner is off, so Kišib holds no identity and has no contacts list to read: turn it on (Runner), and give it an identity (Identities, Held here)',
+  locked: 'Kišib is locked: its contacts list is read once the runner’s passphrase is given (Runner)',
+  none: 'Kišib’s runner holds no identity yet: give it one (Identities, Held here), and its contacts list is read here',
+} as const;
 
 export class Kishib {
   private plans = new Map<string, Plan>();
@@ -151,10 +179,67 @@ export class Kishib {
   private col: CollectiveSitting | null = null;
   readonly web: boolean;
   readonly now: () => number;
+  /** Who is known (H96, H100, H106): the one contacts list and the names identities published, read by the kit's one reader. */
+  readonly known: Known;
+  private holder: Holder | null;
+  /** The addresses given to Kišib in this program's life (homes, relays), in memory only: where names are read too. */
+  private near = new Set<string>();
 
   constructor(opts: Options = {}) {
     this.web = opts.web ?? false;
     this.now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+    this.holder = opts.holder ?? null;
+    this.known = new Known('Kišib', { via: opts.via });
+  }
+
+  // ------------------------------------------------------------ names and contacts (hand test v3: H96, H100, H106, H109)
+
+  /** Addresses given in a form, kept in memory as places to read names at. Never written anywhere. */
+  heard(...typed: string[]): void {
+    for (const t of typed) for (const x of String(t ?? '').split(/[\s,]+/)) if (/^https?:\/\/\S+$/.test(x) && this.near.size < 64) this.near.add(x.replace(/\/+$/, ''));
+  }
+
+  /** Where names are read: the homes of the identities held, and the addresses given here. */
+  private places(): string[] {
+    const held = this.holder?.state === 'on' ? this.holder.holding().flatMap((h) => h.homes) : [];
+    return [...new Set([...held, ...this.near])];
+  }
+
+  /** The identity whose contacts Kišib shows (`as`, else the first held), or why there is none. */
+  private whose(as?: string): { me: TestIdentity; open: Opener } | { problem: string } {
+    if (this.web || !this.holder) return { problem: NO_CONTACTS_SAY.web };
+    if (this.holder.state !== 'on') return { problem: NO_CONTACTS_SAY[this.holder.state] };
+    const held = this.holder.holding();
+    const id = as && held.some((h) => h.id === as) ? as : held[0]?.id;
+    if (!id) return { problem: NO_CONTACTS_SAY.none };
+    return this.holder.self(id);
+  }
+
+  /** The names of the IDs the page draws (H96, H106): the nickname given (where an identity is held), and the name each published. */
+  async names(a: { ids: string[]; fresh?: boolean; as?: string }): Promise<Record<string, Named>> {
+    const w = this.whose(a.as);
+    if ('me' in w) return this.known.named(w.me, w.open, a.ids, this.places(), { fresh: a.fresh });
+    // Nobody's contacts here: the published names alone.
+    const published = await this.known.names.many(a.ids.slice(0, 200), this.places(), !!a.fresh);
+    return Object.fromEntries(Object.entries(published).map(([id, p]) => [id, { nick: null, published: p }]));
+  }
+
+  /** The one contacts list (H100), each contact with its names; or why it cannot be read here (locked, off, the web: nothing read). */
+  async contacts(a: { as?: string; fresh?: boolean } = {}): Promise<KnownContacts> {
+    const w = this.whose(a.as);
+    if (!('me' in w)) return { contacts: [], problem: w.problem };
+    return this.known.contacts(w.me, w.open, this.places(), { fresh: a.fresh });
+  }
+
+  /** The list changed (H109): a contact added with a nickname, a nickname set or taken away, a contact taken out; sealed as the people cMIP keeps it. */
+  /**
+   * Kišib shows the contacts, and changes none (fix round 7's reading, put
+   * to Nobody, allegedly): changing them signs an act, and the runner signs
+   * only for the apps paired with it (the runner cMIP), never for Kišib
+   * itself. They are changed in Dub, Damgar, Edubba or Ummia.
+   */
+  async contactChange(_a: { op: 'add' | 'nick' | 'remove'; id: string; nick?: string; as?: string }): Promise<{ lines: Said[] }> {
+    throw new Error(CONTACTS_READ_ONLY);
   }
 
   // ------------------------------------------------------------ state
@@ -170,7 +255,9 @@ export class Kishib {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...(h.positions ? { positions: h.positions } : {}), ...(h.chain || h.signing ? { words: h.chain ? ('chain' as const) : ('signing' as const) } : {}), ...(h.request ? { nakisib: { fingerprint: h.fingerprint ?? '' } } : {}) };
+    // H88: a new identity's ID link, once made (one of its homes, one of its relays), for Share your ID link.
+    const link = h.kind === 'make' && h.id ? { link: idWhere(h.id, [h.homes[0]?.hint, h.places.find((p) => !h.homes.some((x) => x.hint === p))].filter((x): x is string => !!x)) } : {};
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...link, ...(h.positions ? { positions: h.positions } : {}), ...(h.chain || h.signing ? { words: h.chain ? ('chain' as const) : ('signing' as const) } : {}), ...(h.request ? { nakisib: { fingerprint: h.fingerprint ?? '' } } : {}) };
   }
 
   /** Drop everything this sitting holds: words, keys, bytes. */
@@ -996,7 +1083,7 @@ export class Kishib {
         {
           heading: 'What changes',
           lines: [
-            { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${short(h.operator!)})`).join('; ')}. The old homes are left.`, tone: 'warn' },
+            { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${h.operator!})`).join('; ')}. The old homes are left.`, tone: 'warn' },
             { text: 'Every rotation above is abandoned: it can never count afterwards (Identity section 11).', tone: 'warn' },
             { text: 'A new signing key, made now; its words are shown once the new homes’ receipts are in.' },
             { text: `A new chain key, from a new paper made now on this device (key ${p} of its words): its words are shown first, and only once three are typed back are the escape and its endorsement signed. The stolen paper is then spent: whoever holds it can derive nothing that counts after this escape. ${PAPER_COUNTS_SAY}`, tone: 'warn' },
@@ -1005,7 +1092,7 @@ export class Kishib {
       ];
       const signs = [
         `With your chain key (key ${idx} of these words): one homeless rotation of ${short(id)} at position ${p}, naming the new homes.`,
-        `With your signing key (bound by ${short(q.act)}): one escape endorsement naming that rotation and listing ${rivals.length === 1 ? 'the rotation above' : `the ${rivals.length} rotations above`} as abandoned.`,
+        `With your signing key (bound by ${actForm(q.act)}): one escape endorsement naming that rotation and listing ${rivals.length === 1 ? 'the rotation above' : `the ${rivals.length} rotations above`} as abandoned.`,
         'Both keys together are the strongest proof of ownership MOR sees (Identity rule 53): an escape endorsed with the signing key cannot be voided by an objection. Someone holding both of your keys could do the same: keep them apart.',
       ];
       const digest = sha256(cborEncode(['MOR Kišib escape, version 1', id, q.act, rivals.map((s) => s.id).sort(), newHomes.map((h) => h.hint), plan.kept.map((k) => [k.act, k.position, k.summary])]));
@@ -1352,3 +1439,6 @@ export function vaultPlan(v: VaultChange | undefined, now: { unit: string; railM
     ) as { spec: string; kind: number; cbor: Uint8Array },
   };
 }
+
+/** Why Kišib's contacts are shown, not changed. */
+export const CONTACTS_READ_ONLY = 'Kišib shows your contacts and changes none: changing them signs an act, and Kišib signs only for the apps paired with it. Add a contact or a nickname in Dub, Damgar, Edubba or Ummia; it is here at once. Nothing was signed.';

@@ -30,9 +30,10 @@ import { join } from 'node:path';
 import { base64, cborEncode, describeAct, hex, keyDeliveryPayload, makeEveryday, openSealed, openWithKey, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { cardText, ownLine } from '../../genesis/src/lines.ts';
-import type { Home, SignRequest } from '../../genesis/src/identity.ts';
+import { TestIdentity, type Home, type IdentityFile, type SignRequest } from '../../genesis/src/identity.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { idForm, readId } from '../../genesis/src/forms.ts';
+import { idForm, idWhere, readId } from '../../genesis/src/forms.ts';
+import type { Opener } from '../../kit/src/engine/people.ts';
 import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
@@ -263,7 +264,8 @@ export interface RunnerView {
   upgrade: boolean;
   since: number | null;
   risk: string[];
-  held: { id: string; form: string; name: string | null; spent: boolean; apps: string[]; homes: string[]; members: { collective: string; form: string; added: number }[] }[];
+  /** Each identity held: its ID, its ID link (H88: one of its homes, for Share your ID link), the name it published as read when given. */
+  held: { id: string; form: string; link: string; name: string | null; spent: boolean; apps: string[]; homes: string[]; members: { collective: string; form: string; added: number }[] }[];
   /** Draft 3: the collectives' keys apps asked Kišib to hold, waiting for an answer here. */
   memberAsks: { id: string; app: string; identity: string; name: string | null; collective: string; form: string; at: number }[];
   apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; opens: string[]; asked: number; approved: number | null }[];
@@ -976,7 +978,7 @@ export class Runner {
       } else {
         const d = o.described;
         const kind = kindOf({ identity: h.id, binding: '', line: 'private', sequence: [], spec: d.spec ?? '', type: d.type ?? 0, payload: d.payload ?? new Uint8Array(), public: false, to: d.to });
-        const from = !d.signer ? '' : d.signer === h.id ? ', its own' : `, from ${short(idForm(d.signer))}`;
+        const from = !d.signer ? '' : d.signer === h.id ? ', its own' : `, from ${idForm(d.signer)}`;
         f.log.push({ at, app: p.id, appName: p.name, identity: h.id, kind, words: [`Opened for ${p.name}: ${KIND_ONE[kind]}${from}. Nothing was signed.`], act: d.id, line: 'private', position: 0, opened: true, sealed, times: 1 });
       }
       changed = true;
@@ -1032,7 +1034,8 @@ export class Runner {
     const { w, app, held } = x;
     return {
       title: titleOf(app.name, w),
-      as: w.req.as !== undefined ? `As the collective ${short(idForm(w.req.as))}, with ${held.name ?? 'this identity'}’s own member key · ${w.req.public ? 'public' : 'private'}` : `As ${held.name ?? 'this identity'} · ${short(idForm(held.id))} · ${w.req.public ? 'public' : 'private'}`,
+      // H121: IDs whole here; the panel shows each short, its tap showing it whole.
+      as: w.req.as !== undefined ? `As the collective ${idForm(w.req.as)}, with ${held.name ?? 'this identity'}’s own member key · ${w.req.public ? 'public' : 'private'}` : `As ${held.name ?? 'this identity'} · ${idForm(held.id)} · ${w.req.public ? 'public' : 'private'}`,
       words: w.words,
       always: ALWAYS_ASKS.includes(w.kind) || w.req.as !== undefined ? null : `Always yes for ${app.name}’s ${KIND_NAME[w.kind]}`,
     };
@@ -1073,6 +1076,51 @@ export class Runner {
     }
   }
 
+  // ------------------------------------------------------------ Kišib's own contacts (hand test v3, H100, H109)
+
+  /** The identities held, with their homes, while on: where Kišib reads names, and whose contacts it shows. */
+  holding(): { id: string; homes: string[] }[] {
+    return (this.f?.held ?? []).map((h) => ({ id: h.id, homes: h.homes.map((x) => x.hint) }));
+  }
+
+  /**
+   * A held identity, as the one contacts list needs it (H100: the people
+   * cMIP's list, sealed to the identity at its homes): opened with the
+   * encryption key its signing words carry, to be shown in Kišib's own page.
+   * Nothing is signed for Kišib itself: its contacts are read-only (the
+   * runner signs only for the apps paired with it). Locked or off: refused,
+   * nothing read.
+   */
+  self(id: string): { me: TestIdentity; open: Opener } {
+    const f = this.file();
+    const h = f.held.find((x) => x.id === id);
+    if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity. Nothing was read.');
+    const file = { label: '', identity: h.id, position: 0, binding: h.binding, signingSecret: '', chain: [], homes: h.homes, rule: null, sequence: [], private: [], split: true, routes: null, encryption: [], pending: null } as unknown as IdentityFile;
+    const me = new TestIdentity(file, this.via);
+    me.signer = async () => {
+      throw new RunnerRefusal(403, 'Kišib signs only for the apps paired with it. Nothing was signed.');
+    };
+    const open: Opener = async (sealed) => {
+      const held = this.file().held.find((x) => x.id === id);
+      if (!held) return sealed.map(() => null);
+      const seed = unhex(held.secret);
+      const secret = encryptionSecret(seed);
+      seed.fill(0);
+      try {
+        return sealed.map((bytes) => {
+          try {
+            return openSealed(bytes, held.id, secret) as Awaited<ReturnType<Opener>>[number];
+          } catch {
+            return null;
+          }
+        });
+      } finally {
+        secret.fill(0);
+      }
+    };
+    return { me, open };
+  }
+
   // ------------------------------------------------------------ what Kišib's page shows
 
   view(): RunnerView {
@@ -1085,7 +1133,7 @@ export class Runner {
       upgrade: !!this.legacy,
       since: f?.since ?? null,
       risk: RISK_SAY,
-      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name), members: (h.members ?? []).map((m) => ({ collective: m.collective, form: idForm(m.collective), added: m.added })) })),
+      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), link: idWhere(h.id, h.homes.map((x) => x.hint).slice(0, 1)), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name), members: (h.members ?? []).map((m) => ({ collective: m.collective, form: idForm(m.collective), added: m.added })) })),
       memberAsks: (f?.memberAsks ?? []).map((x) => ({ id: x.id, app: x.appName, identity: x.identity, name: name(x.identity), collective: x.collective, form: idForm(x.collective), at: x.at })),
       apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, opens: opensOf(p), asked: p.asked, approved: p.approved ?? null })),
       waiting: [...this.waiting.values()]
@@ -1123,16 +1171,12 @@ function erase(x: string) {
   rmSync(x, { force: true });
 }
 
+
 /** A request's title, as the panel and Waiting say it. */
 const titleOf = (app: string, w: { kind: Kind; req: RunnerRequest }) => `${app} asks Kišib to sign ${KIND_ONE[w.kind]}${w.req.as !== undefined ? ' as a collective' : ''}`;
 
 /** At most this many sealed containers opened in one request. */
 export const OPEN_MAX = 100;
-
-const short = (form: string) => {
-  const one = form.indexOf('1');
-  return one < 0 || form.length < one + 10 ? form : `${form.slice(0, one + 4)}…${form.slice(-3)}`;
-};
 
 const wire = (m: { act: Uint8Array; id: string; key: Uint8Array }) => ({ act: base64(m.act), id: m.id, key: base64(m.key) });
 
