@@ -214,7 +214,8 @@ test('H88, H96, H100, H106, H109, H119, H121: Damgar shows names, keeps the one 
   await ad.c.ask('sign draft', { id: tip.id });
   await go(page, 'waiting', 'to-pay');
   await page.waitForFunction((id) => document.querySelector(`#pane [data-k-who="${id}"] .k-nick`)?.textContent === 'Bobby', bob.id, { timeout: 60_000 });
-  assert.match(await page.locator(`#pane [data-k-who="${bob.id}"]`).first().innerText(), /Bob Test/);
+  // His own name comes from his profile at the homes, after the nickname kept here: waited for, not read once.
+  await page.waitForFunction((id) => [...document.querySelectorAll(`#pane [data-k-who="${id}"]`)].some((x) => /Bob Test/.test((x as HTMLElement).innerText)), bob.id, { timeout: 60_000 });
   // The card's signer (Alice, paying): her name, not "No name".
   await page.waitForFunction(() => [...document.querySelectorAll('#pane .k-signer .k-names')].some((x) => x.textContent?.includes('Alice Test')), undefined, { timeout: 60_000 });
   await shot(page, '05-to-pay');
