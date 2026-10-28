@@ -45,3 +45,9 @@ His version, with the clarifications above folded into rule 60. In the texts' vo
 And one line of client conformance beside it, which is where the stated risk is made visible: *before a party signs a founding, its client shows, layer by layer, what the rule lets one member do alone, Money first.*
 
 **Before the freeze:** yes, with F401; it is the shape of the founding and cannot change after.
+
+## Addendum, the same evening, after Nobody, allegedly read it
+
+Asked whether "those agreements fall under the constitution, not layer powers", I first drew the line too wide: I offered to put entering or leaving any agreement as a party (a publication, a work's ownership, a transfer, a release) under the constitutional rule, since it decides where the collective's income goes. Nobody, allegedly, meant something narrower and already in the texts: **the exception is the collective's own agreement, its founding and every clone of it, which dictate its constitution.** Rule 64 gives a clone its powers from its changes, the constitutional rule among them, and no layer's rule reaches it. The sentence under 5 says that and stands as written.
+
+So the extra line is withdrawn. Entering a publication or a work's ownership agreement falls under the Agreements layer's rule like every other act of that layer. Where a founding names "any one member" for Agreements, one member can sign the collective into a publication alone: that is the stated risk his version accepts, chosen at the founding and shown by the client, layer by layer. Nothing more is added to the rule.
