@@ -144,11 +144,11 @@ function chainForms(words: string[]): string[] {
 }
 
 
-/** The faces of Inter the page loaded, from its own origin (F332, "Inter bundled"), once its fonts are ready. */
+/** The faces the page loaded, from its own origin (H123: Atkinson Hyperlegible Next and Mono, Gentium Book Plus italic), once its fonts are ready. */
 async function interLoaded(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
     await document.fonts.ready;
-    return [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Inter' && f.status === 'loaded').map((f) => f.weight).sort();
+    return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')).sort();
   });
 }
 
@@ -251,9 +251,9 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
   assert.equal(a2.prev, first, 'the second post follows the first, in the same line');
   assert.equal(a2.position, a1.position + 1);
-  // Inter, light and regular, from this page's own origin, its licence beside it.
-  assert.deepEqual(await interLoaded(page), ['300', '400']);
-  assert.match(await (await fetch(`${base}/inter_license.txt`)).text(), /SIL Open Font License, Version 1\.1/);
+  // H123: the suite's faces, from this page's own origin, each licence beside it.
+  assert.deepEqual(await interLoaded(page), ['Atkinson Hyperlegible Mono', 'Atkinson Hyperlegible Next', 'Gentium Book Plus']);
+  for (const l of ['atkinson_next_license.txt', 'atkinson_mono_license.txt', 'gentium_book_plus_license.txt']) assert.match(await (await fetch(`${base}/${l}`)).text(), /SIL Open Font License, Version 1\.1/);
   assert.match(contentSecurityPolicy(), /font-src 'self'/);
   await shot(page, '03-public');
 

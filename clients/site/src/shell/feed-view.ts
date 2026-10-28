@@ -36,7 +36,7 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-post figcaption,.f-missing{font-size:12px;color:var(--soft)}
 .f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
 .f-post summary{cursor:pointer;min-height:24px}
-.f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.f-post code,.f-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
 .f-more{font-size:13px;color:var(--soft)}
 .f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
 .f-visitor .f-text{font-size:16px}

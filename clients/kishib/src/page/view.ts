@@ -40,13 +40,13 @@ export const STYLE = `${KIT_STYLE}
 ${PANEL_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.kishib-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.kishib-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .kishib-banner strong{font-weight:400;color:var(--k-text)}
 .kishib-banner ol{margin:4px 0;padding-left:1.4em}
 .k-home.kishib-three>.k-tile:last-child{grid-column:1 / -1}
 .kishib-foot{flex:none;padding:0 28px 10px}
 .kishib-holds{display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;padding:4px 6px 4px 14px;border:1px solid var(--k-line);border-radius:999px;font-size:14px}
-.kishib-holds .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.kishib-holds .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .kishib-door{flex:1;display:grid;place-items:center;padding:20px}
 .kishib-door .k-box{max-width:560px;width:100%;padding:28px 32px;border-radius:22px;background:var(--k-raise);border-color:var(--k-line)}
 .kishib-door .k-ic{width:44px;height:44px;color:var(--k-p)}
@@ -65,8 +65,8 @@ li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
 .kishib-must{border:1px solid var(--k-bad);border-radius:14px;padding:12px 16px;margin:10px 0}
 .kishib-signs{border:1px solid var(--k-edge);border-radius:12px;padding:8px 14px;margin:10px 0;font-size:14px}
-.kishib-fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);letter-spacing:.04em}
-.kishib-full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere}
+.kishib-fpr{font:15px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);letter-spacing:.04em}
+.kishib-full{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere}
 .kishib-typed{display:flex;gap:12px;flex-wrap:wrap}
 .kishib-typed label{flex:1;min-width:120px}
 .kishib-seg{display:inline-flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}

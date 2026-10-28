@@ -39,7 +39,7 @@ export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-
 export const STYLE = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .damgar-banner strong{font-weight:400;color:var(--k-text)}
 .damgar-banner ol{margin:4px 0;padding-left:1.4em}
 .damgar-foot{flex:none;padding:0 28px 10px}
@@ -53,7 +53,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .damgar-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
-.damgar-copy{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
+.damgar-copy{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
 .damgar-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
 .damgar-v.valid{color:var(--k-text);border-color:var(--k-p)}
 .damgar-v.invalid{color:var(--k-bad);border-color:var(--k-bad)}

@@ -36,14 +36,14 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Can
 #mor-bar dt{color:var(--soft)}
 #mor-bar dd{margin:0;overflow-wrap:anywhere}
 #mor-bar ul{margin:4px 0;padding-left:18px}
-code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
+code,.fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
 .ok-word{color:var(--ok);font-weight:600}
 .bad-word{color:var(--bad);font-weight:600}
 #mor-view{flex:1;position:relative}
 #mor-view>iframe{display:block;width:1px;min-width:100%;height:calc(100vh - 4em);border:0;background:Canvas}
 #mor-view>.file{padding:16px}
 #mor-view img{max-width:100%;height:auto;image-orientation:from-image}
-#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
+#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}
 .mor-player{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;overflow:hidden;font:14px/1.4 system-ui,sans-serif}
 .file .mor-player{position:relative;width:100%;aspect-ratio:16/9}

@@ -49,7 +49,7 @@ export const WEB_BANNER = `<details class="k-say ummia-banner" id="for-testing-o
 export const STYLE = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .ummia-banner strong{font-weight:400;color:var(--k-text)}
 .ummia-banner ol{margin:4px 0;padding-left:1.4em}
 .ummia-foot{flex:none;padding:0 28px 10px}
@@ -62,7 +62,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .ummia-look{display:flex;flex-direction:column;min-height:0;flex:1}
 .ummia-look .k-feedwrap{min-height:240px}
 .ummia-pane textarea{min-height:76px}
-.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .ummia-lines{margin:4px 0;padding-left:1.1em;font-size:14px}
 .ummia-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}

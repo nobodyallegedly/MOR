@@ -39,7 +39,7 @@ body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,-apple-
 .l-drafts li{margin:2px 0}
 .l-line details{margin-top:8px;font-size:12px;color:var(--soft)}
 .l-line summary{cursor:pointer;min-height:24px}
-code,.l-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+code,.l-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
 .l-section{margin:16px 0 8px;font-size:15px}
 .l-none{font-size:14px;color:var(--soft)}
 .l-h{margin:18px 0 6px;font-size:19px}

@@ -32,7 +32,7 @@ const listen = (s: Server) => new Promise<string>((r) => s.listen(0, '127.0.0.1'
 
 before(async () => {
   const js = (await build({ entryPoints: [here('test/demo.ts')], bundle: true, format: 'esm', write: false, target: 'es2022' })).outputFiles[0].text;
-  const fonts = (f: string) => readFileSync(here(`../dub/static/fonts/${f}`));
+  const fonts = (f: string) => readFileSync(here(`fonts/${f}`));
   // The other app's origin, for the slot: its own page, posting one message to whoever framed it.
   page2 = createServer((req, res) => {
     if (req.url === '/frame') {
@@ -152,9 +152,13 @@ for (const size of SIZES) {
     // The feed box scrolls inside, never the page.
     assert.equal(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight), true, 'the page itself does not scroll');
     assert.equal(await page.locator('.k-feed').evaluate((f) => getComputedStyle(f).overflowY), 'auto');
-    // Inter, in its light weight, from the page's own origin.
+    // H123: Atkinson Hyperlegible Next for words, its Mono for IDs, Gentium Book Plus italic for the app's name, from the page's own origin.
     await page.evaluate(() => document.fonts.ready);
-    assert.equal(await page.evaluate(() => document.fonts.check('300 15px Inter')), true);
+    assert.equal(await page.evaluate(() => document.fonts.check('300 15px "Atkinson Hyperlegible Next"')), true);
+    assert.equal(await page.evaluate(() => document.fonts.check('12px "Atkinson Hyperlegible Mono"')), true);
+    // The app's name is hidden at a phone's width: its face is loaded where it is shown.
+    if (size.name === 'mac') assert.equal(await page.evaluate(() => document.fonts.check('italic 16px "Gentium Book Plus"', 'Kišib na₄')), true);
+    assert.deepEqual(await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')).sort()), ['Atkinson Hyperlegible Mono', 'Atkinson Hyperlegible Next', ...(size.name === 'mac' ? ['Gentium Book Plus'] : [])]);
     await noFindingNumber(page);
     assert.deepEqual(problems, []);
     await close();

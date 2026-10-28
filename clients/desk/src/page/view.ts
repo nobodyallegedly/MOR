@@ -54,7 +54,7 @@ export const STYLE = `${KIT_STYLE}
 ${PARTS_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.edubba-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.edubba-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .edubba-banner strong{font-weight:400;color:var(--k-text)}
 .edubba-banner ol{margin:4px 0;padding-left:1.4em}
 .edubba-foot{flex:none;padding:0 28px 10px}

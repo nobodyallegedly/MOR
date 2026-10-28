@@ -1,8 +1,11 @@
 // The Dubsar Suite's look, as one stylesheet every app's page carries
 // (decided by Nobody, allegedly, 20–21 October 2026, in
 // docs/design/suite-redesign.md; drawn in docs/design/mockups/suite.css):
-// dominantly black; Inter in light weights, the apps' own font files served
-// from the page's origin; each app's colour in pastel fills (the open tab,
+// dominantly black; Atkinson Hyperlegible Next in light weights, its Mono
+// for what is code-like (IDs, hashes, signing words, amounts), the app names
+// in Gentium Book Plus italic, as Sumerian words are set in transliteration
+// (H123, decided 26 October 2026), the font files the kit's own, served
+// from the page's origin by each app; each app's colour in pastel fills (the open tab,
 // the main button, the part chosen, a wash over tiles), less in outlines;
 // thin neutral lines and outlines kept; red only for alarms. No shadow on
 // the page itself; menus and panels lift over it.
@@ -23,21 +26,33 @@ export const APPS = {
 
 export type App = keyof typeof APPS;
 
-/** The fonts the style names, served by each app from its own origin beside the page (Inter 4.1, SIL OFL 1.1). */
-export const FONTS = ['inter_light.woff2', 'inter_regular.woff2', 'inter_license.txt'] as const;
+/**
+ * The fonts the style names (H123), kept in the kit's `fonts/` folder and
+ * served by each app from its own origin beside the page, nothing loaded
+ * from elsewhere: Atkinson Hyperlegible Next and Mono (the Braille
+ * Institute's, variable weights, Google Fonts' release) and Gentium Book
+ * Plus italic (SIL's), each under the SIL Open Font License 1.1, whole,
+ * only turned to WOFF2 (a change of format, not of the font), each beside
+ * its licence.
+ */
+export const FONTS = ['atkinson_next.woff2', 'atkinson_next_license.txt', 'atkinson_mono.woff2', 'atkinson_mono_license.txt', 'gentium_book_plus_italic.woff2', 'gentium_book_plus_license.txt'] as const;
+
+/** The three faces, as the style and the apps' own styles name them. */
+export const FACES = { sans: '"Atkinson Hyperlegible Next"', mono: '"Atkinson Hyperlegible Mono"', title: '"Gentium Book Plus"' } as const;
 
 const tints = (Object.keys(APPS) as App[])
   .map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`)
   .join('\n');
 
 /** The whole stylesheet. An app puts `k-APP` on its root element (or body) to take its colour; `k-page` makes a window that fills the screen. */
-export const KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+export const KIT_STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
 ${tints}
 .k-page,.k-page *{box-sizing:border-box}
 html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
-.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+.k-page{font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
 :where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 :where(.k-page) button:disabled{opacity:.45;cursor:default}
 :where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
@@ -48,7 +63,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 :where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
 :where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
 .k-page [hidden]{display:none!important}
-.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
 .k-grow{flex:1}
 .k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
@@ -58,6 +73,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 /* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
 .k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
 .k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app .k-nm,.k-appname{font-family:"Gentium Book Plus",Georgia,serif;font-style:italic;font-weight:400;letter-spacing:.01em;font-size:1.12em}
 .k-app img{width:26px;height:26px;border-radius:6px}
 .k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
 .k-menu-btn:hover{color:var(--k-text)}
@@ -69,7 +85,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-on .k-count{background:var(--k-ink);color:var(--k-p)}
 .k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
 .k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-me .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
 .k-dot.k-c{border-radius:7px}
 .k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
@@ -125,7 +141,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
 .k-act:last-child{border-bottom:0}
 .k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
-.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-sid,.k-act .k-actid{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
@@ -148,9 +164,27 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
 
+/* an identity wherever its ID is shown (H96, H121): its names, the nickname first, the published name small and faint; its short ID under, a button */
+.k-who{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;vertical-align:top;max-width:100%;min-width:0}
+.k-who.k-inline{flex-direction:row;align-items:baseline;gap:8px;flex-wrap:wrap}
+.k-names{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;min-width:0}
+.k-nick{font-weight:400;color:var(--k-text);overflow-wrap:anywhere}
+.k-pub{font-size:.82em;color:var(--k-faint);overflow-wrap:anywhere}
+.k-pub.k-state{font-style:italic}
+.k-you{font-size:12px;color:var(--k-soft)}
+.k-retry{font-size:12px;color:var(--k-soft);text-decoration:underline;text-underline-offset:2px}
+.k-idbtn{font:11.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);border-radius:6px;padding:0 2px;text-align:left}
+.k-idbtn:hover,.k-idbtn:focus-visible{background:var(--k-wash);outline:none}
+.k-idbtn.k-whole{overflow-wrap:anywhere;word-break:break-all;white-space:normal;background:var(--k-wash);color:var(--k-text);user-select:all;-webkit-user-select:all}
+.k-idbtn[data-k-copied]{color:var(--k-p)}
+.k-picker{min-width:280px}
+.k-picker input[type=search]{margin:4px 0 6px}
+.k-picker button{display:flex;align-items:center;gap:10px}
+.k-picker .k-names{flex:1}
+
 /* menus: what you take above a line, what changes something below */
 .k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
-.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop .k-t{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
 .k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
 .k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
 .k-pop button:disabled{color:var(--k-faint);opacity:1}
@@ -201,12 +235,16 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
 .k-idrow.k-on{background:var(--k-wash2)}
 .k-idrow .k-n{font-size:14.5px}
-.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint)}
 .k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
 .k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
 .k-idline{display:flex;align-items:center;gap:4px}
 .k-idline>.k-idrow{flex:1;min-width:0}
 .k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-more:hover{color:var(--k-text)}
+.k-ownid{margin:2px 4px 8px 44px}
+.k-ownid .k-row{margin:6px 0 0;gap:6px}
+.k-idwhole{display:block;font-size:12px;color:var(--k-text);overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
 .k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
 .k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
 .k-panel .k-pane-in{padding:4px 6px}
@@ -227,6 +265,17 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-say>summary::-webkit-details-marker{display:none}
 .k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
 .k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-mor{display:inline-block;margin-left:10px;font-size:12px;color:var(--k-soft);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px;white-space:nowrap}
+a.k-mor:hover{color:var(--k-text)}
+.k-more-text .k-mor{margin-left:0;white-space:normal}
+/* a line opening a panel to work in (H99): a chevron, turning down when open */
+.k-fold{margin:8px 0;font-size:13.5px}
+.k-fold>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--k-soft)}
+.k-fold>summary::-webkit-details-marker{display:none}
+.k-fold>summary:hover{color:var(--k-text)}
+.k-chev{display:inline-grid;place-items:center;width:17px;height:17px;font-size:15px;line-height:1;color:var(--k-soft);transition:transform .15s}
+.k-fold[open]>summary .k-chev{transform:rotate(90deg)}
+.k-fold-body{margin:8px 0 2px}
 .k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
 .k-say .k-more-text p{margin:4px 0}
 .k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
@@ -253,7 +302,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-list{border-top:1px solid var(--k-line)}
 .k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
 .k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
-.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;margin:10px 0;background:var(--k-raise)}
 .k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
 .k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
 .k-box.k-fill{background:var(--k-wash);border-color:transparent}

@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
-const FILES = ['index.html', 'nakisib.js', 'nakisib.css', 'inter_light.woff2', 'inter_regular.woff2', 'inter_license.txt', 'icon.png'];
+const FILES = ['index.html', 'nakisib.js', 'nakisib.css', 'atkinson_next.woff2', 'atkinson_next_license.txt', 'atkinson_mono.woff2', 'atkinson_mono_license.txt', 'gentium_book_plus_italic.woff2', 'gentium_book_plus_license.txt', 'icon.png'];
 
 test('built/ is what the sources give, built twice in two folders the same; the program carries exactly these files', () => {
   const a = mkdtempSync(join(tmpdir(), 'nakisib-a-'));

@@ -64,7 +64,7 @@ export const KEPT_SAY =
 export const PAGE_STYLE = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .dub-banner strong{font-weight:400;color:var(--k-text)}
 .dub-banner ol{margin:4px 0;padding-left:1.4em}
 .dub-center{max-width:820px;margin:0 auto;width:100%}
@@ -101,7 +101,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
 .dub-ways input{margin-top:4px}
 .dub-ways .k-small{display:block}
-.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-hand{width:100%;min-height:6em;font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
 @media (max-width:600px){
   .dub-banner{padding:5px 10px}

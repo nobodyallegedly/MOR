@@ -36,9 +36,9 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .nk-loud p{margin:4px 0;color:var(--k-text)}
 .nk-plain p{margin:3px 0}
 .nk-apart{border-left:2px dashed var(--k-edge);padding:4px 12px;margin:10px 0}
-.nk-id{font:12.5px ui-monospace,Menlo,monospace;color:var(--k-id);word-break:break-all}
+.nk-id{font:12.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);word-break:break-all}
 .nk-typed{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.nk-sign input{max-width:12em;font:15px ui-monospace,Menlo,monospace;letter-spacing:.1em}
+.nk-sign input{max-width:12em;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.1em}
 .nk-pane{padding:20px 28px;overflow:auto;max-width:860px}
 .nk-list{list-style:none;padding:0;margin:0}
 .nk-list li{border:1px solid var(--k-line);border-radius:14px;padding:10px 14px;margin:8px 0}

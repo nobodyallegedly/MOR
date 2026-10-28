@@ -28,7 +28,7 @@ export function panelSaid(o: { title: string; text: string }): string {
 
 /** The panel's style, beside Kišib's page style. */
 export const PANEL_STYLE = `
-body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
 .k-rp{padding:14px 18px 10px}
 .k-rp h3{font-weight:300;font-size:19px;margin:0 0 2px}
 .k-rp p{margin:4px 0}

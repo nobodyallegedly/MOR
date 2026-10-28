@@ -23,7 +23,7 @@ li.warn{color:var(--warn)}
 li.bad{color:var(--bad);font-weight:600}
 li.ok{color:var(--ok)}
 .plain{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:6px 0 12px;max-height:24em;overflow:auto}
-.digest{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
+.digest{font:13px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;overflow-wrap:anywhere}
 textarea{font:inherit;width:100%;min-height:6em;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:Canvas;color:CanvasText}
 label.check{display:inline-flex;gap:6px;align-items:center;margin-right:16px}
 fieldset{border:1px solid var(--line);border-radius:6px;margin:8px 0;padding:8px 12px}

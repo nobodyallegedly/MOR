@@ -195,6 +195,31 @@ export function attachClosing(doc: Document = document): void {
       if (st) st.innerHTML = '';
       return;
     }
+    // One's own ID (H88): Copy ID; Share your ID link (the system's sharing where there is one, else copied).
+    const cid = t.closest<HTMLElement>('[data-k-copy-id]');
+    const share = t.closest<HTMLElement>('[data-k-share]');
+    if (cid || share) {
+      const b = (cid ?? share)!;
+      const text = cid ? cid.dataset.kCopyId! : share!.dataset.kShare!;
+      void (async () => {
+        let said = '';
+        if (share && typeof navigator.share === 'function') {
+          try {
+            await navigator.share({ title: 'My ID on MOR', text });
+            return;
+          } catch (err) {
+            if ((err as { name?: string }).name === 'AbortError') return;
+          }
+        }
+        said = (await copy(text)) ? (share ? 'Copied: paste it where you share it' : 'Copied') : 'Select it and copy it';
+        const was = b.textContent;
+        b.textContent = said;
+        setTimeout(() => {
+          if (b.isConnected) b.textContent = was;
+        }, 1600);
+      })();
+      return;
+    }
     if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
@@ -773,6 +798,34 @@ export function ask(page: HTMLElement, o: { title: string; text: string; yes: st
         c.close(true);
         done(true);
       } else if (t.closest('[data-k-ask-no]')) c.close();
+    });
+  });
+}
+
+/**
+ * Ask a nickname for an identity (H109): the person's own name for it,
+ * sealed, "only you see it"; optional. Resolves the nickname typed (null:
+ * none, or taken away), or undefined where the question was closed.
+ */
+export function askNick(page: HTMLElement, o: { title: string; current?: string | null; yes?: string; skip?: string }): Promise<string | null | undefined> {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<form class="k-box" data-k-nick-form><h4>${escapeText(o.title)}</h4><label>A nickname (optional): only you see it, sealed to you</label><input name="nick" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" value="${escapeText(o.current ?? '')}"><div class="k-row"><button type="submit" class="k-btn k-p">${escapeText(o.yes ?? 'Save')}</button><button type="button" class="k-btn k-q" data-k-nick-skip>${escapeText(o.skip ?? 'Skip')}</button></div></form>`,
+      () => done(undefined),
+    );
+    const f = c.box.querySelector<HTMLFormElement>('form')!;
+    f.querySelector<HTMLInputElement>('input')!.focus();
+    f.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const v = (f.elements.namedItem('nick') as HTMLInputElement).value.trim();
+      c.close(true);
+      done(v || null);
+    });
+    c.box.querySelector('[data-k-nick-skip]')!.addEventListener('click', () => {
+      c.close(true);
+      done(o.current ? (o.current ?? null) : null);
     });
   });
 }

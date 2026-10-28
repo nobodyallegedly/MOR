@@ -90,10 +90,10 @@ ${TEXT}
 .e-in .note.error{border-left-color:var(--k-bad);color:var(--k-text)}.e-in .note.done{border-left-color:var(--k-p);color:var(--k-text)}.e-in .note.warn{border-left-color:var(--k-c)}
 .e-in .tag,.e-in .label{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
 .e-in .tag.bad,.e-in .flag{color:var(--k-bad);border-color:var(--k-bad)}
-.e-in code,.e-in .fp,.e-in .id{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.e-in code,.e-in .fp,.e-in .id{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
 .e-in .plain{border:1px solid var(--k-line);border-radius:10px;padding:10px 12px;margin:6px 0 12px;max-height:24em;overflow:auto;white-space:pre-wrap;background:var(--k-bg)}
-.e-in .digest{font:12px ui-monospace,Menlo,monospace;color:var(--k-faint)}
-.e-in .words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:12px 0;padding:14px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;background:var(--k-raise)}
+.e-in .digest{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint)}
+.e-in .words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:12px 0;padding:14px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;background:var(--k-raise)}
 .e-in .words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
 .e-in .say{padding-left:1.1em;color:var(--k-soft);font-size:13.5px}
 .e-in label.check{display:inline-flex;gap:8px;align-items:center;margin:4px 14px 4px 0;color:var(--k-text);font-size:14px}
@@ -115,7 +115,7 @@ ${TEXT}
 .e-in .files{max-height:22em;overflow:auto;border:1px solid var(--k-line);border-radius:10px}
 .e-in .picker li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--k-line);list-style:none}
 .e-in .picker ul{padding:0;margin:8px 0;max-height:50vh;overflow:auto}
-.e-in .picker .path{font:13px ui-monospace,Menlo,monospace;color:var(--k-id);white-space:pre-wrap}
+.e-in .picker .path{font:13px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);white-space:pre-wrap}
 .e-in fieldset{border:1px solid var(--k-line);border-radius:10px;margin:8px 0;padding:8px 12px}
 .e-in legend{font-size:13px;color:var(--k-soft)}
 .e-in .colroot .grid{display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;align-items:center}

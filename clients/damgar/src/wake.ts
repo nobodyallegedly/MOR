@@ -51,7 +51,7 @@ const publicHeaders = { 'x-content-type-options': 'nosniff', 'cache-control': 'n
 
 /** The panel's own style, beside the kit's. */
 export const PANEL_STYLE = `
-body.k-damgar-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+body.k-damgar-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
 .k-dp{padding:14px 18px 10px}
 .k-dp .k-by{font-size:13px;color:var(--k-p);margin:0 0 6px}
 .k-dp h3{font-weight:300;font-size:20px;margin:0 0 2px}

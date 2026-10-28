@@ -26,6 +26,43 @@ export function shortForm(form: string): string {
 /** The first letter of a name, for its round mark. */
 const initial = (name: string | null | undefined, id: string) => (name?.trim()?.[0] ?? id.replace(/^m\w*1/, '')[0] ?? '?').toUpperCase();
 
+// ---------------------------------------------------------------- names (H96)
+
+/** What reading an identity's published name gave (H96). */
+export type NameShown = { state: 'loading' } | { state: 'name'; name: string } | { state: 'none' } | { state: 'unreached' };
+
+/** An identity's names as shown: the nickname given it here (the people cMIP's, sealed), and the name it published (the naming cMIP's). */
+export interface Named {
+  nick?: string | null;
+  published?: NameShown;
+}
+
+/** The words for a published name's state, where there is no name to show. */
+export const NAME_WORDS = { loading: 'Loading…', none: 'No name published', unreached: 'Name not reached' } as const;
+
+/** The best single label for an identity: its nickname, else its published name, else null. */
+export function nameOf(n: Named | null | undefined): string | null {
+  return n?.nick?.trim() || (n?.published?.state === 'name' ? n.published.name : null);
+}
+
+/**
+ * Its names, as HTML (H96): the nickname first; the published name beside
+ * it, small and faint (never hidden, so a changed or copied name still
+ * shows); with no nickname, the published name, or its state said.
+ */
+export function namesHtml(n: Named | null | undefined, o: { retry?: boolean } = {}): string {
+  const nick = n?.nick?.trim() || null;
+  const p = n?.published ?? { state: 'loading' as const };
+  const pub =
+    p.state === 'name'
+      ? p.name
+      : null;
+  const state = p.state === 'name' ? '' : `<span class="k-pub k-state" data-k-name-state="${p.state}">${NAME_WORDS[p.state]}</span>${p.state === 'unreached' && o.retry !== false ? '<button type="button" class="k-retry" data-k-name-retry>Ask again</button>' : ''}`;
+  if (nick) return `<span class="k-nick" dir="auto">${e(nick)}</span>${pub && pub !== nick ? ` <span class="k-pub" dir="auto">${e(pub)}</span>` : ''}`;
+  if (pub) return `<span class="k-nick" dir="auto">${e(pub)}</span>`;
+  return state;
+}
+
 // ---------------------------------------------------------------- who and what
 
 /** An identity as a card shows it. `name` is the name this app gives it (a contact's) or its display name; `ownName` its own display name, shown beneath when it differs. */
@@ -38,6 +75,8 @@ export interface KitWho {
   link: string;
   name: string | null;
   ownName?: string | null;
+  /** Its names as read (H96): the nickname given here, and the published name or its state. Where given, it is what is shown; else `name` and `ownName` are. */
+  named?: Named | null;
   me?: boolean;
   followed?: boolean;
   muted?: boolean;
@@ -94,11 +133,21 @@ export interface KitAct {
 /** The faint words on a card the suite's clock has not stamped yet, in a feed it orders (H110). */
 export const NOT_STAMPED = 'not yet stamped by the Dubsar clock';
 
+/** An identity's names from what an app gives: its `named` where given; else its `name` (a nickname where it differs from `ownName`) and `ownName`. */
+export function namedOf(w: { name?: string | null; ownName?: string | null; named?: Named | null }): Named {
+  if (w.named) return w.named;
+  const nick = w.name && w.ownName && w.name !== w.ownName ? w.name : null;
+  const pub = w.ownName ?? (nick ? null : w.name ?? null);
+  return { nick, published: pub ? { state: 'name', name: pub } : { state: 'none' } };
+}
+
 /** One act's card: the signer's short ID and name top left, the act's short ID bottom right, each opening its own menu (click or tap; never hover). */
 export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const s = a.signer;
-  const name = s.name ?? (s.collective ? 'a collective' : '');
-  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ''}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">“${e(s.ownName)}”</span>` : ''}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ''}${s.me ? '<span class="k-dn">you</span>' : ''}</button>`;
+  // H96: its names first (the nickname, the published name small and faint), its short ID under.
+  const named = namedOf(s);
+  const names = !nameOf(named) && s.collective && named.published?.state === 'none' ? '<span class="k-nick">a collective</span>' : namesHtml(named, { retry: false });
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-names k-nm">${names}</span>${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ''}${s.me ? '<span class="k-dn">you</span>' : ''}<span class="k-sid">${e(shortForm(s.form))}</span></button>`;
   const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === 'bad' ? ' k-bad' : l.tone === 'warn' ? ' k-warn' : ''}">${e(l.text)}</div>`).join('');
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : '';
   const text = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? '')}</div>` : '';
@@ -129,7 +178,8 @@ export function signerMenu(app: string, w: KitWho, own: MenuItem[]): string {
   const below: MenuItem[] = w.me
     ? own
     : [w.followed ? { key: 'unfollow', label: 'Following: remove from contacts' } : { key: 'follow', label: 'Follow: add to contacts' }, ...own, w.muted ? { key: 'unmute', label: 'Unmute' } : { key: 'mute', label: 'Mute' }];
-  return menu(`${w.name ? `${w.name} · ` : ''}${shortForm(w.form)}`, [
+  const n = nameOf(namedOf(w));
+  return menu(`${n ? `${n} · ` : ''}${shortForm(w.form)}`, [
     { key: 'copy-id', label: 'Copy ID' },
     { key: 'copy-link', label: 'Copy ID link' },
     { key: 'profile', label: 'Open profile' },
@@ -175,10 +225,18 @@ export function switcher(parts: { key: string; label: string }[], on: string): s
   return `<nav class="k-switch" aria-label="Views">${parts.map((p) => `<button type="button" data-k-part="${e(p.key)}" class="${p.key === on ? 'k-on' : ''}"${p.key === on ? ' aria-current="page"' : ''}>${e(p.label)}<span class="k-count" data-k-count="${e(p.key)}"></span></button>`).join('')}</nav>`;
 }
 
-/** The identity in use, top right: what opens the identity panel. A collective acted as shows beside its member. */
-export function meButton(o: { name: string | null; form: string; as?: { name: string | null; form: string } | null }): string {
+/**
+ * The identity in use, top right: what opens the identity panel. A
+ * collective acted as shows beside its member. Its name as read (H96):
+ * "Loading…" while asked, "No name published" once its homes answered with
+ * none, "Name not reached" where they could not be asked; never "No name"
+ * for a name not read yet.
+ */
+export function meButton(o: { name: string | null; form: string; named?: Named | null; as?: { name: string | null; form: string; named?: Named | null } | null }): string {
   const shown = o.as ?? o;
-  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(shown.name ?? 'No name')}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ''}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+  const n = namedOf(shown);
+  const label = nameOf(n) ?? NAME_WORDS[n.published?.state === 'name' ? 'none' : (n.published?.state ?? 'loading')];
+  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(label)}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ''}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
 }
 
 /** Contacts, top left (Dub); a menu button. */
@@ -253,10 +311,37 @@ export function typingBox(o: { id: string; placeholder: string; button: string; 
 
 // ---------------------------------------------------------------- disclaimers
 
-/** A disclaimer in one line; the "?" opens the rest. Never a finding number (H76). */
-export function say(line: string, more: string[] | string): string {
+/**
+ * A disclaimer in one line; the "?" opens the rest. Never a finding number
+ * (H76). The "?" only ever unfolds an explanation (H99); a line opening a
+ * panel to work in is a `fold`, with a chevron. `mor`: What is MOR? beside
+ * the "?" and in what it opens (H94).
+ */
+export function say(line: string, more: string[] | string, o: { mor?: boolean | 'offline' } = {}): string {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join('') : more;
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+  const mor = o.mor ? whatIsMor(o.mor === 'offline') : '';
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${whatIsMor(o.mor === 'offline', true)}</p>` : ''}</div></details>`;
+}
+
+/** Where to learn what MOR is (H94): dubsar.org's front page. */
+export const MOR_HOME = 'https://dubsar.org/';
+
+/**
+ * What is MOR? (H94): a button opening dubsar.org's front page in a new tab,
+ * the app left as it was. `offline` (Nakišib, which never connects): the
+ * address as text, to type on another device; nothing opened.
+ */
+export function whatIsMor(offline = false, long = false): string {
+  if (offline) return `<span class="k-mor k-mor-text" data-k-mor>${long ? 'What is MOR? Read it at ' : 'What is MOR? '}<span class="k-mono">dubsar.org</span>${long ? ', on another device: this one never connects.' : ' (on another device)'}</span>`;
+  return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? 'What is MOR? dubsar.org’s front page, in a new tab' : 'What is MOR?'}</a>`;
+}
+
+/**
+ * A line opening a panel to work in (H99): a chevron, turning down when open;
+ * never the "?", which only unfolds an explanation.
+ */
+export function fold(line: string, body: string, o: { open?: boolean; attrs?: string } = {}): string {
+  return `<details class="k-fold"${o.open ? ' open' : ''}${o.attrs ? ` ${o.attrs}` : ''}><summary>${e(line)}<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body">${body}</div></details>`;
 }
 
 /** A note the app says after something is done or refused. */
@@ -283,9 +368,12 @@ export interface Profile {
 /** The profile page, light and friendly: name, their own display name beneath if it differs, where they live, the ID link, trouble only when there is, the buttons, their feed. */
 export function profile(p: Profile): string {
   const w = p.who;
-  const name = w.name ?? w.ownName ?? shortForm(w.form);
+  const n = namedOf(w);
+  const name = nameOf(n) ?? shortForm(w.form);
+  // H96: with a nickname, the name it published beside it, faint; its state said where it has none.
+  const own = n.nick ? (n.published?.state === 'name' ? (n.published.name !== n.nick ? `calls itself “${n.published.name}”` : null) : n.published && n.published.state !== 'loading' ? NAME_WORDS[n.published.state] : null) : !nameOf(n) && n.published && n.published.state !== 'name' ? NAME_WORDS[n.published.state] : null;
   return `<div class="k-prof" data-k-profile="${e(w.id)}"><div class="k-row"><button type="button" class="k-btn k-q" data-k-back="profile">← Back</button></div>
-<div class="k-hero"><span class="k-dot${w.collective ? ' k-c' : ''}">${e(initial(name, w.form))}</span><div class="k-grow"><h2 dir="auto">${e(name)}</h2>${w.ownName && w.ownName !== name ? `<div class="k-own-name" dir="auto">calls itself “${e(w.ownName)}”</div>` : ''}<p class="k-soft">${e(p.lives)}</p><span class="k-mono k-soft">${e(shortForm(w.form))}</span> <button type="button" class="k-btn k-q k-small" data-k-copy="${e(w.link)}">Copy ID link</button></div>
+<div class="k-hero"><span class="k-dot${w.collective ? ' k-c' : ''}">${e(initial(name, w.form))}</span><div class="k-grow"><h2 dir="auto">${e(name)}</h2>${own ? `<div class="k-own-name" dir="auto">${e(own)}</div>` : ''}<p class="k-soft">${e(p.lives)}</p><span class="k-mono k-soft">${e(shortForm(w.form))}</span> <button type="button" class="k-btn k-q k-small" data-k-copy="${e(w.link)}">Copy ID link</button></div>
 <div class="k-row">${p.actions.map((a) => `<button type="button" class="k-btn${a.primary ? ' k-p' : ''}" data-k-do="${e(a.key)}">${e(a.label)}</button>`).join('')}</div></div>
 ${p.trouble ? `<div class="k-alarmbox">${e(p.trouble)}</div>` : ''}
 ${feedBox({ id: 'k-profile-feed', cards: p.cards, empty: p.empty ?? 'Nothing found from them yet.' })}${p.clock ?? ''}
@@ -297,11 +385,15 @@ ${feedBox({ id: 'k-profile-feed', cards: p.cards, empty: p.empty ?? 'Nothing fou
 export interface PanelIdentity {
   id: string;
   form: string;
+  /** Its ID link (`mid1…?r=…`): Share your ID link, on the one in use (H88). */
+  link?: string;
   name: string | null;
+  /** Its names as read (H96), shown where given. */
+  named?: Named | null;
   /** In use (and not acting as one of its collectives). */
   on: boolean;
   /** The collectives under it, which it can act as: the same gesture as switching. */
-  collectives: { id: string; form: string; name: string | null; on: boolean; why?: string | null }[];
+  collectives: { id: string; form: string; name: string | null; named?: Named | null; on: boolean; why?: string | null }[];
 }
 
 /**
@@ -311,9 +403,10 @@ export interface PanelIdentity {
  * (`⋯`); the panel's foot for the app itself.
  */
 export function identityPanel(o: { ids: PanelIdentity[]; adding: boolean; add: { key: string; label: string; say: string; empty?: boolean }[]; foot: string; inside?: string }): string {
-  const row = (x: { id: string; form: string; name: string | null; on: boolean }, sub: boolean, owner: string, why?: string | null) =>
-    `<div class="k-idline"><button type="button" class="k-idrow${x.on ? ' k-on' : ''}${sub ? ' k-sub' : ''}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ''}${x.on ? ' aria-current="true"' : ''}${why ? ' disabled' : ''}><span class="k-dot${sub ? ' k-c' : ''}${x.on ? '' : ' k-alt'}">${e(initial(x.name, x.form))}</span><span><span class="k-n" dir="auto">${e(x.name ?? 'No name')}${sub ? '<span class="k-tagc">collective</span>' : ''}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ''}</span></button>${sub ? '' : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its menu">⋯</button>`}</div>`;
-  const ids = o.ids.map((x) => row(x, false, x.id) + x.collectives.map((c) => row(c, true, x.id, c.why)).join('')).join('');
+  const row = (x: { id: string; form: string; name: string | null; named?: Named | null; on: boolean }, sub: boolean, owner: string, why?: string | null) =>
+    `<div class="k-idline"><button type="button" class="k-idrow${x.on ? ' k-on' : ''}${sub ? ' k-sub' : ''}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ''}${x.on ? ' aria-current="true"' : ''}${why ? ' disabled' : ''}><span class="k-dot${sub ? ' k-c' : ''}${x.on ? '' : ' k-alt'}">${e(initial(x.name, x.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(namedOf(x), { retry: false })}${sub ? '<span class="k-tagc">collective</span>' : ''}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ''}</span></button>${sub ? '' : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its settings" aria-label="Its settings">${GEAR}</button>`}</div>`;
+  // The one in use: its ID whole, Copy ID and Share your ID link (H88).
+  const ids = o.ids.map((x) => row(x, false, x.id) + (x.on ? ownId({ form: x.form, link: x.link ?? x.form }) : '') + x.collectives.map((c) => row(c, true, x.id, c.why)).join('')).join('');
   const add = `<button type="button" class="k-idrow${o.adding ? ' k-on' : ''}" data-k-add="toggle"><span class="k-soft">+ Add</span></button>${
     o.adding
       ? `<div class="k-pane-in">${o.add.map((a) => `<button type="button" class="k-idrow" data-k-add="${e(a.key)}"${a.empty ? ' disabled' : ''}><span><span class="k-n">${e(a.label)}</span><br><span class="k-small k-soft">${e(a.say)}</span></span></button>`).join('')}</div>`
@@ -324,6 +417,18 @@ export function identityPanel(o: { ids: PanelIdentity[]; adding: boolean; add: {
 
 /** The × top right of every pop-up, sheet and panel (H91): it closes what it is in. */
 export const CLOSE_X = '<button type="button" class="k-round k-x" data-k-close aria-label="Close">×</button>';
+
+/** The small gear beside each identity held (H87): its settings (Name, Relays, Words, Line and homes, …, Remove). */
+export const GEAR = '<svg class="k-gear" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
+/**
+ * One's own ID (H88): whole, with Copy ID and Share your ID link (the ID
+ * with where it lives, so others find it). In the identity panel, on the
+ * one in use, and at the end of making or bringing one.
+ */
+export function ownId(o: { form: string; link: string }): string {
+  return `<div class="k-ownid" data-k-ownid><span class="k-mono k-idwhole">${e(o.form)}</span><div class="k-row"><button type="button" class="k-btn k-small" data-k-copy-id="${e(o.form)}">Copy ID</button><button type="button" class="k-btn k-small" data-k-share="${e(o.link)}">Share your ID link</button></div></div>`;
+}
 
 /** Remove, said plainly first: what goes, and what does not. */
 export function removeSaid(app: string, name: string): string {
@@ -337,6 +442,8 @@ export interface Contact {
   form: string;
   /** The name given here (sealed to oneself), else a display name. */
   name: string | null;
+  /** Its names as read (H96): its nickname (the people cMIP's, sealed) and the name it published; shown where given. */
+  named?: Named | null;
   /** Its display names, where they differ from the name. */
   names?: string[];
   collective?: boolean;
@@ -344,7 +451,7 @@ export interface Contact {
 
 /** The label two contacts would share: their name. A faint short ID is added only where two collide (H57, H78). */
 export function labelOf(c: Contact): string {
-  return c.name ?? c.names?.[0] ?? 'No name';
+  return (c.named ? nameOf(c.named) : null) ?? c.name ?? c.names?.[0] ?? shortForm(c.form);
 }
 
 /** Names that collide in a list: shown with a faint short ID. */
@@ -354,13 +461,21 @@ export function colliding(cs: Contact[]): Set<string> {
   return new Set([...seen].filter(([, n]) => n > 1).map(([k]) => k));
 }
 
-/** The contacts panel: one list, names first, searched by name; each with Message; the app's own lines below (add by ID, muted, publish). */
-export function contactsPanel(o: { contacts: Contact[]; below: string; action?: string }): string {
-  const twice = colliding(o.contacts);
+/**
+ * The contacts panel, top left in every app (H100): the one list, names
+ * first (the nickname, the published name faint), searched by nickname and
+ * name; each with the app's action (Message) and Nickname… to add, change or
+ * remove it (H109); the app's own lines below (add by ID, muted, publish).
+ */
+export function contactsPanel(o: { contacts: Contact[]; below: string; action?: string; nick?: boolean }): string {
   const rows = o.contacts
-    .map((c) => `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e([labelOf(c), ...(c.names ?? [])].join(' ').toLowerCase())}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? ' k-c' : ''} k-alt">${e(initial(labelOf(c), c.form))}</span><span><span class="k-n" dir="auto">${e(labelOf(c))}${c.collective ? '<span class="k-tagc">collective</span>' : ''}</span><br><span class="k-s">${e(shortForm(c.form))}${twice.has(labelOf(c).toLowerCase()) ? '' : ''}</span></span></button>${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ''}</div>`)
+    .map((c) => {
+      const n = c.named ?? namedOf({ name: c.name, ownName: c.names?.[0] ?? null });
+      const words = [labelOf(c), n.nick ?? '', n.published?.state === 'name' ? n.published.name : '', ...(c.names ?? []), c.form].join(' ').toLowerCase();
+      return `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e(words)}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? ' k-c' : ''} k-alt">${e(initial(labelOf(c), c.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(n, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ''}</span><br><span class="k-s">${e(shortForm(c.form))}</span></span></button>${o.nick ? `<button type="button" class="k-btn k-q k-small" data-k-nick="${e(c.id)}" title="Your own name for it, sealed: only you see it">Nickname…</button>` : ''}${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ''}</div>`;
+    })
     .join('');
-  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find a contact by name…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
+  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find by nickname or name…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
 }
 
 /** The suggestions for @ or To…: names first, a faint short ID only where two names collide. */

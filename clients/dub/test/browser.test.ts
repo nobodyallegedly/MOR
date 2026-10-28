@@ -265,15 +265,15 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await cardOf(page, damagedPost.id).getByRole('button', { name: /Play the recording/ }).click();
   await cardOf(page, damagedPost.id).locator('.k-label', { hasText: /^The recording is not played: not a recording the audio Module plays: / }).waitFor({ timeout: 60_000 });
   assert.equal(await cardOf(page, damagedPost.id).locator('audio').count(), 0, 'nothing of it played');
-  // Inter, light and regular, from the program's own origin.
+  // H123: Atkinson Hyperlegible Next, its Mono and Gentium Book Plus italic (the app's name), from the program's own origin.
   assert.deepEqual(
     await page.evaluate(async () => {
       await document.fonts.ready;
-      return [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Inter' && f.status === 'loaded').map((f) => f.weight).sort();
+      return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')).sort();
     }),
-    ['300', '400'],
+    ['Atkinson Hyperlegible Mono', 'Atkinson Hyperlegible Next', 'Gentium Book Plus'],
   );
-  const policy = (await fetch(`${app.base}/inter_light.woff2`)).headers.get('content-security-policy') ?? '';
+  const policy = (await fetch(`${app.base}/atkinson_next.woff2`)).headers.get('content-security-policy') ?? '';
   assert.match(policy, /font-src 'self'/);
   assert.match(policy, /media-src blob:/);
 
