@@ -523,7 +523,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (!cc.some((a) => a.id === c.id)) cc.push({ id: c.id, name: c.name ?? shortForm(c.form) });
     drawCc();
   };
-  const drawCc = () => fill('ccs', cc.map((a) => `<span class="k-chip k-on">Cc: ${v.e(a.name)}<button type="button" class="k-x" data-action="uncc-one" data-id="${v.e(a.id)}" aria-label="Not in Cc">×</button></span>`).join(''));
+  // Each a chip, wrapping (H85); two of one name told apart by their short ID (H57).
+  const drawCc = () =>
+    fill(
+      'ccs',
+      cc
+        .map((a) => `<span class="k-chip k-on">Cc: ${v.e(a.name)}${cc.filter((x) => x.name === a.name).length > 1 ? ` <span class="k-mono k-faint">${v.e(shortForm(v.actFormOf(a.id, 'mid')))}</span>` : ''}<button type="button" class="k-x" data-action="uncc-one" data-id="${v.e(a.id)}" aria-label="Not in Cc">×</button></span>`)
+        .join(''),
+    );
 
   // ---------------------------------------------------------------- Private: a mailbox
 

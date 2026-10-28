@@ -370,6 +370,29 @@ for (const size of SIZES) {
   });
 }
 
+test('H84: @ suggestions at the iPad’s size with its keyboard up: just above the typing box, within the part of the page seen', async () => {
+  const context = await browser.newContext({ viewport: { width: 820, height: 1180 }, hasTouch: true });
+  // The keyboard, as the iPad's Safari makes it: the page keeps its height, the part seen (the visual viewport) shortened and scrolled.
+  await context.addInitScript(() => {
+    const vv = Object.assign(new EventTarget(), { offsetTop: 420, offsetLeft: 0, width: 820, height: 760, scale: 1, pageTop: 420, pageLeft: 0 });
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.locator('.k-act').first().waitFor();
+  const ta = page.locator('#post textarea');
+  await ta.click();
+  await ta.pressSequentially('See you, @P');
+  const pop = page.locator('[data-k-suggest]');
+  await pop.waitFor();
+  const [p, f] = await Promise.all([pop.boundingBox(), page.locator('form#post.k-typing, #post').first().boundingBox()]);
+  assert.ok(p && f);
+  assert.ok(p.y >= 420 && p.y + p.height <= 420 + 760, `within the part seen: ${p.y}..${p.y + p.height}`);
+  assert.ok(p.y + p.height <= f.y + 1 && f.y - (p.y + p.height) < 16, `just above the typing box: ${p.y + p.height} above ${f.y}`);
+  if (shots) await page.screenshot({ path: join(shots, 'kit-mention-ipad-keyboard.png') });
+  await context.close();
+});
+
 test('the slot: another app’s panel in a frame the host cannot read or change', async () => {
   const { page, problems, close } = await open(SIZES[0]);
   // An origin not given as the other app's: refused, nothing drawn.

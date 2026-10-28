@@ -419,9 +419,26 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await page.locator('#thread .k-empty', { hasText: 'Nothing yet' }).waitFor();
   await shot(page, '14-private-new');
   await page.locator('[data-action="cc"]').click();
-  await page.locator('#cc').pressSequentially('Riv');
-  await page.locator('[data-k-suggest] [data-k-pick]').first().click();
+  // H85: three in Cc, each a chip, wrapping, none drawn over another; each removable.
+  for (const [typed, nth] of [['Riv', 0], ['Pa', 0], ['Pa', 1]] as const) {
+    await page.locator('#cc').pressSequentially(typed);
+    await page.locator('[data-k-suggest] [data-k-pick]').nth(nth).click();
+  }
+  const chips = page.locator('#ccs .k-chip');
+  await chips.nth(2).waitFor();
+  const boxes = await chips.evaluateAll((cs) => cs.map((c) => c.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height })));
+  assert.equal(boxes.length, 3);
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [a, b] = [boxes[i], boxes[j]];
+      assert.ok(a.x + a.w <= b.x + 0.5 || b.x + b.w <= a.x + 0.5 || a.y + a.h <= b.y + 0.5 || b.y + b.h <= a.y + 0.5, `chips ${i} and ${j} do not overlap`);
+    }
+  assert.ok(await chips.evaluateAll((cs) => cs.every((c) => c.getBoundingClientRect().width > 20)), 'each shown');
+  await shot(page, '14b-cc-three');
+  // The two Pas taken out again: River stays.
+  for (let i = 0; i < 2; i++) await page.locator('#ccs .k-chip', { hasText: 'Pa' }).first().locator('[data-action="uncc-one"]').click();
   await page.locator('#ccs', { hasText: 'Cc: River' }).waitFor();
+  assert.equal(await chips.count(), 1);
   await page.locator('#message textarea').fill('To Ph, River in Cc.');
   await page.locator('#message').getByRole('button', { name: 'Send' }).click();
   await done(page, /in Cc/);

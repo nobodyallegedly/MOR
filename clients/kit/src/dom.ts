@@ -59,23 +59,40 @@ export function closeMenu(): void {
 }
 
 /**
- * Place a pop next to the button that opened it, inside the window: below
- * it where there is room, above otherwise; on a phone, the style lays it as
- * a sheet at the bottom instead.
+ * Place a pop next to the button that opened it, inside the part of the
+ * page that can be seen: below it where there is room, above otherwise; on
+ * a phone, the style lays a menu as a sheet at the bottom instead. The part
+ * seen is the visual viewport where the browser has one: with the iPad's
+ * keyboard up, the page is not shortened, only covered, so a pop placed by
+ * the window's height alone could sit out of sight (H84).
  */
 function place(pop: HTMLElement, button: HTMLElement, prefer: 'below' | 'above') {
+  // Anchored to its typing box (@ suggestions, H84): it travels with the box, wherever the keyboard pushes it.
+  if (pop.classList.contains('k-anchored')) return;
   const r = button.getBoundingClientRect();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
+  const vv = window.visualViewport;
+  // The band seen, in the coordinates a fixed element is placed in.
+  const top = vv ? vv.offsetTop : 0;
+  const bottom = vv ? vv.offsetTop + vv.height : document.documentElement.clientHeight;
+  pop.style.maxHeight = '';
+  const w = pop.offsetWidth;
+  let h = pop.offsetHeight;
   let left = prefer === 'above' ? r.right - w : r.left;
   left = Math.max(8, Math.min(left, vw - w - 8));
-  let topAt = prefer === 'below' ? r.bottom + 6 : r.top - h - 6;
-  if (topAt + h > vh - 8) topAt = r.top - h - 6;
-  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  const roomAbove = r.top - 6 - (top + 8);
+  const roomBelow = bottom - 8 - (r.bottom + 6);
+  const above = prefer === 'above' ? roomAbove >= h || roomAbove >= roomBelow : !(roomBelow >= h || roomBelow >= roomAbove);
+  // Too tall for either side: shortened to the larger room, scrolling inside.
+  const room = Math.max(above ? roomAbove : roomBelow, 80);
+  if (h > room) {
+    pop.style.maxHeight = `${Math.floor(room)}px`;
+    h = pop.offsetHeight;
+  }
+  let at = above ? r.top - 6 - h : r.bottom + 6;
+  at = Math.max(top + 8, Math.min(at, bottom - h - 8));
   pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+  pop.style.top = `${Math.round(at)}px`;
 }
 
 /** Open a pop of HTML next to a button; its items handed to `pick`. */
@@ -90,7 +107,18 @@ export function popAt(button: HTMLElement, html: string, prefer: 'below' | 'abov
   place(pop, button, prefer);
   button.classList.add('k-open');
   button.setAttribute('aria-expanded', 'true');
-  openMenu = { pop, button, done };
+  const again = () => place(pop, button, prefer);
+  window.visualViewport?.addEventListener('resize', again);
+  window.visualViewport?.addEventListener('scroll', again);
+  openMenu = {
+    pop,
+    button,
+    done: () => {
+      window.visualViewport?.removeEventListener('resize', again);
+      window.visualViewport?.removeEventListener('scroll', again);
+      done?.();
+    },
+  };
   pop.addEventListener('click', (ev) => {
     const item = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-k-item]');
     if (!item || item.disabled) return;
@@ -540,6 +568,13 @@ export function attachNames(field: HTMLInputElement | HTMLTextAreaElement, conta
     if (!shown.length) return close();
     at = 0;
     const pop = popAt(field, suggestions(shown, o.title ?? (o.mention ? 'Mention' : 'Contacts')), o.mention ? 'above' : 'below', () => undefined);
+    // A mention in a typing box: the suggestions sit just above the box, inside it, so they are seen above the iPad's keyboard (H84).
+    const box = o.mention ? field.closest<HTMLElement>('.k-typing') : null;
+    if (box) {
+      pop.classList.add('k-anchored');
+      pop.style.left = pop.style.top = pop.style.maxHeight = '';
+      box.append(pop);
+    }
     pop.addEventListener('click', (ev) => {
       const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-pick]');
       const c = b && shown.find((x) => x.id === b.dataset.kPick);
