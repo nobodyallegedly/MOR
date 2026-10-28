@@ -67,6 +67,29 @@ On the Mac, Edubba pairs with Kišib's runner (+ Add › Use one from Kišib ›
 - **Pay someone** is **Pay** on the profile in Dub (round 3).
 - **Settings** became the identity panel's foot, **This app**.
 
+## Fix round 7 (F403, hand test v3)
+
+### In plain words
+
+- **Agents and Collectives follow the identity in use** (H125): only its agents, only the collectives it is a member of. **The test collectives are gone from Edubba** (decided: "It serves no purpose, it was for testing only").
+- **Founding a collective** (H118): it opens with two members, you and one other, then **+ Add a member**; each member by its ID, or chosen from Contacts beside its field. **Change its members** is the same, filled from the members in force, each removable while more than two remain.
+- **Who decides what** (H120): each area chooses one of **Text**, **Envelopes**, **Money**, **Agreements** or **Development** (or Text and Envelopes together, as the Publishing area needs); under **Only some kinds of act**, every kind the layer's MIR defines, taken from the core's own type tables and named in words (claims of works under Agreements).
+- **Contacts top left** (H100): the one list every app reads. Edubba's own list on the Mac is carried into it once, each name as its nickname; after that, only the one list is read.
+- **Names** wherever an identity is shown (H96, H106), short IDs a tap away from whole (H121), a Contacts button beside every field taking an ID (H119), one's own ID with Copy ID and Share your ID link (H88).
+- **Rules I follow** (H93) in This app; the warning that a key changed elsewhere follows the identity in use (H82, H83); one stack of pop-ups (H102).
+
+### Precisely
+
+| File | What |
+| --- | --- |
+| `scripts/core-types.ts`, `src/core-types.ts` | The act types each MIR defines, read from `core/src` (each layer's `pub mod types`, retired numbers left out), generated; `test/core-types.test.ts` fails when it is stale. |
+| `src/kinds.ts`, `src/mirs.ts` | Each type in words, one choice per layer (`GRID_LAYERS`); the MIRs' hashes, kept apart so the page's bundle never loads the core. |
+| `src/grid.ts`, `src/page/grid-view.ts` | `LAYERS` (the six choices), `kindsFor`, `choiceOf`; an area's `part` (Text or Envelopes alone); overlap judged on what each reaches. |
+| `src/page/parts.ts`, `src/page/ui.ts` | `memberRow`, `memberRows`, + Add a member, Remove (H118). |
+| `src/known.ts`, `src/real.ts` | The one contacts list (the kit's `Known`), Edubba's Mac list carried once (`contacts-carried.json`). |
+
+Tests: `test/core-types.test.ts`, `test/names-contacts.test.ts`, `test/edubba-kit-browser.test.ts` (the founding's rows and the grid's kinds, by clicks), `test/real-browser.test.ts`, `test/web-browser.test.ts`, `test/every-app.test.ts` (H82, H83, H93, H102, H105 across the apps).
+
 ## The detail, from earlier rounds (still true where not said above)
 
 ### What an agent does since the agents session (17 October 2026)
