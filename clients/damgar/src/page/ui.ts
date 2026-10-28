@@ -194,15 +194,35 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   let filling = 0;
 
   /** The part open, filled from what Damgar reads. */
+  /**
+   * Each part as last drawn, by identity, tile and part (H115): a part opened
+   * again is drawn at once from it, said "Looking…", then filled in with
+   * what the look-ups return; the program answers one request at a time, so
+   * a part never waits on another's look before it shows.
+   */
+  const held = new Map<string, { html: string; drawn: [string, { act: KitAct; who: Who; lines: v.Line[]; acts: v.CardAct[] }][] }>();
+  const heldKey = () => `${meId()}\u0000${acting?.id ?? ''}\u0000${tab}\u0000${part}`;
   async function fill() {
     const p = pane();
     if (!p) return;
     const mine = ++filling;
+    const key = heldKey();
+    const before = held.get(key);
+    // Another part than the one shown: drawn at once, from what is held, or said Looking…; the same part (a refresh) is left as it is until filled in.
+    if (p.dataset.shown !== key) {
+      p.dataset.shown = key;
+      if (before) {
+        p.innerHTML = `<p class="k-small k-faint damgar-looking" role="status">Looking…</p>${before.html}`;
+        drawn.clear();
+        for (const [id, c] of before.drawn) drawn.set(id, c);
+      } else p.innerHTML = '<p class="k-empty damgar-looking" role="status">Looking…</p>';
+    }
     try {
       const html = await partHtml();
       if (mine !== filling || !p.isConnected) return void (cards = []);
       p.innerHTML = html;
       drawCards();
+      held.set(key, { html, drawn: [...drawn] });
       // The Dubsar clock's time on each card it stamped (decided 23 October 2026), read after drawing.
       const ids = cardsUntimed(p);
       if (ids.length)
@@ -216,6 +236,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       fail(err);
     }
     drawCounts();
+  }
+
+  /** A part that reads what arrived: drawn first from what is held, then looked for once, and drawn again if still in view (H115). */
+  let lookedFor = '';
+  function lookThenFill(which: string) {
+    if (lookedFor === which) return void (lookedFor = '');
+    void b
+      .ask('look')
+      .catch(() => undefined)
+      .then(async () => {
+        if (part !== which) return;
+        lookedFor = which;
+        await fill();
+      });
   }
 
   /** Look on MOR, then draw the part again; what was typed in a form survives (a look may land mid-paste). */
@@ -359,8 +393,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     if (tab === 'account') {
       if (part === 'under') {
-        // What other apps left since: the keys of their acts under the lanes, delivered to this identity.
-        await b.ask('look').catch(() => undefined);
+        // What other apps left since (the keys of their acts under the lanes, delivered to this identity): looked for after drawing what is held (H115).
+        lookThenFill('under');
         const l = await b.ask<LanesRead>('lanes');
         const apps = l.lanes.filter((x) => !x.here);
         // The stage first, in plain words (H107): asked is not paid. A tip under a lane is only asked until the payee answers with an invoice and it is paid in the wallet.
@@ -405,7 +439,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         counts.asked = items.length;
         return `<h2>Asked</h2>${v.say('Lanes other apps asked for, read in plain words, to grant or decline.', ['An app asks through MOR, sealed to you. Granting signs a public grant of this identity to itself, naming the key that app holds.'])}<div class="k-feed">${items.map(itemCard).join('') || '<p class="k-empty">No lane asked.</p>'}</div>`;
       }
-      if (part === 'in-force') await b.ask('look').catch(() => undefined);
+      if (part === 'in-force') lookThenFill('in-force');
       const l = await b.ask<LanesRead>('lanes');
       counts = { ...counts, inForce: l.lanes.filter((x) => x.state === 'in force' && !x.here).length, ended: l.lanes.filter((x) => x.state !== 'in force').length };
       if (part === 'own') return v.ownPane(l.lanes.filter((x) => x.here && x.state === 'in force'), units().map((u) => ({ ...u, label: u.label.replace(' satoshis', '') })), l, b.web);

@@ -137,6 +137,7 @@ async function go(page: Page, tile: string, part: string) {
   await sees(page, '.k-opened', tile);
   if (await page.locator('.k-pane .k-back').isVisible()) await page.locator('.k-pane .k-back').click();
   await page.locator(`.k-col [data-k-col="${part}"]`).click();
+  await page.locator('#pane .damgar-looking').waitFor({ state: 'detached', timeout: 60_000 });
   await page.waitForFunction(() => ![...document.querySelectorAll('button')].some((b) => b.disabled), undefined, { timeout: 60_000 });
 }
 

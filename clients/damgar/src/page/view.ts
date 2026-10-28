@@ -412,7 +412,7 @@ export function laneTotal(l: LaneShown): string {
   if (!l.total) return '';
   const over = l.over ? `<span class="damgar-over"> · overspent by ${e(l.over.said)}</span>` : '';
   // What is paid, apart from what is only asked (H107): an asked payment holds its amount against the cap, but nothing has moved yet.
-  const parts = l.spent ? [l.paid ? `${l.paid.said} paid` : null, l.asked && l.asked.value ? `${l.asked.said} asked, not paid yet` : null].filter(Boolean).join(', ') : '';
+  const parts = l.spent ? [l.paid && l.paid.value ? `${l.paid.said} paid` : null, l.asked && l.asked.value ? `${l.asked.said} asked, not paid yet` : null].filter(Boolean).join(', ') : '';
   return `<dt>In all</dt><dd>${e(l.total.said)}${l.spent ? ` · ${e(l.spent.said)} spent${parts ? ` (${e(parts)})` : ''}, ${e(l.left?.said ?? '')} left` : ' · not read yet'}${over}</dd>`;
 }
 

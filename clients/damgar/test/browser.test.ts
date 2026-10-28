@@ -213,6 +213,8 @@ async function go(page: Page, tab: string, part: string) {
   await page.locator(`.k-col [data-k-col="${part}"]`).click();
   // The part's own heading: the one shown before may still be on screen a moment.
   await sees(page, `#pane h2:text-is("${label}")`, `${tab}-${part}`);
+  // Drawn at once from what it last showed, then filled in (H115): what it looked up is there once "Looking…" is gone.
+  await page.locator('#pane .damgar-looking').waitFor({ state: 'detached', timeout: 60_000 });
   await settled(page);
 }
 
@@ -407,7 +409,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   // Damgar: what is left, and the record of Dub's payments under the lane.
   await go(gp, 'lanes', 'in-force');
   await gp.locator('#pane .damgar-lane', { hasText: 'In all' }).waitFor({ timeout: 60_000 });
-  assert.match(await gp.locator('#pane .damgar-lane').first().innerText(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent, 200 regtest satoshis left/);
+  assert.match(await gp.locator('#pane .damgar-lane').first().innerText(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent \(2 800 regtest satoshis asked, not paid yet\), 200 regtest satoshis left/);
   await shot(gp, 'mac-21-lane-in-all');
   await go(gp, 'account', 'under');
   assert.equal(await gp.locator('#pane .k-act').count(), 2);
