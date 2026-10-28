@@ -185,17 +185,25 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'state': {
         const st = p.desk.state();
         const lines = await p.desk.lines();
+        // H125: the Agents and Collectives columns follow the identity in use: its agents, the collectives it is a member of; nothing held for another identity.
+        const acting = await member.acting();
         return {
           ...st,
           identities: st.identities.map((i) => ({ ...i, line: lines[i.id] ?? i.line })),
           machine: agents ? agents.for(null).state() : null,
-          agents: agents ? agents.list() : [],
+          agents: agents ? agents.list().filter((x) => !!acting && x.owner === acting) : [],
           sharedKey: agents ? agents.sharedKey() : { found: false, from: '' },
-          // On the web, no test collective: only the real ones founded here and those brought by their ID.
-          collectives: [...(web ? collectives.list().filter((c) => c.brought) : collectives.list()), ...real.collectives().map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true }))],
+          // No test collective (removed from Edubba, decided: "It serves no purpose, it was for testing only"): the real ones founded here and those brought by their ID.
+          collectives: [
+            ...collectives.list(acting).filter((c) => c.brought),
+            ...real
+              .collectives()
+              .filter((c) => !!acting && real.collective(c.id).f.members.includes(acting))
+              .map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true })),
+          ],
           proposals: real.proposals().map((x) => ({ ...x, standing: real.standing(x) })),
           contacts: real.contacts(),
-          acting: await member.acting(),
+          acting,
           // The identity panel (decided): each identity held here, with the collectives under it: the real ones it is a member of (founded here), and those brought naming it.
           under: Object.fromEntries(
             store.book().identities.map((i) => [

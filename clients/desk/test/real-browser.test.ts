@@ -288,9 +288,8 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   // H33: whom Edubba acts as, top right.
   await ed.locator('.k-me', { hasText: 'Nobody, allegedly' }).waitFor();
   await tile(ed, 'collectives');
-  // H27: what real and test mean, on the parts and in them.
-  await part(ed, '+ Found a test collective');
-  await ed.locator('#pane', { hasText: 'every member is held in this Edubba, and their consent is simulated' }).waitFor();
+  // Test collectives are gone from Edubba (decided: "It serves no purpose, it was for testing only"): only a real founding is offered.
+  assert.equal(await ed.locator('.k-col button', { hasText: 'test collective' }).count(), 0, 'no test collective offered');
   await part(ed, '+ Found a collective');
   await ed.locator('#pane', { hasText: 'each member is a person with their own identity, on their own device' }).waitFor();
   await shot(ed, 'edubba-collectives-list');
@@ -425,10 +424,6 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await shot(ed, 'edubba-change-review');
   await ed.click('#e-real-review [data-action=cancel]');
 
-  // Test mode, labelled.
-  await part(ed, '+ Found a test collective');
-  await ed.locator('.note.warn', { hasText: 'Test mode' }).waitFor();
-  await shot(ed, 'edubba-test-mode');
   assert.deepEqual(problems, []);
 });
 

@@ -626,10 +626,6 @@ async function collectivesPart(): Promise<string> {
     after = async () => void (await syncGrid('real-found'));
     return v.inside(v.realFound(state));
   }
-  if (part === 'test') {
-    after = mountCollective;
-    return v.inside(v.foundCollective());
-  }
   if (part === 'bring') return v.inside(v.bringCollective());
   if (part === 'sign') return v.inside(`<div id="e-signing-wrap">${await readSign(null)}</div>`);
   if (part.startsWith('p:')) {
@@ -676,13 +672,6 @@ async function collectivesPart(): Promise<string> {
     return `${head}${v.actPane({ name: col.name, acting, chips, cards, typing, note: [...p.notes.map((l) => v.e(l.text)), ...posts.problems.map(v.e), col.brought ? 'Brought here: Edubba holds none of its keys, so nothing can be signed for it here.' : test ? v.e(v.TEST_MODE_SAY) : ''].filter(Boolean).join('<br>') })}`;
   }
   if (sub === 'sign') return `${head}${v.inside(`<div id="e-signing-wrap">${await readSign(id)}</div>${state.proposals.filter((x) => x.collective === id && x.kind === 'release').map((x) => v.proposalStatus(state, x)).join('')}`)}`;
-  if (!col.real) {
-    // A test collective's members, money and endings: the collective client's own page, kept.
-    after = mountCollective;
-    return `${head}${v.inside(`<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div><div id="collectives"></div>
-<details class="card"><summary>Sign or check a release by its id</summary><div id="by-id"></div></details>
-<details class="card"><summary>What was signed, in every collective</summary><div id="history"></div></details></div>`)}`;
-  }
   const rc = await c.ask<RealCollective>('real collective', { collective: id });
   if (sub === 'members') {
     after = async () => {
@@ -721,38 +710,6 @@ ${state.proposals.filter((p) => p.collective === id && p.kind === 'money').map((
 }
 
 /** The collective client's page logic, for a test collective (or its founding, or its settings). */
-async function mountCollective() {
-  const root = app.querySelector<HTMLElement>('[data-collective-root]');
-  if (!root) return;
-  const only = part.startsWith('c:') ? part.slice(2) : undefined;
-  collectiveMount = mount(root, {
-    ask: (op, args) => c.ask(`collective ${op}`, args ?? {}),
-    fail: (err) => {
-      if (!unpaired(err)) return false;
-      void start();
-      return true;
-    },
-    only: () => only,
-    // Something was signed: the collectives listed may have changed (one founded, one ended).
-    done: async () => {
-      const before = state.collectives.map((x) => x.id).join(',');
-      state = await c.ask<State>('state');
-      if (state.collectives.map((x) => x.id).join(',') !== before) {
-        const added = state.collectives.find((x) => !before.includes(x.id));
-        if (added && part === 'test') {
-          part = `c:${added.id}`;
-          sub = 'members';
-          await draw();
-        }
-      }
-    },
-  });
-  try {
-    await collectiveMount.refresh();
-  } catch (err) {
-    fail(err);
-  }
-}
 
 /** F338: the units a money draft may name, the acts a collective may anchor, and the anchors asked. */
 let units: { hash: string; label: string }[] | null = null;
@@ -1219,7 +1176,10 @@ app.addEventListener('click', async (ev) => {
     }
     as = null;
     await useIdentity(id);
-    return void (await show(await c.ask<State>('state')));
+    const next = await c.ask<State>('state');
+    // H125: what belonged to the identity left is not shown for the one now in use.
+    if (part && ((part.startsWith('agent:') && !next.agents.some((a) => `agent:${a.id}` === part)) || (part.startsWith('c:') && !next.collectives.some((x) => `c:${x.id}` === part)) || (part.startsWith('p:') && !next.proposals.some((x) => `p:${x.act}` === part)))) part = '';
+    return void (await show(next));
   }
   const menu = t.closest<HTMLElement>('[data-k-idmenu]');
   if (menu) return void (await identityMenu(menu, menu.dataset.kIdmenu!));

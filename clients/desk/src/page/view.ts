@@ -148,6 +148,8 @@ export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; 
   switch (tab) {
     case 'agents':
       return [
+        // H125: the agents of the identity in use, and said so when it has none.
+        ...(s.agents.length ? [] : [`No agents for ${s.identities.find((i) => i.id === s.acting)?.name ?? 'this identity'} yet`]),
         ...s.agents.map((a) => ({ key: `agent:${a.id}`, label: a.name, k: a.on ? 'on' : 'off' })),
         { key: 'add', label: '+ Add an agent' },
         '-',
@@ -155,13 +157,14 @@ export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; 
       ];
     case 'collectives': {
       const list: ColumnEntry[] = s.collectives.map((c) => ({ key: `c:${c.id}`, label: c.name, k: c.brought ? 'brought' : c.real ? c.members : c.closed ? 'ended' : 'test' }));
-      for (const p of s.proposals.filter((x) => x.kind === 'founding' && !x.founded)) list.push({ key: `p:${p.act}`, label: p.name, k: `${p.standing.signed.length} of ${p.signers.length} signed` });
+      // H125: the foundings the identity in use signs in, as its collectives.
+      for (const p of s.proposals.filter((x) => x.kind === 'founding' && !x.founded && !!s.acting && x.signers.includes(s.acting))) list.push({ key: `p:${p.act}`, label: p.name, k: `${p.standing.signed.length} of ${p.signers.length} signed` });
+      if (!list.length) list.push(`No collectives for ${s.identities.find((i) => i.id === s.acting)?.name ?? 'this identity'} yet`);
       return [
         ...list,
         { key: 'sign', label: 'To sign', k: k.toSign || undefined },
         '-',
         { key: 'found', label: '+ Found a collective' },
-        ...(WEB ? [] : [{ key: 'test', label: '+ Found a test collective' } as ColumnEntry]),
         { key: 'bring', label: '+ Bring a collective' },
       ];
     }

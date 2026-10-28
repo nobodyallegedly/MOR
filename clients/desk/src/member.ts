@@ -216,6 +216,9 @@ export class Member {
       try {
         const r = await this.dub.post({ text });
         return { post: r.post.id, lines: r.lines.map((l) => ({ ...l, text: l.text.replace(/\bDub\b/g, 'Edubba') })) };
+      } catch (e) {
+        // Dub's own words, said here as Edubba's.
+        throw new Error((e instanceof Error ? e.message : String(e)).replace(/\bDub\b/g, 'Edubba'));
       } finally {
         this.keep.postingAs = null;
       }

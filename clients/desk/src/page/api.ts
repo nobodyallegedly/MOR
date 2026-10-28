@@ -190,6 +190,8 @@ export interface State {
 export interface AgentSummary {
   id: string;
   name: string;
+  /** Its owner: the agents column shows those of the identity in use (H125). */
+  owner?: string | null;
   named: { name: string; act: string } | null;
   on: boolean;
   callsPerDay: number;

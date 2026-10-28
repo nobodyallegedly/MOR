@@ -415,6 +415,7 @@ export class Agents {
       return {
         id,
         name: names.identities.find((i) => i.id === id)?.name ?? short(id),
+        owner: s.owner,
         named: s.named,
         on: s.on,
         callsPerDay: s.callsPerDay,

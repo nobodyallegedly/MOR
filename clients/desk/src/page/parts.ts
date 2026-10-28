@@ -428,13 +428,6 @@ export function browsers(s: State): string {
 
 // ---------------------------------------------------------------- collectives
 
-/** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is Ummia's now (F339). */
-export function foundCollective(): string {
-  return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose “+ Found a real collective”.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
-<section class="card"><h3>Its founding</h3><div id="found"></div></section>
-<section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
-<p class="small">A release under one’s own name is made in Ummia, the developers’ app.</p>`;
-}
 
 /** "+ Bring an existing collective" (H15): by its ID, read from its homes, one of your identities among its members. */
 export function bringCollective(): string {
