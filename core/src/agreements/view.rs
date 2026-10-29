@@ -4849,7 +4849,9 @@ impl<'a> AgreementsView<'a> {
         // F142 (rule 42): an adopter is an action of the grantor's own key
         // that counts, done and on its chain; an Identity witness act, on
         // neither chain, adopts nothing.
-        let on_chain = |a: &Held| a.inside.spec != self.mirs.identity;
+        // An ending (a fork or a closing) is no action: it adopts nothing
+        // (F142; IC3), whatever its line holds.
+        let on_chain = |a: &Held| a.inside.spec != self.mirs.identity && !self.is_agreements(a, types::FORK) && !self.is_agreements(a, types::CLOSING);
         // The grantor's own acts: a person's, signed with its own key; a
         // collective's, acts for it.
         let grantors = |a: &Held| if collective { Self::for_col(&col, a) && self.col_grant(&col, a).is_none() } else { a.act.outside.signer == Some(c) && a.act.outside.binding != Some(gh.id) };

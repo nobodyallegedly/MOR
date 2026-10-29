@@ -3857,7 +3857,6 @@ fn of1_a_record_naming_an_agreement_not_in_force_registers_nothing() {
 /// does not count and adopts nothing (rule 40: judged by the area alone).
 /// The debt binds no one, and the fork rightly leaves it out.
 #[test]
-#[ignore = "core: an unfinished fork, counted as an act for the collective (layer 4), adopts the void act its line holds (rule 40); the text: only an action adopts, an ending adopts nothing (F142, IC3)"]
 fn of2_a_fork_leaves_out_a_debt_a_revocation_voided() {
     let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let ops = [
@@ -4008,7 +4007,6 @@ fn of4_a_departure_before_the_citation_is_not_set_aside() {
 /// leaves it out. The oracle had taken the grant as counting because the
 /// holder signed it.
 #[test]
-#[ignore = "core: an unfinished fork, counted as an act for the collective (layer 4), adopts the void act its line holds (rule 40); the text: only an action adopts, an ending adopts nothing (F142, IC3)"]
 fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
     let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let story = |tips: u8, succ_sign: bool| {
