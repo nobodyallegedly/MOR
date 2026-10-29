@@ -283,6 +283,12 @@ impl<'a> AgreementsView<'a> {
             }
             return Some(*named);
         }
+        Some(self.history_version(act, named))
+    }
+
+    /// The deepest complete version below `named` that `act`'s history
+    /// holds, or `named` itself where it holds none.
+    pub(super) fn history_version(&self, act: &Hash, named: &Hash) -> Hash {
         let below = self.versions_below(named);
         let history = self.act_history(act);
         // The deepest complete version below `named` the history holds.
@@ -303,7 +309,7 @@ impl<'a> AgreementsView<'a> {
                 best = *v;
             }
         }
-        Some(best)
+        best
     }
 
     /// The acts in `act`'s history, as far as held: what its `prev` and its

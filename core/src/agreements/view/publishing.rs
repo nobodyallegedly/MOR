@@ -70,7 +70,11 @@ impl<'a> AgreementsView<'a> {
     /// The owners' side of a publication as a party: the collective whose
     /// own agreement the publication names (it signs by its identity), the
     /// line of a work's ownership agreement (it signs as rule 15 says), or,
-    /// naming none, its drafter.
+    /// naming none, its drafter. *Open (question to Nobody, allegedly):
+    /// rule 14 has a vow's signer sign as the owners' side of a publication
+    /// selling the vow that no ownership agreement claims, and also counts
+    /// a publication naming a vow whether or not it pays the vow's signer;
+    /// the core keeps the drafter until that is settled.*
     pub(super) fn owners_party(&self, p: &Publication, drafter: &Hash) -> R<Hash> {
         let Some(o) = &p.owners else { return Ok(*drafter) };
         let t = self.terms(o)?;
@@ -430,7 +434,7 @@ impl<'a> AgreementsView<'a> {
         }
         let t = self.terms(named)?;
         if t.is_collective() {
-            return Ok(Ok(self.latest_version(named)?));
+            return Ok(Ok(self.history_version(receipt, named)));
         }
         match self.deal_state(owners)? {
             DealState::Forked { reference, branches } | DealState::Tangled { reference, branches, .. } => {

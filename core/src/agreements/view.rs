@@ -1564,11 +1564,21 @@ impl<'a> AgreementsView<'a> {
                 }
             }
             let mut holders_signed = true;
-            let (mut asked, _) = Self::must_sign_parts(parent, &terms);
-            // F316: in a deal, the version carrying an owners' matter names
-            // the transfers it counts (field 31); a transfer it does not
-            // name counts nothing toward it, and its seller holds for it.
+            // Rule 94: in a deal, the version names the transfers it counts
+            // (field 31); a transfer it counts makes its buyer the holder
+            // asked, one it does not name counts nothing, its seller holding
+            // for it.
             let counted = terms.transfers_counted.clone().unwrap_or_default();
+            let as_counted = {
+                let mut p = parent.clone();
+                if !counted.is_empty() {
+                    for (i, st) in p.stakes.iter_mut().flatten().enumerate() {
+                        st.holders = self.roster_with(i, st, &counted).into_iter().filter(|(_, n)| *n > 0).map(|(h, n)| (Who::Id(h), n)).collect();
+                    }
+                }
+                p
+            };
+            let (mut asked, _) = Self::must_sign_parts(&as_counted, &terms);
             for h in super::pay::pay_signers_by(parent, &terms, &|i, st| self.roster_with(i, st, &counted)) {
                 if !asked.contains(&h) {
                     asked.push(h);
@@ -10118,7 +10128,7 @@ impl<'a> AgreementsView<'a> {
         // or a metric share of its plan, or the owners' line.
         let mut unplanned: Vec<Hash> = vec![];
         let mut unevidenced: Vec<Hash> = vec![];
-        let lone_owner = p.owners.is_none().then_some(pe.drafter);
+        let lone_owner = p.owners.is_none().then(|| pe.parties[0]);
         for x in &s.payouts {
             let planned = if let Some(i) = x.partner {
                 p.partners.get(i as usize).is_some_and(|q| q.identity == x.receiver)
