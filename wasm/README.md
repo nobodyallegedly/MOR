@@ -27,4 +27,24 @@ The core moved to the bake-to-publication texts (MICS v30 with Identity 15, Text
 | `agreements::layers::ENVELOPES_AND_TEXT` = 1, `MONEY` = 2, `AGREEMENTS` = 3, `DEVELOPMENT` = 4 | `layers::TEXT` = 1, `ENVELOPES` = 2, `MONEY` = 3, `AGREEMENTS` = 4, `DEVELOPMENT` = 5 (`IDENTITY` = 0): an area's or grant's kind `[0, layer]` and a specification's field 10 are read in these numbers; field 10 accepts 0 to 4 | MICS, "Structure"; Development, "Layers an extension acts on" |
 | task 11 (anchoring) in the Agreements layer | task 11 in the Envelopes layer, as Development's task table writes it | Development, "Tasks" |
 
-**Not yet in the core** (the texts have them; the core still reads the earlier formats, so a client keeps making those until the core moves): the publication (Agreements type 6, partners, split service, split plan) in place of the standing offer and of terms fields 8, 14, 28 and 29; the ownership agreement's target (terms field 33) and one stake; shares by reference (receipt field 9 as `[ownership agreement, version]`); the layer rules (field 19 as a map keyed by layer) and finer areas (field 34); a collective with no signing key, its members acting with their own keys, and with no member keys or collective grant keys; records drawn by any member; the keyless genesis and rotation. `docs/s7h-report.md` says what remains and why.
+The core now reads the redesign's remaining formats too (S7h-2): the publication, the ownership agreement's target and one stake, shares by reference, purchases by price tag, the keyless collective and the keyless genesis and rotation. What a client calls differently in this binding, old shape first:
+
+| Old | New | Why |
+| --- | --- | --- |
+| `makeGenesis({ signingSecret, ... })`, `signingSecret` required | `signingSecret` optional; for a collective, `firstChainKeySeeds` and `firstChainKeyScheme` instead (its genesis signed by its first chain key, revealed in the signature); exactly one of the two | Identity rule 1: a collective's genesis declares no signing key |
+| `makeRotation({ newSigningPublic, ... })`, required | `newSigningPublic` optional, absent for a collective; a collective's rotation keeps no tip | Identity rotation check 4 |
+| `resolve(identity).signingKey`, always bytes | `null` for a keyless identity | Identity rule 1 |
+| `readTerms(...)`: `grammar.signing`; `splitGrant`, `payeeGrants`, `backups`, `plan`, `fees` (terms fields 8, 14, 28, 29) | `grammar` holds `chainKey` and `recovery` only; the four fields are gone (a publication carries them); new `target` (`["claim", hash]` or `["collective", null]`, field 33) and `layers` (`[[layer, rule]]`, field 19); `areas` are field 34's finer areas | Agreements, "Terms": fields 19, 33 and 34 |
+| a mark's power: `area`, `constitutional`, ... | also `layer` (`area` holds the layer number), the power `[6, layer]` | Agreements rule 65 |
+| `readGrant(...).thisAgreement` | gone: a collective's grant carries no key, and names none of its own | Agreements, "Grant (type 9)" |
+| `recordPayload({ kept, ... })` | `kept` gone: a record cites the collective's line in its objects | Agreements, "Record (type 17)" |
+| `agreementsConsent(...)`: each area count's `byKey` | gone: no member keys | Agreements rule 58 |
+| `agreementsHandOut(specs, collective, agreement, chainAct, tips)`, `agreementsLineUnheld(specs, collective, chainAct, tips)` | `agreementsHandOut(specs, collective, agreement, line)`, `agreementsLineUnheld(specs, collective, line)`: `line` the acts the ending cites on the collective's chain | Agreements rule 91: an ending's line is what it cites |
+| `agreementsSplitTurns(specs, service, agreement, stake, holders, previous)` | `agreementsSplitTurns(specs, service, owners, holders, previous)`: `owners` the ownership agreement's first version | Agreements rule 15: one stake, read by reference |
+| `agreementsSplit(...).agreement` | `.publication`: a split names the publication it pays under (field 3) | Agreements, "Split (type 8)" |
+| `agreementsPayerSplit(...)` | gone: what a payer owes is read from the publication's split plan and its price tag | Agreements rules 11 and 15 |
+| none | `publicationPayload({ sold, owners, partners, service, plan, words, cmips, designated, backups, time, refundUntil, until })`, `Verifier.agreementsPublication(specs, id)`, `Verifier.agreementsTagUnder(specs, tag)` | Agreements, "Publication (type 6)" |
+| none | `Verifier.bakeUploader(bake)`: the uploader, or "unknown" where a bake names a collective and Agreements are not read | Money rule 18; Q13 |
+| `anchoringOffer(...)`, `anchoringReadOffer(...)` | both refuse: the anchoring cMIP still makes and reads a standing offer, which the core no longer reads; they return once the cMIP moves to a publication with a price tag | cMIPs left as they are |
+
+CLIENT_FAILURES_PLACEHOLDER
