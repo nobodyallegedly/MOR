@@ -72,6 +72,8 @@ struct Lab {
     /// (rule 58): each act names it in `objects`. What the label's own
     /// devices did before its signing key was withdrawn.
     c: Vec<Person>,
+    /// The acts each device made for an earlier holder ([`Lab::hand_over`]).
+    handed: Vec<Vec<Hash>>,
     founding: Hash,
     authority: Person,
     keeper: Person,
@@ -279,6 +281,7 @@ impl Lab {
                 m,
                 col,
                 c,
+                handed: vec![vec![]; 3],
                 founding,
                 authority,
                 keeper,
@@ -293,8 +296,17 @@ impl Lab {
     /// What an act on the label's chain cites (F127): the decisions its
     /// devices know, and these previous acts.
     fn chain(&self, previous: &[Hash]) -> Vec<Object> {
-        let (c, ds) = self.c[0].cite.clone().expect("the label's devices cite its chain");
-        ds.iter().chain(previous).map(|d| Object { chain: c, predecessor: *d }).collect()
+        let c = self.col.id;
+        self.decisions().iter().chain(previous).map(|d| Object { chain: c, predecessor: *d }).collect()
+    }
+
+    /// The decisions device 0 cites (rule 58): what its cite list holds
+    /// besides its own actions.
+    fn decisions(&self) -> Vec<Hash> {
+        let (_, ds) = self.c[0].cite.clone().expect("the label's devices cite its chain");
+        let own = |x: &Hash| self.handed[0].contains(x) || self.c[0].seq.contains(x);
+        let record = |x: &Hash| self.w.v.get(x).is_some_and(|h| h.inside.spec == mirs().agreements && h.inside.type_ == agreements::types::RECORD);
+        ds.into_iter().filter(|x| !own(x) || record(x)).collect()
     }
 
     fn ids(&self) -> Vec<Hash> {
@@ -372,6 +384,17 @@ impl Lab {
         id
     }
 
+    /// Holds device `d`'s act for the label; the device's next act cites it
+    /// among the heads (rule 58, client conformance: a member's client
+    /// cites its own last act for the collective).
+    fn own(&mut self, d: usize, a: &mor_core::act::Act) -> Hash {
+        let id = self.w.add(a);
+        if let Some((_, ds)) = self.c[d].cite.as_mut() {
+            ds.push(id);
+        }
+        id
+    }
+
     /// An act of the label, on device `d`, of a cMIP's own type 0: an act in
     /// the lane of the task the terms name that cMIP for (F106). Since F112
     /// a payment cMIP defines no act of its own (receipts are Money's,
@@ -385,7 +408,7 @@ impl Lab {
             None,
             None,
         );
-        self.w.add(&a)
+        self.own(d, &a)
     }
 
     /// The label's payee pointer (Money type 0), on device `d`, naming
@@ -404,7 +427,7 @@ impl Lab {
                 .collect(),
         });
         let a = self.w.everyday_act(&mut self.c[d], mirs().money, 0, p.to_map(), None, None);
-        self.w.add(&a)
+        self.own(d, &a)
     }
 
     /// A settlement receipt the label signs as payee (Money type 2), on
@@ -426,7 +449,7 @@ impl Lab {
             purchase: None,
         });
         let a = self.w.everyday_act(&mut self.c[d], mirs().money, 2, r.to_map(), None, None);
-        self.w.add(&a)
+        self.own(d, &a)
     }
 
     /// A publication of the label (Envelopes type 0), on device `d`.
@@ -439,7 +462,7 @@ impl Lab {
             None,
             None,
         );
-        self.w.add(&a)
+        self.own(d, &a)
     }
 
     /// The label acknowledges an act by a witness act (Identity type 15),
@@ -458,7 +481,7 @@ impl Lab {
     fn acknowledge(&mut self, d: usize, x: Hash) -> Hash {
         let f = self.founding;
         let a = self.w.everyday_act(&mut self.c[d], agreements_spec(), 12, liveness(f), obj(f), Some(vec![x]));
-        self.w.add(&a)
+        self.own(d, &a)
     }
 
     /// The same act citing nothing on the label's chain: an action on no
@@ -476,7 +499,7 @@ impl Lab {
     fn adopt(&mut self, d: usize, x: Hash) -> Hash {
         let o = self.chain(&[x]);
         let a = self.w.everyday_act(&mut self.c[d], ext(), 0, vec![], Some(o), None);
-        let a = self.w.add(&a);
+        let a = self.own(d, &a);
         // The Releases area reaches it: its holder signs, so it counts.
         self.sign(ANA, &a);
         a
@@ -540,12 +563,24 @@ impl Lab {
         grantee.acting_for(self.col.id, vec![grant])
     }
 
-    /// The label's line, as devices `devs` see it (rule 58): the decisions
-    /// device 0 knows, and the actions of those devices for the label.
+    /// The label's devices pass to member `to` (where Cy leaves): each keeps
+    /// what it cites; its earlier acts stay in the line it sees.
+    fn hand_over(&mut self, to: usize) {
+        for (i, d) in self.c.iter_mut().enumerate() {
+            let (col, ds) = d.cite.clone().expect("a device acting for the label");
+            self.handed[i].extend(d.seq.iter().copied());
+            *d = self.m[to].acting_for(col, ds);
+        }
+    }
+
+    /// The label's line, as devices `devs` see it (rule 58): its latest
+    /// identity-chain link, and those devices' actions for it (each citing,
+    /// in turn, the decisions its device knew): what the label's kept tips
+    /// held before its key was withdrawn.
     fn line(&self, devs: &[usize]) -> Vec<Hash> {
-        let mut out: Vec<Hash> = self.c[0].cite.clone().map(|c| c.1).unwrap_or_default();
+        let mut out: Vec<Hash> = vec![self.w.v.resolve(&self.col.id).links.last().expect("the label's chain").act];
         for i in devs {
-            for x in &self.c[*i].seq {
+            for x in self.handed[*i].iter().chain(&self.c[*i].seq) {
                 let names = self.w.v.get(x).is_some_and(|h| h.inside.objects.iter().flatten().any(|o| o.chain == self.col.id));
                 if names && !out.contains(x) {
                     out.push(*x);
@@ -608,6 +643,18 @@ impl Lab {
         }
         id
     }
+}
+
+/// An act of `p` for the collective it acts for, held; its next act cites
+/// it among the heads (rule 58, client conformance: a member's or
+/// grantee's client cites its own last act for the collective).
+fn act_for(w: &mut World, p: &mut Person, spec: Hash, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let a = w.everyday_act(p, spec, type_, payload, objects, None);
+    let id = w.add(&a);
+    if let Some((_, ds)) = p.cite.as_mut() {
+        ds.push(id);
+    }
+    id
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
@@ -1253,6 +1300,8 @@ fn a_departed_holders_stake_never_shrinks_without_them() {
     let sa = lab.sign(ANA, &k);
     let sb = lab.sign(BEN, &k);
     lab.rotate(Some((k, vec![sa, sb])), &[0]);
+    // Cy's devices act for the label no more: Ben's do.
+    lab.hand_over(BEN);
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     assert_eq!(lab.in_force(&p), k);
@@ -1329,10 +1378,7 @@ fn an_emptied_area_ends_its_grants() {
 
     let mut pubs_strand = lab.strand(g1, &publisher);
     let mut agent_strand = lab.strand(g2, &agent);
-    let under = |lab: &mut Lab, st: &mut Person, spec: Hash| -> Hash {
-        let a = lab.w.everyday_act(st, spec, 0, vec![], None, None);
-        lab.w.add(&a)
-    };
+    let under = |lab: &mut Lab, st: &mut Person, spec: Hash| -> Hash { act_for(&mut lab.w, st, spec, 0, vec![], None) };
     // Not yet accepted by its grantee: the key backs nothing (F128).
     let early = under(&mut lab, &mut pubs_strand, env);
     assert!(matches!(lab.view().backing(&early).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("accept")));
@@ -1348,7 +1394,7 @@ fn an_emptied_area_ends_its_grants() {
         let a = lab.w.everyday_act(&mut st, env, 0, publication(vec![]), None, None);
         lab.w.add(&a)
     };
-    assert!(matches!(lab.view().backing(&loose).unwrap(), Backing::NotBacked { reason, .. } if reason.contains("F128")));
+    assert_eq!(lab.view().backing(&loose).unwrap(), Backing::NotUnderGrant, "it names no grantor's chain (rule 80)");
     // Signed with another key than the grant's: not the label's act.
     let forged = {
         let mut st = lab.strand(g1, &agent);
@@ -1433,14 +1479,12 @@ fn an_emptied_area_ends_its_grants() {
     let rw = lab.grant(&wrong);
     lab.sign(CY, &rw);
     assert!(matches!(lab.consent(&rw), Consent::Invalid { .. }));
-    // The reinstatement, after the refit, completed by the new holder: a
-    // clone of the ended grant with a key of its own, which the grantee
-    // accepts. It takes nothing on (G2).
+    // The reinstatement, after the refit, drawn by the new holder (Cy's
+    // device: his act is his signature, rule 60): a clone of the ended
+    // grant, which the grantee accepts. It takes nothing on (G2).
     let mut again = g(publisher.id);
     again.reinstates = Some(g1);
     let re = lab.grant(&again);
-    assert!(!lab.counts(&re));
-    lab.sign(CY, &re);
     assert!(lab.counts(&re));
     sign(&mut lab.w, &mut publisher, &re);
     let mut st = lab.strand(re, &publisher);
@@ -1498,11 +1542,13 @@ fn a_revocation_ends_the_grant_key() {
     s1.cite.as_mut().unwrap().1.push(r);
     let after = act(&mut lab, &mut s1);
     assert!(matches!(lab.view().backing(&after).unwrap(), Backing::NotBacked { .. }));
-    // A witness act of the label acknowledging the racing act adopts
-    // nothing: on neither chain (F142, rule 42). An action of the label's
-    // own key on its chain, citing it, adopts it (A6; F131, IT2a).
+    // A member's witness act acknowledging the racing act adopts nothing:
+    // on neither chain of the label (F142, rule 42), it is another
+    // identity's acknowledgement, the act disputed, conferring nothing
+    // (rule 76). An action for the label on its chain, citing it, adopts it
+    // (A6; F131, IT2a).
     lab.ack(0, racing);
-    assert!(matches!(lab.view().backing(&racing).unwrap(), Backing::NotBacked { .. }), "a witness act adopts nothing (F142)");
+    assert!(matches!(lab.view().backing(&racing).unwrap(), Backing::Disputed { .. }), "a witness act adopts nothing (F142): {:?}", lab.view().backing(&racing));
     lab.adopt(0, racing);
     assert_eq!(lab.view().backing(&racing).unwrap(), Backing::Binds { grant: g });
     // H3 (F129): no handover. Another grantee manages the adopted act
@@ -1675,7 +1721,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
 fn a_collectives_negotiation_is_talk() {
     let mut lab = Lab::new(&|_| {});
     let other = lab.w.genesis("a buyer", vec![own_home()], None, None);
-    let saved = lab.c[0].cite.take();
+    // A member's message for the label names it (rule 58).
     let m = lab.w.private_act(
         &mut lab.c[0],
         mirs().agreements,
@@ -1684,7 +1730,6 @@ fn a_collectives_negotiation_is_talk() {
         None,
         vec![other.id],
     );
-    lab.c[0].cite = saved;
     assert_eq!(lab.consent(&m), Consent::Talk);
 }
 
@@ -1698,6 +1743,8 @@ fn co_holders_carry_on() {
         t.areas.as_mut().unwrap()[1].threshold = 2;
     };
     let mut lab = Lab::new(&ben_cy);
+    // The acts drawn by Ana, who holds no Money area.
+    lab.hand_over(ANA);
     let f = lab.founding;
     let mut ben = lab.m[BEN].clone();
     let res = lab.resign_from(&mut ben, f, Some(2));
@@ -1966,24 +2013,27 @@ fn a_rotation_declaring_nothing_carries_the_agreement_forward() {
     let x = lab.publish(0);
     assert!(matches!(lab.consent(&x), Consent::Broken { reason } if reason.contains("B5")));
 
-    let mut lab = Lab::new(&|_| {});
+    // The rule for Money the treasurer's (field 19, `[2, [ben]]`).
+    let mut lab = Lab::new(&money_is_bens);
     let f = lab.founding;
-    // The treasurer adopts a second payment cMIP alone; the label records it.
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| {
+    let money = Power::Layer(agreements::layers::MONEY);
+    // The treasurer adopts a second payment cMIP alone (`[6, 3]`); the label
+    // records it.
+    let t = lab.clone_terms(&f, vec![(money.clone(), vec![BEN])], &|t| {
         t.cmips = vec![(6, pay2()), (11, anchor())];
     });
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     lab.record(0, Some((k, vec![s])), &[], vec![], k);
-    // The label rotates its keys, declaring nothing.
+    // The label rotates its chain key, declaring nothing.
     lab.rotate(None, &[0]);
     let x = lab.cmip_act(0, pay2());
     assert_eq!(lab.in_force(&x), k, "the recorded clone is still in force");
     assert!(!lab.counts(&x), "a receipt of the adopted rail needs the treasurer");
     lab.sign(BEN, &x);
-    assert!(lab.counts(&x), "and counts with the treasurer, under the new key");
+    assert!(lab.counts(&x), "and counts with the treasurer, after the rotation");
     // A further record under the new key follows the agreement chain from k.
-    let t2 = lab.clone_terms(&k, vec![(Power::Area(2), vec![BEN])], &|t| {
+    let t2 = lab.clone_terms(&k, vec![(money.clone(), vec![BEN])], &|t| {
         t.cmips = vec![(6, pay3()), (11, anchor())];
     });
     let k2 = lab.propose(BEN, &t2);
@@ -3835,12 +3885,15 @@ fn key_of(grantee: Hash) -> SchnorrKey {
 
 /// A person's grant (rule 73): it names the grant key its grantee holds.
 fn person_grant(grantee: Hash) -> Grant {
-    Grant { key: Some(grant_key(&format!("{grantee:?}")).1), ..plain_grant(grantee) }
+    Grant { key: Some(grant_key(&format!("{grantee:?}")).1), kinds: None, ..plain_grant(grantee) }
 }
 
-/// A collective's grant: it carries no key (rule 73).
+/// A collective's grant: it carries no key (rule 73) and names the acts it
+/// reaches (field 6, rule 74): here, naming no area, the Agreements layer
+/// and a deal cMIP's acts, which no area reaches.
 fn plain_grant(grantee: Hash) -> Grant {
-    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, key: None }
+    let kinds = vec![Kind::Layer(agreements::layers::AGREEMENTS), Kind::Type { spec: spec("a deal cMIP"), type_: 0 }];
+    Grant { grantee, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(kinds), reinstates: None, key: None }
 }
 
 impl Lab {
@@ -13575,6 +13628,7 @@ fn a_successor_with_no_plan_3_8c() {
     assert_eq!(lab.view().nominee(&label, &cy.id).unwrap(), None, "declared, not confirmed: nobody");
     let conf = lab.w.everyday_act(&mut sam, common::identity_spec(), mor_core::identity::types::LINK_CONFIRMATION, vec![], Some(vec![Object { chain: cy.id, predecessor: rot }]), None);
     lab.w.add(&conf);
+    eprintln!("DBG {:?} {:?} {:?}", lab.w.v.status(&conf), lab.w.v.status(&rot), lab.view().current(&label));
     assert_eq!(lab.view().nominee(&label, &cy.id).unwrap(), Some(sam.id), "a nomination, once confirmed");
     // The seat is no automatic one: Cy is still a party, Sam is not.
     let cur = lab.view().current(&label).unwrap().unwrap();

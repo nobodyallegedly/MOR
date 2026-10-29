@@ -535,8 +535,10 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             json!(v.liveness(&h("act")).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" }))
         }
         // Whether terms are invalid against their parent and lineage (a false mark...).
+        // Terms refused outside their shape or by a rule read act by act
+        // (a single chain-key holder with no successor, rule 59) are invalid.
         "agreement invalid" => json!(match view(w).agreement(&h("act")).map(|a| a.invalid.is_some()) {
-            Ok(true) => "invalid",
+            Ok(true) | Err(agreements::AgreementsError::Check(_) | agreements::AgreementsError::Shape(_)) => "invalid",
             Ok(false) => "not invalid",
             Err(_) => "unknown",
         }),

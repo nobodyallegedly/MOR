@@ -106,11 +106,13 @@ pub fn agreements(out: &mut Out) {
     walk_1(out);
     walk_2(out);
     walk_3(out);
+    walk_4(out);
+    walk_5(out);
 }
 
 /// A collective of Ana, Ben and Cy, its founding changed by `f` before
 /// every member signs it; its identity keyless, declaring it.
-fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> Col {
+fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> (Col, Person) {
     let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
     let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
     let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
@@ -125,12 +127,14 @@ fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> Col {
     let chain = w.genesis_with(name, vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
     let id = chain.id;
     let c = m[2].acting_for(id, vec![id]);
-    Col { m, id, chain, c, founding }
+    (Col { m, id, chain, c, founding }, authority)
 }
 
 /// A clone of `parent` changed by `f`, marked with `mark`, drafted by the
-/// first signer and signed by `signers`: its id and the signature acts.
-fn clone_of(w: &mut World, col: &mut Col, parent: Hash, mark: Vec<(agreements::Power, Vec<usize>)>, signers: &[usize], f: &dyn Fn(&mut Terms)) -> (Hash, Vec<Hash>) {
+/// first signer and signed by `signers`, each act for the collective citing
+/// `cite` on its chain: its id and the signature acts.
+#[allow(clippy::too_many_arguments)]
+fn clone_of(w: &mut World, col: &mut Col, parent: Hash, mark: Vec<(agreements::Power, Vec<usize>)>, signers: &[usize], cite: Vec<Hash>, f: &dyn Fn(&mut Terms)) -> (Hash, Vec<Hash>) {
     let mut t = view(w).terms(&parent).unwrap();
     t.parent = Some(parent);
     t.field4 = Field4::Mark(
@@ -143,8 +147,9 @@ fn clone_of(w: &mut World, col: &mut Col, parent: Hash, mark: Vec<(agreements::P
             .collect(),
     );
     f(&mut t);
-    let k = ag_act(w, &mut col.m[signers[0]], agreements::types::TERMS, t.to_map(), obj(parent));
-    let sigs = signers.iter().map(|i| sign(w, &mut col.m[*i], &k)).collect();
+    let id = col.id;
+    let k = ag_act(w, &mut col.m[signers[0]].acting_for(id, cite.clone()), agreements::types::TERMS, t.to_map(), obj(parent));
+    let sigs = signers.iter().map(|i| sign(w, &mut col.m[*i].acting_for(id, cite.clone()), &k)).collect();
     (k, sigs)
 }
 
@@ -155,7 +160,7 @@ fn ask_record(col: &Hash, rec: &Hash) -> J {
 /// 9.2, a member leaving a collective: Cy resigns; a record is the line.
 fn walk_2(out: &mut Out) {
     let mut w = World::new();
-    let mut col = band(&mut w, "a band whose third member leaves", &|t, ids| {
+    let (mut col, _) = band(&mut w, "a band whose third member leaves", &|t, ids| {
         t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: ids.to_vec() };
         t.constitutional = Some(Rule::Threshold(2));
         t.layers = Some(vec![
@@ -198,7 +203,7 @@ fn walk_2(out: &mut Out) {
     // his share as a departed holder; a rotation of the band's chain key
     // declares it.
     let keep = vec![ana_id, ben_id];
-    let (k, sigs) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], &|t| {
+    let (k, sigs) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], vec![rec], &|t| {
         t.parties = keep.clone();
         t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
         t.departed = Some(vec![cy_id]);
@@ -311,11 +316,10 @@ fn walk_3(out: &mut Out) {
     let mut dee = w.genesis("dee, ben's colleague", vec![own_home()], None, None);
     let dee_id = dee.id;
     let (c1, c2) = (spec("ben's first child"), spec("ben's second child"));
-    let mut col = band(&mut w, "a band whose member dies", &|t, ids| {
+    let (mut col, mut authority) = band(&mut w, "a band whose member dies", &|t, ids| {
         t.layers = Some(layers_all(Rule::Threshold(1)));
         t.succession = Some(vec![agreements::SuccessionPlan { party: ids[1], stakes: Some(vec![(c1, 500_000), (c2, 500_000)]), seats: Some(vec![dee_id]), entry: Some(0) }]);
     });
-    let mut authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
     let (f, cid) = (col.founding, col.id);
     let (ana_id, ben_id, cy_id) = (col.m[0].id, col.m[1].id, col.m[2].id);
     let d = agreements::AbsenceDeclaration { agreement: f, clause: f, party: ben_id, outcomes: vec![outcomes::VOICE_REMOVED] };
@@ -325,7 +329,6 @@ fn walk_3(out: &mut Out) {
         let a = w.everyday_act(&mut cy, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, registers: Some(vec![d]) }.to_map(), obj(f), None);
         w.add(&a)
     };
-    eprintln!("DBG rec {:?}", view(&w).record(&cid, &rec).map(|e| e.not_a_line));
     out.case(&mut w, "9.3 a record registering the abandonment authority's declaration of Ben: the line", "Agreements rules 69 and 83",
         "The authority's declaration triggers the plan; any member draws the record registering it, naming the band and its genesis.", Facts::default(), ask_record(&cid, &rec), json!({ "line": true, "puts": null }), None);
     // The seat passes as a constitutional clone marked with the plan, Dee
@@ -337,10 +340,14 @@ fn walk_3(out: &mut Out) {
     t.succession = None;
     t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 3, members: new.clone() };
     t.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Plan(ben_id), signers: vec![dee_id] }]);
-    let k = ag_act(&mut w, &mut col.m[0], agreements::types::TERMS, t.to_map(), obj(f));
-    let sd = sign(&mut w, &mut dee, &k);
+    // Ana drafts it for the band, citing the record: its history holds the
+    // line, where the plan's trigger is in effect.
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![rec]), agreements::types::TERMS, t.to_map(), obj(f));
+    // Dee's signature act cites the band's chain, as an action does: the
+    // rotation's history is that of the signature acts it names.
+    let sd = sign(&mut w, &mut dee.acting_for(cid, vec![rec]), &k);
     out.case(&mut w, "9.3 the clone marked with Ben's plan, Dee in his place, every threshold unchanged: not invalid", "Agreements rule 83",
-        "Marked with the plan alone, signed by the seat successor, changing only what the plan gives.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k) }), json!("not invalid"), None);
+        "Marked with the plan alone, signed by the seat successor, changing only what the plan gives; Ana drafts it for the band, citing the record.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k) }), json!("not invalid"), None);
     let mut t2 = view(&w).terms(&k).unwrap();
     t2.text = "Other words, slipped into the succession.".into();
     t2.parent = Some(f);
@@ -352,7 +359,6 @@ fn walk_3(out: &mut Out) {
         "The band's chain key, rebuilt, declares the clone; the keys are re-dealt to Dee in Ben's place.", Facts::default(), ask_status(&rot), json!("valid"), None);
     let mut dee_for = dee.acting_for(cid, vec![rot]);
     let x = text_act(&mut w, &mut dee_for, "Dee's first notice for the band.", None);
-    eprintln!("DBG dee {:?}", view(&w).consent(&x));
     out.case(&mut w, "9.3 Dee's text for the band, citing the rotation: it counts", "Agreements rules 58 and 83",
         "Dee holds the seat in the agreement in force for the act.", Facts::default(), ask("consent counts", &x), json!(true), None);
 
@@ -380,7 +386,170 @@ fn walk_3(out: &mut Out) {
     let none = { let t = single(false, false); ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None) };
     out.case(&mut w, "9.3 a founding naming a single chain-key holder with a successor and an escrowed share: not invalid", "Agreements rule 59",
         "A single holder still has a named successor and an escrowed share.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&ok) }), json!("not invalid"), None);
-    eprintln!("DBG none {:?}", view(&w).agreement(&none).map(|a| a.invalid));
     out.case(&mut w, "9.3 a founding naming a single chain-key holder with neither: invalid", "Agreements rule 59",
         "No successor is named and no share escrowed: the key would die with its holder.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&none) }), json!("invalid"), None);
+}
+
+/// A successor of `col` for the side `side` (member indices), founded
+/// first: terms forked from the original, its members signing; its keyless
+/// identity. Its id.
+fn successor(w: &mut World, col: &mut Col, name: &str, side: &[usize]) -> Hash {
+    let f = col.founding;
+    let members: Vec<Hash> = side.iter().map(|i| col.m[*i].id).collect();
+    let mut t = view(w).terms(&f).unwrap();
+    t.parties = members.clone();
+    t.clone = Rule::Threshold(members.len().min(2) as u64);
+    t.layers = Some(layers_all(Rule::Threshold(1)));
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: members.iter().enumerate().map(|(i, h)| (agreements::Who::Id(*h), if i == 0 { 1_000_000 - (members.len() as u64 - 1) * (1_000_000 / members.len() as u64) } else { 1_000_000 / members.len() as u64 })).collect() }]);
+    t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: members.len() as u64, members: members.clone() };
+    t.forked_from = Some(col.id);
+    let x = ag_act(w, &mut col.m[side[0]], agreements::types::TERMS, t.to_map(), None);
+    for i in side {
+        sign(w, &mut col.m[*i], &x);
+    }
+    w.genesis_with(name, vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &x)]), 3).id
+}
+
+/// 9.4, closing and fork.
+fn walk_4(out: &mut Out) {
+    // A band that cannot agree forks; its own publication sells nothing
+    // from the fork's line.
+    let mut w = World::new();
+    let (mut col, _) = band(&mut w, "a band that forks", &|t, _| t.layers = Some(layers_all(Rule::Threshold(1))));
+    let (f, cid) = (col.founding, col.id);
+    let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+    let mut svc = w.genesis("the band's split service", vec![own_home()], None, None);
+    let sid = svc.id;
+    let mut fan = w.genesis("a fan of the band", vec![own_home()], None, None);
+    let mut ana = member_for(&col, 0);
+    let work = spec("the band's album, scenario 9.4");
+    let bake = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None); w.add(&a) };
+    let pb = owners_publication(&mut w, &mut ana, f, sid, vec![agreements::Sold::Bake(bake)], "The album.");
+    sign(&mut w, &mut svc, &pb);
+    let tag = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 500, spec(UNIT), sid);
+    let buy = |w: &mut World, svc: &mut Person, fan: &mut Person, proof: &[u8]| {
+        let purchase = Some(Purchase { agreement: f, line: f });
+        let c = Fin::Claim(Claim { rail: rail(), proof: proof.to_vec(), payee: sid, amount: Amount { unit: spec(UNIT), value: 500 }, fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: purchase.clone(), previous: None });
+        let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
+        let claim = w.add(&a);
+        let r = sale(w, svc, fan.id, tag, f, f, 500, proof);
+        (claim, r)
+    };
+    let (c0, r0) = buy(&mut w, &mut svc, &mut fan, b"bought before the fork");
+    let head = text_act(&mut w, &mut ana, "The band's last notice before it forks.", None);
+    let sa = successor(&mut w, &mut col, "side A of the band", &[0]);
+    let sb = successor(&mut w, &mut col, "side B of the band", &[1, 2]);
+    let fork = agreements::Fork {
+        agreement: f,
+        collective: cid,
+        sides: vec![agreements::Side { successor: sa, members: vec![ids[0]] }, agreements::Side { successor: sb, members: vec![ids[1], ids[2]] }],
+        shares: vec![],
+        debts: vec![],
+    };
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![head]), agreements::types::FORK, fork.to_map(), obj(f));
+    for i in 0..3 {
+        let (_, q) = w.chain_sign(&col.m[i], k);
+        col.m[i] = q;
+    }
+    let after = text_act(&mut w, &mut ana, "A notice for the band after its fork.", None);
+    let (c1, r1) = buy(&mut w, &mut svc, &mut fan, b"bought after the fork");
+    let facts = || Facts { rail_valid: vec![(c0, sid), (r0, sid), (c1, sid), (r1, sid)], rail_payments: vec![(b"bought before the fork".to_vec(), b"the first payment".to_vec()), (b"bought after the fork".to_vec(), b"the second payment".to_vec())], ..Default::default() };
+    out.case(&mut w, "9.4 a fork drawn by a member, naming the band, its line and the successors, chain-signed by every member: complete", "Agreements rule 91",
+        "Each side founded its successor first; the members on each side chain-sign the fork under the constitutional change rule; there is no debt to assign.", Facts::default(), ask("fork", &k), json!({ "complete": true }), None);
+    out.case(&mut w, "9.4 a text for the band after its fork: it counts for nothing", "Agreements rule 91",
+        "Once the fork is complete the original is closed: nothing done for it afterwards counts.", Facts::default(), ask("consent counts", &after), json!(false), None);
+    out.case(&mut w, "9.4 a payment under the band's own publication made before the fork, which the fork's history does not hold: racing it, no purchase", "Agreements rule 12, \"Owners that ended\"; \"Made before, made after\", 7",
+        "\"After it\" is read as the tie rule reads an ending: the fork cites the band's last notice, not the payment, so neither cites the other, and the ending wins.", facts(), ask("purchase", &c0), json!("no purchase"), None);
+    out.case(&mut w, "9.4 a payment under the band's own publication after the fork: no purchase, owed back", "Agreements rules 12 and 91",
+        "A publication whose ownership agreement names the closed collective as owner sells nothing from the fork's line.", facts(), ask("purchase", &c1), json!("no purchase"), None);
+
+    // A second band, holding half of a work's stake, closes: "holds
+    // nothing" is read from the ownership agreements of the works that list
+    // it, applying the complete transfers its closing's history cites.
+    let mut w = World::new();
+    let (mut col, _) = band(&mut w, "a band that closes", &|t, _| t.layers = Some(layers_all(Rule::Threshold(1))));
+    let (f, cid) = (col.founding, col.id);
+    let mut dee = w.genesis("dee, the band's co-owner of a song", vec![own_home()], None, None);
+    let dee_id = dee.id;
+    let mut ana = member_for(&col, 0);
+    let creators = [col.m[0].id];
+    let claim = claim_act(&mut w, &mut col.m[0], &creators, spec("a song the band co-owns"));
+    let mut t = deal(&[cid, dee_id], None);
+    t.text = "The song's ownership agreement: the band and Dee, half each.".into();
+    owning(&mut t, claim, &[(cid, 500_000), (dee_id, 500_000)]);
+    let own = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut dee, &own);
+    let base = w.log.clone();
+    let close = |w: &mut World, col: &mut Col, cite: Hash| {
+        let closing = agreements::Closing { agreement: f, collective: cid, open: vec![] };
+        let k = ag_act(w, &mut col.m[1].acting_for(cid, vec![cite]), agreements::types::CLOSING, closing.to_map(), obj(f));
+        for i in 0..3 {
+            let (_, q) = w.chain_sign(&col.m[i], k);
+            col.m[i] = q;
+        }
+        k
+    };
+    let mut w1 = replay(&base, &[]);
+    let mut col1 = Col { m: col.m.clone(), id: cid, chain: col.chain.clone(), c: col.c.clone(), founding: f };
+    let k1 = close(&mut w1, &mut col1, own);
+    out.case(&mut w1, "9.4 a closing of a band that still holds half a song's stake: not complete", "Agreements rule 91",
+        "A closing ends only a collective that holds nothing: the song's ownership agreement lists the band as an owner.", Facts::default(), ask("closing", &k1), json!({ "complete": false }), None);
+    // The band sells its half to Dee: Ana draws the transfer for it; Dee
+    // completes it; the band's chain key, rebuilt, chain-signs it.
+    let tr = StakeTransfer { agreement: own, stake: 0, to: dee_id, share: 500_000, record: vec![] };
+    let x = ag_act(&mut w, &mut ana, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(own));
+    sign(&mut w, &mut dee, &x);
+    w.chain_sign(&col.chain, x);
+    out.case(&mut w, "9.4 the band's transfer of its whole half to Dee, drawn by a member, completed by Dee, chain-signed by the band: it takes effect", "Agreements rules 10 and 95",
+        "The band is the seller: a member draws the act for it, under the rule for Agreements; its chain key fixes the transfer's place on the band's own line.", Facts::default(), ask("transfer", &x), json!({ "effective": true, "wrong_receipts": [] }), None);
+    let k2 = close(&mut w, &mut col, x);
+    out.case(&mut w, "9.4 the band's closing citing that transfer, chain-signed by every member: complete", "Agreements rule 91; \"Closing (type 20)\"",
+        "\"Holds nothing\" applies the complete transfers the closing's history cites, as rule 10 counts them: the band's half is Dee's.", Facts::default(), ask("closing", &k2), json!({ "complete": true }), None);
+}
+
+/// 9.5, rotation and escape.
+fn walk_5(out: &mut Out) {
+    let mut w = World::new();
+    let mut home = w.operator("the band's home, later hostile");
+    let new_home = w.operator("the band's new home");
+    let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
+    let keeper = w.genesis("the band's keeper", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut t = collective_terms(&ids, authority.id, keeper.id, vec![ids[1]], 1);
+    t.text = "A band whose home turns hostile.".into();
+    t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: ids.clone() };
+    let founding = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &founding);
+    }
+    let band = w.genesis_with("a band that escapes", vec![home_of(&home)], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
+    out.case(&mut w, "9.5 the band's genesis, declaring its founding and no signing key, signed by a chain key revealed in its signature: valid", "Identity rule 1",
+        "A collective's genesis is signed by a chain key revealed in its signature, its commitment naming the next.", Facts::default(), ask_status(&band.id), json!("valid"), None);
+    // A rotation of its chain key, rebuilt from the members' shares; its
+    // home receipts it as any chain act.
+    let (r1, band1) = w.rotate(&band, Rot::default());
+    w.receipt(&mut home, &band.id, &r1, 1);
+    out.case(&mut w, "9.5 the band's rotation, signed with its chain key, receipted by its home: valid", "Identity rule 7",
+        "It reveals the chain key the genesis committed and commits the next; it installs no signing key and keeps no tip.", Facts::default(), ask_status(&r1), json!("valid"), None);
+    // The home turns hostile: the band escapes by a homeless rotation to a
+    // new home, the old home objecting.
+    let (r2, _) = w.rotate(&band1, Rot { homes: Some(vec![home_of(&new_home)]), homeless: true, ..Default::default() });
+    let mut nh = new_home.clone();
+    w.receipt(&mut nh, &band.id, &r2, 2);
+    w.object(&mut home, &band.id, &r2);
+    out.case(&mut w, "9.5 the band's homeless rotation, its old home objecting: it counts, its own escape endorsement", "Identity rule 53, \"The escape endorsement\"",
+        "Signed with its chain key, rebuilt from k of its members' shares, it is its own escape endorsement; the old home's objection voids nothing.", Facts::default(), json!({ "question": "chain", "identity": hx(&band.id) }), json!({ "counting": [hx(&band.id), hx(&r1), hx(&r2)], "next": "end", "dishonest": [] }), None);
+    // A person's homeless rotation under the same objection, with no
+    // endorsement: voided.
+    let mut w = World::new();
+    let mut home = w.operator("ivo's home, later hostile");
+    let new_home = w.operator("ivo's new home");
+    let ivo = w.genesis("ivo", vec![home_of(&home)], None, None);
+    let (r, _) = w.rotate(&ivo, Rot { homes: Some(vec![home_of(&new_home)]), homeless: true, ..Default::default() });
+    let mut nh = new_home.clone();
+    w.receipt(&mut nh, &ivo.id, &r, 1);
+    w.object(&mut home, &ivo.id, &r);
+    out.case(&mut w, "9.5 a person's homeless rotation under the same objection, with no escape endorsement: it does not count", "Identity rule 53; the homeless procedure, step 3",
+        "A person's escape needs an endorsement with the signing key; without it, the old home's objection voids the homeless rotation.", Facts::default(), json!({ "question": "chain", "identity": hx(&ivo.id) }), json!({ "counting": [hx(&ivo.id)], "next": "end", "dishonest": [] }), None);
 }

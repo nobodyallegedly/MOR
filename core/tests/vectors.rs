@@ -417,7 +417,7 @@ fn verdict_vectors() {
                 "liveness" => json!(with_facts(&v, &mirs, facts).liveness(&h(&ask["act"])).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" })),
                 // Whether terms are invalid against their parent and lineage (a false mark...).
                 "agreement invalid" => json!(match with_facts(&v, &mirs, facts).agreement(&h(&ask["act"])).map(|a| a.invalid.is_some()) {
-                    Ok(true) => "invalid",
+                    Ok(true) | Err(mor_core::agreements::AgreementsError::Check(_) | mor_core::agreements::AgreementsError::Shape(_)) => "invalid",
                     Ok(false) => "not invalid",
                     Err(_) => "unknown",
                 }),
