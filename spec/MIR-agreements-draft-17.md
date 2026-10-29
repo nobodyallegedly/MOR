@@ -1232,7 +1232,7 @@ What the request shows: that a party who signed the reference knew of the fork w
 
 A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it.
 
-**A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's**: a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 or 2 redistributes or transfers it.
+**A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's**: a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 redistributes it.
 
 **Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change.** For a collective's stake in itself, a version of the collective's split agreement (rule 15) that pays the stake less needs the signature of every holder of the stake it pays less who has no voice in the power making that change: **every holder who is no member: a departed holder (rule 68), a stake successor who received a share by succession (rule 83), and a holder who bought part of the stake (rule 10).** *A change paying such a holder less is a new version, and every holder it pays less who has no voice in the power making it signs it.*
 
@@ -1242,7 +1242,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 **In a collective, the stake's holders' rule may stand in for each signature** (rule 94): where the stake carries a holders' rule by share, and the change hits every holder of the stake alike, holders meeting that rule consent for every holder it binds. A holder it does not bind, one that never accepted it, still signs. What such holders consent to are the owners' matters (rule 95).
 
-**No advance permission reaches what one holder is paid unlike the others.** A holders' rule the holder accepted, by signing or by buying, reaches what every holder of the stake is paid alike (rule 94); nothing reaches what one holder is paid unlike the others of the stake, which that holder alone signs. Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, which a declaration may do although the holder is no party (rule 85), to its stake successor, or, with none named, by outcome 1 or 2 (rule 89); whoever then holds it signs, or already holds the say. For a deal's holder who is no party, no advance permission reaches its pay: a deal carries no holders' rule (rule 47).
+**No advance permission reaches what one holder is paid unlike the others.** A holders' rule the holder accepted, by signing or by buying, reaches what every holder of the stake is paid alike (rule 94); nothing reaches what one holder is paid unlike the others of the stake, which that holder alone signs. Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, which a declaration may do although the holder is no party (rule 85), to its stake successor, or, with none named, by outcome 1 (rule 89); whoever then holds it signs, or already holds the say. For a deal's holder who is no party, no advance permission reaches its pay: a deal carries no holders' rule (rule 47).
 
 *Abandonment protects operational flow; it is not meant to change stakes or pay. What it can trigger in that regard is succession, the stake and its pay going to the successor.*
 
@@ -1302,7 +1302,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 **A fork's successors** (4). For each successor, its founding terms and the split agreement its founding names first must pay no kept holder (a departed holder of the original, or a member whose voice remains on no side) less than the original's agreement and split agreement in force at the fork's line pay it, as rule 48 reads "paid less". The comparison runs between the original's stake in itself and the successor's, each its target's stake, read across the two collectives as the kept holders' stake: what each split agreement takes off the top, the fees each bears, and the split cMIP and its parameters. Where a successor's founding terms pay a kept holder less, the fork completes only once the kept holders consent: holders of the original's stake in itself meeting its holders' rule, or, where it is every holder, each kept holder paid less, by a signature act naming the successor's founding terms, as a holder who is no party signs a deal's version. **A kept holder's consent counts only where an act of the original in the fork's history acknowledges it**, as a closing relies on a release: placed by the original's line and kept there, so a kept holder's later rotation never unmakes a complete fork; one nobody acknowledged is shown, and the fork waits. *A chain-key ceremony per kept holder per fork would weigh on passive owners.* *With the same plan the check is met at once; with no kept holders there is nothing to check.*
 
-**The way out against an owner who vanished** is the declaration of absence, which may name a holder who is no party (rule 85): its stake moves to its stake successor, who consents or not, or by outcome 1 or 2.
+**The way out against an owner who vanished** is the declaration of absence, which may name a holder who is no party (rule 85): its stake moves to its stake successor, who consents or not, or by outcome 1.
 
 *Stated cost:* *a members' collective with departed holders and no holders' rule waits for their signatures on its sales and releases of works, and on a fork whose successors' plans pay them less, as its fee changes already do. Shared ownership means shared fruits.*
 
@@ -2053,42 +2053,34 @@ So records follow the agreement chain one clone at a time. A rotation's declarat
 
 #### Rule 73. Grants
 
-Grants delegate authority with limits: signing new deals, managing specific existing ones, or acting for an identity or collective (posting, publishing, spending up to a limit).
+Grants delegate authority with limits: signing new deals, managing specific existing ones, or acting for an identity or collective (posting, uploading, spending up to a limit).
 
 A grant is authority to act in the grantor's name without a stake, the employer-and-employee kind. It confers no voice in the agreement.
 
-**A collective's grant hands its grantee a grant key.** An agent acting for a collective works under a grant, holding a key of the collective scoped to it, never the collective's own keys. What it signs with the grant key is the collective's own act, within the grant's reach, on the grantee's strand of the collective's actions chain, citing the grant (grant field 9, rule 58).
+**A collective's grant names its grantee, who acts for the collective with their own key.** An agent acting for a collective works under a grant: what it signs, with its own identity's key, naming the collective on its chain and citing the grant as the decision it acts under (rule 58), is an act for the collective, within the grant's reach. **A collective hands no grant key**: it has no signing key to scope (rule 56).
 
 The grant is a decision naming the grantee's own identity, which signs to accept it.
 
 **A grant whose grantee is its own grantor is valid, its acceptance the grantor's own signature act naming it (type 1).** *A grant to oneself: a person grants itself a key that an application makes and holds, so the application signs within the grant's reach and limits, and every reader sees the act signed under that grant, not with the person's own key. It ends with one revocation, as any grant.*
 
-**A holder's signature of a founding or clone may name a key; it is a grant key within the areas the agreement in force for each of its acts gives the holder; the founding or clone is its grant, the signature its naming and acceptance; it counts from the moment the founding or clone naming it is in force (rule 72), until a later version names another key for that holder or the holder leaves.** *A member's own key: their app makes it as they sign, and keeps its private half sealed to the member themself, so any of their apps holding their identity can act with it.*
+**There is no member key.** A member acts for the collective with their own key, as themselves, for the collective (rule 58); a signature of a founding or a clone names no key (signature field 1 is retired). *A member's change of keys carries their power over: there is nothing to re-grant.*
 
-- An act signed with it names that signature act as its `binding` (a scoped key, judged here), its signer the collective. It is the collective's own act, on the key's strand of the collective's actions chain, citing the decisions it acts under as every action does (rule 58).
-- It counts as the holder's signature within the areas the agreement in force for the act gives that holder (rule 60); no area reaching it, it counts for nothing. It never signs a decision: no record, grant, revocation, nor any act of the collective's identity chain. *The collective's own key is needed only for those.*
-- It counts only under the version it was named on, once complete, and the versions descending from it, and only while it is its holder's latest: a later version of that line on which the holder's signature names a key replaces it. *So each member change, which every member signs, names fresh keys.*
-- Its key is the holder's alone: a key named by two signatures of different signers is no member's.
-- The holder's own change of keys leaves it as it is. A rotation of the holder that disowns the very signature that named it is judged as any member's signature the collective's line placed: it stays valid for the collective ("Made before, made after", 4).
-
-*Stated cost: where a member never signs, the keys others' apps made for that founding are left unused. The key sits encrypted at its holder's homes.*
-
-Grants are revocable at any time, by a revocation: a decision ending powers, which removes the key (type 10).
+Grants are revocable at any time, by a revocation: a decision ending powers (type 10).
 
 During a collective's broken stretch its grants are quarantined: a grantee's act of the stretch counts for nothing. The grants work again after the rollback (rule 93), for an act citing the rollback or a later decision.
 
-*Stated cost: a stolen grant key acts within its scope until revoked; the collective's identity gains a scoped kind of key (Identity, "Scoped keys").*
+*Stated cost: a stolen grant key acts within its scope until revoked; a grantee's stolen key acts within the grant's reach until the grant is revoked or the grantee rotates.*
 
-**A grant's dials.** A grant has scope (fields 1, 6), limits by a cMIP (fields 3, 4), revocation with the tie rule, the grantee's acceptance and own key, and never reaches beyond its issuer's power (rule 74). Besides these:
+**A grant's dials.** A grant has scope (fields 1, 6), limits by a cMIP (fields 3, 4), revocation with the tie rule, the grantee's acceptance, and never reaches beyond its issuer's power (rule 74). Besides these:
 
-- **Expiry** is one more limit of the grant's limits cMIP, judged against a time reference: an act of the grant key past it is not backed (rule 80). The grant goes quiet rather than ending, and stays revocable.
-- **Sub-granting stays excluded**: a grant key signs no grant ("Grant (type 9)").
+- **Expiry** is one more limit of the grant's limits cMIP, judged against a time reference: an act under the grant past it is not backed (rule 80). The grant goes quiet rather than ending, and stays revocable.
+- **Sub-granting stays excluded**: no act under a grant is a grant ("Grant (type 9)").
 - **Exclusivity is not in the core**: no verifier proves the absence of another grant. It is a promise written as a deal term, its breach visible on the record. *MOR is not the law; on these matters it keeps the record.*
 - **Conditions** (an escrow's "only once X") are a cMIP's.
-- **Licences, leases and trusts are not grants**: they are offers, stakes and deals.
-- **A proxy is not a grant**: a grant key signs no decision; a holder's vote is handed on only by a proxy (rule 97).
+- **Licences, leases and trusts are not grants**: they are publications, stakes and deals.
+- **A proxy is not a grant**: no act under a grant is a decision; a holder's vote is handed on only by a proxy (rule 97).
 
-**Every identity grants keys the same way.** A person's grant hands its grantee a key of the person. What the grantee signs with it is the person's own act, citing the grant on the person's chain (the person's identity as chain).
+**A person's grant hands its grantee a grant key**: a key of the person, scoped to the grant (Identity's scoped key), which the grantee makes and holds (field 9). What the grantee signs with it is the person's own act, citing the grant on the person's chain (the person's identity as chain).
 
 **A person's grant and its revocation are everyday acts, signed with the person's own signing key: adding or removing a grant key needs no rotation and no chain key.**
 
@@ -2100,57 +2092,44 @@ A person's grant reaches the kinds it names (a MIR's layer, or a type of a speci
 
 *Stated cost: as with every act of the signing key, a thief holding it can also revoke the owner's grants until the owner rotates and grants again.*
 
-**Grants to a split service.** In a deal, each payee grants the split service its own grant key, scoped to that deal:
-
-- the grant names "this agreement" by null;
-- the deal lists it in field 14, one per payee;
-- it counts once the deal exists;
-- its key signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout ("Grant (type 9)").
-
-The same holds for every grant to a service the deal's chain names to take over, one per payee, and, under the same limit, for a collective's grant to its split service.
+*Grants to a split service are retired with terms fields 14 and 29: a publication names its split service, which receives in its own name (rule 16).*
 
 #### Rule 74. A grant never reaches beyond its issuer's power
 
 A grant never reaches beyond the power of whoever issued it.
 
-The holders of an area may grant within it. The collective signs a grant naming the area (field 5) and the acts it reaches (field 6), within the area's reach. It counts only with valid signature acts naming it by the area's holders, meeting its threshold as rule 65 counts it, as for any act the area reaches (rule 60). It is judged by the area it names alone, whichever area reaches grants as acts.
+**A collective's grant is an act of the collective in Agreements**, drawn by a member naming the collective, counting under its rule for Agreements (rule 60), and **it reaches only acts its signers could do together**: each act its kinds name (field 6) lies within what its drafter and the signers of signature acts naming it meet under the rule of the layer, or of the area, that reaches that act. *A member who acts alone in Money under the founding can grant that and no more; a member whose rule for Money is "two together" cannot grant alone what they cannot do alone.*
 
-**So is a revocation of such a grant**: it counts only with valid signature acts naming it by the holders of the area the grant names, meeting its threshold as rule 65 counts it, whichever area reaches revocations as acts. So is a reinstatement (rule 71).
+**The holders of an area may grant within it.** A grant naming the area (field 5) and the acts it reaches (field 6), within the area's reach, counts only with valid signature acts naming it by the area's holders, meeting its threshold as rule 65 counts it, as for any act the area reaches (rule 60). It is judged by the area it names alone, whichever rule reaches grants as acts.
 
-A collective's grant naming no area is judged as any other act of the collective, and reaches only acts that no area of the agreement in force reaches. **A collective's grant to its split service is judged under the area that issued it**: the area its field 5 names, or, where it names none and an area reaches Money, that area; the receipts its key signs are that area's acts (Money rule 7).
+**So is a revocation of such a grant**: it counts only with valid signature acts naming it by the holders of the area the grant names, meeting its threshold as rule 65 counts it, whichever rule reaches revocations as acts. So is a reinstatement (rule 71). A revocation of a grant naming no area counts under the collective's rule for Agreements.
 
-A grant whose field 6 reaches beyond its area is invalid, a reinstatement aside (rule 71).
-
-*So a member holding an area can act alone there, under a grant to their own identity, and can hire others for it; and neither they nor the one who holds the collective's signing key can give anyone more than that area.*
+A grant whose field 6 reaches beyond its area, or beyond what its signers could do together, is invalid, a reinstatement aside (rule 71).
 
 #### Rule 75. Strands
 
-A collective's actions chain has a strand for each of its devices and for each grant key.
-
-A grantee's acts are its strand, each citing its previous act there by `prev` and its grant on the collective's chain.
-
-*A grant key's strand is the collective's own, which every member's chain reading follows.*
+*Retired*, its number never reused. A collective has no devices of its own and hands no grant keys: its members' and grantees' acts join its chain by what they cite (rule 58).
 
 #### Rule 76. Revocation
 
-Revoking a grant removes its key. The revocation names the grant, never a place on its strand.
+Revoking a grant ends it, and, for a person's grant, removes its key. The revocation names the grant.
 
-**An act signed with the grant key that the revocation's history holds was done within the grant's powers, and binds.** An act signed with the grant key that the revocation's history does not hold, racing it (neither citing the other) or after it, is void, the ending winning (the tie rule), unless:
+**An act under the grant that the revocation's history holds was done within the grant's powers, and binds.** An act under the grant that the revocation's history does not hold, racing it (neither citing the other) or after it, is void, the ending winning (the tie rule), unless:
 
 - another identity acknowledged it (Envelopes rule 17; by an act of a type the Identity, Money or Agreements MIR defines), the grantee aside: an acknowledgement whose signer is the grantee does not count here;
 - or a keeper recorded it before recording the revocation, the record counting as rule 42 says (rule 41);
 
 then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names, and only while its own signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save rule 42's exception for a keeper's record.
 
-**What such a disputed act confers: nothing, unless adopted.** As an act a rotation disowned (rule 6), an act a revocation's history does not hold, shown disputed, confers nothing on an agreement chain (no stake, no obligation, no consent) and is shown, to everyone; Money treats it as it treats a disputed act after a change of keys (Money rule 7). The grantor may still adopt it (below), and then it binds. *Binding the grantor by an accomplice's acknowledgement would let a thief holding a grant key sign the victim into a debt; shown, not binding, keeps both sides visible, and an honest grantor who meant it adopts it. Stated cost: a payee who relied on a revoked application's promise, a debt to come rather than a payment made, holds a visible dispute, not a debt, unless the grantor adopts it; a payment already made stays made on its rail, and the payee's own receipt stands.*
+**What such a disputed act confers: nothing, unless adopted.** As an act a rotation disowned (rule 6), an act a revocation's history does not hold, shown disputed, confers nothing on an agreement chain (no stake, no obligation, no consent) and is shown, to everyone; Money treats it as it treats a disputed act after a change of keys (Money rule 7). The grantor may still adopt it (below), and then it binds. *Binding the grantor by an accomplice's acknowledgement would let a thief holding a grantee's key sign the victim into a debt; shown, not binding, keeps both sides visible, and an honest grantor who meant it adopts it. Stated cost: a payee who relied on a revoked application's promise, a debt to come rather than a payment made, holds a visible dispute, not a debt, unless the grantor adopts it; a payment already made stays made on its rail, and the payee's own receipt stands.*
 
-*This is Identity rule 34's principle, for a revocation as for a rotation's disowning: nothing another identity relied on in a way the protocol can see is silently erased, and no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. An act nobody else acknowledged and no keeper recorded stays void, so a revocation still cuts off a stolen or misused grant cleanly.* *Stated cost: a thief holding a grant key, with an accomplice who acknowledges its act, gets "disputed" rather than "void": visible to everyone, never erased, and bounded by the grant's own limits. The grantee's own acknowledgement is no such rescue: what decides would be signed by the grantee whose powers the revocation ends.*
+*This is Identity rule 34's principle, for a revocation as for a rotation's disowning: nothing another identity relied on in a way the protocol can see is silently erased, and no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. An act nobody else acknowledged and no keeper recorded stays void, so a revocation still cuts off a stolen or misused grant cleanly.* *Stated cost: a thief holding a grantee's key, with an accomplice who acknowledges its act, gets "disputed" rather than "void": visible to everyone, never erased, and bounded by the grant's own limits. The grantee's own acknowledgement is no such rescue: what decides would be signed by the grantee whose powers the revocation ends.*
 
-**A revocation cites every act under the grant its signer holds.** *Client conformance:* the grantor's client cites, in the revocation's history, every act of the grant key it holds, so that each act's holder, holding only its own act, finds it there. *A grant key's acts are chained on its strand, each naming the one before (rule 75), so an honest grantor's client holding the latest reaches the earlier ones; what it can miss is the tail: an act not yet stored at the grantor's places, or one made at the moment of the revocation. Stated cost: a public revocation lists every act's id, so anyone can count the grant's acts, and a long-lived grant makes a long revocation.*
+**A revocation cites every act under the grant its signer holds.** *Client conformance:* the grantor's client cites, in the revocation's history, every act under the grant it holds, so that each act's holder, holding only its own act, finds it there. *A grantee's acts cite one another on the grantor's chain (rule 58), so an honest grantor's client holding the latest reaches the earlier ones; what it can miss is the tail: an act not yet stored at the grantor's places, or one made at the moment of the revocation. Stated cost: a public revocation lists every act's id, so anyone can count the grant's acts, and a long-lived grant makes a long revocation.*
 
 A revocation of a grant within an area is judged by that area alone (rule 74).
 
-**The grantor may adopt a void or disputed act of a grant key as its own.** An act of the grantor's own key that counts (for a collective, an act of the collective's own key that counts) makes it bind when it does any of these:
+**The grantor may adopt a void or disputed act under its grant as its own.** An act of the grantor that counts (for a person, an act of its own key; for a collective, an act for the collective that counts) makes it bind when it does any of these:
 
 - acknowledges it;
 - cites it (for a collective, its history holding the act);
@@ -2160,51 +2139,52 @@ A revocation of a grant within an area is judged by that area alone (rule 74).
 
 **Once adopted, no ending racing the adoption voids it.** A revocation, or a departure emptying the area, that does not hold the act still ends the grant for every act after it, never for one the collective already took on.
 
-**Another grantee then manages it under its own grant** (scope 1, naming it), with its own grant key.
+**Another grantee then manages it under its own grant** (scope 1, naming it).
 
-*A collective that took the money cannot later say the deal never happened. The adoption is the grantor's own act, never the grantee's: no act signed with a grant key adopts anything.*
+*A collective that took the money cannot later say the deal never happened. The adoption is the grantor's own act, never the grantee's: no act under a grant adopts anything.*
 
 #### Rule 77. Import
 
 **Retired**, its number never reused: there is no import act. Type 11 is retired, never reused; adoption is by acknowledging, citing or paying on (rule 76). An act of type 11 is of a type this MIR does not define, and is invalid.
 
-There is no handover. A grant key's acts are the grantor's own, on its chain, so there is no branch to move them from. A void one counts only if the grantor adopts it (rule 76), and another grantee then manages it under its own grant.
+There is no handover. A grantee's acts are the grantor's own, on its chain, so there is no branch to move them from. A void one counts only if the grantor adopts it (rule 76), and another grantee then manages it under its own grant.
 
 *Adoption already does the job, visibly; a second mechanism would have no purpose of its own.*
 
 #### Rule 78. Acknowledgements
 
-An acknowledgement of a grant key's act counts as an adoption only when it is an act of the collective's own key that counts (rule 76), wherever it is stored.
+An acknowledgement of an act under a collective's grant counts as an adoption only when it is an act for the collective that counts (rule 76), wherever it is stored.
 
-**That means done: sealed to every member and on the collective's chain (rule 57). An Identity witness act (type 15), on neither chain, adopts nothing. The collective adopts by an action of its own key citing the act. No act of a grant key adopts anything (rule 76).**
+**That means done: sealed to every member and on the collective's chain (rule 57). An Identity witness act (type 15), on neither chain, adopts nothing. The collective adopts by an act for it citing the act, signed under the rule of that act's layer. No act under a grant adopts anything (rule 76).**
 
 #### Rule 79. Fate of acts
 
-An act of a grant key that a decision ending its grant does not hold does not bind the collective: it is void, or, where the decision is a revocation, void or disputed as rule 76 says; either way it binds only where the collective (for a person's grant, the grantor) adopted it (rule 76).
+An act under a grant that a decision ending the grant does not hold does not bind the collective: it is void, or, where the decision is a revocation, void or disputed as rule 76 says; either way it binds only where the collective (for a person's grant, the grantor) adopted it (rule 76).
 
-Decisions ending a grant are: a revocation, a departure emptying its area, a fork, a closing.
+Decisions ending a grant are: a revocation, a departure emptying its area, a layer freezing, a fork, a closing.
 
 **Counterparties: wait until a later act of the collective cites the act before performing.** From then on the act is adopted (rule 76), and no ending racing that citation voids it.
 
 **The promise, restated**: safe once cited, against everything but the collusion of an ending's signers.
 
-*Stated cost:* a fork or closing whose line is drawn early on purpose, before the citing act, leaves both out of its history, and both are void (the tie rule). Without a clock, a line drawn early on purpose cannot be told from one drawn before the later acts existed, and every cure would let something published after a fork reopen it, against a complete fork's finality (rule 91). It needs every signer of the ending to collude against the counterparty: each conforming client refuses to sign it ("Made before, made after", client conformance). And it stays fully legible: the signed act, the collective's citation of it and the ending leaving them out stand as evidence for any outside court.
+*Stated cost:* a fork or closing whose line is drawn early on purpose, before the citing act, leaves both out of its history, and both are void (the tie rule). Without a clock, a line drawn early on purpose cannot be told from one drawn before the later acts existed, and every cure would let something uploaded after a fork reopen it, against a complete fork's finality (rule 91). It needs every signer of the ending to collude against the counterparty: each conforming client refuses to sign it ("Made before, made after", client conformance). And it stays fully legible: the signed act, the collective's citation of it and the ending leaving them out stand as evidence for any outside court.
 
 #### Rule 80. Evaluation
 
-A client evaluating an act signed with a grant key follows its binding to the grant.
+A client evaluating an act under a grant follows it to the grant: for a person's grant, by its `binding`, the grant whose key signed it; for a collective's grant, by the grant its `objects` cite on the collective's chain.
 
 The act binds when all of these hold:
 
-- the grant counts (its area's holders met, or the founding terms carry it), and its grantee signed to accept it;
-- the act is signed with the grant's key, cites the grant on the collective's chain, is done (rule 57), and lies within the grant's reach (rule 74) and within the limits its limits cMIP sets (grant fields 3 and 4);
-- no decision ending the grant fails to hold it (rules 71, 76, 91), or, where one does, the collective adopted it (rule 76).
+- the grant counts (its signers' power met, rule 74), and its grantee signed to accept it;
+- the act is signed by the grantee (with the grant's key, for a person's grant), cites the grant on the grantor's chain, is done (rule 57, for a collective), and lies within the grant's reach (rule 74) and within the limits its limits cMIP sets (grant fields 3 and 4);
+- no decision ending the grant fails to hold it (rules 71, 76, 91), or, where one does, the grantor adopted it (rule 76).
 
-**For a person's grant**, the person's own chain stands for the collective's in these conditions: the act cites the grant on the person's chain (the person's identity as chain). **For a holder's member key**, the founding or clone naming the key is the grant, counting once in force (rule 72), the holder's signature naming the key its acceptance, and the areas in force for the act that the agreement gives that holder its reach (rule 73).
+**For a person's grant**, the person's own chain stands for the collective's in these conditions: the act cites the grant on the person's chain (the person's identity as chain).
 
-An act beyond the grant's reach is not backed by it, whatever its strand. **Nor is an act of the grant key outside its cMIP's limits, as one outside its kinds is not.** A verifier that does not hold the limits cMIP, or the time reference a limit is judged against, answers unknown.
+An act beyond the grant's reach is not backed by it. **Nor is an act under the grant outside its cMIP's limits, as one outside its kinds is not.** A verifier that does not hold the limits cMIP, or the time reference a limit is judged against, answers unknown.
 
-*Every act of a grant key binds or does not.*
+*Every act under a grant binds or does not.*
+
 
 ### 14. Succession
 
@@ -2240,7 +2220,11 @@ The clone's mark then names the plan, `[3, party]`, with the seat successors ent
 - the executed plan dropped;
 - and, where the party held the chain key alone, a plan for the successor in its place, naming their own successor, signed by the successor in that clone (rule 59).
 
+**What the plan alone may pass.** A plan passes a seat to one identity or several, **an identity already a party among them**: that party then holds both seats, written once for each in field 0, the departed party's place kept, and counts twice wherever seats are counted, every threshold unchanged. **It passes a key holding to exactly one successor.** It passes the stake to its stake successors, one or several, in its shares. Where a plan names otherwise, the clone marked with it alone is invalid (rule 46), and the change is made by an ordinary clone under the change rule.
+
 **A clone marked with the plan alone that changes anything more is invalid** (a false mark, rule 46): one that places a seat successor elsewhere than in the party's own place, among the parties or in a holding of the key grammar, or that reorders the other parties, changes more than the plan gives.
+
+*Client conformance:* **before a party signs a succession plan, its client shows what each successor would hold after it**: its seats, its key shares, and where that lets one identity act alone. *Consent given in advance by everyone still counted is consent; what must never happen is a surprise, so the consequence is shown at signing. A and B start a collective; over the years it grows; A always meant to give his seat to B and his stake to his children: the plan says so, every member signed it, and each saw that B would then hold two seats.*
 
 *Consent given in advance, by everyone still counted (rule 8); a plan that some members cloned without the others is not that version, so it cannot slip a stranger into the constitution through a judicial clause. A plan changes only with every member, so a plan some members clone without the others never comes into force at all.*
 
@@ -2257,7 +2241,7 @@ A stake passes by succession as planned: it is property, not a seat.
 
 In a deal, the clone needs every party whose voice remains (rule 47).
 
-For a collective, the members then rotate and re-split the chain key to include the new key holders, using the grammar's recovery path where a share is gone for good. The succession clone changes the parties, so a rotation declares it (rule 69), and that rotation re-deals the collective's keys to include the successor.
+For a collective, the members then rotate and re-split the chain key to include the new key holders, using the grammar's recovery path where a share is gone for good. The succession clone changes the parties, so a rotation declares it (rule 69), and that rotation re-deals the collective's chain key to include the successor.
 
 #### Rule 84. Fallback
 
@@ -2277,7 +2261,7 @@ An abandonment clause, signed into the agreement, names who decides absence and 
 
 Every collective carries one that covers each party with constitutional power (rule 61). A deal may carry one or not.
 
-**In a collective, a declaration may also name a holder of the collective's stake in itself who is no party**: a departed holder, a stake successor, a buyer. It is made under the clause in force; its authority and its absence-proof cMIP are the clause's, as for a party. Against such a holder its outcomes are the stake-moving ones only: succession, as rule 89 says, or outcome 1 or 2 where the holder's plan names no stake successor; never 3 or 4. **Against a holder who is no party and whose plan names a stake successor, the declaration states no outcome (field 3 empty), and the stake passes by succession** (rule 89); outcome 0 is never stated against a holder who is no party, who has no voice to remove. Rule 61's coverage is unchanged: a holder has no constitutional voice to cover (but see rule 61 where the constitutional change rule counts among a stake's holders). *So a departed holder who vanishes does not block the collective's fees, because its stake moves; without this sentence a declaration could name only a party, and one holder who vanished blocked every change paying the stake less, for good.* *In a deal, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.*
+**In a collective, a declaration may also name a holder of the collective's stake in itself who is no party**: a departed holder, a stake successor, a buyer. It is made under the clause in force; its authority and its absence-proof cMIP are the clause's, as for a party. Against such a holder its outcomes are the stake-moving ones only: succession, as rule 89 says, or outcome 1 where the holder's plan names no stake successor; never 3 or 4. **Against a holder who is no party and whose plan names a stake successor, the declaration states no outcome (field 3 empty), and the stake passes by succession** (rule 89); outcome 0 is never stated against a holder who is no party, who has no voice to remove. Rule 61's coverage is unchanged: a holder has no constitutional voice to cover (but see rule 61 where the constitutional change rule counts among a stake's holders). *So a departed holder who vanishes does not block the collective's fees, because its stake moves; without this sentence a declaration could name only a party, and one holder who vanished blocked every change paying the stake less, for good.* *In a deal, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.*
 
 The authority MUST be an identity:
 - the keeper's operator;
@@ -2308,7 +2292,7 @@ The core checks:
 - that it is signed by that authority (for a threshold of the other parties, by one of them, completed by the others' signature acts until the number is met);
 - that the outcome is one the clause allows;
 - that field 1 names the version the party declared absent signed last ("Abandonment declaration");
-- that, where the party's succession plan names a stake successor, it states neither outcome 1 nor outcome 2 (rule 89).
+- that, where the party's succession plan names a stake successor, it does not state outcome 1 (rule 89).
 
 **Otherwise the declaration is the authority's judgment, a stated cost the party accepted by signing the clause, and a contest shows it.**
 
@@ -2335,13 +2319,14 @@ A party who believes they were wrongly declared absent contests it with a contes
 The outcomes of a declaration may be combined:
 - **voice removed**, described below;
 - stake redistributed among remaining holders in proportion, **only where the holder's succession plan names no stake successor**;
-- stake transferred to parties named or defined by role, **only where the holder's succession plan names no stake successor**;
 - obligations redirected or held;
 - agreement closed.
 
-A declaration stating outcome 1 or 2 against a holder whose succession plan names a stake successor is refused (rule 87).
+**Outcome 2, a stake transferred to parties named or defined by role, is struck from MOR 1**: a clause or declaration listing it is invalid (rule 87). *Succession covers it: where a succession plan is in force, it passes the stake; without one, the stake is shared out. A frozen format could not have carried whom outcome 2 transferred to.*
 
-**Against a holder of the collective's stake in itself who is no party**: the stake passes to its stake successor, as above, or, where its plan names none, outcome 1 or 2 moves it; never outcome 0, 3 or 4. The clone carrying it, put in force under the declaration, needs no signature of the absent holder. *The succession plan a departed holder signed as a member stays with its stake (rule 67), so the plan exists to execute.*
+A declaration stating outcome 1 against a holder whose succession plan names a stake successor is refused (rule 87).
+
+**Against a holder of the collective's stake in itself who is no party**: the stake passes to its stake successor, as above, or, where its plan names none, outcome 1 moves it; never outcome 0, 3 or 4. The clone carrying it, put in force under the declaration, needs no signature of the absent holder. *The succession plan a departed holder signed as a member stays with its stake (rule 67), so the plan exists to execute.*
 
 Voice removed: the party is no longer counted in any change rule or area of the agreement, or of any agreement descending from it (rule 65). This holds:
 - in a collective, from the collective's line registering the declaration, or from the recovery rotation where the declared party is the one who would draw that line, the rotation that removes them;
@@ -2349,9 +2334,9 @@ Voice removed: the party is no longer counted in any change rule or area of the 
 
 A clone put in force before then is never undone, whatever version of the clause or of the agreement the declaration names. "Before then" means by a record or rotation of a collective before its line, or, in a deal, by signatures a keeper recorded before recording the declaration.
 
-When the voice is removed in a collective, the remaining members rotate its keys and clone it without the party (rule 69), the recovery path standing in for a share that is gone.
+When the voice is removed in a collective, the remaining members rotate its chain key and clone its agreement without the party (rule 69), the recovery path standing in for a share that is gone.
 
-*A declaration is not a clone: it needs no change rule, only the authority the party signed. Removing a voice never takes the stake; that takes the party's succession plan or, where it names no stake successor, outcome 1 or 2, which the party also signed.*
+*A declaration is not a clone: it needs no change rule, only the authority the party signed. Removing a voice never takes the stake; that takes the party's succession plan or, where it names no stake successor, outcome 1, which the party also signed.*
 
 ## Part three: rare cases
 
@@ -2387,9 +2372,9 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
 
   Each side first founds its successor: a new collective (its own genesis and keys) whose founding terms have that side's members as parties and name the original in "forked from" (field 23), a back-link only, never a parent.
 
-  **A fork act (type 19) names the successors by their identities, and, signed by the members on its sides with their own identities under the constitutional change rule, closes the original in Agreements.** By default that is every member, a silent member being the abandonment clause's business. Where the founders set a lower rule, the fork may complete without a member, who must then either join a side or leave: a member who signs no side has no seat in any successor, and is a departed holder of each at their percentage. **Where the constitutional change rule counts by share, an ending is counted by share at its line** (operate by share, end by share): the holdings are those field 7 of the agreement in force at the line names, with the stake transfers placed in the ending's history (rule 94, read at the ending's line); each rule the constitution lists is counted as it would be alone (rule 65), the members by their chain signatures on the ending. **Owners who are no members consent as members do, by a chain signature (Identity type 16) with their own chain key naming the ending**, judged as every ending signature is: it counts at its position in their chain, and no later rotation voids it. *The ending names its history by its chain act and kept tips, so nothing in that history can acknowledge a signature on the ending itself: one way to sign an ending, whoever signs.*
+  **A fork act (type 19) names the successors by their identities, and, signed by the members on its sides with their own identities under the constitutional change rule, closes the original in Agreements.** By default that is every member, a silent member being the abandonment clause's business. Where the founders set a lower rule, the fork may complete without a member, who must then either join a side or leave: a member who signs no side has no seat in any successor, and is a departed holder of each at their percentage. **Where the constitutional change rule counts by share, an ending is counted by share at its line** (operate by share, end by share): the holdings are those field 7 of the agreement in force at the line names, with the stake transfers placed in the ending's history (rule 94, read at the ending's line); each rule the constitution lists is counted as it would be alone (rule 65), the members by their chain signatures on the ending. **Owners who are no members consent as members do, by a chain signature (Identity type 16) with their own chain key naming the ending**, judged as every ending signature is: it counts at its position in their chain, and no later rotation voids it. *The ending names its history by what it cites on the collective's chain, so nothing in that history can acknowledge a signature on the ending itself: one way to sign an ending, whoever signs.*
 
-  From the fork's line, anything the original's keys sign counts for nothing in Agreements, whatever its key grammar's holders do. A rotation of the original is optional cleanup.
+  From the fork's line, nothing done for the original counts in Agreements, whatever its key grammar's holders do. A rotation of the original is optional cleanup.
 
   *Two fork acts signed concurrently on the same agreement, neither naming the other, are concurrent acts on its chain (rule 6): the status quo stands, and neither closes it, until one names the other. **A complete fork or closing is final**: a later ending of the same collective, naming it, counts for nothing. A later fork of a successor is a new fork, of the successor, in sequence.*
 
@@ -2403,18 +2388,18 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
      - A later fork of a successor hands out, in turn, what an earlier fork handed it, where its own chain signature on that fork lies in its identity chain before the later fork's chain act (the signature is a chain act).
      - An obligation signed by a collective binds it once done, like any act (rule 57): sealed to every member, and on its chain. A debt sealed to the creditor alone binds no one, its signer included, so hiding gains nothing.
      - Publishing the debt is the creditor's choice and protection (client conformance), and no validity rests on where an act is stored.
-   - **Grants.** Every grant of the original ends at the fork, the old split service's included. **Every grant key ends at the fork's line**, as when a departure empties an area (rule 71). Each successor grants, with a grant key of its own, what it wants. An act of a grant key in the history the fork cites, or that the original adopted before the fork, binds, as a debt. Any other is missing from the ending's history, and void (the tie rule): its counterparty deals again with a successor.
+   - **Grants.** Every grant of the original ends at the fork's line, as when a departure empties an area (rule 71), and the original's split agreement with them. Each successor grants what it wants. An act under a grant in the history the fork cites, or that the original adopted before the fork, binds, as a debt. Any other is missing from the ending's history, and void (the tie rule): its counterparty deals again with a successor.
    - **Money after it.** Payment follows the work's current claim: the work carries nothing and never changes; its claim names the successors as owners, so routing follows to their own pointers and split services. A payee pointer of the original that the ending left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it ("Fork (type 19)"; Money rule 4).
-     - The fork act withdraws the original's open offers: a wallet reading Agreements sees them withdrawn, and pays a successor's offer instead.
-     - **A payment that reaches the old split service after the fork** (a wallet not reading Agreements paying a withdrawn offer, a push rail that cannot refuse) **names no claim, or the original's superseded claim, and the original's actions chain never recorded it before the fork: it is no purchase, and is owed back to the payer as a refund** (rule 12; the old service's grant key ended at the fork's line).
+     - The fork ends the original's publications from its line (rule 12): a wallet reading Agreements sees them ended, and pays a successor's publication instead.
+     - **A payment that reaches a publication of the original after the fork** (a wallet not reading Agreements paying a tag of an ended publication, a push rail that cannot refuse) **is owed back to the payer as a refund**, as a payment racing an ending is (rules 11, 12).
      - A sale the original's chain recorded in the fork's history stays a purchase.
 
-     *Client conformance:* the old split service, its grant ended, issues no payment request. *Stated cost: a wallet reading only Money does not see the withdrawal, and could still pay an on-chain address of a dead service; that money is owed back to it.* *The work is the point of payment; it needs nothing of the old collective.*
+     *Client conformance:* a split service whose publication has ended issues no payment request. *Stated cost: a wallet reading only Money does not see the withdrawal, and could still pay an on-chain address of a dead service; that money is owed back to it.* *The work is the point of payment; it needs nothing of the old collective.*
    - **Defaults.** Whatever the fork act does not settle falls to these defaults.
 
 - **C. Actively abandoned,** where everyone agrees the collective has ended but its works still earn: a plain collective, nothing new. It keeps its rules, changes rails, renews offers and pays every holder until winding it down makes sense. *A plain collective is enough; only how its stakeholders use it changes.*
 
-- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **Each sale or release of a work is an owners' matter** (rule 95): the owners of the collective's stake in itself who have no say consent, by their holders' rule or each signing. **A closing act (type 20), signed under the constitutional change rule like the fork act, and counted by share at its line where that rule counts by share, as a fork is, ends a collective that holds nothing and owes nothing.** After its line, the collective's keys count for nothing in Agreements. A collective cannot close while it owes anything: one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). This is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. An absentee's money share follows the collective's own rules (its split plan, its absence clause, its terms); what they could not deliver stays visible as an open obligation wherever they sent it, and it does not keep the collective from closing. The closing names nothing for it; field 4 stays for money owed back (rule 93, "Closing (type 20)"). Batching them is a client's or a cMIP's convenience, never a second way in the core.
+- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **Each sale or release of a work is an owners' matter** (rule 95): the owners of the collective's stake in itself who have no say consent, by their holders' rule or each signing. **A closing act (type 20), signed under the constitutional change rule like the fork act, and counted by share at its line where that rule counts by share, as a fork is, ends a collective that holds nothing and owes nothing.** After its line, nothing done for the collective counts in Agreements. A collective cannot close while it owes anything: one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). This is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. An absentee's money share follows the collective's own rules (its split plan, its absence clause, its terms); what they could not deliver stays visible as an open obligation wherever they sent it, and it does not keep the collective from closing. The closing names nothing for it; field 4 stays for money owed back (rule 93, "Closing (type 20)"). Batching them is a client's or a cMIP's convenience, never a second way in the core.
 
 *"A fork closes the original" holds for shape B only. No group keeps the original identity: a lone holdout keeping the identity, its history and its pointers while everyone else leaves was the cost that closing the original removes. Leaving costs the vote and the right to act, never a stake unless it is sold.*
 
@@ -2444,11 +2429,11 @@ Once it counts:
 
 #### Rule 93. A broken collective, and its way back
 
-*In short: a collective is broken when a rotation moves its keys without putting a valid agreement in force, so Identity and Agreements no longer agree on who is in. While it is broken, everything done in its name counts for nothing, and it keeps only what its rules before the break allowed. The way back is a rollback: a later rotation returning to the agreement in force just before the break.*
+*In short: a collective is broken when a rotation moves its chain key without putting a valid agreement in force, so Identity and Agreements no longer agree on who is in. While it is broken, everything done in its name counts for nothing, and it keeps only what its rules before the break allowed. The way back is a rollback: a later rotation returning to the agreement in force just before the break.*
 
 **What breaks a collective.**
 
-A collective is broken when its keys moved by a rotation whose declared agreement fails rule 69, or whose Agreements declaration is missing or cannot be read. Identity counts the rotation, so the keys have moved, but:
+A collective is broken when its chain key moved by a rotation whose declared agreement fails rule 69, or whose Agreements declaration is missing or cannot be read. Identity counts the rotation, so the key has moved, but:
 
 - the clone it declares is not a clone of the agreement in force; or
 - it does not change the constitutional tier; or
@@ -2465,7 +2450,7 @@ Agreements then finds no agreement in force, and Identity and Agreements no long
 
 **The broken stretch and quarantine.**
 
-The broken stretch runs from the broken act to the rollback. Every act of the collective bound to a link of its identity chain in that stretch **stays shown and counts for nothing in Agreements**, during the stretch and after it. This covers the broken act, the rotations after it other than the rollback, records and the clones and departures they write, agreements, releases, debts, grants, and every other act in its name.
+The broken stretch runs from the broken act to the rollback. **An act for the collective is of the stretch where its history holds the broken act, or a rotation after it, and does not hold the rollback.** Every act of the stretch **stays shown and counts for nothing in Agreements**, during the stretch and after it. An act whose history holds neither is judged as made before the break, under the rules before it, wherever it was made. *No act for a collective is bound to a link of its identity chain, since the collective has no signing key; what an act cites says which side of the break it stands on.* This covers the broken act, the rotations after it other than the rollback, records and the clones and departures they write, agreements, releases, debts, grants, and every other act in its name.
 
 Such an act places no signature at all, a member's signature act on a declaration of absence included ("Made before, made after", 2). Its records register nothing (record field 3): only the rollback's registration counts.
 
@@ -2473,14 +2458,7 @@ The broken collective is quarantined. *A broken collective is broken until fixed
 
 **A grantee's act of the broken stretch counts for nothing**, like the collective's own. The grants issued before the broken act work again after the rollback, which restores every condition as at the act before the break: a grant issued, revoked or ended by an act of the stretch is as it was before the break (rule 73).
 
-A grantee's act is of the stretch where:
-
-- neither the broken act's history nor that of an act of the collective's own key before it holds it; and
-- it cites neither the rollback nor any later decision of the collective (rule 58).
-
-**After the rollback, a grantee's act counts only once it cites the rollback or a later decision of the collective.** An act citing nothing newer than the time before the break counts for nothing, and is signed again; this includes one made just before the break that no act of the collective took in.
-
-*Client conformance:* a grantee's client cites the latest decision of the collective it holds in every act it signs. *MOR has no clock of its own, so an unanchored act proves where it stands only by what it cites; an anchor can place an act, and the rule asks for the citation all the same, as the safer path.*
+*Client conformance:* a member's or grantee's client cites the latest decision of the collective it holds in every act it signs for it, and, after a rollback, the rollback or a later decision. *MOR has no clock of its own, so an unanchored act proves where it stands only by what it cites. Stated cost: an act that cites only decisions before the break is judged under the rules before it, even where it was made during the stretch or after the rollback; the rules before the break are what the collective keeps.*
 
 **What others relied on during the stretch (a debt, a sale, a receipt) counts for nothing, for good, and is signed anew after the rollback**, never adopted by citing it (rule 76 does not reach it).
 
@@ -2531,7 +2509,7 @@ A payment to the payer's vault always counts, and the payer's own receipt counts
 
 A collective may also set the amount aside with a named holder that outlives the closing and pays the payer when they turn up (a keeper or custodian role, for a cMIP to define). The core allows it, shows it beside the debt in the closing act, and requires neither the holder nor any one notice period.
 
-*Why: a stranger who pays a penny from a fresh identity under an offer of the stretch, and publishes nothing, would otherwise freeze the collective's ending for good. After a closing the collective's keys count for nothing, so nothing could be paid later: the notice comes first. The notice demonstrates good faith, its degree set by the notice's conditions.*
+*Why: a stranger who pays a penny from a fresh identity under an offer of the stretch, and publishes nothing, would otherwise freeze the collective's ending for good. After a closing nothing done for the collective counts, so nothing could be paid later: the notice comes first. The notice demonstrates good faith, its degree set by the notice's conditions.*
 
 *A payer who committed only a one-time key cannot be reached by a notice.*
 
@@ -2572,7 +2550,7 @@ The rollback's mark (field 4) names the constitutional change rule, `[0]`, with 
 
 What it registers. **The rollback may register a declaration of absence made during the broken stretch** under the clause of the agreement in force just before the broken act, exactly as a record does outside the stretch, so that a member who dies or vanishes during the stretch does not block the way back. *A faction that is the absence authority could already declare a member absent falsely with no break: the break adds steps, not power; the new risk was attention, which rule 88's client conformance closes.*
 
-**The rollback is a line**, by its kept tips, as every rotation is ("Made before, made after"): its clone is in force for the collective's acts after it, and the resignations it registers take effect there.
+**The rollback is a line**, by the signature acts its declaration names, as every rotation is ("Made before, made after"): its clone is in force for the collective's acts after it, and the resignations it registers take effect there.
 
 In everything else a rollback is a clone like any other:
 
@@ -2605,13 +2583,11 @@ After a rollback, a later rotation that fails rule 69 breaks the collective agai
 
 ### Made before, made after
 
-*In short: MOR has no clock, so "before" and "after" are always read on one chain. For anything a collective does, that chain is the collective's own: never a member's personal sequences.*
+*In short: MOR has no clock, so "before" and "after" are always read on one chain. For anything done for a collective, that chain is the collective's own: never a member's personal sequences.*
 
-*MOR has no clock, and every identity, a collective as much as a member, may keep several sequences at once, one per device (Envelopes, "Sequences"). A member's own sequences cannot settle what happened first: members keep as many as they like, forget some, and nobody else can see them all. Envelopes' own principle settles it instead: every "before" in the core is judged inside one named chain, by reference to a specific act (Envelopes rule 16). For anything a collective does, that chain is the collective's own.*
+*MOR has no clock, and every identity may keep several sequences at once, one per device (Envelopes, "Sequences"). A member's own sequences cannot settle what happened first: members keep as many as they like, forget some, and nobody else can see them all. Envelopes' own principle settles it instead: every "before" in the core is judged inside one named chain, by reference to a specific act (Envelopes rule 16). For anything done for a collective, that chain is the collective's own: the acts that name it, each citing the decision it acts under and the other acts on the chain it knows (rule 58). A collective has no signing key and so no sequence of its own; its chain is made of its members' and grantees' acts, joined by what they cite. The chain's role is to make acts unmissable, not to confirm them.*
 
-*A collective's sequences form two chains. Its decisions (genesis, rotations, records, fork, closing) are its lines, each citing the action head it saw by the tips it names. Its actions (every other act in its name) are the acts of its devices' sequences, each citing its previous act there. Each action also cites, in `objects`, the decision it acts under, and the heads of the other devices it knows, so that the next act joins the heads where several devices signed at once (rule 58). A sequence is one device's strand of the actions chain; a join ties strands together between lines. The chain's role is to make acts unmissable, not to confirm them.*
-
-**For anything done in a collective's name, "before" and "after" are judged only on the collective's own sequences, never on a member's personal sequences.**
+**For anything done for a collective, "before" and "after" are judged only on the collective's chain, by what its acts cite, never on a member's personal sequences.**
 
 This holds for every event that changes who may act for the collective:
 
@@ -2619,66 +2595,64 @@ This holds for every event that changes who may act for the collective:
 - a declaration removing a voice (rule 89);
 - a member's own rotation (Identity);
 - a clone put in force (rules 69, 72); and
-- the freeze of an area (rule 71).
+- the freeze of an area or a layer (rule 71).
 
-Each takes effect for the collective's acts at a line. A line is a record (type 17) or a rotation of the collective. It names the latest act of every sequence the collective keeps other than its own (record field 1; a rotation's kept tips, Identity).
+Each takes effect for the collective's acts at a line. A line is a record (type 17), a rotation of the collective, a fork or a closing. A record names, in `objects` on the collective's chain, the previous decision and the other acts it knows (its **tips**); a rotation's history is that of the signature acts its declaration names, each citing the collective's chain as an action does; a fork or closing cites the chain in its own `objects`.
 
-1. **The collective's own acts.** An act of the collective counts as made before a line when the line's history holds it. That is, when it:
+1. **The collective's own acts.** An act for the collective counts as made before a line when the line's history holds it. That is, when it:
 
-   - precedes the line in the line's own sequence;
-   - lies in the ancestry of a tip the line names, proved by position and running summary as for a rotation's kept ancestry (Identity); or
-   - is reached from there through what those acts cite on the collective's chain, the tips of a record so reached included.
+   - is an act the line names on the collective's chain (a tip);
+   - is reached from there through what those acts name on the collective's chain, the tips of a record so reached, and the signature acts a rotation so reached names, included.
 
-   For a rotation, its kept tips alone count, by Identity's rule.
-
-   Every other act of the collective counts as made after it, whenever it was really made. That includes an act on a branch the line left out, by mistake or on purpose; an offline device's act its drafter had not heard of; and a fork made later from an act before the line.
+   Every other act for the collective counts as made after it, whenever it was really made. That includes an act on a branch the line left out, by mistake or on purpose; an offline member's act its drafter had not heard of; and a fork made later from an act before the line.
 
    **While an act the line's history names is not held, whether an act is before that line is unknown; nothing is void on it.** "Made after" is read only where the line's history is held whole: a verifier with a hole in it voids nothing by the tie rule (point 7) and takes no voice away (rule 65) on that line; it answers unknown, and judges again once it holds the act.
 
-   Lines are ordered among themselves the same way, by the collective's tips alone.
+   Lines are ordered among themselves the same way, by what they cite alone.
 
-   **For the agreement in force at a record, only the records before it count.** For an action, the records its history holds count, and those before them (rule 58). A record it does not cite, a concurrent one included, decides nothing for it, save where it ends a power the action uses (the tie rule, point 7).
+   **For the agreement in force at a record, only the decisions in its history count.** For an action, the decisions its history holds count, and those in their histories (rule 72). A record it does not cite, a concurrent one included, decides nothing for it, save where it ends a power the action uses (the tie rule, point 7).
 
-   *An act within its signer's powers counts as the signer knew the collective's head.* *Read literally between two records drawn on two devices, each would count as after the other, each would judge the other's clone under the wrong parent, and a fork of records could never arise.*
+   *An act within its signer's powers counts as the signer knew the collective's chain.* *Read literally between two records drawn by two members, each would count as after the other, each would judge the other's clone under the wrong parent, and a fork of records could never arise.*
 
-2. **Others' acts are placed by the collective's.** An act of another identity done in the collective's name has no place of its own in the collective's sequence. A member's signature act is placed:
+2. **Others' acts are placed by the collective's.** A signature act on an act for the collective is placed:
 
-   - at the act of the collective it signs;
+   - at the act for the collective it signs;
    - at a record naming it among the signature acts that complete its clone (record field 2);
    - at a rotation naming it among the signature acts that complete the clone it declares (rule 69);
    - at a recovery rotation naming it among the signature acts on a declaration that takes effect there; and
-   - at any act of the collective on its chain acknowledging it (Envelopes, `acks`).
+   - at any act for the collective on its chain acknowledging it (Envelopes, `acks`).
 
    It counts as made before a line when one of those acts does, and as made after it otherwise.
 
-   An Identity witness act of the collective (type 15), on neither chain, places nothing and counts for nothing in Agreements.
+   An Identity witness act, on neither chain, places nothing and counts for nothing in Agreements.
 
-   An act signed with a grant key is the collective's own, on the grantee's strand of its actions chain, citing its grant, as every action cites (rule 58). It has no place by its key. It is before a line when the line's history holds it: that is, when an act of the collective before the line joined it, or a later act of the same strand that such an act joined. Where a decision ending the grant's powers does not hold it, the tie rule voids it, or, for a revocation, voids it or shows it disputed as rule 76 says (point 7), save where the collective itself adopts it (rule 76).
+   An act a grantee signs for the collective is on its chain, citing its grant, as every action cites (rule 58). It is before a line when the line's history holds it: when an act for the collective before the line names it, or a later act that such an act names reaches it. Where a decision ending the grant's powers does not hold it, the tie rule voids it, or, for a revocation, voids it or shows it disputed as rule 76 says (point 7), save where the collective itself adopts it (rule 76).
 
-3. **A departure takes effect at the collective's line.** A resignation, a stepping down, or a declaration removing a voice takes effect for the collective at the line registering it: a record naming it in field 3. A member's voice remains for an act of the collective made before that line, and through any signature of theirs placed before it. For everything after it, it is gone (rules 70, 71, 65).
+3. **A departure takes effect at the collective's line.** A resignation, a stepping down, or a declaration removing a voice takes effect for the collective at the line registering it: a record naming it in field 3. A member's voice remains for an act for the collective made before that line, and through any signature of theirs placed before it. For everything after it, it is gone (rules 70, 71, 65). **A member's power ends at the line that registers their departure; their own key continues to sign their own acts.**
 
    **Two lines neither of which is before the other are concurrent.** Where a departure is registered on both, an act counts as made before it only when it is before both. Records on concurrent lines are a fork of the agreement chain (rule 72).
 
    A rotation declaring a clone that removes a party, or takes a holder off an area, is that change's own line (rule 69).
 
-   Rarely, a declaration takes effect at a recovery rotation. A declaration takes effect at the collective's line, or, where the declared member is the one who would draw it (for instance the only holder of the collective's signing key), at the rotation made by the recovery path (rule 59), a line by its kept tips. That is the rotation that removes the declared member, declaring the clone that takes that party out of the parties, so that clone is counted without the declared party. Where the declaration's authority is a threshold needing more than its own signer, that rotation names the others' signature acts and places them there. The abandonment authority draws no line for the collective.
+   Rarely, a declaration takes effect at a recovery rotation: where no member other than the declared one remains to draw a record (a collective of one, for instance), at the rotation made by the recovery path (rule 59), its history that of the signature acts it names. That is the rotation that removes the declared member, declaring the clone that takes that party out of the parties, so that clone is counted without the declared party. Where the declaration's authority is a threshold needing more than its own signer, that rotation names the others' signature acts and places them there. The abandonment authority draws no line for the collective.
 
-   *A rotation names no declaration itself, only the signature acts completing one where its number needs them; a recovery rotation declaring nothing new removes nobody, and leaves the declaration to the first record under the new key.*
+   *A rotation names no declaration itself, only the signature acts completing one where its number needs them; a recovery rotation declaring nothing new removes nobody, and leaves the declaration to the first record after it.*
 
 4. **A member's own rotation is registered the same way.** The collective registers a member's rotation (Identity) on its line, as it registers a departure (record field 3).
 
-   A signature act of that member made with the key the rotation replaced, and placed before that line, stays valid for the collective, whatever the rotation kept or disowned, where it signs an act the collective's key holders also signed. That is an act of the collective, or a clone that a record or rotation of the collective puts in force, naming that signature among those that complete it. Its status under Identity is unchanged, and every client shows that status.
+   An act or signature act of that member made with the key the rotation replaced, and placed before that line, stays valid for the collective, whatever the rotation kept or disowned. Its status under Identity is unchanged, and every client shows that status.
 
-   Such a signature placed after that line is judged by Identity alone (rule 6).
+   Such an act placed after that line is judged by Identity alone (rule 6).
 
-   *If the member's key was stolen, the thief's signatures placed before the line count too, but only where the collective's key holders also signed: a stolen member key can finish an act the collective signed, never start one; the collective then reorganizes around the theft.*
+   *If the member's key was stolen, the thief's acts for the collective placed before the line count too, within the member's power; the collective then reorganizes around the theft.*
 
    *Stated cost:* *within a collective, Identity's theft protection is softened to this extent.*
 
-   *Stated cost:* *a signature on a clone that no act of the collective placed before the line registering its signer's rotation is judged by Identity alone, so one made from a device the rotation forgot no longer counts; the collective's client avoids it by acknowledging members' signatures as they arrive.*
+   *Stated cost:* *a signature on a clone that no act for the collective placed before the line registering its signer's rotation is judged by Identity alone, so one made from a device the rotation forgot no longer counts; the member's client avoids it by acknowledging members' signatures as they arrive.*
 
    **This reaches every act a line places.** An act of another identity that a line of the collective (a record, a rotation, a rollback) names, registers, or relies on to count what it registers keeps, for that collective, the effect the line gave it, whatever its signer's later rotation kept or disowned. That is:
 
+   - an act for the collective that the line's history holds;
    - a resignation or stepping down (type 16) a line registers;
    - a declaration of absence (type 13) a line registers, or a recovery rotation or rollback takes effect on, and the signature acts completing it that the line places;
    - the signature acts of the declared party that the declaration's field 1 is checked against, as the line judged them (rule 87);
@@ -2689,46 +2663,47 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
    Its status under Identity is unchanged, and every client shows it as a dispute on the line. The line is the collective's own act (Identity rule 34's "disowned but relied on"; "what others relied on stands"), so the record stays a line, the clone it wrote stays in force, the departure stays taken, and every later record finds its parent. An act a line never placed is judged by Identity alone: disowned by its signer's rotation, it is shown, and decides nothing.
 
-   *Stated cost:* *a thief holding a member's signing key can resign the member; once the collective's line registers the resignation, the member's rotation does not undo the departure for the collective, and the member comes back by a constitutional clone naming them (rule 65). A stolen member key can so take a voice out until the collective puts it back; the alternative would let one member's chain unwind the collective's year.*
+   *Stated cost:* *a thief holding a member's signing key can resign the member; once the collective's line registers the resignation, the member's rotation does not undo the departure for the collective, and the member comes back by a constitutional clone naming them (rule 65). A stolen key can so take a voice out until the collective puts it back; the alternative would let one member's chain unwind the collective's year.*
 
-5. **The collective's keepers place its own acts a line left out.** An act of the collective that a line left out counts as made before that line when the keepers named by the collective's agreement in force for the line recorded it before recording the line. This is as the keepers' own rule counts what is recorded: any one, a threshold, or all of them (rules 38, 41, 42).
+5. **The collective's keepers place its own acts a line left out.** An act for the collective that a line left out counts as made before that line when the keepers named by the collective's agreement in force for the line recorded it before recording the line. This is as the keepers' own rule counts what is recorded: any one, a threshold, or all of them (rules 38, 41, 42).
 
-   Keepers place only the collective's own acts: never a member's signature, a grantee's act, or one line against another, which only the collective's tips order.
+   Keepers place only acts for the collective: never a member's signature act, or one line against another, which only what the lines cite orders.
 
    *Stated cost:* *a keeper that records a line late opens a window, the trust in keepers rule 42 already states.*
 
-6. **Nothing else places.** An acknowledgement by any other identity (Envelopes), a member's friend or a counterparty, carries no place in the collective's sequence: it keeps the act visible and changes nothing here. A member's personal sequences, and which device signed what, are never read for the collective.
+6. **Nothing else places.** An acknowledgement by any other identity (Envelopes), a member's friend or a counterparty, carries no place on the collective's chain: it keeps the act visible and changes nothing here. A member's personal sequences, their `prev` among them, and which device signed what, are never read for the collective.
 
-7. **The tie rule.** Where a decision ending powers and an action using them cite neither each other, **the ending wins: the action is void**, or, where the ending is a grant's revocation, void or disputed as rule 76 says. A decision ending powers is a fork, a closing, a departure, a grant's revocation, or a departure emptying an area. So:
+7. **The tie rule.** Where a decision ending powers and an action using them cite neither each other, **the ending wins: the action is void**, or, where the ending is a grant's revocation, void or disputed as rule 76 says. A decision ending powers is a fork, a closing, a departure, a grant's revocation, or a departure emptying an area or freezing a layer. So:
 
-   - an act of the collective a fork's or closing's history does not hold counts for nothing (rule 91);
+   - an act for the collective a fork's or closing's history does not hold counts for nothing (rule 91);
    - a member's voice a line removes is gone for every act the line's history does not hold, an act judged under a version earlier than the one the departure names included (rule 65);
-   - an act signed with a grant key that the line emptying its grant's area does not hold is void (rule 71); one that a revocation of its grant does not hold is void, or disputed under rule 76.
+   - an act under a grant that the line emptying its area does not hold is void (rule 71); one that a revocation of its grant does not hold is void, or disputed under rule 76.
 
    "Does not hold" is read on a history held whole: while an act the history names is not held, the action is unknown for that verifier, never void (point 1).
 
-   *An action missing from the ending's history was made with powers that are ending; its counterparty deals again with a successor. Otherwise anyone holding a power could keep a fork or closing from settling by racing it. A counterparty protects itself by waiting until the actions chain visibly moves past its act before delivering.*
+   *An action missing from the ending's history was made with powers that are ending; its counterparty deals again with a successor. Otherwise anyone holding a power could keep a fork or closing from settling by racing it. A counterparty protects itself by waiting until the collective's chain visibly moves past its act before delivering.*
 
-   **The tie rule voids only acts the collective never took on.** An act that an act of the collective's own key that counts cites is adopted (rule 76), and no ending racing that citation voids it. "Cites" is meant as a line cites: the act lies in the citing act's history, so citing a later act of the same strand cites it too.
+   **The tie rule voids only acts the collective never took on.** An act that an act for the collective that counts cites is adopted (rule 76), and no ending racing that citation voids it. "Cites" is meant as a line cites: the act lies in the citing act's history.
 
-   *A revocation from a device that had not heard of the citation cannot reach the act; it ends the grant for everything after it. A departure racing the citation takes no voice off the act: the act counts if it counts as judged, or once the departures racing its citation are set aside (whichever of the two judgments counts). Against a fork or closing nothing changes: an act citing it that the ending's history holds puts it in that history, and one the history does not hold is itself void.*
+   *A revocation drawn by a member who had not heard of the citation cannot reach the act; it ends the grant for everything after it. A departure racing the citation takes no voice off the act: the act counts if it counts as judged, or once the departures racing its citation are set aside (whichever of the two judgments counts). Against a fork or closing nothing changes: an act citing it that the ending's history holds puts it in that history, and one the history does not hold is itself void.*
 
    *Stated limit:* two acts signed at the same moment without seeing each other cannot be ordered by hashes alone; with two chains this remains only where a decision ending powers meets an action using them, and the tie rule settles it. Where the decision ends no power (a record of an operational or judicial clone), each act is judged under the decisions it cites (rule 58).
 
 *Stated cost:*
 
-- *A departure takes effect for the collective's acts when the collective draws its line, not when the member signs it: until then, the departed member's signature still counts on the collective's acts. The line is drawn by whoever produces the collective's signature, who could already withhold it from any act.*
-- *An act of the collective on a branch its own line left out counts as made after it, unless a keeper placed it: the cost falls on the collective, whose line it was, and on whoever relied on the act; it is the power its key holders already have at a rotation, which can leave out a branch (Identity rules 33 to 35).*
-- *A member who left can still complete an act the collective signed before its line, and it counts: the act was drafted with her in it. A pending act stays completable by whoever held the area when it was made.*
-- *A signature the collective never acknowledged before its line, on a clone recorded only after it, no longer counts for its departed signer; a collective's client SHOULD acknowledge members' signatures as they arrive.*
+- *A departure takes effect for the collective's acts when a member draws the line, not when the departing member signs it: until then, the departed member's acts still count for the collective. Any member can draw the line, so a collective that delays it only delays itself.*
+- *An act for the collective on a branch a line left out counts as made after it, unless a keeper placed it: the cost falls on the collective, whose line it was, and on whoever relied on the act.*
+- *A member who left can still complete an act the collective signed before its line, and it counts: the act was drafted with her in it. A pending act stays completable by whoever held the power when it was made.*
+- *A signature the collective never acknowledged before its line, on a clone recorded only after it, no longer counts for its departed signer; a member's client SHOULD acknowledge members' signatures as they arrive.*
 
-*Client conformance:* the collective's devices share their tips before a line is drawn, and a client warns before drawing one with a device not heard from, as before a rotation (Identity). **For a fork or a closing it refuses**: a member's client signs no fork or closing, its own or another member's, until it has pulled every device's latest acts and holds every act the ending's history should hold.
+*Client conformance:* the members' clients share the acts they hold for the collective before a line is drawn, and a client warns before drawing one while a member has not been heard from, as before a rotation (Identity). **For a fork or a closing it refuses**: a member's client signs no fork or closing, its own or another member's, until it has pulled every member's latest acts for the collective and holds every act the ending's history should hold.
 
-**In a deal, a declaration draws its own line.** A deal has no sequence of its own, and no collective's line reaches it. An abandonment declaration with outcome 0 (rule 89) removes the party's voice in a deal from then on. Every signature act of that party on the deal counts as made after it, except one that the keepers the deal names recorded before recording the declaration, as their rule counts it (rules 38, 41, 42). So a clone of the deal completed, and so recorded, before it is never undone. The other parties then change the deal without the declared party (rule 47).
+**In a deal, a declaration draws its own line.** A deal has no chain of its own beyond its versions, and no collective's line reaches it. An abandonment declaration with outcome 0 (rule 89) removes the party's voice in a deal from then on. Every signature act of that party on the deal counts as made after it, except one that the keepers the deal names recorded before recording the declaration, as their rule counts it (rules 38, 41, 42). So a clone of the deal completed, and so recorded, before it is never undone. The other parties then change the deal without the declared party (rule 47).
 
 **What others relied on stays complete before any declaration's line.** A declaration's line decides only what no relied-on version holds: a version of the deal that a party's or keeper's later act relies on (rule 47) stays complete, the declared party's signature on it included, in a deal that names keepers and in one that names none.
 
 *A deal's authority is one identity: its signature alone makes the declaration, so the declaration is its own line, with nothing to complete after it.* *A signature on a deal's clone names the clone, an agreement, so the deal's keepers can place it; deals that need protection name a keeper.*
+
 
 ## Part four: act formats
 
@@ -2886,8 +2861,9 @@ abandonment = {
   0 => [ 0, hash ]          ; the authority: a named identity (a keeper's operator, a party, a collective, or a third party)
      / [ 1, uint ],         ; or a threshold of the other parties: in a collective only
   1 => [+ uint],            ; outcomes allowed (rule 89), ascending: 0 voice removed, 1 stake redistributed,
-                            ; 2 stake transferred to parties named or defined by role, 3 obligations redirected or
-                            ; held, 4 agreement closed
+                            ; 3 obligations redirected or held, 4 agreement closed; 2 (once a stake transferred
+                            ; to parties named or defined by role) is struck from MOR 1: a clause or a
+                            ; declaration listing it is invalid (rule 87)
                             ; key 2 (the period of absence) is retired and never reused: terms carrying
                             ; it are invalid
   ? 3 => [ hash, any ]     ; an absence-proof cMIP and its parameters (a period, a time reference), task "Absence proof"
@@ -3670,7 +3646,7 @@ declaration-payload = {
   2 => hash,                ; the party declared absent: a party to the agreement of field 0, or, in a collective, a
                             ; holder of the collective's stake in itself who is no party
   3 => [* uint]             ; the outcomes (rule 89), ascending, none twice, each one the clause allows; at least one
-                            ; against a party; against a holder who is no party, 1 or 2 where its plan names no stake
+                            ; against a party; against a holder who is no party, 1 where its plan names no stake
                             ; successor, and none where it names one, succession alone moving the stake
 }
 ```
@@ -3693,7 +3669,7 @@ A declaration counts only when it passes rule 87's checks:
 - it is valid under Identity, or, registered by a line of a collective, valid as that line placed it (below);
 - the party is a party to the agreement field 0 names, or, in a collective, a holder of its stake in itself who is no party;
 - field 1 is the last version of that agreement, back from it, that the party signed by a valid signature act, and carries an abandonment clause; for a holder who is no party, field 1 is the version field 0 names, whose clause is the clause in force (rule 87);
-- every outcome it states is one the clause in force allows, the abandonment clause of the agreement field 0 names; against a holder who is no party, the stake-moving ones only: none, its stake passing by succession, where its succession plan names a stake successor, or else outcome 1 or 2; never 0, 3 or 4 (rule 89); and
+- every outcome it states is one the clause in force allows, the abandonment clause of the agreement field 0 names; against a holder who is no party, the stake-moving ones only: none, its stake passing by succession, where its succession plan names a stake successor, or else outcome 1; never 0, 3 or 4 (rule 89); and
 - it is signed by that clause's authority (the clause in force, for every party, one whose voice was removed before a judicial change included). That is the identity the clause names, or, where the authority is a threshold of the other parties, one of them, its number counted where the declaration takes effect (rule 85).
 
 A declaration that fails any check, judged at the point where the record names it, is no declaration there: a record naming it in field 3 counts for nothing (record, field 3). A later act of the party never makes a record fail that passed where it was drawn.
@@ -4077,7 +4053,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 - A deal's version raising a fee, signed by every party, stays a draft until a holder who is no party, paid less by it, signs; a collective's clone lowering a stake's part of the plan, met by its area, stays a draft until each departed holder of that stake signs; a member outside the area is not asked: 1, 3.
 - A plan putting a role share, a named receiver or a metric share in the rest is invalid; the same off the top is valid, and what is left goes to the stakes alone, by their parts and within each by ownership: 1, 2, 3.
-- A declaration of absence passes a holder's stake to its stake successor, by a clone the holder does not sign; one stating outcome 1 or 2 against a holder naming a stake successor is refused; with none named, outcome 1 shares the stake out; no declaration lets a version pay less a holder whose stake stays: 1, 3.
+- A declaration of absence passes a holder's stake to its stake successor, by a clone the holder does not sign; one stating outcome 1 against a holder naming a stake successor is refused; with none named, outcome 1 shares the stake out; no declaration lets a version pay less a holder whose stake stays: 1, 3.
 - Conservation and remainder rule; module fees and an omitted fee visible; maximum fee per payout, and a plan stating none flagged before signing; split by an attention metric evidenced by a record the identity running the service signs, never by a Module: 1, 2, 7.
 - The collective's own reserve: a plan naming the collective off the top, written null, pays that part to the collective's vault, never split again; with no vault declared, the plan is invalid; raising the part is an owners' matter, a departed holder asked: 3.
 - A role share filled by a reposter, with the payer's signed referral; a referral named by the service alone earning nothing; an unfilled role share following the chosen option: 2. A relay's delivery record counting for its role share only when the payer's claim acknowledges it, and only for the object paid for; a claim the relay signs itself confirming nothing: 2.
@@ -4211,7 +4187,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 - A threshold abandonment authority of two of the other parties against the only holder of the signing key: the recovery rotation removing them names the second signature act, and the declaration counts there; one that names none, the second signature placed nowhere before it, leaves the declared member counted; one naming another act puts nothing in force: 3.
 - A declaration naming another clause version than the one the absent member signed last, an outcome the clause does not allow, or signed by someone other than the authority registers nothing (rule 87): 3.
 - A departed holder vanishes: declared absent under the clause in force, though no party, its stake passes to its plan's successor, who signs the sale; with no plan, outcome 1 shares it out and the sale proceeds; a declaration against it stating outcome 0, 3 or 4 counts for nothing: 3.
-- A collective whose constitutional change rule counts among its stake's holders, its abandonment clause allowing outcome 0 alone, or naming as authority the holder it would have to declare: invalid; allowing outcome 1 or 2 with an authority able to declare every holder who is no party: valid, a vanished holder's stake moved and the constitution changed without it: 3.
+- A collective whose constitutional change rule counts among its stake's holders, its abandonment clause allowing outcome 0 alone, or naming as authority the holder it would have to declare: invalid; allowing outcome 1 with an authority able to declare every holder who is no party: valid, a vanished holder's stake moved and the constitution changed without it: 3.
 - A declaration of absence registered by a line, then its authority rotates and disowns it, or the declared member rotates and disowns the signature field 1 names: the record stays a line, the declaration shown disputed: 3.
 
 #### Forks of records
