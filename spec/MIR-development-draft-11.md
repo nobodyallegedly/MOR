@@ -28,7 +28,7 @@ The core is frozen; everything above it competes. Development is the grammar of 
 
 ## Dependencies
 
-Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defined in Money and Agreements, so a Money-only client never depends on this MIR.
+Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defined in Money and Agreements, so a Money-only client decodes of this MIR only a rail Module's specification (Money, "Dependencies").
 
 ## Words used in this MIR
 

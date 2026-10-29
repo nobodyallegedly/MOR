@@ -258,7 +258,7 @@ Every act on an agreement names the chain and the act it follows.
 
 *In short: two acts following the same act are a fork. Most forks are settled by the agreement's own rule for acting independently, or by keeping the status quo.*
 
-Two acts naming the same predecessor are a fork. The exception: signatures naming the act they sign are parallel consents, not a fork.
+Two acts naming the same predecessor are a fork. The exception: acts naming the act they concern as both chain and predecessor, `[x, x]` (a signature naming what it signs, a publication naming the ownership agreement it reads, a transfer, a resignation, a proxy, a liveness, a request, an issuance take-up), are parallel acts on it, never a fork.
 
 A fork is settled this way:
 
@@ -427,7 +427,7 @@ Its split service signs its price tag (Money rule 18). A buyer's client finds th
 
 - **the owners' side**: where it names an ownership agreement (field 1), that agreement, as a party consenting by its own rule (rule 15: in a deal every party; in a collective, under its rule for Agreements, rule 60); where it names none, its drafter alone, selling as the lone owner of what it sells;
 - **each partner** it names;
-- **its split service.**
+- **its split service**, and each backup it names (field 11).
 
 It counts, and sells, once every party has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1). *Partners are any identity: the core does not define a publisher; it may be a curated relay, a client, a label.*
 
@@ -1823,7 +1823,7 @@ Collectives only. **The judicial tier changes only with the signature of every m
 - the abandonment clause;
 - the succession plans;
 - the keepers;
-- the split service and its backups (fields 14 and 29);
+- outside the terms, the collective's split agreement (rule 15), naming its split service and backups;
 - the time reference;
 - the arbitrators or verifiers (field 13);
 - the condition, time reference and anchoring cMIPs (field 2, tasks 9, 10 and 11), and the absence-proof cMIP (task 14, named in the abandonment clause's key 3);
@@ -2389,7 +2389,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
      - An obligation signed by a collective binds it once done, like any act (rule 57): sealed to every member, and on its chain. A debt sealed to the creditor alone binds no one, its signer included, so hiding gains nothing.
      - Publishing the debt is the creditor's choice and protection (client conformance), and no validity rests on where an act is stored.
    - **Grants.** Every grant of the original ends at the fork's line, as when a departure empties an area (rule 71), and the original's split agreement with them. Each successor grants what it wants. An act under a grant in the history the fork cites, or that the original adopted before the fork, binds, as a debt. Any other is missing from the ending's history, and void (the tie rule): its counterparty deals again with a successor.
-   - **Money after it.** Payment follows the work's current claim: the work carries nothing and never changes; its claim names the successors as owners, so routing follows to their own pointers and split services. A payee pointer of the original that the ending left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it ("Fork (type 19)"; Money rule 4).
+   - **Money after it.** Payment follows the work's ownership agreement: the work carries nothing and never changes; the fork passes the original's share in it to the successors, so routing follows to their own pointers and split services. A payee pointer of the original that the ending left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it ("Fork (type 19)"; Money rule 4).
      - The fork ends the original's publications from its line (rule 12): a wallet reading Agreements sees them ended, and pays a successor's publication instead.
      - **A payment that reaches a publication of the original after the fork** (a wallet not reading Agreements paying a tag of an ended publication, a push rail that cannot refuse) **is owed back to the payer as a refund**, as a payment racing an ending is (rules 11, 12).
      - A sale the original's chain recorded in the fork's history stays a purchase.
@@ -2776,14 +2776,14 @@ terms-payload = {
                             ; specification as field 2's task 10 where both are present
   ? 7 => owners,            ; the stake: the holders of the target and their shares (only with field 33, and then
                             ; required)
-  ; 8, once the split plan, is withdrawn: a publication's split plan; never reused
+  ; 8, is withdrawn: a publication's split plan; never reused
   ? 9 => abandonment,       ; the abandonment clause
   ; 10, the concurrency rule, is withdrawn: rule 90's default stands; never reused
   ? 11 => hash,             ; parent: the agreement this one clones; objects names it as chain and, as predecessor,
                             ; an act of its chain, the latest the signer's client holds (rule 45)
   ? 12 => key-grammar,      ; present if this agreement founds a collective (only with target [1, null])
   ? 13 => [+ hash],         ; arbitrators or verifiers named, who receive keys to judge content
-  ; 14, once the split service's grant, is withdrawn: a publication names its split service; never reused
+  ; 14, is withdrawn: a publication names its split service; never reused
   ? 17 => refund-terms,     ; until when a refund owed on a payment under these terms is claimable: a point on the
                             ; time reference
   ? 21 => [+ chain],        ; the chain of judgment: who takes over from a judge (rule 35)
@@ -2844,7 +2844,7 @@ key-grammar = {
   1 => holding,             ; how the chain key is held
   ? 3 => recovery           ; a way to rotate that needs less than every member; required when holding 1 names
                             ; every member
-}                           ; key 0 (once how the collective's signing key was held) and key 2 (once listed act types)
+}                           ; key 0 and key 2
                             ; are retired and never reused: a collective has no signing key (rule 59)
 holding  = [ 0, holder: hash ]                        ; one holder
          / [ 1, threshold: uint, members: [+ hash] ]  ; any k of these members, by shares
@@ -3059,7 +3059,7 @@ signature-payload = {
                             ; threshold of the other parties; an issuance offer, taking up its proportion (type 26);
                             ; a collective's stake transfer or release of a share in a work, consenting as an owner;
                             ; or a publication, as a party consenting to it (type 6) or signing onto it (rule 13)
-}                           ; key 1 (once a member key named on a collective's founding or clone) is retired and never
+}                           ; key 1 is retired and never
                             ; reused: there is no member key (rule 73)
 ```
 
@@ -3130,7 +3130,7 @@ A pooled anchoring service sells so, a proven delivery: its tiers, prices or pri
 
 **Refund terms (terms field 17, a publication's field 8).** `refund-terms = { 0 => [ 0, point: any ] }`: the refund is claimable until this point on the time reference. Terms or a publication carrying it name a time reference (rule 33). Past the point, the refund is ended (rule 11).
 
-**A split agreement** is a publication whose versions carry no field 0. It sells nothing and takes no price tag; it divides what reaches its split service for the ownership agreement it names, whose target is a collective (rule 15). A split agreement naming a work's ownership agreement, or naming none, counts for nothing.
+**A split agreement** is a publication whose versions carry no field 0. Field 0 is the same in kind across a line: **a later version of a publication that sells (field 0 present) carrying no field 0 is invalid**, and one carrying it empty ends the publication; **a later version of a split agreement carrying field 0 is invalid**. It sells nothing and takes no price tag; it divides what reaches its split service for the ownership agreement it names, whose target is a collective (rule 15). A split agreement naming a work's ownership agreement, or naming none, counts for nothing.
 
 ### Claim (type 3)
 
@@ -3322,7 +3322,7 @@ grant-payload = {
   ? 7 => hash,              ; a reinstatement: the ended grant it reinstates, fields 0 to 6 repeating that grant's (rule 71); only with field 5
   ? 9 => signing-key        ; a person's grant only, and then required: the grant key, in Identity's form [ scheme, key ],
                             ; made and held by the grantee, scoped to this grant
-}                           ; key 8 (once "the grantor is this collective", for a grant its founding terms named) is
+}                           ; key 8 is
                             ; retired and never reused, with terms fields 14 and 29; null in field 2 ("this agreement")
                             ; likewise
 
@@ -3760,7 +3760,7 @@ fork-payload = {
   4 => [2* side],           ; the sides
   ? 5 => [+ fork-share],    ; the original's stakes, where not divided by default
   ? 6 => [+ [ obligation: hash, sides: [+ uint] ]]  ; every obligation in the history it cites: the side, or the sides jointly, owing it
-}                           ; keys 2 and 3 (once the original's chain act and the kept tips of its own sequences) are
+}                           ; keys 2 and 3 are
                             ; retired and never reused: the fork's line is what it cites on the collective's chain
 side       = [ successor: hash, members: [+ hash] ]   ; the collective the side founded first, by its identity, and its members
 fork-share = [ agreement: hash, index: uint, [+ share: uint] ]   ; a stake the original holds, and each side's share, in millionths
@@ -4171,7 +4171,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### How a collective ends
 
 - A group splits off with the powers to do so: an ordinary membership change, its members departed holders (rule 91, shape A): 3.
-- A collective forks: each side founds its successor first; the fork act names them; every member signs it with their own identity, by a chain signature with their chain key, on a side, under the constitutional rule; the original's later acts count for nothing; its ownership passes to the successors by the members' stakes; the departed holder keeps their share in each; the fork hands out every debt in the history it cites, an unpublished one included, or does not take effect, each successor signing for its own, and uploading that debt later changes nothing; a successor owing such a debt cannot close until it is paid or released; grants end, the split service's included, every grant key at the fork's line, a grantee's deal the fork's history cites binding and any other void; a debt signed off the fork's history is void; its publications sell nothing from the line; a payment to the old service naming no claim, or the original's claim never recorded by the original's chain before the fork, is no purchase, owed back to the payer; one naming the fork is pending until a successor's chain records it; a member on no side under every-party, a stranger on a side, a successor dropping a departed holder, or two concurrent forks sharing no signer, close nothing (rule 91, shape B): 3.
+- A collective forks: each side founds its successor first; the fork act names them; every member signs it with their own identity, by a chain signature with their chain key, on a side, under the constitutional rule; the original's later acts count for nothing; its ownership passes to the successors by the members' stakes; the departed holder keeps their share in each; the fork hands out every debt in the history it cites, an unpublished one included, or does not take effect, each successor signing for its own, and uploading that debt later changes nothing; a successor owing such a debt cannot close until it is paid or released; every grant ends at the fork's line, a grantee's deal the fork's history cites binding and any other void; a debt signed off the fork's history is void; its publications sell nothing from the line; a payment to the old service naming no claim, or the original's claim never recorded by the original's chain before the fork, is no purchase, owed back to the payer; one naming the fork is pending until a successor's chain records it; a member on no side under every-party, a stranger on a side, a successor dropping a departed holder, or two concurrent forks sharing no signer, close nothing (rule 91, shape B): 3.
 - Under a constitutional rule of two of three, two members fork without the third, who signs no side and is a departed holder of each successor at their percentage: 3.
 - A fork hands out its whole history: a debt another member signed for the collective that the line's history joined must be handed out, one it leaves out is void and owed by nobody; while an act the history names is not held, the fork is not complete; a successor's own later fork hands out what it inherited: 3.
 - The tie rule: a public debt a closing's history does not cite is void, and does not keep the collective from closing; cited, it does: 3.

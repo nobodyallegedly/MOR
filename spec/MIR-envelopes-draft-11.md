@@ -438,7 +438,7 @@ media = {
   4 => bstr .size 24, ; nonce of the media lock
   ? 5 => bstr .size 32, ; the media's content key, for public media
   ? 6 => [+ tstr]     ; where the locked bytes can be fetched
-}                     ; fields 7 (once a price) and 8 (once "for") are retired, never reused: a bake carrying either is invalid
+}                     ; fields 7 and 8 are reserved, never reused: a bake carrying either is invalid
 ```
 
 *A bake carries no price and names nobody it is made for: its price, where it has one, is its uploader's price tag (Money), and selling under an agreement is a publication (Agreements). So an upload only stores.*
