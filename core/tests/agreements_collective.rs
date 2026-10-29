@@ -13188,6 +13188,8 @@ fn an_issuance_3_7ac() {
     let mut c0 = lab.c[0].clone();
     let paid = receipt(&mut lab, &mut c0, b_, up, 3_000);
     lab.c[0] = c0;
+    // The label's receipt, a Money act: its Money area's holder signs it.
+    lab.sign(BEN, &paid);
     // Ben given less than his proportion; Dana scaled unlike the others.
     for wrong in [
         vec![(a_, 240_000), (b_, 280_000), (c_, 240_000), (d_, 80_000), (i_, 160_000)],
