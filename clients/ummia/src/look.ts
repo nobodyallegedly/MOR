@@ -18,7 +18,7 @@
 import { SPECS, cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { Judge } from '../../barebone/src/post.ts';
-import { clockTimes, byClock } from '../../barebone/src/clock.ts';
+import { clockTimes, byClock, newestFirst } from '../../barebone/src/clock.ts';
 import { decodeManifest, type Manifest } from '../../repo/src/manifest.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { specForm, actForm } from '../../genesis/src/forms.ts';
@@ -332,7 +332,8 @@ export async function look(relays: string[], q: { signers?: string[]; release?: 
       placed++;
     }
   }
-  items.sort((a, b) => (times.get(b.id) ?? -1) - (times.get(a.id) ?? -1));
+  // H110: an act the clock has not stamped yet is placed by its signer's own sequence, first, as the newest.
+  items = newestFirst(items, times, { id: (x) => x.id, signer: (x) => x.signer });
   return { items, lines, counts, ordered: { placed, shown: items.length } };
 }
 

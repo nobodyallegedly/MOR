@@ -51,7 +51,7 @@ const publicHeaders = { 'x-content-type-options': 'nosniff', 'cache-control': 'n
 
 /** The panel's own style, beside the kit's. */
 export const PANEL_STYLE = `
-body.k-damgar-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+body.k-damgar-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
 .k-dp{padding:14px 18px 10px}
 .k-dp .k-by{font-size:13px;color:var(--k-p);margin:0 0 6px}
 .k-dp h3{font-weight:300;font-size:20px;margin:0 0 2px}
@@ -91,7 +91,7 @@ export function wakeRoutes(damgar: Damgar, base: () => string, fonts: Record<str
   return async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> => {
     if (!url.pathname.startsWith('/damgar/')) return false;
     if (req.method === 'GET' && url.pathname === '/damgar/panel.css') return send(res, 200, 'text/css; charset=utf-8', `${KIT_STYLE}\n${PANEL_STYLE}`, publicHeaders), true;
-    const font = /^\/damgar\/(inter_(?:light|regular)\.woff2)$/.exec(url.pathname);
+    const font = /^\/damgar\/([a-z_]+\.woff2)$/.exec(url.pathname);
     if (req.method === 'GET' && font && fonts[`/${font[1]}`]) return send(res, 200, 'font/woff2', fonts[`/${font[1]}`].body, publicHeaders), true;
     const pm = /^\/damgar\/panel\/([0-9a-f]{64})$/.exec(url.pathname);
     if (pm) {

@@ -4,7 +4,7 @@
 
 ## In plain words
 
-Choose a node. **Pay an invoice**: paste it, read what it asks (the amount, the node paid, the description hash Damgar checks), then pay it: the page shows the preimage, the proof to paste back into Damgar. **Make an invoice**: an amount and the description hash Damgar shows the payee. **On-chain**: send to an address, get the transaction's id; a fresh address of the node; a Bitcoin key of the node's wallet (x-only, for Damgar's Settings, On-chain); mine blocks (six make an on-chain payment final for Damgar). A red band on top says it is a test.
+Choose a node. **Pay an invoice**: paste it, read what it asks (the amount, the node paid, the description hash Damgar checks), then pay it: the page shows the preimage, the proof to paste back into Damgar. **Make an invoice**: an amount and the description hash Damgar shows the payee. **On-chain**: send to an address, get the transaction's id; a fresh address of the node; a Bitcoin key of the node's wallet (x-only, for Damgar's Settings, On-chain); mine blocks (six make an on-chain payment final for Damgar). **For Damgar's receive-only link** (H114), on each node's card: its address, its receive-only permission file and its certificate, each with Copy; the admin permission is never the one to give. A whole `lightning:` link pasted in Pay is read as its invoice; the page itself cannot answer `lightning:` links, and says so (H117). A red band on top says it is a test.
 
 It refuses to start unless every node says it is on regtest.
 
@@ -12,7 +12,7 @@ It refuses to start unless every node says it is on regtest.
 
 | File | What |
 | --- | --- |
-| `src/lnd.ts` | An lnd node's REST interface, its certificate pinned and its admin macaroon read from its folder: info, balances, decode, pay, invoice (with a description hash), a Taproot address, a key of its wallet (x-only), send; btcd asked only to mine. |
+| `src/lnd.ts` | An lnd node's REST interface, its certificate pinned and its admin macaroon read from its folder: info, balances, decode, pay, invoice (with a description hash), a Taproot address, a key of its wallet (x-only), send; btcd asked only to mine; `link`, what Damgar's receive-only link asks for, from `nodes.json` (H114). |
 | `src/server.ts` | The program on 127.0.0.1: the regtest check; the requests, each checked (whole amounts above zero, a 64-hex description hash, a known node, at most 200 blocks); its page under a strict content policy. Two guards against other web pages: the Host must be its own address (no DNS rebinding), and every request carries a header a plain form cannot send. |
 | `src/cli.ts` | `npm start -- RUN_DIR [--port N]` (port 8478). |
 | `static/` | The page: plain HTML, CSS and JavaScript, no build. |

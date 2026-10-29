@@ -5,7 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, attachContacts, attachIds, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, namesHtml, openPanel, openSlot, ownId, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, rulesAsk, attachRules, rulesPart, shortForm, stampCards, type KitAct, type Named } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
 import type { LookItem, Looked, SpecPage } from '../look.ts';
@@ -68,10 +68,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     s.innerHTML = `${v.note(kind, html)}<button type="button" class="k-round k-close" data-action="status-close" aria-label="Close">×</button>`;
   }
-  const spentShown = (m: string) => {
-    if ($('spent')) return;
-    const where = $('spent-at') ?? app.querySelector('.k-top');
-    where?.insertAdjacentHTML(where.id === 'spent-at' ? 'afterbegin' : 'afterend', v.spent(m));
+  // H82, H83: the kit's warning, a pop-up with the box for the new words, for the identity in use only.
+  const spentShown = (m: string | null) => {
+    const i = state?.identity;
+    keyChanged(app, m && i ? { id: i.id, name: v.labelOf(i.named, 'This identity'), say: m, form: v.renewForm() } : null);
   };
   const fail = (err: unknown) => {
     if (b.unpaired?.(err)) {
@@ -103,7 +103,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   let slot: { close(): void; request: string } | null = null;
   const raw = b.ask.bind(b);
-  const NOT_WATCHED = new Set(['runner asking', 'runner', 'state', 'runner drop', 'look', 'spec page', 'clock words', 'check', 'accepted', 'published here', 'discussions', 'releases', 'mips', 'reports', 'contacts']);
+  const NOT_WATCHED = new Set(['runner asking', 'runner', 'state', 'runner drop', 'look', 'spec page', 'clock words', 'check', 'accepted', 'published here', 'discussions', 'releases', 'mips', 'reports', 'contacts', 'names']);
   b.ask = async <T>(op: string, a?: Record<string, unknown>): Promise<T> => {
     if (b.web || NOT_WATCHED.has(op) || !state?.identity?.runner) return raw<T>(op, a);
     let over = false;
@@ -143,6 +143,47 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
   };
 
+  // ---------------------------------------------------------------- names, contacts and short IDs (H96, H100, H106, H109, H119, H121)
+
+  /** Names read for the signers of the cards drawn, by ID; read again once the contacts change. */
+  const known = new Map<string, Named>();
+  /** H100: Contacts top left, the one list; every Contacts button beside a field taking an ID (H119). */
+  const contacts = attachContacts(app, {
+    app: 'Ummia',
+    ask: (op, a) => b.ask(op, a),
+    profile: (id) => profileOf(id),
+    said: (kind, html) => {
+      known.clear();
+      say(kind, html);
+    },
+  });
+  // H96, H106, H121: every identity Ummia shows has its names asked for; every short ID shows whole on a tap, copies on a second.
+  attachIds(app, { names: (ids, fresh) => b.ask<Record<string, Named>>('names', { ids, fresh: !!fresh }), profile: (id) => profileOf(id) });
+
+  /** The cards' signers, named once drawn (H106): their nicknames and published names, read by Ummia's engine. */
+  async function nameCards(root: HTMLElement) {
+    const arts = [...root.querySelectorAll<HTMLElement>('.k-act[data-k-signer]')];
+    const ids = [...new Set(arts.map((a) => a.dataset.kSigner!))].filter((id) => !known.has(id) && /^[0-9a-f]{64}$/.test(id));
+    if (ids.length) {
+      try {
+        for (const [id, n] of Object.entries(await b.ask<Record<string, Named>>('names', { ids }))) known.set(id, n);
+      } catch {
+        // not reached: said as such below, never "no name"
+      }
+    }
+    for (const a of arts) {
+      if (!a.isConnected) continue;
+      const n = known.get(a.dataset.kSigner!) ?? { published: { state: 'unreached' as const } };
+      const box = a.querySelector(':scope > .k-signer .k-names');
+      if (box) box.innerHTML = namesHtml(n, { retry: false });
+      const d = drawn.get(a.dataset.kAct!);
+      if (d) d.act.signer.named = n;
+    }
+  }
+
+  /** H88: one's own ID whole, with Copy ID and Share your ID link, at the end of bringing an identity. */
+  const ownIdNow = () => (state?.identity ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: state.identity.form, link: state.identity.link })}` : '');
+
   // ---------------------------------------------------------------- drawing
 
   async function show(s: State) {
@@ -155,9 +196,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     await draw();
     void b
       .ask<{ current: boolean; say: string | null }>('check')
-      .then((c) => {
-        if (!c.current && c.say) spentShown(c.say);
-      })
+      .then((c) => spentShown(c.current ? null : c.say))
       .catch(() => undefined);
     void readCounts();
   }
@@ -166,11 +205,37 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     keepAt();
     if (!tab) {
       app.innerHTML = v.home(state!, b.web);
+      askRules();
       return;
     }
     app.innerHTML = v.tabPage(state!, tab, part, counts);
+    askRules();
     await fill();
   }
+
+  // ---------------------------------------------------------------- Rules I follow (H93)
+
+  /** A rule Ummia runs not approved yet: asked under the top, for the identity in use. */
+  function askRules() {
+    const s = state;
+    rulesAsk(app, s?.identity && s.rules ? { id: s.identity.id, app: 'Ummia', missing: s.rules.missing, open: () => void go('choose', 'ummia-rules') } : null);
+  }
+
+  const rulesHtml = () => `<h2>Ummia’s own rules</h2>${rulesPart({ app: 'Ummia', rules: state?.rules?.rules ?? [], problem: state?.rules?.problem ?? null, manage: 'Every layer, above: your whole list, every app’s part of it.' })}`;
+
+  async function rulesChosen(key: string, where: 'here' | 'list', remove = false) {
+    try {
+      const r = await b.ask<{ lines: v.Line[]; rules: NonNullable<State['rules']> }>('rules approve', { keys: [key], where, remove });
+      if (!state) return;
+      state.rules = r.rules;
+      if (tab === 'choose') await draw();
+      say('done', v.lines(r.lines));
+    } catch (err) {
+      fail(err);
+    }
+  }
+
+  attachRules(app, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, 'here', true) });
 
   /** The column's quiet counts, read after drawing. */
   async function readCounts() {
@@ -207,6 +272,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (mine !== filling || !p.isConnected) return void (cards = []);
       p.innerHTML = html;
       drawCards();
+      void nameCards(p);
       // The Dubsar clock's time on each card it stamped (decided 23 October 2026), read after drawing.
       const ids = cardsUntimed(p);
       if (ids.length)
@@ -226,11 +292,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const drawn = new Map<string, { act: KitAct; item: LookItem | null }>();
   let cards: { act: KitAct; item: LookItem | null }[] = [];
   const meId = () => state?.identity?.id ?? '';
-  const nameOf = (id: string) => (id === meId() ? 'you' : shortForm(v.formOf(id, 'mid')));
+  /** An identity named where Ummia shows it in words (H96, H106): its names, its short ID under, a tap away. */
+  const whoOf = (id: string) => v.idCopy(id, { me: id === meId(), inline: true });
+  /** A card's signer: its names as read (Loading… until then), filled in once drawn (`nameCards`). */
   const who = (id: string): KitAct['signer'] => {
     const form = v.formOf(id, 'mid');
-    return { id, form, link: form, name: null, me: id === meId() };
+    const named = id === meId() ? (state?.identity?.named ?? null) : (known.get(id) ?? { nick: null, published: { state: 'loading' as const } });
+    return { id, form, link: form, name: null, named, me: id === meId() };
   };
+
+  /** An identity's profile, as Ummia has one: its ID, Look pointed at it, Follow their releases. */
+  function profileOf(id: string) {
+    const me = id === meId();
+    const named = me ? state?.identity?.named : known.get(id);
+    popup.show(me ? 'You' : v.labelOf(named, 'Their profile'), `<dl class="k-facts"><dt>ID</dt><dd>${v.idCopy(id, { me })}</dd></dl><div class="k-row"><button type="button" class="k-btn k-p" data-point-id="${v.e(id)}">Point Look at them</button>${me ? '' : `<button type="button" class="k-btn" data-follow-releases="${v.e(id)}">Follow their releases</button>`}</div><p class="k-small k-soft">Full record in Kišib. Their posts and profile are in Dub.</p>`);
+  }
   const cardOf = (a: KitAct, item: LookItem | null = null) => {
     cards.push({ act: a, item });
     return card(a);
@@ -253,6 +329,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         verified: x.verified,
         alarm: x.alarm,
         when: x.when,
+        unstamped: x.when ? null : NOT_STAMPED,
         hint: x.hint,
         own: x.signer === meId(),
       },
@@ -270,15 +347,17 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       const item = c?.item ?? null;
       switch (key) {
         case 'profile':
-          return void popup.show(a.signer.me ? 'You' : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd>${v.idCopy(a.signer.id)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-p" data-point-id="${v.e(a.signer.id)}">Point Look at them</button>${a.signer.me ? '' : `<button type="button" class="k-btn" data-follow-releases="${v.e(a.signer.id)}">Follow their releases</button>`}</div><p class="k-small k-soft">Full record in Kišib. Their posts and profile are in Dub.</p>`);
+          return void profileOf(a.signer.id);
         case 'follow':
           return void popup.show('Follow: add to contacts', followForm(a.signer.id, false));
         case 'follow-releases':
           return void popup.show('Follow their releases', followForm(a.signer.id, true));
         case 'unfollow':
+          // H100: the one list, Contacts top left: Nickname… and Remove there.
+          return void contacts.open();
         case 'mute':
         case 'unmute':
-          return void popup.show('Contacts are Dub’s', '<p class="k-soft">Ummia adds to the follow list, the same one Dub reads; removing and muting are done in Dub, from their card or profile.</p>');
+          return void popup.show('Muting is Dub’s', '<p class="k-soft">Ummia shares the one contacts list (Contacts, top left); muting is done in Dub, from their card or profile.</p>');
         case 'why':
           return void popup.show('Why it’s valid', `${v.lines([{ text: a.verified ? 'Its signature and its place in its signer’s sequence hold, judged through its signer’s chain by the core library.' : (a.alarm ?? 'Not shown as valid.'), tone: a.verified ? 'ok' : 'bad' }, ...(item?.hash ? [{ text: 'Its content decodes as a specification (Development, Part three), and its hash is computed from that content.' }] : []), ...(item?.release ? [{ text: 'Its manifest was found and matches its fingerprint. “Check it as anyone would” (Publish) fetches every file.' }] : [])])}`);
         case 'open':
@@ -299,7 +378,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   });
 
   const followForm = (id: string, releases: boolean) =>
-    `<form id="${releases ? 'follow-releases' : 'follow'}" data-id="${v.e(id)}">${v.say(releases ? 'Their releases, in Look’s saved points: the same follow list as Dub’s, here it filters.' : 'Added to the follow list Dub, Edubba and Ummia read.', ['The follow list is sealed to you at your homes: nobody else can read it, nor the name you give.'])}<p>${v.idCopy(id)}</p><label>Their name here (optional, never published)</label><input name="name" maxlength="64" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">${releases ? 'Follow their releases' : 'Add to contacts'}</button></div></form>`;
+    `<form id="${releases ? 'follow-releases' : 'follow'}" data-id="${v.e(id)}">${v.say(releases ? 'Their releases, in Look’s saved points: the one contacts list, here it filters.' : 'Added to the one contacts list, the same in every app.', ['Your contacts are sealed to you at your homes: nobody else can read them, nor the nickname you give.'])}<p>${v.idCopy(id)}</p><label>Your nickname for it (optional: only you see it)</label><input name="name" maxlength="48" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">${releases ? 'Follow their releases' : 'Add to contacts'}</button></div></form>`;
 
   // ---------------------------------------------------------------- each part
 
@@ -311,7 +390,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (part === 'saved-none') return `<h2>Saved points</h2><p class="k-soft">None yet. Point Look somewhere and press “Save this point”, or choose “Follow their releases” in a signer’s menu: a developer’s releases, from the same follow list Dub reads.</p>`;
       if (page) {
         const p = await b.ask<Page>('spec page', { hash: page });
-        return v.specPagePane(p, nameOf);
+        return v.specPagePane(p, whoOf);
       }
       const saved = part.startsWith('saved:') ? (s.saved.find((x) => `saved:${x.key}` === part) ?? null) : null;
       const here: v.LookAt = saved ? { point: { kind: saved.point.kind, value: saved.point.value }, filters: saved.filters, layer: null } : at;
@@ -362,6 +441,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     if (tab === 'choose') {
       if (part === 'accept-hash') return `<h2>Accept by hash</h2>${v.acceptForm()}`;
+      if (part === 'ummia-rules') return rulesHtml();
       const a = await b.ask<Parameters<typeof v.choosePane>[0]>('accepted');
       return v.choosePane(a, part.startsWith('layer:') ? part.slice(6) : null);
     }
@@ -373,12 +453,16 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   let adding = false;
   function panelHtml(inside?: string) {
     const s = state!;
+    // H96: each identity by its names (its published name, or why none is shown); H88: the one in use with its ID link.
     const ids = s.held.map((h) => ({
       id: h.id,
-      form: v.formOf(h.id, 'mid'),
-      name: h.runner ? 'via Kišib' : shortForm(v.formOf(h.id, 'mid')),
+      form: h.form,
+      link: h.link,
+      // One used through Kišib, with no name published: said so, as before.
+      name: v.labelOf(h.named, h.runner ? 'via Kišib' : '') || null,
+      named: h.runner && !v.labelOf(h.named, '') ? null : h.named,
       on: h.active && !v.actingOf(s),
-      collectives: h.active ? s.actors.filter((c) => c.kind === 'collective').map((c) => ({ id: c.id, form: v.formOf(c.id, 'mid'), name: `Collective ${shortForm(v.formOf(c.id, 'mid'))}`, on: s.acting === c.id, why: c.available ? null : c.why })) : [],
+      collectives: h.active ? s.actors.filter((c) => c.kind === 'collective').map((c) => ({ id: c.id, form: v.formOf(c.id, 'mid'), name: v.labelOf(s.names?.[c.id], 'Collective'), named: s.names?.[c.id] ?? null, on: s.acting === c.id, why: c.available ? null : c.why })) : [],
     }));
     return identityPanel({ ids, adding, add: v.ADD(b.web), foot: `<button type="button" class="k-btn k-q k-small" data-action="relays-open">Relays</button> <span class="k-small k-soft">${b.web ? 'This browser: the web client, for testing only.' : 'This app: Ummia on this computer.'}</span>`, inside });
   }
@@ -391,12 +475,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   async function identityMenu(button: HTMLElement, id: string) {
     const runner = state?.held.find((h) => h.id === id)?.runner;
     const items = v.IDENTITY_MENU.filter(([k]) => (runner ? k !== 'renew' && k !== 'words' : true)).map(([key, label, hint], i, all) => ({ key, label, hint: hint || undefined, line: i === all.length - 1 }));
-    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${v.e(shortForm(v.formOf(id, 'mid')))}</div>${items.map((m) => `${m.line ? '<hr>' : ''}<button type="button" role="menuitem" data-k-item="${m.key}">${v.e(m.label)}${m.hint ? `<span class="k-k">${v.e(m.hint)}</span>` : ''}</button>`).join('')}</div>`, 'below', async (key) => {
+    const named = state?.held.find((h) => h.id === id)?.named;
+    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${v.e(v.labelOf(named, 'Its settings'))}</div>${items.map((m) => `${m.line ? '<hr>' : ''}<button type="button" role="menuitem" data-k-item="${m.key}">${v.e(m.label)}${m.hint ? `<span class="k-k">${v.e(m.hint)}</span>` : ''}</button>`).join('')}</div>`, 'below', async (key) => {
       if (id !== state?.identity?.id && key !== 'remove') {
         await act(() => b.ask('use', { id }));
         state = await b.ask<State>('state');
       }
-      if (key === 'remove') return void redrawPanel(panelHtml(removeSaid('Ummia', shortForm(v.formOf(id, 'mid'))).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`)));
+      // Said plainly first, on top of the panel (H102).
+      if (key === 'remove') return void openConfirm(app, removeSaid('Ummia', v.labelOf(named, 'this identity')).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
       closePanel();
       if (key === 'words') {
         const c = await act(() => b.ask<{ grouped: string; words: string[] }>('carry'));
@@ -559,7 +645,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const take = t.closest<HTMLElement>('[data-runner-take]');
     if (take) {
       const r = await act(() => raw<Lines>('runner take', { id: take.dataset.runnerTake }));
-      if (r) (popup.close(), await show(await b.ask<State>('state')), done(r));
+      if (r) (popup.close(), await show(await b.ask<State>('state')), say('done', `${v.lines(r.lines)}${ownIdNow()}`));
       return;
     }
     const el = t.closest<HTMLElement>('[data-action]');
@@ -676,6 +762,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           box.innerHTML = `${v.lines(r.lines)}<div class="k-feed">${all.map((x) => cardOf({ id: x.id, form: v.formOf(x.id), signer: who(x.signer), kind: x.sealed ? 'sent to you' : null, text: x.text, verified: x.standing === 'valid', alarm: x.standing === 'valid' ? null : x.standing })).join('') || '<p class="k-empty">No reply found yet.</p>'}</div>`;
           for (const c of cards) drawn.set(c.act.id, c);
           cards = [];
+          void nameCards(box);
         }
         return;
       }
@@ -729,12 +816,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     switch (fid) {
       case 'bring': {
         const r = await act(() => b.ask<Lines>('bring', { id: str(fd, 'id'), words: str(fd, 'words'), address: str(fd, 'address'), relays: str(fd, 'relays') }));
-        if (r) (popup.close(), await show(await b.ask<State>('state')), done(r));
+        // H88: the end of bringing it shows its ID whole, Copy ID and Share your ID link.
+        if (r) (popup.close(), await show(await b.ask<State>('state')), say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}${ownIdNow()}`));
         return;
       }
       case 'renew': {
         const r = await act(() => b.ask<Lines>('renew', { words: str(fd, 'words') }));
-        if (r) (popup.close(), app.querySelector('#spent')?.remove(), app.querySelector('#spent-words')?.remove(), await show(await b.ask<State>('state')), done(r));
+        if (r) (popup.close(), spentShown(null), await show(await b.ask<State>('state')), done(r));
         return;
       }
       case 'collective-add': {
@@ -780,6 +868,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'follow-releases': {
         const r = await act(() => b.ask<Lines>(fid === 'follow' ? 'follow' : 'follow releases', { id: f.dataset.id, name: str(fd, 'name') }));
         if (r) {
+          known.clear();
           popup.close();
           state = await b.ask<State>('state');
           if (tab) await draw();

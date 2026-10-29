@@ -2,6 +2,7 @@
 // code, the program on the Mac and Linux and the web client alike.
 
 import type { LineShown } from '../../genesis/src/card-words.ts';
+import type { Named } from '../../kit/src/html.ts';
 /** One line said to the person, with its tone: red only for an alarm (a void act, a key changed elsewhere, a proof that does not hold). */
 export interface Line {
   text: string;
@@ -46,7 +47,7 @@ export interface Accept {
 export interface ToSign {
   /** The act it comes from (a draft, a request, an invoice request, a claim). */
   id: string;
-  kind: 'draft' | 'request' | 'invoice' | 'address' | 'receipt' | 'lane' | 'unknown';
+  kind: 'draft' | 'request' | 'invoice' | 'address' | 'receipt' | 'lane' | 'unknown' | 'uncounted';
   from: Who;
   /** Prepared in another app: its name. */
   app: string | null;
@@ -136,7 +137,7 @@ export interface State {
   /** Something was saved from Settings (H45): its sections start folded; before that, on first use, all open. */
   settingsSaved: boolean;
   stage: 'identity' | 'accept' | 'ready';
-  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: Damgar holds none of its keys. */ runner?: boolean; /** Its display name (the naming cMIP), where it has one. */ name?: string | null }[];
+  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: Damgar holds none of its keys. */ runner?: boolean; /** Its display name (the naming cMIP), where it has one. */ name?: string | null; /** Its published name as read (H96): the name, none published, or not reached. */ named?: Named | null }[];
   identity: null | {
     id: string;
     grouped: string;
@@ -149,15 +150,20 @@ export interface State {
     /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
     line: LineShown;
     /** The collectives Damgar acts for in money, under this identity (the identity panel). */
-    collectives: { id: string; form: string; short: string; name: string | null }[];
+    collectives: { id: string; form: string; short: string; name: string | null; /** Its published name as read (H96). */ named?: Named | null }[];
     /** Its display name (the naming cMIP), where it has one. */
     name: string | null;
+    /** Its published name as read (H96): what the top right and the identity panel show, or why not. */
+    named?: Named | null;
+    /** Its ID link (`mid1…?r=…`, one home and one relay): Share your ID link (H88). */
+    link?: string;
     /** Used through Kišib's runner. */
     runner: boolean;
   };
   accept: Accept[];
   /** Where the accepted list stands: its version, whether it was forked and merged, published or private. */
-  list: { version: number; merged: string[]; published: boolean; problems: string[] };
+  /** `here`: how many rules are followed in Damgar only, not sealed (H112). */
+  list: { version: number; merged: string[]; published: boolean; problems: string[]; here?: number };
   counts: { toSign: number; toPay: number };
 }
 
@@ -181,7 +187,10 @@ export interface LaneShown {
   left?: Shown | null;
   over?: Shown | null;
   /** An app's payments under it, read from the acts whose keys it delivered to this identity: the record kept here (Account › Under the lanes). */
-  payments?: { key: string; to: Who; amount: Shown; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[];
+  /** Of what is spent in all: what is paid (its claim signed), and what is only asked (its invoice request signed, nothing moved yet) (H107). */
+  paid?: Shown | null;
+  asked?: Shown | null;
+  payments?: { key: string; to: Who & { name?: string | null }; amount: Shown; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[];
   /** Acts under it whose keys were not delivered here: sealed, not counted. */
   sealed?: number;
 }

@@ -50,19 +50,20 @@ export const KEPT_SAY =
  * a grey-violet, both at low saturation; red only for a contest, a void act
  * or a stolen key. No shadow, no glow.
  */
-export const STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+export const STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{font:300 15px/1.55 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 main{max-width:600px;margin:0 auto;padding:0 16px 64px}
 a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
 h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
 h2{font-size:17px;margin:28px 0 10px}
 h3{font-size:15px;margin:0 0 6px}
 p{margin:8px 0}
-code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+code,.mono{font:13px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .small{font-size:13px;color:var(--soft)}
 button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
 button:hover{border-color:var(--faint)}
@@ -89,7 +90,7 @@ label.check input{width:auto}
 .count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
 .count:empty{display:none}
 .me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.fp{font:12px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
 .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
 .who .name{color:var(--text);font-weight:400}
 .who .dn{color:var(--soft)}
@@ -137,7 +138,7 @@ details[open]>summary::before{content:"− "}
 .people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
 .people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
 .people ul{margin:0;padding:0}
-.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .words span{white-space:nowrap}
 .words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
 .say{padding-left:1.1em;color:var(--soft);font-size:14px}
@@ -146,7 +147,7 @@ details[open]>summary::before{content:"− "}
 .typed{display:flex;flex-wrap:wrap;gap:10px}
 .typed label{margin:0}
 .typed input{width:10em}
-.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+.id{font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
 dl.facts dt{color:var(--faint)}
 dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}

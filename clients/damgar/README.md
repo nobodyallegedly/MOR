@@ -118,6 +118,27 @@ In **Waiting, To the vault** (in Settings before round 3): **Transfer to the vau
 
 A payment an app makes under its lane for a vow (Dub's **Buy it**) is marked visible: once paid, its claim is signed again in public, so anyone looking at the relays sees the sale (Agreements rule 13; a reading, the build's). `confirmPurchase` signs one more public claim of the same payment acknowledging what was bought (the vow): the sale reads confirmed. Each is signed as the payment's claim was, under the same lane or by hand, and its proof is the one the payment carried (kept as `proof`). **A purchase confirmed from Edubba** (F357; the money messages cMIP, draft 4, 2.3): a draft of a new kind, "confirm a purchase", naming your own public claim and the vow; To sign reads it (the claim fetched and checked: yours, of that payee and amount) and signing signs the claim again, in public, acknowledging the vow. Every message is now written under the money messages cMIP draft 4; drafts 1 to 3 are still read.
 
+## Fix round 7 (F403, hand test v3)
+
+### In plain words
+
+- **Where you are paid** (H92): choose a rail first, from the rails you follow; the page then asks only what that rail needs. **+ Add a rail** puts another in the same pointer, each its own card, removable; they are kept in the order of the cards, the first preferred.
+- **Open in wallet** (H117): an invoice to pay is handed to your wallet, which asks you to approve it. Where your browser has a wallet of its own (WebLN), it is offered first, and the proof it returns comes back here by itself; otherwise **Open in wallet** (a `lightning:` link) or its **QR code** for a wallet on your phone, and you paste the proof back. Copying the invoice stays. Nothing is paid without your approval in the wallet.
+- **Rules I follow** (H93): "What you accept" is renamed; each rule kept **on your list** (every app reads it) or **in Damgar only**. **Later**, and a way back to another identity, on the first-use step (H112).
+- **Under the lanes** (H107): each card says its stage first ("Asked: waiting for Bob's invoice", "Paid"), the cap's In all counting paid apart from asked; a payment under a lane whose expiry the clock has not stamped yet waits in To receive and is judged again, never set aside.
+- **Names and contacts** (H96, H100, H106, H109, H119, H121): names wherever an identity is shown; Contacts top left, one list for every app; a Contacts button beside every field taking an ID; every short ID a tap away from whole.
+- The tabs draw at once from what they last showed, then fill in (H115); the Mac icon has no white square (H113); a key changed elsewhere follows the identity in use (H82, H83).
+
+### Precisely
+
+| File | What |
+| --- | --- |
+| `src/page/view.ts` | `RAIL_FIELDS` (each rail Module's own fields, by key), `railsAccepted`, `railsForm`, `paidPane` (H92); `openInWallet` (H117: WebLN first where present, the `lightning:` link, the kit's `qrSvg`). |
+| `src/page/ui.ts` | The rails chosen (`railsChosen`, kept with what was typed when a rail is added or removed); `webln`: `enable`, `sendPayment`, the preimage put in the proof's field and the form sent. |
+| `src/damgar.ts` | `railsFrom` orders the rails as the cards (`order`); `pointerOf(id)`: anyone's payee pointer, each rail and the unit its network gives (H100, shown on Dub's profile); `setAccepted(keys, 'here')` (H93). |
+
+Tests: `test/wallet-rails.test.ts` (H92 by clicks, H100 on the profile, H117 with no wallet and with a WebLN wallet injected), `test/web-lane-tip.test.ts` (H107 across two web clients), `test/lane-expiry.test.ts`, `test/tabs-timing.test.ts` (H115), `test/names-contacts.test.ts`, `../kit/test/qr.test.ts` (the QR code against the Rust `qrcode` crate).
+
 ## Tests
 
 - `test/act-menu.test.ts`: Damgar's act menu (F382): an act anchored from Damgar in one step, its invoice paid, shown in Anchors; its receipt relied on (RELY typed; one's own act refused; refused after a change of keys made in Kišib until the new words), then the receipt itself anchored.

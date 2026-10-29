@@ -99,9 +99,11 @@ test('Damgar’s colour on the kit: the Money layer’s gold, in pastel fills; r
   // Red stays the alarm's: the kit's --k-bad, never on a tile but an alarm.
   assert.match(STYLE, /--k-bad:#c4645f/);
   for (const m of STYLE.matchAll(/\.k-tile\.k-d[23]\{([^}]*)\}/g)) assert.doesNotMatch(m[1], /--k-bad/);
-  // The icon's tint, by H36's rule (H47: the duck alone, gold-tinted): the stone at 70% over the dark, the carving at 60%, the base at 30%, the layer's gold on its lit edges; no square behind it.
+  // The icon's tint, by H36's rule (H47: the duck alone, gold-tinted): the stone at 70% over the dark, the carving at 60%, the base at 30%, the layer's gold on its lit edges.
   const over = (share: number) => '#' + [0, 2, 4].map((i) => Math.round(parseInt('06080c'.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt('06080c'.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
   const svg = readFileSync(join(here, 'static/icon/damgar.svg'), 'utf8');
   for (const c of [over(0.7), over(0.6), over(0.3), TINT.layer]) assert.ok(svg.includes(c), c);
-  assert.ok(!/<rect /.test(svg), 'no tablet, no square: the duck alone');
+  // H113 (hand test v3): drawn as the family's are, on its own dark rounded square and its frame, never on white; no tablet.
+  const rects = [...svg.matchAll(/<rect [^>]*>/g)].map((m) => m[0]);
+  assert.deepEqual(rects, ['<rect x="100" y="100" width="824" height="824" rx="184" fill="#14110b"/>', '<rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#a4802c" stroke-width="16"/>'], 'the family’s rounded square and frame, the duck alone on it');
 });

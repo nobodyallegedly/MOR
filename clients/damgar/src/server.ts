@@ -48,7 +48,10 @@ export async function serve(opts: { dir: string; port: number; chain?: ChainSour
   const store = new Store(opts.dir);
   let base = '';
   // Kišib's runner (the Dubsar runner cMIP): an identity used through it, Damgar holding no key; money always asks, in Kišib's panel here.
-  const runner = new RunnerLink(opts.dir, { kishib: opts.kishib ?? KISHIB_DIR, origin: () => base, name: 'Damgar' });
+  const runner = new RunnerLink(opts.dir, { kishib: opts.kishib ?? KISHIB_DIR, origin: () => base, name: 'Damgar',
+    // H126: Damgar's stated need, shown beside “may open what is sealed to this identity” in Kišib, never ticking it.
+    needs: { opening: { why: 'to read your lanes, your payments and your list of rules', without: 'Damgar cannot work for this identity' } },
+  });
   const damgar = new Damgar(store, { chain: opts.chain ?? null, link: opts.link ?? lndLink, runner });
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
@@ -73,7 +76,7 @@ export async function serve(opts: { dir: string; port: number; chain?: ChainSour
         return run(damgar, op, a);
     }
   };
-  // Inter, Dub's files, and Damgar's icon, served beside the page from the program's own origin.
+  // The suite's type (H123), from the kit, and Damgar's icon, served beside the page from the program's own origin.
   const files = {
     ...Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`../dub/${FONTS_DIR}/${name}`)) }])),
     '/icon.png': { type: 'image/png', body: readFileSync(here('static/icon/damgar.png')) },

@@ -42,6 +42,7 @@ export const OPS = [
   'confirm plan',
   'collective start',
   'collective read',
+  'collective notices',
   'collective give',
   'confirm',
   'resend',
@@ -54,10 +55,28 @@ export const OPS = [
   'collective rotate',
   'collective share',
   'collective share written',
+  'names',
+  'contacts',
+  'contact add',
+  'contact nick',
+  'contact remove',
 ] as const;
 
 export async function run(k: Kishib, op: string, a: Record<string, unknown>): Promise<unknown> {
+  // Where names are read (H106): the homes and relays given in a form, kept in memory only.
+  k.heard(text(a.address), text(a.homes), text(a.relays));
   switch (op) {
+    // Who is known (hand test v3, H96, H100, H106, H109): the kit's names and its one contacts list.
+    case 'names':
+      return k.names({ ids: list(a.ids), fresh: a.fresh === true, as: text(a.as) || undefined });
+    case 'contacts':
+      return k.contacts({ as: text(a.as) || undefined, fresh: a.fresh === true });
+    case 'contact add':
+      return k.contactChange({ op: 'add', id: text(a.id), nick: text(a.nick), as: text(a.as) || undefined });
+    case 'contact nick':
+      return k.contactChange({ op: 'nick', id: text(a.id), nick: text(a.nick), as: text(a.as) || undefined });
+    case 'contact remove':
+      return k.contactChange({ op: 'remove', id: text(a.id), as: text(a.as) || undefined });
     case 'state':
       return k.state();
     case 'forget':
@@ -87,6 +106,9 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
       return k.confirmPlan({ owner: text(a.owner), successor: text(a.successor), address: text(a.address), words: text(a.words) });
     case 'collective start':
       return k.collectiveStart({ collective: text(a.collective), address: text(a.address), founder: text(a.founder), founderWords: text(a.founderWords), number: text(a.number), shareWords: text(a.shareWords), room: a.room === true, leaveOut: list(a.leaveOut) });
+    // H97: the rotations waiting for the member, from their inbox (the rotation notice cMIP).
+    case 'collective notices':
+      return k.collectiveNotices({ member: text(a.member), address: text(a.address), words: text(a.words) });
     case 'collective read':
       return k.collectiveRead({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address) });
     case 'collective give':

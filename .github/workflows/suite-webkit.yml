@@ -1,0 +1,44 @@
+# The suite's kit in WebKit, Safari's engine, which every browser on an iPad
+# and an iPhone uses, beside the same tests in Chromium: the rows of hand
+# test v3 found on the iPad and the iPhone (H84, the @ suggestions above the
+# keyboard; H99, the two signs tapped; H102, one stack; H105, the tiles at
+# 390 px; the type at a phone's width) must behave the same in both.
+# Playwright's build of WebKit is downloaded here, on GitHub's machines.
+# Runs on every push and pull request that changes the kit or this file, and
+# by hand.
+name: suite in WebKit
+
+on:
+  push:
+    paths:
+      - clients/kit/**
+      - .github/workflows/suite-webkit.yml
+  pull_request:
+    paths:
+      - clients/kit/**
+      - .github/workflows/suite-webkit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MOR_CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The kit's packages
+        run: cd clients/kit && npm ci --no-audit --no-fund
+      - name: WebKit, Playwright's build
+        run: cd clients/kit && npx playwright-core install --with-deps webkit
+      - name: The kit's browser tests in WebKit (Safari's engine)
+        run: cd clients/kit && MOR_BROWSER=webkit node --import tsx --test test/kit.test.ts
+      - name: The kit's browser tests in Chromium
+        if: success() || failure()
+        run: cd clients/kit && node --import tsx --test test/kit.test.ts

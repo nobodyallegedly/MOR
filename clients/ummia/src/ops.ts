@@ -58,6 +58,8 @@ export const OPS = [
   'track',
   'acts of',
   'accepted',
+  'rules',
+  'rules approve',
   'accepted change',
   'accepted publish',
   'mips',
@@ -80,7 +82,11 @@ export const OPS = [
   'clock words',
   'saved add',
   'saved remove',
+  'names',
   'contacts',
+  'contact add',
+  'contact nick',
+  'contact remove',
   'follow',
   'follow releases',
   'card prepare',
@@ -100,6 +106,10 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
   switch (op) {
     case 'state':
       return u.state();
+    case 'rules':
+      return u.rules();
+    case 'rules approve':
+      return u.approveRules({ keys: list(a.keys), where: a.where === 'list' ? 'list' : 'here', remove: a.remove === true });
     case 'bring':
       return u.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays) });
     case 'renew':
@@ -185,8 +195,16 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
       return u.savedAdd({ label: text(a.label), point: { kind: text((a.point as { kind?: unknown })?.kind), value: text((a.point as { value?: unknown })?.value) }, filters: list(a.filters) });
     case 'saved remove':
       return u.savedRemove(text(a.key));
+    case 'names':
+      return u.names({ ids: list(a.ids), fresh: a.fresh === true });
     case 'contacts':
-      return u.contactsList();
+      return u.contacts();
+    case 'contact add':
+      return u.contactChange({ op: 'add', id: text(a.id), nick: text(a.nick) || null });
+    case 'contact nick':
+      return u.contactChange({ op: 'nick', id: text(a.id), nick: text(a.nick) || null });
+    case 'contact remove':
+      return u.contactChange({ op: 'remove', id: text(a.id) });
     case 'follow':
       return u.follow({ id: text(a.id), name: text(a.name) || null });
     case 'follow releases':

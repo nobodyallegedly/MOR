@@ -33,7 +33,7 @@ cat > "$entry" <<DESKTOP
 Type=Application
 Version=1.0
 Name=Kišib
-Comment=MOR: where a chain key is used, from paper, and then forgotten (test identities only)
+Comment=Dubsar Suite, on MOR: where a chain key is used, from paper, and then forgotten (test identities only)
 Exec="$launch"
 Icon=$data/mor/kishib.png
 Terminal=false

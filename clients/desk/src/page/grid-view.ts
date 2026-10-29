@@ -9,7 +9,7 @@
 // own box, the row names fixed on the left.
 
 import { e } from '../../../manage/src/view.ts';
-import { KINDS, LAYERS, reachSay, type Grid, type AreaRow } from '../grid.ts';
+import { LAYERS, choiceOf, kindsFor, reachSay, type Grid, type AreaRow } from '../grid.ts';
 
 /** The grid's own look, added to the page's (`view.ts`, STYLE). */
 export const GRID_STYLE = `
@@ -41,20 +41,22 @@ const num = (field: string, value: number, _min: number, _max: number) => `<inpu
 
 function areaRows(g: Grid, l: AreaRow, i: number, name: (id: string) => string): string {
   const holders = g.members.filter((m) => l.holders.includes(m));
-  const layer = `<select data-grid-layer="${i}">${LAYERS.map((x) => `<option value="${x.layer}"${x.layer === l.layer ? ' selected' : ''}>${e(x.name)}</option>`).join('')}</select>`;
-  const some = l.kinds !== undefined;
+  const layer = `<select data-grid-layer="${i}">${LAYERS.map((x) => `<option value="${x.value}"${x.value === choiceOf(l) ? ' selected' : ''}>${e(x.name)}</option>`).join('')}</select>`;
+  // The Development MIR defines no act type of its own: chosen whole.
+  const some = l.kinds !== undefined && kindsFor(l.layer, l.part).length > 0;
   const money = l.layer === 2
     ? `<label title="Above this amount an act, one more key: the grant limits cMIP, draft 2, judges it on each act (a cMIP's rule; the core counts keys).">ⓘ Above <input type="number" data-grid-cap="${i}" value="${l.cap ?? ''}" placeholder="no cap" class="cap"> regtest sats, one more key</label>`
     : '';
   const keysSay = holders.length ? `${l.number === 1 ? (holders.length === 1 ? `${name(holders[0])} alone` : `any one of ${list(holders.map(name))}`) : `any ${l.number} of ${list(holders.map(name))}`}` : 'nobody: frozen';
   const capSay = l.cap ? `; above ${l.cap.toLocaleString('en')}, ${l.number + 1} keys` : '';
   const row = `<tr data-area="${i}"><th class="rowname"><input class="areaname" type="text" data-grid-name="${i}" value="${e(l.name)}" aria-label="The area's name" placeholder="Its name">
-<div class="areamore">${layer}<label class="check"><input type="checkbox" data-grid-some="${i}"${some ? ' checked' : ''}> Only some kinds of act</label>${money}<button type="button" class="quiet" data-grid-remove="${i}">Remove this area</button></div></th>
+<div class="areamore">${layer}${kindsFor(l.layer, l.part).length ? `<label class="check"><input type="checkbox" data-grid-some="${i}"${some ? ' checked' : ''}> Only some kinds of act</label>` : ''}${money}<button type="button" class="quiet" data-grid-remove="${i}">Remove this area</button></div></th>
 ${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}’s key counts in “${l.name}”`)).join('')}
 <td>${num(`area:${i}`, l.number, 1, Math.max(1, holders.length))} <span class="small">of ${holders.length}</span></td>
 <td class="say">${e(reachSay(l))}: ${e(keysSay)}${e(capSay)}.</td></tr>`;
   if (!some) return row;
-  const kinds = KINDS[l.layer] ?? [];
+  // H120: every kind the layer's MIR defines, from the core's own type tables.
+  const kinds = kindsFor(l.layer, l.part);
   return `${row}<tr class="kinds"><td></td><td colspan="${g.members.length + 2}">${kinds
     .map((k) => {
       const v = `${k.spec}:${k.type}`;
@@ -63,10 +65,14 @@ ${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}’
     .join(' ')}</td></tr>`;
 }
 
-/** The grid of a founding or a member change. `form`: the form it belongs to. */
-export function gridTable(form: string, g: Grid, name: (id: string) => string): string {
+/**
+ * The grid of a founding or a member change. `form`: the form it belongs to.
+ * `name`: a member in words, in the sentences; `head`: a member as its
+ * column shows it, its names and its short ID as a button (H106, H121).
+ */
+export function gridTable(form: string, g: Grid, name: (id: string) => string, head?: (id: string) => string): string {
   const n = g.members.length;
-  const cols = g.members.map((m) => `<th scope="col" title="${e(m)}">${e(name(m))}</th>`).join('');
+  const cols = g.members.map((m) => `<th scope="col">${head ? head(m) : e(name(m))}</th>`).join('');
   const span = `colspan="${n}"`;
   const band = (t: string) => `<tr class="band"><th class="rowname" colspan="${n + 3}">${e(t)}</th></tr>`;
   const c = g.constitution;

@@ -269,15 +269,12 @@ impl Nakisib {
         if r.stage != "read" {
             return Err("The paper was already given for this request: press Forget to start again.".into());
         }
+        // H104 (decided: "Chain key, only words in dubsar apps"): the paper is its 24 words, no other form.
         let parts = written.split_whitespace().count();
-        let module = if parts == 24 { SeedModule::Words } else { SeedModule::Hex };
-        let seed = Seed::restore(module, written).map_err(|e| {
-            if parts == 24 || written.split_whitespace().collect::<String>().len() == 72 {
-                format!("These are not a paper’s words as written: {e}. Look at the paper again. Nothing was signed.")
-            } else {
-                format!("A paper is 24 words, or 72 characters (the hex paper): {parts} were typed. Nothing was signed.")
-            }
-        })?;
+        if parts != 24 {
+            return Err(format!("A chain key’s paper is its 24 words: {parts} were typed. Nothing was signed."));
+        }
+        let seed = Seed::restore(SeedModule::Words, written).map_err(|e| format!("These are not a paper’s words as written: {e}. Look at the paper again. Nothing was signed."))?;
         let scheme = match preview_scheme(&r.preview) {
             Some(s) => s,
             None => return Err("This request’s previous act commits to a chain key Nakišib does not implement.".into()),
@@ -427,11 +424,15 @@ impl Nakisib {
 
     // ------------------------------------------------------------ a new identity's first paper
 
-    /// Draw a new identity's first paper (words or hex), its key 0 under
-    /// scheme 3. Shown next; nothing is written before three parts are typed back.
+    /// Draw a new identity's first paper (24 words: H104, words only in
+    /// Dubsar apps), its key 0 under scheme 3. Shown next; nothing is
+    /// written before three parts are typed back.
     pub fn first(&mut self, module: &str) -> R<Json> {
         self.busy()?;
-        let module = SeedModule::from_name(module).ok_or("A paper is words or hex.")?;
+        let module = match SeedModule::from_name(module) {
+            Some(SeedModule::Words) => SeedModule::Words,
+            _ => return Err("Nakišib draws a chain key’s paper as 24 words only.".into()),
+        };
         let mut signer = Signer::new(self.config.clone());
         signer.new_seed(module, FIRST_SCHEME, &mut OsRng);
         self.sitting = Some(Sitting::First(First { signer: Some(signer), asked: None, export: None, commit: String::new(), module, stage: "drawn", written: vec![] }));
@@ -837,9 +838,11 @@ mod tests {
         let spec = config().identity_spec;
         let dir = tmp("slip");
         let mut n = Nakisib::new(dir.clone());
-        n.first("hex").unwrap();
+        // H104: words only; a hex paper is refused.
+        assert!(n.first("hex").is_err(), "no hex paper");
+        n.first("words").unwrap();
         let first = walk(&mut n, false);
-        assert_eq!(first.len(), 18, "a hex paper: 18 groups of four");
+        assert_eq!(first.len(), 24, "a paper of 24 words");
         n.write(&dir.join("c.mor")).unwrap();
         let export = std::fs::read(dir.join("c.mor")).unwrap();
         std::fs::remove_file(dir.join("c.mor")).unwrap();

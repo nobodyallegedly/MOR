@@ -66,6 +66,20 @@ export interface Asking {
   kind: string;
 }
 
+/**
+ * An app's stated needs (the runner cMIP, draft 4, 2.1a; H126): for each
+ * permission a pairing can give (today one, `opening`: "may open what is
+ * sealed to this identity"), why the app needs it and what it cannot do
+ * without it, in plain words, at most 300 characters each. A statement,
+ * never a choice: Kišib shows it beside the box, which stays unticked.
+ */
+export interface RunnerNeeds {
+  opening?: { why: string; without: string };
+}
+
+/** Dub's stated need (draft 4, 2.1a): its private side reads what is sealed to the identity; its public posts do not. */
+export const DUB_NEEDS: RunnerNeeds = { opening: { why: 'to read your private messages, your contacts and your purchases', without: 'public posts still work' } };
+
 type Answer = { signed?: { act: string; id: string; key: string }; asks?: Asking; declined?: true; waiting?: true; expired?: true };
 
 export class RunnerLink {
@@ -75,7 +89,8 @@ export class RunnerLink {
 
   constructor(
     private readonly dir: string,
-    private readonly o: { kishib?: string; origin: () => string; name?: string },
+    /** `needs`: what the app states in its pairing request (H126); Dub's own where the app is Dub and states none. */
+    private readonly o: { kishib?: string; origin: () => string; name?: string; needs?: RunnerNeeds },
   ) {}
 
   private get path() {
@@ -124,7 +139,8 @@ export class RunnerLink {
 
   /** Pair with Kišib (section 2.1): a code to compare there. Asking again starts a new pairing. */
   async pair(): Promise<{ code: string }> {
-    const p = await this.call<{ pairing: string; code: string; token: string }>('/runner/pair', { name: this.o.name ?? 'Dub', origin: this.o.origin() });
+    const needs = this.o.needs ?? (this.o.name === undefined || this.o.name === 'Dub' ? DUB_NEEDS : undefined);
+    const p = await this.call<{ pairing: string; code: string; token: string }>('/runner/pair', { name: this.o.name ?? 'Dub', origin: this.o.origin(), ...(needs ? { needs } : {}) });
     this.keep({ token: p.token, pairing: p.pairing, code: p.code, at: Math.floor(Date.now() / 1000) });
     return { code: p.code };
   }

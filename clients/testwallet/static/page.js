@@ -28,6 +28,29 @@ async function busy(id, f) {
   }
 }
 
+// H114: what Damgar's receive-only link asks for, each with Copy; never the admin permission.
+const link = (n) => `<details class="link"><summary>For Damgar’s receive-only link (${esc(n.name)})</summary>
+<p class="small">In Damgar, Settings › Where you are paid › a node of your own: these three, as they are on this computer.</p>
+${[
+  ['Its address', n.link.address],
+  ['Its receive-only permission file', n.link.macaroon],
+  ['Its certificate', n.link.cert],
+]
+  .map(([what, v]) => `<div class="row"><span class="small">${what}</span> <code>${esc(v)}</code> <button type="button" data-copy="${esc(v)}">Copy</button></div>`)
+  .join('')}
+<p class="small"><strong>Never the admin permission</strong> (admin.macaroon): it spends. The receive-only one lets Damgar make invoices, nothing else.</p></details>`;
+
+document.addEventListener('click', async (ev) => {
+  const b = ev.target.closest('[data-copy]');
+  if (!b) return;
+  try {
+    await navigator.clipboard.writeText(b.dataset.copy);
+    b.textContent = 'Copied';
+  } catch {
+    b.textContent = 'Select it and copy';
+  }
+});
+
 async function nodes() {
   const list = await ask('nodes');
   if (!list.some((n) => n.name === node)) node = list[0]?.name;
@@ -36,7 +59,7 @@ async function nodes() {
       .map(
         (n) => `<label class="node"><input type="radio" name="node" value="${esc(n.name)}"${n.name === node ? ' checked' : ''}><strong>${esc(n.name)}</strong>
  · in channels ${num(n.channels)} · on-chain ${num(n.onchain)}${n.unconfirmed ? ` (+${num(n.unconfirmed)} unconfirmed)` : ''} regtest sat
-<br><span class="mono small">${esc(n.key)}</span></label>`,
+<br><span class="mono small">${esc(n.key)}</span></label>${n.link ? link(n) : ''}`,
       )
       .join('') + `<p class="small">Block ${num(list[0]?.height ?? 0)}. Alice pays; bob and carol are paid (bob: a payee's flow node, carol: a vault node). Every amount here is regtest satoshis.</p>`;
 }

@@ -13,7 +13,8 @@
 <main>
 <section><h2>Node</h2><div id="nodes"><p>Reading the nodes…</p></div></section>
 <section><h2>Pay an invoice</h2>
-<form id="read"><label for="pay-invoice">Invoice (lnbcrt…)</label><textarea id="pay-invoice" name="invoice" rows="3" spellcheck="false" required></textarea><button type="submit">Read it</button></form>
+<p class="small">This page does not answer <code>lightning:</code> links (a web page cannot take them): copy the invoice, or the whole link, from Damgar and paste it here.</p>
+<form id="read"><label for="pay-invoice">Invoice (lnbcrt…, or a lightning: link)</label><textarea id="pay-invoice" name="invoice" rows="3" spellcheck="false" required></textarea><button type="submit">Read it</button></form>
 <div id="pay-out"></div></section>
 <section><h2>Make an invoice</h2>
 <form id="invoice"><label for="inv-sat">Amount (regtest satoshis)</label><input id="inv-sat" name="sat" inputmode="numeric" required>

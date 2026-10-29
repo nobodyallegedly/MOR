@@ -93,8 +93,9 @@ import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords,
 import { newChainKey } from '../../dub/src/chainwords.ts';
 import { openerOf, type Opener } from '../../dub/src/people.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
-import { namesOf } from '../../dub/src/names.ts';
-import { idForm, readActId, readId } from '../../genesis/src/forms.ts';
+import { idForm, idWhere, readActId, readId } from '../../genesis/src/forms.ts';
+import { Known } from '../../kit/src/engine/known.ts';
+import type { Named, NameShown } from '../../kit/src/html.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { offers as anchorOffers } from '../../ummia/src/anchor.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
@@ -124,6 +125,8 @@ export const RUNNER_OLD_KEY_SAY = 'This identity’s keys were changed with its 
 export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Kišib, never here.';
 /** Said where Kišib does not let Damgar open what is sealed to an identity. */
 export const RUNNER_NO_OPEN_SAY = 'Kišib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Kišib: Runner, Apps, Damgar, “may open what is sealed to” this identity.';
+/** H112: the rules followed cannot be sealed through Kišib's runner: the cause and the way. */
+export const KISIB_NO_OPEN_LIST_SAY = 'Kišib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it. To allow it, tick it in Kišib: Runner › Apps, beside Damgar, “may open what is sealed to” this identity.';
 export const NO_KEY_SAY =
   'Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key’s words.';
 
@@ -175,6 +178,14 @@ export interface Settings {
   collectives?: string[];
   /** Something was saved from Settings (H45): from then on its sections start folded; before, all open. */
   settingsSaved?: boolean;
+  /**
+   * Specifications followed in Damgar only, by hash (H93's "in this app
+   * only"; H112: where the sealed list cannot be written, the change is kept
+   * here, said, never stuck): read with the sealed list, never sealed.
+   */
+  acceptedHere?: string[];
+  /** The first-use step on the rules was left for later (H112): money acts under rules not followed are shown unknown. */
+  acceptLater?: boolean;
 }
 
 /** How an act was signed, as the account shows it (round 2, 2b). */
@@ -237,6 +248,14 @@ export interface Book {
   invoices: Record<string, { from: string; found: number; stage: 'new' | 'answered' | 'refused'; payment: string | null; why: string | null }>;
   /** Money messages this Damgar cannot read (a type it does not know, a payload not as the cMIP writes it): shown unknown, never guessed (money messages cMIP, 6.1). Absent in books written before. */
   unread?: Record<string, { from: string; found: number; type: number; why: string; stage: 'new' | 'set aside' }>;
+  /**
+   * Acts signed under someone's grant (a lane) that cannot count yet: its
+   * backing unknown (H107: an expiry its clock has not placed, or a grant
+   * not found yet). Kept, shown in Waiting, To receive, as waiting to count,
+   * judged again at every look; filed once they count, set aside once they
+   * cannot (Development rule 10: unknown until then, nothing answered).
+   */
+  uncounted?: Record<string, { act: string; key?: string; from: string; found: number; why: string; stage: 'new' | 'set aside' }>;
   payments: Record<string, Payment>;
   /** Payments to a deal between separate people this identity is a party of, receipted by its split service in the deal's payee's name and sealed to every party (this round), by receipt. */
   shared?: Record<string, { payer: string; payee: string; amount: Amount; fulfils: string; purchase: boolean; at: number }>;
@@ -353,15 +372,23 @@ export class Damgar {
     return this.line(me, via).catch(() => null);
   }
   private queue: Promise<unknown> = Promise.resolve();
-  /** Display names read (the naming cMIP), by identity, for a few minutes (memory only): the panel shows names, not hashes. */
-  private names = new Map<string, { name: string | null; at: number }>();
+  /**
+   * Who is known, as in every app (H96, H100, H106, H109): the one contacts
+   * list (the people cMIP's, sealed to the identity at its homes, nicknames
+   * included) and the names identities published (the naming cMIP), read by
+   * the kit's one name reader, kept a few minutes in memory only.
+   */
+  private readonly known = new Known('Damgar');
 
-  private async nameOf(id: string, places: string[], via: Via): Promise<string | null> {
-    const c = this.names.get(id);
-    if (c && c.at + 300 > now()) return c.name;
-    const name = (await namesOf(id, places, via).catch(() => [])).map((x) => x.name).pop() ?? null;
-    this.names.set(id, { name, at: now() });
-    return name;
+  /** An identity's published name as read (H96): the name, none published, or not reached (never "no name" for silence). */
+  private published(id: string, places: string[]): Promise<NameShown> {
+    return this.known.names.read(id, places);
+  }
+
+  /** Its display name (the naming cMIP), where one was read; null otherwise. */
+  private async nameOf(id: string, places: string[], _via?: Via): Promise<string | null> {
+    const n = await this.published(id, places);
+    return n.state === 'name' ? n.name : null;
   }
   /** The accepted list as last read, by identity (memory only). */
   private lists = new Map<string, { list: Accepted; at: number }>();
@@ -786,7 +813,12 @@ export class Damgar {
     const c = this.lists.get(me.id);
     if (c && !fresh && c.at + 60 > now()) return c.list;
     const { open } = await this.opener(me);
-    const l = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
+    const sealed = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
+    // Followed in Damgar only (H93, H112): read beside the sealed list, never written into it.
+    const here = (await this.store.read<Settings>(me.id, 'settings'))?.acceptedHere ?? [];
+    const entries = new Map(sealed.entries);
+    for (const h of here) if (!entries.has(h)) entries.set(h, labelOf(h) ?? null);
+    const l = { ...sealed, entries };
     this.lists.set(me.id, { list: l, at: now() });
     return l;
   }
@@ -801,13 +833,30 @@ export class Damgar {
    * accepted cMIP, 1.3). Written on the latest version read, checked again
    * before sending (F340).
    */
-  setAccepted(keys: string[]): Promise<{ lines: Line[] }> {
+  setAccepted(keys: string[], where: 'list' | 'here' = 'list'): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       await this.current(me);
       const want = new Set(keys);
       const unknownKey = keys.find((k) => !ACCEPTABLE.some((a) => a.key === k));
       if (unknownKey) throw new Error(`Damgar lists no “${unknownKey}”.`);
+      // H93: in Damgar only, on the person's choice: kept here, the sealed list unchanged, so the other apps still ask.
+      if (where === 'here') {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, 'settings', { ...s, acceptedHere: hashes, acceptLater: false } satisfies Settings);
+        this.lists.delete(me.id);
+        return { lines: [{ text: 'Followed in Damgar only: your list is unchanged, so the other apps still ask.', tone: 'ok' }] };
+      }
+      // H112: where the list cannot be sealed to the identity (Kišib does not let Damgar open what is sealed to it, or no key is held), the cause and
+      // the way are said, and the choice is kept in Damgar only, so nothing is stuck: other apps do not see it until it is sealed.
+      const { open, problem } = await this.opener(me);
+      if (!open) {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, 'settings', { ...s, acceptedHere: hashes, acceptLater: false } satisfies Settings);
+        this.lists.delete(me.id);
+        const cause = problem === RUNNER_NO_OPEN_SAY ? KISIB_NO_OPEN_LIST_SAY : `The rules you follow cannot be sealed to this identity: ${problem ?? NO_KEY_SAY}`;
+        return { lines: [{ text: cause, tone: 'warn' }, { text: 'Kept in Damgar only, for now: Damgar follows them here; the other apps do not see them until they are sealed. Save them again once it is allowed.', tone: 'ok' }] };
+      }
       const r = await changeAccepted(
         me,
         (entries) => {
@@ -816,12 +865,15 @@ export class Damgar {
             else entries.delete(h);
           }
         },
-        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open: (await this.opener(me)).open },
+        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open },
       );
-      this.lists.set(me.id, { list: r.list, at: now() });
+      // Sealed now: what was kept in Damgar only is in the list.
+      if (s.acceptedHere?.length || s.acceptLater) await this.store.write(me.id, 'settings', { ...s, acceptedHere: undefined, acceptLater: undefined } satisfies Settings);
+      this.lists.delete(me.id);
+      await this.accepted(me, true);
       const lines: Line[] = [];
       if (r.list.merged.length) lines.push({ text: `Two apps had changed the accepted list at once. Both changes were merged: ${r.list.merged.join(' ')}`, tone: 'warn' });
-      lines.push(r.written ? { text: `What you accept is sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: 'ok' } : { text: 'Nothing changed.' });
+      lines.push(r.written ? { text: `Your rules are sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: 'ok' } : { text: 'Nothing changed.' });
       for (const a of ACCEPTABLE) {
         if (!want.has(a.key)) continue;
         const missing = a.needs.filter((n) => !want.has(n));
@@ -844,7 +896,7 @@ export class Damgar {
       return {
         lines: [
           on
-            ? { text: `What you accept is published at ${s.relays.join(', ')}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: 'warn' }
+            ? { text: `Your rules are published at ${s.relays.join(', ')}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: 'warn' }
             : { text: 'The published list is withdrawn: it is private again. Earlier versions stay readable as acts.', tone: 'ok' },
         ],
       };
@@ -858,7 +910,10 @@ export class Damgar {
     const held = [];
     for (const id of await this.store.held()) {
       const f = await this.store.identity(id);
-      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: f ? await this.nameOf(id, f.f.homes.map((h) => h.hint), f.via) : null });
+      // H96: each one's published name read at its own homes and relays (kept a while), so the top right and the panel say it, or why not.
+      const s = f ? ((await this.store.read<Settings>(id, 'settings')) ?? { relays: [], via: {} }) : null;
+      const published: NameShown = f && s ? await this.published(id, [...f.f.homes.map((h) => h.hint), ...s.relays]) : { state: 'unreached' };
+      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: published.state === 'name' ? published.name : null, named: { nick: null, published } });
     }
     const me = active ? await this.load(active) : null;
     const out: State = { web: !!this.opts.web, settingsSaved: false, stage: 'identity', held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
@@ -877,8 +932,16 @@ export class Damgar {
       encryption: me.f.encryption.length > 0,
       line: line ?? noLine(me.f),
       // The collectives under it (decided: acting as a collective is the identity panel's gesture): those Damgar acts for, added here.
-      collectives: await Promise.all((s.collectives ?? []).map(async (c) => ({ id: c, form: idForm(c), short: short(c), name: await this.nameOf(c, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via) }))),
+      collectives: await Promise.all(
+        (s.collectives ?? []).map(async (c) => {
+          const published = await this.published(c, [...me.f.homes.map((h) => h.hint), ...s.relays]);
+          return { id: c, form: idForm(c), short: short(c), name: published.state === 'name' ? published.name : null, named: { nick: null, published } };
+        }),
+      ),
       name: held.find((h) => h.id === me.id)?.name ?? null,
+      named: held.find((h) => h.id === me.id)?.named ?? null,
+      // H88: its ID link (the ID with where it lives: one home, one relay), for Share your ID link.
+      link: idWhere(me.id, [...me.f.homes.map((h) => h.hint).slice(0, 1), ...s.relays.filter((r) => !me.f.homes.some((h) => h.hint === r)).slice(0, 1)]),
       runner: !me.f.signingSecret,
     };
     let l: Accepted;
@@ -890,7 +953,9 @@ export class Damgar {
     const set = this.acceptedSet(l);
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }) satisfies Accept);
     out.list = { version: l.version, merged: l.merged, published: !!book.published && !book.published.withdrawn, problems: l.problems };
-    out.stage = l.version === 0 ? 'accept' : 'ready';
+    // H112: a first-use step never locks the app: Later (or rules kept in Damgar only) lets it in.
+    out.stage = l.version === 0 && !s.acceptLater && !s.acceptedHere?.length ? 'accept' : 'ready';
+    out.list.here = s.acceptedHere?.length ?? 0;
     out.settingsSaved = !!s.settingsSaved;
     out.counts = {
       toSign:
@@ -902,6 +967,81 @@ export class Damgar {
       toPay: Object.values(book.payments).filter((p) => p.side === 'out' && p.stage === 'to pay').length,
     };
     return out;
+  }
+
+  // ------------------------------------------------------------ who is known (H96, H100, H106, H109, H119)
+
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given in the one contacts list (sealed, the
+   * person's own) and the name each published, read at the identity's homes
+   * and relays. `fresh`: asked again (a retry). With no identity in use (the
+   * first screen), the names published only, each held identity's read at
+   * its own homes.
+   */
+  async names(a: { ids: string[]; fresh?: boolean }): Promise<Record<string, Named>> {
+    const ids = [...new Set(a.ids.filter((x) => /^[0-9a-f]{64}$/.test(x)))].slice(0, 200);
+    const active = await this.store.active();
+    const me = active ? await this.load(active) : null;
+    if (!me) {
+      const out: Record<string, Named> = {};
+      for (const id of ids) {
+        const f = await this.store.identity(id).catch(() => null);
+        out[id] = { nick: null, published: f ? await this.known.names.read(id, f.f.homes.map((h) => h.hint), !!a.fresh) : { state: 'unreached' } };
+      }
+      return out;
+    }
+    const { s, hints } = await this.ctx();
+    const { open } = await this.opener(me);
+    return this.known.named(me, open, ids, hints, { via: s.via, fresh: a.fresh });
+  }
+
+  /** The one contacts list (H100), each contact with its names; why it cannot be read here, where it cannot. */
+  async contacts(a: { fresh?: boolean } = {}): Promise<{ contacts: { id: string; form: string; name: string | null; named: Named }[]; problem: string | null }> {
+    const { me, s, hints } = await this.ctx();
+    const { open, problem } = await this.opener(me);
+    const r = await this.known.contacts(me, open, hints, { via: s.via, fresh: a.fresh });
+    // Where Damgar cannot open what is sealed to the identity, its own words for why (H112).
+    return { contacts: r.contacts, problem: open ? r.problem : problem === RUNNER_NO_OPEN_SAY ? 'Kišib does not let Damgar open what is sealed to this identity, so its contacts are not read here' : (problem ?? r.problem) };
+  }
+
+  /** Add a contact (with a nickname, H109), give or change its nickname, or take it out: sealed as the people cMIP keeps the list, seen in every app. */
+  contactChange(a: { op: 'add' | 'nick' | 'remove'; id: string; nick?: string | null }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      if (!a.id.trim()) throw new Error('Give its ID (mid1…, or an ID link). Nothing was signed.');
+      const { open } = await this.opener(me);
+      let said;
+      try {
+        said = await this.known.change(me, a, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      } catch (e) {
+        if (e instanceof Refused) throw new Error(`${e.message}. Nothing was signed.`);
+        throw e;
+      }
+      return { lines: said };
+    });
+  }
+
+  /**
+   * The first-use step on the rules, left for later (H112): Damgar opens,
+   * every money act under a rule not followed shown unknown (Development
+   * rule 10); Settings, Rules I follow, at any time.
+   */
+  acceptLater(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.store.write(me.id, 'settings', { ...s, acceptLater: true } satisfies Settings);
+      return { lines: [{ text: 'Later, then: until you choose the rules you follow (Settings, Rules I follow), every money act is shown unknown, and nothing is signed for it.', tone: 'ok' }] };
+    });
+  }
+
+  /** Back to the first page (H112): no identity in use; those held are kept, to choose again. */
+  firstBack(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      await this.store.setActive(null);
+      return { lines: [] };
+    });
   }
 
   /** Settings were saved (H45): from now on its sections start folded. */
@@ -1117,6 +1257,13 @@ export class Damgar {
           return `its signer was not found (${message(e)})`;
         }
       };
+      // What waited to count, judged again (H107).
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== 'new' || book.acts[id] || fresh.some((f) => f.described.id === id)) continue;
+        const act = b64(x.act);
+        const key = x.key ? b64(x.key) : undefined;
+        fresh.push({ act, key, described: (key ? openWithKey(act, key) : describeAct(act)) as Described });
+      }
       for (const o of fresh) {
         const d = o.described;
         if (!d.signer || !d.payload) continue;
@@ -1128,6 +1275,14 @@ export class Damgar {
           st = a.backing === 'backed' || a.backing === 'binds' ? 'valid' : a.backing === 'disputed' ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
+        // Under a grant whose backing is unknown, or whose grant is not found yet: it waits to count, in To receive, judged again at each look (H107).
+        if (underGrant && (!a || a.backing === 'unknown')) {
+          const was = book.uncounted?.[d.id];
+          if (!was) lines.push({ text: `${short(d.signer)} sent something signed under a lane that cannot count yet: in Waiting, To receive.`, tone: 'warn' });
+          (book.uncounted ??= {})[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : undefined, from: d.signer, found: was?.found ?? now(), why: a ? this.waitingWhy(a) : 'the grant it was signed under was not found at the places asked yet', stage: was?.stage ?? 'new' };
+          continue;
+        }
+        if (book.uncounted?.[d.id]) delete book.uncounted[d.id];
         if (st !== 'valid') {
           problems.push(`An act from ${short(d.signer)} that does not count (${st}): set aside.`);
           continue;
@@ -1144,6 +1299,13 @@ export class Damgar {
       await this.saveBook(me.id, book);
       return { lines, problems };
     });
+  }
+
+  /** Why an act under a lane cannot count yet, in plain words first (H107). */
+  private waitingWhy(a: Authority): string {
+    const l = a.limits;
+    if (l && l.within === null && /clock|stamp|expiry/i.test(l.why)) return `its lane has an expiry judged by a timestamp clock, which has not placed this act yet; until it does, nobody can tell it was signed in time (the grant limits cMIP, 3.1). ${a.words}`;
+    return a.words;
   }
 
   /** On whose authority an act under a grant stands: its grant, its acceptance and the grantor's revocations read at these places and the signer's homes (`clients/grants`). */
@@ -1786,6 +1948,25 @@ export class Damgar {
           found: x.found,
         });
       }
+      for (const [id, x] of Object.entries(book.uncounted ?? {})) {
+        if (x.stage !== 'new') continue;
+        items.push({
+          id,
+          kind: 'uncounted',
+          from: this.who(x.from, me.id),
+          app: null,
+          title: `Waiting to count: sent by ${short(x.from)} under a lane`,
+          lines: [
+            { text: `It cannot count yet: ${x.why}`, tone: 'warn' },
+            { text: 'Damgar looks again each time it looks for what arrived; once it counts, it shows here as a payment to answer. Until then nothing is answered and nothing signed (unknown, as Development rule 10 says).' },
+            { text: 'Setting it aside signs nothing and sends nothing.' },
+          ],
+          amount: null,
+          unknown: true,
+          offers: ['decline'],
+          found: x.found,
+        });
+      }
       for (const [id, x] of Object.entries(book.requestsIn)) {
         if (x.stage !== 'new' && x.stage !== 'debt') continue;
         const r = this.requestOf(book, id);
@@ -2094,6 +2275,7 @@ export class Damgar {
       if (book.drafts[id]?.stage === 'new') book.drafts[id].stage = 'declined';
       else if (book.laneRequests?.[id]?.stage === 'new') book.laneRequests[id].stage = 'declined';
       else if (book.requestsIn[id] && (book.requestsIn[id].stage === 'new' || book.requestsIn[id].stage === 'debt')) book.requestsIn[id].stage = 'declined';
+      else if (book.uncounted?.[id]?.stage === 'new') book.uncounted[id].stage = 'set aside';
       else if (book.unread?.[id]?.stage === 'new') {
         book.unread[id].stage = 'set aside';
         await this.saveBook(me.id, book);
@@ -3030,7 +3212,10 @@ export class Damgar {
           spent: used !== null ? shown(used) : null,
           left: l.total && used !== null ? shown(Math.max(0, l.total.value - used)) : null,
           over: l.total && used !== null && used > l.total.value ? shown(used - l.total.value) : null,
-          payments: under?.payments.map((p) => ({ key: p.key, to: this.who(p.payee, me.id), amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims })) ?? [],
+          // What is paid apart from what is only asked (H107): asked holds its amount against the cap in all, but no money has moved.
+          paid: under && unitOfLane ? shown(spentOf(under.payments.filter((p) => p.stage === 'paid').map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          asked: under && unitOfLane ? shown(spentOf(under.payments.filter((p) => p.stage === 'asked').map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          payments: under ? await Promise.all(under.payments.map(async (p) => ({ key: p.key, to: { ...this.who(p.payee, me.id), name: await this.nameOf(p.payee, hints, s.via).catch(() => null) }, amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims }))) : [],
           sealed: under?.sealed ?? 0,
         });
       }
@@ -3383,13 +3568,33 @@ export class Damgar {
   }
 
   /**
+   * Where an identity is paid, as anyone reads it (H100: "Currencies and
+   * rails accepted can live on the profile page"): its payee pointer in
+   * force, each rail by name, with what it names (a node, a key, its
+   * network, so its unit). Null where it publishes none.
+   */
+  async pointerOf(id: string): Promise<{ version: number; rails: { name: string; said: string }[] } | null> {
+    const { me, s } = await this.ctx();
+    const { look, acts } = await this.payee(id, me, s);
+    const ptr = look.verifier.moneyPointer(MONEY, id) as { act: string | null; version: number };
+    if (!ptr.act || !acts.get(ptr.act)?.payload) return null;
+    const pp = (moneyRead(0, acts.get(ptr.act)!.payload!) as { act: { rails: { module: string; address: Uint8Array }[] } }).act;
+    // Its unit, from the network the rail names: what a payer pays in.
+    const unitOn = (module: string, address: Uint8Array) => {
+      const a = (module === SPEC.lightning.hash ? readLightningAddress(address) : module === SPEC.onchain.hash ? readOnchainAddress(address) : null) as { network: number } | null;
+      return a ? `${a.network === 0 ? 'bitcoin' : NETWORKS[a.network]} satoshis` : 'a unit this app does not read';
+    };
+    return { version: ptr.version, rails: pp.rails.map((r) => ({ name: railName(r.module), said: unitOn(r.module, new Uint8Array(r.address)) })) };
+  }
+
+  /**
    * Review a new payee pointer (Money type 0): the rails in order of
    * preference, with each rail Module's stated costs (a client MUST show
    * them before a rail is declared). Nothing is signed until `publishRails`
    * with the same digest. On-chain, the request key is made here, or a new
    * one where `newRequestKey`.
    */
-  async railsReview(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean }): Promise<{ digest: string; lines: Line[]; costs: Line[] }> {
+  async railsReview(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; order?: string[] }): Promise<{ digest: string; lines: Line[]; costs: Line[] }> {
     const { me } = await this.ctx();
     const keys = (await this.store.read<Keys>(me.id, 'keys')) ?? { request: null, earlier: [] };
     const rails = this.railsFrom(a, keys.request && !a.newRequestKey ? keys.request : null);
@@ -3402,7 +3607,7 @@ export class Damgar {
     return { digest, lines: [...lines, { text: 'Signed with your signing key, public: anyone paying you reads it. It replaces the pointer in force; payments already bound stay as they are.' }], costs };
   }
 
-  private railsFrom(a: { lightning?: string; onchain?: string; network: number }, requestSecret: string | null): { module: string; address: Uint8Array; requestSecret: string | null }[] {
+  private railsFrom(a: { lightning?: string; onchain?: string; network: number; order?: string[] }, requestSecret: string | null): { module: string; address: Uint8Array; requestSecret: string | null }[] {
     const out: { module: string; address: Uint8Array; requestSecret: string | null }[] = [];
     if (a.lightning?.trim()) out.push({ module: SPEC.lightning.hash, address: lightningAddress({ network: a.network, node: a.lightning.trim().toLowerCase() }) as Uint8Array, requestSecret: null });
     if (a.onchain?.trim()) {
@@ -3412,11 +3617,19 @@ export class Damgar {
       const secret = requestSecret ?? hex(newSecret());
       out.push({ module: SPEC.onchain.hash, address: onchainAddress({ network: a.network, key, request: onchainKey(unhex(secret)) }) as Uint8Array, requestSecret: secret });
     }
+    // H92: in the order the person put the rails' cards, the first preferred (Money's pointer lists rails in order of preference).
+    if (a.order?.length) {
+      const rank = (m: string) => {
+        const i = a.order!.indexOf(m === SPEC.lightning.hash ? 'lightning' : 'onchain');
+        return i < 0 ? a.order!.length : i;
+      };
+      out.sort((x, y) => rank(x.module) - rank(y.module));
+    }
     return out;
   }
 
   /** Publish the reviewed payee pointer: version one more than the pointer in force, naming it. */
-  publishRails(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; digest: string }): Promise<{ lines: Line[] }> {
+  publishRails(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; order?: string[]; digest: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       const { digest: _, ...rest } = a;

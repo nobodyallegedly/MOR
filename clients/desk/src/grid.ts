@@ -22,18 +22,13 @@
 
 import type { Governance } from '../../repo/src/collective.ts';
 import type { AreaKind, AreaSpec } from '../../repo/src/agreements.ts';
+import { GRID_LAYERS, type Kind } from './kinds.ts';
 
 // The page draws the grid too, and loads no WebAssembly: the hashes it needs
 // are written here, and `test/grid.test.ts` checks each against the core's.
 
-/** The MIRs' test hashes (`genesis/src/core.ts`, MIRS). */
-export const MIRS = {
-  text: 'a9167c22f01bd8f9489bd364f04b1144d5ff7a755aa59ffdbf34cfac374daf80',
-  envelopes: '591d75d82930983b3412942b954070754183771d4ec70e2c7faab5cbf4e8ede7',
-  money: 'b6cea993bfce99cf52c277648855d42cfd32654a6a8c018519f4e92179d8c69d',
-  agreements: '00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a',
-  development: 'f62cc059fd01d5643cac6375b06323ad15c3d2d96729f00df15c457e5a0da6f8',
-} as const;
+export { MIRS } from './mirs.ts';
+import { MIRS } from './mirs.ts';
 
 /** The grant limits cMIP, draft 2 (section 7, F353): an area's cap on its holders' keys. `sha256("Grant limits cMIP, draft 2, test value until publication")`. */
 export const GRANT_LIMITS_SPEC_2 = '1185fad343823042fe75481813a249b447fe61bec92c304b8e5948d566a12c9d';
@@ -41,36 +36,27 @@ export const GRANT_LIMITS_SPEC_2 = '1185fad343823042fe75481813a249b447fe61bec92c
 /** The Bitcoin units Module's regtest unit, as the core names it (Damgar's `SPEC.units.regtest`): the cap's unit. */
 export const REGTEST_UNIT = 'b674b1606df529b4a5b3857258d1b73e31b7a425f462c54ebfd5b7bd95e0d60e';
 
-/** The layers an area may reach, as the founding offers them (Agreements, "Layer"). Identity's area, rotations, stays the constitution's here. */
-export const LAYERS: { layer: number; name: string; say: string }[] = [
-  { layer: 1, name: 'Posts and publications', say: 'posts and publications (the Envelopes and Text layer)' },
-  { layer: 2, name: 'Money', say: 'money (the Money layer)' },
-  { layer: 3, name: 'Agreements', say: 'offers, deals and grants (the Agreements layer)' },
-  { layer: 4, name: 'Development', say: 'specifications and releases (the Development layer)' },
+/**
+ * What an area may reach, one choice per layer (H120, decided): Text,
+ * Envelopes, Money, Agreements, Development, each with every kind of act its
+ * MIR defines, drawn from the core's own type tables (`kinds.ts`); and Text
+ * and Envelopes together, which the core counts as one layer (Agreements,
+ * "Layer"), as the founding's Publishing area needs. `value` is what the
+ * page's choice carries: the core's layer, and the part of it where narrower.
+ */
+export const LAYERS: { value: string; layer: number; part?: 'text' | 'envelopes'; name: string; say: string }[] = [
+  ...GRID_LAYERS.filter((l) => l.key === 'text' || l.key === 'envelopes').map((l) => ({ value: `1:${l.key}`, layer: 1, part: l.key as 'text' | 'envelopes', name: l.name, say: l.say })),
+  { value: '1', layer: 1, name: 'Text and Envelopes, together', say: 'posts and publications (the Text and Envelopes layers)' },
+  ...GRID_LAYERS.filter((l) => l.layer > 1).map((l) => ({ value: String(l.layer), layer: l.layer, name: l.name, say: l.say })),
 ];
 
-/** The kinds of act offered under "Only some kinds of act", per layer: MIR types (rule 60, `[1, spec, type]`). */
-export const KINDS: Record<number, { spec: string; type: number; name: string }[]> = {
-  1: [
-    { spec: MIRS.text, type: 0, name: 'posts (Text)' },
-    { spec: MIRS.envelopes, type: 0, name: 'publications, releases among them' },
-    { spec: MIRS.envelopes, type: 5, name: 'vows' },
-    { spec: MIRS.envelopes, type: 3, name: 'withdrawals' },
-  ],
-  2: [
-    { spec: MIRS.money, type: 0, name: 'where it is paid (payee pointers)' },
-    { spec: MIRS.money, type: 1, name: 'debts (obligations)' },
-    { spec: MIRS.money, type: 2, name: 'receipts' },
-    { spec: MIRS.money, type: 3, name: 'claims' },
-    { spec: MIRS.money, type: 4, name: 'creditor’s releases' },
-  ],
-  3: [
-    { spec: MIRS.agreements, type: 6, name: 'offers' },
-    { spec: MIRS.agreements, type: 0, name: 'terms of deals' },
-    { spec: MIRS.agreements, type: 1, name: 'signatures' },
-  ],
-  4: [{ spec: MIRS.development, type: 0, name: 'specifications' }],
-};
+/** The kinds of act offered under "Only some kinds of act", per layer and part: the core's own types (rule 60, `[1, spec, type]`). */
+export function kindsFor(layer: number, part?: 'text' | 'envelopes'): Kind[] {
+  return GRID_LAYERS.filter((l) => l.layer === layer && (!part || l.key === part)).flatMap((l) => l.kinds);
+}
+
+/** An area's choice, as the page's select carries it. */
+export const choiceOf = (l: { layer: number; part?: 'text' | 'envelopes' }) => (l.part ? `${l.layer}:${l.part}` : String(l.layer));
 
 /** One area: a row of the third band. */
 export interface AreaRow {
@@ -78,7 +64,9 @@ export interface AreaRow {
   id?: number;
   name: string;
   layer: number;
-  /** "Only some kinds of act": the kinds ticked, by `spec:type`; absent, the whole layer. */
+  /** Within Text and Envelopes' layer, one of them only (H120); absent, both. */
+  part?: 'text' | 'envelopes';
+  /** "Only some kinds of act": the kinds ticked, by `spec:type`; absent, the whole layer (or part). */
   kinds?: string[];
   /** The boxes filled: the members whose keys count here. */
   holders: string[];
@@ -120,9 +108,17 @@ export function defaultGrid(members: string[]): Grid {
   };
 }
 
+/** The kinds an area reaches, by `spec:type`; null for its whole layer. */
+function reach(l: AreaRow): string[] | null {
+  if (l.kinds?.length) return l.kinds;
+  if (l.part) return kindsFor(l.layer, l.part).map((k) => `${k.spec}:${k.type}`);
+  return null;
+}
+
 function kindsOf(l: AreaRow): AreaKind[] {
-  if (!l.kinds?.length) return [{ layer: l.layer }];
-  return l.kinds.map((k) => {
+  const r = reach(l);
+  if (!r) return [{ layer: l.layer }];
+  return r.map((k) => {
     const [spec, type] = k.split(':');
     return { spec, type: Number(type) };
   });
@@ -131,15 +127,17 @@ function kindsOf(l: AreaRow): AreaKind[] {
 /** Whether two areas reach a common act: then both would have to be met, which the founding refuses. */
 function overlap(a: AreaRow, b: AreaRow): boolean {
   if (a.layer !== b.layer) return false;
-  if (!a.kinds?.length || !b.kinds?.length) return true;
-  return a.kinds.some((k) => b.kinds!.includes(k));
+  const ra = reach(a);
+  const rb = reach(b);
+  if (!ra || !rb) return true;
+  return ra.some((k) => rb.includes(k));
 }
 
 /** What the page offers for one area, in words: its reach. */
 export function reachSay(l: AreaRow): string {
-  const layer = LAYERS.find((x) => x.layer === l.layer);
+  const layer = LAYERS.find((x) => x.value === choiceOf(l));
   if (!l.kinds?.length) return `all ${layer?.say ?? `layer ${l.layer}`}`;
-  const names = l.kinds.map((k) => KINDS[l.layer]?.find((x) => `${x.spec}:${x.type}` === k)?.name ?? k);
+  const names = l.kinds.map((k) => kindsFor(l.layer).find((x) => `${x.spec}:${x.type}` === k)?.name ?? k);
   return `only ${list(names)}`;
 }
 
@@ -169,7 +167,7 @@ export function governanceOf(grid: Grid, text: string, used: number[] = []): { g
     if (!l.name.trim()) blocking.push(`Area ${i + 1}: give it a name.`);
     else if (names.has(l.name.trim())) blocking.push(`${label}: two areas have this name.`);
     names.add(l.name.trim());
-    if (!LAYERS.some((x) => x.layer === l.layer)) blocking.push(`${label}: choose what it reaches.`);
+    if (!LAYERS.some((x) => x.value === choiceOf(l))) blocking.push(`${label}: choose what it reaches.`);
     if (l.kinds && !l.kinds.length) blocking.push(`${label}: “Only some kinds of act” is ticked, and none is chosen.`);
     const holders = m.filter((x) => l.holders.includes(x));
     if (!holders.length) blocking.push(`${label}: fill at least one member’s box. An area nobody holds stands frozen.`);
@@ -220,14 +218,23 @@ export function gridOf(g: Governance, members: string[]): Grid {
     const l = a.kinds.find((k): k is { layer: number } => 'layer' in k);
     if (l) return l.layer;
     const t = a.kinds[0] as { spec: string } | undefined;
-    for (const [layer, ks] of Object.entries(KINDS)) if (ks.some((k) => k.spec === t?.spec)) return Number(layer);
-    return 1;
+    return GRID_LAYERS.find((x) => x.kinds.some((k) => k.spec === t?.spec))?.layer ?? 1;
+  };
+  // Within Text and Envelopes' layer: one of them alone, where every kind is its; and all its kinds read as that part, whole.
+  const partOf = (a: AreaSpec, layer: number): { part?: 'text' | 'envelopes'; kinds?: string[] } => {
+    const ks = kinds(a);
+    if (layer !== 1 || !ks) return { kinds: ks };
+    for (const p of ['text', 'envelopes'] as const) {
+      const all = kindsFor(1, p).map((k) => `${k.spec}:${k.type}`);
+      if (ks.every((k) => all.includes(k))) return ks.length === all.length ? { part: p } : { part: p, kinds: ks };
+    }
+    return { kinds: ks };
   };
   const rows: AreaRow[] = (g.areas ?? []).map((a) => ({
     id: a.id,
     name: a.name,
     layer: layerOf(a),
-    kinds: kinds(a),
+    ...partOf(a, layerOf(a)),
     holders: a.holders.filter((h) => members.includes(h)),
     number: a.threshold,
     ...(a.cap ? { cap: a.cap.value } : {}),

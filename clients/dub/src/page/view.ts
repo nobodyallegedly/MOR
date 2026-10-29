@@ -9,6 +9,7 @@
 import {
   APPS,
   KIT_STYLE,
+  NOT_STAMPED,
   appMark,
   card,
   clockLine,
@@ -25,8 +26,13 @@ import {
   top,
   typingBox,
   type KitAct,
+  actId,
+  who,
+  contactsButtonFor,
   type KitLabel,
   type KitWho,
+  whatIsMor,
+  fold,
 } from '../../../kit/src/index.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { PUBLISH_WARNING, type Item, type Line, type Message, type PayWays, type Purchase, type State, type Suggested, type Who } from '../shapes.ts';
@@ -50,7 +56,7 @@ export const TINT = { layer: APPS.dub.colour, pastel: APPS.dub.pastel } as const
  * HTML itself (`static/web.html`, written there by the build), outside what
  * the script draws, so it shows even when the script does not run.
  */
-export const WEB_BANNER = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>Two risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment an identity is made here could copy its keys.</li>
 <li>This browser’s storage, where the identity’s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
@@ -63,7 +69,7 @@ export const KEPT_SAY =
 export const PAGE_STYLE = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .dub-banner strong{font-weight:400;color:var(--k-text)}
 .dub-banner ol{margin:4px 0;padding-left:1.4em}
 .dub-center{max-width:820px;margin:0 auto;width:100%}
@@ -86,9 +92,18 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
 .dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
 .dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-notes .dub-thread{overflow:auto}
+.dub-pad{padding:10px 14px}
+.dub-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.dub-note-latest{border:1px solid var(--k-line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.dub-note-draft{border-top:1px solid var(--k-line);padding:8px 0}
+.dub-note-form textarea{width:100%;min-height:220px}
 .dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .dub-thread .dub-head h2{font-size:20px}
 .dub-cc{font-size:12.5px;color:var(--k-soft)}
+#ccs{display:contents}
+#ccs .k-chip{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ccs .k-chip .k-x{margin-left:4px;flex:none}
 .dub-field{display:flex;gap:8px;align-items:center}
 .dub-field input{flex:1}
 .dub-modal-form textarea{min-height:5em}
@@ -97,7 +112,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
 .dub-ways input{margin-top:4px}
 .dub-ways .k-small{display:block}
-.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-hand{width:100%;min-height:6em;font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
 @media (max-width:600px){
   .dub-banner{padding:5px 10px}
@@ -116,8 +131,9 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 
 /** An identity as the kit's card shows it: the name given here, else its display name; its own display name beneath where it differs. */
 export function kitWho(w: Who, collective = false): KitWho {
-  const own = w.names[0] ?? null;
-  return { id: w.id, form: w.form, link: w.link, name: w.pet ?? own, ownName: w.pet && own && own !== w.pet ? own : null, me: w.me, followed: w.followed, muted: w.muted, collective };
+  const own = w.names[w.names.length - 1] ?? null;
+  // H96: the nickname first, the name it published beside it (or its state: Loading…, No name published, Name not reached).
+  return { id: w.id, form: w.form, link: w.link, name: w.pet ?? own, ownName: w.pet && own && own !== w.pet ? own : null, named: { nick: w.pet, published: w.published ?? (own ? { state: 'name', name: own } : { state: 'loading' }) }, me: w.me, followed: w.followed, muted: w.muted, collective };
 }
 
 /** The name an identity is called by, here. */
@@ -131,7 +147,12 @@ const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
 export function itemAct(it: Item, collectives: string[] = []): KitAct {
   const labels: KitLabel[] = [];
   if (it.repost) labels.push({ text: `↻ ${nameOf(it.repost.by)} reposted ${nameOf(it.repost.of)}’s sealed post` });
-  for (const a of it.answers) labels.push({ text: `↳ answers ${a.who ? nameOf(a.who) : 'an act not found'}${a.snippet ? ` · “${a.snippet}”` : ` · ${shortForm(a.id.length === 64 ? actFormOf(a.id) : a.id)}`}` });
+  // H95: whom and what it answers, each a button: the identity's names (Open profile), the act answered (expanded above the reply).
+  for (const a of it.answers)
+    labels.push({
+      text: `↳ answers ${a.who ? nameOf(a.who) : 'an act not found'}${a.snippet ? ` · “${a.snippet}”` : ` · ${shortForm(a.id.length === 64 ? actFormOf(a.id) : a.id)}`}`,
+      html: `↳ answers ${a.who ? who({ id: a.who.id, form: a.who.form, named: { nick: a.who.pet, published: a.who.published ?? { state: 'loading' } }, inline: true }) : 'an act not found'}${a.snippet ? ` · “${e(a.snippet)}”` : ''} · ${a.id.length === 64 ? `<span class="dub-answers" data-answers="${e(a.id)}" data-answers-signer="${e(a.who?.id ?? '')}">${actId(a.id, { expand: true })}</span>` : e(a.id)}`,
+    });
   if (it.corrects) labels.push({ text: `Correction of ${shortForm(actFormOf(it.corrects))}, which stays as signed` });
   if (it.correctedBy?.length) labels.push({ text: `Corrected by ${it.correctedBy.map((c) => shortForm(actFormOf(c))).join(', ')}: shown as it was signed` });
   if (it.authority) labels.push({ text: it.authority.words, tone: it.authority.backed ? undefined : 'warn' });
@@ -162,6 +183,7 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
     form: it.form,
     signer: kitWho(it.who, collectives.includes(it.who.id)),
     when: it.when ?? null,
+    unstamped: it.unstamped && !it.when ? NOT_STAMPED : null,
     hint: it.hint ?? null,
     kind: it.what ? it.what : it.vow ? 'vow' : it.sealed ? `sealed ${it.sealed.media}` : null,
     labels,
@@ -305,7 +327,7 @@ function whenWords(t: number): string {
 
 // ---------------------------------------------------------------- the frame
 
-export type Part = 'public' | 'private' | 'purchases';
+export type Part = 'public' | 'private' | 'notes' | 'purchases';
 
 /** The top of Dub: Contacts and the app top left, the switch in the middle, the identity top right. */
 export function topBar(s: State, part: Part | null): string {
@@ -316,11 +338,12 @@ export function topBar(s: State, part: Part | null): string {
     [
       { key: 'public', label: 'Public' },
       { key: 'private', label: 'Private' },
+      { key: 'notes', label: 'Notes' },
       { key: 'purchases', label: 'Purchases' },
     ],
     part ?? '',
   );
-  const right = meButton({ name: i.who.names[0] ?? null, form: i.form, as: acting ? { name: acting.name ?? 'a collective', form: acting.form } : null });
+  const right = meButton({ name: i.who.names[0] ?? null, form: i.form, named: { nick: null, published: i.who.published ?? { state: 'loading' } }, as: acting ? { name: acting.name ?? 'a collective', form: acting.form } : null });
   return top({ left, center, right });
 }
 
@@ -329,10 +352,10 @@ export function firstScreen(web: boolean, suggested: Suggested): string {
   return `${top({ left: appMark(NAME, 'icon.png'), right: '' })}<div class="k-body"><section class="dub-first" id="first"><div id="status-here"></div>
 <h2>Identity</h2><p class="k-soft">Dub opens once an identity is here.</p>
 ${makeForm(web, suggested)}${bringForm(web)}${web ? '' : `<div class="k-box" id="from-kishib"><h4>Use one from Kišib</h4><p class="k-small k-soft">Through Kišib’s runner, on this Mac: Kišib keeps the signing key and shows each act before it signs it; Dub holds no key.</p><div class="k-row"><button type="button" class="k-btn" data-k-add="kishib">Use one from Kišib</button></div></div>`}
-${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}</section></div>`;
+${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`], { mor: whatIsMor })}</section></div>`;
 }
 
-const via = `<details class="k-say"><summary>Another way to reach an address (rarely needed)<span class="k-help">?</span></summary><div class="k-more-text"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
+const via = `<details class="k-fold"><summary>Another way to reach an address (rarely needed)<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body"><label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></div></details>`;
 const lns = (xs?: string[]) => e((xs ?? []).join('\n'));
 
 /** Make a new identity: its chain key's words shown once. */
@@ -416,7 +439,7 @@ export function publicPart(s: State, lens: Lens, layers: string[]): string {
   )}${lens === 'relay' ? pointRow('Showing', LAYERS.map((l) => ({ key: l.key, label: l.label, on: layers.includes(l.key) })), 'layer') : ''}`;
   const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><label title="A recording (M4A)">♪<span class="dub-l"> Audio</span><input name="audio" type="file" accept=".m4a,audio/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
   return `<div class="k-body"><section class="k-pane dub-center" id="public">${feedBox({ id: 'feed', above, cards: '', empty: 'Reading the feed…', below: '<div id="feed-foot"></div>' })}
-${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: '<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false"><button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>' })}</section></div>`;
+${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: `<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false">${contactsButtonFor('to')}<button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>` })}</section></div>`;
 }
 
 /** The foot of the feed box: whose clock orders it, and what was not shown. */
@@ -454,11 +477,62 @@ ${typingBox({
   placeholder: `Write to ${nameOf(open.with)}…`,
   button: 'Send',
   opts: `<span class="k-chip">As ${e(i.who.names[0] ?? 'yourself')}</span>${usable.map((c) => `<button type="button" class="k-chip" data-append="${e(c.id)}" aria-pressed="false">+ of ${e(c.name ?? shortForm(c.form))}</button>`).join('')}<span id="ccs"></span><button type="button" class="k-chip" data-action="cc">+ Cc</button><button type="button" class="k-chip" data-action="askpaid">+ Ask to be paid</button>`,
-  extra: '<div class="dub-field" id="cc-field" hidden><input id="cc" placeholder="Cc: a contact’s name, or an ID" aria-label="Cc" spellcheck="false"><button type="button" class="k-btn k-q" data-action="uncc">Done</button></div>',
+  extra: `<div class="dub-field" id="cc-field" hidden><input id="cc" placeholder="Cc: a contact’s name, or an ID" aria-label="Cc" spellcheck="false">${contactsButtonFor('cc')}<button type="button" class="k-btn k-q" data-action="uncc">Done</button></div>`,
   tools: '',
 })}${usable.length ? '<p class="k-clock">A collective appended binds nothing; the reader’s app shows it only where your membership checks. Everyone sees the Cc.</p>' : ''}`
     : '<p class="k-empty">Choose a conversation, or start a new one.</p>';
   return `<div class="k-body dub-private${open ? ' k-chosen' : ''}"><aside class="dub-convs"><input class="dub-find" type="search" id="find-conv" placeholder="Find a conversation…" autocomplete="off" aria-label="Find a conversation"><div class="dub-list">${list}<button type="button" class="dub-conv" data-action="new-conv"><span class="k-soft">+ A new conversation</span></button></div><div id="private-notes"></div></aside><section class="dub-thread" id="private">${thread}</section></div>`;
+}
+
+// ---------------------------------------------------------------- Notes (H122)
+
+/** A note as the page is given it (`../notes.ts`). */
+export interface NoteShown {
+  id: string;
+  versions: { id: string; text: string; position: number; corrects: string | null }[];
+  retired: boolean;
+}
+
+/** A note's first line, as the list shows it. */
+const firstLine = (n: NoteShown) => {
+  const t = (n.retired ? (n.versions[1]?.text ?? '') : n.versions[0].text).split('\n').find((l) => l.trim()) ?? '';
+  return t.trim().slice(0, 80) || 'An empty note';
+};
+
+/**
+ * Notes, laid out as Private (his words: "instead of identities the left
+ * bar offers the past notes"): the notes on the left, latest first, + New
+ * note at the top; the one chosen on the right, its latest version, Edit
+ * (a new version correcting it), Retire, and Earlier drafts, each as signed.
+ */
+export function notesPart(o: { notes: NoteShown[] | null; open: string | null; editing: boolean; problems: string[]; opening: string | null }): string {
+  const list = (o.notes ?? [])
+    .map(
+      (n) =>
+        `<button type="button" class="dub-conv${o.open === n.id ? ' k-on' : ''}" data-note="${e(n.id)}"><span><span class="k-n" dir="auto">${e(firstLine(n))}</span><span class="dub-l">${n.retired ? 'Retired' : n.versions.length > 1 ? `${n.versions.length} versions` : 'One version'}</span></span></button>`,
+    )
+    .join('');
+  const chosen = o.open ? (o.notes ?? []).find((n) => n.id === o.open) ?? null : null;
+  const box = (text: string, corrects: string | null) =>
+    `<form id="note" class="dub-note-form"${corrects ? ` data-corrects="${e(corrects)}"` : ''}><textarea name="text" rows="12" maxlength="20000" placeholder="Write a note: sealed to you, only you can open it" aria-label="The note" dir="auto">${e(text)}</textarea><div class="k-row"><button type="submit" class="k-btn k-p">${corrects ? 'Sign the new version' : 'Sign and keep'}</button>${corrects ? '<button type="button" class="k-btn k-q" data-action="note-cancel">Cancel</button>' : ''}</div></form>`;
+  let right: string;
+  if (o.open === 'new') right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">← Back</button><h2>A new note</h2></div>${box('', null)}${say('Sealed to you, kept at your homes.', ['A note is a private text act sealed to this identity alone, left at its homes: any app holding the identity opens it (through Kišib where Kišib holds it and lets the app open). Nothing is ever updated: Edit signs a new version, the earlier ones kept under Earlier drafts.'])}`;
+  else if (chosen) {
+    const [latest, ...earlier] = chosen.versions;
+    const shown = chosen.retired ? (earlier[0] ?? latest) : latest;
+    const drafts = (chosen.retired ? earlier.slice(1) : earlier)
+      .map((x, i, all) => `<div class="dub-note-draft" data-note-draft="${e(x.id)}"><p class="k-small k-soft">Version ${all.length - i} ${actId(x.id)}</p><div class="dub-note-text" dir="auto">${e(x.text)}</div></div>`)
+      .join('');
+    right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">← Back</button><h2 dir="auto">${e(firstLine(chosen))}</h2>${chosen.retired ? '<span class="k-chip">Retired</span>' : ''}<span class="k-grow"></span>${actId(shown.id)}</div>
+${
+  o.editing && !chosen.retired
+    ? box(latest.text, latest.id)
+    : `<div class="dub-note-text dub-note-latest" dir="auto">${e(shown.text)}</div>${chosen.retired ? '<p class="k-small k-soft">Retired: dropped, kept readable with its drafts.</p>' : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="note-edit">Edit</button><button type="button" class="k-btn k-q" data-action="note-retire" data-latest="${e(latest.id)}">Retire</button></div>`}`
+}
+${drafts ? fold(`Earlier drafts (${chosen.retired ? earlier.length - 1 : earlier.length})`, drafts) : '<p class="k-small k-faint">No earlier drafts.</p>'}`;
+  } else right = '<p class="k-empty">Choose a note, or write a new one.</p>';
+  const problems = [...(o.opening ? [o.opening] : []), ...o.problems].map((x) => `<p class="k-clock">${e(x)}</p>`).join('');
+  return `<div class="k-body dub-private dub-notes${o.open ? ' k-chosen' : ''}"><aside class="dub-convs"><div class="dub-list"><button type="button" class="dub-conv" data-action="note-new"><span class="k-soft">+ New note</span></button>${o.notes === null ? '<p class="k-small k-soft dub-pad">Reading your notes at your homes…</p>' : list || '<p class="k-small k-soft dub-pad">No notes yet.</p>'}</div><div class="dub-pad">${problems}</div></aside><section class="dub-thread" id="notes">${right}</section></div>`;
 }
 
 // ---------------------------------------------------------------- Purchases
@@ -588,7 +662,7 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
 <div class="k-row"><input name="total" inputmode="numeric" placeholder="In all, for the whole lane (optional)" class="k-grow"></div>
 <label>Until (optional), judged on a timestamp clock: its ID${s.identity!.laneClock ? `, prefilled with ${e(s.identity!.laneClock.name)}` : ''}</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.laneClock?.id ?? '')}"></div>
-<p class="k-small k-soft">The clock is written in the lane’s grant, so the lane’s words name it: change it here before asking, if you wish.</p>
+<p class="k-small k-soft">The clock is written in the lane’s grant, so the lane’s words name it: change it here before asking, if you wish. With an Until, a payment under the lane counts for whoever you pay only once that clock has stamped it (the Dubsar clock does within a minute or so): until then it waits in their Damgar, said.</p>
 <div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
 <h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }
@@ -630,7 +704,7 @@ export function appFoot(s: State, web: boolean): string {
   return `${web ? '' : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
 <h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org’s feed names. A choice of clock comes later, when there are better clocks.</p>
 ${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order, and show the signer’s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar.'])}
-${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}`;
+${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`], { mor: whatIsMor })}`;
 }
 
 // ---------------------------------------------------------------- contacts
@@ -639,7 +713,7 @@ ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser'
 export function contactsBelow(s: State): string {
   const i = s.identity!;
   return `<form id="follow" class="dub-modal-form"><input name="id" autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1…, or an ID link)" required aria-label="Add by ID"><input name="name" autocomplete="off" placeholder="Your name for it (sealed to you)" aria-label="Your name for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>
-${i.muted.length ? `<details class="k-say"><summary>Muted (${i.muted.length})<span class="k-help">?</span></summary><div class="k-more-text">${i.muted.map((m) => `<div class="k-row"><span dir="auto">${e(nameOf(m))}</span><span class="k-mono k-faint">${e(shortForm(m.form))}</span><button type="button" class="k-btn k-q" data-action="unmute" data-id="${e(m.id)}">Unmute</button></div>`).join('')}</div></details>` : ''}
+${i.muted.length ? `<details class="k-fold"><summary>Muted (${i.muted.length})<span class="k-chev" aria-hidden="true">›</span></summary><div class="k-fold-body">${i.muted.map((m) => `<div class="k-row"><span dir="auto">${e(nameOf(m))}</span><span class="k-mono k-faint">${e(shortForm(m.form))}</span><button type="button" class="k-btn k-q" data-action="unmute" data-id="${e(m.id)}">Unmute</button></div>`).join('')}</div></details>` : ''}
 <label class="k-row"><input type="checkbox" id="publish-list" ${i.list === 'published' ? 'checked' : ''}> Publish whom ${e(i.who.names[0] ?? 'this identity')} follows</label>
 ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for them stay sealed.' : 'Your names for them stay sealed to you. The same list in Public and Private.', [
   i.encryption
@@ -652,9 +726,9 @@ ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for 
 ])}`;
 }
 
-/** The spent key, said plainly, and the new signing key's words taken. */
-export function spent(said: string): string {
-  return `<div class="k-alarmbox" id="spent-box"><p>${e(said)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form></div>`;
+/** The new signing key's words taken, where the key was changed elsewhere (in the kit's warning, H82). */
+export function renewForm(): string {
+  return `<form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 
 // ---------------------------------------------------------------- an identity used through Kišib (the Dubsar runner cMIP)

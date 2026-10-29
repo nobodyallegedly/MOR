@@ -164,7 +164,7 @@ const COLUMNS: Record<string, string[]> = {
   waiting: ['To pay', 'To receive', '+ Paste an act to sign', 'To the vault'],
   account: ['Summary', 'Payments', 'Shared deals', 'Under the lanes', 'Anchors'],
   lanes: ['Asked', 'In force', 'Damgar’s own', 'Ended'],
-  settings: ['Where you are paid', 'What you accept', 'Homes and relays', 'Every step by hand'],
+  settings: ['Where you are paid', 'Rules I follow', 'Homes and relays', 'Every step by hand'],
 };
 
 /** Each tile opened, its column read, each part opened (a picture of each). */
@@ -196,7 +196,7 @@ async function columns(page: Page, tag: string, phone = false) {
 async function acceptAll(page: Page) {
   await sees(page, 'form#accept', 'accept');
   for (const box of await page.locator('input[name=accept]').all()) await box.check();
-  await page.getByRole('button', { name: 'Accept these' }).click();
+  await page.getByRole('button', { name: 'Add these to my list' }).click();
   await sees(page, '.k-tile', 'tiles after accept');
 }
 
@@ -213,6 +213,8 @@ async function go(page: Page, tab: string, part: string) {
   await page.locator(`.k-col [data-k-col="${part}"]`).click();
   // The part's own heading: the one shown before may still be on screen a moment.
   await sees(page, `#pane h2:text-is("${label}")`, `${tab}-${part}`);
+  // Drawn at once from what it last showed, then filled in (H115): what it looked up is there once "Looking…" is gone.
+  await page.locator('#pane .damgar-looking').waitFor({ state: 'detached', timeout: 60_000 });
   await settled(page);
 }
 
@@ -407,7 +409,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   // Damgar: what is left, and the record of Dub's payments under the lane.
   await go(gp, 'lanes', 'in-force');
   await gp.locator('#pane .damgar-lane', { hasText: 'In all' }).waitFor({ timeout: 60_000 });
-  assert.match(await gp.locator('#pane .damgar-lane').first().innerText(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent, 200 regtest satoshis left/);
+  assert.match(await gp.locator('#pane .damgar-lane').first().innerText(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent \(2 800 regtest satoshis asked, not paid yet\), 200 regtest satoshis left/);
   await shot(gp, 'mac-21-lane-in-all');
   await go(gp, 'account', 'under');
   assert.equal(await gp.locator('#pane .k-act').count(), 2);
@@ -524,14 +526,16 @@ test('the web client by clicks, at a phone’s size and a Mac’s: Make an ident
   await sees(mp, '#pane form.collective-promise', 'for the collective');
   const me = await mp.locator('.k-me').innerText();
   assert.ok(me.includes(colShort), `${me} / ${colShort}`);
-  assert.ok((await mp.locator('.k-col').innerText()).includes(`For ${colShort}`));
+  // H106, H121: the column names it by its name, never a bare short ID (it has none: “the collective”); its pane by its names, the short ID a button.
+  assert.ok((await mp.locator('.k-col').innerText()).includes('For the collective'));
+  assert.equal(await mp.locator(`#pane h2 [data-k-who="${col}"] .k-idbtn`).count(), 1);
   // Its promise to pay is read back and signed there (`collective.test.ts` signs them through the program).
   assert.match(await mp.locator('#pane').innerText(), /Its Money area, “Money”: 2 holders, 1 key; above 10,000 an act, one more/);
   await shot(mp, 'mac-web-03-for-the-collective');
   // The same gesture again: back to A alone.
   await mp.locator('[data-k-open="identity"]').click();
   await mp.locator('.k-panel [data-k-under]').click();
-  await mp.waitForFunction(() => !/For mid1/.test(document.querySelector('.k-col')?.textContent ?? ''));
+  await mp.waitForFunction(() => !/For the collective/.test(document.querySelector('.k-col')?.textContent ?? ''));
   await mc.close();
   assert.deepEqual(problems, []);
   assert.deepEqual(csp, []);
@@ -572,7 +576,7 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   // What Max accepts is sealed to Max: signed through Kišib too, its panel in Damgar's window.
   await sees(gp, 'form#accept', 'accept through Kišib');
   for (const box of await gp.locator('input[name=accept]').all()) await box.check();
-  await gp.getByRole('button', { name: 'Accept these' }).click();
+  await gp.getByRole('button', { name: 'Add these to my list' }).click();
   await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
   await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
   await sees(gp, '.k-tile', 'tiles through Kišib');
@@ -598,6 +602,76 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   await shot(gp, 'mac-31-kishib-panel');
   await fl.locator('button:has-text("Sign it")').click();
   await gp.locator('#status .k-note.k-done', { hasText: 'invoice request was sent' }).waitFor({ timeout: 60_000 });
+  assert.deepEqual(problems, []);
+});
+
+test('H112: through Kišib’s runner with the opening unticked, the first use never locks Damgar: the cause and the way said, the rules kept in Damgar only; Later; back to the first page; sealed once ticked', async () => {
+  const H = homes.map((h) => h.base);
+  const R = [relay.base];
+  const max = await dub(H, R);
+  await max.c.ask('name', { name: 'Max' });
+  const k = await kishib();
+  await k.c.ask('runner on', { read: true, passphrase: 'test passphrase, not a real one', again: 'test passphrase, not a real one' });
+  await k.c.ask('runner give', { id: max.id, address: H[0], words: max.words });
+  const g = await damgar(null, undefined, { kishib: k.dir });
+  const { page: gp } = await open(`${g.app.base}/#pair=${g.app.access.newCode()}`);
+  await sees(gp, '[data-add="kishib"]', 'first');
+  await gp.locator('[data-add="kishib"]').click();
+  await gp.locator('[data-action="runner-pair"]').click();
+  await sees(gp, '[data-action="runner-look"]', 'code');
+  const code = /([0-9A-Z]{4}-[0-9A-Z]{4})/.exec(await gp.locator('#first-part').innerText())![1];
+  const st = await k.c.ask<{ apps: { id: string; code: string }[] }>('runner state');
+  const app = st.apps.find((x) => x.code === code)!;
+  // Approved without “may open what is sealed to” Max.
+  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], opens: [] });
+  await gp.locator('[data-action="runner-look"]').click();
+  await gp.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(gp, 'form#accept', 'accept');
+  // Later and a way back, on the first-use step.
+  assert.ok(await gp.getByRole('button', { name: 'Later' }).isVisible());
+  assert.ok(await gp.getByRole('button', { name: '← Another identity' }).isVisible());
+  await shot(gp, 'h112-01-accept');
+  // Accepting: refused to be sealed, the cause and the way said (Kišib, Runner › Apps), kept in Damgar only; the app opens.
+  for (const box of await gp.locator('input[name=accept]').all()) await box.check();
+  await gp.getByRole('button', { name: 'Add these to my list' }).click();
+  await sees(gp, '.k-tile', 'tiles, not stuck');
+  const said = await gp.locator('#status').innerText();
+  assert.match(said, /Kišib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it\. To allow it, tick it in Kišib: Runner › Apps, beside Damgar/);
+  assert.match(said, /Kept in Damgar only/);
+  await shot(gp, 'h112-02-kept-here');
+  // Back to the first page from the identity panel's state: a new Damgar for the same identity, its first step left for later.
+  const g2 = await damgar(null, undefined, { kishib: k.dir });
+  const { page: g2p } = await open(`${g2.app.base}/#pair=${g2.app.access.newCode()}`);
+  await sees(g2p, '[data-add="kishib"]', 'first 2');
+  await g2p.locator('[data-add="kishib"]').click();
+  await g2p.locator('[data-action="runner-pair"]').click();
+  await sees(g2p, '[data-action="runner-look"]', 'code 2');
+  const code2 = /([0-9A-Z]{4}-[0-9A-Z]{4})/.exec(await g2p.locator('#first-part').innerText())![1];
+  const app2 = (await k.c.ask<{ apps: { id: string; code: string }[] }>('runner state')).apps.find((x) => x.code === code2)!;
+  await k.c.ask('runner approve', { pairing: app2.id, identities: [max.id], opens: [] });
+  await g2p.locator('[data-action="runner-look"]').click();
+  await g2p.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(g2p, 'form#accept', 'accept 2');
+  await g2p.getByRole('button', { name: '← Another identity' }).click();
+  await sees(g2p, '[data-add="kishib"]', 'back to the first page');
+  await shot(g2p, 'h112-03-back');
+  // Chosen again from those held: the step again, then Later.
+  await g2p.locator('[data-add="kishib"]').click();
+  await sees(g2p, `[data-runner-take="${max.id}"], [data-action="runner-look"]`, 'kishib again');
+  if (!(await g2p.locator(`[data-runner-take="${max.id}"]`).count())) await g2p.locator('[data-action="runner-look"]').click();
+  await g2p.locator(`[data-runner-take="${max.id}"]`).click();
+  await sees(g2p, 'form#accept', 'accept 3');
+  await g2p.getByRole('button', { name: 'Later' }).click();
+  await sees(g2p, '.k-tile', 'tiles after later');
+  // Ticked in Kišib: the rules saved again in Settings are sealed, through Kišib's panel.
+  await k.c.ask('runner opening', { pairing: app.id, identity: max.id, on: true });
+  await go(gp, 'settings', 'accept');
+  assert.match(await gp.locator('#pane').innerText(), /Kept in Damgar only/);
+  await gp.locator('#pane').getByRole('button', { name: 'Save to my list' }).click();
+  await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
+  await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
+  await sees(gp, '#status .k-note.k-done', 'sealed');
+  assert.match(await gp.locator('#status').innerText(), /sealed to this identity and kept at its homes/);
   assert.deepEqual(problems, []);
 });
 

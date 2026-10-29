@@ -5,7 +5,7 @@
 // program says and hands each choice back to it.
 
 import { KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, ICONS, note, opened, say, tiles, top, type ColumnEntry } from '../../../kit/src/html.ts';
+import { appMark, e, ICONS, note, opened, say, tiles, top, type ColumnEntry, whatIsMorOffline } from '../../../kit/src/html.ts';
 
 export const NAME = 'Nakišib';
 
@@ -36,9 +36,9 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .nk-loud p{margin:4px 0;color:var(--k-text)}
 .nk-plain p{margin:3px 0}
 .nk-apart{border-left:2px dashed var(--k-edge);padding:4px 12px;margin:10px 0}
-.nk-id{font:12.5px ui-monospace,Menlo,monospace;color:var(--k-id);word-break:break-all}
+.nk-id{font:12.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);word-break:break-all}
 .nk-typed{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.nk-sign input{max-width:12em;font:15px ui-monospace,Menlo,monospace;letter-spacing:.1em}
+.nk-sign input{max-width:12em;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.1em}
 .nk-pane{padding:20px 28px;overflow:auto;max-width:860px}
 .nk-list{list-style:none;padding:0;margin:0}
 .nk-list li{border:1px solid var(--k-line);border-radius:14px;padding:10px 14px;margin:8px 0}
@@ -114,7 +114,7 @@ export function home(): string {
     { key: 'rotation', name: 'Change keys', say: 'Read a request from Kišib: your paper, a new paper, SIGN.', icon: 'paper', danger: 3 },
     { key: 'first', name: 'A new identity', say: 'Its first paper, and the commitment Kišib makes the identity from.', icon: 'identities', danger: 3 },
     { key: 'signed', name: 'What it signed', say: 'Its memory: each change it signed. Nothing secret in it.', icon: 'choose', danger: 1 },
-  ]).replace('class="k-home"', 'class="k-home nk-three"')}</div><div class="nk-homefoot">${say('What “never connect” means, and what Nakišib keeps', NEVER_MORE)}</div>${FOOT}`;
+  ]).replace('class="k-home"', 'class="k-home nk-three"')}</div><div class="nk-homefoot">${say('What “never connect” means, and what Nakišib keeps', NEVER_MORE, { mor: whatIsMorOffline })}</div>${FOOT}`;
 }
 
 const COLUMN: ColumnEntry[] = ['Nakišib', { key: 'rotation', label: 'Change keys' }, { key: 'first', label: 'A new identity' }, { key: 'signed', label: 'What it signed' }];
@@ -149,7 +149,7 @@ ${v.already === 'same' ? '' : paperForm()}`;
 }
 
 function paperForm(): string {
-  return `<form id="paper" class="k-box k-fill" autocomplete="off"><h3>Your paper</h3>${p('The chain key’s paper this identity uses now: its 24 words, or the 72 characters of a hex paper. Nakišib uses it for this request only and overwrites it once signed; the Module checks again everything above with it.', 'k-small k-soft')}
+  return `<form id="paper" class="k-box k-fill" autocomplete="off"><h3>Your paper</h3>${p('The chain key’s paper this identity uses now: its 24 words (the only form Dubsar apps take). Nakišib uses it for this request only and overwrites it once signed; the Module checks again everything above with it.', 'k-small k-soft')}
 <label>The paper</label><textarea name="words" rows="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <div class="k-row"><button type="submit" class="k-btn k-p">Use this paper</button><span class="k-small k-faint">Nothing is signed yet.</span></div></form>`;
 }
@@ -195,7 +195,7 @@ ${w.length ? `<div class="k-row">${btn('forget', 'Done', true)}</div>` : ''}`;
 export function firstStart(): string {
   return `${steps(FIRST_STEPS, 0)}<h2>A new identity’s first paper</h2>
 ${p('For an identity Kišib makes (“Make an identity with Nakišib”): Nakišib draws the paper here, shows it once, asks three parts back, then writes only its commitment for Kišib. The paper never leaves this Mac, and Nakišib forgets it.', 'k-soft')}
-<div class="k-row">${btn('first', 'Draw a paper of 24 words', true, ' data-module="words"')}${btn('first', 'Draw a hex paper (72 characters)', false, ' data-module="hex"')}</div>`;
+<div class="k-row">${btn('first', 'Draw a paper of 24 words', true, ' data-module="words"')}</div>`;
 }
 
 export function firstReady(s: State, typed: boolean): string {

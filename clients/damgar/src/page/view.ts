@@ -9,12 +9,23 @@
 // from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, meButton, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile } from '../../../kit/src/html.ts';
+import { appMark, contactsButton, e, fold, meButton, note, opened, say, tiles, top, type ColumnEntry, type Named, type Tile, whatIsMor } from '../../../kit/src/html.ts';
+import { actId, contactsButtonFor, hashButton, who } from '../../../kit/src/ids.ts';
+import { qrSvg } from '../../../kit/src/qr.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
 
 export { e, note, say };
+
+/**
+ * An identity wherever Damgar shows one (H96, H106, H121): its names (the
+ * nickname, then the name it published, faint), asked of Damgar once drawn,
+ * and its short ID under them, a button: one tap shows it whole, a second
+ * copies it. Never a bare short ID.
+ */
+export const whoOf = (w: { id: string; me?: boolean }, inline = true): string => who({ id: w.id, me: !!w.me, inline });
+export { actId, hashButton };
 export type { Account, Accept, LaneShown, Line, PaymentShown, Rails, State, ToSign };
 
 export const NAME = 'Damgar';
@@ -29,7 +40,7 @@ export const TINT = { layer: APPS.damgar.colour, pastel: APPS.damgar.pastel } as
  * (`static/web.html`, written there by the build), so it shows even when the
  * script does not run.
  */
-export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}. Damgar holds no wallet.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key, and the on-chain request key Damgar makes: with them, sign claims and receipts as you, and commit your side to payments you did not intend.</li>
 <li>This browser’s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
 <li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
@@ -39,7 +50,7 @@ export const WEB_BANNER = `<details class="k-say damgar-banner" id="for-testing-
 export const STYLE = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.damgar-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .damgar-banner strong{font-weight:400;color:var(--k-text)}
 .damgar-banner ol{margin:4px 0;padding-left:1.4em}
 .damgar-foot{flex:none;padding:0 28px 10px}
@@ -53,7 +64,11 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .damgar-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
-.damgar-copy{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
+.damgar-qr{display:inline-block;line-height:0;border-radius:8px;overflow:hidden;max-width:100%}
+.damgar-qr svg{max-width:100%;height:auto}
+.damgar-wallet{margin:6px 0 8px}
+.damgar-wallet a.k-btn{text-decoration:none;display:inline-flex;align-items:center}
+.damgar-copy{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
 .damgar-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
 .damgar-v.valid{color:var(--k-text);border-color:var(--k-p)}
 .damgar-v.invalid{color:var(--k-bad);border-color:var(--k-bad)}
@@ -96,7 +111,7 @@ const TILES: (Tile & { key: Tab })[] = [
   { key: 'waiting', name: 'Waiting', say: 'Payments to read, sign and pay in your wallet; invoices to make, receipts to sign; one pasted by hand; to the vault.', icon: 'waiting', danger: 3 },
   { key: 'account', name: 'Account', say: 'In, out, pending, owed. Per unit, never summed across units. What other apps paid under their lanes.', icon: 'account', danger: 1 },
   { key: 'lanes', name: 'Lanes', say: 'What each app may pay without asking: a cap per act, a cap in all, kinds, an expiry.', icon: 'lanes', danger: 2 },
-  { key: 'settings', name: 'Settings', say: 'Where you are paid (the vault set in Kišib), what you accept, homes and relays, every step by hand.', icon: 'settings', danger: 2 },
+  { key: 'settings', name: 'Settings', say: 'Where you are paid (the vault set in Kišib), the rules you follow, homes and relays, every step by hand.', icon: 'settings', danger: 2 },
 ];
 
 /** Acting as: the identity in use, or one of its collectives (the identity panel's gesture). */
@@ -104,14 +119,18 @@ export interface Acting {
   id: string;
   form: string;
   name: string | null;
+  /** Its published name as read (H96). */
+  named?: Named | null;
 }
 
 /** The top of the window: Damgar (back to the tiles), its tabs once a tile is open, the identity (or the collective acted as) top right. */
 export function topBar(s: State, tab: Tab | null, acting: Acting | null): string {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Damgar">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? ' k-on' : ''}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ''}>${e(t.name)}${t.key === 'waiting' && s.counts.toSign + s.counts.toPay ? `<span class="k-count">${s.counts.toSign + s.counts.toPay}</span>` : ''}</button>`).join('')}</nav>` : '';
-  const me = i ? meButton({ name: i.name ?? (i.runner ? 'via Kišib' : shortForm(i.form)), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : '';
-  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button>${tabs}`, right: me });
+  // H96: its name as read: Loading…, its name, No name published, or Name not reached; never a bare mid1… in its place.
+  const me = i ? meButton({ name: i.name, form: i.form, named: i.named ?? null, as: acting ? { name: acting.name, form: acting.form, named: acting.named ?? null } : null }) : '';
+  // H100: Contacts top left, the one list, as in every app.
+  return top({ left: `<div class="k-row">${contactsButton()}<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button></div>${tabs}`, right: me });
 }
 
 /** The four tiles, their danger marks; the counts on Waiting. */
@@ -119,7 +138,7 @@ export function home(s: State, web: boolean, acting: Acting | null): string {
   const n = s.counts;
   const ts = TILES.map((t) => (t.key === 'waiting' && n.toSign + n.toPay ? { ...t, say: `To sign: ${n.toSign} · to pay: ${n.toPay}. Each read in plain words before you sign; paid only in your own wallet.` } : t));
   return `${topBar(s, null, acting)}<div class="k-body k-col-flex">${tiles(ts)}</div>
-<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'])}</div>`;
+<div class="damgar-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program’s folder: a prototype, never for a real identity.'], { mor: whatIsMor })}</div>`;
 }
 
 /** Each tab's column. Acting as a collective, Waiting gains its own part. */
@@ -129,7 +148,7 @@ export function column(tab: Tab, s: State, c: { toPay: number; toReceive: number
       return [
         { key: 'to-pay', label: 'To pay', k: c.toPay },
         { key: 'to-receive', label: 'To receive', k: c.toReceive },
-        ...(acting ? ['-' as ColumnEntry, { key: 'collective', label: `For ${acting.name ?? shortForm(acting.form)}` } as ColumnEntry] : []),
+        ...(acting ? ['-' as ColumnEntry, { key: 'collective', label: `For ${acting.name ?? 'the collective'}` } as ColumnEntry] : []),
         '-',
         { key: 'paste', label: '+ Paste an act to sign' },
         { key: 'vault', label: 'To the vault' },
@@ -139,7 +158,7 @@ export function column(tab: Tab, s: State, c: { toPay: number; toReceive: number
     case 'lanes':
       return [{ key: 'asked', label: 'Asked', k: c.asked }, { key: 'in-force', label: 'In force', k: c.inForce }, { key: 'own', label: 'Damgar’s own' }, '-', { key: 'ended', label: 'Ended', k: c.ended }];
     case 'settings':
-      return [{ key: 'paid', label: 'Where you are paid' }, { key: 'accept', label: 'What you accept' }, { key: 'relays', label: 'Homes and relays' }, '-', { key: 'manual', label: 'Every step by hand' }];
+      return [{ key: 'paid', label: 'Where you are paid' }, { key: 'accept', label: 'Rules I follow' }, { key: 'relays', label: 'Homes and relays' }, '-', { key: 'manual', label: 'Every step by hand' }];
   }
 }
 
@@ -182,7 +201,7 @@ export function firstScreen(web: boolean, part: 'make' | 'bring' | 'kishib' = 'b
 
 export function bringForm(): string {
   return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key’s words, as Dub, Edubba or Kišib show them (never the chain key’s).</p>
-<label>Its ID (mid1…, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
+<label>Its ID (mid1…, or its hexadecimal)</label><div class="k-row"><input name="id" class="k-grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
 <label>Its signing key’s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
@@ -209,7 +228,7 @@ export function makeWords(r: { words: string[]; positions: number[] }): string {
 export function runnerForm(r: { available: boolean; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }): string {
   if (!r.available) return `<p class="k-small k-soft">Kišib’s runner is in the computer’s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
   const ids = r.identities.length
-    ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? 'Use it' : 'Use it here'}</button></div>`).join('')}</div>`
+    ? `<div class="k-list">${r.identities.map((x) => `<div><span>${who({ id: x.id, named: x.name ? { published: { state: 'name', name: x.name } } : null, inline: true })}</span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? 'Use it' : 'Use it here'}</button></div>`).join('')}</div>`
     : '';
   return `${r.problem ? note('error', e(r.problem)) : ''}
 ${say('Kišib keeps the identity’s signing key on this Mac; Damgar holds none.', ['Pairing starts here and is approved in Kišib (Runner, Apps), comparing the code. Then every money act Damgar would sign is a request to Kišib, and Kišib’s panel appears inside Damgar’s window: money always asks. Allow “may open what is sealed to this identity” in Kišib, or Damgar cannot read what waits for it.'])}
@@ -227,10 +246,10 @@ export function acceptList(items: Accept[]): string {
 }
 
 export function acceptScreen(s: State): string {
-  return `<div class="damgar-first">${appMark(NAME, 'icon.png')}<h2>What you accept</h2>
+  return `<div class="damgar-first">${appMark(NAME, 'icon.png')}<h2>Rules I follow</h2>
 ${say('Damgar signs only under what you accept here; anything else is shown unknown, never signed.', ['Every money act names the specifications it follows. Damgar reads, checks and signs only under those you accept; an act under any other is shown unknown, as the core treats a specification it does not implement. Your choice is sealed to your identity and kept at its homes, so every app holding it reads the same list; changeable in Settings.'])}
 ${s.list.problems.length ? note('', lines(s.list.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
-<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Accept these</button></div></form><div id="status" class="k-status"></div></div>`;
+<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Add these to my list</button><button type="submit" class="k-btn" data-in="here">In Damgar only</button><button type="button" class="k-btn" data-action="accept-later">Later</button><span class="k-grow"></span><button type="button" class="k-btn k-q" data-action="first-back">← Another identity</button></div><p class="k-small k-soft">Later: every money act is shown unknown until you choose, in Settings, Rules I follow.</p></form><div id="status" class="k-status"></div></div>`;
 }
 
 // ---------------------------------------------------------------- the identity's own menu, its parts in the pop-up
@@ -260,14 +279,12 @@ export function renewForm(): string {
 }
 
 export function collectiveForm(cs: { id: string; form: string }[]): string {
+  // H121: each collective by its names, its short ID a button; H119: Contacts beside the field taking an ID.
   return `<p class="k-small k-soft">A collective whose Money area you hold: Damgar acts for it with your own key for it, sealed to you when you signed its founding. Then choose it under this identity in the panel: Waiting shows its part.</p>
-${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(c.form))}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join('')}</div>` : ''}
-<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span>${who({ id: c.id, collective: true, inline: true })}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join('')}</div>` : ''}
+<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}<button type="submit" class="k-btn k-p">Act for it</button></form>`;
 }
 
-export function spent(sayIt: string): string {
-  return `<div class="k-alarmbox" id="spent">${e(sayIt)} <button type="button" class="k-btn k-small" data-action="renew">Give the new words</button></div>`;
-}
 
 // ---------------------------------------------------------------- what waits
 
@@ -307,22 +324,39 @@ export function itemActs(t: ToSign): string {
   return `${t.amount ? `<p>${e(t.amount.said)}</p>` : ''}${lines(t.lines)}${invoice}<div class="damgar-acts">${offers}</div>`;
 }
 
+/**
+ * H117 (decided: "let's have at least the wallet receive the invoices for
+ * aproval"): the invoice handed to the person's wallet, every payment still
+ * approved there. Where a WebLN wallet is in the browser, it is offered
+ * first, and the proof it returns is taken back by itself; **Open in
+ * wallet**, a `lightning:` link opening the wallet app with the invoice
+ * filled in, and its QR for a wallet on a phone, whose proof is pasted back.
+ * No spending link.
+ */
+export function openInWallet(key: string, invoice: string): string {
+  const webln = typeof globalThis !== 'undefined' && !!(globalThis as { webln?: unknown }).webln;
+  const link = `lightning:${invoice}`;
+  return `<div class="damgar-wallet" data-wallet="${e(key)}"><div class="k-row">${webln ? `<button type="button" class="k-btn k-p" data-action="webln" data-key="${e(key)}" data-invoice="${e(invoice)}">Pay with your browser’s wallet</button>` : ''}<a class="k-btn${webln ? '' : ' k-p'}" href="${e(link)}" data-open-wallet>Open in wallet</a></div>
+${fold('Its QR code, for a wallet on your phone', `<div class="damgar-qr">${qrSvg(link, { level: 'M', label: 'The invoice, as a QR code' })}</div>`)}
+<p class="k-small k-soft">${webln ? 'Your browser’s wallet asks you to approve it, then hands the proof back here by itself.' : 'Your wallet asks you to approve it; then paste its proof below.'} Nothing is paid without your approval in the wallet.</p></div>`;
+}
+
 /** What a payment shows to be paid: the invoice or address, the proof pasted back; a vault's invoice; an anchor's ticket. */
 export function payment(p: PaymentShown, forPay = false): string {
   const proofs = p.proofs.length
-    ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${e(x.by.me ? 'you' : x.by.short)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
+    ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${whoOf(x.by)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
     : '';
   const pay =
     forPay && p.pay
       ? p.pay.invoice
-        ? `<label>Pay this invoice in your wallet</label><div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
+        ? `<label>Pay this invoice in your wallet</label>${openInWallet(p.key, p.pay.invoice)}<div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
 <form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once paid: the preimage (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>`
         : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="damgar-copy">${e(p.pay.address ?? '')}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.address ?? '')}">Copy the address</button>
 ${p.stage === 'paid' ? `<div class="k-row"><button type="button" data-action="recheck" data-key="${e(p.key)}" class="k-btn k-p">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction’s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>`}`
       : '';
   const vaultInvoice =
     forPay && p.vaultInvoice
-      ? `<p class="k-small k-soft">Make an invoice on your vault’s node (${e(p.vaultInvoice.node.slice(0, 16))}…) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault’s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
+      ? `<p class="k-small k-soft">Make an invoice on your vault’s node (${hashButton(p.vaultInvoice.node)}) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault’s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
 <form class="vault-invoice" data-key="${e(p.key)}"><label>The invoice your vault’s node made</label><input name="invoice" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it</button></div></form>`
       : '';
   const ticket = p.ticket ? `<p class="k-small k-soft">An anchor’s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? '' : ' Not checked here: this Damgar follows no chain, so whether that block is within the tier’s reach of today’s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer.'}</p>` : '';
@@ -351,7 +385,7 @@ export function vaultPane(r: Rails | null, problem: string | null, waiting: stri
   if (!v) return `<h2>To the vault</h2><p class="k-soft">Your identity’s chain declares no vault: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Kišib (Paper, Change the vault).</p>`;
   return `<h2>To the vault</h2>
 ${say('From your wallet to your vault, one way only.', ['Damgar binds the payment, you pay it in your wallet (on regtest, the test wallet) and paste the proof back. It names the act that declared your vault, a transfer to yourself (the payment cMIP, draft 4). Withdrawing needs the chain key and stays in Kišib.'])}
-<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join('; '))}. Declared in your chain (act ${e(v.declaredBy.slice(0, 12))}…), with the chain key: changed only in Kišib.</p>
+<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join('; '))}. Declared in your chain (act ${actId(v.declaredBy)}), with the chain key: changed only in Kišib.</p>
 <form id="vault-transfer"><label>To</label><select name="entry">${v.entries.map((x, i) => `<option value="${i}">${e(x.railName)}, ${e(x.unit.said)}</option>`).join('')}</select>
 <label>Amount (whole units)</label><input name="value" inputmode="numeric" autocomplete="off" required>
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="vault-review"></div>${waiting}`;
@@ -364,24 +398,25 @@ ${r.costs.length ? `<div class="damgar-costs"><h3>Before you send</h3>${lines(r.
 ${r.blocking.length ? note('error', lines(r.blocking.map((t) => ({ text: t, tone: 'warn' as const })))) : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it here</button></div>`}`;
 }
 
-/** For a collective (round 3, F353): its Money area, a promise to pay, and the promises signed here with how they stand. */
+/** For a collective (round 3, F353): its Money area, a promise to pay, and the promises signed here with how they stand. `name`: the collective as shown, markup (its names, `whoOf`). */
 export function collectivePane(c: { id: string; area: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] } | null, name: string): string {
-  if (!c) return `<h2>For ${e(name)}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity’s menu (A collective under it).</p>`;
+  if (!c) return `<h2>For ${name}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity’s menu (A collective under it).</p>`;
   const area = c.area;
+  // H96, H121: whom each promise pays by its names, its act by its short ID, each a button.
   const acts = c.acts.length
-    ? lines(
-        c.acts.map((a) => {
+    ? `<ul class="damgar-lines">${c.acts
+        .map((a) => {
           const st = a.standing;
           const keys = st?.areas[0];
-          return { text: `${a.amount.value.toLocaleString('en')} to ${a.to.slice(0, 8)}…${a.whatFor ? ` (${a.whatFor})` : ''}: ${st ? (st.met ? 'counts for the collective' : 'does not count yet') : 'not read'}${keys ? `, ${keys.signers.length} of ${keys.needed} keys${keys.limits === 'above' ? ', above the cap' : ''}` : ''} · ${a.act.slice(0, 12)}…`, tone: st?.met ? 'ok' : 'warn' };
-        }),
-      )
+          return `<li class="${st?.met ? 'ok' : 'warn'}">${e(a.amount.value.toLocaleString('en'))} to ${who({ id: a.to, inline: true })}${a.whatFor ? ` (${e(a.whatFor)})` : ''}: ${e(st ? (st.met ? 'counts for the collective' : 'does not count yet') : 'not read')}${keys ? e(`, ${keys.signers.length} of ${keys.needed} keys${keys.limits === 'above' ? ', above the cap' : ''}`) : ''} · ${actId(a.act)}</li>`;
+        })
+        .join('')}</ul>`
     : '<p class="k-small k-soft">No promise signed here yet.</p>';
-  return `<h2>For ${e(name)}</h2>
+  return `<h2>For ${name}</h2>
 ${say('Damgar acts for it with your own key for it.', ['Made as you signed its founding and sealed to you at your homes. Within the area’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.'])}
 ${area ? `<p class="k-small k-soft">Its Money area, “${e(area.name)}”: ${area.holders.length} holder${area.holders.length === 1 ? '' : 's'}, ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
 ${c.why ? note('error', e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h3>A promise to pay, from the collective</h3>
-<label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
+<label>To whom (an ID)</label><div class="k-row"><input name="to" type="text" class="k-grow" required autocomplete="off" spellcheck="false">${contactsButtonFor('to')}</div>
 <label>How much (regtest satoshis)</label><input name="value" type="text" inputmode="numeric" required>
 <label>What for</label><input name="whatFor" type="text">
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div><div class="promise-read"></div></form>`}
@@ -400,7 +435,7 @@ const amounts = (xs: Shown[]) => (xs.length ? xs.map((x) => e(x.said)).join('<br
 /** Summary: per unit, never added across units; requests and debts; what it does not judge. */
 export function summaryPane(a: Account): string {
   const asks = a.asks.length
-    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} <span class="k-mono">${e(shortForm(formOf(x.other.id, 'mid')))}</span>: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
+    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} ${whoOf(x.other)}: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
     : '';
   return `<h2>Summary</h2>
 ${say('Per unit, never summed across units. Each verified from the rail’s evidence.', a.notes)}
@@ -414,7 +449,9 @@ ${asks}${a.problems.length ? note('', lines(a.problems.map((t) => ({ text: t, to
 export function laneTotal(l: LaneShown): string {
   if (!l.total) return '';
   const over = l.over ? `<span class="damgar-over"> · overspent by ${e(l.over.said)}</span>` : '';
-  return `<dt>In all</dt><dd>${e(l.total.said)}${l.spent ? ` · ${e(l.spent.said)} spent, ${e(l.left?.said ?? '')} left` : ' · not read yet'}${over}</dd>`;
+  // What is paid, apart from what is only asked (H107): an asked payment holds its amount against the cap, but nothing has moved yet.
+  const parts = l.spent ? [l.paid && l.paid.value ? `${l.paid.said} paid` : null, l.asked && l.asked.value ? `${l.asked.said} asked, not paid yet` : null].filter(Boolean).join(', ') : '';
+  return `<dt>In all</dt><dd>${e(l.total.said)}${l.spent ? ` · ${e(l.spent.said)} spent${parts ? ` (${e(parts)})` : ''}, ${e(l.left?.said ?? '')} left` : ' · not read yet'}${over}</dd>`;
 }
 
 /** One lane, as Lanes shows it. */
@@ -442,7 +479,7 @@ ${say('What an app may sign and pay without asking you each time.', ['A lane let
 ${manual ? note('', 'Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.') : ''}
 ${ls.map((l) => lane(l)).join('') || '<p class="k-empty">No lane in force. An app asks for one (in Dub: the identity’s menu, “A lane from Damgar”), and it waits in Asked.</p>'}
 <h3>The clock for lanes</h3><p class="k-small k-soft">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.${dubsar ? ' Prefilled with the Dubsar clock, the one every app of the suite relies on; a lane’s grant names the clock, so its words say which.' : ''}</p>
-<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? '')}" spellcheck="false"><button type="submit" class="k-btn">Save the clock</button></form>`;
+<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? '')}" spellcheck="false">${contactsButtonFor('clock')}<button type="submit" class="k-btn">Save the clock</button></form>`;
 }
 
 /** Damgar's own lanes: receipts and invoices, referral shares; and the node link (moved here from Settings, accepted). */
@@ -467,23 +504,57 @@ ${web ? note('', 'The web client never makes a link to a node: use Damgar on you
 
 // ---------------------------------------------------------------- settings
 
-export function paidPane(r: Rails | null, problem: string | null): string {
+/**
+ * H92 (his words: "First the user selects the rail, that changes the content
+ * of the setup page depending on rail"): each rail Module's own fields for
+ * the payee pointer, by its key. A rail Module to come adds its fields here,
+ * not a new page; its name and what it does come from its own entry
+ * (`../specs.ts`), its costs from its read-back.
+ */
+export const RAIL_FIELDS: Record<string, { fields: (v: Record<string, string>) => string; network: boolean }> = {
+  lightning: {
+    fields: (v) => `<label>Your wallet’s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false" value="${e(v.lightning ?? '')}">`,
+    network: true,
+  },
+  onchain: {
+    fields: (v) =>
+      `<label>A Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false" value="${e(v.onchain ?? '')}"><label class="damgar-check"><input type="checkbox" name="newRequestKey"${v.newRequestKey === 'on' ? ' checked' : ''}> Make a new on-chain request key (the old one then no longer counts for new payments)</label>`,
+    network: true,
+  },
+};
+
+/** The rail Modules this identity accepts that Damgar can put in a pointer: what + Add a rail offers. */
+export const railsAccepted = (accept: Accept[]) => accept.filter((a) => a.kind === 'Module' && a.accepted && RAIL_FIELDS[a.key]);
+
+/** The new pointer's form (H92): one card per rail chosen, each removable, its own fields; + Add a rail from those accepted. */
+export function railsForm(accept: Accept[], chosen: string[], values: Record<string, string>): string {
+  const can = railsAccepted(accept);
+  if (!can.length) return `<p class="k-soft">You accept no rail Module yet: accept one in Settings, Rules I follow (the Lightning rail, the on-chain rail), then choose it here.</p>`;
+  const cards = chosen
+    .map((k) => can.find((a) => a.key === k))
+    .filter((a): a is Accept => !!a)
+    .map((a, n) => `<div class="k-box damgar-rail" data-rail-card="${e(a.key)}"><div class="k-row"><h4 class="k-grow">${n + 1}. ${e(a.name)}</h4><button type="button" class="k-btn k-q k-small" data-action="rail-remove" data-rail="${e(a.key)}">Remove</button></div><p class="k-small k-soft">${e(a.does)}</p>${RAIL_FIELDS[a.key].fields(values)}</div>`)
+    .join('');
+  const left = can.filter((a) => !chosen.includes(a.key));
+  const add = left.length
+    ? `<div class="k-row damgar-rail-add"><select name="rail-add" aria-label="A rail to add">${left.map((a) => `<option value="${e(a.key)}">${e(a.name)}</option>`).join('')}</select><button type="button" class="k-btn" data-action="rail-add">${chosen.length ? '+ Add a rail' : 'Choose this rail'}</button></div>`
+    : '';
+  const network = chosen.some((k) => RAIL_FIELDS[k]?.network) ? `<label>Network</label><select name="network"><option value="3"${values.network !== '2' ? ' selected' : ''}>regtest</option><option value="2"${values.network === '2' ? ' selected' : ''}>signet</option></select>` : '';
+  return `<form id="rails">${chosen.length ? '' : '<p class="k-small k-soft">First choose a rail: the page then asks only what that rail needs.</p>'}${cards}${add}${network}${chosen.length ? '<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div>' : ''}</form>`;
+}
+
+export function paidPane(r: Rails | null, problem: string | null, accept: Accept[] = [], chosen: string[] = [], values: Record<string, string> = {}): string {
   const pointer = r?.pointer
-    ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''} · <span class="k-mono">${e(shortForm(formOf(r.pointer.act)))}</span></dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? '' : ' (a rail Module you do not accept)'}</dd>`).join('')}</dl></div>`
+    ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''} · ${actId(r.pointer.act)}</dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? '' : ' (a rail Module you do not accept)'}</dd>`).join('')}</dl></div>`
     : '<p class="k-soft">You have no payee pointer yet: nobody can pay you until you say where.</p>';
   const vault = r?.vault
-    ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity’s chain (act ${e(r.vault.declaredBy.slice(0, 12))}…), with the chain key: changed only in Kišib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>`
+    ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity’s chain (act ${actId(r.vault.declaredBy)}), with the chain key: changed only in Kišib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>`
     : '<p class="k-small k-soft">None declared: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Kišib.</p>';
   return `<h2>Where you are paid</h2>
 ${say('Your payee pointer: where payments to you go, with each rail’s costs.', ['Read back with each rail’s stated costs before it is signed. A new pointer replaces the one in force for new payments.'])}
 ${problem ? note('error', e(problem)) : pointer}
-<details class="k-box"><summary>Change it</summary>
-<form id="rails"><label>Lightning: your wallet’s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false">
-<label>On-chain: a Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false">
-<label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
-<label class="damgar-check"><input type="checkbox" name="newRequestKey"> Make a new on-chain request key (the old one then no longer counts for new payments)</label>
-<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="rails-review"></div></details>
-${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: <span class="k-mono">${e(r.requestKey.slice(0, 16))}…</span></p>` : ''}
+${fold('Change it', `<div id="rails-at">${railsForm(accept, chosen, values)}</div><div id="rails-review"></div>`, { attrs: 'id="rails-fold"', open: !!values.open })}
+${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: ${hashButton(r.requestKey)}</p>` : ''}
 <div class="k-box"><h3>The vault</h3>${vault}</div>`;
 }
 
@@ -494,10 +565,11 @@ ${r.costs.length ? `<div class="damgar-costs"><h3>What each rail costs you, stat
 }
 
 export function acceptPane(s: State): string {
-  return `<h2>What you accept</h2>
+  return `<h2>Rules I follow</h2>
 ${say(`Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ''}: every app holding it reads it.`, ['Each app changes only its part; Damgar the Money layer’s. An act under something you do not accept is shown unknown, and never signed.'])}
 ${s.list.merged.length ? note('', `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ''}
-<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Save what I accept</button></div></form>
+${s.list.here ? note('', 'Kept in Damgar only: the rules ticked below are not sealed to this identity yet, so the other apps do not see them. Save them again once they can be sealed.') : ''}
+<form id="accept">${acceptList(s.accept)}<div class="k-row"><button type="submit" class="k-btn k-p">Save to my list</button><button type="submit" class="k-btn" data-in="here">In Damgar only</button></div><p class="k-small k-soft">Save to my list: sealed to this identity, every app reads it. In Damgar only: kept here, your list unchanged, so the other apps still ask; a rule already on your list stays on it.</p></form>
 <div class="k-row"><span class="k-grow k-small k-soft">${s.list.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button type="button" class="k-btn" data-action="publish list" data-on="${s.list.published ? 'false' : 'true'}">${s.list.published ? 'Make it private again' : 'Publish it'}</button></div>`;
 }
 
@@ -522,8 +594,8 @@ export interface CardAct {
 
 const actChoice = (acts: CardAct[]) =>
   acts.length > 1
-    ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? ' checked' : ''}> <span>${e(x.said)} <span class="k-mono k-faint">${e(shortForm(formOf(x.id)))}</span></span></label>`).join('')}</div>`
-    : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> <span class="k-mono k-faint">${e(shortForm(formOf(acts[0].id)))}</span></p>`;
+    ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? ' checked' : ''}> <span>${e(x.said)} ${actId(x.id)}</span></label>`).join('')}</div>`
+    : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> ${actId(acts[0].id)}</p>`;
 
 const noAct = '<p class="k-soft">This card is not yet an act on MOR (a draft waiting to be signed here): there is nothing to rely on or anchor.</p>';
 
@@ -538,7 +610,7 @@ export function anchorForm(acts: CardAct[], offers: { act: string; unit: string;
   if (!acts.length) return noAct;
   const which = chosen ? acts.filter((x) => x.id === chosen) : acts;
   return `<form id="anchor-offers">${say('An anchor puts this act’s fingerprint on the Bitcoin chain, through a pooled anchoring service, paid here.', ['Anyone may anchor any act (the anchoring cMIP). The service is sent a leaf (the act’s fingerprint mixed with a random secret Damgar keeps), never the act. Damgar signs the payment’s request at once; you pay the invoice in To pay; it shows in Account › Anchors. Round 1 runs on regtest: its coins are worth nothing.'])}${actChoice(which.length ? which : acts)}
-<label>The anchoring service’s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow"><button type="submit" class="k-btn">Read its offer</button></div></form>${
+<label>The anchoring service’s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow">${contactsButtonFor('service')}<button type="submit" class="k-btn">Read its offer</button></div></form>${
     offers === null
       ? ''
       : offers.length

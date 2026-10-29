@@ -59,23 +59,40 @@ export function closeMenu(): void {
 }
 
 /**
- * Place a pop next to the button that opened it, inside the window: below
- * it where there is room, above otherwise; on a phone, the style lays it as
- * a sheet at the bottom instead.
+ * Place a pop next to the button that opened it, inside the part of the
+ * page that can be seen: below it where there is room, above otherwise; on
+ * a phone, the style lays a menu as a sheet at the bottom instead. The part
+ * seen is the visual viewport where the browser has one: with the iPad's
+ * keyboard up, the page is not shortened, only covered, so a pop placed by
+ * the window's height alone could sit out of sight (H84).
  */
 function place(pop: HTMLElement, button: HTMLElement, prefer: 'below' | 'above') {
+  // Anchored to its typing box (@ suggestions, H84): it travels with the box, wherever the keyboard pushes it.
+  if (pop.classList.contains('k-anchored')) return;
   const r = button.getBoundingClientRect();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
+  const vv = window.visualViewport;
+  // The band seen, in the coordinates a fixed element is placed in.
+  const top = vv ? vv.offsetTop : 0;
+  const bottom = vv ? vv.offsetTop + vv.height : document.documentElement.clientHeight;
+  pop.style.maxHeight = '';
+  const w = pop.offsetWidth;
+  let h = pop.offsetHeight;
   let left = prefer === 'above' ? r.right - w : r.left;
   left = Math.max(8, Math.min(left, vw - w - 8));
-  let topAt = prefer === 'below' ? r.bottom + 6 : r.top - h - 6;
-  if (topAt + h > vh - 8) topAt = r.top - h - 6;
-  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  const roomAbove = r.top - 6 - (top + 8);
+  const roomBelow = bottom - 8 - (r.bottom + 6);
+  const above = prefer === 'above' ? roomAbove >= h || roomAbove >= roomBelow : !(roomBelow >= h || roomBelow >= roomAbove);
+  // Too tall for either side: shortened to the larger room, scrolling inside.
+  const room = Math.max(above ? roomAbove : roomBelow, 80);
+  if (h > room) {
+    pop.style.maxHeight = `${Math.floor(room)}px`;
+    h = pop.offsetHeight;
+  }
+  let at = above ? r.top - 6 - h : r.bottom + 6;
+  at = Math.max(top + 8, Math.min(at, bottom - h - 8));
   pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+  pop.style.top = `${Math.round(at)}px`;
 }
 
 /** Open a pop of HTML next to a button; its items handed to `pick`. */
@@ -85,10 +102,23 @@ export function popAt(button: HTMLElement, html: string, prefer: 'below' | 'abov
   holder.innerHTML = html;
   const pop = holder.firstElementChild as HTMLElement;
   (button.closest('.k-page') ?? document.body).append(pop);
+  // A menu is drawn above whatever is open (H102).
+  pop.style.zIndex = String(LAYER_BASE + stack.length * 2 + 2);
   place(pop, button, prefer);
   button.classList.add('k-open');
   button.setAttribute('aria-expanded', 'true');
-  openMenu = { pop, button, done };
+  const again = () => place(pop, button, prefer);
+  window.visualViewport?.addEventListener('resize', again);
+  window.visualViewport?.addEventListener('scroll', again);
+  openMenu = {
+    pop,
+    button,
+    done: () => {
+      window.visualViewport?.removeEventListener('resize', again);
+      window.visualViewport?.removeEventListener('scroll', again);
+      done?.();
+    },
+  };
   pop.addEventListener('click', (ev) => {
     const item = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-k-item]');
     if (!item || item.disabled) return;
@@ -118,14 +148,33 @@ async function copied(item: HTMLButtonElement, text: string) {
  * bottom halves the app's.
  */
 export function attachCards(root: HTMLElement, host: CardHost): void {
+  /** An act drawn here: the app's, or an earlier version unfolded inside a corrected card (H103). */
+  const actOf = (card: HTMLElement): KitAct | undefined => {
+    const own = host.act(card.dataset.kAct!);
+    if (own) return own;
+    const outer = card.parentElement?.closest<HTMLElement>('[data-k-act]');
+    return outer ? (actOf(outer)?.earlier ?? []).find((x) => x.id === card.dataset.kAct) : undefined;
+  };
   root.addEventListener('click', (ev) => {
+    // H103: Corrected unfolds the earlier versions above, and folds them again.
+    const fold = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-corrected]');
+    if (fold) {
+      ev.stopPropagation();
+      const box = fold.closest<HTMLElement>('[data-k-act]')?.querySelector<HTMLElement>(':scope > [data-k-earlier]');
+      if (box) {
+        box.hidden = !box.hidden;
+        fold.setAttribute('aria-expanded', String(!box.hidden));
+        fold.classList.toggle('k-on', !box.hidden);
+      }
+      return;
+    }
     const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-menu]');
     if (!b) return;
     const card = b.closest<HTMLElement>('[data-k-act]');
     if (!card) return;
     ev.stopPropagation();
     if (openMenu?.button === b) return closeMenu();
-    const a = host.act(card.dataset.kAct!);
+    const a = actOf(card);
     if (!a) return;
     const which = b.dataset.kMenu as 'signer' | 'act';
     card.classList.add('k-sel');
@@ -148,27 +197,197 @@ export function attachCards(root: HTMLElement, host: CardHost): void {
 
 // ---------------------------------------------------------------- closing what is open
 
-/** One listener on the document: a click outside a pop or Escape closes it (then a panel, then the pop-up thread). */
+/**
+ * One listener on the document: a click outside a menu closes it; Escape
+ * closes the menu open, else whatever was opened last (asking first where a
+ * form in it was typed in), else the note under the top (H91, H102).
+ */
 export function attachClosing(doc: Document = document): void {
+  if (attached.has(doc)) return;
+  attached.add(doc);
   doc.addEventListener('click', (ev) => {
-    if (!openMenu) return;
     const t = ev.target as HTMLElement;
+    // The × of a note under the top (H91): it goes, nothing else changes.
+    const x = t.closest<HTMLElement>('[data-k-status-close]');
+    if (x) {
+      const st = x.closest<HTMLElement>('.k-status');
+      if (st) st.innerHTML = '';
+      return;
+    }
+    // One's own ID (H88): Copy ID; Share your ID link (the system's sharing where there is one, else copied).
+    const cid = t.closest<HTMLElement>('[data-k-copy-id]');
+    const share = t.closest<HTMLElement>('[data-k-share]');
+    if (cid || share) {
+      const b = (cid ?? share)!;
+      const text = cid ? cid.dataset.kCopyId! : share!.dataset.kShare!;
+      void (async () => {
+        let said = '';
+        if (share && typeof navigator.share === 'function') {
+          try {
+            await navigator.share({ title: 'My ID on MOR', text });
+            return;
+          } catch (err) {
+            if ((err as { name?: string }).name === 'AbortError') return;
+          }
+        }
+        said = (await copy(text)) ? (share ? 'Copied: paste it where you share it' : 'Copied') : 'Select it and copy it';
+        const was = b.textContent;
+        b.textContent = said;
+        setTimeout(() => {
+          if (b.isConnected) b.textContent = was;
+        }, 1600);
+      })();
+      return;
+    }
+    if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
   });
   doc.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
     if (openMenu) return closeMenu();
-    if (panel) return closePanel();
-    popup?.close();
+    const top = stack[stack.length - 1];
+    if (top) return void leave(top);
+    for (const st of doc.querySelectorAll<HTMLElement>('.k-status')) st.innerHTML = '';
   });
+  // Every note under the top gets its ×, whoever writes it (H91: nothing stays until a refresh).
+  const closeable = (root: ParentNode) => {
+    for (const st of root.querySelectorAll<HTMLElement>('.k-status')) {
+      if (st.firstElementChild && !st.querySelector(':scope > [data-k-status-close], :scope > .k-close')) {
+        const b = doc.createElement('button');
+        b.type = 'button';
+        b.className = 'k-round k-close';
+        b.dataset.kStatusClose = '';
+        b.setAttribute('aria-label', 'Close');
+        b.textContent = '×';
+        st.append(b);
+      }
+    }
+  };
+  new MutationObserver(() => closeable(doc)).observe(doc.documentElement, { childList: true, subtree: true });
+}
+const attached = new WeakSet<Document>();
+
+// ---------------------------------------------------------------- one stack of what is open (H102, H91)
+
+/**
+ * Everything that opens over the page (a pop-up, a panel, another app's
+ * frame, a confirmation) is one layer of one stack: whatever opens last is
+ * drawn on top, each layer over its own shade, so the one beneath is dimmed;
+ * closing one returns to the one beneath (and closes what was opened above
+ * it). Each has its × top right; Escape and a tap outside close the top one,
+ * asking first where a form in it was typed in; nothing ever needs a
+ * refresh to go.
+ */
+export interface Layer {
+  box: HTMLElement;
+  shade: HTMLElement;
+  close(): void;
+  /** Something typed in it and not sent: closing by Escape or a tap outside asks first. */
+  dirty: boolean;
+}
+
+const LAYER_BASE = 30;
+const stack: Layer[] = [];
+
+function restack(): void {
+  stack.forEach((l, i) => {
+    l.shade.style.zIndex = String(LAYER_BASE + i * 2);
+    l.box.style.zIndex = String(LAYER_BASE + i * 2 + 1);
+    l.box.toggleAttribute('data-k-under', i < stack.length - 1);
+  });
+}
+
+/** Put a box and its shade on the stack, on top; its own `close` takes them away. */
+export function pushLayer(box: HTMLElement, shade: HTMLElement, close: () => void): Layer {
+  // A menu that led here has done its work.
+  closeMenu();
+  const l: Layer = { box, shade, close, dirty: false };
+  stack.push(l);
+  shade.addEventListener('click', () => {
+    if (stack[stack.length - 1] === l) void leave(l);
+  });
+  box.addEventListener('input', (ev) => {
+    const t = ev.target as HTMLInputElement | HTMLTextAreaElement;
+    if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !/^(checkbox|radio|file|hidden|search)$/.test((t as HTMLInputElement).type))) && t.value.trim()) l.dirty = true;
+  });
+  box.addEventListener('submit', () => (l.dirty = false), true);
+  box.addEventListener('click', (ev) => {
+    const t = ev.target as HTMLElement;
+    if (t.closest('[data-k-close]')?.closest('[data-k-stack]') === box) l.close();
+    else if (t.closest('[data-k-remove-no]') && box.matches('[data-k-confirm]')) l.close();
+  });
+  box.dataset.kStack = '';
+  restack();
+  return l;
+}
+
+/** Take a layer off the stack, and everything opened above it. Its own `close` removes its elements. */
+export function popLayer(box: HTMLElement): void {
+  const i = stack.findIndex((l) => l.box === box);
+  if (i < 0) return;
+  const above = stack.splice(i);
+  for (const l of above.slice(1).reverse()) l.close();
+  restack();
+}
+
+/** The layer on top, if any. */
+export const topLayer = (): HTMLElement | null => stack[stack.length - 1]?.box ?? null;
+
+/** Close a layer as Escape or a tap outside does: asking first where something typed in it would be lost. */
+async function leave(l: Layer): Promise<void> {
+  if (l.dirty && !(await askLeave(l.box.closest('.k-page') ?? document.body))) return;
+  l.close();
+}
+
+/** "Close it? What you typed is not kept": a small confirmation, on top. */
+function askLeave(page: Element): Promise<boolean> {
+  return new Promise((done) => {
+    const c = openConfirm(page as HTMLElement, '<div class="k-box" data-k-leave><h4>Close it?</h4><p class="k-small k-soft">What you typed there is not kept.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-leave-yes>Close it</button><button type="button" class="k-btn k-q" data-k-leave-no>Keep writing</button></div></div>', () => done(false));
+    c.box.addEventListener('click', (ev) => {
+      const t = ev.target as HTMLElement;
+      if (t.closest('[data-k-leave-yes]')) {
+        c.close(true);
+        done(true);
+      } else if (t.closest('[data-k-leave-no]')) c.close();
+    });
+  });
+}
+
+/**
+ * A confirmation over whatever is open (Remove said plainly, Close it?): on
+ * top of the stack, its own × and shade. `gone` is called when it goes
+ * without an answer.
+ */
+export function openConfirm(page: HTMLElement, html: string, gone?: () => void): { box: HTMLElement; close(answered?: boolean): void } {
+  const shade = document.createElement('div');
+  shade.className = 'k-shade k-light';
+  const box = document.createElement('div');
+  box.className = 'k-modal k-confirm';
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-modal', 'true');
+  box.dataset.kConfirm = '';
+  box.innerHTML = `<div class="k-mh"><span class="k-grow"></span><button type="button" class="k-round" data-k-close aria-label="Close">×</button></div><div class="k-mbody">${html}</div>`;
+  page.append(shade, box);
+  let answered = false;
+  const close = (a = false) => {
+    answered ||= a;
+    if (!box.isConnected) return;
+    box.remove();
+    shade.remove();
+    popLayer(box);
+    if (!answered) gone?.();
+  };
+  pushLayer(box, shade, () => close());
+  box.querySelector<HTMLButtonElement>('.k-mbody button')?.focus({ preventScroll: true });
+  return { box, close };
 }
 
 // ---------------------------------------------------------------- panels (identities, contacts)
 
 let panel: { el: HTMLElement; shade: HTMLElement; done?: () => void } | null = null;
 
-/** Open a panel (its HTML from `identityPanel` or `contactsPanel`) over a light shade; one at a time. */
+/** Open a panel (its HTML from `identityPanel` or `contactsPanel`) over a light shade; one at a time, on the stack. */
 export function openPanel(page: HTMLElement, html: string, done?: () => void): HTMLElement {
   closePanel();
   const shade = document.createElement('div');
@@ -177,8 +396,8 @@ export function openPanel(page: HTMLElement, html: string, done?: () => void): H
   holder.innerHTML = html;
   const el = holder.firstElementChild as HTMLElement;
   page.append(shade, el);
-  shade.addEventListener('click', () => closePanel());
   panel = { el, shade, done };
+  pushLayer(el, shade, () => closePanel());
   const find = el.querySelector<HTMLInputElement>('[data-k-find]');
   find?.addEventListener('input', () => {
     const q = find.value.trim().toLowerCase();
@@ -193,18 +412,21 @@ export function redrawPanel(html: string): HTMLElement | null {
   const holder = document.createElement('div');
   holder.innerHTML = html;
   const el = holder.firstElementChild as HTMLElement;
-  panel.el.replaceWith(el);
-  panel.el = el;
-  return el;
+  // The same layer, its contents drawn again: its place in the stack kept.
+  panel.el.replaceChildren(...el.childNodes);
+  for (const a of [...el.attributes]) if (a.name !== 'style') panel.el.setAttribute(a.name, a.value);
+  return panel.el;
 }
 
 export function closePanel(): void {
   if (!panel) return;
   closeMenu();
-  panel.el.remove();
-  panel.shade.remove();
-  panel.done?.();
+  const p = panel;
   panel = null;
+  popLayer(p.el);
+  p.el.remove();
+  p.shade.remove();
+  p.done?.();
 }
 
 export const panelOpen = () => panel?.el ?? null;
@@ -241,7 +463,6 @@ export class Popup {
       this.scroll = [...this.page.querySelectorAll('.k-feed')].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement('div');
       this.shade.className = 'k-shade';
-      this.shade.addEventListener('click', () => this.close());
       this.box = document.createElement('div');
       this.box.className = 'k-modal';
       this.box.setAttribute('role', 'dialog');
@@ -253,6 +474,7 @@ export class Popup {
       });
       this.page.append(this.shade, this.box);
       popup = this;
+      pushLayer(this.box, this.shade, () => this.close());
     }
     this.stack.push({ title, html });
     return this.draw();
@@ -273,6 +495,7 @@ export class Popup {
 
   close(): void {
     closeMenu();
+    if (this.box) popLayer(this.box);
     this.box?.remove();
     this.shade?.remove();
     this.box = this.shade = null;
@@ -316,7 +539,7 @@ export function stampCards(root: ParentNode, words: Record<string, string>): voi
     s.className = 'k-when';
     s.textContent = w;
     a.prepend(s);
-    a.querySelector('.k-hint')?.remove();
+    a.querySelectorAll('.k-hint, .k-unstamped').forEach((h) => h.remove());
   }
 }
 
@@ -389,6 +612,13 @@ export function attachNames(field: HTMLInputElement | HTMLTextAreaElement, conta
     if (!shown.length) return close();
     at = 0;
     const pop = popAt(field, suggestions(shown, o.title ?? (o.mention ? 'Mention' : 'Contacts')), o.mention ? 'above' : 'below', () => undefined);
+    // A mention in a typing box: the suggestions sit just above the box, inside it, so they are seen above the iPad's keyboard (H84).
+    const box = o.mention ? field.closest<HTMLElement>('.k-typing') : null;
+    if (box) {
+      pop.classList.add('k-anchored');
+      pop.style.left = pop.style.top = pop.style.maxHeight = '';
+      box.append(pop);
+    }
     pop.addEventListener('click', (ev) => {
       const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-pick]');
       const c = b && shown.find((x) => x.id === b.dataset.kPick);
@@ -491,6 +721,11 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
   frame.src = url.href;
   box.append(by, frame);
   page.append(shade, box);
+  // On the stack (H102): above whatever was open; Escape or a tap outside closes it as its × does.
+  pushLayer(box, shade, () => {
+    slot.close();
+    o.closed?.();
+  });
   // A sandboxed frame has an opaque origin ("null"): the message is taken only from that frame's window.
   const listen = (ev: MessageEvent) => {
     if (ev.source === frame.contentWindow) o.message?.(ev.data);
@@ -500,6 +735,7 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
     frame,
     close() {
       window.removeEventListener('message', listen);
+      popLayer(box);
       box.remove();
       shade.remove();
     },
@@ -509,4 +745,149 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
     o.closed?.();
   });
   return slot;
+}
+
+// ---------------------------------------------------------------- a key changed elsewhere (H82, H83)
+
+/** The identities whose warning was closed: a one-line reminder under the top instead (this page's memory). */
+const keyWarned = new Set<string>();
+let keyBox: { id: string; close(answered?: boolean): void } | null = null;
+
+/**
+ * The warning that the identity in use had its signing key changed
+ * elsewhere, with the app's box for the new words: a pop-up over the page
+ * (the tiles left whole); closed, a one-line reminder stays under the top,
+ * whose button opens it again (H82). It belongs to the identity in use:
+ * called with null, or with another identity, whatever was shown for an
+ * earlier one goes (H83). The app calls it whenever it checks the identity
+ * in use, and on every switch.
+ */
+export function keyChanged(page: HTMLElement, w: { id: string; name: string; say: string; form: string } | null): void {
+  if (keyBox && keyBox.id !== w?.id) {
+    keyBox.close(true);
+    keyBox = null;
+  }
+  for (const r of page.querySelectorAll<HTMLElement>('[data-k-keychanged]')) if (r.dataset.kKeychanged !== w?.id) r.remove();
+  if (!w) return;
+  const remind = () => {
+    if (page.querySelector(`[data-k-keychanged="${CSS.escape(w.id)}"]`)) return;
+    const line = document.createElement('div');
+    line.className = 'k-reminder';
+    line.dataset.kKeychanged = w.id;
+    line.setAttribute('role', 'alert');
+    const text = document.createElement('span');
+    text.textContent = `${w.name}’s signing key was changed elsewhere: this app signs nothing more with the old one.`;
+    const again = document.createElement('button');
+    again.type = 'button';
+    again.className = 'k-btn k-small';
+    again.textContent = 'Give the new words';
+    again.addEventListener('click', () => {
+      keyWarned.delete(w.id);
+      keyChanged(page, w);
+    });
+    line.append(text, again);
+    (page.querySelector('.k-top') ?? page.firstElementChild)?.after(line);
+  };
+  if (keyWarned.has(w.id)) return remind();
+  if (keyBox?.id === w.id) return;
+  const c = openConfirm(page, `<div class="k-keychanged" data-k-keychanged-box><h4>${escapeText(w.name)}: a signing key changed elsewhere</h4><p class="k-small">${escapeText(w.say)}</p>${w.form}</div>`, () => {
+    keyBox = null;
+    keyWarned.add(w.id);
+    remind();
+  });
+  c.box.classList.add('k-alarm-modal');
+  keyBox = { id: w.id, close: c.close };
+}
+
+/**
+ * A question asked in the page, never the browser's own dialog (which some
+ * browsers and app windows answer “no” without showing it, H90): on top of
+ * the stack, its × and Escape meaning no. Resolves true for yes.
+ */
+export function ask(page: HTMLElement, o: { title: string; text: string; yes: string; no?: string; alarm?: boolean }): Promise<boolean> {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<div class="k-box" data-k-ask><h4>${escapeText(o.title)}</h4><p class="k-small k-soft">${escapeText(o.text)}</p><div class="k-row"><button type="button" class="k-btn ${o.alarm ? 'k-alarm' : 'k-p'}" data-k-ask-yes>${escapeText(o.yes)}</button><button type="button" class="k-btn k-q" data-k-ask-no>${escapeText(o.no ?? 'Not now')}</button></div></div>`,
+      () => done(false),
+    );
+    c.box.addEventListener('click', (ev) => {
+      const t = ev.target as HTMLElement;
+      if (t.closest('[data-k-ask-yes]')) {
+        c.close(true);
+        done(true);
+      } else if (t.closest('[data-k-ask-no]')) c.close();
+    });
+  });
+}
+
+/**
+ * Ask a nickname for an identity (H109): the person's own name for it,
+ * sealed, "only you see it"; optional. Resolves the nickname typed (null:
+ * none, or taken away), or undefined where the question was closed.
+ */
+export function askNick(page: HTMLElement, o: { title: string; current?: string | null; yes?: string; skip?: string }): Promise<string | null | undefined> {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<form class="k-box" data-k-nick-form><h4>${escapeText(o.title)}</h4><label>A nickname (optional): only you see it, sealed to you</label><input name="nick" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" value="${escapeText(o.current ?? '')}"><div class="k-row"><button type="submit" class="k-btn k-p">${escapeText(o.yes ?? 'Save')}</button><button type="button" class="k-btn k-q" data-k-nick-skip>${escapeText(o.skip ?? 'Skip')}</button></div></form>`,
+      () => done(undefined),
+    );
+    const f = c.box.querySelector<HTMLFormElement>('form')!;
+    f.querySelector<HTMLInputElement>('input')!.focus();
+    f.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const v = (f.elements.namedItem('nick') as HTMLInputElement).value.trim();
+      c.close(true);
+      done(v || null);
+    });
+    c.box.querySelector('[data-k-nick-skip]')!.addEventListener('click', () => {
+      c.close(true);
+      done(o.current ? (o.current ?? null) : null);
+    });
+  });
+}
+
+/**
+ * The ask for rules not followed yet (H93): a one-line reminder under the
+ * top, naming them, whose button opens the app's Rules I follow. It belongs
+ * to the identity in use: called with null, or with nothing missing, it goes.
+ */
+export function rulesAsk(page: HTMLElement, w: { id: string; app: string; missing: string[]; open: () => void } | null): void {
+  for (const r of page.querySelectorAll<HTMLElement>('[data-k-rules-ask]')) if (!w || !w.missing.length || r.dataset.kRulesAsk !== w.id) r.remove();
+  if (!w || !w.missing.length) return;
+  const words = `${w.app} runs ${w.missing.length === 1 ? 'a rule' : `${w.missing.length} rules`} you have not approved: ${w.missing.join(', ')}. Until then, what was done under ${w.missing.length === 1 ? 'it' : 'them'} is unknown here.`;
+  let line = page.querySelector<HTMLElement>(`[data-k-rules-ask="${CSS.escape(w.id)}"]`);
+  if (line) {
+    line.querySelector('span')!.textContent = words;
+    return;
+  }
+  line = document.createElement('div');
+  line.className = 'k-reminder k-rules-ask';
+  line.dataset.kRulesAsk = w.id;
+  line.setAttribute('role', 'status');
+  const text = document.createElement('span');
+  text.textContent = words;
+  const look = document.createElement('button');
+  look.type = 'button';
+  look.className = 'k-btn k-small';
+  look.textContent = 'Rules I follow';
+  look.addEventListener('click', () => w.open());
+  line.append(text, look);
+  (page.querySelector('.k-top') ?? page.firstElementChild)?.after(line);
+}
+
+/**
+ * Rules I follow's clicks (H93): `approve` is given the rule's key ("*" for
+ * every one not followed) and where (`here`: in this app only; `list`: added
+ * to the identity's list); `stop`, a rule followed in this app only.
+ */
+export function attachRules(root: HTMLElement, o: { approve: (key: string, where: 'here' | 'list') => void; stop: (key: string) => void }): void {
+  root.addEventListener('click', (ev) => {
+    const t = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-rule], [data-k-rule-stop]');
+    if (!t || !root.contains(t)) return;
+    if (t.dataset.kRuleStop) o.stop(t.dataset.kRuleStop);
+    else o.approve(t.dataset.kRule!, t.dataset.kRuleWhere === 'list' ? 'list' : 'here');
+  });
 }

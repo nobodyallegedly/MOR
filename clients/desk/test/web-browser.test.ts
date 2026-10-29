@@ -408,14 +408,24 @@ test('a real collective founded in the web client, its members made in Dub on th
   await part(ed, '+ Found a collective');
   await banner(ed, 'the founding form');
   assert.match(await ed.locator('#pane').innerText(), /This is a web page/);
+  // H100, H109: contacts are the one list, top left, sealed to the identity in use; each added by its ID with a nickname.
   for (const [id, name] of [[anaId, 'Ana'], [boId, 'Bo'], [cyId, 'Cy']]) {
-    await ed.fill('#contact-add input[name=id]', shownId(id));
-    await ed.fill('#contact-add input[name=name]', name);
-    await ed.click('#contact-add button[type=submit]');
-    await ed.locator('#e-contacts li', { hasText: name }).waitFor({ timeout: 30_000 });
+    await ed.click('[data-k-open="contacts"]');
+    const panel = ed.locator('.k-panel[data-k-panel="contacts"]');
+    await panel.locator('input[name=contact-id]').fill(shownId(id));
+    await panel.locator('input[name=contact-nick]').fill(name);
+    await panel.getByRole('button', { name: 'Add to contacts' }).click();
+    await ed.locator(`.k-panel[data-k-panel="contacts"] [data-k-contact="${id}"]`, { hasText: name }).waitFor({ timeout: 60_000 });
+    // What was said, top centre, closed first: it lies over the panel's ×.
+    await ed.locator('#e-status [data-action=status-close]').click();
+    await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-close]').click();
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
-  for (const id of [anaId, boId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
+  // H118: you and one other, then + Add a member.
+  await ed.fill('#real-found input[name=member-2]', shownId(anaId));
+  await ed.click('#real-found [data-action="member-add"]');
+  await ed.fill('#real-found input[name=member-3]', shownId(boId));
+  await ed.locator('#real-found input[name=member-3]').dispatchEvent('change');
   // Round 3: the grid. Members are its columns, the founder first; three bands, the constitution first.
   const grid = ed.locator('#e-grid-real-found table.grid');
   await grid.waitFor({ timeout: 30_000 });
@@ -528,7 +538,9 @@ test('a real collective founded in the web client, its members made in Dub on th
   await cg.waitFor({ timeout: 60_000 });
   assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
   assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
-  await ed.check(`#real-change input[name=member][value="${cyId}"]`);
+  await ed.click('#real-change [data-action="member-add"]');
+  await ed.fill('#real-change input[name=member-4]', shownId(cyId));
+  await ed.locator('#real-change input[name=member-4]').dispatchEvent('change');
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });

@@ -41,7 +41,7 @@ import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
 import { standingWords } from '../../reader/src/read.ts';
-import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, timeWords } from '../../barebone/src/clock.ts';
+import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, newestFirst, timeWords } from '../../barebone/src/clock.ts';
 import { APPENDED_FORMAT, appendedOf, appendedRef, membership } from './appended.ts';
 import { draftPayload, type Draft } from '../../damgar/src/messages.ts';
 import { offers as anchorOffers, type Offer } from '../../ummia/src/anchor.ts';
@@ -53,6 +53,7 @@ import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
+import type { Named, NameShown } from '../../kit/src/html.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, openerOf, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type Opened, type Opener, type People } from './people.ts';
 import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, RecordingShown, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
@@ -66,6 +67,8 @@ import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { RunnerLink } from './runner.ts';
 import type { DamgarLink, Woken } from './damgar-link.ts';
+import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
+import { readNotes, writeNote, type Note } from './notes.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -135,7 +138,13 @@ export interface Settings {
   collectives?: { id: string; available: boolean; why: string | null }[];
   /** The collective acted as now, or none: the identity itself. */
   acting?: string | null;
+  /** Rules followed in Dub only (H93): their spec hashes, the sealed list unchanged. */
+  rulesHere?: string[];
 }
+
+/** The rules Dub runs (H93): its money (Damgar's code, in Dub), its people, names, corrections, collectives and notes. */
+export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys', 'notes');
+const MONEY_RULES = ['payment', 'messages', 'grant-limits'];
 
 /**
  * What the Signing tab keeps for one identity (H18). The one-time keys'
@@ -224,6 +233,7 @@ export function randomBelow(n: number): number {
 interface Described {
   id: string;
   signer?: string;
+  position?: number;
   public: boolean;
   to?: string[];
   spec?: string;
@@ -260,7 +270,10 @@ export class Dub {
   }
   private queue: Promise<unknown> = Promise.resolve();
   /** Display names found, by ID, and when (this app's memory only). */
-  private names = new Map<string, { names: string[]; at: number }>();
+  /** Display names read (the naming cMIP), by identity: what was found, or that its homes were not reached (H96: never "no name" for that). */
+  private names = new Map<string, { names: string[]; at: number; unreached?: boolean }>();
+  /** Rules I follow as last read, by identity (memory only; H93). */
+  private rulesRead = new Map<string, { shown: RulesShown; at: number }>();
 
   /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
   /** Money, round 2: a lane asked here, payments signed under it, sealed posts (`money.ts`). */
@@ -331,6 +344,7 @@ export class Dub {
       link: /^[0-9a-f]{64}$/.test(id) ? idWhere(id, hints) : id,
       short: fingerprint(id),
       names: this.names.get(id)?.names ?? [],
+      published: this.published(id),
       pet: f?.name ?? null,
       me: id === me,
       followed: !!f,
@@ -339,17 +353,41 @@ export class Dub {
   }
 
   /** Read the display names of these identities, where not read lately. A name not found is no name: silence proves nothing. */
-  private async warm(ids: string[], places: string[], via: Via): Promise<void> {
-    const due = [...new Set(ids)].filter((id) => (this.names.get(id)?.at ?? 0) + NAMES_FOR < now());
+  private async warm(ids: string[], places: string[], via: Via, fresh = false): Promise<void> {
+    // A name not reached is asked again sooner than one read.
+    const due = [...new Set(ids)].filter((id) => /^[0-9a-f]{64}$/.test(id)).filter((id) => fresh || (this.names.get(id)?.at ?? 0) + (this.names.get(id)?.unreached ? NAMES_FOR / 10 : NAMES_FOR) < now());
     await Promise.all(
       due.map(async (id) => {
         try {
           this.names.set(id, { names: (await namesOf(id, places, via)).map((n) => n.name), at: now() });
         } catch {
-          // its homes did not answer: its fingerprint alone is shown
+          // its homes did not answer: "Name not reached", never "no name" (silence proves nothing)
+          this.names.set(id, { names: this.names.get(id)?.names ?? [], at: now(), unreached: true });
         }
       }),
     );
+  }
+
+  /** An identity's published name as read (H96): the name, none published, not reached, or not read yet. */
+  private published(id: string): NameShown {
+    const n = this.names.get(id);
+    if (!n) return { state: 'loading' };
+    if (n.names.length) return { state: 'name', name: n.names[n.names.length - 1] };
+    return n.unreached ? { state: 'unreached' } : { state: 'none' };
+  }
+
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given here (the people cMIP's, sealed) and the
+   * name each published, read at its homes. `fresh`: asked again (a retry).
+   */
+  names_(a: { ids: string[]; fresh?: boolean }): Promise<Record<string, Named>> {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const ids = a.ids.filter((x) => /^[0-9a-f]{64}$/.test(x)).slice(0, 200);
+      await this.warm(ids, [...new Set([...hints, ...this.inboxPlaces(p)])], s.via, !!a.fresh);
+      return Object.fromEntries(ids.map((id) => [id, { nick: id === me.id ? null : (p.follows.find((f) => f.id === id)?.name ?? null), published: this.published(id) }]));
+    });
   }
 
   // ------------------------------------------------------------ state
@@ -359,6 +397,9 @@ export class Dub {
     const held: Held[] = [];
     for (const id of await this.store.held()) {
       const s = await this.store.settings(id);
+      // H96: each one's published name read at its own homes (kept a while), so the top right and the panel say it, or why not.
+      const f = await this.store.identity(id).catch(() => null);
+      await this.warm([id], [...(f?.f.homes.map((h) => h.hint) ?? []), ...s.relays], s.via);
       held.push({ id, grouped: groupId(id), who: this.whoFrom(id, active, null), active: id === active, kind: s.kind });
     }
     const pend = await this.store.pending();
@@ -400,10 +441,54 @@ export class Dub {
         clock: s.clock ? { id: s.clock.id, form: idForm(s.clock.id), name: s.clock.name } : null,
         laneClock: dubsarClock() ? { id: dubsarClock()!.identity, name: DUBSAR_CLOCK_NAME } : null,
       };
+      out.rules = await this.rulesNow(me, s);
       // Proposals to sign wait in the inbox as this app read it: signed in Edubba (Dub's Signing tab removed, decided).
       out.proposalsWaiting = p.inbox.items.filter((k) => k.talk && k.talk.thread === k.key && k.from && k.from !== me.id && k.refs.length).length;
     }
     return out;
+  }
+
+  // ------------------------------------------------------------ Rules I follow (H93)
+
+  /** The rules Dub runs, held against the identity's sealed list and what was approved in Dub only: read again at most once a minute. */
+  private async rulesNow(me: TestIdentity, s: Settings, fresh = false): Promise<RulesShown> {
+    const c = this.rulesRead.get(me.id);
+    if (c && !fresh && c.at + 60 > now()) return c.shown;
+    const { open } = await this.opener(me);
+    const { shown } = await readRules('Dub', DUB_RULES, me, s.rulesHere ?? [], { open, via: s.via });
+    this.rulesRead.set(me.id, { shown, at: now() });
+    return shown;
+  }
+
+  /** How this app opens what is sealed to an identity it holds (Edubba's Rules I follow reads it so), or null. */
+  async openerFor(id: string): Promise<Opener | null> {
+    const me = await this.load(id).catch(() => null);
+    return me ? (await this.opener(me)).open : null;
+  }
+
+  async rules(): Promise<RulesShown> {
+    const { me, s } = await this.ctx();
+    return this.rulesNow(me, s, true);
+  }
+
+  /**
+   * Approve rules Dub runs, in Dub only or added to the list; or stop
+   * following one in Dub only. The money rules approved in Dub only are
+   * followed by Damgar's code in Dub too (its own "Damgar only" choice).
+   */
+  approveRules(a: { keys: string[]; where: 'here' | 'list'; remove?: boolean }): Promise<{ lines: Line[]; rules: RulesShown }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const keys = a.keys.includes('*') ? (await this.rulesNow(me, s, true)).rules.filter((r) => !r.on).map((r) => r.key) : a.keys;
+      if (!keys.length) return { lines: [{ text: 'Every rule Dub runs is followed already.' }], rules: await this.rulesNow(me, s) };
+      const { open } = await this.opener(me);
+      const r = await approveRules('Dub', DUB_RULES, me, { keys, where: a.where, remove: a.remove, here: s.rulesHere ?? [] }, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      const next = { ...s, rulesHere: r.here };
+      await this.store.saveSettings(me.id, next);
+      const hereMoney = DUB_RULES.filter((x) => MONEY_RULES.includes(x.key) && x.hashes.every((h) => r.here.includes(h))).map((x) => x.key);
+      await this.money.engine.setAccepted(hereMoney, 'here').catch(() => undefined);
+      return { lines: r.lines, rules: await this.rulesNow(me, next, true) };
+    });
   }
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; p: People; hints: string[] }> {
@@ -1097,6 +1182,7 @@ export class Dub {
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
       it.when = fp.time ? byClock(fp.time) : null;
+      it.unstamped = !!dubsarClock() && !fp.time;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
       // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
@@ -1199,7 +1285,8 @@ export class Dub {
     }
     // H54: where a clock is named, the acts it stamped by its word, newest first; the others keep the relay's order after them.
     const times = await clockTimes([...new Set([...s.relays, ...hints])], s.via);
-    if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
+    // H110: an act the clock has not stamped yet is placed by its signer's own sequence (first, as the newest), never below the acts it follows.
+    if (times.size) picked.splice(0, picked.length, ...newestFirst(picked, times, { id: (x) => x.d.id, signer: (x) => x.d.signer, position: (x) => x.d.position }));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge = new Judge([...new Set([...s.relays, ...hints])], s.via);
     const items: Item[] = [];
@@ -1218,7 +1305,10 @@ export class Dub {
       }
       items.push({ id: d.id, form: actForm(d.id), who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: null, seen: true, what: whatAct(d) });
     }
-    for (const it of items) it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+    for (const it of items) {
+      it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+      it.unstamped = !!dubsarClock() && !it.when;
+    }
     const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: items.filter((x) => x.when).length, shown: items.length } : null;
     return { items, hidden, left, problems, clock };
   }
@@ -1526,6 +1616,38 @@ export class Dub {
       lines.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(', ')}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: 'ok' });
       if (of) lines.push({ text: `Written in your own name, with the collective ${this.nameOf(of, me.id, p)} appended: it binds nothing, and the reader’s app shows it only where your membership checks.` });
       return { lines };
+    });
+  }
+
+  // ------------------------------------------------------------ Notes (H122)
+
+  /** The notes sealed to this identity at its homes, the latest first; opened here, or through Kišib's runner where it may open. */
+  async notes(): Promise<{ notes: Note[]; problems: string[]; opening: string | null }> {
+    const { me, s } = await this.ctx();
+    const { open, problem } = await this.opener(me);
+    if (!open) return { notes: [], problems: [], opening: problem };
+    const r = await readNotes(me, open, s.via);
+    return { ...r, opening: null };
+  }
+
+  /** A new note, or a new version of one (Edit: `corrects` the version replaced); nothing is updated. */
+  noteWrite(a: { text: string; corrects?: string | null }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (s.acting) throw new Error('Notes are your own: switch back to yourself to write one. Nothing was signed.');
+      await this.current(me);
+      const id = await writeNote(me, { text: a.text, corrects: a.corrects ?? null }, { via: s.via, sign: (f) => this.signed(me, f) });
+      return { id, lines: [{ text: a.corrects ? 'A new version, signed and sealed to you at your homes. The earlier ones stay, under Earlier drafts.' : 'Signed and sealed to you at your homes: only you can open it, from any app holding this identity.', tone: 'ok' }] };
+    });
+  }
+
+  /** Retire a note: a last version with no text, marking it dropped. It stays, readable, with its drafts. */
+  noteRetire(a: { latest: string }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      const id = await writeNote(me, { text: '', corrects: a.latest }, { via: s.via, sign: (f) => this.signed(me, f) });
+      return { id, lines: [{ text: 'Retired: a last version marks it dropped. It stays, readable, with its earlier drafts.', tone: 'ok' }] };
     });
   }
 
@@ -2077,7 +2199,7 @@ export class Dub {
    * display name, where it lives (and since when, by the clock named, where
    * it stamped its genesis), trouble only where there is, and its posts.
    */
-  profile(a: { id: string }): Promise<{ who: Who; lives: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }> {
+  profile(a: { id: string }): Promise<{ who: Who; lives: string; takes: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }> {
     return this.serial(async () => {
       const { me, p, s, hints } = await this.ctx();
       const { id, hints: where } = readIdWhere(a.id);
@@ -2099,17 +2221,27 @@ export class Dub {
       } catch (e) {
         trouble = `It could not be looked up: ${message(e)}.`;
       }
+      // H100: the rails and currencies it takes, from its payee pointer, so whoever pays sees them first.
+      let takes: string;
+      try {
+        const ptr = await this.money.engine.pointerOf(id);
+        takes = ptr?.rails.length ? `Paid on ${ptr.rails.map((r) => `${r.name}, in ${r.said}`).join('; ')} (its payee pointer, version ${ptr.version}).` : 'It publishes no payee pointer: nobody can pay it yet.';
+      } catch (e) {
+        takes = `Where it is paid could not be read: ${message(e)}.`;
+      }
       const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, dubsarClock());
       const items: Item[] = [];
       for (const fp of feed.posts) {
         if (!fp.post) continue;
         const it = { ...this.item(fp.post, me.id, p, s, 'feed', fp.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
         it.when = fp.time ? byClock(fp.time) : null;
+        it.unstamped = !!dubsarClock() && !fp.time;
         items.push(it);
       }
       return {
         who: this.whoFrom(id, me.id, p),
         lives,
+        takes,
         trouble,
         items,
         clock: feed.clock ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
@@ -2215,7 +2347,7 @@ export class Dub {
       if ((describeAct(act) as Described).signer !== me.id) throw new Error('Only this identity’s own acts are corrected here (a reply is the way to answer another’s). Nothing was signed.');
       await this.current(me);
       const made = await this.signed(me, () => post(me, { text, relays: s.relays, corrects: [id, me.id] }));
-      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: readers show it with “corrected by”.`, tone: 'ok' }] };
+      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: the feed shows the correction in its place, labelled Corrected, the original a tap away (H103).`, tone: 'ok' }] };
     });
   }
 

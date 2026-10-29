@@ -275,17 +275,19 @@ export class Collectives {
   }
 
   /** The list on top of the Collectives tab: each collective by its ID and the name given here. */
-  list(): { id: string; name: string; closed: boolean; members: number; brought?: boolean }[] {
-    return [...this.held(), ...this.brought().map((x) => ({ id: x.id, name: x.name, closed: false, members: 0, brought: true }))];
+  list(of?: string | null): { id: string; name: string; closed: boolean; members: number; brought?: boolean }[] {
+    // H125: given an identity, only the collectives it is a member of (or was brought naming it).
+    const all = [...this.held(), ...this.brought().map((x) => ({ id: x.id, name: x.name, closed: false, members: 0, brought: true, of: [x.member] }))];
+    return all.filter((c) => of === undefined || (!!of && c.of.includes(of))).map(({ of: _, ...c }) => c);
   }
 
-  private held(): { id: string; name: string; closed: boolean; members: number }[] {
+  private held(): { id: string; name: string; closed: boolean; members: number; of: string[] }[] {
     return this.store.book().collectives.map((x) => {
       try {
         const c = this.store.collective(x.id);
-        return { id: x.id, name: x.name, closed: !!c.f.closed, members: c.f.members.length };
+        return { id: x.id, name: x.name, closed: !!c.f.closed, members: c.f.members.length, of: c.f.members.map((m) => (typeof m === 'string' ? m : (m as { id: string }).id)) };
       } catch {
-        return { id: x.id, name: x.name, closed: false, members: 0 };
+        return { id: x.id, name: x.name, closed: false, members: 0, of: [] };
       }
     });
   }

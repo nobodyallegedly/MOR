@@ -12,7 +12,7 @@ An identity's **chain key** is the key that changes its other keys: it lives on 
 
 1. **On the everyday Mac, in Kišib:** Paper › **Change keys with Nakišib**. Kišib reads the identity, every line of its acts, the cards and the vault, and reads it all back, as for any change of keys; it asks no paper. Confirmed, it makes the new signing key and **writes the request for Nakišib** to a file you choose (on the USB stick). It shows the new signing key's fingerprint.
 2. **On the offline Mac, in Nakišib:** **Change keys** › choose the file. Nakišib **believes none of it**: it reads the exact bytes itself and shows what they say, **the dangerous parts first, in capitals** (new homes, a new vault, a successor, closing a home, giving up old acts), the new signing key's fingerprint among them (compare it with Kišib's). Kišib's own words are shown apart, marked as not checked.
-3. **Your paper:** type its 24 words (or the 72 characters of a hex paper). The Module checks everything again with it. A wrong paper, or an earlier one already spent, is refused, said plainly.
+3. **Your paper:** type its 24 words, the only form Dubsar apps take (H104, decided: "Chain key, only words in dubsar apps"; the hex paper is no longer taken nor drawn). The Module checks everything again with it. A wrong paper, or an earlier one already spent, is refused, said plainly.
 4. **The new paper:** Nakišib draws a fresh one (every change of keys makes a new chain-key paper), shows its words, hides them, and asks three back. A wrong word is refused; nothing is signed before they match.
 5. **Type SIGN.** Above the box, the Module's own summary of the exact bytes it signs. Nakišib signs, writes its memory, and **forgets both papers' words**.
 6. **Write the signed rotation** to the USB stick (choose where).
@@ -45,7 +45,7 @@ An identity's **chain key** is the key that changes its other keys: it lives on 
 *Where the brief and the Module leave a choice, Nakišib takes these readings; to be confirmed by Nobody, allegedly.*
 
 1. **The summary before the paper.** The Module's review needs the chain key before it can summarise (`Signer::review` finds the key first). Nakišib shows **its own reading of the request's bytes** before the paper, built with the Module's `summary::describe` from the Module's strict decoding, and once the paper is typed, the **Module's own review** checks everything again; its summary is the one above SIGN. A later Module draft could offer the summary without the key, and this reading would go.
-2. **A first paper**: the words seed Module by default (a hex paper offered), under scheme 3 (SLH-DSA-SHA2-128f), as Kišib and Dub make an identity's chain key.
+2. **A first paper**: the words seed Module, words only (H104), under scheme 3 (SLH-DSA-SHA2-128f), as Kišib and Dub make an identity's chain key.
 3. **The same request again**, from the request or from What it signed: the same bytes without the paper (rule 3.4: "whatever the user chooses this time"). With the paper typed, the Module answers the same.
 4. **Words held at most fifteen minutes** without a step, as Kišib's reviews; Forget and Quit drop them at once.
 5. **Nakišib's window ends Nakišib**: closing it ends the program, so nothing is held after the window is gone.

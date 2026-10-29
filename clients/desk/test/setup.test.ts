@@ -198,7 +198,8 @@ test('H14 and H15 for collectives: “What you may do for it” folded and remem
   const ids: string[] = [];
   for (const [name, mine] of [['Me', true], ['Ana', false], ['Bo', false]] as const) ids.push((await confirm({ kind: 'identity', name, mine })).acts[0]);
   await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: {} });
-  const col = (await c.ask<any>('state')).collectives[0].id;
+  // The collective client's own collectives are no longer listed in Edubba's state (test collectives removed from Edubba, decided): found by its store.
+  const col = app.collectives.list().find((x) => x.name === 'Tablet house')!.id;
   await c.ask<Done>('collective prepare', { kind: 'post', collective: col, text: 'For the house.' }).then((r: any) => c.ask('collective confirm', { plan: r.plan, digest: r.digest }));
 
   // H14: folded, remembered by the program, per collective.

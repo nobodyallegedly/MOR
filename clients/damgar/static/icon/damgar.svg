@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Damgar (dam-gàr, the merchant; F338): the sleeping duck alone, in its own shape, as a Mesopotamian duck weight is (H47, Nobody, allegedly: Damgar's icon and Dub's looked too alike; no square tablet behind it, Dub keeps its tablet). A smooth stone egg of a body resting on a flat base, the neck rising from the breast and turned back, the head laid along the back, the bill toward the tail; no eye. Gold-tinted with the Money layer's gold (#e8b33a; H36), in Kišib's rule's own steps over the dark #06080c: the stone #a4802c (70%), the carved neck and head #8e6f28 (60%), the base's shadow #4a3b1a (30%), its lit upper rim and the head's lit edge the layer's gold itself, faint. On a transparent ground; no glow. -->
+  <!-- Damgar (dam-gàr, the merchant; F338): the sleeping duck alone, in its own shape, as a Mesopotamian duck weight is (H47, Nobody, allegedly: Damgar's icon and Dub's looked too alike; no square tablet behind it, Dub keeps its tablet). A smooth stone egg of a body resting on a flat base, the neck rising from the breast and turned back, the head laid along the back, the bill toward the tail; no eye. Gold-tinted with the Money layer's gold (#e8b33a; H36), in Kišib's rule's own steps over the dark #06080c: the stone #a4802c (70%), the carved neck and head #8e6f28 (60%), the base's shadow #4a3b1a (30%), its lit upper rim and the head's lit edge the layer's gold itself, faint. No glow. On the family's dark rounded square, the Mac's own shape, as the others are (H113: on a transparent ground the Mac set it on a white square of its own); the square is the icon's ground, not a tablet behind the duck (H47). -->
+  <!-- The ground: the family's dark, in the Mac's rounded square, its edge the Money layer's gold at 70%. -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#14110b"/>
+  <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#a4802c" stroke-width="16"/>
+  <!-- The duck, as drawn before, scaled to sit inside the square. -->
+  <g transform="translate(512 530) scale(0.8) translate(-516 -529)">
   <!-- The base: the weight's flat underside, a thin shadow. -->
   <path d="M190 742 C300 768 724 768 834 742 C838 760 820 774 790 778 L234 778 C204 774 186 760 190 742 Z" fill="#4a3b1a"/>
   <!-- The body: an egg lying on its side, taller at the breast. -->
@@ -14,4 +19,5 @@
   </g>
   <!-- The head's lit edge. -->
   <path d="M540 372 C590 346 660 346 704 372" fill="none" stroke="#e8b33a" stroke-width="12" stroke-linecap="round" opacity=".8"/>
+  </g>
 </svg>

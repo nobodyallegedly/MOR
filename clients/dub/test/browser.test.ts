@@ -144,7 +144,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
 
   // Always opens on Public: three lenses, Relay third; the typing box at the bottom.
   await page.locator('[data-k-part="public"].k-on').waitFor({ timeout: 60_000 });
-  assert.deepEqual((await page.locator('[data-k-part]').allInnerTexts()).map((t) => t.trim()), ['Public', 'Private', 'Purchases']);
+  assert.deepEqual((await page.locator('[data-k-part]').allInnerTexts()).map((t) => t.trim()), ['Public', 'Private', 'Notes', 'Purchases']);
   assert.deepEqual((await page.locator('[data-k-lens]').allInnerTexts()).map((t) => t.trim()), ['Following', 'To you', 'Relay']);
   await page.locator('.k-me', { hasText: 'Ada' }).waitFor();
   assert.ok((await page.locator('#post').boundingBox())!.y > (await page.locator('#feed').boundingBox())!.y, 'the typing box below the feed');
@@ -265,15 +265,15 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await cardOf(page, damagedPost.id).getByRole('button', { name: /Play the recording/ }).click();
   await cardOf(page, damagedPost.id).locator('.k-label', { hasText: /^The recording is not played: not a recording the audio Module plays: / }).waitFor({ timeout: 60_000 });
   assert.equal(await cardOf(page, damagedPost.id).locator('audio').count(), 0, 'nothing of it played');
-  // Inter, light and regular, from the program's own origin.
+  // H123: Atkinson Hyperlegible Next, its Mono and Gentium Book Plus italic (the app's name), from the program's own origin.
   assert.deepEqual(
     await page.evaluate(async () => {
       await document.fonts.ready;
-      return [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Inter' && f.status === 'loaded').map((f) => f.weight).sort();
+      return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')).sort();
     }),
-    ['300', '400'],
+    ['Atkinson Hyperlegible Mono', 'Atkinson Hyperlegible Next', 'Gentium Book Plus'],
   );
-  const policy = (await fetch(`${app.base}/inter_light.woff2`)).headers.get('content-security-policy') ?? '';
+  const policy = (await fetch(`${app.base}/atkinson_next.woff2`)).headers.get('content-security-policy') ?? '';
   assert.match(policy, /font-src 'self'/);
   assert.match(policy, /media-src blob:/);
 
@@ -346,8 +346,19 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await modal.locator('form#correct textarea').fill('Hello, from a page, corrected.');
   await modal.getByRole('button', { name: 'Sign the correction' }).click();
   await done(page, /Correction/);
-  await page.locator('#feed .k-act', { hasText: 'Hello, from a page, corrected.' }).locator('.k-label', { hasText: 'Correction of' }).waitFor({ timeout: 60_000 });
-  await cardOf(page, hello.id).locator('.k-label', { hasText: 'Corrected by' }).waitFor();
+  // H103: the corrected version in the original's place, labelled Corrected; pressed, the original unfolds above it, as signed.
+  const corrected = page.locator('#feed > .k-act.k-is-corrected', { hasText: 'Hello, from a page, corrected.' });
+  await corrected.waitFor({ timeout: 60_000 });
+  assert.equal(await page.locator('#feed > .k-act', { hasText: /^[\s\S]*Hello, from a page\.[\s\S]*$/ }).filter({ hasNotText: 'corrected.' }).count(), 0, 'the original is not shown on its own');
+  const earlier = corrected.locator('[data-k-earlier]');
+  assert.equal(await earlier.isVisible(), false);
+  await corrected.locator('[data-k-corrected]').click();
+  await earlier.locator('.k-act', { hasText: 'Hello, from a page.' }).waitFor();
+  const [orig, latest] = await Promise.all([earlier.boundingBox(), corrected.locator(':scope > .k-txt').boundingBox()]);
+  assert.ok(orig && latest && orig.y < latest.y, 'the original above the correction');
+  await shot(page, '10b-corrected-unfolded');
+  await corrected.locator('[data-k-corrected]').click();
+  assert.equal(await earlier.isVisible(), false, 'folded again');
   // Correct it shows only on one's own acts.
   await theirs.locator('.k-actid').click();
   assert.equal(await page.getByRole('menuitem', { name: 'Correct it' }).count(), 0);
@@ -419,9 +430,26 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await page.locator('#thread .k-empty', { hasText: 'Nothing yet' }).waitFor();
   await shot(page, '14-private-new');
   await page.locator('[data-action="cc"]').click();
-  await page.locator('#cc').pressSequentially('Riv');
-  await page.locator('[data-k-suggest] [data-k-pick]').first().click();
+  // H85: three in Cc, each a chip, wrapping, none drawn over another; each removable.
+  for (const [typed, nth] of [['Riv', 0], ['Pa', 0], ['Pa', 1]] as const) {
+    await page.locator('#cc').pressSequentially(typed);
+    await page.locator('[data-k-suggest] [data-k-pick]').nth(nth).click();
+  }
+  const chips = page.locator('#ccs .k-chip');
+  await chips.nth(2).waitFor();
+  const boxes = await chips.evaluateAll((cs) => cs.map((c) => c.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height })));
+  assert.equal(boxes.length, 3);
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [a, b] = [boxes[i], boxes[j]];
+      assert.ok(a.x + a.w <= b.x + 0.5 || b.x + b.w <= a.x + 0.5 || a.y + a.h <= b.y + 0.5 || b.y + b.h <= a.y + 0.5, `chips ${i} and ${j} do not overlap`);
+    }
+  assert.ok(await chips.evaluateAll((cs) => cs.every((c) => c.getBoundingClientRect().width > 20)), 'each shown');
+  await shot(page, '14b-cc-three');
+  // The two Pas taken out again: River stays.
+  for (let i = 0; i < 2; i++) await page.locator('#ccs .k-chip', { hasText: 'Pa' }).first().locator('[data-action="uncc-one"]').click();
   await page.locator('#ccs', { hasText: 'Cc: River' }).waitFor();
+  assert.equal(await chips.count(), 1);
   await page.locator('#message textarea').fill('To Ph, River in Cc.');
   await page.locator('#message').getByRole('button', { name: 'Send' }).click();
   await done(page, /in Cc/);
@@ -442,9 +470,10 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   // Mute, from the signer's menu: nothing of it shown; unmuted in Contacts.
   await page.locator('[data-k-part="public"]').click();
   await signerMenu(cardOf(page, theirPost.post.id), 'Mute');
+  await page.locator('[data-k-ask-yes]').click();
   await page.waitForFunction((id) => !document.querySelector(`#feed [data-k-act="${id}"]`), theirPost.post.id, { timeout: 60_000 });
   await page.locator('[data-k-open="contacts"]').click();
-  await page.locator('[data-k-panel="contacts"] details.k-say summary', { hasText: 'Muted (1)' }).click();
+  await page.locator('[data-k-panel="contacts"] details.k-fold summary', { hasText: 'Muted (1)' }).click();
   await page.locator('[data-k-panel="contacts"]').getByRole('button', { name: 'Unmute' }).click();
   await cardOf(page, theirPost.post.id).waitFor({ timeout: 60_000 });
   await page.keyboard.press('Escape');
@@ -455,7 +484,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await idp.locator('[data-k-use][aria-current]', { hasText: 'Ada' }).waitFor();
   await shot(page, '17-identity-panel');
   await idp.locator(`[data-k-idmenu="${me}"]`).click();
-  assert.deepEqual((await page.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Name', 'Relays', 'Words', 'Line and homes', 'A lane from Damgar', 'A collective under it', 'Remove from Dub…']);
+  assert.deepEqual((await page.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Name', 'Relays', 'Words', 'Line and homes', 'A lane from Damgar', 'A collective under it', 'Rules I follow', 'Remove from Dub…']);
   await shot(page, '18-identity-menu');
   await page.getByRole('menuitem', { name: /^Name/ }).click();
   await modal.locator('form#name input').fill('Ada Lovelace');
@@ -492,13 +521,30 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   const before = (await app.dub.state()).identity!.line.acts;
   await page.locator('#post textarea').fill('Signed with a retired key?');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
-  await page.locator('#spent-box', { hasText: /changed elsewhere[\s\S]*Kišib/ }).waitFor({ timeout: 60_000 });
+  // H82: the warning a pop-up over the page, with the box for the new words; the page beneath left whole.
+  const warned = page.locator('[data-k-keychanged-box]');
+  await warned.waitFor({ timeout: 60_000 });
+  assert.match(await warned.innerText(), /changed elsewhere[\s\S]*Kišib/);
   assert.equal((await app.dub.state()).identity!.line.acts, before, 'nothing signed with the retired key (H80)');
   await shot(page, '19-key-changed-elsewhere');
+  // Closed: a one-line reminder under the top.
+  await page.locator('[data-k-confirm] [data-k-close]').click();
+  const line = page.locator('.k-reminder[data-k-keychanged]');
+  await line.waitFor();
+  // H83: switching to an identity whose key is fine, the warning goes; back, the reminder again.
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`.k-panel [data-k-use="${me}"]`).click();
+  await page.locator('.k-me', { hasText: 'Max' }).waitFor({ timeout: 60_000 }).catch(() => undefined);
+  await page.waitForFunction(() => !document.querySelector('[data-k-keychanged]'), undefined, { timeout: 60_000 });
+  assert.equal(await page.locator('[data-k-keychanged-box]').count(), 0, 'no warning for an identity whose key is fine');
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`.k-panel [data-k-use="${g.id}"]`).click();
+  await line.waitFor({ timeout: 60_000 });
+  await line.getByRole('button', { name: 'Give the new words' }).click();
   await page.locator('form#renew textarea').fill(toWords(unhex(g.f.signingSecret)).join(' '));
   await page.getByRole('button', { name: 'Use the new words' }).click();
   await done(page, 'The new words are in use');
-  assert.equal(await page.locator('#spent-box').count(), 0);
+  assert.equal(await page.locator('[data-k-keychanged], [data-k-keychanged-box]').count(), 0);
 
   // Remove, said plainly first (H58): nothing removed until confirmed.
   await page.locator('[data-k-open="identity"]').click();
@@ -517,7 +563,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await page.locator('[data-k-part="public"]').click();
   await page.locator('#feed .k-act').first().waitFor({ timeout: 60_000 });
   await shot(page, '01-public', 'phone');
-  await page.locator('#feed .k-act').first().locator('.k-actid').click();
+  await page.locator('#feed > .k-act').first().locator(':scope > .k-foot > .k-actid').click();
   await page.locator('.k-pop').waitFor();
   const sheet = (await page.locator('.k-pop').boundingBox())!;
   assert.ok(sheet.x <= 10 && sheet.x + sheet.width >= 380, 'a sheet across the phone');

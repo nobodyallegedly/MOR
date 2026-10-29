@@ -15,6 +15,7 @@
 // keeps every new screen.
 
 import { after, before, test } from 'node:test';
+import { idForm } from '../../genesis/src/forms.ts';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -288,21 +289,31 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   // H33: whom Edubba acts as, top right.
   await ed.locator('.k-me', { hasText: 'Nobody, allegedly' }).waitFor();
   await tile(ed, 'collectives');
-  // H27: what real and test mean, on the parts and in them.
-  await part(ed, '+ Found a test collective');
-  await ed.locator('#pane', { hasText: 'every member is held in this Edubba, and their consent is simulated' }).waitFor();
+  // Test collectives are gone from Edubba (decided: "It serves no purpose, it was for testing only"): only a real founding is offered.
+  assert.equal(await ed.locator('.k-col button', { hasText: 'test collective' }).count(), 0, 'no test collective offered');
   await part(ed, '+ Found a collective');
   await ed.locator('#pane', { hasText: 'each member is a person with their own identity, on their own device' }).waitFor();
   await shot(ed, 'edubba-collectives-list');
-  await ed.locator('#e-contacts').waitFor();
+  // H100, H109: contacts are the one list, top left, sealed to the identity in use; each added by ID with a nickname.
   for (const [id, name] of [[webId, 'Ana (web)'], [macId, 'Bo (Mac)']]) {
-    await ed.fill('#contact-add input[name=id]', id);
-    await ed.fill('#contact-add input[name=name]', name);
-    await ed.click('#contact-add button[type=submit]');
-    await ed.locator('#e-contacts li', { hasText: name }).waitFor({ timeout: 30_000 });
+    await ed.click('[data-k-open="contacts"]');
+    const panel = ed.locator('.k-panel[data-k-panel="contacts"]');
+    await panel.locator('input[name=contact-id]').fill(id);
+    await panel.locator('input[name=contact-nick]').fill(name);
+    await panel.getByRole('button', { name: 'Add to contacts' }).click();
+    await ed.locator(`.k-panel[data-k-panel="contacts"] [data-k-contact="${id}"]`, { hasText: name }).waitFor({ timeout: 60_000 });
+    // What was said, top centre, closed first: it lies over the panel's ×.
+    await ed.locator('#e-status [data-action=status-close]').click();
+    await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-close]').click();
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
-  for (const id of [webId, macId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
+  // H118: you and one other, then + Add a member; each chosen from Contacts beside its field (H119).
+  await ed.click('#real-found [data-k-pick-for="member-2"]');
+  await ed.click(`[data-k-picker] [data-k-picked="${idForm(webId)}"]`);
+  await ed.click('#real-found [data-action="member-add"]');
+  await ed.click('#real-found [data-k-pick-for="member-3"]');
+  await ed.click(`[data-k-picker] [data-k-picked="${idForm(macId)}"]`);
+  await ed.locator('#real-found input[name=member-3]').dispatchEvent('change');
   // The grid (round 3): its one area, Publishing, asks two members' keys, as the Releases area did.
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(2).waitFor({ timeout: 30_000 });
   await gridNumber(ed, 'area:0', '2');
@@ -411,24 +422,26 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   // Folded at first (H34), in its Members tab: opened to change its members.
   await ed.click('.edubba-tabs button:has-text("Members")');
   await ed.click('#e-real-change > summary');
-  await ed.uncheck(`#real-change input[name=member][value="${macId}"]`);
+  // H118: filled from the members in force, each removable while more than two remain.
+  assert.equal(await ed.locator('#real-change [data-member-row]').count(), 3);
+  await ed.click(`#real-change [data-member-row]:has(input[value="${idForm(macId)}"]) [data-action="member-remove"]`);
+  assert.equal(await ed.locator('#real-change [data-action="member-remove"]').count(), 0, 'the last two cannot be removed');
   await ed.click('#real-change button[type=submit]');
   // The grid (round 3) says it first, in its own words: the numbers no longer fit two members.
   await ed.locator('#e-real-review #reading', { hasText: 'Judge absence: a number from 1 to 1' }).waitFor({ timeout: 60_000 });
   assert.ok(await ed.locator('#e-real-review [data-action=confirm]').isDisabled());
   await ed.click('#e-real-review [data-action=cancel]');
   // With the same members and a contact more, it is: every voice and the joining member sign; then it waits for Kišib.
-  await ed.check(`#real-change input[name=member][value="${macId}"]`);
-  await ed.fill('#real-change textarea[name=typed]', nobody.replace(/./g, (ch, i) => (i === 0 ? (ch === 'a' ? 'b' : 'a') : ch)));
+  await ed.click('#real-change [data-action="member-add"]');
+  await ed.locator('#real-change input[data-member-id]').last().fill(macId);
+  await ed.click('#real-change [data-action="member-add"]');
+  await ed.locator('#real-change input[data-member-id]').last().fill(nobody.replace(/./g, (ch, i) => (i === 0 ? (ch === 'a' ? 'b' : 'a') : ch)));
+  await ed.locator('#real-change input[data-member-id]').last().dispatchEvent('change');
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await shot(ed, 'edubba-change-review');
   await ed.click('#e-real-review [data-action=cancel]');
 
-  // Test mode, labelled.
-  await part(ed, '+ Found a test collective');
-  await ed.locator('.note.warn', { hasText: 'Test mode' }).waitFor();
-  await shot(ed, 'edubba-test-mode');
   assert.deepEqual(problems, []);
 });
 
@@ -445,8 +458,8 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await part(ed, '+ Found a collective');
   await ed.fill('#real-found input[name=name]', 'Two of us');
   await ed.selectOption('#real-found select[name=founder]', nobody);
-  await ed.fill('#real-found textarea[name=typed]', dee);
-  await ed.locator('#real-found textarea[name=typed]').press('Tab');
+  await ed.fill('#real-found input[name=member-2]', dee);
+  await ed.locator('#real-found input[name=member-2]').press('Tab');
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(1).waitFor({ timeout: 30_000 });
   for (const [n, v] of [['chain', '1'], ['area:0', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
   await ed.click('#real-found button[type=submit]');
@@ -500,9 +513,13 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await mac.dub.follow({ id: 'ab'.repeat(32), name: 'Ezra, met in Dub' });
   await use(ed, nobody, 'Nobody, allegedly');
   await part(ed, '+ Found a collective');
-  await ed.click('#e-contacts [data-action=real-lists]');
-  await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).innerText(), /in Nobody, allegedly’s follow list/);
+  await ed.click('#pane [data-action=real-lists]');
+  // The one list (H100): in Contacts, top left, with the nickname given in Dub; and among the members to choose from (H118, H119: Contacts beside a member's field).
+  await ed.click('#real-found [data-k-pick-for="member-2"]');
+  await ed.locator('[data-k-picker] [data-k-picked]', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
+  await ed.keyboard.press('Escape');
+  await ed.click('[data-k-open="contacts"]');
+  await ed.locator('.k-panel[data-k-panel="contacts"] [data-k-contact]', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
   await shot(ed, 'edubba-contacts-from-list');
   assert.deepEqual(problems, []);
 });

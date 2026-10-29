@@ -476,7 +476,7 @@ test('from elsewhere, check a gateway: the same as signed and released, or where
 
   // The gateway serves an altered display client: found by comparing with the release (here, a build of it).
   const doctored = mkdtempSync(join(tmpdir(), 'mor-site-dist-'));
-  for (const f of ['index.html', 'gateway.css', 'mor_wasm_bg.wasm']) writeFileSync(join(doctored, f), readFileSync(join(here, 'dist', f)));
+  for (const f of DISPLAY_FILES.filter((x) => x !== 'gateway.js')) writeFileSync(join(doctored, f), readFileSync(join(here, 'dist', f)));
   writeFileSync(join(doctored, 'gateway.js'), readFileSync(join(here, 'dist/gateway.js'), 'utf8').replace('Verified:', 'Verified (trust me):'));
   const h = new Gateway(pinnedAt(w.site.id), doctored);
   assert.ok(await loadedOk(h));

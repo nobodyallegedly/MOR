@@ -27,6 +27,7 @@ import type { Setup } from './setup.ts';
 import type { Store } from './store.ts';
 import type { Listing } from './folders.ts';
 import type { Grid } from './grid.ts';
+import { EdubbaKnown } from './known.ts';
 
 /** What the operations act on. The program gives every part; the web client neither the agents, the pairing, money nor the folder picker. */
 export interface Parts {
@@ -56,6 +57,14 @@ export interface Parts {
 export const WEB_OPS: readonly string[] = [
   'clock words',
   'state',
+  'rules',
+  'rules approve',
+  // H96, H100, H106, H109, H119: names and the one contacts list, the same on the web.
+  'names',
+  'contacts',
+  'contact add',
+  'contact nick',
+  'contact remove',
   'publishing',
   'publishing act as',
   'publishing collective add',
@@ -155,6 +164,8 @@ const sharesIn = (v: unknown): SharesIn | null => {
 export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Record<string, unknown>, key: string) => Promise<unknown> {
   const { store, desk, setup, real, after, member, publishing, corrections, collectives, agents, access, money } = p;
   const web = opts.web;
+  // Who is known (H96, H100, H109): the one contacts list, sealed to the identity in use, and the names published.
+  const known = new EdubbaKnown(store, real, member);
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
   const realRead = (id: string) => {
     if (!real.isReal(id)) return undefined;
@@ -185,17 +196,28 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'state': {
         const st = p.desk.state();
         const lines = await p.desk.lines();
+        // H125: the Agents and Collectives columns follow the identity in use: its agents, the collectives it is a member of; nothing held for another identity.
+        const acting = await member.acting();
         return {
           ...st,
           identities: st.identities.map((i) => ({ ...i, line: lines[i.id] ?? i.line })),
           machine: agents ? agents.for(null).state() : null,
-          agents: agents ? agents.list() : [],
+          agents: agents ? agents.list().filter((x) => !!acting && x.owner === acting) : [],
           sharedKey: agents ? agents.sharedKey() : { found: false, from: '' },
-          // On the web, no test collective: only the real ones founded here and those brought by their ID.
-          collectives: [...(web ? collectives.list().filter((c) => c.brought) : collectives.list()), ...real.collectives().map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true }))],
+          // No test collective (removed from Edubba, decided: "It serves no purpose, it was for testing only"): the real ones founded here and those brought by their ID.
+          collectives: [
+            ...collectives.list(acting).filter((c) => c.brought),
+            ...real
+              .collectives()
+              .filter((c) => !!acting && real.collective(c.id).f.members.includes(acting))
+              .map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true })),
+          ],
           proposals: real.proposals().map((x) => ({ ...x, standing: real.standing(x) })),
           contacts: real.contacts(),
-          acting: await member.acting(),
+          acting,
+          // H88, H96: each identity held here with its names and its ID link, for the top right and the identity panel.
+          held: await known.held(),
+          rules: await member.rules(acting).catch(() => null),
           // The identity panel (decided): each identity held here, with the collectives under it: the real ones it is a member of (founded here), and those brought naming it.
           under: Object.fromEntries(
             store.book().identities.map((i) => [
@@ -399,14 +421,37 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'real collective renew':
         return after.renewCollective(text(a.collective), text(a.words));
       case 'real lists':
+        // Read again where asked: the one list as every app sees it, its nicknames too (H100).
+        known.forget();
         return real.readLists();
+      case 'rules':
+        return member.rules(await member.acting(), true);
+      case 'rules approve':
+        return member.approveRules(await member.acting(), { keys: Array.isArray(a.keys) ? a.keys.map(String) : [], where: a.where === 'list' ? 'list' : 'here', remove: a.remove === true });
       case 'real contacts':
         return real.contacts();
-      case 'real contact add':
-        return real.addContact(text(a.id), text(a.name));
+      // H100: once Edubba's own list was carried into the sealed list, a contact is added to (or taken out of) the sealed list only, the name given as its nickname.
+      case 'real contact add': {
+        if (!known.retired()) return real.addContact(text(a.id), text(a.name));
+        const id = readIdOr(text(a.id));
+        await known.change('add', id, text(a.name) || null);
+        return { id, name: text(a.name), from: { list: 'yours' } };
+      }
       case 'real contact remove':
-        real.removeContact(text(a.id));
+        if (known.retired()) await known.change('remove', readIdOr(text(a.id)));
+        else real.removeContact(text(a.id));
         return {};
+      // The names of the IDs the page draws (H96, H106), and the one contacts list (H100, H109): the kit's `attachIds` and `attachContacts`.
+      case 'names':
+        return known.names(list(a.ids), a.fresh === true);
+      case 'contacts':
+        return known.contacts(a.fresh === true);
+      case 'contact add':
+        return known.change('add', text(a.id), text(a.nick) || null);
+      case 'contact nick':
+        return known.change('nick', text(a.id), text(a.nick) || null);
+      case 'contact remove':
+        return known.change('remove', text(a.id));
       case 'real found prepare':
         return real.prepareFounding({
           name: text(a.name),

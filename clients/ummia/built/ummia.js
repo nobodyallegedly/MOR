@@ -1570,6 +1570,31 @@ function formRead(s, want) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
+function formWithHints(label, data, hints) {
+  let deferred5_0;
+  let deferred5_1;
+  try {
+    const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(hints, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.formWithHints(ptr0, len0, ptr1, len1, ptr2, len2);
+    var ptr4 = ret[0];
+    var len4 = ret[1];
+    if (ret[3]) {
+      ptr4 = 0;
+      len4 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred5_0 = ptr4;
+    deferred5_1 = len4;
+    return getStringFromWasm0(ptr4, len4);
+  } finally {
+    wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+  }
+}
 function keyDeliveryPayload(target, key, media) {
   const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -3322,13 +3347,13 @@ function cannotReach(hint, via = {}) {
   }
   return null;
 }
-async function firstOf(items, ask3, failed) {
+async function firstOf(items, ask4, failed) {
   if (!items.length) return null;
   return new Promise((resolve) => {
     let left = items.length;
     let done = false;
     for (const x of items) {
-      ask3(x).then(
+      ask4(x).then(
         (r) => {
           left--;
           if (r !== null && r !== void 0 && !done) {
@@ -4172,18 +4197,18 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets2 = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
+    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
         if (it.kind !== "sealed") continue;
-        out.push(await receive(it.item, this.f.identity, secrets2, opts.senderHints, this.via));
+        out.push(await receive(it.item, this.f.identity, secrets, opts.senderHints, this.via));
       }
     }
     return out;
   }
 };
-async function receive(sealed, me, secrets2, senderHints, via = {}) {
+async function receive(sealed, me, secrets, senderHints, via = {}) {
   const id = sealedId(sealed);
   let parts;
   try {
@@ -4194,7 +4219,7 @@ async function receive(sealed, me, secrets2, senderHints, via = {}) {
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
   let lastError = "no key";
-  for (const secret of secrets2) {
+  for (const secret of secrets) {
     record({ kind: "decapsulate", secret, ct: parts.capsules[index] });
     let o;
     try {
@@ -4318,7 +4343,7 @@ async function lineAtHomes(me, app2, via = me.via) {
     card: away ? null : cards.map((c) => cardText(c.card, app2)).join("; ")
   };
 }
-async function ownActs(identity, secrets2, places, via = {}) {
+async function ownActs(identity, secrets, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
   const locked = /* @__PURE__ */ new Map();
   for (const a of await actsBy(identity, places, via)) {
@@ -4327,8 +4352,8 @@ async function ownActs(identity, secrets2, places, via = {}) {
     else locked.set(d.id, a);
   }
   const delivered = /* @__PURE__ */ new Map();
-  if (!secrets2.length) return [...out.values()];
-  const queries = [{ q: { to: identity }, me: identity }, ...secrets2.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
+  if (!secrets.length) return [...out.values()];
+  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
   for (const h of places) {
     for (const { q, me } of queries) {
       let after;
@@ -4337,7 +4362,7 @@ async function ownActs(identity, secrets2, places, via = {}) {
           const page = await relayAt(h, via).feed({ ...q, after });
           for (const it of page.items) {
             if (it.kind !== "sealed") continue;
-            for (const s of secrets2) {
+            for (const s of secrets) {
               try {
                 const o = openSealed(it.item, me, s);
                 const d = o.described;
@@ -4424,9 +4449,9 @@ var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
-var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
+var negotiationPayload = (text3, format) => cborEncode(new Map([[0, text3.normalize("NFC")], ...format ? [[1, unhex(format)]] : []]));
 async function negotiate(by, to, o) {
-  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text, o.format), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
@@ -4571,9 +4596,9 @@ function readPayload(p) {
     return null;
   }
 }
-async function readMemberKeys(identity, secrets2, homes, via = {}) {
+async function readMemberKeys(identity, secrets, homes, via = {}) {
   const out = /* @__PURE__ */ new Map();
-  if (!secrets2.length) return [];
+  if (!secrets.length) return [];
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l;
   try {
@@ -4582,7 +4607,7 @@ async function readMemberKeys(identity, secrets2, homes, via = {}) {
     return [];
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const x of await ownActs(identity, secrets2, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
+  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
     try {
       if (x.key) l.verifier.addWithKey(x.act, x.key);
       else l.verifier.add(x.act);
@@ -4597,7 +4622,7 @@ async function readMemberKeys(identity, secrets2, homes, via = {}) {
         for (const it of page.items) {
           if (it.kind !== "sealed") continue;
           let o = null;
-          for (const s of secrets2) {
+          for (const s of secrets) {
             try {
               o = openSealed(it.item, identity, s);
               break;
@@ -6882,6 +6907,7 @@ var form = (label, hex3) => formEncode(label, unhex(hex3));
 var idForm = (id) => form("mid", id);
 var actForm = (id) => form("mact", id);
 var specForm = (hash) => form("mspec", hash);
+var idWhere = (id, hints) => formWithHints("mid", unhex(id), hints.filter((h) => /^https?:\/\//.test(h)));
 function readForm(typed, want) {
   const t = typed.trim();
   const squeezed = t.replace(/\s+/g, "");
@@ -6897,6 +6923,14 @@ function readForm(typed, want) {
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
 var readActId = (typed) => readForm(typed, "mact").hex;
+function readIdWhere(typed) {
+  const t = typed.trim().replace(/^.*#/, "");
+  const parts = t.split(/\s+/).filter(Boolean);
+  const beside = parts.slice(1).filter((p) => /^https?:\/\//.test(p));
+  const head = beside.length ? parts.filter((p) => !/^https?:\/\//.test(p)).join("") : t;
+  const r = readForm(head, "mid");
+  return { id: r.hex, hints: [.../* @__PURE__ */ new Set([...r.hints, ...beside])] };
+}
 
 // ../dub/src/carryin.ts
 var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
@@ -6952,9 +6986,9 @@ function sealedListPayload(a) {
   );
   return cborEncode(m);
 }
-function openerOf(identity, secrets2) {
+function openerOf(identity, secrets) {
   return async (sealed) => sealed.map((bytes) => {
-    for (const s of secrets2) {
+    for (const s of secrets) {
       try {
         return openSealed(bytes, identity, s);
       } catch {
@@ -7194,6 +7228,7 @@ var ACCEPTABLE = [
     needs: ["payment"]
   }
 ];
+var acceptable = (key) => ACCEPTABLE.find((a) => a.key === key);
 var OURS = new Set(ACCEPTABLE.flatMap((a) => a.hashes));
 var labelOf = (hash) => {
   const a = ACCEPTABLE.find((x) => x.hashes.includes(hash));
@@ -7327,16 +7362,16 @@ async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
   const held = [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
-  const secrets2 = held.length ? held : opts.open ?? [];
-  if (Array.isArray(secrets2) && !secrets2.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
+  const secrets = held.length ? held : opts.open ?? [];
+  if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
-    const read4 = await readAccepted(me.id, secrets2, homes, via);
+    const read4 = await readAccepted(me.id, secrets, homes, via);
     if (read4.problems.length >= homes.length && !read4.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read4.problems.join("; ")}): the accepted list was not changed.`);
     const next = new Map(read4.entries);
     change(next);
     const same = read4.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read4.entries].sort());
     if (same || !read4.tips.length && !next.size) return { written: null, list: read4 };
-    const again = await readAccepted(me.id, secrets2, homes, via);
+    const again = await readAccepted(me.id, secrets, homes, via);
     if (!sameTips(again.tips, read4.tips)) continue;
     await opts.check();
     const look2 = await lookUp(me.id, homes, via);
@@ -8694,6 +8729,30 @@ async function clockWords(ids, hints, via) {
   for (const id of ids) if (t.has(id)) out[id] = byClock(t.get(id));
   return out;
 }
+function newestFirst(xs, times, o) {
+  const at = new Map(xs.map((x, i) => [x, i]));
+  const pos = (x) => o.position?.(x) ?? null;
+  const eff = new Map(xs.map((x) => [x, times.get(o.id(x)) ?? Infinity]));
+  const bySigner = /* @__PURE__ */ new Map();
+  for (const x of xs) {
+    const s = o.signer(x);
+    if (s && pos(x) !== null) bySigner.set(s, [...bySigner.get(s) ?? [], x]);
+  }
+  for (const line of bySigner.values()) {
+    line.sort((a, b) => pos(b) - pos(a));
+    for (let i = 1; i < line.length; i++) eff.set(line[i], Math.min(eff.get(line[i]), eff.get(line[i - 1])));
+  }
+  const slot = new Map(at);
+  for (const line of bySigner.values()) {
+    const places = line.map((x) => at.get(x)).sort((a, b) => a - b);
+    line.forEach((x, i) => slot.set(x, places[i]));
+  }
+  return [...xs].sort((a, b) => {
+    const [ea, eb] = [eff.get(a), eff.get(b)];
+    if (ea !== eb) return ea === Infinity ? -1 : eb === Infinity ? 1 : eb - ea;
+    return slot.get(a) - slot.get(b);
+  });
+}
 
 // src/cards.ts
 var CARD_HEAD = "Dubsar Specification Card";
@@ -8896,45 +8955,7 @@ var BUILT_IN_SAY = "One of the core\u2019s texts: it names no creator, so no car
 var builtIn = (hash) => BUILT_IN.find((b) => b.hash === hash) ?? null;
 
 // src/follows.ts
-var FOLLOW_SAY = "One follow list for every app: sealed to you at your homes, read by Dub, Edubba and Ummia. Here it points Look at the people you follow; muting is Dub\u2019s.";
-var secrets = (me) => [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
-async function contacts(me, via) {
-  const keys = secrets(me);
-  if (!keys.length) return { follows: [], problem: "Ummia holds no encryption key of this identity: its follow list cannot be opened here." };
-  const l = await readSealedList(me.id, keys, me.f.homes.map((h) => h.hint), via);
-  return { follows: l.follows, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
-}
-async function follow(me, who, via) {
-  const keys = secrets(me);
-  if (!keys.length) throw new Error("Ummia holds no encryption key of this identity, so its follow list cannot be sealed to it. Follow in Dub instead. Nothing was signed.");
-  if (who.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
-  const homes = me.f.homes.map((h) => h.hint);
-  const found = await readSealedList(me.id, keys, homes, via);
-  if (!found.act && found.problems.length >= homes.length) throw new Error(`The follow list could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
-  const follows2 = found.follows.map((f) => ({ ...f }));
-  const had = follows2.find((f) => f.id === who.id);
-  if (had && (!who.name || had.name === who.name)) return [{ text: "Already in your contacts: nothing to change.", tone: "ok" }];
-  if (had) had.name = who.name;
-  else follows2.push({ id: who.id, name: who.name });
-  const look2 = await lookUp(me.id, homes, via);
-  const held = me.f.encryption.find((e3) => look2.encryptionKey && e3.secret && hex(xwingPublic(unhex(e3.secret))) === hex(look2.encryptionKey));
-  if (!held || !look2.encryptionKey) throw new Error("The encryption key this identity publishes is not one Ummia holds: the follow list cannot be sealed from here. Nothing was signed.");
-  const made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: follows2 }), { public: false, to: [me.id] });
-  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look2.encryptionKey }]);
-  let left = 0;
-  for (const h of homes) {
-    try {
-      await relayAt(h, via).putSealed(sealed);
-      left++;
-    } catch {
-    }
-  }
-  await leaveAtHomes(me, made, { via, sealed: left > 0 });
-  const lines2 = [];
-  if (found.forked) lines2.push({ text: "The follow list at your homes was forked: two apps changed it at once. The longer branch was continued.", tone: "warn" });
-  lines2.push(left ? { text: `Added to your contacts: the follow list is sealed to you and kept at your homes (version ${found.version + 1}); Dub and Edubba read it too.`, tone: "ok" } : { text: "No home took the follow list: nothing changed there. Try again.", tone: "warn" });
-  return lines2;
-}
+var FOLLOW_SAY = "One contacts list for every app: sealed to you at your homes, the same in Dub, Damgar, Edubba and Ummia, your nicknames seen by you alone. Here it points Look at the people you follow; muting is Dub\u2019s.";
 
 // ../repo/src/manifest.ts
 function validPath(p) {
@@ -9785,10 +9806,10 @@ function changedSince(m, before) {
   if (!m.previous) return null;
   if (!before) return "The release before it is not found on these relays: what changed cannot be said.";
   const was = new Map(before.files.map((f) => [f.path, f.work]));
-  const now3 = new Map(m.files.map((f) => [f.path, f.work]));
-  const changed = [...now3].filter(([p, w]) => was.has(p) && was.get(p) !== w).length;
-  const added = [...now3.keys()].filter((p) => !was.has(p)).length;
-  const removed = [...was.keys()].filter((p) => !now3.has(p)).length;
+  const now4 = new Map(m.files.map((f) => [f.path, f.work]));
+  const changed = [...now4].filter(([p, w]) => was.has(p) && was.get(p) !== w).length;
+  const added = [...now4.keys()].filter((p) => !was.has(p)).length;
+  const removed = [...was.keys()].filter((p) => !now4.has(p)).length;
   const parts = [changed ? `${plural(changed, "file")} changed` : "", added ? `${added} added` : "", removed ? `${removed} removed` : ""].filter(Boolean);
   const impl = (m.implements ?? []).filter((i) => !(before.implements ?? []).some((b) => b.spec === i.spec)).map((i) => specForm(i.spec));
   const libs = m.dependencies.length !== before.dependencies.length || m.dependencies.some((d, i) => before.dependencies[i]?.version !== d.version || before.dependencies[i]?.name !== d.name);
@@ -9931,7 +9952,7 @@ async function look(relays, q) {
       placed++;
     }
   }
-  items.sort((a, b) => (times.get(b.id) ?? -1) - (times.get(a.id) ?? -1));
+  items = newestFirst(items, times, { id: (x) => x.id, signer: (x) => x.signer });
   return { items, lines: lines2, counts, ordered: { placed, shown: items.length } };
 }
 async function specPage(hash, relays, via, hints = []) {
@@ -10252,7 +10273,7 @@ async function replies(me, drafts, relays, via = {}) {
     const t = cborDecode(d.payload).get(0);
     for (const r of named2) out.set(r, [...out.get(r) ?? [], { id: d.id, signer: d.signer, text: typeof t === "string" ? t : "", standing: standing2, sealed }]);
   };
-  const secrets2 = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   const asks = [...inbox.map((h) => ({ h, toMe: true })), ...relays.map((h) => ({ h, toMe: false }))];
   for (const { h, toMe } of asks) {
     let after;
@@ -10265,7 +10286,7 @@ async function replies(me, drafts, relays, via = {}) {
             if (d.public) await take(it.item, d, void 0, false);
             continue;
           }
-          for (const s of secrets2) {
+          for (const s of secrets) {
             try {
               const o = openSealed(it.item, me.id, s);
               await take(o.act, o.described, o.key, true);
@@ -10445,12 +10466,331 @@ async function publishSpec(by, content, relays) {
   return { id: made.id, act: made.act, refused };
 }
 
+// ../dub/src/names.ts
+var NAMING_SPEC = sha2562("Naming cMIP, draft 1, test value until publication");
+var NAME = 4;
+var NAME_WITHDRAWAL = 5;
+var MAX_NAME = 48;
+var FORBIDDEN = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "u");
+function nameProblem(name) {
+  if (name !== name.normalize("NFC")) return "it is not canonical text (NFC)";
+  if (!name.trim()) return "it is empty";
+  if (/^\s|\s$/u.test(name)) return "it starts or ends with a space";
+  if (FORBIDDEN.test(name)) return "it holds a line break, a control character or a direction override";
+  if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
+  return null;
+}
+async function namesOf(identity, places, via = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...routed, ...places])];
+  await holdSequence(v, identity, l, at, via);
+  const names = /* @__PURE__ */ new Map();
+  const withdrawn = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (seen.has(d.id) || d.spec !== SPECS.identity || d.signer !== identity) continue;
+          if (d.type !== NAME && d.type !== NAME_WITHDRAWAL) continue;
+          seen.add(d.id);
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          if (d.type === NAME_WITHDRAWAL) {
+            for (const [chain, target] of d.objects ?? []) if (chain === target) withdrawn.add(target);
+            continue;
+          }
+          const m = cborDecode(d.payload);
+          const name = m.get(0);
+          const cmip = m.get(1);
+          if (typeof name !== "string" || !(cmip instanceof Uint8Array) || hex(cmip) !== NAMING_SPEC) continue;
+          if (nameProblem(name)) continue;
+          names.set(d.id, { act: d.id, name });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
+}
+
+// ../kit/src/engine/people.ts
+var heldSecrets = (me) => [...me.f.encryption].reverse().filter((x) => x.secret).map((x) => unhex(x.secret));
+async function readContacts(me, open, via = {}) {
+  if (!open || Array.isArray(open) && !open.length) return { contacts: [], version: 0, problem: "this app cannot open what is sealed to this identity, so its contacts cannot be read here" };
+  const l = await readSealedList(me.id, open, me.f.homes.map((h) => h.hint), via);
+  return { contacts: l.follows, version: l.version, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
+}
+function readNick(typed) {
+  const n = (typed ?? "").normalize("NFC").trim();
+  if (!n) return null;
+  if ([...n].length > MAX_NAME) throw new Error(`A nickname is at most ${MAX_NAME} characters. Nothing was signed.`);
+  if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(n)) throw new Error("A nickname holds no line break, control character or direction override. Nothing was signed.");
+  return n;
+}
+async function changeContacts(me, change, o) {
+  const via = o.via ?? {};
+  if (!o.open || Array.isArray(o.open) && !o.open.length) throw new Error(`${o.app} cannot open what is sealed to this identity, so its contacts cannot be changed from here. Nothing was signed.`);
+  const homes = me.f.homes.map((h) => h.hint);
+  const found = await readSealedList(me.id, o.open, homes, via);
+  if (!found.act && found.problems.length >= homes.length) throw new Error(`The contacts could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
+  const next = change(found.follows.map((f) => ({ ...f })));
+  if (!next) return [{ text: "Nothing changed.", tone: "ok" }];
+  const look2 = await lookUp(me.id, homes, via);
+  if (!look2.encryptionKey) throw new Error("This identity publishes no encryption key: its contacts cannot be sealed to it. Nothing was signed.");
+  if (Array.isArray(o.open) && !me.f.encryption.some((x) => x.secret && hex(xwingPublic(unhex(x.secret))) === hex(look2.encryptionKey))) throw new Error(`The encryption key this identity publishes is not one ${o.app} holds: its contacts cannot be sealed from here. Nothing was signed.`);
+  let made;
+  try {
+    made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: next }), { public: false, to: [me.id] });
+  } finally {
+    await o.save?.();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look2.encryptionKey }]);
+  let left = 0;
+  for (const h of homes) {
+    try {
+      await relayAt(h, via).putSealed(sealed);
+      left++;
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via, sealed: left > 0 });
+  await o.save?.();
+  const said2 = [];
+  if (found.forked) said2.push({ text: "Your contacts were forked at your homes: two apps changed them at once. The longer branch was continued.", tone: "warn" });
+  said2.push(left ? { text: `Your contacts are sealed to you and kept at your homes (version ${found.version + 1}): every app holding this identity reads them.`, tone: "ok" } : { text: "No home took your contacts: nothing changed there. Try again.", tone: "warn" });
+  return said2;
+}
+var addContact = (me, who2, o) => changeContacts(
+  me,
+  (now4) => {
+    if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+    const nick = readNick(who2.nick);
+    const had = now4.find((f) => f.id === who2.id);
+    if (had && (!nick || had.name === nick)) return null;
+    if (had) had.name = nick;
+    else now4.push({ id: who2.id, name: nick });
+    return now4;
+  },
+  o
+);
+var setNick = (me, who2, o) => changeContacts(
+  me,
+  (now4) => {
+    const nick = readNick(who2.nick);
+    const had = now4.find((f) => f.id === who2.id);
+    if (!had) {
+      if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+      now4.push({ id: who2.id, name: nick });
+      return now4;
+    }
+    if ((had.name ?? null) === nick) return null;
+    had.name = nick;
+    return now4;
+  },
+  o
+);
+var removeContact = (me, id, o) => changeContacts(me, (now4) => now4.some((f) => f.id === id) ? now4.filter((f) => f.id !== id) : null, o);
+
+// ../dub/src/appended.ts
+var APPENDED_FORMAT = sha2562("Appended collective cMIP, draft 1, test value until publication");
+
+// ../desk/src/memory.ts
+var MEMORY_SPEC = sha2562("Agent memory cMIP, draft 1, test value until publication");
+var WORDS = new Set(ENGLISH);
+
+// ../dub/src/notes.ts
+var NOTES_FORMAT = sha2562("Notes cMIP, draft 1, test value until publication");
+
+// ../kit/src/engine/rules.ts
+var holds = (r, set) => r.hashes.every((h) => set.has(h));
+async function readRules(app2, runs, me, here, o = {}) {
+  const open = heldSecrets(me).length ? heldSecrets(me) : o.open ?? null;
+  const listed = /* @__PURE__ */ new Set();
+  let problem = null;
+  if (!open || Array.isArray(open) && !open.length) problem = `${app2} cannot open what is sealed to this identity, so its list of rules cannot be read here: only what you approved in ${app2} counts`;
+  else {
+    try {
+      const l = await readAccepted(me.id, open, me.f.homes.map((h) => h.hint), o.via ?? {});
+      for (const h of l.entries.keys()) listed.add(h);
+      if (!l.tips.length && l.problems.length) problem = `its homes did not answer (${l.problems.join("; ")})`;
+    } catch (e3) {
+      problem = e3 instanceof Error ? e3.message : String(e3);
+    }
+  }
+  const hereSet = new Set(here);
+  const followed = /* @__PURE__ */ new Set([...listed, ...hereSet]);
+  const rules = runs.map((r) => ({ key: r.key, name: r.name, kind: r.kind, does: r.does, text: r.text, on: holds(r, listed) ? "list" : holds(r, hereSet) ? "here" : null }));
+  return { shown: { app: app2, rules, missing: rules.filter((r) => !r.on).map((r) => r.name), problem }, followed };
+}
+async function approveRules(app2, runs, me, a, o) {
+  const chosen2 = a.keys.map((k) => {
+    const r2 = runs.find((x) => x.key === k);
+    if (!r2) throw new Error(`${app2} runs no rule called ${k}. Nothing was changed.`);
+    return r2;
+  });
+  const names = chosen2.map((r2) => r2.name).join(", ");
+  const hashes = chosen2.flatMap((r2) => r2.hashes);
+  if (a.where === "here") {
+    const here = a.remove ? a.here.filter((h) => !hashes.includes(h)) : [.../* @__PURE__ */ new Set([...a.here, ...hashes])];
+    return { here, lines: [a.remove ? { text: `${names}: no longer followed in ${app2} only.` } : { text: `${names}: followed in ${app2} only. Your list is unchanged, so the other apps still ask.`, tone: "ok" }] };
+  }
+  const r = await changeAccepted(
+    me,
+    (entries) => {
+      for (const x of chosen2) for (const h of x.hashes) a.remove ? entries.delete(h) : entries.has(h) || entries.set(h, x.name);
+    },
+    { via: o.via ?? {}, save: o.save, check: o.check ?? (async () => {
+    }), open: o.open ?? null }
+  );
+  const lines2 = [];
+  if (r.list.merged.length) lines2.push({ text: `Two apps had changed your list at once. Both changes were merged: ${r.list.merged.join(" ")}`, tone: "warn" });
+  lines2.push(
+    r.written ? { text: a.remove ? `${names}: removed from your list. Every app holding this identity reads the change.` : `${names}: added to your list, sealed to this identity at its homes. Every app holding it reads it.`, tone: "ok" } : { text: "Nothing changed: your list already said so." }
+  );
+  return { here: a.remove ? a.here : a.here.filter((h) => !hashes.includes(h)), lines: lines2 };
+}
+var money = (key, does) => {
+  const a = acceptable(key);
+  return { key, name: a.name, kind: a.kind, hashes: a.hashes, does, text: a.text };
+};
+var SUITE_RULES = {
+  payment: money("payment", "Paying and being paid: a request, its claim and its receipt."),
+  messages: money("messages", "The messages between apps and people about money: a draft for Damgar, a lane asked, a sale told to your own app."),
+  "grant-limits": money("grant-limits", "A lane\u2019s limits: how much one payment under it may move, and until when."),
+  people: { key: "people", name: "People", kind: "cMIP", hashes: [PEOPLE_SPEC, PEOPLE_SPEC_1], does: "Your contacts and their nicknames, sealed to yourself at your homes; the people you mute.", text: "cmips/cmip-people-draft-2.md" },
+  naming: { key: "naming", name: "Naming", kind: "cMIP", hashes: [NAMING_SPEC], does: "Display names: the name an identity publishes for itself, shown beside its ID.", text: "cmips/cmip-naming-draft-1.md" },
+  corrections: { key: "corrections", name: "Corrections", kind: "cMIP", hashes: [CORRECTIONS_SPEC], does: "A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.", text: "cmips/cmip-corrections-draft-2.md" },
+  appended: { key: "appended", name: "Appended collective", kind: "cMIP", hashes: [APPENDED_FORMAT], does: "A collective\u2019s posts whose members append, each signed by its member.", text: "cmips/cmip-appended-collective-draft-1.md" },
+  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "A member\u2019s own key for acting as a collective, granted and revoked by it.", text: "cmips/cmip-member-keys-draft-1.md" },
+  "agent-memory": { key: "agent-memory", name: "Agent memory", kind: "cMIP", hashes: [MEMORY_SPEC], does: "What an agent keeps between its sessions, sealed to its owner.", text: "cmips/cmip-agent-memory-draft-2.md" },
+  notes: { key: "notes", name: "Notes", kind: "cMIP", hashes: [NOTES_FORMAT], does: "Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.", text: "cmips/cmip-notes-draft-1.md" },
+  "long-form": { key: "long-form", name: "Long form", kind: "cMIP", hashes: [LONGFORM_SPECS.longform], does: "Long documents with headings: drafts of MIPs, and their replies.", text: "cmips/cmip-long-form-draft-1.md" },
+  "release-manifest": { key: "release-manifest", name: "Release manifest", kind: "cMIP", hashes: [REPO_SPECS.manifest], does: "A release of an app: its files, their fingerprints, and who signed it.", text: "cmips/cmip-release-manifest-draft-4.md" }
+};
+var rulesOf = (...keys) => keys.map((k) => SUITE_RULES[k]);
+
+// ../kit/src/engine/names.ts
+var now2 = () => Date.now();
+var NameReader = class {
+  /** `keep`: how long a name read (or none) is kept, in milliseconds; a name not reached is asked again after a tenth of it. */
+  constructor(o = {}) {
+    this.o = o;
+  }
+  kept = /* @__PURE__ */ new Map();
+  reading = /* @__PURE__ */ new Map();
+  /** Its published name, as its homes give it; `fresh` asks again whatever was kept. */
+  read(id, places, fresh = false) {
+    const keep = this.o.keep ?? 3e5;
+    const k = this.kept.get(id);
+    if (k && !fresh && now2() - k.at < (k.shown.state === "unreached" ? keep / 10 : keep)) return Promise.resolve(k.shown);
+    const r = this.reading.get(id);
+    if (r && !fresh) return r;
+    const p = (async () => {
+      let shown;
+      try {
+        const found = await namesOf(id, places, this.o.via ?? {});
+        const name = found.map((x) => x.name).pop();
+        shown = name ? { state: "name", name } : { state: "none" };
+      } catch {
+        shown = { state: "unreached" };
+      }
+      this.kept.set(id, { shown, at: now2() });
+      this.reading.delete(id);
+      return shown;
+    })();
+    this.reading.set(id, p);
+    return p;
+  }
+  /** Several at once, by ID. */
+  async many(ids, places, fresh = false) {
+    const out = {};
+    await Promise.all([...new Set(ids)].filter((x) => /^[0-9a-f]{64}$/.test(x)).map(async (id) => out[id] = await this.read(id, places, fresh)));
+    return out;
+  }
+  /** What is kept of it now, without asking: "Loading…" where nothing is. */
+  now(id) {
+    return this.kept.get(id)?.shown ?? { state: "loading" };
+  }
+  /** Forget what was kept of one (its name was just changed here). */
+  forget(id) {
+    this.kept.delete(id);
+  }
+};
+
+// ../kit/src/engine/known.ts
+var HEX2 = /^[0-9a-f]{64}$/;
+var Known = class {
+  /** `app`: this app's name, as said ("Damgar"). */
+  constructor(app2, o = {}) {
+    this.app = app2;
+    this.names = new NameReader({ via: o.via });
+  }
+  names;
+  lists = /* @__PURE__ */ new Map();
+  /** The contacts sealed to the identity, read again at most once a minute (or now, `fresh`). */
+  async followed(me, open, via = {}, fresh = false) {
+    const c = this.lists.get(me.id);
+    if (c && !fresh && c.at + 6e4 > Date.now()) return c;
+    let r;
+    try {
+      r = await readContacts(me, open, via);
+    } catch (e3) {
+      r = { contacts: c?.contacts ?? [], problem: e3 instanceof Error ? e3.message : String(e3) };
+    }
+    this.lists.set(me.id, { ...r, at: Date.now() });
+    return r;
+  }
+  /** The names of these identities: the nickname given (none for oneself), and the name each published, read at `places` and its own homes. */
+  async named(me, open, ids, places, o = {}) {
+    const want = [...new Set(ids.filter((x) => HEX2.test(x)))].slice(0, 200);
+    const [{ contacts }, published] = await Promise.all([this.followed(me, open, o.via), this.names.many(want, places, !!o.fresh)]);
+    return Object.fromEntries(want.map((id) => [id, { nick: id === me.id ? null : contacts.find((f) => f.id === id)?.name ?? null, published: published[id] }]));
+  }
+  /** The list, each contact with its names (its published name read, or its state). */
+  async contacts(me, open, places, o = {}) {
+    const { contacts, problem } = await this.followed(me, open, o.via, o.fresh);
+    const published = await this.names.many(contacts.map((c) => c.id), places);
+    return { contacts: contacts.map((c) => ({ id: c.id, form: idForm(c.id), name: c.name, named: { nick: c.name, published: published[c.id] } })), problem };
+  }
+  /** Add a contact, with a nickname if given; set or take away a nickname; take a contact out. Each sealed as the people cMIP keeps the list. */
+  async change(me, a, o) {
+    const id = HEX2.test(a.id) ? a.id : readIdWhere(a.id.trim()).id;
+    a = { ...a, id };
+    const opts = { open: o.open, via: o.via, app: this.app, save: o.save };
+    const said2 = a.op === "add" ? await addContact(me, { id: a.id, nick: a.nick ?? null }, opts) : a.op === "nick" ? await setNick(me, { id: a.id, nick: a.nick ?? null }, opts) : await removeContact(me, a.id, opts);
+    this.lists.delete(me.id);
+    return said2;
+  }
+  /** Forget what was kept for an identity (it was removed, or its key changed). */
+  forget(id) {
+    this.lists.delete(id);
+    this.names.forget(id);
+  }
+};
+
 // src/ummia.ts
+var UMMIA_RULES = rulesOf("long-form", "release-manifest", "naming");
 var LINE_SAY = "Ummia keeps its own line of acts for this identity (its specifications, releases, drafts, reports, and the sealed acts it sends to itself). If the signing key is ever changed with the chain key, in Ki\u0161ib, that change must keep this line, or every act signed here becomes void. Some of its acts are sealed, so give Ki\u0161ib this line\u2019s card, shown in the identity window.";
 var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words Ummia holds no longer count. Nothing was signed. To go on here, give Ummia the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Ummia then goes on, in new lines.";
 var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Ummia holds none of its keys. Every act Ummia would sign for it is shown first in Ki\u0161ib\u2019s panel, inside Ummia\u2019s window. What is sealed to it (the accepted list, the follow list) does not open here.";
 var NO_KEY_SAY = "Ummia holds no encryption key for this identity, so nothing sealed to it opens here and nothing can be sealed to it from here: the accepted list cannot be read or changed, and an anchor\u2019s payment cannot be prepared for Damgar.";
+var CONTACTS_NO_KEY_SAY = "Ummia holds no encryption key of this identity, so its contacts, sealed to it at its homes, do not open here";
+var CONTACTS_RUNNER_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s keys and Ummia none, so its contacts, sealed to it at its homes, do not open in Ummia: see and change them in Dub";
 var ACCEPTED_SAY = [
   "One list of the cMIPs and Modules you accept, sealed to your identity and kept at its homes: every app holding the identity reads the same list, each the part it understands (Damgar the payment specifications, Edubba the agreements\u2019 and splits\u2019, Dub the formats it shows). Here it is shown whole.",
   "A change is written on the latest version read, and the list is read again just before sending. Where two apps changed it at once, both changes are merged, never one dropped.",
@@ -10460,13 +10800,13 @@ var NO_BOOK = () => ({ releases: [], specs: [], mips: [], reports: [], anchors: 
 var list = (xs) => [...new Set(xs.map((s) => s.trim().replace(/\/$/, "")).filter(Boolean))];
 var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var now2 = () => Math.floor(Date.now() / 1e3);
+var now3 = () => Math.floor(Date.now() / 1e3);
 var PLAN_FOR = 15 * 60 * 1e3;
 async function releaseArea(collective, places, via) {
-  const now3 = await collectiveNow(collective, places, via);
-  if (!now3.agreement) return null;
+  const now4 = await collectiveNow(collective, places, via);
+  if (!now4.agreement) return null;
   for (const h of places) {
-    const a = await relayAt(h, via).getAct(now3.agreement).catch(() => null);
+    const a = await relayAt(h, via).getAct(now4.agreement).catch(() => null);
     if (!a) continue;
     const d = describeAct(a);
     if (!d.payload) return null;
@@ -10484,6 +10824,8 @@ var Ummia = class {
   }
   /** This app's line as the homes hold it, for its card (H80's question 2). */
   line = lineReader("Ummia");
+  /** Who is known (H96, H100): the one contacts list and the names identities published, read as every app reads them. */
+  known = new Known("Ummia");
   /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
   async lineNow(me, via) {
     if (Object.keys(me.f.unsent ?? {}).length) {
@@ -10524,17 +10866,17 @@ var Ummia = class {
   }
   /** Who acts, from the chooser: oneself, or a collective this identity acts for, with its own key for it (round 2, F353). */
   async acting(me, s) {
-    const who = chosen(actors(await this.store.held(), s.collectives ?? []), s.acting ?? me.id);
-    if (!who) throw new Error("Choose who acts.");
-    if (who.kind === "self") {
-      if (who.id !== me.id) throw new Error("Choose who acts: yourself, or a collective you act for.");
+    const who2 = chosen(actors(await this.store.held(), s.collectives ?? []), s.acting ?? me.id);
+    if (!who2) throw new Error("Choose who acts.");
+    if (who2.kind === "self") {
+      if (who2.id !== me.id) throw new Error("Choose who acts: yourself, or a collective you act for.");
       return { kind: "self" };
     }
-    const places = await this.placesOf(who.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
+    const places = await this.placesOf(who2.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
     const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-    const key = keys.length ? await memberKeyFor(keys, who.id, places, s.via).catch(() => null) : null;
+    const key = keys.length ? await memberKeyFor(keys, who2.id, places, s.via).catch(() => null) : null;
     if (!key) throw new Error("No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change. Nothing was signed.");
-    return { kind: "collective", id: who.id, key, places };
+    return { kind: "collective", id: who2.id, key, places };
   }
   async placesOf(id, hints, via) {
     try {
@@ -10724,16 +11066,16 @@ var Ummia = class {
   setActing(id) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
-      const who = actors(await this.store.held(), s.collectives ?? []).find((a) => a.id === id && a.available);
-      if (!who) throw new Error("That one cannot act here.");
-      if (who.kind === "collective") {
-        await this.store.write(me.id, "settings", { ...s, acting: who.id });
-        return { lines: [{ text: `Acting for the collective ${who.short}, with your own key for it.`, tone: "ok" }] };
+      const who2 = actors(await this.store.held(), s.collectives ?? []).find((a) => a.id === id && a.available);
+      if (!who2) throw new Error("That one cannot act here.");
+      if (who2.kind === "collective") {
+        await this.store.write(me.id, "settings", { ...s, acting: who2.id });
+        return { lines: [{ text: `Acting for the collective ${who2.short}, with your own key for it.`, tone: "ok" }] };
       }
-      if (who.id !== me.id) await this.store.setActive(who.id);
-      const target = who.id === me.id ? s : { relays: [], track: [], reports: null, via: {}, ...await this.store.read(who.id, "settings") ?? {} };
-      await this.store.write(who.id, "settings", { ...target, acting: who.id });
-      return { lines: [{ text: `Acting as yourself, ${who.short}.`, tone: "ok" }] };
+      if (who2.id !== me.id) await this.store.setActive(who2.id);
+      const target = who2.id === me.id ? s : { relays: [], track: [], reports: null, via: {}, ...await this.store.read(who2.id, "settings") ?? {} };
+      await this.store.write(who2.id, "settings", { ...target, acting: who2.id });
+      return { lines: [{ text: `Acting as yourself, ${who2.short}.`, tone: "ok" }] };
     });
   }
   /** Settings: where this identity's acts go, the relays tracking asks, the reporting identity. */
@@ -10758,7 +11100,16 @@ var Ummia = class {
   async state() {
     const active = await this.store.active();
     const heldIds = await this.store.held();
-    const held = await Promise.all(heldIds.map(async (id) => ({ id, grouped: groupId(id), short: short4(id), active: id === active, runner: !(await this.store.identity(id))?.f.signingSecret })));
+    const held = await Promise.all(
+      heldIds.map(async (id) => {
+        const f = await this.store.identity(id);
+        const hs = { relays: [], track: [], reports: null, via: {}, ...await this.store.read(id, "settings") ?? {} };
+        const homes = f?.f.homes.map((h) => h.hint) ?? [];
+        const published = f ? await this.known.names.read(id, this.namePlaces(f, hs)) : { state: "unreached" };
+        const link = idWhere(id, [...homes.slice(0, 1), ...hs.relays.filter((r) => !homes.includes(r)).slice(0, 1)]);
+        return { id, grouped: groupId(id), short: short4(id), form: idForm(id), link, named: { nick: null, published }, active: id === active, runner: !f?.f.signingSecret };
+      })
+    );
     const me = active ? await this.load(active) : null;
     const out = {
       web: !!this.opts.web,
@@ -10781,6 +11132,9 @@ var Ummia = class {
       id: me.id,
       grouped: groupId(me.id),
       short: short4(me.id),
+      form: idForm(me.id),
+      link: held.find((h) => h.id === me.id).link,
+      named: held.find((h) => h.id === me.id).named,
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
@@ -10789,8 +11143,11 @@ var Ummia = class {
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
+    const cs = out.actors.filter((x) => x.kind === "collective").map((x) => x.id);
+    out.names = cs.length ? await this.known.named(me, this.opener(me).open, cs, this.namePlaces(me, s), { via: s.via }).catch(() => ({})) : {};
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
     out.saved = s.saved ?? [];
+    out.rules = await this.rulesNow(me, s);
     out.counts = { specs: book.specs.length, releases: book.releases.length + (book.collectiveReleases?.length ?? 0), mips: book.mips.length, reports: book.reports.length, cards: (book.cards?.length ?? 0) + (book.discussions?.length ?? 0), anchors: book.anchors.length };
     return out;
   }
@@ -10871,7 +11228,7 @@ ${s.relays.join("\n")}`));
           await this.store.saveIdentity(me);
         }
         const book = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
-        book.specs.push({ id: out.id, hash: p.hash, name: p.name, kind: KINDS[form2.kind], at: now2() });
+        book.specs.push({ id: out.id, hash: p.hash, name: p.name, kind: KINDS[form2.kind], at: now3() });
         if (form2.kind === 8) {
           const m = book.mips.find((x) => x.text === form2.text && !x.published);
           if (m) m.published = { id: out.id, hash: p.hash };
@@ -10938,15 +11295,40 @@ ${s.relays.join("\n")}`));
   /** Each specification's layer, as tracking reads it from its own fields, on the relays tracking asks: read again at most once a minute. */
   async layersOf(hashes) {
     if (!hashes.length) return /* @__PURE__ */ new Map();
-    if (this.layerCache && this.layerCache.at + 60 > now2() && hashes.every((h) => this.layerCache.layers.has(h))) return this.layerCache.layers;
+    if (this.layerCache && this.layerCache.at + 60 > now3() && hashes.every((h) => this.layerCache.layers.has(h))) return this.layerCache.layers;
     try {
       const { s } = await this.ctx();
       const t = await track(this.lookRelays(s), { via: s.via });
-      this.layerCache = { at: now2(), layers: new Map(t.specs.map((x) => [x.hash, x.layer])) };
+      this.layerCache = { at: now3(), layers: new Map(t.specs.map((x) => [x.hash, x.layer])) };
       return this.layerCache.layers;
     } catch {
       return /* @__PURE__ */ new Map();
     }
+  }
+  /** Ummia's own rules (H93), held against the list and what was approved in Ummia only: read again at most once a minute. */
+  rulesRead = /* @__PURE__ */ new Map();
+  async rulesNow(me, s, fresh = false) {
+    const c = this.rulesRead.get(me.id);
+    if (c && !fresh && c.at + 60 > now3()) return c.shown;
+    const { shown } = await readRules("Ummia", UMMIA_RULES, me, s.rulesHere ?? [], { open: this.secrets(me), via: me.via });
+    this.rulesRead.set(me.id, { shown, at: now3() });
+    return shown;
+  }
+  async rules() {
+    const { me, s } = await this.ctx();
+    return this.rulesNow(me, s, true);
+  }
+  /** Approve rules Ummia runs, in Ummia only or added to the list; or stop following one in Ummia only. */
+  approveRules(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const keys = a.keys.includes("*") ? (await this.rulesNow(me, s, true)).rules.filter((r2) => !r2.on).map((r2) => r2.key) : a.keys;
+      if (!keys.length) return { lines: [{ text: "Every rule Ummia runs is followed already." }], rules: await this.rulesNow(me, s) };
+      const r = await approveRules("Ummia", UMMIA_RULES, me, { keys, where: a.where, remove: a.remove, here: s.rulesHere ?? [] }, { via: me.via, save: () => this.store.saveIdentity(me), check: () => this.current(me) });
+      const next = { ...s, rulesHere: r.here };
+      await this.store.write(me.id, "settings", next);
+      return { lines: r.lines, rules: await this.rulesNow(me, next, true) };
+    });
   }
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */
   async accepted() {
@@ -11044,7 +11426,7 @@ ${s.relays.join("\n")}`));
       } finally {
         await this.store.saveIdentity(me);
       }
-      m.drafts.push({ id, at: now2(), name: m.text.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) });
+      m.drafts.push({ id, at: now3(), name: m.text.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) });
       await this.saveBook(me.id, book);
       return {
         title: `Draft ${m.drafts.length} is published for discussion`,
@@ -11134,10 +11516,10 @@ ${s.relays.join("\n")}`));
   }
   async prepareRelease(a) {
     const { me, s, book, hints } = await this.ctx();
-    const who = await this.acting(me, s);
-    if (who.kind === "collective") {
-      const area = await releaseArea(who.id, who.places, s.via);
-      return this.releasesHere().prepare(me, await this.collectiveReleases(who.id, book, who.places, s.via), { ...a, relays: [.../* @__PURE__ */ new Set([...s.relays, ...who.places])], via: s.via, as: { collective: who.id, area } });
+    const who2 = await this.acting(me, s);
+    if (who2.kind === "collective") {
+      const area = await releaseArea(who2.id, who2.places, s.via);
+      return this.releasesHere().prepare(me, await this.collectiveReleases(who2.id, book, who2.places, s.via), { ...a, relays: [.../* @__PURE__ */ new Set([...s.relays, ...who2.places])], via: s.via, as: { collective: who2.id, area } });
     }
     return this.releasesHere().prepare(me, await this.ownReleases(me, book, hints, s.via), { ...a, relays: s.relays, via: s.via });
   }
@@ -11145,8 +11527,8 @@ ${s.relays.join("\n")}`));
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       await this.current(me);
-      const who = await this.acting(me, s);
-      if (who.kind === "collective") return this.confirmCollectiveRelease(me, s, book, who, plan, digest);
+      const who2 = await this.acting(me, s);
+      if (who2.kind === "collective") return this.confirmCollectiveRelease(me, s, book, who2, plan, digest);
       let r;
       try {
         r = await this.releasesHere().confirm(me, await this.ownReleases(me, book, [.../* @__PURE__ */ new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via), plan, digest, s.relays, s.via);
@@ -11165,25 +11547,25 @@ ${s.relays.join("\n")}`));
    * sent a negotiation message naming it, sealed to them, to sign in their
    * own app; then how it stands, as anyone reads it.
    */
-  async confirmCollectiveRelease(me, s, book, who, plan, digest) {
-    const relays = [.../* @__PURE__ */ new Set([...s.relays, ...who.places])];
-    const at = await chainFor(who.id, who.key, who.places, s.via);
+  async confirmCollectiveRelease(me, s, book, who2, plan, digest) {
+    const relays = [.../* @__PURE__ */ new Set([...s.relays, ...who2.places])];
+    const at = await chainFor(who2.id, who2.key, who2.places, s.via);
     const sign = async (payload) => {
-      const made = signAsMember(who.id, who.key, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
+      const made = signAsMember(who2.id, who2.key, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
       if (!(await publishAt([made.act], relays, s.via)).length) throw new Error("No relay took the release. Nothing counts: try again.");
       return { id: made.id };
     };
-    const r = await this.releasesHere().confirm(me, await this.collectiveReleases(who.id, book, who.places, s.via), plan, digest, relays, s.via, sign);
-    const area = await releaseArea(who.id, who.places, s.via);
+    const r = await this.releasesHere().confirm(me, await this.collectiveReleases(who2.id, book, who2.places, s.via), plan, digest, relays, s.via, sign);
+    const area = await releaseArea(who2.id, who2.places, s.via);
     const asked = [];
     const lines2 = [...r.done.lines];
     if (area && area.number > 1) {
       for (const h of area.holders.filter((x) => x !== me.id)) {
         try {
-          const l = await lookUp(h, who.places, s.via);
+          const l = await lookUp(h, who2.places, s.via);
           const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((x) => x.hints);
           if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox");
-          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short4(who.id)}, ${r.release.name} ${r.release.version}: its area \u201C${area.name}\u201D asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
+          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short4(who2.id)}, ${r.release.name} ${r.release.version}: its area \u201C${area.name}\u201D asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who2.id], [who2.id, who2.id]] });
           asked.push(h);
         } catch {
           lines2.push({ text: `${short4(h)} could not be reached to sign it (no inbox or encryption key found).`, tone: "warn" });
@@ -11192,9 +11574,9 @@ ${s.relays.join("\n")}`));
       await this.store.saveIdentity(me);
       if (asked.length) lines2.push({ text: `Asked for their key: ${asked.map(short4).join(", ")}.` });
     }
-    const st = (await judgeCollective(who.id, [r.release.id], who.places, s.via)).get(r.release.id);
+    const st = (await judgeCollective(who2.id, [r.release.id], who2.places, s.via)).get(r.release.id);
     lines2.push(st?.met ? { text: "It counts as the collective\u2019s release: its area is met.", tone: "ok" } : { text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") ?? "not read"}.`, tone: "warn" });
-    book.collectiveReleases = [...book.collectiveReleases ?? [], { ...r.release, collective: who.id, asked }];
+    book.collectiveReleases = [...book.collectiveReleases ?? [], { ...r.release, collective: who2.id, asked }];
     await this.saveBook(me.id, book);
     return { ...r.done, title: `${r.release.name} ${r.release.version} is published for the collective`, lines: lines2 };
   }
@@ -11270,10 +11652,11 @@ ${s.relays.join("\n")}`));
       said2 = idForm(id);
       out = await look(this.lookRelays(s), { signers: [id], filters, layer, via: s.via, hints });
     } else if (kind === "contacts") {
-      const c = await contacts(me, s.via);
-      said2 = `your contacts (${c.follows.length})`;
-      out = await look(this.lookRelays(s), { signers: c.follows.map((f) => f.id), filters, layer, via: s.via, hints });
-      if (c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${c.problem}.`, tone: "warn" });
+      const { open, problem } = this.opener(me);
+      const c = await this.known.followed(me, open, s.via, true);
+      said2 = `your contacts (${c.contacts.length})`;
+      out = await look(this.lookRelays(s), { signers: c.contacts.map((f) => f.id), filters, layer, via: s.via, hints });
+      if (problem ?? c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${problem ?? c.problem}.`, tone: "warn" });
     } else {
       if (!value) throw new Error("Point at a release by its act ID (mact1\u2026, or hexadecimal).");
       const id = readActId(value);
@@ -11316,23 +11699,59 @@ ${s.relays.join("\n")}`));
       return { lines: [{ text: "Removed from Look\u2019s saved points.", tone: "ok" }] };
     });
   }
-  /** The follow list sealed to this identity: Look's "my contacts". */
-  async contactsList() {
-    const { me, s } = await this.ctx();
-    const c = await contacts(me, s.via);
-    return { follows: c.follows.map((f) => ({ ...f, form: idForm(f.id) })), problem: c.problem, say: FOLLOW_SAY };
+  // ------------------------------------------------------------ who is known (H96, H100, H106, H109, H119)
+  /**
+   * How Ummia opens what is sealed to an identity (its contacts): with the
+   * encryption keys it holds. One used through Kišib's runner, or brought
+   * without its encryption key, has none here: `open` is null and `problem`
+   * says so, plainly.
+   */
+  opener(me) {
+    const keys = heldSecrets(me);
+    if (keys.length) return { open: keys, problem: null };
+    return { open: null, problem: me.f.signingSecret ? CONTACTS_NO_KEY_SAY : CONTACTS_RUNNER_SAY };
   }
-  /** Follow: add to contacts (the same follow list as Dub's). */
-  follow(a) {
+  /** Where an identity's names are read: its homes, the relays its acts go to, the relays Look asks. */
+  namePlaces(me, s) {
+    return list([...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track]);
+  }
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given in the one contacts list (the people
+   * cMIP's, sealed) and the name each published (the naming cMIP's), read
+   * by the kit's one name reader. `fresh`: asked again (a retry).
+   */
+  async names(a) {
+    if (!await this.store.active()) {
+      const published = await this.known.names.many(a.ids.slice(0, 200), [], !!a.fresh);
+      return Object.fromEntries(Object.entries(published).map(([id, p]) => [id, { nick: null, published: p }]));
+    }
+    const { me, s } = await this.ctx();
+    return this.known.named(me, this.opener(me).open, a.ids, this.namePlaces(me, s), { via: s.via, fresh: !!a.fresh });
+  }
+  /** The one contacts list (H100), each with its names: the same list Dub, Damgar and Edubba read, sealed to the identity at its homes. Read again each time it is asked for. */
+  async contacts() {
+    const { me, s } = await this.ctx();
+    const { open, problem } = this.opener(me);
+    const r = await this.known.contacts(me, open, this.namePlaces(me, s), { via: s.via, fresh: true });
+    return { ...r, problem: problem ?? r.problem, say: FOLLOW_SAY };
+  }
+  /** The contacts list changed (H109): a contact added (with a nickname, where given), its nickname set or taken away, or taken out. */
+  contactChange(a) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
+      const { open, problem } = this.opener(me);
+      if (!open) throw new Error(`${problem}. Nothing was signed.`);
       await this.current(me);
-      try {
-        return { lines: await follow(me, { id: readId(a.id), name: a.name?.trim().slice(0, 64) || null }, s.via) };
-      } finally {
-        await this.store.saveIdentity(me);
-      }
+      const said2 = await this.known.change(me, a, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      return { lines: said2.map((x) => ({ text: x.text, tone: x.tone })) };
     });
+  }
+  /** Follow: add to contacts, with a nickname where given (H109): the one list, as Contacts top left adds to it. */
+  async follow(a) {
+    const r = await this.contactChange({ op: "add", id: readId(a.id), nick: a.name?.trim() || null });
+    if (r.lines[0]?.text === "Nothing changed.") return { lines: [{ text: "Already in your contacts: nothing to change.", tone: "ok" }] };
+    return { lines: [{ text: "Added to your contacts.", tone: "ok" }, ...r.lines] };
   }
   /** Follow their releases (decided: "the same follow list, but here it filters"): added to contacts, and a saved point of Look showing their releases. */
   async followReleases(a) {
@@ -11406,8 +11825,8 @@ ${s.relays.join("\n")}`));
           acts2.push(c.id);
           lines2.push({ text: `Its card is published: ${actForm(c.id)}, a plain post every app shows.`, tone: "ok" });
           const b = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
-          b.cards = [...b.cards ?? [], { id: c.id, spec: hash, title: fields.title, at: now2() }];
-          if (newThread) b.discussions = [...b.discussions ?? [], { id: fields.discussion, spec: hash, title: fields.title, at: now2() }];
+          b.cards = [...b.cards ?? [], { id: c.id, spec: hash, title: fields.title, at: now3() }];
+          if (newThread) b.discussions = [...b.discussions ?? [], { id: fields.discussion, spec: hash, title: fields.title, at: now3() }];
           await this.saveBook(me.id, b);
         } finally {
           await this.store.saveIdentity(me);
@@ -11483,7 +11902,7 @@ ${s.relays.join("\n")}`));
       } finally {
         await this.store.saveIdentity(me);
       }
-      book.replies = [...book.replies ?? [], { id, to, at: now2() }];
+      book.replies = [...book.replies ?? [], { id, to, at: now3() }];
       await this.saveBook(me.id, book);
       return { title: "Your reply is published", acts: [id], lines: [{ text: `A signed document, public, answering ${actForm(to)}: ${actForm(id)}.`, tone: "ok" }] };
     });
@@ -11619,6 +12038,10 @@ async function run(u2, op, a) {
   switch (op) {
     case "state":
       return u2.state();
+    case "rules":
+      return u2.rules();
+    case "rules approve":
+      return u2.approveRules({ keys: list2(a.keys), where: a.where === "list" ? "list" : "here", remove: a.remove === true });
     case "bring":
       return u2.bring({ id: text2(a.id), words: text2(a.words), address: text2(a.address), relays: list2(a.relays) });
     case "renew":
@@ -11704,8 +12127,16 @@ async function run(u2, op, a) {
       return u2.savedAdd({ label: text2(a.label), point: { kind: text2(a.point?.kind), value: text2(a.point?.value) }, filters: list2(a.filters) });
     case "saved remove":
       return u2.savedRemove(text2(a.key));
+    case "names":
+      return u2.names({ ids: list2(a.ids), fresh: a.fresh === true });
     case "contacts":
-      return u2.contactsList();
+      return u2.contacts();
+    case "contact add":
+      return u2.contactChange({ op: "add", id: text2(a.id), nick: text2(a.nick) || null });
+    case "contact nick":
+      return u2.contactChange({ op: "nick", id: text2(a.id), nick: text2(a.nick) || null });
+    case "contact remove":
+      return u2.contactChange({ op: "remove", id: text2(a.id) });
     case "follow":
       return u2.follow({ id: text2(a.id), name: text2(a.name) || null });
     case "follow releases":
@@ -11746,13 +12177,14 @@ var APPS = {
   ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
 };
 var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
-var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var KIT_STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
 ${tints}
 .k-page,.k-page *{box-sizing:border-box}
 html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
-.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+.k-page{font:300 15px/1.5 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
 :where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 :where(.k-page) button:disabled{opacity:.45;cursor:default}
 :where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
@@ -11763,7 +12195,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 :where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
 :where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
 .k-page [hidden]{display:none!important}
-.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
 .k-grow{flex:1}
 .k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
@@ -11773,6 +12205,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 /* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
 .k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
 .k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app .k-nm,.k-appname{font-family:"Gentium Book Plus",Georgia,serif;font-style:italic;font-weight:400;letter-spacing:.01em;font-size:1.12em}
 .k-app img{width:26px;height:26px;border-radius:6px}
 .k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
 .k-menu-btn:hover{color:var(--k-text)}
@@ -11784,7 +12217,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-on .k-count{background:var(--k-ink);color:var(--k-p)}
 .k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
 .k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-me .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
 .k-dot.k-c{border-radius:7px}
 .k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
@@ -11794,10 +12227,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
 
 /* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
-.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));gap:18px;padding:24px 28px 12px;overflow:auto}
 .k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
 .k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
-.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+/* the icon in the tile's own flow, at its top, the words at its bottom: they never overlap, at any width (H105); a short tile grows */
+.k-tile .k-ic{flex:none;width:58px;height:58px;color:var(--k-p);margin:-2px 0 auto;padding-bottom:10px;box-sizing:content-box}
 .k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
 .k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
 .k-tile .k-dm{position:absolute;right:24px;top:26px}
@@ -11839,11 +12273,11 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
 .k-act:last-child{border-bottom:0}
 .k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
-.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-sid,.k-act .k-actid{font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
-.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
+.k-act .k-hint,.k-act .k-unstamped{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
@@ -11861,15 +12295,42 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act audio{display:block;width:100%;margin:6px 0}
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+.k-act .k-corrected{display:inline-block;margin:0 0 0 8px;font-size:11.5px;letter-spacing:.04em;color:var(--k-p);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px;vertical-align:2px}
+.k-act .k-corrected.k-on{background:var(--k-wash2)}
+.k-earlier{border-left:2px solid var(--k-edge);margin:0 0 8px;padding:0 0 0 10px;opacity:.82}
+.k-earlier .k-act{border-bottom:1px dashed var(--k-line)}
+.k-earlier-say{font-size:11.5px;color:var(--k-faint);margin:4px 0 0}
+
+/* an identity wherever its ID is shown (H96, H121): its names, the nickname first, the published name small and faint; its short ID under, a button */
+.k-who{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;vertical-align:top;max-width:100%;min-width:0}
+.k-who.k-inline{display:inline;vertical-align:baseline}
+.k-who.k-inline>.k-idbtn{margin-left:6px}
+.k-who.k-inline .k-names{display:inline}
+.k-who.k-inline .k-names>*+*{margin-left:6px}
+.k-names{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;min-width:0}
+.k-nick{font-weight:400;color:var(--k-text);overflow-wrap:anywhere}
+.k-pub{font-size:.82em;color:var(--k-faint);overflow-wrap:anywhere}
+.k-pub.k-state{font-style:italic}
+.k-you{font-size:12px;color:var(--k-soft)}
+.k-retry{font-size:12px;color:var(--k-soft);text-decoration:underline;text-underline-offset:2px}
+.k-idbtn{font:11.5px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);border-radius:6px;padding:0 2px;text-align:left}
+.k-idbtn:hover,.k-idbtn:focus-visible{background:var(--k-wash);outline:none}
+.k-idbtn.k-whole{overflow-wrap:anywhere;word-break:break-all;white-space:normal;background:var(--k-wash);color:var(--k-text);user-select:all;-webkit-user-select:all}
+.k-idbtn[data-k-copied]{color:var(--k-p)}
+.k-picker{min-width:280px}
+.k-picker input[type=search]{margin:4px 0 6px}
+.k-picker button{display:flex;align-items:center;gap:10px}
+.k-picker .k-names{flex:1}
 
 /* menus: what you take above a line, what changes something below */
 .k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
-.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop .k-t{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
 .k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
 .k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
 .k-pop button:disabled{color:var(--k-faint);opacity:1}
 .k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
 .k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop.k-anchored{position:absolute;left:8px;right:auto;top:auto;bottom:calc(100% + 6px);max-height:min(320px,40vh)}
 .k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
 
 /* the typing box: always in the same place, the bottom */
@@ -11901,15 +12362,36 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
 .k-panel.k-left{left:16px;right:auto}
 .k-panel h4{font-size:16px;font-weight:300}
+.k-ph{display:flex;align-items:center;gap:10px;padding:2px 2px 6px 8px}
+.k-panel .k-ph .k-round{width:28px;height:28px;font-size:16px}
+.k-confirm{width:min(440px,calc(100% - 28px))}
+.k-confirm .k-mh{margin-bottom:0}
+.k-confirm .k-box{margin:0;border:0;padding:0 4px 4px}
+.k-alarm-modal{border-color:var(--k-bad)}
+.k-keychanged h4{font-size:17px;margin:0 0 6px}
+.k-keychanged textarea{min-height:70px}
+.k-reminder{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 20px;border-bottom:1px solid var(--k-bad);font-size:13px;color:var(--k-text);background:rgba(196,100,95,.08);flex:none}
+.k-reminder span{flex:1;min-width:12em}
+.k-reminder.k-rules-ask{border-bottom-color:var(--k-edge);background:var(--k-wash)}
+.k-rule-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.k-rule{border:1px solid var(--k-line);border-radius:10px;padding:10px 12px}
+.k-rule p{margin:4px 0}
+.k-rule-not{border-color:var(--k-edge)}
+.k-rule-not .k-rule-on{font-weight:600}
+.k-rules-all{margin:10px 0 0}
 .k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
 .k-idrow.k-on{background:var(--k-wash2)}
 .k-idrow .k-n{font-size:14.5px}
-.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-s{font:11.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-faint)}
 .k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
 .k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
 .k-idline{display:flex;align-items:center;gap:4px}
 .k-idline>.k-idrow{flex:1;min-width:0}
 .k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-more:hover{color:var(--k-text)}
+.k-ownid{margin:2px 4px 8px 44px}
+.k-ownid .k-row{margin:6px 0 0;gap:6px}
+.k-idwhole{display:block;font-size:12px;color:var(--k-text);overflow-wrap:anywhere;word-break:break-all;user-select:all;-webkit-user-select:all}
 .k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
 .k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
 .k-panel .k-pane-in{padding:4px 6px}
@@ -11930,6 +12412,17 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-say>summary::-webkit-details-marker{display:none}
 .k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
 .k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-mor{display:inline-block;margin-left:10px;font-size:12px;color:var(--k-soft);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px;white-space:nowrap}
+a.k-mor:hover{color:var(--k-text)}
+.k-more-text .k-mor{margin-left:0;white-space:normal}
+/* a line opening a panel to work in (H99): a chevron, turning down when open */
+.k-fold{margin:8px 0;font-size:13.5px}
+.k-fold>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--k-soft)}
+.k-fold>summary::-webkit-details-marker{display:none}
+.k-fold>summary:hover{color:var(--k-text)}
+.k-chev{display:inline-grid;place-items:center;width:17px;height:17px;font-size:15px;line-height:1;color:var(--k-soft);transition:transform .15s}
+.k-fold[open]>summary .k-chev{transform:rotate(90deg)}
+.k-fold-body{margin:8px 0 2px}
 .k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
 .k-say .k-more-text p{margin:4px 0}
 .k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
@@ -11940,7 +12433,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
 .k-note ul{margin:4px 0 0;padding-left:1.1em}
 .k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
-.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status{position:fixed;z-index:900;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
 .k-status:empty{display:none}
 .k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
 .k-status .k-close{position:absolute;right:8px;top:8px}
@@ -11956,7 +12449,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-list{border-top:1px solid var(--k-line)}
 .k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
 .k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
-.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;margin:10px 0;background:var(--k-raise)}
 .k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
 .k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
 .k-box.k-fill{background:var(--k-wash);border-color:transparent}
@@ -11971,9 +12464,9 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-me .k-n,.k-me .k-s{display:none}
   .k-menu-btn .k-l{display:none}
   .k-switch button{padding:4px 11px}
-  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(min-content,1fr));gap:10px;padding:12px}
   .k-tile{padding:16px 18px;border-radius:18px}
-  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile .k-ic{width:40px;height:40px;padding-bottom:8px}
   .k-tile h2{font-size:24px}
   .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .k-tile .k-dm{right:16px;top:18px}
@@ -12000,20 +12493,44 @@ function shortForm(form2) {
   return `${form2.slice(0, one2 + 4)}\u2026${form2.slice(-3)}`;
 }
 var initial = (name, id) => (name?.trim()?.[0] ?? id.replace(/^m\w*1/, "")[0] ?? "?").toUpperCase();
+var NAME_WORDS = { loading: "Loading\u2026", none: "No name published", unreached: "Name not reached" };
+function nameOf2(n) {
+  return n?.nick?.trim() || (n?.published?.state === "name" ? n.published.name : null);
+}
+function namesHtml(n, o = {}) {
+  const nick = n?.nick?.trim() || null;
+  const p = n?.published ?? { state: "loading" };
+  const pub = p.state === "name" ? p.name : null;
+  const state = p.state === "name" ? "" : `<span class="k-pub k-state" data-k-name-state="${p.state}">${NAME_WORDS[p.state]}</span>${p.state === "unreached" && o.retry !== false ? '<button type="button" class="k-retry" data-k-name-retry>Ask again</button>' : ""}`;
+  if (nick) return `<span class="k-nick" dir="auto">${e(nick)}</span>${pub && pub !== nick ? ` <span class="k-pub" dir="auto">${e(pub)}</span>` : ""}`;
+  if (pub) return `<span class="k-nick" dir="auto">${e(pub)}</span>`;
+  return state;
+}
+var NOT_STAMPED = "not yet stamped by the Dubsar clock";
+function namedOf(w) {
+  if (w.named) return w.named;
+  const nick = w.name && w.ownName && w.name !== w.ownName ? w.name : null;
+  const pub = w.ownName ?? (nick ? null : w.name ?? null);
+  return { nick, published: pub ? { state: "name", name: pub } : { state: "none" } };
+}
 function card(a, o = {}) {
   const s = a.signer;
-  const name = s.name ?? (s.collective ? "a collective" : "");
-  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ""}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">\u201C${e(s.ownName)}\u201D</span>` : ""}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}</button>`;
-  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${e(l.text)}</div>`).join("");
+  const named2 = namedOf(s);
+  const names = !nameOf2(named2) && s.collective && named2.published?.state === "none" ? '<span class="k-nick">a collective</span>' : namesHtml(named2, { retry: false });
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-names k-nm">${names}</span>${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}<span class="k-sid">${e(shortForm(s.form))}</span></button>`;
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${l.html ?? e(l.text)}</div>`).join("");
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
   const text3 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
-  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
+  const hint = (!a.when && a.unstamped ? `<div class="k-unstamped">${e(a.unstamped)}</div>` : "") + (!a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "");
+  const earlier = a.earlier?.length ? `<div class="k-earlier" data-k-earlier hidden><div class="k-earlier-say">${a.earlier.length === 1 ? "The original, as signed" : `The original and ${a.earlier.length - 1} earlier correction${a.earlier.length > 2 ? "s" : ""}, as signed, oldest first`}</div>${a.earlier.map((x) => card(x)).join("")}</div>` : "";
+  const corrected = a.earlier?.length ? `<button type="button" class="k-corrected" data-k-corrected aria-expanded="false">Corrected</button>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}${a.earlier?.length ? " k-is-corrected" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${earlier}${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${corrected}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
 }
 function signerMenu(app2, w, own) {
   const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
-  return menu(`${w.name ? `${w.name} \xB7 ` : ""}${shortForm(w.form)}`, [
+  const n = nameOf2(namedOf(w));
+  return menu(`${n ? `${n} \xB7 ` : ""}${shortForm(w.form)}`, [
     { key: "copy-id", label: "Copy ID" },
     { key: "copy-link", label: "Copy ID link" },
     { key: "profile", label: "Open profile" }
@@ -12040,7 +12557,12 @@ function appMark(name, icon) {
 }
 function meButton(o) {
   const shown = o.as ?? o;
-  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(shown.name ?? "No name")}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+  const n = namedOf(shown);
+  const label = nameOf2(n) ?? NAME_WORDS[n.published?.state === "name" ? "none" : n.published?.state ?? "loading"];
+  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(label)}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+}
+function contactsButton(label = "Contacts") {
+  return `<button type="button" class="k-menu-btn" data-k-open="contacts" aria-haspopup="dialog"><span aria-hidden="true">\u2630</span><span class="k-l">${e(label)}</span></button>`;
 }
 var danger = (l) => `<span class="k-dm k-l${l}" title="danger ${l} of 3" aria-label="danger ${l} of 3"><i></i><i></i><i></i></span>`;
 function tiles(ts) {
@@ -12056,24 +12578,51 @@ function pointRow(label, chips, name = "point") {
 function feedBox(o) {
   return `${o.above ?? ""}<div class="k-feedwrap"><div class="k-feed" id="${e(o.id)}" tabindex="0">${o.cards || `<p class="k-empty">${e(o.empty ?? "Nothing yet.")}</p>`}</div>${o.below ?? ""}</div>`;
 }
-function say2(line, more) {
+function say2(line, more, o = {}) {
   const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
-  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+  const mor = o.mor ? o.mor() : "";
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span>${mor}</summary><div class="k-more-text">${rest}${o.mor ? `<p>${o.mor(true)}</p>` : ""}</div></details>`;
+}
+var MOR_HOME = "https://dubsar.org/";
+function whatIsMor(long = false) {
+  return `<a class="k-mor" data-k-mor href="${MOR_HOME}" target="_blank" rel="noopener noreferrer">${long ? "What is MOR? dubsar.org\u2019s front page, in a new tab" : "What is MOR?"}</a>`;
+}
+function fold(line, body, o = {}) {
+  return `<details class="k-fold"${o.open ? " open" : ""}${o.attrs ? ` ${o.attrs}` : ""}><summary>${e(line)}<span class="k-chev" aria-hidden="true">\u203A</span></summary><div class="k-fold-body">${body}</div></details>`;
 }
 var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
 function identityPanel(o) {
-  const row = (x, sub, owner, why) => `<div class="k-idline"><button type="button" class="k-idrow${x.on ? " k-on" : ""}${sub ? " k-sub" : ""}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ""}${x.on ? ' aria-current="true"' : ""}${why ? " disabled" : ""}><span class="k-dot${sub ? " k-c" : ""}${x.on ? "" : " k-alt"}">${e(initial(x.name, x.form))}</span><span><span class="k-n" dir="auto">${e(x.name ?? "No name")}${sub ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ""}</span></button>${sub ? "" : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its menu">\u22EF</button>`}</div>`;
-  const ids = o.ids.map((x) => row(x, false, x.id) + x.collectives.map((c) => row(c, true, x.id, c.why)).join("")).join("");
+  const row = (x, sub, owner, why) => `<div class="k-idline"><button type="button" class="k-idrow${x.on ? " k-on" : ""}${sub ? " k-sub" : ""}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ""}${x.on ? ' aria-current="true"' : ""}${why ? " disabled" : ""}><span class="k-dot${sub ? " k-c" : ""}${x.on ? "" : " k-alt"}">${e(initial(x.name, x.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(namedOf(x), { retry: false })}${sub ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ""}</span></button>${sub ? "" : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its settings" aria-label="Its settings">${GEAR}</button>`}</div>`;
+  const ids = o.ids.map((x) => row(x, false, x.id) + (x.on ? ownId({ form: x.form, link: x.link ?? x.form }) : "") + x.collectives.map((c) => row(c, true, x.id, c.why)).join("")).join("");
   const add = `<button type="button" class="k-idrow${o.adding ? " k-on" : ""}" data-k-add="toggle"><span class="k-soft">+ Add</span></button>${o.adding ? `<div class="k-pane-in">${o.add.map((a) => `<button type="button" class="k-idrow" data-k-add="${e(a.key)}"${a.empty ? " disabled" : ""}><span><span class="k-n">${e(a.label)}</span><br><span class="k-small k-soft">${e(a.say)}</span></span></button>`).join("")}</div>` : ""}`;
-  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity">${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ""}</div>`;
+  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity"><div class="k-ph"><h4>Identities</h4><span class="k-grow"></span>${CLOSE_X}</div>${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ""}</div>`;
+}
+var CLOSE_X = '<button type="button" class="k-round k-x" data-k-close aria-label="Close">\xD7</button>';
+var GEAR = '<svg class="k-gear" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+function ownId(o) {
+  return `<div class="k-ownid" data-k-ownid><span class="k-mono k-idwhole">${e(o.form)}</span><div class="k-row"><button type="button" class="k-btn k-small" data-k-copy-id="${e(o.form)}">Copy ID</button><button type="button" class="k-btn k-small" data-k-share="${e(o.link)}">Share your ID link</button></div></div>`;
 }
 function removeSaid(app2, name) {
   return `<div class="k-box" data-k-remove><h4>Remove ${e(name)} from ${e(app2)}?</h4><p class="k-small k-soft">${e(app2)} forgets ${e(name)}\u2019s signing words, and what it kept about it, on this device. ${e(name)} itself is not touched: its acts, its homes and the other apps keep it. To use it here again, bring it with its words.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-remove-yes>Remove it</button><button type="button" class="k-btn k-q" data-k-remove-no>Keep it</button></div></div>`;
 }
+function labelOf2(c) {
+  return (c.named ? nameOf2(c.named) : null) ?? c.name ?? c.names?.[0] ?? shortForm(c.form);
+}
+function contactsPanel(o) {
+  const rows = o.contacts.map((c) => {
+    const n = c.named ?? namedOf({ name: c.name, ownName: c.names?.[0] ?? null });
+    const words = [labelOf2(c), n.nick ?? "", n.published?.state === "name" ? n.published.name : "", ...c.names ?? [], c.form].join(" ").toLowerCase();
+    return `<div class="k-idline" data-k-contact="${e(c.id)}" data-k-name="${e(words)}"><button type="button" class="k-idrow" data-k-contact-open="${e(c.id)}"><span class="k-dot${c.collective ? " k-c" : ""} k-alt">${e(initial(labelOf2(c), c.form))}</span><span><span class="k-n k-names" dir="auto">${namesHtml(n, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(c.form))}</span></span></button>${o.nick ? `<button type="button" class="k-btn k-q k-small" data-k-nick="${e(c.id)}" title="Your own name for it, sealed: only you see it">Nickname\u2026</button>` : ""}${o.action ? `<button type="button" class="k-btn k-q k-small" data-k-contact-do="${e(c.id)}">${e(o.action)}</button>` : ""}</div>`;
+  }).join("");
+  return `<div class="k-panel k-left" role="dialog" aria-label="Contacts" data-k-panel="contacts"><div class="k-ph"><h4>Contacts</h4><span class="k-grow"></span><span class="k-small k-soft">${o.contacts.length}</span>${CLOSE_X}</div><input type="search" data-k-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${rows || '<p class="k-small k-soft">Nobody yet.</p>'}<div class="k-sepline"></div>${o.below}</div>`;
+}
 var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 var ICONS = {
   identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
-  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  // The runner: the seal of Kišib's menu bar (H111), as its state shows it there: hollow while off, filled while on, a padlock while locked.
+  runner: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z"/>'),
+  runnerOn: SVG('<path d="M24 8.5Q29 5.2 31.8 10.6Q37.8 10.2 37.4 16.2Q42.8 19 39.5 24Q42.8 29 37.4 31.8Q37.8 37.8 31.8 37.4Q29 42.8 24 39.5Q19 42.8 16.3 37.4Q10.2 37.8 10.6 31.8Q5.2 29 8.5 24Q5.2 19 10.6 16.2Q10.2 10.2 16.2 10.6Q19 5.2 24 8.5Z" fill="currentColor" fill-opacity=".85"/>'),
+  runnerLocked: SVG('<rect x="13" y="22" width="22" height="17" rx="3.5"/><path d="M17.5 22v-5a6.5 6.5 0 0 1 13 0v5"/><circle cx="24" cy="30.5" r="2"/>'),
   paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
   collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
   waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
@@ -12090,6 +12639,20 @@ var ICONS = {
 };
 function slotWords(by, host) {
   return `Drawn by ${by} \xB7 ${host} cannot read or change this frame`;
+}
+function rulesPart(o) {
+  const missing = o.rules.filter((r) => !r.on);
+  const both = (key) => `<button type="button" class="k-btn k-p k-small" data-k-rule="${e(key)}" data-k-rule-where="list">Add to my list</button><button type="button" class="k-btn k-small" data-k-rule="${e(key)}" data-k-rule-where="here">In ${e(o.app)} only</button>`;
+  const row = (r) => {
+    const state = r.on === "list" ? "On your list: every app follows it" : r.on === "here" ? `In ${o.app} only: the other apps still ask` : `Not followed yet: its acts are unknown here, and ${o.app} signs nothing under it`;
+    const acts2 = r.on === "list" ? "" : r.on === "here" ? `<button type="button" class="k-btn k-p k-small" data-k-rule="${e(r.key)}" data-k-rule-where="list">Add to my list</button><button type="button" class="k-btn k-q k-small" data-k-rule-stop="${e(r.key)}">Stop following in ${e(o.app)}</button>` : both(r.key);
+    return `<li class="k-rule${r.on ? "" : " k-rule-not"}" data-k-rule-row="${e(r.key)}"><div class="k-rule-head"><b>${e(r.name)}</b> <span class="k-tagc">${e(r.kind)}</span></div><p class="k-small k-soft">${e(r.does)}</p>${r.text ? `<p class="k-small k-faint k-mono">${e(r.text)}</p>` : ""}<p class="k-small k-rule-on">${e(state)}</p>${acts2 ? `<div class="k-row">${acts2}</div>` : ""}</li>`;
+  };
+  return `<section class="k-rules" data-k-rules-part>${say2(`The rules ${o.app} runs, and whether you follow them.`, [
+    `A rule here is a cMIP or a Module: a specification anyone may write, which ${o.app} carries in its build. You choose which you follow.`,
+    `Add to my list: kept on your list of rules, sealed to this identity at its homes, and every app holding it reads it. In ${o.app} only: kept by ${o.app}; your list is unchanged, so the other apps still ask.`,
+    `Until you follow a rule, what others did under it is shown unknown here, and ${o.app} signs nothing under it (Development rule 10).`
+  ])}${o.problem ? `<p class="k-small k-soft">${e(o.problem)}.</p>` : ""}${missing.length > 1 ? `<div class="k-row k-rules-all"><span class="k-small">${missing.length} not followed yet:</span>${both("*")}</div>` : ""}<ul class="k-rule-list">${o.rules.map(row).join("")}</ul>${o.manage ? `<p class="k-small k-soft">${e(o.manage)}</p>` : ""}</section>`;
 }
 
 // ../kit/src/dom.ts
@@ -12123,18 +12686,29 @@ function closeMenu() {
   openMenu = null;
 }
 function place(pop, button, prefer) {
+  if (pop.classList.contains("k-anchored")) return;
   const r = button.getBoundingClientRect();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
+  const vv = window.visualViewport;
+  const top2 = vv ? vv.offsetTop : 0;
+  const bottom = vv ? vv.offsetTop + vv.height : document.documentElement.clientHeight;
+  pop.style.maxHeight = "";
+  const w = pop.offsetWidth;
+  let h = pop.offsetHeight;
   let left = prefer === "above" ? r.right - w : r.left;
   left = Math.max(8, Math.min(left, vw - w - 8));
-  let topAt = prefer === "below" ? r.bottom + 6 : r.top - h - 6;
-  if (topAt + h > vh - 8) topAt = r.top - h - 6;
-  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  const roomAbove = r.top - 6 - (top2 + 8);
+  const roomBelow = bottom - 8 - (r.bottom + 6);
+  const above = prefer === "above" ? roomAbove >= h || roomAbove >= roomBelow : !(roomBelow >= h || roomBelow >= roomAbove);
+  const room = Math.max(above ? roomAbove : roomBelow, 80);
+  if (h > room) {
+    pop.style.maxHeight = `${Math.floor(room)}px`;
+    h = pop.offsetHeight;
+  }
+  let at = above ? r.top - 6 - h : r.bottom + 6;
+  at = Math.max(top2 + 8, Math.min(at, bottom - h - 8));
   pop.style.left = `${Math.round(left)}px`;
-  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+  pop.style.top = `${Math.round(at)}px`;
 }
 function popAt(button, html, prefer, pick, done) {
   closeMenu();
@@ -12142,10 +12716,22 @@ function popAt(button, html, prefer, pick, done) {
   holder.innerHTML = html;
   const pop = holder.firstElementChild;
   (button.closest(".k-page") ?? document.body).append(pop);
+  pop.style.zIndex = String(LAYER_BASE + stack.length * 2 + 2);
   place(pop, button, prefer);
   button.classList.add("k-open");
   button.setAttribute("aria-expanded", "true");
-  openMenu = { pop, button, done };
+  const again = () => place(pop, button, prefer);
+  window.visualViewport?.addEventListener("resize", again);
+  window.visualViewport?.addEventListener("scroll", again);
+  openMenu = {
+    pop,
+    button,
+    done: () => {
+      window.visualViewport?.removeEventListener("resize", again);
+      window.visualViewport?.removeEventListener("scroll", again);
+      done?.();
+    }
+  };
   pop.addEventListener("click", (ev) => {
     const item = ev.target.closest("button[data-k-item]");
     if (!item || item.disabled) return;
@@ -12166,14 +12752,31 @@ async function copied(item, text3) {
   setTimeout(closeMenu, ok ? 450 : 2400);
 }
 function attachCards(root, host) {
+  const actOf = (card2) => {
+    const own = host.act(card2.dataset.kAct);
+    if (own) return own;
+    const outer = card2.parentElement?.closest("[data-k-act]");
+    return outer ? (actOf(outer)?.earlier ?? []).find((x) => x.id === card2.dataset.kAct) : void 0;
+  };
   root.addEventListener("click", (ev) => {
+    const fold2 = ev.target.closest("[data-k-corrected]");
+    if (fold2) {
+      ev.stopPropagation();
+      const box2 = fold2.closest("[data-k-act]")?.querySelector(":scope > [data-k-earlier]");
+      if (box2) {
+        box2.hidden = !box2.hidden;
+        fold2.setAttribute("aria-expanded", String(!box2.hidden));
+        fold2.classList.toggle("k-on", !box2.hidden);
+      }
+      return;
+    }
     const b = ev.target.closest("[data-k-menu]");
     if (!b) return;
     const card2 = b.closest("[data-k-act]");
     if (!card2) return;
     ev.stopPropagation();
     if (openMenu?.button === b) return closeMenu();
-    const a = host.act(card2.dataset.kAct);
+    const a = actOf(card2);
     if (!a) return;
     const which = b.dataset.kMenu;
     card2.classList.add("k-sel");
@@ -12194,18 +12797,142 @@ function attachCards(root, host) {
   });
 }
 function attachClosing(doc = document) {
+  if (attached.has(doc)) return;
+  attached.add(doc);
   doc.addEventListener("click", (ev) => {
-    if (!openMenu) return;
     const t = ev.target;
+    const x = t.closest("[data-k-status-close]");
+    if (x) {
+      const st = x.closest(".k-status");
+      if (st) st.innerHTML = "";
+      return;
+    }
+    const cid = t.closest("[data-k-copy-id]");
+    const share2 = t.closest("[data-k-share]");
+    if (cid || share2) {
+      const b = cid ?? share2;
+      const text3 = cid ? cid.dataset.kCopyId : share2.dataset.kShare;
+      void (async () => {
+        let said2 = "";
+        if (share2 && typeof navigator.share === "function") {
+          try {
+            await navigator.share({ title: "My ID on MOR", text: text3 });
+            return;
+          } catch (err) {
+            if (err.name === "AbortError") return;
+          }
+        }
+        said2 = await copy(text3) ? share2 ? "Copied: paste it where you share it" : "Copied" : "Select it and copy it";
+        const was = b.textContent;
+        b.textContent = said2;
+        setTimeout(() => {
+          if (b.isConnected) b.textContent = was;
+        }, 1600);
+      })();
+      return;
+    }
+    if (!openMenu) return;
     if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
     closeMenu();
   });
   doc.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape") return;
     if (openMenu) return closeMenu();
-    if (panel) return closePanel();
-    popup?.close();
+    const top2 = stack[stack.length - 1];
+    if (top2) return void leave(top2);
+    for (const st of doc.querySelectorAll(".k-status")) st.innerHTML = "";
   });
+  const closeable = (root) => {
+    for (const st of root.querySelectorAll(".k-status")) {
+      if (st.firstElementChild && !st.querySelector(":scope > [data-k-status-close], :scope > .k-close")) {
+        const b = doc.createElement("button");
+        b.type = "button";
+        b.className = "k-round k-close";
+        b.dataset.kStatusClose = "";
+        b.setAttribute("aria-label", "Close");
+        b.textContent = "\xD7";
+        st.append(b);
+      }
+    }
+  };
+  new MutationObserver(() => closeable(doc)).observe(doc.documentElement, { childList: true, subtree: true });
+}
+var attached = /* @__PURE__ */ new WeakSet();
+var LAYER_BASE = 30;
+var stack = [];
+function restack() {
+  stack.forEach((l, i) => {
+    l.shade.style.zIndex = String(LAYER_BASE + i * 2);
+    l.box.style.zIndex = String(LAYER_BASE + i * 2 + 1);
+    l.box.toggleAttribute("data-k-under", i < stack.length - 1);
+  });
+}
+function pushLayer(box2, shade, close) {
+  closeMenu();
+  const l = { box: box2, shade, close, dirty: false };
+  stack.push(l);
+  shade.addEventListener("click", () => {
+    if (stack[stack.length - 1] === l) void leave(l);
+  });
+  box2.addEventListener("input", (ev) => {
+    const t = ev.target;
+    if ((t.tagName === "TEXTAREA" || t.tagName === "INPUT" && !/^(checkbox|radio|file|hidden|search)$/.test(t.type)) && t.value.trim()) l.dirty = true;
+  });
+  box2.addEventListener("submit", () => l.dirty = false, true);
+  box2.addEventListener("click", (ev) => {
+    const t = ev.target;
+    if (t.closest("[data-k-close]")?.closest("[data-k-stack]") === box2) l.close();
+    else if (t.closest("[data-k-remove-no]") && box2.matches("[data-k-confirm]")) l.close();
+  });
+  box2.dataset.kStack = "";
+  restack();
+  return l;
+}
+function popLayer(box2) {
+  const i = stack.findIndex((l) => l.box === box2);
+  if (i < 0) return;
+  const above = stack.splice(i);
+  for (const l of above.slice(1).reverse()) l.close();
+  restack();
+}
+async function leave(l) {
+  if (l.dirty && !await askLeave(l.box.closest(".k-page") ?? document.body)) return;
+  l.close();
+}
+function askLeave(page) {
+  return new Promise((done) => {
+    const c = openConfirm(page, '<div class="k-box" data-k-leave><h4>Close it?</h4><p class="k-small k-soft">What you typed there is not kept.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-leave-yes>Close it</button><button type="button" class="k-btn k-q" data-k-leave-no>Keep writing</button></div></div>', () => done(false));
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-leave-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-leave-no]")) c.close();
+    });
+  });
+}
+function openConfirm(page, html, gone) {
+  const shade = document.createElement("div");
+  shade.className = "k-shade k-light";
+  const box2 = document.createElement("div");
+  box2.className = "k-modal k-confirm";
+  box2.setAttribute("role", "alertdialog");
+  box2.setAttribute("aria-modal", "true");
+  box2.dataset.kConfirm = "";
+  box2.innerHTML = `<div class="k-mh"><span class="k-grow"></span><button type="button" class="k-round" data-k-close aria-label="Close">\xD7</button></div><div class="k-mbody">${html}</div>`;
+  page.append(shade, box2);
+  let answered = false;
+  const close = (a = false) => {
+    answered ||= a;
+    if (!box2.isConnected) return;
+    box2.remove();
+    shade.remove();
+    popLayer(box2);
+    if (!answered) gone?.();
+  };
+  pushLayer(box2, shade, () => close());
+  box2.querySelector(".k-mbody button")?.focus({ preventScroll: true });
+  return { box: box2, close };
 }
 var panel = null;
 function openPanel(page, html, done) {
@@ -12216,8 +12943,8 @@ function openPanel(page, html, done) {
   holder.innerHTML = html;
   const el = holder.firstElementChild;
   page.append(shade, el);
-  shade.addEventListener("click", () => closePanel());
   panel = { el, shade, done };
+  pushLayer(el, shade, () => closePanel());
   const find = el.querySelector("[data-k-find]");
   find?.addEventListener("input", () => {
     const q = find.value.trim().toLowerCase();
@@ -12230,17 +12957,19 @@ function redrawPanel(html) {
   const holder = document.createElement("div");
   holder.innerHTML = html;
   const el = holder.firstElementChild;
-  panel.el.replaceWith(el);
-  panel.el = el;
-  return el;
+  panel.el.replaceChildren(...el.childNodes);
+  for (const a of [...el.attributes]) if (a.name !== "style") panel.el.setAttribute(a.name, a.value);
+  return panel.el;
 }
 function closePanel() {
   if (!panel) return;
   closeMenu();
-  panel.el.remove();
-  panel.shade.remove();
-  panel.done?.();
+  const p = panel;
   panel = null;
+  popLayer(p.el);
+  p.el.remove();
+  p.shade.remove();
+  p.done?.();
 }
 var panelOpen = () => panel?.el ?? null;
 var Popup = class {
@@ -12262,7 +12991,6 @@ var Popup = class {
       this.scroll = [...this.page.querySelectorAll(".k-feed")].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement("div");
       this.shade.className = "k-shade";
-      this.shade.addEventListener("click", () => this.close());
       this.box = document.createElement("div");
       this.box.className = "k-modal";
       this.box.setAttribute("role", "dialog");
@@ -12274,6 +13002,7 @@ var Popup = class {
       });
       this.page.append(this.shade, this.box);
       popup = this;
+      pushLayer(this.box, this.shade, () => this.close());
     }
     this.stack.push({ title, html });
     return this.draw();
@@ -12291,6 +13020,7 @@ var Popup = class {
   }
   close() {
     closeMenu();
+    if (this.box) popLayer(this.box);
     this.box?.remove();
     this.shade?.remove();
     this.box = this.shade = null;
@@ -12299,9 +13029,9 @@ var Popup = class {
     if (popup === this) popup = null;
   }
   draw() {
-    const now3 = this.stack[this.stack.length - 1];
+    const now4 = this.stack[this.stack.length - 1];
     const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
-    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now3.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now3.html}</div>`;
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now4.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now4.html}</div>`;
     const body = this.box.querySelector(".k-mbody");
     this.drawn(body);
     return body;
@@ -12320,7 +13050,7 @@ function stampCards(root, words) {
     s.className = "k-when";
     s.textContent = w;
     a.prepend(s);
-    a.querySelector(".k-hint")?.remove();
+    a.querySelectorAll(".k-hint, .k-unstamped").forEach((h) => h.remove());
   }
 }
 function attachColumn(root, chose) {
@@ -12369,6 +13099,10 @@ function openSlot(page, o) {
   frame.src = url.href;
   box2.append(by, frame);
   page.append(shade, box2);
+  pushLayer(box2, shade, () => {
+    slot.close();
+    o.closed?.();
+  });
   const listen = (ev) => {
     if (ev.source === frame.contentWindow) o.message?.(ev.data);
   };
@@ -12377,6 +13111,7 @@ function openSlot(page, o) {
     frame,
     close() {
       window.removeEventListener("message", listen);
+      popLayer(box2);
       box2.remove();
       shade.remove();
     }
@@ -12386,6 +13121,339 @@ function openSlot(page, o) {
     o.closed?.();
   });
   return slot;
+}
+var keyWarned = /* @__PURE__ */ new Set();
+var keyBox = null;
+function keyChanged(page, w) {
+  if (keyBox && keyBox.id !== w?.id) {
+    keyBox.close(true);
+    keyBox = null;
+  }
+  for (const r of page.querySelectorAll("[data-k-keychanged]")) if (r.dataset.kKeychanged !== w?.id) r.remove();
+  if (!w) return;
+  const remind = () => {
+    if (page.querySelector(`[data-k-keychanged="${CSS.escape(w.id)}"]`)) return;
+    const line = document.createElement("div");
+    line.className = "k-reminder";
+    line.dataset.kKeychanged = w.id;
+    line.setAttribute("role", "alert");
+    const text3 = document.createElement("span");
+    text3.textContent = `${w.name}\u2019s signing key was changed elsewhere: this app signs nothing more with the old one.`;
+    const again = document.createElement("button");
+    again.type = "button";
+    again.className = "k-btn k-small";
+    again.textContent = "Give the new words";
+    again.addEventListener("click", () => {
+      keyWarned.delete(w.id);
+      keyChanged(page, w);
+    });
+    line.append(text3, again);
+    (page.querySelector(".k-top") ?? page.firstElementChild)?.after(line);
+  };
+  if (keyWarned.has(w.id)) return remind();
+  if (keyBox?.id === w.id) return;
+  const c = openConfirm(page, `<div class="k-keychanged" data-k-keychanged-box><h4>${escapeText(w.name)}: a signing key changed elsewhere</h4><p class="k-small">${escapeText(w.say)}</p>${w.form}</div>`, () => {
+    keyBox = null;
+    keyWarned.add(w.id);
+    remind();
+  });
+  c.box.classList.add("k-alarm-modal");
+  keyBox = { id: w.id, close: c.close };
+}
+function ask2(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<div class="k-box" data-k-ask><h4>${escapeText(o.title)}</h4><p class="k-small k-soft">${escapeText(o.text)}</p><div class="k-row"><button type="button" class="k-btn ${o.alarm ? "k-alarm" : "k-p"}" data-k-ask-yes>${escapeText(o.yes)}</button><button type="button" class="k-btn k-q" data-k-ask-no>${escapeText(o.no ?? "Not now")}</button></div></div>`,
+      () => done(false)
+    );
+    c.box.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (t.closest("[data-k-ask-yes]")) {
+        c.close(true);
+        done(true);
+      } else if (t.closest("[data-k-ask-no]")) c.close();
+    });
+  });
+}
+function askNick(page, o) {
+  return new Promise((done) => {
+    const c = openConfirm(
+      page,
+      `<form class="k-box" data-k-nick-form><h4>${escapeText(o.title)}</h4><label>A nickname (optional): only you see it, sealed to you</label><input name="nick" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" value="${escapeText(o.current ?? "")}"><div class="k-row"><button type="submit" class="k-btn k-p">${escapeText(o.yes ?? "Save")}</button><button type="button" class="k-btn k-q" data-k-nick-skip>${escapeText(o.skip ?? "Skip")}</button></div></form>`,
+      () => done(void 0)
+    );
+    const f = c.box.querySelector("form");
+    f.querySelector("input").focus();
+    f.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const v = f.elements.namedItem("nick").value.trim();
+      c.close(true);
+      done(v || null);
+    });
+    c.box.querySelector("[data-k-nick-skip]").addEventListener("click", () => {
+      c.close(true);
+      done(o.current ? o.current ?? null : null);
+    });
+  });
+}
+function rulesAsk(page, w) {
+  for (const r of page.querySelectorAll("[data-k-rules-ask]")) if (!w || !w.missing.length || r.dataset.kRulesAsk !== w.id) r.remove();
+  if (!w || !w.missing.length) return;
+  const words = `${w.app} runs ${w.missing.length === 1 ? "a rule" : `${w.missing.length} rules`} you have not approved: ${w.missing.join(", ")}. Until then, what was done under ${w.missing.length === 1 ? "it" : "them"} is unknown here.`;
+  let line = page.querySelector(`[data-k-rules-ask="${CSS.escape(w.id)}"]`);
+  if (line) {
+    line.querySelector("span").textContent = words;
+    return;
+  }
+  line = document.createElement("div");
+  line.className = "k-reminder k-rules-ask";
+  line.dataset.kRulesAsk = w.id;
+  line.setAttribute("role", "status");
+  const text3 = document.createElement("span");
+  text3.textContent = words;
+  const look2 = document.createElement("button");
+  look2.type = "button";
+  look2.className = "k-btn k-small";
+  look2.textContent = "Rules I follow";
+  look2.addEventListener("click", () => w.open());
+  line.append(text3, look2);
+  (page.querySelector(".k-top") ?? page.firstElementChild)?.after(line);
+}
+function attachRules(root, o) {
+  root.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-k-rule], [data-k-rule-stop]");
+    if (!t || !root.contains(t)) return;
+    if (t.dataset.kRuleStop) o.stop(t.dataset.kRuleStop);
+    else o.approve(t.dataset.kRule, t.dataset.kRuleWhere === "list" ? "list" : "here");
+  });
+}
+
+// ../kit/src/ids.ts
+function idForm2(hex3, label = "mid") {
+  if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8 | b) & 65535;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
+  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+}
+function who(o) {
+  const form2 = o.form ?? idForm2(o.id, "mid");
+  return `<span class="k-who${o.inline ? " k-inline" : ""}" data-k-who="${e(o.id)}"${o.named ? ' data-k-named=""' : ""}><span class="k-names">${namesHtml(o.named ?? null)}${o.me ? '<span class="k-you">you</span>' : ""}${o.collective ? '<span class="k-tagc">collective</span>' : ""}</span>${idButton(form2, { person: o.id })}</span>`;
+}
+function idButton(form2, o = {}) {
+  return `<button type="button" class="k-idbtn" data-k-idform="${e(form2)}"${o.person ? ` data-k-person="${e(o.person)}"` : ""}${o.act ? ` data-k-act-id="${e(o.act)}"` : ""}${o.expand ? ' data-k-expand=""' : ""} title="Tap to show it whole">${e(shortForm(form2))}</button>`;
+}
+var actId2 = (id, o = {}) => idButton(idForm2(id, "mact"), { act: id, expand: o.expand });
+var hosts = /* @__PURE__ */ new WeakMap();
+function attachIds(root, host) {
+  hosts.set(root, host);
+  root.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    const retry = t.closest("[data-k-name-retry]");
+    if (retry) {
+      ev.stopPropagation();
+      const w = retry.closest("[data-k-who]");
+      if (w) await fillNames(root, [w], true);
+      return;
+    }
+    const prof = t.closest("[data-k-open-profile]");
+    if (prof) {
+      ev.stopPropagation();
+      return host.profile?.(prof.dataset.kOpenProfile);
+    }
+    const b = t.closest(".k-idbtn");
+    if (!b || !root.contains(b)) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    closeMenu();
+    if (b.dataset.kExpand !== void 0 && b.dataset.kActId && host.act) return host.act(b.dataset.kActId, b);
+    const form2 = b.dataset.kIdform;
+    if (!b.classList.contains("k-whole")) {
+      b.classList.add("k-whole");
+      b.textContent = form2;
+      b.title = "Tap again to copy it";
+      if (b.dataset.kPerson && host.profile && !b.nextElementSibling?.matches("[data-k-open-profile]")) b.insertAdjacentHTML("afterend", `<button type="button" class="k-btn k-q k-small" data-k-open-profile="${e(b.dataset.kPerson)}">Open profile</button>`);
+      return;
+    }
+    const ok = await copy(form2);
+    b.textContent = ok ? "Copied" : "Select it: copying refused";
+    b.dataset.kCopied = ok ? "yes" : "no";
+    setTimeout(() => {
+      if (b.isConnected) b.textContent = form2;
+    }, 1200);
+  });
+  let queued = false;
+  const ask4 = () => {
+    if (queued) return;
+    queued = true;
+    queueMicrotask(async () => {
+      queued = false;
+      const ws = [...root.querySelectorAll("[data-k-who]:not([data-k-named])")];
+      if (ws.length) await fillNames(root, ws, false);
+    });
+  };
+  new MutationObserver(ask4).observe(root, { childList: true, subtree: true });
+  ask4();
+}
+async function fillNames(root, ws, fresh) {
+  const host = hosts.get(root);
+  for (const w of ws) w.dataset.kNamed = "";
+  if (!host?.names) {
+    for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "unreached" } }, { retry: false });
+    return;
+  }
+  if (fresh) for (const w of ws) w.querySelector(".k-names").innerHTML = namesHtml({ published: { state: "loading" } });
+  const ids = [...new Set(ws.map((w) => w.dataset.kWho))];
+  let got = {};
+  try {
+    got = await host.names(ids, fresh);
+  } catch {
+  }
+  for (const w of ws) {
+    if (!w.isConnected) continue;
+    const box2 = w.querySelector(".k-names");
+    const extra = [...box2.querySelectorAll(".k-you, .k-tagc")].map((x) => x.outerHTML).join("");
+    box2.innerHTML = namesHtml(got[w.dataset.kWho] ?? { published: { state: "unreached" } }) + extra;
+  }
+}
+var contactsButtonFor = (field) => `<button type="button" class="k-btn k-q k-small k-pick" data-k-pick-for="${e(field)}" aria-haspopup="dialog">Contacts</button>`;
+function attachContactsButtons(root, contacts, picked) {
+  root.addEventListener("click", async (ev) => {
+    const b = ev.target.closest("[data-k-pick-for]");
+    if (!b) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const scope = b.closest("form") ?? root;
+    const key = b.dataset.kPickFor;
+    const field = scope.querySelector(`[name="${CSS.escape(key)}"], #${CSS.escape(key)}`);
+    if (!field) return;
+    const list3 = await contacts();
+    const byForm = new Map(list3.map((c) => [c.form ?? idForm2(c.id, "mid"), c]));
+    const row = (c) => {
+      const form2 = c.form ?? idForm2(c.id, "mid");
+      const words = [c.named.nick ?? "", c.named.published?.state === "name" ? c.named.published.name : "", form2].join(" ").toLowerCase();
+      return `<button type="button" role="option" data-k-picked="${e(form2)}" data-k-words="${e(words)}"><span class="k-names">${namesHtml(c.named, { retry: false })}${c.collective ? '<span class="k-tagc">collective</span>' : ""}</span><span class="k-k">${e(shortForm(form2))}</span></button>`;
+    };
+    const pop = popAt(
+      b,
+      `<div class="k-pop k-picker" role="listbox" data-k-picker><div class="k-t">Contacts</div><input type="search" data-k-pick-find placeholder="Find by nickname or name\u2026" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Find a contact">${list3.map(row).join("") || '<p class="k-small k-soft">No contacts yet: add one by its ID in Contacts, top left.</p>'}</div>`,
+      "below",
+      () => void 0
+    );
+    const find = pop.querySelector("[data-k-pick-find]");
+    find.focus({ preventScroll: true });
+    find.addEventListener("input", () => {
+      const q = find.value.trim().toLowerCase();
+      pop.querySelectorAll("[data-k-picked]").forEach((x) => x.hidden = !!q && !x.dataset.kWords.includes(q));
+    });
+    pop.addEventListener("click", (e22) => {
+      const p = e22.target.closest("[data-k-picked]");
+      if (!p) return;
+      e22.stopPropagation();
+      const form2 = p.dataset.kPicked;
+      if (picked?.(field, byForm.get(form2))) {
+        closeMenu();
+        return;
+      }
+      if (field.tagName === "TEXTAREA" || field.dataset.kSeveral !== void 0) {
+        const have = field.value.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean);
+        if (!have.includes(form2)) field.value = [...have, form2].join("\n");
+      } else field.value = form2;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+      closeMenu();
+      field.focus({ preventScroll: true });
+    });
+  });
+}
+function attachContacts(page, host) {
+  let list3 = [];
+  let problem = null;
+  const below = () => `<form data-k-contact-add class="k-contact-add"><div class="k-row"><input name="contact-id" data-k-id-field autocomplete="off" spellcheck="false" placeholder="+ Add by ID (mid1\u2026, or an ID link)" required aria-label="Add by ID"></div><input name="contact-nick" autocomplete="off" placeholder="Your nickname for it (only you see it)" aria-label="Your nickname for it"><div class="k-row"><button type="submit" class="k-btn">Add to contacts</button></div></form>${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : '<p class="k-small k-soft">Sealed to you at your homes: every app holding this identity reads the same list. Your nicknames are seen by you alone.</p>'}`;
+  const html = () => host.readOnly ? contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), below: `${problem ? `<p class="k-small k-soft">${e(problem)}.</p>` : ""}<p class="k-small k-soft">${e(host.readOnly)}</p>` }) : contactsPanel({ contacts: list3.map((c) => ({ id: c.id, form: c.form, name: c.name, named: c.named })), nick: true, action: "Remove", below: below() });
+  const refresh = async (fresh = false) => {
+    try {
+      const r = await host.ask("contacts", fresh ? { fresh: true } : {});
+      list3 = r.contacts;
+      problem = r.problem;
+    } catch (err) {
+      problem = err instanceof Error ? err.message : String(err);
+    }
+  };
+  const open = async () => {
+    await refresh(true);
+    if (panelOpen()?.dataset.kPanel === "contacts") redrawPanel(html());
+    else openPanel(page, html());
+  };
+  const changed = async (op, a, done) => {
+    try {
+      const r = await host.ask(op, a);
+      host.said("done", `<strong>${e(done)}</strong>${r.lines?.length ? ` ${r.lines.map((l) => e(l.text)).join(" ")}` : ""}`);
+      await open();
+    } catch (err) {
+      host.said("error", e(err instanceof Error ? err.message : String(err)));
+    }
+  };
+  page.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (t.closest('[data-k-open="contacts"]')) return void open();
+    const panel2 = t.closest('[data-k-panel="contacts"]');
+    if (!panel2) return;
+    const opened2 = t.closest("[data-k-contact-open]");
+    if (opened2 && host.profile) return host.profile(opened2.dataset.kContactOpen);
+    const nickB = t.closest("[data-k-nick]");
+    if (nickB) {
+      const c = list3.find((x) => x.id === nickB.dataset.kNick);
+      const nick = await askNick(page, { title: `Nickname for ${c?.named.published?.state === "name" ? c.named.published.name : shortForm(c?.form ?? "")}`, current: c?.name ?? null, yes: "Save", skip: "Keep it as it is" });
+      if (nick === void 0 || nick === (c?.name ?? null)) return;
+      return changed("contact nick", { id: nickB.dataset.kNick, nick: nick ?? "" }, nick ? "Nickname saved." : "Nickname taken away.");
+    }
+    const rm = t.closest("[data-k-contact-do]");
+    if (rm) {
+      const c = list3.find((x) => x.id === rm.dataset.kContactDo);
+      if (!await ask2(page, { title: `Remove ${c?.name ?? shortForm(c?.form ?? "")} from your contacts?`, text: "Taken out of the one list, in every app holding this identity. Nobody is told.", yes: "Remove", no: "Keep it" })) return;
+      return changed("contact remove", { id: rm.dataset.kContactDo }, "Removed from your contacts.");
+    }
+  });
+  page.addEventListener("submit", (ev) => {
+    const f = ev.target.closest("form[data-k-contact-add]");
+    if (!f) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const d = new FormData(f);
+    void changed("contact add", { id: String(d.get("contact-id") ?? "").trim(), nick: String(d.get("contact-nick") ?? "").trim() }, "Added to your contacts.");
+  });
+  attachContactsButtons(page, async () => {
+    if (!list3.length) await refresh();
+    return list3.map((c) => ({ id: c.id, form: c.form, named: c.named }));
+  });
+  return { open, list: () => list3, refresh: () => refresh(true) };
 }
 
 // ../genesis/src/card-words.ts
@@ -12404,19 +13472,20 @@ var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><stro
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
-var STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
-@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+var STYLE = `@font-face{font-family:"Atkinson Hyperlegible Next";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_next.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(atkinson_mono.woff2) format("woff2")}
+@font-face{font-family:"Gentium Book Plus";font-style:italic;font-weight:400;font-display:swap;src:url(gentium_book_plus_italic.woff2) format("woff2")}
 :root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{font:300 15px/1.55 "Atkinson Hyperlegible Next",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 main{max-width:600px;margin:0 auto;padding:0 16px 64px}
 a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
 h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
 h2{font-size:17px;margin:28px 0 10px}
 h3{font-size:15px;margin:0 0 6px}
 p{margin:8px 0}
-code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+code,.mono{font:13px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .small{font-size:13px;color:var(--soft)}
 button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
 button:hover{border-color:var(--faint)}
@@ -12443,7 +13512,7 @@ label.check input{width:auto}
 .count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
 .count:empty{display:none}
 .me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.fp{font:12px/1.4 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
 .who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
 .who .name{color:var(--text);font-weight:400}
 .who .dn{color:var(--soft)}
@@ -12491,7 +13560,7 @@ details[open]>summary::before{content:"\u2212 "}
 .people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
 .people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
 .people ul{margin:0;padding:0}
-.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .words span{white-space:nowrap}
 .words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
 .say{padding-left:1.1em;color:var(--soft);font-size:14px}
@@ -12500,7 +13569,7 @@ details[open]>summary::before{content:"\u2212 "}
 .typed{display:flex;flex-wrap:wrap;gap:10px}
 .typed label{margin:0}
 .typed input{width:10em}
-.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+.id{font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
 dl.facts dt{color:var(--faint)}
 dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
@@ -12536,14 +13605,14 @@ details>summary::before{color:var(--tint)}
 // ../dub/src/page/view.ts
 var TEST_ONLY2 = "Test identities only, until MOR is frozen";
 var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
-var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>Two risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
 <li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
 var PAGE_STYLE2 = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .dub-banner strong{font-weight:400;color:var(--k-text)}
 .dub-banner ol{margin:4px 0;padding-left:1.4em}
 .dub-center{max-width:820px;margin:0 auto;width:100%}
@@ -12566,9 +13635,18 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
 .dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
 .dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-notes .dub-thread{overflow:auto}
+.dub-pad{padding:10px 14px}
+.dub-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.dub-note-latest{border:1px solid var(--k-line);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.dub-note-draft{border-top:1px solid var(--k-line);padding:8px 0}
+.dub-note-form textarea{width:100%;min-height:220px}
 .dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .dub-thread .dub-head h2{font-size:20px}
 .dub-cc{font-size:12.5px;color:var(--k-soft)}
+#ccs{display:contents}
+#ccs .k-chip{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ccs .k-chip .k-x{margin-left:4px;flex:none}
 .dub-field{display:flex;gap:8px;align-items:center}
 .dub-field input{flex:1}
 .dub-modal-form textarea{min-height:5em}
@@ -12577,7 +13655,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
 .dub-ways input{margin-top:4px}
 .dub-ways .k-small{display:block}
-.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-hand{width:100%;min-height:6em;font:12px "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
 @media (max-width:600px){
   .dub-banner{padding:5px 10px}
@@ -12624,10 +13702,10 @@ function actFormOf(hex3, label = "mact") {
 }
 
 // src/page/view.ts
-var NAME = "Ummia";
+var NAME2 = "Ummia";
 var TEST_ONLY3 = "Test identities only, until MOR is frozen";
 var TINT3 = { layer: APPS.ummia.colour, pastel: APPS.ummia.pastel };
-var WEB_BANNER3 = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
+var WEB_BANNER3 = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span>${whatIsMor()}</summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment you bring an identity here could copy its signing key: with it, publish specifications, MIP drafts and reports as you, and read your accepted list.</li>
 <li>This browser\u2019s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
@@ -12635,7 +13713,7 @@ var WEB_BANNER3 = `<details class="k-say ummia-banner" id="for-testing-only" rol
 var STYLE2 = `${KIT_STYLE}
 body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 #app.k-page{flex:1;min-height:0;height:auto}
-.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 "Atkinson Hyperlegible Next",system-ui,sans-serif;color:var(--k-soft)}
 .ummia-banner strong{font-weight:400;color:var(--k-text)}
 .ummia-banner ol{margin:4px 0;padding-left:1.4em}
 .ummia-foot{flex:none;padding:0 28px 10px}
@@ -12648,7 +13726,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .ummia-look{display:flex;flex-direction:column;min-height:0;flex:1}
 .ummia-look .k-feedwrap{min-height:240px}
 .ummia-pane textarea{min-height:76px}
-.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .ummia-lines{margin:4px 0;padding-left:1.1em;font-size:14px}
 .ummia-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}
@@ -12714,9 +13792,10 @@ function specBech(hex3) {
   const check = [0, 1, 2, 3, 4, 5].map((i) => mod >> 5 * (5 - i) & 31);
   return `${hrp}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
 }
-var hashCopy = (hex3, big = false, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}<span class="k-mono${big ? " ummia-big" : ""}" title="${e(specFormOf(hex3))}">${e(big ? specFormOf(hex3) : shortForm(specFormOf(hex3)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(specFormOf(hex3))}">Copy</button></span>`;
-var actCopy = (hex3, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}<span class="k-mono" title="${e(formOf2(hex3))}">${e(shortForm(formOf2(hex3)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf2(hex3))}">Copy</button></span>`;
-var idCopy = (hex3) => `<span class="ummia-hash"><span class="k-mono" title="${e(formOf2(hex3, "mid"))}">${e(shortForm(formOf2(hex3, "mid")))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf2(hex3, "mid"))}">Copy</button></span>`;
+var hashCopy = (hex3, big = false, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}${big ? `<span class="k-mono ummia-big" title="${e(specFormOf(hex3))}">${e(specFormOf(hex3))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(specFormOf(hex3))}">Copy</button>` : idButton(specFormOf(hex3))}</span>`;
+var actCopy = (hex3, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}${actId2(hex3)}</span>`;
+var idCopy = (hex3, o = {}) => who({ id: hex3, form: formOf2(hex3, "mid"), ...o });
+var labelOf3 = (named2, instead) => nameOf2(named2) ?? instead;
 var TILES = [
   { key: "look", name: "Look", say: "One feed: point at a relay, an ID, your contacts or a release; filter by releases, cMIPs, Modules, xtypes, extensions.", icon: "look", danger: 1 },
   { key: "discuss", name: "Discuss", say: "MIP drafts, their discussion, bug reports and answers.", icon: "discuss", danger: 1 },
@@ -12730,12 +13809,19 @@ function topBar(s, tab) {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Ummia">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}</button>`).join("")}</nav>` : "";
   const c = actingOf(s);
-  const me = i ? meButton({ name: i.runner ? "via Ki\u0161ib" : shortForm(formOf2(i.id, "mid")), form: formOf2(i.id, "mid"), as: c ? { name: `Collective ${shortForm(formOf2(c.id, "mid"))}`, form: formOf2(c.id, "mid") } : null }) : "";
-  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, "icon.png")}</button>${tabs}`, right: me });
+  const shownName = i && !nameOf2(i.named) && i.runner ? "via Ki\u0161ib" : null;
+  const cn = c ? s.names?.[c.id] : null;
+  const me = i ? meButton({
+    name: shownName ?? nameOf2(i.named),
+    form: i.form,
+    named: shownName ? null : i.named,
+    as: c ? nameOf2(cn) ? { name: nameOf2(cn), form: formOf2(c.id, "mid"), named: cn } : { name: "Collective", form: formOf2(c.id, "mid") } : null
+  }) : "";
+  return top({ left: `<div class="k-row">${contactsButton()}<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME2, "icon.png")}</button></div>${tabs}`, right: me });
 }
 function home(s, web) {
   return `${topBar(s, null)}<div id="spent-at"></div><div class="k-body k-col-flex">${tiles(TILES)}</div>
-<div class="ummia-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity."])}</div>`;
+<div class="ummia-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity."], { mor: whatIsMor })}</div>`;
 }
 function column(tab, s, k) {
   switch (tab) {
@@ -12754,7 +13840,7 @@ function column(tab, s, k) {
     case "publish":
       return [{ key: "release", label: "A release" }, { key: "spec", label: "A cMIP or Module" }, { key: "anchoring", label: "Anchoring", k: k.anchors }, "-", { key: "published", label: "Published here", k: k.published }];
     case "choose":
-      return [{ key: "every", label: "Every layer" }, ...LAYERS2.map((l) => ({ key: `layer:${l}`, label: l })), "-", { key: "accept-hash", label: "+ Accept by hash" }];
+      return [{ key: "every", label: "Every layer" }, ...LAYERS2.map((l) => ({ key: `layer:${l}`, label: l })), "-", { key: "accept-hash", label: "+ Accept by hash" }, "-", { key: "ummia-rules", label: "Ummia\u2019s own rules", k: s.rules?.missing.length || void 0 }];
   }
 }
 var LAYERS2 = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
@@ -12763,12 +13849,12 @@ function tabPage(s, tab, part, k) {
   return `${topBar(s, tab)}<div id="spent-at"></div>${opened(column(tab, s, k), part, `<div class="ummia-pane${tab === "look" && part !== "page" && part !== "acts" ? " ummia-look" : ""}" id="pane"><p class="k-empty">Reading\u2026</p></div><div id="status" class="k-status"></div>`)}`;
 }
 function pairing() {
-  return `<div class="ummia-first">${appMark(NAME, "icon.png")}<h2>Pair this browser</h2>
+  return `<div class="ummia-first">${appMark(NAME2, "icon.png")}<h2>Pair this browser</h2>
 <p class="k-small k-soft">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="k-row"><input id="pair-code" class="k-grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
 <button type="submit" class="k-btn k-p">Pair</button></form><div id="pair-status"></div></div>`;
 }
-var alone = (html) => `<div class="ummia-first">${appMark(NAME, "icon.png")}${html}</div>`;
+var alone = (html) => `<div class="ummia-first">${appMark(NAME2, "icon.png")}${html}</div>`;
 var top0 = (web = false) => alone(web ? '<p class="k-small k-soft">The web client, for testing only.</p>' : "");
 var runnerSay = (web) => web ? "through Ki\u0161ib\u2019s runner, in the computer\u2019s program only: never in the web client" : "through Ki\u0161ib\u2019s runner, on this Mac: Ummia holds no key, and Ki\u0161ib\u2019s panel asks for every act";
 var ADD = (web) => [
@@ -12776,7 +13862,7 @@ var ADD = (web) => [
   { key: "kishib", label: "Use one from Ki\u0161ib", say: runnerSay(web), empty: web }
 ];
 function firstScreen(web, part = "bring") {
-  return `<div class="ummia-first">${appMark(NAME, "icon.png")}<h2>First, an identity</h2>
+  return `<div class="ummia-first">${appMark(NAME2, "icon.png")}<h2>First, an identity</h2>
 <p class="k-soft">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key\u2019s words, as Dub, Edubba or Ki\u0161ib show them; or, on the Mac, use one Ki\u0161ib holds.</p>
 <div class="k-row">${ADD(web).map((a) => `<button type="button" class="k-btn${a.key === part ? " k-p" : ""}" data-add="${a.key}"${a.empty ? " disabled" : ""}>${e(a.label)}</button>`).join("")}</div>
 <div id="first-part">${part === "kishib" ? '<p class="k-small k-soft">Reading Ki\u0161ib\u2019s runner\u2026</p>' : bringForm()}</div>
@@ -12792,7 +13878,7 @@ function bringForm() {
 }
 function runnerForm(r) {
   if (!r.available) return `<p class="k-small k-soft">Ki\u0161ib\u2019s runner is in the computer\u2019s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
-  const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? "Use it" : "Use it here"}</button></div>`).join("")}</div>` : "";
+  const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div>${who({ id: x.id, form: x.form, named: x.name ? { nick: null, published: { state: "name", name: x.name } } : null })}<button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? "Use it" : "Use it here"}</button></div>`).join("")}</div>` : "";
   return `${r.problem ? note("error", e(r.problem)) : ""}
 ${say2("Ki\u0161ib keeps the identity\u2019s signing key on this Mac; Ummia holds none.", ["Pairing starts here and is approved in Ki\u0161ib (Runner, Apps), comparing the code. Then every act Ummia would sign is a request to Ki\u0161ib, and Ki\u0161ib\u2019s panel appears inside Ummia\u2019s window. What is sealed to the identity (the accepted list, the follow list) does not open in Ummia."])}
 ${r.state === "approved" ? `<p class="k-small">Ki\u0161ib approved Ummia (code ${e(r.code ?? "")}). The identities it lets Ummia use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Ummia in Ki\u0161ib.</p>'}` : r.state === "waiting" ? `<p>Approve Ummia in Ki\u0161ib (Runner, Apps), comparing this code: <span class="k-mono">${e(r.code ?? "")}</span></p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">I approved it in Ki\u0161ib</button></div>` : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Ask Ki\u0161ib to pair</button></div>`}`;
@@ -12810,7 +13896,7 @@ function wordsShown(c) {
 }
 function lineShown(s) {
   const i = s.identity;
-  return `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(i.id)}</dd><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Ummia\u2019s line</dt><dd>${cardWords(i.line, "Ummia", e)}</dd></dl>
+  return `<dl class="k-facts"><dt>ID</dt><dd>${ownId({ form: i.form, link: i.link })}</dd><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Ummia\u2019s line</dt><dd>${cardWords(i.line, "Ummia", e)}</dd></dl>
 ${say2("Give Ki\u0161ib this card at a change of keys.", ["Some of Ummia\u2019s acts are sealed (your accepted list, the follow list, an anchor\u2019s payment for Damgar), so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every act signed here becomes void."])}
 ${i.encryption || i.runner ? "" : note("error", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}`;
 }
@@ -12820,17 +13906,14 @@ function renewForm() {
 function collectiveForm(s) {
   const cs = s.actors.filter((a) => a.kind === "collective");
   return `<p class="k-small k-soft">A collective whose area reaching its releases you hold a box in: Ummia acts for it with your own key for it, sealed to you when you signed its founding or a member change. Then choose it under this identity in the panel: Publish signs its releases.</p>
-${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(formOf2(c.id, "mid")))}</span><span class="k-small k-soft">${c.available ? "can act" : e(c.why ?? "")}</span></div>`).join("")}</div>` : ""}
-<form id="collective-add" class="k-row"><input name="collective" class="k-grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div>${who({ id: c.id, form: formOf2(c.id, "mid"), named: s.names?.[c.id] ?? null, collective: true })}<span class="k-small k-soft">${c.available ? "can act" : e(c.why ?? "")}</span></div>`).join("")}</div>` : ""}
+<form id="collective-add" class="k-row"><input name="collective" class="k-grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required data-k-id-field>${contactsButtonFor("collective")}<button type="submit" class="k-btn k-p">Act for it</button></form>`;
 }
 function relaysForm(s) {
   return `<form id="relays"><label>Relays your acts go to (specifications, releases, cards, drafts, reports), one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.relays.join("\n"))}</textarea>
 <label>Public relays Look asks, one per line</label><textarea name="track" spellcheck="false">${e(s.settings.track.join("\n"))}</textarea>
 <div class="k-row"><button type="submit" class="k-btn k-p">Save</button></div></form>
 <dl class="k-facts"><dt>Homes</dt><dd>${e(s.identity?.homes.join(", ") ?? "")} (the identity\u2019s chain names them; changed in Ki\u0161ib)</dd></dl>`;
-}
-function spent(sayIt) {
-  return `<div class="k-alarmbox" id="spent">${e(sayIt)}</div><div class="k-box" id="spent-words">${renewForm()}</div>`;
 }
 function review(r, confirmAction = "confirm") {
   const files = r.files ? `<details open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="ummia-files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join("")}</div></details>${r.skipped?.length ? `<p class="k-small k-soft">Left out: ${e(r.skipped.join("; "))}</p>` : ""}
@@ -12860,7 +13943,7 @@ var FILTER_CHIPS = [
 ];
 function lookHead(at, s, saved) {
   const relays = s.settings.track.length ? s.settings.track : s.settings.relays;
-  const field = at.point.kind === "relay" ? `<select name="value" class="k-grow">${relays.map((r) => `<option${r === at.point.value ? " selected" : ""}>${e(r)}</option>`).join("")}<option value="">every relay Look asks</option></select>` : at.point.kind === "contacts" ? '<span class="k-small k-soft k-grow">the people you follow (the same follow list as Dub\u2019s)</span>' : `<input name="value" class="k-grow" value="${e(at.point.value)}" placeholder="${at.point.kind === "id" ? "Their ID: mid1\u2026" : "The release\u2019s act ID: mact1\u2026"}" autocomplete="off" spellcheck="false">`;
+  const field = at.point.kind === "relay" ? `<select name="value" class="k-grow">${relays.map((r) => `<option${r === at.point.value ? " selected" : ""}>${e(r)}</option>`).join("")}<option value="">every relay Look asks</option></select>` : at.point.kind === "contacts" ? '<span class="k-small k-soft k-grow">the people you follow (the one contacts list, the same in every app)</span>' : `<input name="value" class="k-grow" value="${e(at.point.value)}" placeholder="${at.point.kind === "id" ? "Their ID: mid1\u2026" : "The release\u2019s act ID: mact1\u2026"}" autocomplete="off" spellcheck="false"${at.point.kind === "id" ? " data-k-id-field" : ""}>${at.point.kind === "id" ? contactsButtonFor("value") : ""}`;
   return `${saved ? `<div class="k-row"><h2 class="k-grow">${e(saved.label)}</h2><button type="button" class="k-btn k-q k-small" data-saved-remove="${e(saved.key)}">Remove this point</button></div>` : ""}
 ${pointRow("Point at", POINT_KINDS.map((p) => ({ key: p.key, label: p.key === "relay" && at.point.kind === "relay" && (at.point.value || relays.length === 1) ? (at.point.value || relays[0]).replace(/^https?:\/\//, "") : p.label, on: p.key === at.point.kind })), "point")}
 ${pointRow("Filter by", FILTER_CHIPS.map((f) => ({ key: f.key, label: f.label, on: at.filters.includes(f.key) })), "filter")}
@@ -12870,12 +13953,12 @@ ${pointRow("Layer", [{ key: "", label: "any", on: !at.layer }, ...LAYERS2.map((l
 function lookFoot(limit, counts, placed) {
   return `${placed ? `<p class="k-clock">${placed.placed ? `Ordered by the Dubsar clock${placed.placed < placed.shown ? `; ${placed.shown - placed.placed} not stamped, kept after` : ""}.` : "The Dubsar clock stamped none of these: in each signer\u2019s own order, not a time."}</p>` : ""}${say2("Public agreements only, as the relays answer", [...limit.map((x) => `<p>${e(x)}</p>`), counts.length ? `<p><b>What the relays answered</b></p>${lines(counts)}` : ""].join(""))}`;
 }
-function specPagePane(p, nameOf2) {
-  const card2 = (c, own2) => `<div class="${own2 ? "ummia-cardsay" : "ummia-word"}" data-card="${e(c.id)}"><p class="k-small k-soft">${own2 ? "Its creator\u2019s card" : `${e(nameOf2(c.signer))}\u2019s card: their word, not the specification\u2019s`}</p><h3>${e(c.fields.title)}</h3>${c.fields.summary ? `<p>${e(c.fields.summary)}</p>` : ""}${actCopy(c.id, "the card")}</div>`;
+function specPagePane(p, whoOf) {
+  const card2 = (c, own2) => `<div class="${own2 ? "ummia-cardsay" : "ummia-word"}" data-card="${e(c.id)}"><p class="k-small k-soft">${own2 ? "Its creator\u2019s card" : `${whoOf(c.signer)}\u2019s card: their word, not the specification\u2019s`}</p><h3>${e(c.fields.title)}</h3>${c.fields.summary ? `<p>${e(c.fields.summary)}</p>` : ""}${actCopy(c.id, "the card")}</div>`;
   const head = `<div class="k-row"><button type="button" class="k-btn k-q k-small" data-action="look-back">\u2190 The feed</button></div>
 <h2 id="spec-title">${e(p.title)}</h2>
 ${hashCopy(p.hash, true)}
-<p class="k-small k-soft">${[p.kind, p.layer, p.creator ? `by ${nameOf2(p.creator)}${p.claimed ? "" : " (unclaimed: its creator never published it)"}` : p.builtIn ? "no creator: one of the core\u2019s texts" : ""].filter(Boolean).map(e).join(" \xB7 ")}</p>
+<p class="k-small k-soft">${[e(p.kind), e(p.layer), p.creator ? `by ${whoOf(p.creator)}${p.claimed ? "" : " (unclaimed: its creator never published it)"}` : p.builtIn ? "no creator: one of the core\u2019s texts" : ""].filter(Boolean).join(" \xB7 ")}</p>
 ${lines(p.lines)}`;
   const own = p.own ? card2(p.own, true) : p.builtIn ? `<div class="ummia-cardsay" data-builtin><p class="k-small k-soft">Ummia\u2019s own words, built in</p><h3>${e(p.title)}</h3><p>${e(p.builtIn.summary)}</p><p class="k-small k-faint">${e(p.builtIn.say)}</p></div>` : p.found ? '<p class="k-small k-soft">Its creator has signed no card for it yet: its title is its own first line.</p>' : "";
   const also = p.ownAlso.length ? `<p class="k-small k-soft">Its creator also signed, on another line:</p>${p.ownAlso.map((c) => card2(c, true)).join("")}` : "";
@@ -12898,17 +13981,17 @@ function pageForm() {
 }
 function actsForm() {
   return `<h2>One specification\u2019s acts</h2><p class="k-small k-soft">The public acts of one specification on the relays Look asks, by the filters relays already have: its spec hash, and an act type and a signer where given. Each judged through its signer\u2019s chain.</p>
-<form id="acts"><label>Its spec hash</label><input name="spec" spellcheck="false" required><label>An act type (optional)</label><input name="type" inputmode="numeric"><label>A signer (optional)</label><input name="signer" spellcheck="false">
+<form id="acts"><label>Its spec hash</label><input name="spec" spellcheck="false" required><label>An act type (optional)</label><input name="type" inputmode="numeric"><label>A signer (optional)</label><div class="k-row"><input name="signer" class="k-grow" spellcheck="false" data-k-id-field>${contactsButtonFor("signer")}</div>
 <div class="k-row"><button type="submit" class="k-btn k-p">Look</button></div></form><div id="acts-out"></div>`;
 }
 function acts(r) {
-  return `${lines(r.lines)}${r.acts.length ? `<ul class="ummia-list">${r.acts.map((a) => `<li><span class="k-grow">type ${a.type} \xB7 by ${e(shortForm(formOf2(a.signer, "mid")))} \xB7 <span class="ummia-v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span></span>${actCopy(a.id)}</li>`).join("")}</ul>` : '<p class="k-empty">No public act of it found.</p>'}`;
+  return `${lines(r.lines)}${r.acts.length ? `<ul class="ummia-list">${r.acts.map((a) => `<li><span class="k-grow">type ${a.type} \xB7 by ${who({ id: a.signer, inline: true })} \xB7 <span class="ummia-v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span></span>${actCopy(a.id)}</li>`).join("")}</ul>` : '<p class="k-empty">No public act of it found.</p>'}`;
 }
 function mipsPane(m, open) {
   const one2 = (d) => `<div class="k-box mip" data-key="${e(d.key)}"><div class="k-row"><h3 class="k-grow">${e(d.title)}</h3><span class="k-chip">${d.published ? "published as a MIP" : d.drafts.length ? "draft \xB7 discussed" : "draft \xB7 kept here"}</span></div>
 <p class="k-small k-soft">Forks ${e(d.forksName)} \xB7 ${d.drafts.length} draft${d.drafts.length === 1 ? "" : "s"} published for discussion${d.published ? "" : " \xB7 kept here until you publish it"}</p>
 ${d.drafts.map((x, i) => `<div>${actCopy(x.id, `draft ${i + 1}`)}</div>`).join("")}
-${d.published ? hashCopy(d.published.hash, false, "its hash") : `<details${open === d.key ? " open" : ""}><summary>Write it</summary><form class="mip-text" data-key="${e(d.key)}"><textarea class="ummia-code" name="text" spellcheck="false">${e(d.text)}</textarea><div class="k-row"><button type="submit" class="k-btn">Keep it here (nothing is sent)</button></div></form></details>
+${d.published ? hashCopy(d.published.hash, false, "its hash") : `${fold("Write it", `<form class="mip-text" data-key="${e(d.key)}"><textarea class="ummia-code" name="text" spellcheck="false">${e(d.text)}</textarea><div class="k-row"><button type="submit" class="k-btn">Keep it here (nothing is sent)</button></div></form>`, { open: open === d.key })}
 <div class="k-row"><button type="button" class="k-btn" data-action="mip draft" data-key="${e(d.key)}">Publish this draft for discussion</button><button type="button" class="k-btn k-q" data-action="mip replies" data-key="${e(d.key)}">Replies</button><button type="button" class="k-btn k-q" data-action="mip prepare" data-key="${e(d.key)}">I am ready: publish it as a MIP\u2026</button></div>`}
 <div id="mip-out-${e(d.key)}"></div></div>`;
   return `<h2>MIP drafts</h2>${say2("A MIP is a proposal toward MOR 2, drafted and discussed before it is published.", m.say)}${m.drafts.length ? m.drafts.map(one2).join("") : '<p class="k-empty">No MIP drafted here yet: + Start a MIP.</p>'}`;
@@ -12923,7 +14006,7 @@ function reportsPane(r) {
     return `<div class="k-box"><h3>${e(s.title)}</h3>${actCopy(s.id)}${as.length ? as.map((a) => `<p class="k-small">Answered (<span class="ummia-v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join("") : '<p class="k-small k-soft">No answer yet.</p>'}</div>`;
   }).join("") : '<p class="k-empty">No report sent from here.</p>';
   return `<h2>Bug reports</h2>${say2("A report is public, signed by you, left in the reporting identity\u2019s inbox.", r.say)}
-<form id="reporting" class="k-row"><label class="k-grow">The reporting identity<input name="reports" spellcheck="false" value="${e(r.to ? formOf2(r.to, "mid") : "")}" placeholder="Its ID: mid1\u2026"></label><button type="submit" class="k-btn">Save</button></form>
+${r.to ? `<p class="k-small k-soft">Reports go to ${who({ id: r.to, inline: true })}</p>` : ""}<form id="reporting" class="k-row"><label class="k-grow">The reporting identity<input name="reports" spellcheck="false" value="${e(r.to ? formOf2(r.to, "mid") : "")}" placeholder="Its ID: mid1\u2026" data-k-id-field></label>${contactsButtonFor("reports")}<button type="submit" class="k-btn">Save</button></form>
 ${r.to ? `<form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign and send it</button></div></form>` : note("", "Give the reporting identity\u2019s ID first.")}
 ${lines(r.lines)}<h3>Sent from here</h3>${sent}`;
 }
@@ -12932,12 +14015,14 @@ function replyForm(to, title) {
 }
 function whoActs(s) {
   if (s.actors.length < 2) return "";
-  return `<div class="ummia-who"><span class="k-small k-soft">Who acts</span>${s.actors.map((a) => `<button type="button" class="k-chip${a.id === s.acting ? " k-on" : ""}" data-acting="${e(a.id)}"${a.available ? "" : " disabled"} aria-pressed="${a.id === s.acting}">${a.kind === "self" ? "You" : `Collective ${e(shortForm(formOf2(a.id, "mid")))}`}</button>`).join("")}</div>`;
+  const unnamed = s.actors.filter((a) => a.kind === "collective" && !nameOf2(s.names?.[a.id]));
+  const label = (a) => a.kind === "self" ? "You" : nameOf2(s.names?.[a.id]) ?? `Collective${unnamed.length > 1 ? ` ${unnamed.indexOf(a) + 1}` : ""}`;
+  return `<div class="ummia-who"><span class="k-small k-soft">Who acts</span>${s.actors.map((a) => `<button type="button" class="k-chip${a.id === s.acting ? " k-on" : ""}" data-acting="${e(a.id)}"${a.available ? "" : " disabled"} aria-pressed="${a.id === s.acting}">${e(label(a))}</button>`).join("")}</div>`;
 }
 function releasePane(s, r) {
   if (!s.releases) return `<h2>A release</h2>${note("", "Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.")}`;
   const list3 = r?.releases ?? [];
-  const opts = list3.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(shortForm(formOf2(x.id)))})</option>`).join("");
+  const opts = list3.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(x.folder)})</option>`).join("");
   const forCollective = !!actingOf(s);
   const rows = list3.length ? list3.map(
     (x) => `<div class="k-box" data-release="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.name)} ${e(x.version)}</h3>${actCopy(x.id)}</div><p class="k-small k-soft">from ${e(x.folder)}</p>
@@ -12966,8 +14051,8 @@ function checked2(c) {
   return `<div class="${c.ok ? "" : "ummia-blocking"}">${lines(c.lines)}</div>`;
 }
 function anchorForm(release, offers2, sayIt) {
-  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(shortForm(formOf2(o.act)))}, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="k-row"><button type="submit" class="k-btn k-p">Prepare the payment for Damgar</button></div>` : note("", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="k-row"><button type="submit" class="k-btn">Read its offer</button></div>';
-  return `<form class="anchor" data-release="${e(release)}">${say2("Anchoring is optional: offered by a service, its tier chosen here, prepared for Damgar and paid there.", sayIt)}<label>The anchoring service\u2019s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
+  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o, n) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${n + 1}, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="k-row"><button type="submit" class="k-btn k-p">Prepare the payment for Damgar</button></div>` : note("", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="k-row"><button type="submit" class="k-btn">Read its offer</button></div>';
+  return `<form class="anchor" data-release="${e(release)}">${say2("Anchoring is optional: offered by a service, its tier chosen here, prepared for Damgar and paid there.", sayIt)}<label>The anchoring service\u2019s ID</label><div class="k-row"><input name="service" class="k-grow" autocomplete="off" spellcheck="false" required data-k-id-field>${contactsButtonFor("service")}</div>${choose}</form>`;
 }
 var TASK_TICKS = (tasks) => `<div class="ummia-ticks">${tasks.map((t) => `<label><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join("")}</div>`;
 function specPane(s, choices) {
@@ -12977,15 +14062,15 @@ ${say2("Its hash first: read back before anything is signed. Published for good.
 <label>Its text (canonical text: no space at the end of a line, no final line break)</label><textarea class="ummia-code" name="text" spellcheck="false" placeholder="# cMIP: \u2026"></textarea>
 <input type="file" id="spec-file" accept=".md,.txt,text/plain,text/markdown"><span class="k-small k-soft"> or load it from a file</span>
 <p class="k-small k-soft">Fill below only what your text says.</p>
-<details><summary>A cMIP: the tasks it fills (field 2)</summary>${TASK_TICKS(choices.tasks)}</details>
-<details><summary>Act types it defines (field 3): one per line, \u201Cnumber name schema\u201D</summary><textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea></details>
-<details><summary>A Module: the cMIP it implements, or the MIR it works under (field 5)</summary><input name="implements" spellcheck="false" placeholder="a spec hash"></details>
-<details><summary>A rail Module: its kind and what its proof binds (fields 11 and 13)</summary><select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
-<div class="ummia-ticks"><label><input type="checkbox" name="railBinds" value="0"> the payee</label><label><input type="checkbox" name="railBinds" value="1"> the purpose</label><label><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div></details>
-<details><summary>As an extension, the layers it acts on (field 10)</summary><div class="ummia-ticks">${["Identity", "Envelopes and Text", "Money", "Agreements"].map((l, i) => `<label><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join("")}</div></details>
-<details><summary>Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)</summary><label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
+${fold("A cMIP: the tasks it fills (field 2)", `${TASK_TICKS(choices.tasks)}`)}
+${fold("Act types it defines (field 3): one per line, \u201Cnumber name schema\u201D", `<textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea>`)}
+${fold("A Module: the cMIP it implements, or the MIR it works under (field 5)", `<input name="implements" spellcheck="false" placeholder="a spec hash">`)}
+${fold("A rail Module: its kind and what its proof binds (fields 11 and 13)", `<select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
+<div class="ummia-ticks"><label><input type="checkbox" name="railBinds" value="0"> the payee</label><label><input type="checkbox" name="railBinds" value="1"> the purpose</label><label><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div>`)}
+${fold("As an extension, the layers it acts on (field 10)", `<div class="ummia-ticks">${["Identity", "Envelopes and Text", "Money", "Agreements"].map((l, i) => `<label><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join("")}</div>`)}
+${fold("Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)", `<label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
 <label>Specifications it depends on, one per line</label><textarea name="dependencies" spellcheck="false"></textarea>
-<label><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
+<label><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label>`)}
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back, with its hash</button></div></form>
 <div id="spec-review"></div>`;
 }
@@ -13002,11 +14087,11 @@ ${c.discussion ? `<input type="hidden" name="discussion" value="${e(c.discussion
 function anchoringPane(anchors, sayIt, web) {
   return `<h2>Anchoring</h2>${say2("Optional: a release\u2019s fingerprint on Bitcoin, through a pooled anchoring service, paid in Damgar.", sayIt)}
 <p class="k-small k-soft">Ask from a release (A release \u203A Anchor it on Bitcoin), or from any card\u2019s act menu (Anchor it).${web ? " The web client follows no chain: anchors are shown asked, never checked here." : ""}</p>
-<h3>Anchors asked</h3>${anchors.length ? anchors.map((a) => `<div class="k-box"><div class="k-row"><h3 class="k-grow">${e(a.label)}</h3><span class="ummia-v${a.state === "anchored" ? " valid" : a.state === "invalid" ? " bad" : ""}">${e(a.state)}</span></div>${actCopy(a.act)}<p class="k-small k-soft">tier ${a.tier} \xB7 by ${e(shortForm(formOf2(a.service, "mid")))}</p>${lines(a.lines)}</div>`).join("") : '<p class="k-empty">None asked yet.</p>'}`;
+<h3>Anchors asked</h3>${anchors.length ? anchors.map((a) => `<div class="k-box"><div class="k-row"><h3 class="k-grow">${e(a.label)}</h3><span class="ummia-v${a.state === "anchored" ? " valid" : a.state === "invalid" ? " bad" : ""}">${e(a.state)}</span></div>${actCopy(a.act)}<p class="k-small k-soft">tier ${a.tier} \xB7 by ${who({ id: a.service, inline: true })}</p>${lines(a.lines)}</div>`).join("") : '<p class="k-empty">None asked yet.</p>'}`;
 }
 function choosePane(a, layer) {
   const shown = layer ? a.entries.filter((x) => (x.layer ?? "").split(", ").includes(layer)) : a.entries;
-  return `<h2>What you accept${layer ? ` \xB7 ${e(layer)}` : ""}</h2>${say2("Sealed to you, read by every app", a.say)}
+  return `<h2>Rules I follow${layer ? ` \xB7 ${e(layer)}` : ""}</h2>${say2("Sealed to you, read by every app", a.say)}
 ${a.problems.length ? note("", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
 ${a.forked ? note("", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
 <p class="k-small k-soft">${a.version ? `Version ${a.version}.` : "Nothing accepted yet: the default, under which no app signs anything under any specification."}</p>
@@ -13058,9 +14143,8 @@ function mount(app2, b) {
     s.innerHTML = `${note(kind, html)}<button type="button" class="k-round k-close" data-action="status-close" aria-label="Close">\xD7</button>`;
   }
   const spentShown = (m) => {
-    if ($("spent")) return;
-    const where = $("spent-at") ?? app2.querySelector(".k-top");
-    where?.insertAdjacentHTML(where.id === "spent-at" ? "afterbegin" : "afterend", spent(m));
+    const i = state?.identity;
+    keyChanged(app2, m && i ? { id: i.id, name: labelOf3(i.named, "This identity"), say: m, form: renewForm() } : null);
   };
   const fail = (err) => {
     if (b.unpaired?.(err)) {
@@ -13088,7 +14172,7 @@ function mount(app2, b) {
   }
   let slot = null;
   const raw = b.ask.bind(b);
-  const NOT_WATCHED = /* @__PURE__ */ new Set(["runner asking", "runner", "state", "runner drop", "look", "spec page", "clock words", "check", "accepted", "published here", "discussions", "releases", "mips", "reports", "contacts"]);
+  const NOT_WATCHED = /* @__PURE__ */ new Set(["runner asking", "runner", "state", "runner drop", "look", "spec page", "clock words", "check", "accepted", "published here", "discussions", "releases", "mips", "reports", "contacts", "names"]);
   b.ask = async (op, a) => {
     if (b.web || NOT_WATCHED.has(op) || !state?.identity?.runner) return raw(op, a);
     let over = false;
@@ -13127,6 +14211,36 @@ function mount(app2, b) {
       slot = null;
     }
   };
+  const known = /* @__PURE__ */ new Map();
+  const contacts = attachContacts(app2, {
+    app: "Ummia",
+    ask: (op, a) => b.ask(op, a),
+    profile: (id) => profileOf(id),
+    said: (kind, html) => {
+      known.clear();
+      say3(kind, html);
+    }
+  });
+  attachIds(app2, { names: (ids, fresh) => b.ask("names", { ids, fresh: !!fresh }), profile: (id) => profileOf(id) });
+  async function nameCards(root) {
+    const arts = [...root.querySelectorAll(".k-act[data-k-signer]")];
+    const ids = [...new Set(arts.map((a) => a.dataset.kSigner))].filter((id) => !known.has(id) && /^[0-9a-f]{64}$/.test(id));
+    if (ids.length) {
+      try {
+        for (const [id, n] of Object.entries(await b.ask("names", { ids }))) known.set(id, n);
+      } catch {
+      }
+    }
+    for (const a of arts) {
+      if (!a.isConnected) continue;
+      const n = known.get(a.dataset.kSigner) ?? { published: { state: "unreached" } };
+      const box2 = a.querySelector(":scope > .k-signer .k-names");
+      if (box2) box2.innerHTML = namesHtml(n, { retry: false });
+      const d = drawn.get(a.dataset.kAct);
+      if (d) d.act.signer.named = n;
+    }
+  }
+  const ownIdNow = () => state?.identity ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: state.identity.form, link: state.identity.link })}` : "";
   async function show(s) {
     state = s;
     closePanel();
@@ -13135,20 +14249,37 @@ function mount(app2, b) {
       return;
     }
     await draw();
-    void b.ask("check").then((c) => {
-      if (!c.current && c.say) spentShown(c.say);
-    }).catch(() => void 0);
+    void b.ask("check").then((c) => spentShown(c.current ? null : c.say)).catch(() => void 0);
     void readCounts();
   }
   async function draw() {
     keepAt();
     if (!tab) {
       app2.innerHTML = home(state, b.web);
+      askRules();
       return;
     }
     app2.innerHTML = tabPage(state, tab, part, counts);
+    askRules();
     await fill();
   }
+  function askRules() {
+    const s = state;
+    rulesAsk(app2, s?.identity && s.rules ? { id: s.identity.id, app: "Ummia", missing: s.rules.missing, open: () => void go("choose", "ummia-rules") } : null);
+  }
+  const rulesHtml = () => `<h2>Ummia\u2019s own rules</h2>${rulesPart({ app: "Ummia", rules: state?.rules?.rules ?? [], problem: state?.rules?.problem ?? null, manage: "Every layer, above: your whole list, every app\u2019s part of it." })}`;
+  async function rulesChosen(key, where, remove = false) {
+    try {
+      const r = await b.ask("rules approve", { keys: [key], where, remove });
+      if (!state) return;
+      state.rules = r.rules;
+      if (tab === "choose") await draw();
+      say3("done", lines(r.lines));
+    } catch (err) {
+      fail(err);
+    }
+  }
+  attachRules(app2, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, "here", true) });
   async function readCounts() {
     const s = state;
     if (!s?.identity) return;
@@ -13179,6 +14310,7 @@ function mount(app2, b) {
       if (mine !== filling || !p.isConnected) return void (cards = []);
       p.innerHTML = html;
       drawCards();
+      void nameCards(p);
       const ids = cardsUntimed(p);
       if (ids.length)
         void b.ask("clock words", { ids }).then((w) => p.isConnected && stampCards(p, w)).catch(() => void 0);
@@ -13191,11 +14323,17 @@ function mount(app2, b) {
   const drawn = /* @__PURE__ */ new Map();
   let cards = [];
   const meId = () => state?.identity?.id ?? "";
-  const nameOf2 = (id) => id === meId() ? "you" : shortForm(formOf2(id, "mid"));
-  const who = (id) => {
+  const whoOf = (id) => idCopy(id, { me: id === meId(), inline: true });
+  const who2 = (id) => {
     const form2 = formOf2(id, "mid");
-    return { id, form: form2, link: form2, name: null, me: id === meId() };
+    const named2 = id === meId() ? state?.identity?.named ?? null : known.get(id) ?? { nick: null, published: { state: "loading" } };
+    return { id, form: form2, link: form2, name: null, named: named2, me: id === meId() };
   };
+  function profileOf(id) {
+    const me = id === meId();
+    const named2 = me ? state?.identity?.named : known.get(id);
+    popup2.show(me ? "You" : labelOf3(named2, "Their profile"), `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(id, { me })}</dd></dl><div class="k-row"><button type="button" class="k-btn k-p" data-point-id="${e(id)}">Point Look at them</button>${me ? "" : `<button type="button" class="k-btn" data-follow-releases="${e(id)}">Follow their releases</button>`}</div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
+  }
   const cardOf = (a, item = null) => {
     cards.push({ act: a, item });
     return card(a);
@@ -13209,7 +14347,7 @@ function mount(app2, b) {
     {
       id: x.id,
       form: formOf2(x.id),
-      signer: who(x.signer),
+      signer: who2(x.signer),
       kind: x.kind,
       text: x.text,
       html: `<div class="ummia-acts">${x.hash ? `${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button>` : ""}${x.release ? `<button type="button" class="k-btn k-q k-small" data-point-release="${e(x.id)}">Its line</button>` : ""}</div>`,
@@ -13217,6 +14355,7 @@ function mount(app2, b) {
       verified: x.verified,
       alarm: x.alarm,
       when: x.when,
+      unstamped: x.when ? null : NOT_STAMPED,
       hint: x.hint,
       own: x.signer === meId()
     },
@@ -13233,15 +14372,16 @@ function mount(app2, b) {
       const item = c?.item ?? null;
       switch (key) {
         case "profile":
-          return void popup2.show(a.signer.me ? "You" : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(a.signer.id)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-p" data-point-id="${e(a.signer.id)}">Point Look at them</button>${a.signer.me ? "" : `<button type="button" class="k-btn" data-follow-releases="${e(a.signer.id)}">Follow their releases</button>`}</div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
+          return void profileOf(a.signer.id);
         case "follow":
           return void popup2.show("Follow: add to contacts", followForm(a.signer.id, false));
         case "follow-releases":
           return void popup2.show("Follow their releases", followForm(a.signer.id, true));
         case "unfollow":
+          return void contacts.open();
         case "mute":
         case "unmute":
-          return void popup2.show("Contacts are Dub\u2019s", '<p class="k-soft">Ummia adds to the follow list, the same one Dub reads; removing and muting are done in Dub, from their card or profile.</p>');
+          return void popup2.show("Muting is Dub\u2019s", '<p class="k-soft">Ummia shares the one contacts list (Contacts, top left); muting is done in Dub, from their card or profile.</p>');
         case "why":
           return void popup2.show("Why it\u2019s valid", `${lines([{ text: a.verified ? "Its signature and its place in its signer\u2019s sequence hold, judged through its signer\u2019s chain by the core library." : a.alarm ?? "Not shown as valid.", tone: a.verified ? "ok" : "bad" }, ...item?.hash ? [{ text: "Its content decodes as a specification (Development, Part three), and its hash is computed from that content." }] : [], ...item?.release ? [{ text: "Its manifest was found and matches its fingerprint. \u201CCheck it as anyone would\u201D (Publish) fetches every file." }] : []])}`);
         case "open":
@@ -13260,7 +14400,7 @@ function mount(app2, b) {
       }
     }
   });
-  const followForm = (id, releases) => `<form id="${releases ? "follow-releases" : "follow"}" data-id="${e(id)}">${say2(releases ? "Their releases, in Look\u2019s saved points: the same follow list as Dub\u2019s, here it filters." : "Added to the follow list Dub, Edubba and Ummia read.", ["The follow list is sealed to you at your homes: nobody else can read it, nor the name you give."])}<p>${idCopy(id)}</p><label>Their name here (optional, never published)</label><input name="name" maxlength="64" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">${releases ? "Follow their releases" : "Add to contacts"}</button></div></form>`;
+  const followForm = (id, releases) => `<form id="${releases ? "follow-releases" : "follow"}" data-id="${e(id)}">${say2(releases ? "Their releases, in Look\u2019s saved points: the one contacts list, here it filters." : "Added to the one contacts list, the same in every app.", ["Your contacts are sealed to you at your homes: nobody else can read them, nor the nickname you give."])}<p>${idCopy(id)}</p><label>Your nickname for it (optional: only you see it)</label><input name="name" maxlength="48" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">${releases ? "Follow their releases" : "Add to contacts"}</button></div></form>`;
   async function partHtml() {
     const s = state;
     if (tab === "look") {
@@ -13269,7 +14409,7 @@ function mount(app2, b) {
       if (part === "saved-none") return `<h2>Saved points</h2><p class="k-soft">None yet. Point Look somewhere and press \u201CSave this point\u201D, or choose \u201CFollow their releases\u201D in a signer\u2019s menu: a developer\u2019s releases, from the same follow list Dub reads.</p>`;
       if (page) {
         const p = await b.ask("spec page", { hash: page });
-        return specPagePane(p, nameOf2);
+        return specPagePane(p, whoOf);
       }
       const saved = part.startsWith("saved:") ? s.saved.find((x) => `saved:${x.key}` === part) ?? null : null;
       const here = saved ? { point: { kind: saved.point.kind, value: saved.point.value }, filters: saved.filters, layer: null } : at;
@@ -13285,7 +14425,7 @@ function mount(app2, b) {
       if (part === "threads") {
         const t = await b.ask("discussions");
         return `<h2>Discussions</h2>${say2("The threads started here and the MIP drafts published for discussion, each with its replies.", ["A reply comes from any app: Dub\u2019s replies are plain posts; here, a reply is a signed document. Replies are found in your inbox and on the relays you name."])}${lines(t.lines)}${t.threads.map(
-          (x) => `<div class="k-box" data-thread="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.title)}</h3>${actCopy(x.id)}</div>${x.spec ? `<div class="k-row">${hashCopy(x.spec, false, "about")}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.spec)}">Its page</button></div>` : ""}<div class="k-feed">${x.replies.map((r) => cardOf({ id: r.id, form: formOf2(r.id), signer: who(r.signer), kind: r.sealed ? "sent to you" : null, text: r.text, verified: r.standing === "valid", alarm: r.standing === "valid" ? null : r.standing, own: r.mine })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div><div class="k-row"><button type="button" class="k-btn" data-action="reply-open" data-to="${e(x.id)}" data-title="${e(x.title)}">Reply, as a signed document</button></div></div>`
+          (x) => `<div class="k-box" data-thread="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.title)}</h3>${actCopy(x.id)}</div>${x.spec ? `<div class="k-row">${hashCopy(x.spec, false, "about")}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.spec)}">Its page</button></div>` : ""}<div class="k-feed">${x.replies.map((r) => cardOf({ id: r.id, form: formOf2(r.id), signer: who2(r.signer), kind: r.sealed ? "sent to you" : null, text: r.text, verified: r.standing === "valid", alarm: r.standing === "valid" ? null : r.standing, own: r.mine })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div><div class="k-row"><button type="button" class="k-btn" data-action="reply-open" data-to="${e(x.id)}" data-title="${e(x.title)}">Reply, as a signed document</button></div></div>`
         ).join("") || '<p class="k-empty">No discussion yet: a thread is started with a specification\u2019s card (Publish), and a MIP draft is published for discussion here.</p>'}`;
       }
       return mipsPane(await b.ask("mips"), openMip);
@@ -13303,7 +14443,7 @@ function mount(app2, b) {
 <h3>Specifications</h3><div class="k-feed">${p.specs.map((x) => {
           const cs = p.cards.filter((c) => c.spec === x.hash);
           const th = p.discussions.find((d) => d.spec === x.hash);
-          return cardOf({ id: x.id, form: formOf2(x.id), signer: who(meId()), kind: x.kind, text: `${cs[cs.length - 1]?.title ?? x.name}${cs.length ? `
+          return cardOf({ id: x.id, form: formOf2(x.id), signer: who2(meId()), kind: x.kind, text: `${cs[cs.length - 1]?.title ?? x.name}${cs.length ? `
 Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card yet"}`, html: `<div class="ummia-acts">${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button><button type="button" class="k-btn k-small${cs.length ? "" : " k-p"}" data-action="card-new" data-hash="${e(x.hash)}" data-title="${e(cs[cs.length - 1]?.title ?? x.name)}" data-discussion="${e(th?.id ?? "")}">${cs.length ? "A later card" : "Its card"}</button></div>`, verified: true, own: true });
         }).join("") || '<p class="k-empty">None yet.</p>'}</div>
 <h3>Releases</h3>${r2.releases.length ? `<ul class="ummia-list">${r2.releases.map((x) => `<li><span class="k-grow">${e(x.name)} ${e(x.version)}</span>${actCopy(x.id)}</li>`).join("")}</ul>` : '<p class="k-empty">None from here.</p>'}`;
@@ -13313,6 +14453,7 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
     }
     if (tab === "choose") {
       if (part === "accept-hash") return `<h2>Accept by hash</h2>${acceptForm()}`;
+      if (part === "ummia-rules") return rulesHtml();
       const a = await b.ask("accepted");
       return choosePane(a, part.startsWith("layer:") ? part.slice(6) : null);
     }
@@ -13323,10 +14464,13 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
     const s = state;
     const ids = s.held.map((h) => ({
       id: h.id,
-      form: formOf2(h.id, "mid"),
-      name: h.runner ? "via Ki\u0161ib" : shortForm(formOf2(h.id, "mid")),
+      form: h.form,
+      link: h.link,
+      // One used through Kišib, with no name published: said so, as before.
+      name: labelOf3(h.named, h.runner ? "via Ki\u0161ib" : "") || null,
+      named: h.runner && !labelOf3(h.named, "") ? null : h.named,
       on: h.active && !actingOf(s),
-      collectives: h.active ? s.actors.filter((c) => c.kind === "collective").map((c) => ({ id: c.id, form: formOf2(c.id, "mid"), name: `Collective ${shortForm(formOf2(c.id, "mid"))}`, on: s.acting === c.id, why: c.available ? null : c.why })) : []
+      collectives: h.active ? s.actors.filter((c) => c.kind === "collective").map((c) => ({ id: c.id, form: formOf2(c.id, "mid"), name: labelOf3(s.names?.[c.id], "Collective"), named: s.names?.[c.id] ?? null, on: s.acting === c.id, why: c.available ? null : c.why })) : []
     }));
     return identityPanel({ ids, adding, add: ADD(b.web), foot: `<button type="button" class="k-btn k-q k-small" data-action="relays-open">Relays</button> <span class="k-small k-soft">${b.web ? "This browser: the web client, for testing only." : "This app: Ummia on this computer."}</span>`, inside });
   }
@@ -13337,12 +14481,13 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
   async function identityMenu(button, id) {
     const runner = state?.held.find((h) => h.id === id)?.runner;
     const items = IDENTITY_MENU.filter(([k]) => runner ? k !== "renew" && k !== "words" : true).map(([key, label, hint], i, all2) => ({ key, label, hint: hint || void 0, line: i === all2.length - 1 }));
-    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${e(shortForm(formOf2(id, "mid")))}</div>${items.map((m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${m.key}">${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`).join("")}</div>`, "below", async (key) => {
+    const named2 = state?.held.find((h) => h.id === id)?.named;
+    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${e(labelOf3(named2, "Its settings"))}</div>${items.map((m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${m.key}">${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`).join("")}</div>`, "below", async (key) => {
       if (id !== state?.identity?.id && key !== "remove") {
         await act(() => b.ask("use", { id }));
         state = await b.ask("state");
       }
-      if (key === "remove") return void redrawPanel(panelHtml(removeSaid("Ummia", shortForm(formOf2(id, "mid"))).replace("data-k-remove>", `data-k-remove data-id="${e(id)}">`)));
+      if (key === "remove") return void openConfirm(app2, removeSaid("Ummia", labelOf3(named2, "this identity")).replace("data-k-remove>", `data-k-remove data-id="${e(id)}">`));
       closePanel();
       if (key === "words") {
         const c = await act(() => b.ask("carry"));
@@ -13492,7 +14637,7 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
     const take = t.closest("[data-runner-take]");
     if (take) {
       const r = await act(() => raw("runner take", { id: take.dataset.runnerTake }));
-      if (r) popup2.close(), await show(await b.ask("state")), done(r);
+      if (r) popup2.close(), await show(await b.ask("state")), say3("done", `${lines(r.lines)}${ownIdNow()}`);
       return;
     }
     const el = t.closest("[data-action]");
@@ -13605,9 +14750,10 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
         const box2 = $(`mip-out-${el.dataset.key}`);
         if (r && box2) {
           const all2 = Object.values(r.replies).flat();
-          box2.innerHTML = `${lines(r.lines)}<div class="k-feed">${all2.map((x) => cardOf({ id: x.id, form: formOf2(x.id), signer: who(x.signer), kind: x.sealed ? "sent to you" : null, text: x.text, verified: x.standing === "valid", alarm: x.standing === "valid" ? null : x.standing })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div>`;
+          box2.innerHTML = `${lines(r.lines)}<div class="k-feed">${all2.map((x) => cardOf({ id: x.id, form: formOf2(x.id), signer: who2(x.signer), kind: x.sealed ? "sent to you" : null, text: x.text, verified: x.standing === "valid", alarm: x.standing === "valid" ? null : x.standing })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div>`;
           for (const c of cards) drawn.set(c.act.id, c);
           cards = [];
+          void nameCards(box2);
         }
         return;
       }
@@ -13653,12 +14799,12 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
     switch (fid) {
       case "bring": {
         const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
-        if (r) popup2.close(), await show(await b.ask("state")), done(r);
+        if (r) popup2.close(), await show(await b.ask("state")), say3("done", `<strong>The identity is here.</strong>${lines(r.lines)}${ownIdNow()}`);
         return;
       }
       case "renew": {
         const r = await act(() => b.ask("renew", { words: str(fd, "words") }));
-        if (r) popup2.close(), app2.querySelector("#spent")?.remove(), app2.querySelector("#spent-words")?.remove(), await show(await b.ask("state")), done(r);
+        if (r) popup2.close(), spentShown(null), await show(await b.ask("state")), done(r);
         return;
       }
       case "collective-add": {
@@ -13704,6 +14850,7 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
       case "follow-releases": {
         const r = await act(() => b.ask(fid === "follow" ? "follow" : "follow releases", { id: f.dataset.id, name: str(fd, "name") }));
         if (r) {
+          known.clear();
           popup2.close();
           state = await b.ask("state");
           if (tab) await draw();
@@ -13897,8 +15044,8 @@ var WebKeep = class _WebKeep {
 // src/web/app.ts
 var app = document.getElementById("app");
 var ummia;
-var ask2 = (op, a = {}) => run(ummia, op, a);
-var ui = mount(app, { web: true, ask: ask2, start });
+var ask3 = (op, a = {}) => run(ummia, op, a);
+var ui = mount(app, { web: true, ask: ask3, start });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
     app.innerHTML = `${top0(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;

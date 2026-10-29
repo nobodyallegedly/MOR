@@ -17,6 +17,7 @@ import {
   identityPanel,
   lenses,
   meButton,
+  openConfirm,
   openPanel,
   openSlot,
   popAt,
@@ -26,6 +27,7 @@ import {
   redrawPanel,
   removeSaid,
   say,
+  fold,
   switcher,
   tiles,
   top,
@@ -42,6 +44,8 @@ declare global {
     slotOrigin: string;
     openTestSlot(src: string): string;
     slotMessages: unknown[];
+    openForm(): void;
+    sayNote(text: string): void;
   }
 }
 window.chosen = [];
@@ -93,7 +97,7 @@ function draw() {
       above: `${lenses([{ key: 'following', label: 'Following' }, { key: 'toyou', label: 'To you' }, { key: 'relay', label: 'Relay' }], 'following')}`,
       cards: acts.map((a) => card(a)).join(''),
       below: clockLine({ name: 'the test clock', placed: 3, shown: 5 }),
-    })}${typingBox({ id: 'post', placeholder: 'Write something public…', button: 'Post', tools: '<button type="button">Picture</button><button type="button" data-at>@</button>', opts: '<input id="to" placeholder="To…" aria-label="To">' })}${say('Test identities only, until MOR is frozen', ['Every key is held in software.', 'Nothing here is for a real identity.'])}</section></div>`;
+    })}${typingBox({ id: 'post', placeholder: 'Write something public…', button: 'Post', tools: '<button type="button">Picture</button><button type="button" data-at>@</button>', opts: '<input id="to" placeholder="To…" aria-label="To">' })}${say('Test identities only, until MOR is frozen', ['Every key is held in software.', 'Nothing here is for a real identity.'])}${fold('A lane from Damgar', '<form id="lane-demo"><label>Cap per payment</label><input name="cap" inputmode="numeric"><button type="submit" class="k-btn">Ask Damgar</button></form>')}</section></div>`;
   } else if (part === 'tiles') {
     body = `<div class="k-body" id="tiles">${tiles([
       { key: 'identities', name: 'Identities', say: 'Records and successions.', icon: 'identities', danger: 1 },
@@ -175,7 +179,7 @@ page.addEventListener('click', (ev) => {
     ev.stopPropagation();
     popAt(more, `<div class="k-pop" role="menu"><div class="k-t">Max</div><button type="button" role="menuitem" data-k-item="name">Name</button><button type="button" role="menuitem" data-k-item="relays">Relays</button><button type="button" role="menuitem" data-k-item="words">Words</button><button type="button" role="menuitem" data-k-item="line">Line and homes</button><hr><button type="button" role="menuitem" data-k-item="remove">Remove from Demo…</button></div>`, 'below', (key) => {
         window.chosen.push(`idmenu:${key}`);
-        if (key === 'remove') redrawPanel(identityPanel({ ids: ids(), adding: false, add: [], foot: 'This app', inside: removeSaid('Demo', 'Max') }));
+        if (key === 'remove') openConfirm(page, removeSaid('Demo', 'Max'));
       });
   }
   if (t.closest('[data-k-remove-yes]')) window.chosen.push('removed');
@@ -193,5 +197,17 @@ window.openTestSlot = (src: string) => {
   } catch (err) {
     return `refused: ${err instanceof Error ? err.message : String(err)}`;
   }
+};
+// A pop-up with a form, to type in and close (H91), and a note under the top with its ×.
+window.openForm = () => void popup.show('Write', '<form id="demo-form"><textarea name="text"></textarea><button type="submit" class="k-btn">Send</button></form>');
+window.sayNote = (text: string) => {
+  let st = document.getElementById('status');
+  if (!st) {
+    st = document.createElement('div');
+    st.id = 'status';
+    st.className = 'k-status';
+    page.append(st);
+  }
+  st.innerHTML = `<div class="k-note k-done" role="status">${text}</div>`;
 };
 draw();

@@ -87,8 +87,9 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
     setTimeout(() => (opts.quit ? opts.quit() : void running.close()), 50);
   };
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
-  const kishib = new Kishib({ now: opts.now });
   const runner = new Runner(opts.dir, { via: opts.via });
+  // The runner holds the identities' keys: whose contacts Kišib shows, and where it reads names (H100).
+  const kishib = new Kishib({ now: opts.now, holder: runner, via: opts.via });
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
   const built = await version();
@@ -164,8 +165,9 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
     const token = req.headers['mor-runner'] as string | undefined;
     // The panel's style and fonts.
     if (req.method === 'GET' && url.pathname === '/runner/panel.css') return send(res, 200, 'text/css; charset=utf-8', `${KIT_STYLE}\n${PANEL_STYLE}`, publicHeaders), true;
-    const font = /^\/runner\/(inter_(?:light|regular)\.woff2)$/.exec(url.pathname);
-    if (req.method === 'GET' && font) return send(res, 200, 'font/woff2', files[`/${font[1]}`].body, publicHeaders), true;
+    // The kit's fonts, as its style names them (Atkinson Hyperlegible Next and Mono, Gentium).
+    const font = /^\/runner\/([a-z_]+\.woff2)$/.exec(url.pathname);
+    if (req.method === 'GET' && font && files[`/${font[1]}`]) return send(res, 200, 'font/woff2', files[`/${font[1]}`].body, publicHeaders), true;
     // The panel (section 4): into a frame only, of the pairing's origin only.
     const pm = /^\/runner\/panel\/([0-9a-f]{64})$/.exec(url.pathname);
     if (pm) {
@@ -198,7 +200,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       const a = (body ? JSON.parse(body) : {}) as Record<string, unknown>;
       switch (url.pathname) {
         case '/runner/pair':
-          return json(res, 200, runner.pair({ name: text(a.name), origin: text(a.origin) })), true;
+          return json(res, 200, runner.pair({ name: text(a.name), origin: text(a.origin), needs: a.needs })), true;
         case '/runner/paired':
           return json(res, 200, runner.paired(token)), true;
         case '/runner/unpair':

@@ -16,7 +16,6 @@ import { fingerprint } from './shapes.ts';
 import type { Line } from './shapes.ts';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 
 /** A rotation served for an identity, as read from its bytes. */
 export interface Served {
@@ -174,7 +173,7 @@ export function linesUnder(rd: Read, binding: string): FoundLine[] {
 
 /** The homes in plain words. */
 export function homesWords(homes: Home[], effective?: string): string {
-  const list = homes.map((h) => (h.operator ? `${h.hint} (operator ${short(h.operator)})` : `${h.hint} (self-hosted: the identity is its own home)`)).join('; ');
+  const list = homes.map((h) => (h.operator ? `${h.hint} (operator ${h.operator})` : `${h.hint} (self-hosted: the identity is its own home)`)).join('; ');
   const operators = new Set(homes.map((h) => h.operator ?? 'own')).size;
   const k = /^Threshold\((\d+)\)$/.exec(effective ?? '')?.[1];
   const rule = !effective
@@ -215,6 +214,9 @@ export function recordWords(rd: Read): { heading: string; lines: Line[] }[] {
   out.push({ heading: 'Its chain and receipts', lines: chain });
   const succ = rd.look.verifier.succession(rd.id) as { state: string; successor?: string; confirmation?: string };
   if (succ.state !== 'none') {
+    // H121: the successor and its confirmation as IDs, each shown short with its tap.
+    if (succ.successor && /^[0-9a-f]{64}$/.test(succ.successor)) succ.successor = idForm(succ.successor);
+    if (succ.confirmation && /^[0-9a-f]{64}$/.test(succ.confirmation)) succ.confirmation = actForm(succ.confirmation);
     out.push({
       heading: 'Its succession',
       lines: [

@@ -28,6 +28,10 @@ const TYPES: Record<string, string> = {
   'gateway.js': 'text/javascript; charset=utf-8',
   'gateway.css': 'text/css; charset=utf-8',
   'mor_wasm_bg.wasm': 'application/wasm',
+  'atkinson_next.woff2': 'font/woff2',
+  'atkinson_mono.woff2': 'font/woff2',
+  'atkinson_next_license.txt': 'text/plain; charset=utf-8',
+  'atkinson_mono_license.txt': 'text/plain; charset=utf-8',
 };
 
 export interface Loaded {

@@ -12,6 +12,7 @@ import { encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts
 import { asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, runnerOn, start, type Relay } from './world.ts';
 import { describeAct } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
+import { idForm } from '../../genesis/src/forms.ts';
 import { closeAll as closeOthers, dub as dubOf, edubba, person, testLink } from '../../damgar/test/world.ts';
 import { TestNode } from '../../damgar/test/node.ts';
 import { SPEC } from '../../damgar/src/specs.ts';
@@ -117,6 +118,12 @@ test('member keys: an identity used through Kišib, a member of a collective; it
   const html = await (await fetch(ask.panel, { headers: { 'sec-fetch-dest': 'iframe' } })).text();
   assert.match(html, /As the collective/);
   assert.match(html, /own member key/);
+  // Which key signs, said plainly: Max's own member key for the collective, the collective's ID and Max's each a tap showing it whole.
+  assert.match(html, /signed with [^<]+’s own member key for it/);
+  assert.ok(html.includes(`<span class="k-whole">${idForm(collective)}</span>`), 'the collective’s ID, a tap');
+  assert.ok(html.includes(`<span class="k-whole">${idForm(max.id)}</span>`), 'the member’s ID, a tap');
+  const waits = (await state(k.c)).waiting;
+  assert.match(waits[0].as ?? '', new RegExp(`^As the collective .*${idForm(collective)}, signed with .*own member key for it \\(${idForm(max.id)}\\)`));
   assert.ok(!/Always yes/.test(html), 'an act as a collective always shows the panel');
   assert.match(await clickPanel(ask.panel, 'sign'), /Signed/);
   const posted = await posting;

@@ -66,7 +66,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { actsBy, checkWarned, planLines, type LinePlan } from '../../genesis/src/lines.ts';
 import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
-import { readId } from '../../genesis/src/forms.ts';
+import { actForm, idForm, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, carriedKey, servedChain } from '../../dub/src/carryin.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, FOUNDING_AGREEMENT, REPO_SPECS } from '../../repo/src/specs.ts';
@@ -104,7 +104,115 @@ export interface CollectiveDeps {
   web: boolean;
 }
 
-const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+// ---------------------------------------------------------------- the rotation notice (`cmips/cmip-rotation-notice-draft-1.md`; hand test v3, H97)
+
+/** The rotation notice cMIP's hash, its draft test value: named as the text format (key 1) of the starter's message. */
+export const ROTATION_NOTICE_FORMAT = sha256('Rotation notice cMIP, draft 1, test value until publication');
+
+/** The line opening the structured part (1.1), word for word. */
+export const NOTICE_HEAD = '-- Dubsar rotation notice, draft 1 --';
+
+/** What a notice carries (1.1): the values a member otherwise copies by hand. */
+export interface Notice {
+  collective: string;
+  fingerprint: string;
+  relays: string[];
+  expires: number;
+  share: number;
+}
+
+/** A notice's text (1.1): the free text first, for any reader; the structured part last, nothing after it. */
+export function noticeText(free: string, n: Notice): string {
+  return [free, NOTICE_HEAD, `collective: ${n.collective}`, `fingerprint: ${n.fingerprint}`, `relays: ${n.relays.join(' ')}`, `expires: ${n.expires}`, `share: ${n.share}`].join('\n');
+}
+
+/**
+ * The structured part of a notice's text (1.1, 1.2), read strictly: its
+ * last block exactly the form, each field once, in order, nothing after.
+ * Anything else: null, the text read as free text only, never half-read.
+ */
+export function readNotice(text: string): Notice | null {
+  const ls = text.split('\n');
+  const at = ls.lastIndexOf(NOTICE_HEAD);
+  if (at < 0 || ls.length - at !== 6) return null;
+  const want = ['collective', 'fingerprint', 'relays', 'expires', 'share'];
+  const v: Record<string, string> = {};
+  for (let i = 0; i < 5; i++) {
+    const m = /^([a-z]+): (.+)$/.exec(ls[at + 1 + i]);
+    if (!m || m[1] !== want[i]) return null;
+    v[m[1]] = m[2];
+  }
+  const relays = v.relays.split(' ');
+  if (!/^[0-9a-f]{64}$/.test(v.collective) || !/^[0-9a-f]{64}$/.test(v.fingerprint)) return null;
+  if (!relays.length || relays.length > 8 || relays.some((r) => !/^https?:\/\/\S+$/.test(r))) return null;
+  if (!/^\d{1,12}$/.test(v.expires) || !/^\d{1,3}$/.test(v.share)) return null;
+  const share = Number(v.share);
+  if (share < 1 || share > 255) return null;
+  return { collective: v.collective, fingerprint: v.fingerprint, relays, expires: Number(v.expires), share };
+}
+
+/** A rotation waiting for a member, as Waiting for you lists it (2.2): the notice's values, who sent it, and to whom. */
+export interface Listed extends Notice {
+  member: string;
+  from: string;
+  /** The message it came in. */
+  message: string;
+}
+
+/**
+ * The rotations waiting for a member (2.1, 2.2): every negotiation message
+ * in the notice's format sealed to the member at its Agreements inbox,
+ * opened with `open` (the runner's key, or the key the member's words
+ * carry), its structured part read; listed if not expired and sent by a
+ * member of the collective it names, as the collective's chain says. The
+ * rotation itself is read and checked later, as by hand (2.3).
+ */
+export async function noticesFor(member: string, hints: string[], open: (sealed: Uint8Array[]) => Promise<({ described: unknown } | null)[]>, now: number, via: Via = {}): Promise<{ listed: Listed[]; problem: string | null }> {
+  let inbox: string[] = [];
+  try {
+    inbox = (await lookUp(member, hints, via)).inbox(REPO_SPECS.agreements) ?? [];
+  } catch (e) {
+    return { listed: [], problem: `The identity could not be read at ${hints.join(', ')}: ${message(e)}` };
+  }
+  if (!inbox.length) return { listed: [], problem: 'This identity declares no inbox: no notice can reach it.' };
+  const found: Listed[] = [];
+  for (const hint of inbox) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(hint, via).feed({ to: member, after });
+        const sealed = page.items.filter((it) => it.kind === 'sealed').map((it) => it.item as Uint8Array);
+        const opened = sealed.length ? await open(sealed) : [];
+        for (const o of opened) {
+          if (!o) continue;
+          const m = readMessage(o.described as Parameters<typeof readMessage>[0]);
+          if (!m || m.format !== ROTATION_NOTICE_FORMAT || !m.to.includes(member)) continue;
+          const n = readNotice(m.text);
+          if (!n || n.expires <= now || found.some((x) => x.fingerprint === n.fingerprint)) continue;
+          found.push({ ...n, member, from: m.from, message: m.id });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that inbox is away
+    }
+  }
+  // Sent by a member of the collective named, as its chain says (2.2); the rest is checked when it is read (2.3).
+  const listed: Listed[] = [];
+  for (const x of found) {
+    try {
+      const c = await readCollective(x.collective, x.relays, via);
+      if (c.holders.includes(x.from)) listed.push(x);
+    } catch {
+      // the collective not read at the relays named: not listed
+    }
+  }
+  return { listed, problem: null };
+}
+
+// H121: an identity written whole (`mid1…`); Kišib's page shows it short, its names beside, a tap showing it whole.
+const short = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 interface Described {
@@ -460,7 +568,7 @@ export class CollectiveSitting {
       if (!changes.length) throw new Error('No member change is proposed under the agreement in force: propose one in Edubba (the collective’s page, “Change its members”), have every member sign it, then come back.');
       const ch = changes[0];
       this.change = ch;
-      if (ch.missing.length) blocking.push(`The member change ${short(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short).join(', ')}.`);
+      if (ch.missing.length) blocking.push(`The member change ${actForm(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short).join(', ')}.`);
       if (changes.filter((x) => !x.missing.length).length > 1) blocking.push('Several member changes are fully signed under the same agreement: Kišib cannot tell which one the members mean. Say which in Edubba.');
       this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
       const names = (m: string) => (m === id ? 'the collective' : short(m));
@@ -512,14 +620,14 @@ export class CollectiveSitting {
       const sections: Section[] = [
         { heading: 'Before you start: what this device will hold (F337)', lines: DEALER_SAY },
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith('Its lines')),
-        { heading: 'The member change it completes', lines: [{ text: `Clone ${ch.clone}, proposed by ${short(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short(s)} ${ch.signatures[s] ? '✓' : '(not yet)'}`).join(', ')}.`, tone: ch.missing.length ? 'warn' : 'ok' }] },
+        { heading: 'The member change it completes', lines: [{ text: `Clone ${actForm(ch.clone)}, proposed by ${short(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short(s)} ${ch.signatures[s] ? '✓' : '(not yet)'}`).join(', ')}.`, tone: ch.missing.length ? 'warn' : 'ok' }] },
         { heading: 'The papers', lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members’ paper shares rebuild the chain key (its agreement’s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: 'In the same room: the others type theirs into this Kišib, one after another. Nothing is sent.' } : { text: `Remote: each other member gives theirs in their own Kišib, sealed to a one-time key made here, within an hour (until ${when(this.request!.expires)} by this device’s clock; MOR has no clock).` }] },
         { heading: 'Its lines of acts: what the rotation keeps (Identity rule 35)', lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         { heading: 'The new shares', lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] },
       ];
       const signs = [
         `Kišib signs one rotation of the collective ${short(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
-        `The rotation declares the member change (clone ${short(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective’s lines, installs a new signing key (its words shown once, for ${short(ch.holder)}, who holds it) and commits a new chain key.`,
+        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective’s lines, installs a new signing key (its words shown once, for ${short(ch.holder)}, who holds it) and commits a new chain key.`,
         this.room ? 'Nothing is signed with anyone’s signing key.' : `As ${short(this.founder!.id)}: one message in each member’s thread announcing the rotation, and, after it, each new share sealed to its member’s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`,
       ];
       const s0 = founderSeed;
@@ -573,12 +681,17 @@ export class CollectiveSitting {
           thread: a.thread,
           previous: a.previous,
           acks: [a.previous],
-          text: [
-            `A rotation of the collective ${c.rd.id} waits for your paper share, in Kišib.`,
-            `Fingerprint: ${this.fingerprint}`,
-            `Open Kišib, choose “Give my share to a collective’s rotation”, and give the collective and this fingerprint. Kišib shows the rotation in plain words before you type anything.`,
-            `It expires at ${when(q.expires)}.`,
-          ].join('\n'),
+          // H97: the free text, as before, then the rotation notice cMIP's structured part, which the member's Kišib reads to fill in Waiting for you.
+          text: noticeText(
+            [
+              `A rotation of the collective ${c.rd.id} waits for your paper share, in Kišib.`,
+              `Fingerprint: ${this.fingerprint}`,
+              `Open Kišib, Collectives, “Waiting for you”: it is listed there, filled in, or give the collective and this fingerprint. Kišib shows the rotation in plain words before you type anything.`,
+              `It expires at ${when(q.expires)}.`,
+            ].join('\n'),
+            { collective: c.rd.id, fingerprint: this.fingerprint, relays: q.relays.filter((r) => /^https?:\/\//.test(r)).slice(0, 8), expires: q.expires, share: c.holders.indexOf(m) + 1 },
+          ),
+          format: ROTATION_NOTICE_FORMAT,
           // Kišib makes no line an app continues: its acts stay off the starter's homes (README, cost of point 7).
           home: false,
         });
@@ -824,6 +937,8 @@ export class CollectiveSitting {
       if (blob) break;
     }
     if (!blob) throw new Error(`No rotation request with this fingerprint was found at ${c.rd.places.join(', ')}. Check the fingerprint, or ask the starter.`);
+    // Never believed from a message (the rotation notice cMIP, 2.3): the request is the one the fingerprint names.
+    if (sha256(blob) !== fp) throw new Error('The request found does not match this fingerprint: nothing is read from it, and nothing is signed.');
     const q = decodeRequest(blob);
     if (q.collective !== id) throw new Error('This request is for another collective.');
     if (now > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
@@ -832,7 +947,7 @@ export class CollectiveSitting {
     const names = (m: string) => (m === id ? 'the collective' : short(m));
     const sections: Section[] = [
       { heading: 'The rotation you are asked to give your share to', lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter’s message, character by character.`, tone: 'warn' }, { text: `It expires at ${when(q.expires)} (this device’s clock).` }] },
-      { heading: 'The member change it completes', lines: change ? [{ text: `Clone ${q.clone}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${q.clone}, not found here: Kišib cannot read it back to you. Do not give your share unless you know it.`, tone: 'bad' }] },
+      { heading: 'The member change it completes', lines: change ? [{ text: `Clone ${actForm(q.clone)}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${actForm(q.clone)}, not found here: Kišib cannot read it back to you. Do not give your share unless you know it.`, tone: 'bad' }] },
       { heading: 'What it keeps and creates', lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? '' : 's'} of the collective’s acts.` }, { text: `A new chain key, created on the starter’s device and dealt to ${q.members.length} members (${q.members.map(short).join(', ')}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
       { heading: 'What the starter’s device will hold (F337)', lines: DEALER_SAY.slice(0, 2) },
     ];

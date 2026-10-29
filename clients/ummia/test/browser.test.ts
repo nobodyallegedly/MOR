@@ -209,6 +209,8 @@ test('Ummia by clicks at a Mac’s size: the tiles; Publish with its card; Look 
 
   const u = await ummia();
   const { page } = await open(`${u.app.base}/#pair=${u.app.access.newCode()}`);
+  // The first screen drawn once the program answered (read before it, the list is empty: the step that flaked).
+  await sees(page, '[data-add]', 'first');
   await shot(page, 'mac-01-first');
   assert.deepEqual(await page.locator('[data-add]').allInnerTexts(), ['Bring one', 'Use one from Kišib']);
   await bring(page, me, H[0]);
@@ -435,7 +437,7 @@ test('Ummia by clicks at a Mac’s size: the tiles; Publish with its card; Look 
 
   // Choose: the accepted list by layer; + Accept by hash; Remove; Publish it.
   await tile(page, 'Choose');
-  assert.deepEqual((await page.locator('.k-col button').allInnerTexts()).map((x) => x.split('\n')[0]), ['Every layer', 'Identity', 'Text', 'Envelopes', 'Money', 'Agreements', 'Development', '+ Accept by hash']);
+  assert.deepEqual((await page.locator('.k-col button').allInnerTexts()).map((x) => x.split('\n')[0]), ['Every layer', 'Identity', 'Text', 'Envelopes', 'Money', 'Agreements', 'Development', '+ Accept by hash', 'Ummia’s own rules']); // H93: Ummia’s own rules, its part of Choose
   await sees(page, '#accepted li', 'accepted');
   assert.match(await page.locator('#accepted').innerText(), /Dubsar Slots, draft 1/);
   await part(page, 'Development');
@@ -589,7 +591,8 @@ test('acting as a collective from the identity panel: the collective under its m
   assert.match(await page.locator('.k-me').innerText(), /Collective/);
   await page.locator('.k-tile', { hasText: 'Publish' }).click();
   await sees(page, '.ummia-who', 'who-acts');
-  assert.equal(await page.locator('.ummia-who .k-chip.k-on').innerText(), `Collective ${(await page.locator('.ummia-who .k-chip.k-on').innerText()).replace('Collective ', '')}`);
+  // H96, H121: the collective by the name it published; it published none, so "Collective" (its short ID a tap away in the identity panel, never bare on a chip).
+  assert.equal(await page.locator('.ummia-who .k-chip.k-on').innerText(), 'Collective');
   await page.locator('form#release [name=folder]').fill(folder());
   await page.locator('form#release [name=folder]').dispatchEvent('change');
   await page.waitForFunction(() => (document.querySelector('form#release [name=name]') as HTMLInputElement)?.value === 'testrelease');

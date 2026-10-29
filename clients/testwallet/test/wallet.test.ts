@@ -16,6 +16,7 @@ const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chr
 /** A node in memory: its invoices, its payments (paying one learns its preimage). */
 class MemoryNode implements Node {
   readonly key = `02${randomBytes(32).toString('hex')}`;
+  link: Node['link'] = null;
   channels = 5_000_000;
   onchain = 100_000_000;
   invoices = new Map<string, { sat: number; preimage: string; descriptionHash: string; memo: string; to: MemoryNode }>();
@@ -77,6 +78,8 @@ after(async () => {
 const world = () => {
   const net: MemoryNode[] = [];
   const [alice, bob, carol] = ['alice', 'bob', 'carol'].map((n) => new MemoryNode(n, net));
+  // What up.sh writes for each node (H114): its REST address, its receive-only permission file, its certificate.
+  for (const [i, n] of [alice, bob, carol].entries()) n.link = { address: `https://127.0.0.1:${18080 + i}`, macaroon: `/tmp/mor-regtest/${n.name}/receive.macaroon`, cert: `/tmp/mor-regtest/${n.name}/tls.cert` };
   let mined = 0;
   const w: Wallet = { nodes: [alice, bob, carol], mine: async (n) => Array.from({ length: n }, () => String(++mined)) };
   return { w, alice, bob, carol, mined: () => mined };
@@ -155,7 +158,15 @@ test('the page, by clicks: pay an invoice bob made, as alice; make an invoice wi
     assert.ok(await page.locator('input[name=node][value=alice]').isChecked(), 'alice, the payer, first');
     // Bob made an invoice (as Damgar asks the payee's wallet to); alice reads it, then pays it.
     const inv = await bob.invoice(1500, { descriptionHash: 'cd'.repeat(32) });
-    await page.locator('#pay-invoice').fill(inv.invoice);
+    // H114: carol's card says what Damgar's receive-only link asks for, each with Copy, and never the admin permission.
+    const carolLink = page.locator('details.link', { hasText: 'carol' });
+    await carolLink.locator('summary').click();
+    const said = await carolLink.innerText();
+    for (const x of ['https://127.0.0.1:18082', '/tmp/mor-regtest/carol/receive.macaroon', '/tmp/mor-regtest/carol/tls.cert', 'Never the admin permission']) assert.ok(said.includes(x), x);
+    assert.equal(await carolLink.locator('[data-copy]').count(), 3);
+    if (process.env.MOR_SCREENSHOTS) await page.screenshot({ path: join(process.env.MOR_SCREENSHOTS, 'testwallet-link.png'), fullPage: true });
+    // H117: a whole `lightning:` link pasted is read as its invoice.
+    await page.locator('#pay-invoice').fill(`lightning:${inv.invoice}`);
     await page.getByRole('button', { name: 'Read it' }).click();
     await page.locator('#pay-it').waitFor();
     const read = await page.locator('#pay-out').innerText();

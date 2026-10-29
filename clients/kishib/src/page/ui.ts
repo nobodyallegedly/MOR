@@ -4,7 +4,7 @@
 // browser). It keeps nothing in the browser's storage, not even which
 // screen was open: a reload opens on the four tiles.
 
-import { attachCards, attachClosing, attachColumn, card, cardsUntimed, Popup, stampCards, shortForm, type KitAct } from '../../../kit/src/index.ts';
+import { ask, attachCards, attachClosing, attachColumn, attachContacts, attachIds, card, cardsUntimed, ownId, Popup, stampCards, type KitAct, type Named } from '../../../kit/src/index.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import * as v from './view.ts';
 
@@ -40,7 +40,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       return;
     }
     const s = $('status') ?? $('result');
-    const html = v.note('error', v.e(errorOf(err)));
+    const html = v.note('error', v.said(errorOf(err)));
     if (s) {
       s.innerHTML = html;
       s.scrollIntoView({ block: 'nearest' });
@@ -49,6 +49,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
   const done = (html: string) => {
     const s = $('status');
     if (s) s.innerHTML = v.note('done', html);
+  };
+  /** Said after a change of the contacts (H100), on whatever screen is open. */
+  const tell = (kind: 'done' | 'error', html: string) => {
+    const s = $('status');
+    if (s) s.innerHTML = v.note(kind, html);
+    else app.insertAdjacentHTML('beforeend', `<div id="status" class="k-status">${v.note(kind, html)}</div>`);
   };
 
   async function act<T>(f: () => Promise<T>): Promise<T | undefined> {
@@ -78,6 +84,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     }
     app.innerHTML = v.tabPage(b.web, tab, part, pane ?? v.part(tab, part ?? '', b.web, r), r);
     if (tab === 'runner' && part === 'signed') drawSigned();
+    void notices();
+  }
+
+  /** H97: Waiting for you, its rotations read from the inbox at once where the runner holds the member (the rotation notice cMIP, 2.1). */
+  async function notices() {
+    const box = app.querySelector<HTMLElement>('#notices[data-auto]');
+    if (!box) return;
+    const r = await b.ask<{ notices: Parameters<typeof v.noticesList>[0]; problem: string | null }>('collective notices', {}).catch((err) => ({ notices: [], problem: errorOf(err) }));
+    if (box.isConnected) box.innerHTML = `<h3>Rotations waiting for you</h3>${v.noticesList(r.notices, r.problem)}`;
   }
 
   /** Where the state says Kišib stands: a sitting in its tab, or what was open. */
@@ -112,6 +127,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
   // ---------------------------------------------------------------- what the runner signed: cards with the kit's two menus
 
   const drawn = new Map<string, { act: KitAct; s: v.RunnerView['signed'][number] }>();
+  const label = (text: string) => ({ text, html: v.said(text) });
   function drawSigned() {
     const box = $('signed');
     if (!box || !runner) return;
@@ -127,8 +143,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
           form: actFormOf(s.act),
           signer: { id: s.identity, form, link: form, name: s.name, me: true },
           kind: s.opened ? `${s.app} · opened · ${kind}` : `${s.app} · ${kind}`,
-          text: s.words.join(' '),
-          labels: [{ text: s.opened ? `opened, nothing signed · ${s.times === 1 ? 'once' : `${s.times} times`} · last ${at}` : `${s.lane ? 'signed without asking: a lane’s record, to the identity itself' : s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.as ? `as the collective ${shortForm(actFormOf(s.as, 'mid'))}, with its member key` : s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${at}` }],
+          // H121: the IDs in its words, each a tap showing it whole.
+          html: `<div class="k-txt" dir="auto">${s.words.map(v.said).join(' ')}</div>`,
+          labels: [label(s.opened ? `opened, nothing signed · ${s.times === 1 ? 'once' : `${s.times} times`} · last ${at}` : `${s.lane ? 'signed without asking: a lane’s record, to the identity itself' : s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.as ? `as the collective ${actFormOf(s.as, 'mid')}, with its member key` : s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${at}`)],
           verified: false,
         };
         drawn.set(a.id, { act: a, s });
@@ -153,25 +170,37 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     async choose(key, a) {
       const s = drawn.get(a.id)?.s;
       if (!s) return;
-      if (key === 'profile') {
-        tab = 'identities';
-        part = 'record';
-        draw();
-        const f = app.querySelector<HTMLFormElement>('#form-record');
-        if (f) (f.elements.namedItem('id') as HTMLInputElement).value = a.signer.form;
-        return;
-      }
+      if (key === 'profile') return openRecord(a.signer.form);
       if (key === 'why' && s.opened) {
-        popup.show('An opening', `${v.lines([{ text: `Kišib opened, for ${s.app}, what was sealed to this identity: ${s.times === 1 ? 'once' : `${s.times} times`}. An opening signs nothing; ${s.app} reads the act inside, not the identity’s key.` }])}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${v.e(w)}</p>`).join('')}</div>`);
+        popup.show('An opening', `${v.lines([{ text: `Kišib opened, for ${s.app}, what was sealed to this identity: ${s.times === 1 ? 'once' : `${s.times} times`}. An opening signs nothing; ${s.app} reads the act inside, not the identity’s key.` }])}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${v.said(w)}</p>`).join('')}</div>`);
         return;
       }
       if (key === 'why') {
         const body = popup.show('Why it’s valid', `<p class="k-small k-soft">Reading its standing at its homes…</p>`);
         const r = await b.ask<{ lines: v.Line[] }>('runner standing', { act: s.act, identity: s.identity }).catch((e) => ({ lines: [{ text: errorOf(e), tone: 'warn' as const }] }));
-        if (body.isConnected) popup.replace(`${v.lines(r.lines)}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${v.e(w)}</p>`).join('')}</div>`);
+        if (body.isConnected) popup.replace(`${v.lines(r.lines)}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${v.said(w)}</p>`).join('')}</div>`);
       }
     },
   });
+
+  /** An identity's record, its ID filled in: Kišib's profile of anyone (Identities, Read a record). */
+  function openRecord(form: string) {
+    tab = 'identities';
+    part = 'record';
+    draw();
+    const f = app.querySelector<HTMLFormElement>('#form-record');
+    if (f) (f.elements.namedItem('id') as HTMLInputElement).value = form;
+  }
+
+  // ---------------------------------------------------------------- names, IDs and contacts (hand test v3: H96, H100, H106, H109, H119, H121)
+
+  // Every identity shown by its names, read by Kišib's program (the nickname, the published name faint; Loading… until read); every short ID a tap: whole, then copied; Open profile: its record.
+  attachIds(app, {
+    names: (ids, fresh) => b.ask<Record<string, Named>>('names', { ids, fresh: !!fresh }),
+    profile: (id) => openRecord(v.idFormOf(id)),
+  });
+  // Contacts top left, and the Contacts button beside every field taking an ID: the one list of the identity the runner holds.
+  attachContacts(app, { app: 'Kišib', ask: (op, a) => b.ask(op, a), profile: (id) => openRecord(v.idFormOf(id)), said: tell, readOnly: 'Shown here, changed in Dub, Damgar, Edubba or Ummia: changing them signs an act, and Kišib signs only for the apps paired with it.' });
 
   attachColumn(app, async (key) => {
     part = key;
@@ -185,6 +214,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     const st = $('status');
     if (st) st.innerHTML = '';
     if (tab === 'runner' && key === 'signed') drawSigned();
+    void notices();
   });
 
   // ---------------------------------------------------------------- forms
@@ -261,6 +291,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       return done('The new signing key’s words are taken: the runner signs for this identity again, with its new key.');
     }
     await withFiles(form, a);
+    if (id === 'form-notices') {
+      // H97: elsewhere than the runner, the member's words first; read, then forgotten here (cleared from the form).
+      const r = await act(() => b.ask<{ notices: Parameters<typeof v.noticesList>[0]; problem: string | null }>('collective notices', { member: a.member, address: a.address, words: a.words }));
+      clear(form);
+      const list = $('notices-list');
+      if (r && list) list.innerHTML = v.noticesList(r.notices, r.problem);
+      return;
+    }
     if (id === 'nakisib-answer' || id === 'nakisib-late') {
       const s = await act(() => b.ask<v.State>('nakisib answer', a));
       if (s) await show({ ...s, runner: runner ?? undefined });
@@ -273,7 +311,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         const r = await act(() => b.ask<{ title: string; lines?: v.Line[]; sections?: v.Section[] }>(kind === 'check' ? 'check words' : 'record', a));
         if (!r) return;
         clear(form);
-        $('result')!.innerHTML = `<div class="kishib-review" id="answer"><h3>${v.e(r.title)}</h3>${r.lines ? v.lines(r.lines) : v.sections(r.sections ?? [])}</div>`;
+        $('result')!.innerHTML = `<div class="kishib-review" id="answer"><h3>${v.said(r.title)}</h3>${r.lines ? v.lines(r.lines) : v.sections(r.sections ?? [])}</div>`;
         return;
       }
       case 'checkshare': {
@@ -285,7 +323,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         const r = await act(() => b.ask<{ title: string; lines: v.Line[] }>('check share', { collective: a.collective, address: a.address, numbers: [a.number, ...more.map((m) => m[1])], shares: [a.shareWords, ...more.map((m) => m[2])] }));
         if (!r) return;
         clear(form);
-        $('result')!.innerHTML = `<div class="kishib-review" id="answer"><h3>${v.e(r.title)}</h3>${v.lines(r.lines)}</div>`;
+        $('result')!.innerHTML = `<div class="kishib-review" id="answer"><h3>${v.said(r.title)}</h3>${v.lines(r.lines)}</div>`;
         return;
       }
       case 'unlock': {
@@ -302,7 +340,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         if (!r) return;
         runner = r;
         draw();
-        return done('Kept by the runner, on this Mac: approve it for an app in Runner, Apps.');
+        // H88: the identity brought, its ID whole, with Copy ID and Share your ID link.
+        const typed = String(a.id ?? '').trim();
+        const h = r.held.find((x) => x.id === typed || x.form === typed || typed.startsWith(`${x.form}?`));
+        return done(`Kept by the runner, on this Mac: approve it for an app in Runner, Apps.${h ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: h.form, link: h.link })}` : ''}`);
       }
       default:
         if (PLANS[kind]) {
@@ -345,8 +386,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         part = null;
         door = null;
         return draw();
+      // H89: top right shows what Kišib holds and the runner's state, as in every app; it opens the runner, where identities are added.
       case 'holds':
-        return openTab(b.web ? 'identities' : runner?.on ? 'identities' : 'runner');
+        return openTab(b.web ? 'identities' : 'runner');
+      case 'runner-add':
+        tab = 'runner';
+        part = 'add';
+        return draw();
       case 'open-door':
         door = tab;
         return draw();
@@ -359,11 +405,28 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         }
         return;
       }
+      // H97: a rotation listed, tapped: the form filled in from its notice, then the rotation read from its request, checked against the collective's chain (2.3).
+      case 'notice-pick': {
+        const f = app.querySelector<HTMLFormElement>('#form-give');
+        if (!f) return;
+        const set = (name: string, value: string) => {
+          const el = f.elements.namedItem(name) as HTMLInputElement | null;
+          if (el) el.value = value;
+        };
+        set('collective', d.collective ?? '');
+        set('fingerprint', d.fingerprint ?? '');
+        set('address', d.relays ?? '');
+        set('number', d.share ?? '');
+        set('member', d.member ?? '');
+        f.querySelector<HTMLElement>('[data-action="read request"]')?.click();
+        f.querySelector<HTMLElement>('[name="shareWords"]')?.scrollIntoView({ block: 'center' });
+        return;
+      }
       case 'read request': {
         const form = t.closest('form') as HTMLFormElement;
         const a = values(form);
         const r = await act(() => b.ask<{ title: string; sections: v.Section[] }>('collective read', { collective: a.collective, fingerprint: a.fingerprint, address: a.address }));
-        if (r) $('request')!.innerHTML = `<div class="kishib-review"><h3>${v.e(r.title)}</h3>${v.sections(r.sections)}</div>`;
+        if (r) $('request')!.innerHTML = `<div class="kishib-review"><h3>${v.said(r.title)}</h3>${v.sections(r.sections)}</div>`;
         return;
       }
       case 'sign': {
@@ -427,13 +490,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         if (!r) return;
         runner = r;
         draw();
-        return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
+        return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Runner, Add an identity to the runner), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
       }
       case 'quit': {
-        if (!confirm('Quit Kišib? Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.')) return;
+        if (!(await ask(app, { title: 'Quit Kišib?', text: 'Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.', yes: 'Quit Kišib' }))) return;
         const r = await act(() => b.ask<{ quit: boolean }>('quit'));
         if (!r) return;
-        app.innerHTML = `<div class="k-body"><div class="k-box" id="quit-done"><h2>Kišib has quit</h2><p class="k-soft">Its program has ended${runner?.state === 'off' ? '' : ', and the runner is locked'}. Open Kišib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+        app.innerHTML = v.quitDone(runner?.state === 'off');
         return;
       }
       case 'runner-lock': {
@@ -443,10 +506,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         draw();
         return done('Locked: the runner signs and opens nothing until its passphrase is given again. Nothing was erased.');
       }
+      // H90: Off, or the button below it, asks the same question in the page (never the browser's own dialog), then turns it off.
       case 'runner-off-ask':
-        return $<HTMLElement>('runner-state')?.nextElementSibling?.scrollIntoView({ block: 'center' });
       case 'runner-off': {
-        if (!confirm('Turn the runner off? It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.')) return;
+        if (!(await ask(app, { title: 'Turn the runner off?', text: 'It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.', yes: 'Turn it off, and erase everything', alarm: true }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner off'));
         if (!r) return;
         runner = r;
@@ -461,13 +524,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         if (r) {
           runner = r;
           draw();
-          done('Approved: the app may now use the identities chosen, each act shown in Kišib’s panel inside its window.');
+          // H124: the pairing approved stays where it is, open: its line kept in view, to finish setting it up.
+          app.querySelector(`[data-app="${CSS.escape(d.pairing!)}"]`)?.scrollIntoView({ block: 'nearest' });
+          done('Approved: the app may now use the identities chosen, each act shown in Kišib’s panel inside its window. Its setting up is here, below.');
         }
         return;
       }
       case 'refuse':
       case 'revoke': {
-        if (d.action === 'revoke' && !confirm('Revoke this app? It signs through Kišib no more, and what waits from it is dropped.')) return;
+        if (d.action === 'revoke' && !(await ask(app, { title: 'Revoke this app?', text: 'It signs through Kišib no more, and what waits from it is dropped.', yes: 'Revoke it' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner revoke', { pairing: d.pairing }));
         if (r) {
           runner = r;
@@ -493,7 +558,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return;
       }
       case 'member-remove': {
-        if (!confirm('Forget this collective’s key here? The app using the identity through Kišib can no longer act as the collective. The key itself stays sealed to the identity at its homes.')) return;
+        if (!(await ask(app, { title: 'Forget this collective’s key here?', text: 'The app using the identity through Kišib can no longer act as the collective. The key itself stays sealed to the identity at its homes.', yes: 'Forget it here' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner member remove', { identity: d.id, collective: d.collective }));
         if (r) {
           runner = r;
@@ -526,7 +591,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return;
       }
       case 'held-remove': {
-        if (!confirm('Remove this identity from the runner? Kišib forgets its signing key; the apps using it through Kišib stop signing as it. The identity itself is not touched.')) return;
+        if (!(await ask(app, { title: 'Remove this identity from the runner?', text: 'Kišib forgets its signing key; the apps using it through Kišib stop signing as it. The identity itself is not touched.', yes: 'Remove it' }))) return;
         const r = await act(() => b.ask<v.RunnerView>('runner remove', { id: d.id }));
         if (r) {
           runner = r;
@@ -547,16 +612,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     }
   });
 
-  // What waits in the runner (a pairing asked, a request whose panel was closed) shows without a reload.
+  // What waits in the runner (a pairing asked, a request whose panel was closed) shows without a reload; and the page follows the
+  // runner's state wherever it changes (H90: locked, turned off or quit from the seal in the menu bar), on every screen.
   if (!b.web) {
+    let missed = 0;
     setInterval(async () => {
-      if (document.hidden || tab === null || !runner?.on) return;
+      if (document.hidden || !runner || app.querySelector('#quit-done')) return;
       let r: v.RunnerView;
       try {
         r = await b.ask<v.RunnerView>('runner state');
-      } catch {
+        missed = 0;
+      } catch (err) {
+        if (b.unpaired?.(err)) return;
+        // Twice unanswered: Kišib's program has ended (quit from the seal).
+        if (++missed >= 2) app.innerHTML = v.quitDone(runner.state === 'off');
         return;
       }
+      if (r.state !== runner.state) {
+        runner = r;
+        popup.close();
+        draw();
+        return;
+      }
+      if (!runner.on) return;
       const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
       runner = r;
       if (!changed) return;

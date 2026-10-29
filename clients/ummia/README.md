@@ -90,6 +90,20 @@ The core library does every check: the specification's decoding, the acts' judgm
 - The web client reads no folder and follows no chain: no release, no anchor checked there; said in its banner.
 - Tracking sees public agreements only; what relays do not hold, Ummia does not see.
 
+## Fix round 7 (F403, hand test v3)
+
+### In plain words
+
+- **Rules I follow** (H93): the list of rules you follow, shown whole in Choose, is now named so ("Rules I follow"); **Ummia's own rules** (long form, release manifest, naming) are each kept on your list or in Ummia only, and asked about under the top while not followed.
+- **Names** (H96, H106): every identity shown by its names (your nickname first, the name it published beside it), the top right and the identity panel included; never a bare ID where a name is known.
+- **Contacts** (H100, H109, H119): Contacts top left, the one list every app reads; Follow and "my contacts" go through it; a nickname asked when following; a Contacts button beside every field taking an ID.
+- **Your own ID** (H88): at the end of bringing one, and in the panel, its ID whole with Copy ID and Share your ID link.
+- **Short IDs** (H121): every short ID or hash a tap away from whole, a second tap copying it. **Two signs** (H99): the panels to work in (a MIP's text, the specification's optional fields) open with a chevron; "?" only explains.
+
+### Precisely
+
+`src/ummia.ts`: `Known('Ummia')` and the ops `names`, `contacts`, `contact add`, `contact nick`, `contact remove`; `rules`, `rules approve` (`UMMIA_RULES`, the kit's `engine/rules.ts`); each identity's `form`, `link` and `named` in the state. `src/follows.ts`: the explanation only, the list being the kit's. `src/page/`: the kit's `who`, `actId`, `hashButton`, `attachIds`, `attachContacts`, `rulesPart`, `rulesAsk`, `fold`. Tests: `test/names-contacts.test.ts`; `../desk/test/every-app.test.ts` (H93, H102, H82, H83, H105).
+
 ## Tests
 
 `npm test` (Node, and headless Chromium for `browser.test.ts`; `MOR_CHROMIUM` names the browser):

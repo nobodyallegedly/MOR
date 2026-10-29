@@ -23,6 +23,10 @@ import { NO_PEOPLE, type People } from '../../dub/src/people.ts';
 import type { Desk } from './desk.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
 import type { Store } from './store.ts';
+import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
+
+/** The rules Edubba runs (H93): money (purchases, drafts for Damgar, its agents' lanes), people, names, corrections, collectives, agents' memory. */
+export const EDUBBA_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys', 'agent-memory');
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -188,6 +192,40 @@ export class Member {
     return { lines: r.lines.map((l) => ({ ...l, text: l.text.replace(/\bDub\b/g, 'Edubba') })) };
   }
 
+  // ------------------------------------------------------------ Rules I follow (H93)
+
+  private rulesRead = new Map<string, { shown: RulesShown; at: number }>();
+
+  private rulesHere(id: string): string[] {
+    const f = this.store.path('member', `${id}.rules.json`);
+    return existsSync(f) ? ((JSON.parse(readFileSync(f, 'utf8')) as { here?: string[] }).here ?? []) : [];
+  }
+
+  /** The rules Edubba runs, held against the identity's sealed list and what was approved in Edubba only: read again at most once a minute. */
+  async rules(id: string | null, fresh = false): Promise<RulesShown | null> {
+    if (!id || !HEX64.test(id) || !this.store.holds(id)) return null;
+    const c = this.rulesRead.get(id);
+    if (c && !fresh && c.at + 60 > Date.now() / 1000) return c.shown;
+    const me = await this.store.identity(id);
+    const open = await this.dub.openerFor(id).catch(() => null);
+    const { shown } = await readRules('Edubba', EDUBBA_RULES, me, this.rulesHere(id), { open, via: this.store.settings().via });
+    this.rulesRead.set(id, { shown, at: Date.now() / 1000 });
+    return shown;
+  }
+
+  /** Approve rules Edubba runs, in Edubba only or added to the list; or stop following one in Edubba only. */
+  async approveRules(id: string | null, a: { keys: string[]; where: 'here' | 'list'; remove?: boolean }): Promise<{ lines: { text: string; tone?: string }[]; rules: RulesShown | null }> {
+    if (!id || !this.store.holds(id)) throw new Error('No identity in use: choose one in the identity panel.');
+    const now = await this.rules(id, true);
+    const keys = a.keys.includes('*') ? (now?.rules ?? []).filter((r) => !r.on).map((r) => r.key) : a.keys;
+    if (!keys.length) return { lines: [{ text: 'Every rule Edubba runs is followed already.' }], rules: now };
+    const me = await this.store.identity(id);
+    const open = await this.dub.openerFor(id).catch(() => null);
+    const r = await this.keep.exclusive(() => approveRules('Edubba', EDUBBA_RULES, me, { keys, where: a.where, remove: a.remove, here: this.rulesHere(id) }, { open, via: this.store.settings().via, save: async () => this.store.saveIdentity(me) }));
+    writeFileSync(this.store.path('member', `${id}.rules.json`), `${JSON.stringify({ here: r.here }, null, 2)}\n`, { mode: 0o600 });
+    return { lines: r.lines, rules: await this.rules(id, true) };
+  }
+
   /** The identity the Collectives tab acts as: the one chosen, else the first held that is no agent, else the first held. */
   async acting(): Promise<string | null> {
     const a = await this.keep.active();
@@ -216,6 +254,9 @@ export class Member {
       try {
         const r = await this.dub.post({ text });
         return { post: r.post.id, lines: r.lines.map((l) => ({ ...l, text: l.text.replace(/\bDub\b/g, 'Edubba') })) };
+      } catch (e) {
+        // Dub's own words, said here as Edubba's.
+        throw new Error((e instanceof Error ? e.message : String(e)).replace(/\bDub\b/g, 'Edubba'));
       } finally {
         this.keep.postingAs = null;
       }

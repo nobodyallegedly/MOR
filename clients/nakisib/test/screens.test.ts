@@ -85,7 +85,7 @@ test('every screen by clicks, nothing secret on disk, and no connection but the 
   await page.getByText('This Mac should never connect again.').first().waitFor();
   await picture(page, 'first-screen');
   const font = await page.evaluate(() => getComputedStyle(document.querySelector('.k-page')!).fontFamily);
-  assert.match(font, /^Inter/);
+  assert.match(font, /^"Atkinson Hyperlegible Next"/);
 
   // A change of keys, by clicks.
   await page.click('[data-k-tile="rotation"]');

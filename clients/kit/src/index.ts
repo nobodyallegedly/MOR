@@ -5,3 +5,5 @@
 export * from './style.ts';
 export * from './html.ts';
 export * from './dom.ts';
+export * from './ids.ts';
+export * from './qr.ts';

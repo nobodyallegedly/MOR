@@ -11,16 +11,25 @@ import type { Author, AuthorLine, ClockLine } from '../feed.ts';
 import type { AgreementsRead, ListedRelay, RelayLine } from '../listing.ts';
 
 /**
+ * The suite's type (H123), served by the gateway beside the display client
+ * (`/_mor/`): `base` empty for its own stylesheet (beside it), the gateway's
+ * origin for a frame's (a feed, a listing), whose stylesheet is a blob.
+ */
+export const fontFaces = (base: string) =>
+  ['next', 'mono'].map((k) => `@font-face{font-family:"Atkinson Hyperlegible ${k === 'next' ? 'Next' : 'Mono'}";src:url("${base ? `${base}/_mor/` : ''}atkinson_${k}.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap}`).join('\n');
+
+/**
  * The display client's own page: the bar on top, the file below. The page's
  * frame is as tall as the page (app.ts), so the browser's own scrolling is the
  * only one: no box scrolls inside the page (layout decided by Nobody,
  * allegedly, 7 October 2026). Frames are `width:1px;min-width:100%`, since
  * Safari on phones otherwise widens a frame to its content.
  */
-export const STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e;--bar:color-mix(in srgb,CanvasText 6%,Canvas)}
+export const STYLE = `${fontFaces('')}
+:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e;--bar:color-mix(in srgb,CanvasText 6%,Canvas)}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 system-ui,sans-serif}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 "Atkinson Hyperlegible Next",system-ui,sans-serif}
 #mor-bar{flex:none;padding:8px 16px;border-bottom:2px solid var(--line);background:var(--bar);max-height:60vh;overflow:auto}
 #mor-bar.ok{border-bottom-color:var(--ok)}
 #mor-bar.bad{border-bottom-color:var(--bad)}
@@ -36,14 +45,14 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Can
 #mor-bar dt{color:var(--soft)}
 #mor-bar dd{margin:0;overflow-wrap:anywhere}
 #mor-bar ul{margin:4px 0;padding-left:18px}
-code,.fp{font-family:ui-monospace,Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
+code,.fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
 .ok-word{color:var(--ok);font-weight:600}
 .bad-word{color:var(--bad);font-weight:600}
 #mor-view{flex:1;position:relative}
 #mor-view>iframe{display:block;width:1px;min-width:100%;height:calc(100vh - 4em);border:0;background:Canvas}
 #mor-view>.file{padding:16px}
 #mor-view img{max-width:100%;height:auto;image-orientation:from-image}
-#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Menlo,monospace}
+#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
 .note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}
 .mor-player{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;overflow:hidden;font:14px/1.4 system-ui,sans-serif}
 .file .mor-player{position:relative;width:100%;aspect-ratio:16/9}

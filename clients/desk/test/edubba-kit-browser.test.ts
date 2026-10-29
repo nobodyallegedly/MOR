@@ -40,6 +40,7 @@ import { answering, fakeApi, type Fake } from '../../assess/test/fake-api.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
 import { DIARY_RULE_SAY } from '../src/agents.ts';
+import { closeAll, dub } from '../../damgar/test/world.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -78,6 +79,7 @@ before(async () => {
 });
 
 after(async () => {
+  await closeAll();
   await browser?.close();
   await app?.close();
   await api?.stop();
@@ -222,56 +224,63 @@ test('Agents › Queue: an outsider’s note waits until picked; MOR as seen by 
   await page.click('.k-modal [data-k-popup=close]');
 });
 
-let COLLECTIVE = '';
 
-test('Collectives: a test collective; Act with its permissions as chips, a post reviewed and signed, its card; its constitution top right', async () => {
+test('Collectives: a real collective founded by Max; Act with its permissions as chips, a post signed, its card; its constitution top right; no test collective offered', async () => {
   const c = await Client.open(await newKey(), app.base);
   await c.ask('pair', { code: app.access.newCode(), label: 'setup' });
-  const confirm = async (args: object) => {
-    const r = await c.ask<{ plan: string; digest: string }>('collective prepare', args);
-    return c.ask<Done>('collective confirm', { plan: r.plan, digest: r.digest });
-  };
-  const ids: string[] = [];
-  for (const [name, mine] of [['Me', true], ['Ana', false], ['Bo', false]] as const) ids.push((await confirm({ kind: 'identity', name, mine })).acts[0]);
-  await confirm({ kind: 'found', name: 'Three tablets', members: ids, rules: {} });
-  COLLECTIVE = app.collectives.list()[0].id;
+  // Ana and Bo, each in their own Dub, accept Max's founding there (test collectives are gone from Edubba: decided).
+  const H = homes.map((h) => h.base);
+  const ana = await dub(H, [relay.base]);
+  const bo = await dub(H, [relay.base]);
+  await c.ask('real contact add', { id: ana.id, name: 'Ana' });
+  await c.ask('real contact add', { id: bo.id, name: 'Bo' });
+  const all = [ME, ana.id, bo.id];
+  const grid = { members: all, constitution: { holders: all, number: 3 }, chainKey: 2, absence: 2, areas: [{ name: 'Publishing', layer: 1, holders: all, number: 1 }], clone: 2 };
+  const rv = await c.ask<any>('real found prepare', { name: 'Three tablets', founder: ME, members: [ana.id, bo.id], grid });
+  const terms = (await c.ask<Done>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
+  for (const m of [ana, bo]) {
+    await m.c.ask('signing', { on: true });
+    const pr = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
+    await m.c.ask('accept', { thread: pr.thread });
+  }
+  await c.ask('real gather', { act: terms });
+  await c.ask<Done>('real found', { act: terms, read: true });
   await page.reload();
   await tabTo('Collectives');
   await page.locator('.edubba-head h2', { hasText: 'Three tablets' }).waitFor({ timeout: 60_000 });
   await page.locator('.edubba-chips .k-chip').first().waitFor({ timeout: 90_000 });
-  assert.match(await page.locator('.k-col').innerText(), /Three tablets[\s\S]*To sign[\s\S]*\+ Found a collective[\s\S]*\+ Found a test collective[\s\S]*\+ Bring a collective/);
+  const column = await page.locator('.k-col').innerText();
+  assert.match(column, /Three tablets[\s\S]*To sign[\s\S]*\+ Found a collective[\s\S]*\+ Bring a collective/);
+  assert.doesNotMatch(column, /test collective/i);
   await page.fill('#collective-post textarea', 'The tablet house opens on Tuesday.');
   await page.click('#collective-post button[type=submit]');
-  await page.locator('#e-post-review #reading').waitFor({ timeout: 90_000 });
-  await shot(page, 'mac-20-collective-review');
-  await page.click('#e-post-review [data-action=confirm]');
-  await done('Posted for');
-  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Tuesday.' }).waitFor({ timeout: 60_000 });
+  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Tuesday.' }).waitFor({ timeout: 90_000 });
+  await shot(page, 'mac-20-collective-post');
   await page.locator('#collective-feed .k-act .k-actid').first().click();
   await page.locator('.k-pop button', { hasText: 'Rely on it' }).waitFor();
-  await page.locator('.k-pop button', { hasText: 'Correct it' }).waitFor();
   await shot(page, 'mac-21-collective-act-menu');
-  // Correct it (the corrections cMIP), from the act's menu: read back as the collective's post, then signed; the original corrected by it.
-  await page.locator('.k-pop button', { hasText: 'Correct it' }).click();
-  await page.fill('.k-modal #correct-any textarea', 'The tablet house opens on Wednesday.');
-  await page.click('.k-modal #correct-any button[type=submit]');
-  await page.locator('.k-modal #reading').waitFor({ timeout: 90_000 });
-  await page.click('.k-modal [data-action=confirm]');
-  await done('Posted for');
-  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Wednesday.' }).locator('.k-label', { hasText: 'correction of' }).waitFor({ timeout: 60_000 });
-  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Tuesday.' }).locator('.k-label', { hasText: 'corrected by' }).waitFor();
+  await page.keyboard.press('Escape');
   assert.equal(await page.inputValue('form#collective-post [name=text]'), '', 'the typing box is empty once the post is signed');
   await shot(page, 'mac-22-collective-act');
   await page.click('[data-action=constitution]');
   await page.locator('.k-modal', { hasText: 'Areas: who decides which acts' }).waitFor({ timeout: 90_000 });
   await shot(page, 'mac-23-constitution');
   await page.click('.k-modal [data-k-popup=close]');
-  await subTo('Members, money and endings');
-  await page.locator('#e-col-root .card[data-collective]', { hasText: 'Three tablets' }).waitFor({ timeout: 90_000 });
-  await shot(page, 'mac-24-test-collective-workings');
   await col('+ Found a collective');
   await page.locator('#real-found').waitFor();
   await shot(page, 'mac-25-found');
+  // H118: you and one other, + Add a member; H120: one choice per layer, each kind the core defines, in words.
+  assert.equal(await page.locator('#real-found [data-member-row]').count(), 2);
+  await page.fill('#real-found input[name=member-2]', 'cd'.repeat(32));
+  await page.locator('#real-found input[name=member-2]').dispatchEvent('change');
+  const area = page.locator('#e-grid-real-found tr[data-area="0"]');
+  await area.waitFor({ timeout: 30_000 });
+  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Text', 'Envelopes', 'Text and Envelopes, together', 'Money', 'Agreements', 'Development']);
+  await area.locator('select[data-grid-layer]').selectOption('3');
+  await page.locator('#e-grid-real-found tr[data-area="0"] [data-grid-some]').check();
+  const kinds = await page.locator('#e-grid-real-found tr.kinds').innerText();
+  for (const k of ['work claims', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
+  await shot(page, 'mac-26-found-agreements-kinds');
 });
 
 test('Publishing: who acts, what; an audio (M4A) stripped by the audio Module, read back, signed; Published here', async () => {
@@ -331,13 +340,51 @@ test('the identity panel: identities, + Add with three ways, the menu, Remove sa
   await page.locator('.k-pop button', { hasText: 'Line and homes' }).waitFor();
   await shot(page, 'mac-51-identity-menu');
   await page.locator('.k-pop button', { hasText: 'Remove from Edubba' }).click();
-  await page.locator('.k-panel [data-k-remove]', { hasText: 'Max itself is not touched' }).waitFor();
+  await page.locator('[data-k-confirm] [data-k-remove]', { hasText: 'Max itself is not touched' }).waitFor();
   await shot(page, 'mac-52-remove-said');
-  await page.click('.k-panel [data-k-remove-no]');
+  await page.click('[data-k-confirm] [data-k-remove-no]');
   await page.click('.k-panel [data-action=this-app]');
   await page.locator('.k-modal #desk-settings').waitFor();
   await shot(page, 'mac-53-this-app');
   await page.click('.k-modal [data-k-popup=close]');
+  await noFinding();
+});
+
+test('H125: Agents and Collectives follow the identity in use: a second identity with none says so; switching back shows Max’s again', async () => {
+  // Bob, made from the identity panel's + Add: in use at once.
+  await page.click('[data-k-open=identity]');
+  await page.click('.k-panel [data-k-add=toggle]');
+  await page.click('.k-panel [data-k-add=make]');
+  await page.locator('.k-modal #new-identity').waitFor();
+  await page.fill('.k-modal #new-identity input[name=name]', 'Bob');
+  await page.click('.k-modal #new-identity button[type=submit]');
+  await page.locator('.k-me', { hasText: 'Bob' }).waitFor({ timeout: 60_000 });
+  await page.click('.k-modal [data-k-popup=close]').catch(() => undefined);
+  if (await page.locator('#e-status [data-action=status-close]').count()) await page.click('#e-status [data-action=status-close]');
+  const column = async (tile: string) => {
+    await page.click('[data-action=home-tiles]');
+    await page.click(`[data-k-tile=${tile}]`);
+    await page.locator('.k-col').waitFor();
+    return page.locator('.k-col').innerText();
+  };
+  let agents = await column('agents');
+  assert.match(agents, /No agents for Bob yet/i);
+  assert.doesNotMatch(agents, /Machine, allegedly/);
+  assert.match(agents, /\+ Add an agent/);
+  let cols = await column('collectives');
+  assert.match(cols, /No collectives for Bob yet/i);
+  assert.doesNotMatch(cols, /Three tablets/);
+  await shot(page, 'mac-55-bob-collectives');
+  // Back to Max: his agent and his test collective again.
+  await page.click('[data-k-open=identity]');
+  await page.locator(`.k-panel [data-k-use="${ME}"]`).click();
+  await page.locator('.k-me', { hasText: 'Max' }).waitFor({ timeout: 60_000 });
+  agents = await column('agents');
+  assert.match(agents, /Machine, allegedly/);
+  assert.doesNotMatch(agents, /No agents for/i);
+  cols = await column('collectives');
+  assert.doesNotMatch(cols, /No collectives for/i);
+  assert.match(cols, /Three tablets/);
   await noFinding();
 });
 

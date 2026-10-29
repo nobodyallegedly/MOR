@@ -24,6 +24,19 @@ import {
   profile as profilePage,
   redrawPanel,
   removeSaid,
+  inPlace,
+  ownId,
+  ask,
+  askNick,
+  attachIds,
+  attachContactsButtons,
+  contactsButtonFor,
+  type Named,
+  openConfirm,
+  keyChanged,
+  rulesAsk,
+  attachRules,
+  rulesPart,
   shortForm,
   type Contact,
   type KitAct,
@@ -257,11 +270,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     return act;
   };
   const collectives = () => state?.identity?.collectives.map((c) => c.id) ?? [];
-  const itemCards = (items: Item[]) => items.map((it) => card(keep(v.itemAct(it, collectives()), { item: it }))).join('');
+  // H103: a correction by the post's own signer in its place, labelled Corrected, the original unfolding above it.
+  const itemCards = (items: Item[]) => {
+    const byId = new Map(items.map((it) => [it.id, it]));
+    return inPlace(items.map((it) => v.itemAct(it, collectives())))
+      .map((a) => {
+        for (const x of a.earlier ?? []) keep(x, { item: byId.get(x.id) });
+        return card(keep(a, { item: byId.get(a.id) }));
+      })
+      .join('');
+  };
 
   /** The people this identity follows, for @, To…, Cc and Contacts: names first. */
   function contacts(): Contact[] {
-    return (state?.identity?.follows ?? []).map((w) => ({ id: w.id, form: w.form, name: w.pet ?? w.names[0] ?? null, names: w.names, collective: collectives().includes(w.id) }));
+    return (state?.identity?.follows ?? []).map((w) => ({ id: w.id, form: w.form, name: w.pet ?? w.names[0] ?? null, names: w.names, named: { nick: w.pet, published: w.published ?? (w.names.length ? { state: 'name' as const, name: w.names[w.names.length - 1] } : { state: 'loading' as const }) }, collective: collectives().includes(w.id) }));
   }
 
   // ---------------------------------------------------------------- reading
@@ -432,13 +454,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   async function check() {
     try {
       const c = await b.ask<{ current: boolean; say: string | null }>('check');
-      const old = $('spent-box');
-      if (c.current) old?.remove();
-      else if (!old) {
-        const holder = document.createElement('div');
-        holder.innerHTML = v.spent(c.say ?? '');
-        app.querySelector('.k-top')?.after(holder.firstElementChild!);
-      }
+      // H82, H83: the identity in use only, as a pop-up; closed, a line under the top.
+      const me = state?.identity;
+      keyChanged(app, c.current || !me ? null : { id: me.id, name: me.who.names[0] ?? shortForm(v.actFormOf(me.id, 'mid')), say: c.say ?? '', form: v.renewForm() });
     } catch {
       // its homes did not answer: said when something is signed
     }
@@ -485,9 +503,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   /** The window: the top, then the part chosen (or a profile). */
   function draw() {
     const s = state!;
-    const body = profileOf ? `<div class="k-body"><section class="k-pane" id="profile"><p class="k-empty">Reading the profile…</p></section></div>` : part === 'public' ? v.publicPart(s, lens, layers) : part === 'private' ? '' : v.purchasesPart(shelf);
+    const body = profileOf ? `<div class="k-body"><section class="k-pane" id="profile"><p class="k-empty">Reading the profile…</p></section></div>` : part === 'public' ? v.publicPart(s, lens, layers) : part === 'private' || part === 'notes' ? '' : v.purchasesPart(shelf);
     app.innerHTML = `${v.topBar(s, profileOf ? null : part)}${body}`;
     if (part === 'private' && !profileOf) drawPrivate();
+    if (part === 'notes' && !profileOf) drawNotes();
     if (part === 'public' && !profileOf) {
       drawFeed();
       drawTyping();
@@ -495,7 +514,33 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     if (part === 'purchases') drawBought();
     counts();
+    askRules();
   }
+
+  // ---------------------------------------------------------------- Rules I follow (H93)
+
+  /** A rule Dub runs not approved yet: asked under the top, for the identity in use. */
+  function askRules() {
+    const s = state;
+    rulesAsk(app, s?.identity && s.rules ? { id: s.identity.id, app: 'Dub', missing: s.rules.missing, open: openRules } : null);
+  }
+
+  const rulesHtml = () => rulesPart({ app: 'Dub', rules: state?.rules?.rules ?? [], problem: state?.rules?.problem ?? null, manage: 'Your whole list, every app’s part of it, is shown and changed in Ummia.' });
+
+  function openRules() {
+    closePanel();
+    popup.show('Rules I follow', rulesHtml());
+  }
+
+  async function rulesChosen(key: string, where: 'here' | 'list', remove = false) {
+    const r = await busy(where === 'list' ? 'Sealing your list to this identity at its homes…' : 'Keeping it in Dub…', () => b.ask<{ lines: v.Line[]; rules: NonNullable<State['rules']> }>('rules approve', { keys: [key], where, remove }));
+    if (!r || !state) return;
+    state.rules = r.rules;
+    if (popup.open) popup.replace(`${note('done', v.lines(r.lines))}${rulesHtml()}`);
+    askRules();
+  }
+
+  attachRules(app, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, 'here', true) });
 
   function drawTyping() {
     fill('replying', replying ? `<span class="k-chip k-on">Replying to ${v.e(replying.name)}<button type="button" class="k-x" data-action="unreply" aria-label="Not a reply">×</button></span>` : '');
@@ -525,7 +570,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (!cc.some((a) => a.id === c.id)) cc.push({ id: c.id, name: c.name ?? shortForm(c.form) });
     drawCc();
   };
-  const drawCc = () => fill('ccs', cc.map((a) => `<span class="k-chip k-on">Cc: ${v.e(a.name)}<button type="button" class="k-x" data-action="uncc-one" data-id="${v.e(a.id)}" aria-label="Not in Cc">×</button></span>`).join(''));
+  // Each a chip, wrapping (H85); two of one name told apart by their short ID (H57).
+  const drawCc = () =>
+    fill(
+      'ccs',
+      cc
+        .map((a) => `<span class="k-chip k-on">Cc: ${v.e(a.name)}${cc.filter((x) => x.name === a.name).length > 1 ? ` <span class="k-mono k-faint">${v.e(shortForm(v.actFormOf(a.id, 'mid')))}</span>` : ''}<button type="button" class="k-x" data-action="uncc-one" data-id="${v.e(a.id)}" aria-label="Not in Cc">×</button></span>`)
+        .join(''),
+    );
 
   // ---------------------------------------------------------------- Private: a mailbox
 
@@ -583,6 +635,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (open) void seen(msgs.filter((m) => !m.seen && m.dir === 'in').map((m) => m.key));
   }
 
+  // ---------------------------------------------------------------- Notes (H122)
+
+  let notes: { notes: v.NoteShown[]; problems: string[]; opening: string | null } | null = null;
+  let noteOpen: string | null = null;
+  let noteEditing = false;
+
+  function drawNotes() {
+    if (part !== 'notes' || profileOf) return;
+    const html = v.notesPart({ notes: notes?.notes ?? null, open: noteOpen, editing: noteEditing, problems: notes?.problems ?? [], opening: notes?.opening ?? null });
+    const body = app.querySelector('.k-body');
+    if (body) body.outerHTML = html;
+    else app.insertAdjacentHTML('beforeend', html);
+  }
+
+  async function readNotes() {
+    try {
+      notes = await b.ask<NonNullable<typeof notes>>('notes');
+    } catch (err) {
+      notes = { notes: [], problems: [errorOf(err)], opening: null };
+    }
+    drawNotes();
+  }
+
   // ---------------------------------------------------------------- the profile
 
   async function openProfile(id: string) {
@@ -591,7 +666,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     closePanel();
     draw();
     try {
-      const r = await b.ask<{ who: v.Who; lives: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }>('profile', { id });
+      const r = await b.ask<{ who: v.Who; lives: string; takes: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }>('profile', { id });
       if (profileOf !== id) return;
       const me = r.who.me;
       fill(
@@ -599,6 +674,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         profilePage({
           who: v.kitWho(r.who, collectives().includes(r.who.id)),
           lives: r.lives,
+          takes: r.takes,
           trouble: r.trouble,
           actions: me ? [] : [r.who.followed ? { key: 'unfollow', label: 'Following' } : { key: 'follow', label: 'Follow', primary: true }, { key: 'message', label: 'Message' }, { key: 'pay', label: 'Pay' }],
           cards: itemCards(r.items),
@@ -618,7 +694,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   attachCards(app, {
     app: v.NAME,
     act: (id) => drawn.get(id)?.act,
-    signerItems: (a) => (a.signer.me ? [] : [{ key: 'message', label: 'Message' }]),
+    signerItems: (a) => (a.signer.me ? [] : [{ key: 'message', label: 'Message' }, ...(a.signer.followed ? [{ key: 'nick', label: 'Nickname…' }] : [])]),
     actItems(a) {
       const d = drawn.get(a.id);
       const it = d?.item;
@@ -642,6 +718,50 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     },
     choose: (key, a) => void choose(key, a),
   });
+
+  // Every ID drawn: its names asked and filled in (H96, H106), a tap showing it whole, a second copying it (H121);
+  // a person's Open profile; in a reply, the act it answers expanded above it, fetched and verified (H95).
+  // H119: a Contacts button beside every field taking an ID; To… and Cc take the one chosen as their names do.
+  attachContactsButtons(
+    app,
+    () => contacts().map((c) => ({ id: c.id, form: c.form, named: c.named ?? { nick: c.name, published: { state: 'loading' } }, collective: c.collective })),
+    (field, c) => {
+      const k = contacts().find((x) => x.id === c.id);
+      if (!k) return false;
+      if (field.id === 'to') return (addTo(k), (field.value = ''), drawTyping(), true);
+      if (field.id === 'cc') return (addCc(k), (field.value = ''), true);
+      return false;
+    },
+  );
+
+  attachIds(app, {
+    names: (ids, fresh) => b.ask<Record<string, Named>>('names', { ids, fresh: !!fresh }),
+    profile: (id) => void openProfile(id),
+    act: (id, button) => void expandAnswered(id, button),
+  });
+
+  /** H95: the act a reply answers, fetched and verified, drawn above the reply with its standing said; tapped again, folded. One at a time. */
+  async function expandAnswered(id: string, button: HTMLElement) {
+    const reply = button.closest<HTMLElement>('article.k-act');
+    if (!reply) return;
+    const open = reply.previousElementSibling?.matches(`[data-k-answered="${CSS.escape(id)}"]`) ? reply.previousElementSibling : null;
+    if (open) return void open.remove();
+    reply.parentElement?.querySelectorAll(':scope > [data-k-answered]').forEach((x) => x.remove());
+    const box = document.createElement('div');
+    box.className = 'dub-answered';
+    box.dataset.kAnswered = id;
+    box.innerHTML = '<p class="k-small k-soft">Reading the act it answers…</p>';
+    reply.before(box);
+    const signer = button.closest<HTMLElement>('[data-answers-signer]')?.dataset.answersSigner || undefined;
+    try {
+      const r = await b.ask<{ item: Item }>('open', { id, signer });
+      const it = r.item;
+      const said = it.standing === 'valid' ? 'Verified: it counts, as its signer’s chain says.' : it.problem ? `Not verified: ${it.problem}` : `Not verified: ${it.standing}.`;
+      box.innerHTML = `<p class="k-small k-soft dub-answered-say">What it answers · ${v.e(said)}</p>${card(keep(v.itemAct(it, collectives()), { item: it }))}`;
+    } catch (err) {
+      box.innerHTML = `<p class="k-small k-warn">The act it answers: not found at the places asked (${v.e(errorOf(err))}). Nothing is guessed from it.</p>`;
+    }
+  }
 
   async function choose(key: string, a: KitAct) {
     const d = drawn.get(a.id);
@@ -672,6 +792,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         }
         return;
       }
+      case 'nick':
+        return nickname(signer);
       case 'follow':
       case 'unfollow':
       case 'mute':
@@ -754,9 +876,32 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
   }
 
+  /** H88: one's own ID whole, with Copy ID and Share your ID link, at the end of making or bringing an identity. */
+  const ownIdNow = () => (state?.identity ? `<p class="k-small k-soft">Its ID, to give to whoever may write to it:</p>${ownId({ form: state.identity.form, link: state.identity.who.link })}` : '');
+
+  /** Nickname…: the person's own name for a contact (H109), sealed to them, seen in every app; empty takes it away. */
+  async function nickname(id: string) {
+    const w = state?.identity?.follows.find((f) => f.id === id);
+    const nick = await askNick(app, { title: `Nickname for ${w?.names.at(-1) ?? shortForm(v.actFormOf(id, 'mid'))}`, current: w?.pet ?? null, yes: 'Save', skip: 'Keep it as it is' });
+    if (nick === undefined || nick === (w?.pet ?? null)) return;
+    const r = await busy('Saving the nickname…', () => b.ask<Lines>(w ? 'call' : 'follow', { id, name: nick ?? '' }));
+    if (!r) return;
+    state = await b.ask<State>('state');
+    say('done', `<strong>${nick ? 'Nickname saved' : 'Nickname taken away'}.</strong> Sealed to you with your contacts: every app holding this identity shows it.`);
+    if (panelOpen()?.dataset.kPanel === 'contacts') openContacts();
+    else draw();
+  }
+
   async function people(op: 'follow' | 'unfollow' | 'mute' | 'unmute', id: string) {
-    if (op === 'mute' && !confirm('Mute this identity? Nothing of it is shown here any more. Nobody is told; it is never published.')) return;
-    const r = await busy('Saving…', () => b.ask<Lines>(op, { id }));
+    if (op === 'mute' && !(await ask(app, { title: 'Mute this identity?', text: 'Nothing of it is shown here any more. Nobody is told; it is never published.', yes: 'Mute it' }))) return;
+    // H109: Follow: add to contacts asks a nickname at once (optional, only you see it).
+    let name: string | null = null;
+    if (op === 'follow') {
+      const nick = await askNick(app, { title: `Add ${shortForm(v.actFormOf(id, 'mid'))} to your contacts`, yes: 'Add to contacts', skip: 'Add without a nickname' });
+      if (nick === undefined) return;
+      name = nick;
+    }
+    const r = await busy('Saving…', () => b.ask<Lines>(op, { id, ...(name ? { name } : {}) }));
     if (!r) return;
     state = await b.ask<State>('state');
     if (op === 'follow') say('done', `<strong>Added to contacts.</strong>${r.lines.length ? v.lines(r.lines) : ''}`);
@@ -812,6 +957,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         id: h.id,
         form: v.actFormOf(h.id, 'mid'),
         name: h.who.names[0] ?? null,
+        named: { nick: null, published: h.who.published ?? { state: 'loading' as const } },
+        link: h.who.link,
         on: on && !s.identity?.acting,
         collectives: cs.map((c) => ({ id: c.id, form: c.form, name: c.name, on: s.identity?.acting === c.id, why: c.available ? null : c.why })),
       };
@@ -836,7 +983,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   }
 
   function openContacts() {
-    const html = contactsPanel({ contacts: contacts(), action: 'Message', below: v.contactsBelow(state!) });
+    const html = contactsPanel({ contacts: contacts(), action: 'Message', nick: true, below: v.contactsBelow(state!) });
     if (panelOpen()?.dataset.kPanel === 'contacts') redrawPanel(html);
     else openPanel(app, html);
   }
@@ -855,6 +1002,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           ['line', 'Line and homes', ''],
           ['lane', 'A lane from Damgar', ''],
           ['collective', 'A collective under it', String(s.identity!.collectives.length || '')],
+          ['rules', 'Rules I follow', s.rules?.missing.length ? `${s.rules.missing.length} to approve` : ''],
         ]
       : [['use', 'Use this one', '']];
     popAt(
@@ -879,8 +1027,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'use':
         return use(id, null);
       case 'remove':
-        redrawPanel(identityHtml(false, runnerKind ? v.runnerRemoveSaid(name) : removeSaid('Dub', name)));
-        app.querySelector<HTMLElement>('[data-k-remove-yes]')!.dataset.id = id;
+        // Said plainly first, on top of the panel (H102).
+        openConfirm(app, runnerKind ? v.runnerRemoveSaid(name) : removeSaid('Dub', name)).box.querySelector<HTMLElement>('[data-k-remove-yes]')!.dataset.id = id;
         return;
       case 'name':
         closePanel();
@@ -914,6 +1062,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         closePanel();
         popup.show('A collective under it', v.collectiveForm(s));
         return;
+      case 'rules':
+        return openRules();
     }
   }
 
@@ -975,7 +1125,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       // Keys that arrived for what was bought are looked for first: a file opens once its key is here.
       if (part === 'purchases') void readPayments().then(readBought);
       if (part === 'private') void readInbox();
+      if (part === 'notes') void readNotes();
       return;
+    }
+    // Notes (H122): one chosen, + New note, Edit, Retire, back to the list.
+    const noteB = t.closest<HTMLElement>('[data-note]');
+    if (noteB) {
+      noteOpen = noteB.dataset.note!;
+      noteEditing = false;
+      return drawNotes();
     }
     const lensB = t.closest<HTMLElement>('[data-k-lens]');
     if (lensB) {
@@ -1038,6 +1196,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     const contactOpen = t.closest<HTMLElement>('[data-k-contact-open]');
     if (contactOpen) return openProfile(contactOpen.dataset.kContactOpen!);
+    // H109: a contact's nickname, added, changed or taken away, sealed as the people cMIP keeps it.
+    const nickB = t.closest<HTMLElement>('[data-k-nick]');
+    if (nickB) return nickname(nickB.dataset.kNick!);
     const contactDo = t.closest<HTMLElement>('[data-k-contact-do]');
     if (contactDo) return startConversation(whoOf(contactDo.dataset.kContactDo!));
     const prof = t.closest<HTMLElement>('[data-k-do]');
@@ -1079,6 +1240,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     switch (d.action) {
       case 'unsay':
         return say('', '');
+      case 'note-new':
+        noteOpen = 'new';
+        noteEditing = false;
+        drawNotes();
+        return void app.querySelector<HTMLTextAreaElement>('#note textarea')?.focus();
+      case 'notes-list':
+        noteOpen = null;
+        noteEditing = false;
+        return drawNotes();
+      case 'note-edit':
+        noteEditing = true;
+        drawNotes();
+        return void app.querySelector<HTMLTextAreaElement>('#note textarea')?.focus();
+      case 'note-cancel':
+        noteEditing = false;
+        return drawNotes();
+      case 'note-retire': {
+        if (!(await ask(app, { title: 'Retire this note?', text: 'A last version is signed marking it dropped. Nothing is erased: it stays readable, with its earlier drafts.', yes: 'Retire it', no: 'Keep it' }))) return;
+        const r = await busy('Signing and sealing to you…', () => b.ask<{ id: string; lines: v.Line[] }>('note retire', { latest: d.latest }));
+        if (!r) return;
+        say('done', v.lines(r.lines));
+        return readNotes();
+      }
       case 'runner-again':
         if (closedAsk) showPanel(closedAsk, closedAsk.origin);
         return say('', '');
@@ -1192,7 +1376,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         conv = null;
         return drawPrivate();
       case 'new-conv': {
-        const body = popup.show('A new conversation', '<form id="new-conv" class="dub-modal-form"><label>To: a contact’s name, or an ID</label><input name="to" id="new-to" autocomplete="off" spellcheck="false" required><div class="k-row"><button type="submit" class="k-btn k-p">Open it</button></div></form>');
+        const body = popup.show('A new conversation', `<form id="new-conv" class="dub-modal-form"><label>To: a contact’s name, or an ID</label><div class="k-row"><input name="to" id="new-to" autocomplete="off" spellcheck="false" required class="k-grow">${contactsButtonFor('to')}</div><div class="k-row"><button type="submit" class="k-btn k-p">Open it</button></div></form>`);
         const f = body.querySelector<HTMLInputElement>('#new-to')!;
         attachNames(f, contacts, { mention: false, picked: () => undefined });
         f.focus();
@@ -1298,6 +1482,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const d = new FormData(form);
     const body = form.closest<HTMLElement>('.k-mbody');
     switch (name) {
+      case 'note': {
+        const corrects = form.dataset.corrects ?? null;
+        const r = await busy('Signing and sealing to you…', () => b.ask<{ id: string; lines: v.Line[] }>('note write', { text: String(d.get('text') ?? ''), corrects }));
+        if (!r) return;
+        noteEditing = false;
+        if (!corrects) noteOpen = r.id;
+        say('done', v.lines(r.lines));
+        return readNotes();
+      }
       case 'begin': {
         const r = await busy('Asking each home who runs it, and making the identity…', () =>
           b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')), name: String(d.get('name') ?? '') }),
@@ -1317,7 +1510,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           shown = null;
           part = 'public';
           await b.start();
-          say('done', `<strong>The identity is born.</strong>${v.lines(r.lines)}`);
+          say('done', `<strong>The identity is born.</strong>${v.lines(r.lines)}${ownIdNow()}`);
         }
         return;
       }
@@ -1329,7 +1522,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           inbox = null;
           part = 'public';
           await b.start();
-          say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}`);
+          say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}${ownIdNow()}`);
         }
         return;
       }

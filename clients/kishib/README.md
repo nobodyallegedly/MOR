@@ -130,6 +130,22 @@ Shared, changed by this build: `wasm/src/lib.rs` (`makeRotation` takes `successo
 
 A change of keys may keep, declare anew or remove the identity's **vault** (Money rules 2 and 3): where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments. It changes only with the chain key, so only here (decided by Nobody, allegedly: "its setting belongs in Kišib"); Damgar shows it. The declaration is read back with the rotation and included in what is confirmed (`vaultPlan`, `VaultChange`).
 
+## Fix round 7 (F403, hand test v3)
+
+### In plain words
+
+- **Add an identity to the runner** (H89) is in the Runner tile's own column now; the top right says what Kišib holds and whether the runner is on, as every app's top right does.
+- **Apps** (H124): an app just approved stays where it is, open, so you finish setting it up in place; paired apps are listed newest first.
+- **What an app says it needs** (H126): beside "may open what is sealed to this identity", the app's own words on why it needs it and what it cannot do without it (Damgar: its lanes, payments and rules; Dub: private messages, contacts, purchases; Edubba: proposals to sign). The box stays unticked until you tick it.
+- **A rotation waiting for you** (H97): when another member starts a change of a collective's members, your Kišib lists it under Collectives › Waiting for you, already filled in; on the Mac with the runner on and holding you, at once; elsewhere after your words. It is still checked against the collective's own chain before anything is signed.
+- **The panel says which key signs** for a collective: the collective, and that it is your own member key for it, held in Kišib.
+- **Names, IDs, contacts** (H88, H96, H100, H106, H119, H121): a new identity's last screen, and one given to the runner, show its ID whole with Copy ID and Share your ID link; names wherever an identity is shown; Contacts top left, **shown here, changed in Dub, Damgar, Edubba or Ummia** (changing them signs an act, and Kišib signs only for the apps paired with it); every short ID a tap away from whole, the panel included.
+- The runner turns off from the page as from the seal, and the page follows the seal (H90); the Runner tile shows the seal (H111); questions are asked in the page, never the browser's own dialog.
+
+### Precisely
+
+`src/runner.ts` (stated needs read and kept, `self()` opening for Kišib's own page, nothing signed for itself), `src/collective.ts` (the rotation notice's structured part, written and read; `collectiveNotices`), `src/server.ts` (`/runner/pair` with `needs`; the suite's type served to the panel), `src/page/` (the Runner column's entry, Apps newest first, needs beside the box, Waiting for you prefilled, the kit's `who`, `attachIds`, `attachContacts` read-only). Dub's side: `../dub/src/runner.ts` (`DUB_NEEDS`). Tests: `test/runner-needs.test.ts`, `test/rotation-notice.test.ts`, `test/names-contacts.test.ts`, `test/runner-draft-3.test.ts`, `test/runner-browser.test.ts`.
+
 ## Tests
 
 ```

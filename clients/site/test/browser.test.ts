@@ -239,6 +239,14 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       await inner.waitForSelector('.mor-post img');
       await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
       await page.waitForTimeout(300);
+      // H123: the checking bar in the suite's type, served by the gateway itself, loaded at a phone's width.
+      const type = await page.evaluate(async () => {
+        await document.fonts.ready;
+        const bar = document.getElementById('mor-bar')!;
+        return { family: getComputedStyle(bar).fontFamily, loaded: [...document.fonts].filter((x) => x.status === 'loaded').map((x) => x.family.replace(/"/g, '')) };
+      });
+      assert.match(type.family, /^"?Atkinson Hyperlegible Next/);
+      assert.ok(type.loaded.includes('Atkinson Hyperlegible Next'), `the type loaded: ${type.loaded.join(', ')}`);
       const m = await page.evaluate(() => {
         const frame = document.getElementById('mor-page') as HTMLIFrameElement;
         const d = frame.contentDocument!;

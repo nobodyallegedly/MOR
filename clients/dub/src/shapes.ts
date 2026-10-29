@@ -4,6 +4,7 @@
 // never a word, except the words a person asked to see.
 
 import type { LineShown } from '../../genesis/src/card-words.ts';
+import type { NameShown } from '../../kit/src/html.ts';
 /** Said before a follow list is first published (the people cMIP, 3.5), word for word. */
 export const PUBLISH_WARNING =
   'Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.';
@@ -20,6 +21,8 @@ export interface Who {
   short: string;
   /** Its display names that count (the naming cMIP, section 3): free text, not unique. */
   names: string[];
+  /** Its published name as read (H96): the name, none published, not reached, or not read yet. */
+  published?: NameShown;
   /** The name the person gave it in this app (the people cMIP), never published. */
   pet: string | null;
   me: boolean;
@@ -75,6 +78,8 @@ export interface Item {
   form: string;
   /** When, by the clock this feed names (H54), in words; null where not stamped. */
   when?: string | null;
+  /** The feed is ordered by a clock that has not stamped this act yet (H110): said faint, placed by its signer's own sequence. */
+  unstamped?: boolean;
   /** The signer's own hint (field 9), as written: shown labelled as its own where no clock stamped the act. */
   hint?: string | null;
   /** Films it shows (H52). */
@@ -146,6 +151,8 @@ export interface Held {
 }
 
 export interface State {
+  /** Rules I follow (H93): the rules Dub runs, and where each is followed. */
+  rules?: import('../../kit/src/engine/rules.ts').RulesShown;
   /** The identity window (no identity in use), three words to type back, or the app. */
   stage: 'identity' | 'confirm' | 'ready';
   /** The units a money draft may name (Damgar's units Modules), regtest first, each with how Dub writes it. */

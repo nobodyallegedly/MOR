@@ -5814,7 +5814,7 @@ var FEED_STYLE = `${STYLE}
 :root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 "Atkinson Hyperlegible Next",system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 .f-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
 .f-post{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
 .f-post.f-bad{border-color:var(--bad);border-style:dashed}
@@ -5832,7 +5832,7 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-post figcaption,.f-missing{font-size:12px;color:var(--soft)}
 .f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
 .f-post summary{cursor:pointer;min-height:24px}
-.f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.f-post code,.f-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
 .f-more{font-size:13px;color:var(--soft)}
 .f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
 .f-visitor .f-text{font-size:16px}
@@ -6744,7 +6744,7 @@ async function readExtensions(found, byHash, judge, privateActs) {
 var LISTING_STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 "Atkinson Hyperlegible Next",system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 .l-any{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:15px}
 .l-any strong{display:block;font-size:17px}
 .l-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
@@ -6763,7 +6763,7 @@ body{margin:0;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,-apple-
 .l-drafts li{margin:2px 0}
 .l-line details{margin-top:8px;font-size:12px;color:var(--soft)}
 .l-line summary{cursor:pointer;min-height:24px}
-code,.l-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+code,.l-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
 .l-section{margin:16px 0 8px;font-size:15px}
 .l-none{font-size:14px;color:var(--soft)}
 .l-h{margin:18px 0 6px;font-size:19px}
@@ -7047,6 +7047,66 @@ function layOver(frame2, players) {
 }
 
 // src/shell/view.ts
+var fontFaces = (base) => ["next", "mono"].map((k) => `@font-face{font-family:"Atkinson Hyperlegible ${k === "next" ? "Next" : "Mono"}";src:url("${base ? `${base}/_mor/` : ""}atkinson_${k}.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap}`).join("\n");
+var STYLE3 = `${fontFaces("")}
+:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e;--bar:color-mix(in srgb,CanvasText 6%,Canvas)}
+@media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:Canvas;color:CanvasText;font:15px/1.45 "Atkinson Hyperlegible Next",system-ui,sans-serif}
+#mor-bar{flex:none;padding:8px 16px;border-bottom:2px solid var(--line);background:var(--bar);max-height:60vh;overflow:auto}
+#mor-bar.ok{border-bottom-color:var(--ok)}
+#mor-bar.bad{border-bottom-color:var(--bad)}
+#mor-bar .standing{font-weight:600}
+#mor-bar .brief{display:none}
+@media (max-width:40em),(max-height:30em){#mor-bar .brief{display:block}#mor-bar .brief+.standing{display:none}}
+#mor-bar.ok .standing{color:var(--ok)}
+#mor-bar.bad .standing{color:var(--bad)}
+#mor-bar .newer{margin-top:4px;font-weight:600}
+#mor-bar details{margin-top:4px;font-size:13px}
+#mor-bar summary{cursor:pointer;color:var(--soft)}
+#mor-bar dl{margin:6px 0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px}
+#mor-bar dt{color:var(--soft)}
+#mor-bar dd{margin:0;overflow-wrap:anywhere}
+#mor-bar ul{margin:4px 0;padding-left:18px}
+code,.fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:.92em;overflow-wrap:anywhere}
+.ok-word{color:var(--ok);font-weight:600}
+.bad-word{color:var(--bad);font-weight:600}
+#mor-view{flex:1;position:relative}
+#mor-view>iframe{display:block;width:1px;min-width:100%;height:calc(100vh - 4em);border:0;background:Canvas}
+#mor-view>.file{padding:16px}
+#mor-view img{max-width:100%;height:auto;image-orientation:from-image}
+#mor-view pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace}
+.note{max-width:42em;margin:24px auto;padding:10px 12px;border-left:3px solid var(--bad)}
+.mor-player{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;overflow:hidden;font:14px/1.4 system-ui,sans-serif}
+.file .mor-player{position:relative;width:100%;aspect-ratio:16/9}
+.mor-player>img,.mor-player>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
+.mor-player>button{position:relative;font:600 16px system-ui,sans-serif;padding:12px 20px;border:0;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;cursor:pointer}
+.mor-player>.mor-film-note{position:relative;max-width:90%;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.65);text-align:center}
+.mor-player.played>.mor-film-note{display:none}
+.mor-film-open{position:absolute;margin:0;padding:0;border:0;border-radius:999px;background:transparent;color:transparent;font:inherit;cursor:pointer;overflow:hidden;white-space:nowrap}
+.mor-film-open:hover{background:rgba(127,127,127,.18)}
+.mor-film-open:focus-visible{outline:3px solid Highlight;outline-offset:2px}
+.mor-popup{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.8)}
+.mor-popup-panel{display:flex;flex-direction:column;gap:8px;width:min(100%,64em);max-height:100%}
+.mor-popup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;font:600 16px/1.3 system-ui,sans-serif}
+.mor-popup-title{overflow-wrap:anywhere}
+.mor-popup-close{flex:none;min-height:44px;padding:8px 16px;border:2px solid #fff;border-radius:999px;background:#000;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
+.mor-popup .mor-player{position:relative;align-self:center;width:min(100%,calc((100vh - 96px) * var(--shape,1.7778)));width:min(100%,calc((100dvh - 96px) * var(--shape,1.7778)));aspect-ratio:var(--shape,16/9)}
+.mor-write-box{position:absolute;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:Canvas;color:CanvasText;font:16px/1.45 system-ui,-apple-system,sans-serif;overflow:hidden}
+.mw-inner{display:flex;flex-direction:column;gap:8px}
+.mw-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mw-lab{min-width:2.2em;font-size:14px;color:var(--soft)}
+.mw-opt{min-height:40px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:Canvas;color:CanvasText;font:600 15px system-ui,sans-serif;cursor:pointer}
+.mw-opt[aria-pressed=true]{background:CanvasText;color:Canvas;border-color:CanvasText}
+.mw-means,.mw-always{margin:0;font-size:14px}
+.mw-always{color:var(--soft);font-size:13px}
+.mw-text{width:100%;min-height:6em;padding:8px;border:1px solid var(--line);border-radius:8px;background:Canvas;color:CanvasText;font:16px/1.4 system-ui,sans-serif;resize:vertical}
+.mw-send-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.mw-send{min-height:44px;padding:8px 22px;border:0;border-radius:999px;background:var(--ok);color:#fff;font:600 16px system-ui,sans-serif;cursor:pointer}
+.mw-send:disabled{opacity:.5;cursor:default}
+.mw-status{font-size:14px}
+.mw-ok{color:var(--ok)}
+.mw-bad{color:var(--bad)}`;
 var FRAME_STYLE = `.mor-act{display:block;margin:1em 0}
 .mor-film{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .mor-film-link{display:inline-block;padding:.4em 1em;border:1px solid currentColor;border-radius:999px;font:600 14px/1.3 system-ui,sans-serif;white-space:nowrap}
@@ -7612,7 +7672,8 @@ async function showActs(frame2, settings) {
 async function showFeeds(frame2, settings, feeds, clocks) {
   const doc = frame2.contentDocument;
   if (!doc || !feeds.length) return;
-  const style = URL.createObjectURL(new Blob([FEED_STYLE], { type: "text/css" }));
+  const style = URL.createObjectURL(new Blob([`${fontFaces(location.origin)}
+${FEED_STYLE}`], { type: "text/css" }));
   for (const box of [...doc.querySelectorAll(".mor-feed[data-feed]")]) {
     const i = Number(box.dataset.feed);
     const authors = feeds[i];
@@ -7649,7 +7710,8 @@ async function showFeeds(frame2, settings, feeds, clocks) {
 async function showListings(frame2, settings, listings) {
   const doc = frame2.contentDocument;
   if (!doc || !listings.length) return;
-  const style = URL.createObjectURL(new Blob([LISTING_STYLE], { type: "text/css" }));
+  const style = URL.createObjectURL(new Blob([`${fontFaces(location.origin)}
+${LISTING_STYLE}`], { type: "text/css" }));
   for (const box of [...doc.querySelectorAll(".mor-listing[data-listing]")]) {
     const i = Number(box.dataset.listing);
     const asked = listings[i];

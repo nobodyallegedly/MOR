@@ -628,7 +628,8 @@ test('the program’s page: Make an identity (H48), its chain key’s words once
   await shot(page, '54-made');
   // The identity counts at its homes; Dub brings it with its signing words; its chain words are the right paper.
   const id = (await k.c.ask<{ sitting: { id: string } }>('state')).sitting.id;
-  assert.match(await page.locator('.kishib-pane h2').first().innerText(), new RegExp(id.slice(0, 8)));
+  // H121: the heading names it, its short ID a tap (never a bare short ID).
+  assert.equal(await page.locator(`.kishib-pane h2 [data-k-who="${id}"] .k-idbtn`).count(), 1);
   const brought = await dubBringing(id, signing.join(' '), H[0]);
   const p = await brought.c.ask<{ post: { id: string } }>('post', { text: 'Made in Kišib.' });
   assert.equal(await standing(p.post.id, id, [relay.base, ...H]), 'valid');

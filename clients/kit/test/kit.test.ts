@@ -15,10 +15,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { chromium, type Browser, type Page } from 'playwright-core';
+import { chromium, webkit, type Browser, type Page } from 'playwright-core';
 import { KIT_STYLE } from '../src/style.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/** WebKit, Safari's engine, which every browser on an iPad and an iPhone uses (`MOR_BROWSER=webkit`, Playwright's own build, installed on GitHub's machines): the rows from the iPad and the iPhone (H84, H99's tap, H102, H105, the type at 390 px). */
+const WEBKIT = process.env.MOR_BROWSER === 'webkit';
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const shots = process.env.MOR_SCREENSHOTS;
 
@@ -32,7 +34,7 @@ const listen = (s: Server) => new Promise<string>((r) => s.listen(0, '127.0.0.1'
 
 before(async () => {
   const js = (await build({ entryPoints: [here('test/demo.ts')], bundle: true, format: 'esm', write: false, target: 'es2022' })).outputFiles[0].text;
-  const fonts = (f: string) => readFileSync(here(`../dub/static/fonts/${f}`));
+  const fonts = (f: string) => readFileSync(here(`fonts/${f}`));
   // The other app's origin, for the slot: its own page, posting one message to whoever framed it.
   page2 = createServer((req, res) => {
     if (req.url === '/frame') {
@@ -52,7 +54,7 @@ before(async () => {
     res.writeHead(404).end();
   });
   base = await listen(page1);
-  browser = await chromium.launch({ executablePath: CHROMIUM });
+  browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
 });
 
 after(async () => {
@@ -67,8 +69,15 @@ const SIZES = [
 ] as const;
 
 async function open(size: (typeof SIZES)[number]) {
-  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, permissions: ['clipboard-read', 'clipboard-write'] });
+  // WebKit knows no clipboard permissions and reads the clipboard only on a paste: there, what the page writes is kept and read back from the page.
+  const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, permissions: WEBKIT ? [] : ['clipboard-read', 'clipboard-write'] });
   const page = await context.newPage();
+  // Given as text: a function here would carry the test's compiled helpers (`__name`), unknown in the page.
+  if (WEBKIT)
+    await page.addInitScript(`{
+      let kept = '';
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { kept = t; }, readText: async () => kept } });
+    }`);
   const problems: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error' || /Content Security Policy/i.test(m.text())) problems.push(m.text());
@@ -152,9 +161,13 @@ for (const size of SIZES) {
     // The feed box scrolls inside, never the page.
     assert.equal(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight), true, 'the page itself does not scroll');
     assert.equal(await page.locator('.k-feed').evaluate((f) => getComputedStyle(f).overflowY), 'auto');
-    // Inter, in its light weight, from the page's own origin.
+    // H123: Atkinson Hyperlegible Next for words, its Mono for IDs, Gentium Book Plus italic for the app's name, from the page's own origin.
     await page.evaluate(() => document.fonts.ready);
-    assert.equal(await page.evaluate(() => document.fonts.check('300 15px Inter')), true);
+    assert.equal(await page.evaluate(() => document.fonts.check('300 15px "Atkinson Hyperlegible Next"')), true);
+    assert.equal(await page.evaluate(() => document.fonts.check('12px "Atkinson Hyperlegible Mono"')), true);
+    // The app's name is hidden at a phone's width: its face is loaded where it is shown.
+    if (size.name === 'mac') assert.equal(await page.evaluate(() => document.fonts.check('italic 16px "Gentium Book Plus"', 'Kišib na₄')), true);
+    assert.deepEqual(await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')).sort()), ['Atkinson Hyperlegible Mono', 'Atkinson Hyperlegible Next', ...(size.name === 'mac' ? ['Gentium Book Plus'] : [])]);
     await noFindingNumber(page);
     assert.deepEqual(problems, []);
     await close();
@@ -223,6 +236,76 @@ for (const size of SIZES) {
     await close();
   });
 
+  test(`H102 and H91, at ${size.name} size: one stack, whatever opens last on top; × on each; Escape and a tap outside close the top one, a form typed in asking first; a note’s ×`, async () => {
+    const { page, problems, close } = await open(size);
+    const onTop = (sel: string) =>
+      page.locator(sel).first().evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 40));
+        return !!at && el.contains(at) && r.top >= 0 && r.bottom <= window.innerHeight + 1;
+      });
+    // The identity panel, its × top right; Remove from its menu: the confirmation drawn over the panel, never beneath it.
+    await page.locator('[data-k-open="identity"]').click();
+    const panel = page.locator('[data-k-panel="identity"]');
+    await panel.waitFor();
+    assert.equal(await panel.locator('[data-k-close]').count(), 1, 'the panel’s ×');
+    await page.locator('[data-k-idmenu]').first().click();
+    await page.getByRole('menuitem', { name: 'Remove from Demo…' }).click();
+    const confirm = page.locator('[data-k-confirm]');
+    await confirm.waitFor();
+    assert.ok(await onTop('[data-k-confirm]'), 'the confirmation is on top, in view');
+    const z = await page.evaluate(() => [Number(getComputedStyle(document.querySelector('[data-k-panel]')!).zIndex), Number(getComputedStyle(document.querySelector('[data-k-confirm]')!).zIndex)]);
+    assert.ok(z[1] > z[0], `confirmation ${z[1]} above panel ${z[0]}`);
+    await shot(page, size.name, 'stack-remove-on-top');
+    // Keep it: the confirmation goes, the panel stays beneath.
+    await confirm.locator('[data-k-remove-no]').click();
+    await confirm.waitFor({ state: 'detached' });
+    assert.ok(await panel.isVisible());
+    // Remove again, then Escape: only the top one closes.
+    await page.locator('[data-k-idmenu]').first().click();
+    await page.getByRole('menuitem', { name: 'Remove from Demo…' }).click();
+    await confirm.waitFor();
+    await page.keyboard.press('Escape');
+    await confirm.waitFor({ state: 'detached' });
+    assert.ok(await panel.isVisible(), 'Escape closed the confirmation only');
+    // The panel's ×.
+    await panel.locator('[data-k-close]').click();
+    await panel.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.k-shade').count(), 0, 'nothing left over the page');
+    // A pop-up with a form: a tap outside closes it at once while nothing is typed; typed in, it asks first.
+    await page.evaluate(() => window.openForm());
+    const modal = page.locator('.k-modal').first();
+    await modal.waitFor();
+    assert.equal(await modal.locator('[data-k-popup="close"]').count(), 1, 'the pop-up’s ×');
+    await page.mouse.click(5, size.height - 5);
+    await modal.waitFor({ state: 'detached' });
+    await page.evaluate(() => window.openForm());
+    await page.locator('#demo-form textarea').fill('Half a thought');
+    await page.keyboard.press('Escape');
+    const leave = page.locator('[data-k-leave]');
+    await leave.waitFor();
+    assert.ok(await onTop('[data-k-confirm]'), 'asked on top');
+    await page.locator('[data-k-leave-no]').click();
+    await leave.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('#demo-form textarea').inputValue(), 'Half a thought', 'kept writing');
+    await page.mouse.click(5, size.height - 5);
+    await leave.waitFor();
+    await shot(page, size.name, 'stack-close-it');
+    await page.locator('[data-k-leave-yes]').click();
+    await page.locator('#demo-form').waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.k-shade').count(), 0, 'nothing left over the page');
+    // A note under the top: its ×, and Escape, take it away.
+    await page.evaluate(() => window.sayNote('Saved.'));
+    await page.locator('#status [data-k-status-close]').click();
+    assert.equal(await page.locator('#status').innerText(), '');
+    await page.evaluate(() => window.sayNote('Saved again.'));
+    await page.locator('#status [data-k-status-close]').waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#status').innerText(), '');
+    assert.deepEqual(problems, []);
+    await close();
+  });
+
   test(`@ and To… by names, two names colliding, at ${size.name} size`, async () => {
     const { page, problems, close } = await open(size);
     const ta = page.locator('#post textarea');
@@ -236,7 +319,7 @@ for (const size of SIZES) {
     // The two called Pa carry a faint short ID; Ph, alone with its name, carries none.
     assert.equal(await pop.locator('[data-k-pick] .k-k').count(), 2);
     assert.match(offered[0], /Pa\s*mid1bbx…m4k/);
-    assert.match(offered[2], /^P?\s*Ph$/);
+    assert.match(offered[2], /^P?\s*Ph\s*$/);
     await shot(page, size.name, 'mention');
     await pop.locator('[data-k-pick]').nth(1).click();
     assert.equal(await ta.inputValue(), 'Thursday then. @Pa ');
@@ -300,6 +383,73 @@ for (const size of SIZES) {
   });
 }
 
+test('H105: a tile’s icon and its words never overlap, at 390 px wide (a tall and a short phone), light and dark', async () => {
+  for (const height of [844, 600]) {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      const context = await browser.newContext({ viewport: { width: 390, height }, colorScheme });
+      const page = await context.newPage();
+      await page.goto(base);
+      await page.locator('[data-k-part="tiles"]').click();
+      await page.locator('.k-tile').first().waitFor();
+      const overlaps = await page.locator('.k-tile').evaluateAll((ts) =>
+        ts.flatMap((t) => {
+          const ic = t.querySelector('.k-ic')!.getBoundingClientRect();
+          return [...t.querySelectorAll('h2, p')].map((w) => w.getBoundingClientRect()).filter((w) => w.height && ic.bottom > w.top + 0.5 && ic.top < w.bottom && ic.right > w.left && ic.left < w.right).map(() => t.querySelector('h2')!.textContent);
+        }),
+      );
+      assert.deepEqual(overlaps, [], `no overlap at 390×${height}, ${colorScheme}`);
+      if (shots) await page.screenshot({ path: join(shots, `kit-tiles-390x${height}-${colorScheme}.png`), fullPage: true });
+      await context.close();
+    }
+  }
+});
+
+test('H84: @ suggestions at the iPad’s size with its keyboard up: just above the typing box, within the part of the page seen', async () => {
+  const context = await browser.newContext({ viewport: { width: 820, height: 1180 }, hasTouch: true });
+  // The keyboard, as the iPad's Safari makes it: the page keeps its height, the part seen (the visual viewport) shortened and scrolled.
+  await context.addInitScript(() => {
+    const vv = Object.assign(new EventTarget(), { offsetTop: 420, offsetLeft: 0, width: 820, height: 760, scale: 1, pageTop: 420, pageLeft: 0 });
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+  });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.locator('.k-act').first().waitFor();
+  const ta = page.locator('#post textarea');
+  await ta.click();
+  await ta.pressSequentially('See you, @P');
+  const pop = page.locator('[data-k-suggest]');
+  await pop.waitFor();
+  const [p, f] = await Promise.all([pop.boundingBox(), page.locator('form#post.k-typing, #post').first().boundingBox()]);
+  assert.ok(p && f);
+  assert.ok(p.y >= 420 && p.y + p.height <= 420 + 760, `within the part seen: ${p.y}..${p.y + p.height}`);
+  assert.ok(p.y + p.height <= f.y + 1 && f.y - (p.y + p.height) < 16, `just above the typing box: ${p.y + p.height} above ${f.y}`);
+  if (shots) await page.screenshot({ path: join(shots, 'kit-mention-ipad-keyboard.png') });
+  await context.close();
+});
+
+test('H99: two signs, tapped on a phone: the "?" unfolds an explanation and nothing to do; the chevron opens a panel to work in, turning down', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.locator('.k-say').first().waitFor();
+  const sayBox = page.locator('.k-say', { hasText: 'Test identities only' });
+  assert.equal(await sayBox.locator('summary .k-help').innerText(), '?');
+  assert.equal(await sayBox.locator('form, input, button:not([data-k-mor])').count(), 0, 'the "?" holds nothing to do');
+  await sayBox.locator('summary').tap();
+  await sayBox.locator('.k-more-text', { hasText: 'Every key is held in software.' }).waitFor();
+  const fold = page.locator('.k-fold', { hasText: 'A lane from Damgar' });
+  assert.equal(await fold.locator('.k-help').count(), 0, 'no "?" on a panel to work in');
+  const turned = () => fold.locator('.k-chev').evaluate((el) => getComputedStyle(el).transform);
+  assert.ok(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(await turned()), 'the chevron points right, closed');
+  await fold.locator('summary').tap();
+  await fold.locator('form#lane-demo input[name=cap]').waitFor();
+  await page.waitForTimeout(250);
+  const m = (await turned()).match(/matrix\(([^)]+)\)/)![1].split(',').map(Number);
+  assert.ok(Math.abs(m[0]) < 0.01 && Math.abs(m[1] - 1) < 0.01, `the chevron turned down: ${m.join(',')}`);
+  if (shots) await page.screenshot({ path: join(shots, `kit-h99-signs${WEBKIT ? '-webkit' : ''}.png`) });
+  await context.close();
+});
+
 test('the slot: another app’s panel in a frame the host cannot read or change', async () => {
   const { page, problems, close } = await open(SIZES[0]);
   // An origin not given as the other app's: refused, nothing drawn.
@@ -319,6 +469,7 @@ test('the slot: another app’s panel in a frame the host cannot read or change'
   await shot(page, 'mac', 'slot');
   await page.locator('.k-frame .k-round').click();
   assert.equal(await page.locator('.k-frame').count(), 0);
-  assert.deepEqual(problems, []);
+  // WebKit says the host's own read was refused in the console: what this test expects, not a problem.
+  assert.deepEqual(problems.filter((p) => !(WEBKIT && /^Blocked a frame at .* from accessing a frame at "null"\.\s+The frame being accessed is sandboxed/.test(p))), []);
   await close();
 });

@@ -11,6 +11,8 @@ export function contentSecurityPolicy(extraConnect: string[] = []): string {
     "default-src 'none'",
     "script-src 'self' 'wasm-unsafe-eval'",
     "style-src 'self' blob:",
+    // The suite's type, served by the gateway itself (H123).
+    "font-src 'self'",
     "img-src 'self' blob: data:",
     "media-src blob:",
     `connect-src 'self' https: ${extraConnect.join(' ')}`.trim(),

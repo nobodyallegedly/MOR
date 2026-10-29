@@ -19,6 +19,8 @@ export const OPS = [
   'carry',
   'check',
   'accept',
+  'accept later',
+  'first back',
   'publish list',
   'look',
   'to sign',
@@ -68,6 +70,12 @@ export const OPS = [
   'runner asking',
   'runner drop',
   'runner unpair',
+  // H96, H100, H109, H119: names and the one contacts list, as every app.
+  'names',
+  'contacts',
+  'contact add',
+  'contact nick',
+  'contact remove',
 ] as const;
 
 /** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
@@ -92,6 +100,10 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
   switch (op) {
     case 'state':
       return d.state();
+    case 'accept later':
+      return d.acceptLater();
+    case 'first back':
+      return d.firstBack();
     case 'clock words':
       return d.clockWords(list(a.ids));
     case 'bring':
@@ -109,7 +121,7 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
     case 'check':
       return d.check();
     case 'accept':
-      return d.setAccepted(list(a.keys));
+      return d.setAccepted(list(a.keys), a.in === 'here' ? 'here' : 'list');
     case 'publish list':
       return d.publishList(a.on === true);
     case 'look':
@@ -141,9 +153,9 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
     case 'rails':
       return d.rails();
     case 'rails review':
-      return d.railsReview({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true });
+      return d.railsReview({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list(a.order) : undefined });
     case 'rails publish':
-      return d.publishRails({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, digest: text(a.digest) });
+      return d.publishRails({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list(a.order) : undefined, digest: text(a.digest) });
     case 'relays':
       return d.setRelays(list(a.relays));
     case 'lanes':
@@ -206,6 +218,16 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
       return d.runnerDrop({ request: text(a.request) });
     case 'runner unpair':
       return d.runnerUnpair();
+    case 'names':
+      return d.names({ ids: list(a.ids), fresh: a.fresh === true });
+    case 'contacts':
+      return d.contacts({ fresh: a.fresh === true });
+    case 'contact add':
+      return d.contactChange({ op: 'add', id: text(a.id), nick: text(a.nick) });
+    case 'contact nick':
+      return d.contactChange({ op: 'nick', id: text(a.id), nick: text(a.nick) });
+    case 'contact remove':
+      return d.contactChange({ op: 'remove', id: text(a.id) });
     case 'answer address':
       return d.answerAddress(text(a.id));
     default:

@@ -18,7 +18,7 @@ export const FEED_STYLE = `${LONGFORM_STYLE}
 :root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
 *{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 "Atkinson Hyperlegible Next",system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
 .f-note{margin:0 0 12px;font-size:13px;color:var(--soft)}
 .f-post{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
 .f-post.f-bad{border-color:var(--bad);border-style:dashed}
@@ -36,7 +36,7 @@ body{margin:0;background:Canvas;color:CanvasText;font:17px/1.5 system-ui,-apple-
 .f-post figcaption,.f-missing{font-size:12px;color:var(--soft)}
 .f-post details{margin-top:8px;font-size:12px;color:var(--soft)}
 .f-post summary{cursor:pointer;min-height:24px}
-.f-post code,.f-fp{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.f-post code,.f-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
 .f-more{font-size:13px;color:var(--soft)}
 .f-visitor{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,Canvas)}
 .f-visitor .f-text{font-size:16px}
