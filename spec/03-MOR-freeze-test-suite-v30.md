@@ -48,7 +48,15 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] Rotation to a signing key of a new scheme, unknown to a client without it, valid to one with it; an identity born under a scheme a client lacks: its rotation the client can verify, and every act under it, unknown, never invalid (8)
 - [ ] Collective as an identity with a threshold key grammar and a split chain key; a grammar with a recovery path (3)
 
-**Envelopes and Text**
+**Text**
+
+- [ ] A text act with no text, with a field 0 that is not a text string, with a field 2, or of a type Text does not define: invalid in every client *(component)*
+- [ ] A text act carrying `objects` is invalid at every verifier, and never a fork of another MIR's chain, save two cases (Text rule 14); one carrying `acks` is invalid *(component)*
+- [ ] Text rule 14's two cases: a collective's text carrying exactly one object, `[collective, decision]`, naming itself as chain and its own latest decision (a link of its identity chain or one of its records) as predecessor, placed on its actions chain by Agreements rule 58's pointer; a text signed with a grant key carrying exactly one object, `[grantor, grant]`, naming its grantor as chain and the grant its `binding` names as predecessor, whether the grant backs it judged by Agreements; a text signed with a holder's member key carrying exactly one object, `[collective, version]`, the founding or clone its binding's signature names; any other `objects` on a text act invalid, whoever signs it and with whatever key, two objects included; a verifier not holding the signer's identity chain, the decision or the grant answering unknown *(component)*
+- [ ] Canonical text; format shown as plain text by a client without the format; a format hiding only its markup, adding nothing and keeping the order of the bytes, checked by the client implementing the format *(conformance)*; bidirectional controls shown visibly before signing terms *(conformance)* (1, 5)
+- [ ] Text universal across sub-networks (5)
+
+**Envelopes**
 
 - [ ] Act with outside and locked inside; salted inside commitment; closed format (all)
 - [ ] Public act with key attached; private act with key delivered; going public later by publishing the key (2, 5)
@@ -62,9 +70,6 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] A key delivery whose key does not open what it names: valid as an act, its key ignored; shown so *(component; the showing is conformance)*
 - [ ] Acknowledgements counting only alongside the act they name; references, including a web reference with a snapshot hash; a repost as a reference; a reference naming its act's signer, followed by it to where the act is kept, a wrong signer failing only when followed and never making an act invalid, a client naming the signer of every public act it refers to (client conformance) (2, 5)
 - [ ] Only Identity, Money and Agreements act types carry acknowledgements: a text act carrying `acks` is invalid; a reaction under a cMIP carrying `acks` is invalid; a post still becomes a dispute when a witness act or a buyer's claim acknowledges it (2, 5)
-- [ ] A text act with no text, with a field 0 that is not a text string, with a field 2, or of a type Text does not define: invalid in every client *(component)*
-- [ ] A text act carrying `objects` is invalid at every verifier, and never a fork of another MIR's chain, save two cases (Text rule 14); one carrying `acks` is invalid *(component)*
-- [ ] Text rule 14's two cases: a collective's text carrying exactly one object, `[collective, decision]`, naming itself as chain and its own latest decision (a link of its identity chain or one of its records) as predecessor, placed on its actions chain by Agreements rule 58's pointer; a text signed with a grant key carrying exactly one object, `[grantor, grant]`, naming its grantor as chain and the grant its `binding` names as predecessor, whether the grant backs it judged by Agreements; a text signed with a holder's member key carrying exactly one object, `[collective, version]`, the founding or clone its binding's signature names; any other `objects` on a text act invalid, whoever signs it and with whatever key, two objects included; a verifier not holding the signer's identity chain, the decision or the grant answering unknown *(component)*
 - [ ] An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown *(component)*
 - [ ] A publication's size is that of its unlocked media; one that is not is shown as inconsistent (2)
 - [ ] Work hash of plaintext; locked media fingerprinted; segmentation by the named cMIP; a live stream sold by offer (1, 2, 6)
@@ -72,8 +77,6 @@ Each box is ticked only when the component has passed. Numbers show the scenario
 - [ ] Key delivery to an identity and to a bare application key; delegated key release stopping on lapse (6, 7)
 - [ ] Relays; inbox delivery (4, 5) *(Envelopes type 2 is retired; a relay's statement of the acts it holds is the relay transport cMIP's, and scenario 4's commitment is the voting cMIP's own)*
 - [ ] Publication with `for`; withdrawal by signer or `for`, including a payment racing it; a withdrawal in its format, `{}` with the entry `[publication, publication]`; the withdrawal's authority, its publication's signer or `for` (Envelopes rule 24), unknown while the publication is not held (2, 3, 5)
-- [ ] Canonical text; format shown as plain text by a client without the format; a format hiding only its markup, adding nothing and keeping the order of the bytes, checked by the client implementing the format *(conformance)*; bidirectional controls shown visibly before signing terms *(conformance)* (1, 5)
-- [ ] Text universal across sub-networks (5)
 
 **Money**
 

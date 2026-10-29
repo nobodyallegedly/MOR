@@ -17,15 +17,20 @@ The core is deliberately agnostic. It describes identities, media, money, agreem
 
 ## Structure
 
-The core is six MIRs, organised in layers, each depending on those beneath it. No rule of a lower layer depends on data only a higher layer's client holds; where a higher layer needs a lower one to carry something, it is a field there.
+The core is six layers, one per MIR, each depending on those beneath it. They are numbered in this order wherever a format names a layer: 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development. No rule of a lower layer depends on data only a higher layer's client holds; where a higher layer needs a lower one to carry something, it is a field there.
 
-| Layer | MIRs | Contains |
+| Layer | MIR | Contains |
 | --- | --- | --- |
-| Ground | Identity | Identity hash, keys, rotation, homes and receipts, sequences, routes and the inbox, links, succession, the way out |
-| Communication | Envelopes, Text | Acts (outside and locked inside), public and private, key delivery, chains, media, relays, delivery, withdrawal; canonical text |
-| Money | Money | Obligations, settlement receipts and payer claims across rails, payee pointers, flow and vault |
-| Agreements | Agreements | Agreements, keepers, stakes, work claims, splits, offers, time, collectives, grants, cloning, abandonment, contests; a stake's holders' rule, the owners' matters, issuance and proxies |
-| Development | Development | How specifications are named, published, adopted and paid, and what each kind must carry; tasks, extensions and xtypes; the trust root |
+| 0 Identity | Identity | The ground: identity hash, keys, rotation, homes and receipts, sequences, routes and the inbox, links, succession, the way out |
+| 1 Text | Text | Canonical text, the one native media: the text act, plain text always shown, the text format task. Text is universal |
+| 2 Envelopes | Envelopes | Acts (outside and locked inside), public and private, key delivery, chains, media and the bake, vows, relays, delivery. Media other than text runs on Modules |
+| 3 Money | Money | Obligations, settlement receipts and payer claims across rails, payee pointers, flow and vault, the price tag |
+| 4 Agreements | Agreements | Agreements, keepers, claims, ownership agreements and their shares, publications and splits, time, collectives, grants, cloning, abandonment, contests; a stake's holders' rule, the owners' matters, issuance and proxies |
+| 5 Development | Development | How specifications are named, published, adopted and paid, and what each kind must carry; tasks, extensions and xtypes; the trust root |
+
+**From bake to publication.** A work reaches its public in four acts, each saying one thing: a **bake** (Envelopes), "I uploaded this"; a **claim** (Agreements), "I claim to have made this"; an **ownership agreement** (Agreements), "we have agreed that this is how we claim joint ownership"; a **publication** (Agreements), "this is how we agree to publish it with these specified partners". The price is a fifth thing, a **price tag** (Money), which any wallet can pay. Ownership is one thing, distribution another: one work has one ownership agreement and may have many publications, each with its own price, partners and split, the owners' shares read from the ownership agreement in all of them. *Unless there is a publication, money sent to a bake goes to its uploader, with no split possible.*
+
+**A collective acts through its members, and is judged in Agreements.** A collective is an identity with a chain key and no signing key of its own; its members act for it with their own keys, under the rules its founding names for each of five layers (Text, Envelopes, Money, Agreements, Development), and Agreements judges each such act. *Stated cost: a client knowing only Identity, or only Money, judges nothing a collective does; it shows every act for a collective unknown, and a Money-only wallet cannot pay a collective. Customers use agreements; only tips do not.*
 
 **Tasks.** A task is a point where a MIR hands work to a cMIP that an agreement may name by the task's number. Tasks exist only where the MICS defines them; the full list is in Development. A hand-off with no task number is no task: a proven offer names its own proof checker.
 

@@ -139,7 +139,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - An area with no holder whose voice remains stands frozen; a clone may list none at all.
 
   An area reaching a whole layer also decides which cMIPs the collective adopts for that layer's tasks, and an area reaching Development decides which extensions it adopts. Below, "the area reaching Money" (or another layer) is such an area.
-- **Layer.** One of MOR's layers (core, "Structure"): Identity; Envelopes and Text; Money; Agreements; Development. Which layer an act belongs to depends on its `spec`:
+- **Layer.** One of MOR's six layers, one per MIR (core, "Structure"), numbered wherever a format names one: 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development. Which layer an act belongs to depends on its `spec`:
   - An act whose `spec` is a MIR belongs to that MIR's layer.
   - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIR defining it (Development, "The tasks the core defines").
   - An act whose `spec` is an extension the agreement names (field 15) belongs to Development.
@@ -1652,7 +1652,7 @@ A collective's founding agreement may divide its acts and its operational fields
 
 An area is drawn either:
 
-- by whole layer (Identity, Envelopes and Text, Money, Agreements, Development); or
+- by whole layer (Text, Envelopes, Money, Agreements, Development); or
 - by act type within a specification.
 
 Genesis and rotations lie outside any area: the key grammar governs them (terms field 19, "Areas"). An area over the Identity layer reaches the collective's other Identity acts. The collective's everyday Identity acts count for nothing in Agreements.
@@ -3010,8 +3010,8 @@ area = {
                             ; (rule 60)
 }                           ; an area reaches at least one act kind or one field; it is identified by its id, never
                             ; by its place in field 19
-kind = [ 0, layer: uint ]                 ; every act of this layer ("Layer"): 0 Identity, 1 Envelopes and Text,
-                                          ; 2 Money, 3 Agreements, 4 Development
+kind = [ 0, layer: uint ]                 ; every act of this layer ("Layer"): 1 Text, 2 Envelopes, 3 Money,
+                                          ; 4 Agreements, 5 Development
      / [ 1, spec: hash, type: uint ]      ; every act of this type in this specification
 field-ref = [ 0, field: uint ]            ; a whole operational field: 7 stakes, 8 split plan, 17 refund terms
           / [ 1, task: uint ]             ; one entry of field 2: the cMIP for this task, where the task is operational

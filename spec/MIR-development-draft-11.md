@@ -330,7 +330,7 @@ The content is decoded as an act's payload is, under the encoding and the CDDL c
    - field 8 is present on a MIP (kind 8);
    - fields 11 and 13 are present together or not at all, and only on a Module; field 11 is 0 or 1; field 13 is ascending, without repeats, from 0, 1 and 2, holding 0 and 1 where field 11 is 0; a Module whose field 5 names a payment cMIP carries both. This one step needs another specification's bytes, those of the cMIP field 5 names ("A rail Module's kind and binding");
    - field 12 is present only on a cMIP (kind 0);
-   - field 10 is ascending, without repeats, from 0, 1, 2 and 3, on any kind; it is read only where an agreement names the specification as an extension.
+   - field 10 is ascending, without repeats, from 0, 1, 2, 3 and 4, on any kind; it is read only where an agreement names the specification as an extension.
 7. Fields 2, 3, 4, 6, 7 and 8 may sit on any kind; fields 3 and 4 serve discovery only, and field 2 is read where an agreement names the cMIP for a task, and, on a cMIP a Module's field 5 names, to tell whether it is a payment cMIP (step 6; "A rail Module's kind and binding").
 
 A field the rules above do not forbid is never a reason to refuse the content. *A cMIP filling a task writes field 2 (the publishing tool's rule, below); no decoder can tell that a text fills a task, so a missing field 2 is never no specification.*
@@ -408,11 +408,11 @@ A specification whose content is not in this format (a kind, a reference, a fee 
 
 *In short: an extension lists the other layers it adds rules to, so a collective's client knows whose approval adopting or dropping it needs. It is read only where an agreement names the specification as an extension; any other value, or a list out of order, makes the specification no specification. The list is not trusted for enforcement.*
 
-An extension's own acts belong to Development. Field 10 lists, ascending and without repeats, each other layer whose acts it adds rules to, numbered as the core's layers: 0 Identity, 1 Envelopes and Text, 2 Money, 3 Agreements. A specification whose field 10 carries any other value, or is not ascending, is not in the format, and so is no specification.
+An extension's own acts belong to Development. Field 10 lists, ascending and without repeats, each other layer whose acts it adds rules to, numbered as the core's layers: 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements. A specification whose field 10 carries any other value, or is not ascending, is not in the format, and so is no specification.
 
 The field is read only where an agreement names the specification as an extension (Agreements, terms field 15); a specification without it declares nothing beyond Development.
 
-*The declaration tells a collective's client whose approval adopting or dropping the extension needs (Agreements, rule 60). It is not trusted for enforcement: in a collective, an extension's rules bind only the layers whose holders approved it, so an extension that under-declares binds nothing beyond them (Agreements, rule 60).*
+*The declaration tells a collective's client whose approval adopting or dropping the extension needs (Agreements, rule 60). It is not trusted for enforcement: in a collective, an extension's rules bind only the layers whose rules its adoption met, so an extension that under-declares binds nothing beyond them (Agreements, rule 60).*
 
 ### A proof-of-delivery checker (field 12)
 

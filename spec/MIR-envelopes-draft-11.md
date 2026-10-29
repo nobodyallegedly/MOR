@@ -516,15 +516,15 @@ Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as p
 - Delegated key release at scale, stopping on lapse: 6, 7.
 - A private message between two parties that a relay can route but not read, sender sealed; the two parties share no relay and meet through the inbox: 5.
 - A private act made public later by publishing its key (disclosure): 5.
-- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes and Text".
-- A key delivery whose key does not open what it names: valid as an act, its key ignored and shown so: a component under "Envelopes and Text".
-- Two copies of one act id differing in their signature, delivered in both orders: the copy with the valid signature counts at every verifier, and a relay holding the other replaces it: a component under "Envelopes and Text".
+- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes".
+- A key delivery whose key does not open what it names: valid as an act, its key ignored and shown so: a component under "Envelopes".
+- Two copies of one act id differing in their signature, delivered in both orders: the copy with the valid signature counts at every verifier, and a relay holding the other replaces it: a component under "Envelopes".
 
 #### Sequences, chains, acknowledgements and references
 
 - Hash-linked ordering; provable forks; a two-chain act (stake transfer) read correctly: 1, 3.
 - Running summary from the test vector; kept-ancestry proofs: 1, 5, 8 (with Identity).
-- An everyday act with key 2 (`prev`) absent is invalid, and so is one whose `prev` carries two entries; one whose position or summary does not fit its predecessor is not invalid act by act, and cannot be proven kept when its line is rebuilt: a component under "Envelopes and Text", and 5, 8 (with Identity).
+- An everyday act with key 2 (`prev`) absent is invalid, and so is one whose `prev` carries two entries; one whose position or summary does not fit its predecessor is not invalid act by act, and cannot be proven kept when its line is rebuilt: a component under "Envelopes", and 5, 8 (with Identity).
 - A repost as a reference; tips reach the original: 5.
 - A stranger holding only a reply at one home follows it, by the signer its reference names, to the post at another home; a reference naming a wrong signer leaves both acts valid and fails when followed: 5.
 - A text act carrying `acks` is invalid; a reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a publication: 2, 5.
@@ -542,4 +542,4 @@ Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as p
 - Relays: 4, 5. *Scenario 4's "every mirror matches the commitment" rests on the voting cMIP's own commitment, not on this MIR.*
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - An act of a type its specification does not define, or with a payload outside that specification's format, invalid where the specification is implemented and unknown where it is not; an act naming a specification whose content is not in Development's format, unknown to every client: 2, 8.
-- An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes and Text".
+- An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes".
