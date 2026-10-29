@@ -3842,18 +3842,24 @@ fn obligation_to(lab: &mut Lab, creditor: Hash, value: u64) -> Hash {
 /// (Money rules 4 and 14).
 fn receipt(lab: &mut Lab, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
     let r = receipt_unanswered(&mut lab.w, payee, payer, obligation, value);
-    lab.rail_valid.push((r, mor_core::money::PaidAt::VaultEntry(payee.id, 0)));
+    lab.rail_valid.push((r, mor_core::money::PaidAt::VaultEntry(payee_of(payee), 0)));
     r
 }
 
 /// A receipt paying `value` toward an obligation, signed by its payee; no
 /// rail answer stated.
+/// Who a signer is paid as: the collective a member's device acts for, or
+/// itself.
+fn payee_of(p: &Person) -> Hash {
+    p.cite.as_ref().map(|c| c.0).unwrap_or(p.id)
+}
+
 fn receipt_unanswered(w: &mut World, payee: &mut Person, payer: Hash, obligation: Hash, value: u64) -> Hash {
     let rc = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
         rail: spec("a rail Module"),
         proof: vec![],
         payer: Some(mor_core::money::Payer::Identity(payer)),
-        payee: payee.id,
+        payee: payee_of(payee),
         amount: mor_core::money::Amount { unit: spec("a unit"), value },
         fulfils: obligation,
         previous: None,
@@ -13184,12 +13190,15 @@ fn an_issuance_3_7ac() {
     let r_no_ivy = issuance_record(&mut lab, x, &mut []);
     let got = state_at(&lab, &r_no_ivy, &[o], &[up]);
     assert!(matches!(&got, CloneState::Draft(w) if w.contains("new holder")), "{got:?}");
-    // Ben pays his part: 3,000 of the 10,000.
+    // Ben pays his part: 3,000 of the 10,000, to the label, on a rail its
+    // pointer names.
+    label_pointer(&mut lab, BEN, &[]);
     let mut c0 = lab.c[0].clone();
     let paid = receipt(&mut lab, &mut c0, b_, up, 3_000);
     lab.c[0] = c0;
     // The label's receipt, a Money act: its Money area's holder signs it.
     lab.sign(BEN, &paid);
+    eprintln!("DBG {:?} {:?}", lab.consent(&paid), lab.w.v.status(&paid));
     // Ben given less than his proportion; Dana scaled unlike the others.
     for wrong in [
         vec![(a_, 240_000), (b_, 280_000), (c_, 240_000), (d_, 80_000), (i_, 160_000)],
@@ -14064,15 +14073,17 @@ fn a_collectives_text_names_its_own_decision_f334() {
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().text, 0, text("For the house."), None, None);
     let good = lab.w.add(&a);
     assert_eq!(lab.w.v.status(&good), Status::Valid);
-    assert!(matches!(lab.consent(&good), Consent::NoArea { .. }));
+    // No area: the rule for Text, any one member (field 19, rule 60).
+    assert!(matches!(lab.consent(&good), Consent::Areas { .. }), "{:?}", lab.consent(&good));
     assert!(lab.counts(&good));
-    // Without the pointer it is valid as a text, and on no chain (rule 58).
+    // Without the pointer it is valid as a text, the member's own, on no
+    // chain of the collective (rule 58).
     let mut bare = lab.c[0].clone();
     bare.cite = None;
     let a = lab.w.everyday_act(&mut bare, mirs().text, 0, text("Uncited."), None, None);
     let uncited = lab.w.add(&a);
     assert_eq!(lab.w.v.status(&uncited), Status::Valid);
-    assert!(matches!(lab.consent(&uncited), Consent::Uncited { .. }));
+    assert_eq!(lab.consent(&uncited), Consent::NotCollective);
 
     // Another collective, declaring an agreement of its own.
     let other = lab.w.genesis_with(
@@ -14088,11 +14099,12 @@ fn a_collectives_text_names_its_own_decision_f334() {
     let mut dev = lab.c[1].clone();
     dev.seq = lab.c[0].seq.clone();
     let cases: Vec<(&str, Option<Vec<Object>>)> = vec![
-        ("another collective's chain", one(other.id, other.id)),
         ("its own chain, another collective's decision", one(col, other.id)),
         ("its own chain, an act that is no decision", one(col, good)),
         ("two objects", Some(vec![Object { chain: col, predecessor: col }, Object { chain: col, predecessor: col }])),
-        ("any other object", one(sha256(b"a deal's head"), sha256(b"a deal's head"))),
+        // An identity that is no collective (a chain not held answers
+        // unknown, Text rule 14).
+        ("any other object", one(lab.keeper.id, lab.keeper.id)),
     ];
     for (label, objects) in cases {
         // Exactly these objects: the device adds no pointer of its own.
@@ -14100,9 +14112,15 @@ fn a_collectives_text_names_its_own_decision_f334() {
         d.cite = None;
         let a = lab.w.everyday_act(&mut d, mirs().text, 0, text(label), objects, None);
         let id = lab.w.add(&a);
-        assert_eq!(lab.w.v.status(&id), Status::Invalid, "{label}");
-        assert!(!lab.counts(&id), "{label}: counts for nothing in Agreements");
-        assert!(matches!(lab.consent(&id), Consent::Invalid { .. } | Consent::Uncited { .. }), "{label}");
+        assert_eq!(lab.w.v.status(&id), Status::Invalid, "{label}: {:?}", lab.consent(&id));
+        match lab.consent(&id) {
+            // Naming no collective: the member's own act, invalid under Text.
+            Consent::NotCollective => {}
+            c => {
+                assert!(!c.counts(), "{label}: counts for nothing in Agreements");
+                assert!(matches!(c, Consent::Invalid { .. } | Consent::Uncited { .. }), "{label}");
+            }
+        }
     }
     // An individual signer naming its own chain: no collective, invalid (F296 kept).
     let mut ana_dev = lab.m[ANA].clone();

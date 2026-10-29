@@ -262,7 +262,8 @@ impl<'a> AgreementsView<'a> {
                 Ok(Fin::Receipt(rc))
                     if &rc.fulfils == fulfils
                         && &rc.payee == payee
-                        && r.act.outside.signer == Some(*payee)
+                        // Its payee's: a collective's, a member's act naming it (rule 58).
+                        && self.author(r).as_ref() == Some(payee)
                         && self.valid(&r.id)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
