@@ -2713,77 +2713,77 @@ Every act type below has its exact format.
 
 Every Agreements act type may carry acknowledgements (`acks`, Envelopes rules 18 and 19).
 
+**An act for a collective** is signed by a member or a grantee, with their own key, naming the collective on its chain in `objects` after the entries its type defines (rule 58); where the table says "the collective", it means so. A collective signs nothing itself.
+
 | Type | Name | Signed by |
 | --- | --- | --- |
-| 0 | Terms | the proposer |
+| 0 | Terms | the proposer. Terms carrying a target (field 33) are an ownership agreement |
 | 1 | Signature | each party (or grantee, or collective member) |
 | 2 | Keeper record | a keeper's operator |
-| 3 | Work claim | a sole creator; or one creator, who opens it, completed by the other creators' signature acts. Counts only public or addressed to every creator it names |
+| 3 | Claim | a sole creator; or one creator, who opens it, completed by the other creators' signature acts. Counts only public or addressed to every creator it names |
 | 4 | Stake transfer | the seller, who also signs it by a chain signature (Identity type 16), which fixes its place on the seller's own line; completed by the buyer's signature. Names the agreement as `[agreement, agreement]` |
-| 5 | Public domain release | a direct owner of the work, completed by the signature acts of every other holder of the stakes it ends, unless the release rule says otherwise (field 24). A collective owner signs by its own rules, across the areas reaching Envelopes, Money and Agreements |
-| 6 | Standing offer | always public. Under co-owners' agreement, the owners under its rule: in a deal every party, one signing it and the others by signature acts naming it; in a collective, an act of the collective. A lone seller's offer, by the seller, is itself the agreement with the buyer |
-| 7 | *Retired*: the payee's receipt naming the offer, and the claim where there is one, confirms delivery of a publication whose key is public; never reused | — |
-| 8 | Split | the split service, with its own key; delivered to every holder it pays |
-| 9 | Grant | the grantor. For a collective granting within an area, completed by its holders' signature acts; a reinstatement (field 7) likewise. A payee's grant in a deal: by the payee with its own key, carried by the deal that lists it. Accepted by the grantee's own signature act |
-| 10 | Revocation | the grantor, with its own key, naming the grant whose key it removes. For a grant within an area, completed by that area's holders' signature acts |
+| 5 | Public domain release | a direct owner of the work, completed by the signature acts of every other holder of the stakes it ends, unless the release rule says otherwise (field 24). A collective owner signs by its own rules, under its rules for Envelopes, Money and Agreements |
+| 6 | Publication | always public. Its drafter, completed by the signature acts of its other parties: the owners' side (the ownership agreement it names, consenting by its own rule; for a collective, under its rule for Agreements), each partner and its split service (rule 11). A split agreement of a collective likewise, the collective signing under the judicial tier's rule (rule 15) |
+| 7 | *Retired*: the payee's receipt naming the price tag confirms delivery of a bake whose key is public; never reused | — |
+| 8 | Split | the split service, with its own key; delivered to every holder and partner it pays |
+| 9 | Grant | the grantor. For a collective, an act for it, counting under its rule for Agreements, or, granting within an area, completed by its holders' signature acts; a reinstatement (field 7) likewise. Accepted by the grantee's own signature act |
+| 10 | Revocation | the grantor, naming the grant it ends. For a grant within an area, completed by that area's holders' signature acts |
 | 11 | *Retired*: adoption is by acknowledging, citing or paying on (rule 76); never reused | — |
 | 12 | Liveness | a party; counts only public or addressed to the agreement's other parties |
 | 13 | Abandonment declaration | the authority the clause names, always an identity. For a threshold of the other parties (in a collective only): one of them, completed by the others' signature acts, which the recovery rotation names where the declaration takes effect there |
 | 14 | Contest | anyone with standing (rule 54): the party a declaration of absence names, answering it; the buyer of a purchase, contesting it, a vow's sale included (rule 13); anyone else with standing, contesting another act |
 | 15 | *Retired*: a Module states its fee in its own specification (Development field 7); never reused | — |
 | 16 | Resignation | the member giving up their voice, or stepping down from one area, naming the drafts they leave behind |
-| 17 | Record | the collective, with its signing key: its everyday line |
+| 17 | Record | any member of the collective, with their own key, naming the collective: its everyday line |
 | 18 | Negotiation message | one side of a negotiation thread (rule 52) |
 | 19 | Fork | a member of the collective, with their own identity; completed by the chain signatures (Identity type 16) of every member it lists, meeting the constitutional change rule, with those of holders who are no members where that rule counts among a stake's holders, and by the chain signatures of each successor a debt is assigned to (rule 91) |
 | 20 | Closing | a member of the collective, with their own identity; completed by the chain signatures (Identity type 16) of members meeting the constitutional change rule, with those of holders who are no members where that rule counts among a stake's holders (rule 91) |
 | 21 | *Retired*: the creditor's release is a Money act, Money type 4 (rule 92); never reused | — |
 | 22 | Settlement request | a party who signed a deal's reference version, asking the judge of forks it names to settle the fork (rule 47) |
 | 23 | Fork settlement | the judge of forks a deal's reference version names (field 27), or the link of its chain of judgment that took over (field 21), once a settlement request activated it (rule 47) |
-| 24 | Notice | a collective, with its own key, to a payer owed money back from a broken stretch who gave no address. Sealed to that payer, or public naming the payment where the payer committed only a one-time key, with a deadline on a time reference (rule 93) |
+| 24 | Notice | the collective, to a payer owed money back from a broken stretch who gave no address. Sealed to that payer, or public naming the payment where the payer committed only a one-time key, with a deadline on a time reference (rule 93) |
 | 25 | Request to a judge | someone with standing (rule 54), naming a judge the terms name and the question. Counts, and the judge's period runs, only where public or sealed to that judge (rule 35) |
-| 26 | Issuance offer | a collective, with its own key: an act in its name (rule 57), offering each holder of a stake its proportion of an issuance; it reaches each holder it is public or sealed to (rule 96) |
+| 26 | Issuance offer | the collective: an act for it (rule 57), offering each holder of a stake its proportion of an issuance; it reaches each holder it is public or sealed to (rule 96) |
 | 27 | Proxy | a holder of a stake of a collective, with its own key, naming the proxy whose signature acts on the owners' matters count as its vote (rule 97) |
 | 28 | Revocation of a proxy | the holder who signed the proxy, with its own key (rule 97) |
 
 ### Terms (type 0)
 
-*In short: terms propose an agreement. The format below lists every field; the paragraphs after it are the checks that make terms invalid, and what each field means.*
+*In short: terms propose an agreement. Terms carrying a target are an ownership agreement: a work's, whose target is its claim, or a collective's, whose target is the collective it founds. The format below lists every field; the paragraphs after it are the checks that make terms invalid, and what each field means.*
 
 ```cddl
 terms-payload = {
-  0 => [+ hash],            ; parties: identity or collective hashes
+  0 => [+ hash],            ; parties: identity or collective hashes; each once, save a party holding two seats by
+                            ; succession (rule 83), listed once per seat
   1 => tstr,                ; the terms' words, as canonical text; in a collective, the constitution's and the general
                             ; words (each area's own words are in field 20)
-  2 => { * uint => hash },  ; cMIPs, at most one per task (task number => cMIP hash); empty if it uses no task
+  2 => { * uint => hash },  ; cMIPs, at most one per task (task number => cMIP hash); empty if it uses no task;
+                            ; never task 8 in an ownership agreement (the split task is a publication's)
   ? 15 => [+ hash],         ; extensions: cMIPs outside the listed tasks, which add rules and never relax the core's;
-                            ; in a collective, adopted by the area reaching Development
+                            ; in a collective, adopted under its rule for Development
   ? 16 => [+ succession-plan] ; succession plans of parties, part of the signed terms
   ? 3 => keepers,           ; named keepers, and the rule for what counts as recorded
   4 => rule / mark,         ; founding terms: the signing rule, which signatures make the agreement exist: every party,
                             ; in a deal and in a collective
                             ; a clone: its mark, which change rules of the parent brought it into force, and by whom
-  5 => rule,                ; clone rule: in a collective, for operational matters outside every area (the judicial tier
-                            ; needs every party whose voice remains, rule 67); every party in a deal
+  5 => rule,                ; clone rule: in a collective, for operational matters outside every layer's rule and area
+                            ; (the judicial tier needs every party whose voice remains, rule 67); every party in a deal
   ? 18 => rule,             ; constitutional change rule; absent: every party (only with field 12)
-  ? 19 => [+ area],         ; operational areas, powers of members (only with field 12)
-  ? 20 => { + uint => tstr }, ; each area's own words, as canonical text, by area id (only with field 19)
+  ? 19 => layers,           ; who acts for the collective in each layer (only with field 12, and then required)
+  ? 34 => [+ area],         ; areas finer than a layer, powers of members (only with field 12)
+  ? 20 => { + uint => tstr }, ; each area's own words, as canonical text, by area id (only with field 34)
   ? 6 => [ hash, any ],     ; time reference: the task cMIP and its parameters; a naming for task 10, the same
                             ; specification as field 2's task 10 where both are present
-  ? 7 => stakes,            ; stakes defined, in works, publications, or the collective itself, written null
-  ? 8 => split-plan,        ; how incoming payments are divided
-  ? 28 => fees,             ; fees, each entry borne by every stake, off the top: their own field (rule 28);
-                            ; the form is under "Split plan and split"
+  ? 7 => owners,            ; the stake: the holders of the target and their shares (only with field 33, and then
+                            ; required)
+  ; 8, once the split plan, is withdrawn: a publication's split plan; never reused
   ? 9 => abandonment,       ; the abandonment clause
   ; 10, the concurrency rule, is withdrawn: rule 90's default stands; never reused
   ? 11 => hash,             ; parent: the agreement this one clones; objects names it as chain and, as predecessor,
                             ; an act of its chain, the latest the signer's client holds (rule 45)
-  ? 12 => key-grammar,      ; present if this agreement founds a collective
+  ? 12 => key-grammar,      ; present if this agreement founds a collective (only with target [1, null])
   ? 13 => [+ hash],         ; arbitrators or verifiers named, who receive keys to judge content
-  ? 14 => hash / [+ hash],  ; where incoming payments go to a split service: in a collective, its grant (one hash);
-                            ; in a deal, one grant per payee, each naming this agreement by null. Its one
-                            ; grantee is the agreement's designated pointer for payments, the same whoever pays
-                            ; (rule 15): the first of the split cMIP's addresses, its backups following in
-                            ; field 29
+  ; 14, once the split service's grant, is withdrawn: a publication names its split service; never reused
   ? 17 => refund-terms,     ; until when a refund owed on a payment under these terms is claimable: a point on the
                             ; time reference
   ? 21 => [+ chain],        ; the chain of judgment: who takes over from a judge (rule 35)
@@ -2792,7 +2792,7 @@ terms-payload = {
   ? 23 => hash,             ; forked from: in the founding terms of a fork's successor, the original collective, a
                             ; back-link (rule 91; only with field 12)
   ? 24 => holders-rule / [ 2, [+ hash] ],
-                            ; the release rule: which of a stake's holders sign its release (rule 55); founding
+                            ; the release rule: which of the stake's holders sign its release (rule 55); founding
                             ; terms set it, and a clone every owner signs changes it ; a threshold counted by
                             ; share, never by head
   ? 26 => [+ hash],         ; settles: in a deal's clone only, every tip of the deal's fork this version discards, that
@@ -2801,20 +2801,33 @@ terms-payload = {
   ? 27 => hash              ; the judge of forks: in a deal only, the identity among field 13 that settles the deal's
                             ; forks on a party's request, following its chain of judgment (field 21) where it does
                             ; not act; absent, none does (rule 47)
-  ? 29 => backups,          ; the split service's backups, in order, and what counts as a failed attempt: fields of
-                            ; the split cMIP the agreement names (field 2's task 8, or the plan's key 1), signed with
-                            ; the terms (rule 17); only with field 14
+  ; 28 (fees) and 29 (the split service's backups) are withdrawn: a publication's; never reused
   ? 30 => [+ [ stake: uint, holders-rule, ? waived: true ]],
-                            ; the holders' rules: per stake, by its index in field 7, how its holders consent together
-                            ; to the owners' matters; ascending by stake, none twice; a stake not listed: every holder
-                            ; (rules 94, 95); only with field 12; `true` third: a standing
+                            ; the holders' rules: per stake, by its index (0, the one stake), how its holders consent
+                            ; together to the owners' matters; ascending by stake, none twice; a stake not listed:
+                            ; every holder (rules 94, 95); only with field 12; `true` third: a standing
                             ; waiver of pre-emption on that stake (rule 96)
   ? 31 => [+ hash],         ; transfers counted: in a deal's clone carrying an owners' matter, the stake transfers whose
                             ; buyers it counts as holders, ascending, none twice (rule 94)
-  ? 32 => hash / [ 0 ]      ; issues under: in a collective's clone that is an issuance, the issuance offer (type 26) it
+  ? 32 => hash / [ 0 ],     ; issues under: in a collective's clone that is an issuance, the issuance offer (type 26) it
                             ; follows (rule 96); `[0]`, no offer, under the stake's standing
                             ; waiver of pre-emption (field 30)
+  ? 33 => target            ; the target: present, these terms are an ownership agreement (rule 7; Part two)
 }                           ; key 25 (the relays) is withdrawn and never reused: terms carrying it are invalid
+
+target   = [ 0, claim: hash ]                 ; a work's ownership agreement: the work's claim (type 3), by its act id
+         / [ 1, null ]                        ; a collective's: the collective itself, the identity whose genesis
+                                              ; declares these terms or the terms they clone
+owners   = [+ [ holder: hash, share: uint ]]  ; the one stake, on the target, index 0: holders distinct, each share
+                                              ; above zero, summing to 1,000,000; leftovers by largest remainder, the
+                                              ; order of holders deciding nothing
+
+layers   = { 1 => layer-rule, 2 => layer-rule, 3 => layer-rule, 4 => layer-rule, 5 => layer-rule }
+                                              ; who acts for the collective in each layer: 1 Text, 2 Envelopes, 3 Money,
+                                              ; 4 Agreements, 5 Development; every key present, no other (rule 60)
+layer-rule = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]
+                                              ; every party whose voice remains / any k of them / these named parties
+                                              ; together; a threshold from 1 to the number of parties
 
 chain    = [ judge, next: [+ [ hash, period: uint ]] ]
                                       ; a judge the terms name, and in order those that take over from it, each with
@@ -2825,33 +2838,26 @@ judge    = [ 0, task: uint ]          ; the specification named for judicial tas
          / [ 1, identity: hash ]      ; a keeper's operator, an arbitrator or verifier, or the abandonment authority the
                                       ; terms name: next are identities
                                       ; [ 2 ], the split service, is withdrawn and never
-                                      ; reused: terms carrying it are invalid; its backups are field 29
-
-backups  = {                          ; terms field 29
-  0 => [+ hash / [+ hash]],           ; each backup split service after field 14's, in order: in a collective, its
-                                      ; grant; in a deal, its grants, one per payee, each naming this agreement by
-                                      ; null, as many as field 14 lists
-  ? 1 => any                          ; what counts as a failed attempt: the split cMIP's parameters for it
-}
+                                      ; reused: terms carrying it are invalid
 
 key-grammar = {
-  0 => holding,             ; how the signing key is held
-  1 => holding,             ; how the chain key is held, usually stricter
+  1 => holding,             ; how the chain key is held
   ? 3 => recovery           ; a way to rotate that needs less than every member; required when holding 1 names
                             ; every member
-}                           ; key 2 (once: listed act types) is retired and never reused: areas reach acts (field 19)
+}                           ; key 0 (once how the collective's signing key was held) and key 2 (once listed act types)
+                            ; are retired and never reused: a collective has no signing key (rule 59)
 holding  = [ 0, holder: hash ]                        ; one holder
-         / [ 1, threshold: uint, members: [+ hash] ]  ; any k of these members: jointly for the signing key; by
-                                                      ; shares for the chain key
+         / [ 1, threshold: uint, members: [+ hash] ]  ; any k of these members, by shares
          / [ 2, custodian: hash, grant: hash ]        ; a custodian under the collective's grant
 recovery = [ 0, custodian: hash, grant: hash ]        ; a custodian holds a share under grant
          / [ 1, authority: hash ]                     ; an escrowed share released by the abandonment authority
 
 succession-plan = {
   0 => hash,                               ; the party whose succession this is
-  ? 1 => [+ [ successor: hash, share: uint ]],   ; stake successors, shares in millionths of the party's stakes
+  ? 1 => [+ [ successor: hash, share: uint ]],   ; stake successors, shares in millionths of the party's shares
   ? 2 => [+ hash],                         ; seat successors, with no voting weight: under a rule by share a successor
-                                           ; weighs what it holds of the stake, read from field 7; a successor written with a weight is invalid
+                                           ; weighs what it holds of the stake, read from field 7; a successor written with a weight is invalid;
+                                           ; a party already among them takes a second seat (rule 83)
   ? 3 => uint                              ; seat entry: 0 automatic where every voice signed this version of the
                                            ; plan, otherwise treated as 1 ; 1 a nomination, approved under the
                                            ; power a change of parties needs (rule 64)
@@ -2877,23 +2883,13 @@ keepers   = [ [+ hash], [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ] ]
                                                     ; keepers' rule does not fit them are invalid (no rule by share)
 rule      = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]   ; all parties / threshold / named parties
           / [ 3, stake: uint, share: uint ]         ; those counted, holding together at least this share, in millionths,
-                                                    ; of this stake, by its index in field 7
+                                                    ; of the stake (index 0)
           / [ 4, [2* rule] ]                        ; all of these rules, each counted as it would be alone
-          / [ 5, stake: uint, share: uint ]         ; the holders of this stake, members or not, holding together at
+          / [ 5, stake: uint, share: uint ]         ; the holders of the stake, members or not, holding together at
                                                     ; least this share of it ; field 18 only
 holders-rule = [ 0 ]                                ; every holder of the stake (the default)
              / [ 3, share: uint ]                   ; holders together holding at least this share of the stake, in
                                                     ; millionths
-stakes    = [+ [ object: who, [+ [ holder: who, share: uint ]] ] ]
-                                                    ; shares in millionths, summing to 1,000,000; leftovers by
-                                                    ; largest remainder, the order of holders deciding nothing
-                                                    ; each stake is identified by its index here;
-                                                    ; an object once; holders distinct, each share above zero;
-                                                    ; the object the collective itself: a share of all its
-                                                    ; income ; the object a vow's name: held by the
-                                                    ; vow's signer (null for the collective's own vow) in
-                                                    ; the version first writing it (rule 14)
-who       = hash / null                             ; an identity, or null: this collective, only in a collective's terms
 
 area = {
   0 => tstr,                ; its name, as canonical text, shown before signing
@@ -2901,17 +2897,18 @@ area = {
   2 => uint,                ; how many of the holders decide together: at least 1, and at most the number of holders,
                             ; except in a clone that keeps the number the parent's entry for that area has, which
                             ; may then exceed the holders, counted as rule 65 says
-  ? 3 => [+ kind],          ; the acts of the collective it reaches
+  ? 3 => [+ kind],          ; the acts for the collective it reaches, each by act type
   ? 4 => [+ field-ref],     ; the operational fields of the terms it reaches
   5 => uint,                ; its id: permanent, unique among the agreement's areas, never reused
-  ? 6 => [ cmip: hash, any ] ; a cMIP judging limits on its holders' own keys, and its parameters
+  ? 6 => [ cmip: hash, any ] ; a cMIP judging limits on its holders' acts, and its parameters
                             ; (rule 60)
 }                           ; an area reaches at least one act kind or one field; it is identified by its id, never
-                            ; by its place in field 19
+                            ; by its place in field 34
 kind = [ 0, layer: uint ]                 ; every act of this layer ("Layer"): 1 Text, 2 Envelopes, 3 Money,
-                                          ; 4 Agreements, 5 Development
+                                          ; 4 Agreements, 5 Development; in a grant's field 6 only (an area
+                                          ; reaches act types, a layer's rule the whole layer)
      / [ 1, spec: hash, type: uint ]      ; every act of this type in this specification
-field-ref = [ 0, field: uint ]            ; a whole operational field: 7 stakes, 8 split plan, 17 refund terms
+field-ref = [ 0, field: uint ]            ; a whole operational field: 7 the stake, 17 refund terms
           / [ 1, task: uint ]             ; one entry of field 2: the cMIP for this task, where the task is operational
 
 mark  = [+ [ power, signers: [+ hash] ] ] ; each change rule claimed, and the parties whose signatures meet it;
@@ -2927,13 +2924,16 @@ power = [ 0 ]                             ; the parent's constitutional change r
       / [ 5, stake: uint ]                ; the holders' rule of the parent's stake of this index (field 30): its
                                           ; signers the holders whose signatures meet it, a proxy's vote naming
                                           ; its holder (rules 94, 97)
+      / [ 6, layer: uint ]                ; the parent's rule for this layer (field 19), for the cMIPs it adopts for
+                                          ; that layer's tasks and the extensions it declares (rules 60, 64)
 ```
+
 
 *A rule's threshold is between 1 and the number of parties; named parties are parties. In a key grammar, members of a holding are parties.*
 
-**Rules by share, and "all of".** A rule by share (`[3, stake, share]`) and "all of" (`[4, rules]`) are for a collective's change rules only: its clone rule (field 5) and its constitutional change rule (field 18). A rule among a stake's holders (`[5, stake, share]`) is for field 18 only, alone or within "all of". The stake each names is one the terms' own field 7 defines; each share is above zero and at most 1,000,000; "all of" lists two rules or more, none of them itself "all of". Terms breaking any of these are invalid, and so is a deal whose field 5 is not `[0]`. *Weights are read from the stakes, never written as free numbers: a clone cannot raise a weight without changing a stake, which rule 8 guards.*
+**Rules by share, and "all of".** A rule by share (`[3, stake, share]`) and "all of" (`[4, rules]`) are for a collective's change rules only: its clone rule (field 5) and its constitutional change rule (field 18). A rule among a stake's holders (`[5, stake, share]`) is for field 18 only, alone or within "all of". The stake each names is the one the terms' own field 7 defines, index 0; each share is above zero and at most 1,000,000; "all of" lists two rules or more, none of them itself "all of". Terms breaking any of these are invalid, and so is a deal whose field 5 is not `[0]`. *Weights are read from the stakes, never written as free numbers: a clone cannot raise a weight without changing a stake, which rule 8 guards.*
 
-**The holders' rules** (field 30) appear only in terms carrying a key grammar: terms of a deal carrying field 30 are invalid. Each entry names a stake the terms' field 7 defines, once; its share is above zero and at most 1,000,000. An entry may carry a standing waiver of pre-emption, `true` as its third element (rule 96), and field 32 written `[0]` is valid only where the parent's entry for the stake issued carries it. A clone whose entry for a stake differs from its parent's is a draft until every holder of that stake signs it (rule 45). **Field 31** appears only in a deal's clone, and names stake transfers of stakes its parent defines. **Field 32** appears only in a collective's clone, which is then an issuance and is judged as rule 96 says.
+**The holders' rules** (field 30) appear only in terms carrying a key grammar: terms of a deal carrying field 30 are invalid. Each entry names the stake the terms' field 7 defines, index 0, once; its share is above zero and at most 1,000,000. An entry may carry a standing waiver of pre-emption, `true` as its third element (rule 96), and field 32 written `[0]` is valid only where the parent's entry for the stake issued carries it. A clone whose entry for a stake differs from its parent's is a draft until every holder of that stake signs it (rule 45). **Field 31** appears only in a deal's clone, and names stake transfers of the stake its parent defines. **Field 32** appears only in a collective's clone, which is then an issuance and is judged as rule 96 says.
 
 **The release rule's threshold is counted by share**: field 24 written `[1, uint]`, a number of heads, is invalid; it is written `[3, share]`, holders together holding at least this share of the stake released.
 
@@ -2950,7 +2950,7 @@ power = [ 0 ]                             ; the parent's constitutional change r
 
 **Founding terms exist only when every party has signed them,** a deal's and a collective's alike. Founding terms whose field 4 is not `[0]` are invalid. *A person is never added to a collective without their approval: a founder who has not signed leaves the collective unfounded, and a member added later joins only by signing the clone that adds them (rule 45).*
 
-**A deal** (terms without field 12) has every party as its clone rule too. Any deal whose field 5 is not `[0]` is invalid, and so are terms of a deal carrying field 18, 19 or 20. *The fields are kept rather than dropped so that every agreement has one format, and a deal says on its face what it needs.*
+**A deal** (terms without field 12) has every party as its clone rule too. Any deal whose field 5 is not `[0]` is invalid, and so are terms of a deal carrying field 18, 19, 20 or 34. *The fields are kept rather than dropped so that every agreement has one format, and a deal says on its face what it needs.*
 
 **In a deal, the absence authority is one identity**: a party, a keeper's operator or a collective, named by the clause's first form, `[0, hash]`. Terms of a deal whose abandonment clause names a threshold of the other parties, `[1, uint]`, are invalid, whatever its number. *A deal has no sequence of its own in which several signatures could be placed against its line. Parties who need to decide absence together form a collective, which orders its own acts on its own sequence, and name it as the authority: "a collective made of collectives".*
 
@@ -2984,20 +2984,17 @@ Terms breaking any of these are invalid. How a chain passes is rule 35.
 
 *The chain is signed with the terms, by everyone: in a deal by every party, in a collective as part of the judicial tier (rule 67). So nobody signs again when a judge fails.*
 
-*The split service is not in the chain: its backups are the split cMIP's, in field 29, below. A chain of judgment has stages; a chain of backups has attempts.*
+*The split service is not in the chain: its backups are a publication's (publication field 11). A chain of judgment has stages; a chain of backups has attempts.*
 
-**The split service's backups** (field 29; rule 17).
+**The target** (field 33; rule 7, Part two). Terms carrying a target are an ownership agreement.
 
-*How it runs most of the time:* an agreement names one split service (field 14) and no backups; every payment goes to it.
+- **A work's ownership agreement** (`[0, claim]`) is a deal: terms carrying it and field 12, 18, 19, 20, 22, 23, 30, 32 or 34 are invalid. *It refuses the collective's fields: layers, areas, key grammar, the founding fields.*
+- **A collective's ownership agreement** (`[1, null]`) carries a key grammar (field 12) and the layers (field 19): terms carrying it without either are invalid, and terms carrying field 12 without it are invalid. *Every collective's constitution is an ownership agreement whose target is the collective itself.*
+- **An ownership agreement carries its stake** (field 7): terms carrying a target without field 7, or field 7 without a target, are invalid.
+- **A clone repeats its parent's target**; one whose field 33 differs from its parent's is invalid.
+- A target naming an act that is no claim, where the verifier holds that act, claims nothing: the agreement is an ownership agreement of nothing, and every publication naming it sells under none (rule 14). A verifier that does not hold the act answers unknown.
 
-Where the owners choose backups, **field 29 lists them, in order, after field 14's service, with what counts as a failed attempt.** These are fields of the split cMIP the agreement names (field 2's task 8, or the split plan's key 1; where both name one, the same), signed with the terms by everyone who signs them. The checks:
-
-- Field 29 appears only with field 14, and only where the terms name a split cMIP.
-- In a collective, each backup is one grant of the collective.
-- In a deal, each backup is a group of grants, one per payee, as many as field 14 lists, each the payee's own grant naming "this agreement" by null like field 14's.
-- Every grant that field 14 and field 29 list is listed once.
-
-Terms breaking any of these are invalid. The core never reads key 1: what counts as a failed attempt is the split cMIP's. *Attempts, not stages:* no period and no time reference are needed (the chain of judgment's stages and deadlines do not apply to backups).
+*The target is written `[kind, hash]` so that a later MOR can add a kind without touching the act type. One type for both targets: distinct types would double every rule both share (change rules, keepers, judges, succession, absence), which is most of them.*
 
 **The departed members entry** (field 22) appears only in terms carrying a key grammar. It lists identities:
 
@@ -3005,58 +3002,51 @@ Terms breaking any of these are invalid. The core never reads key 1: what counts
 - none of them a party;
 - each a holder of a share of the stake in the collective itself (field 7).
 
-Terms breaking any of these are invalid. The entry records only that each is departed, without voice (rule 68); the stakes decide what every holder is paid. *They are stakeholders: the stakes still show them, and the organizational part files the identity as departed.*
+Terms breaking any of these are invalid. The entry records only that each is departed, without voice (rule 68); the stake decides what every holder is paid. *They are stakeholders: the stake still shows them, and the organizational part files the identity as departed.*
 
-**Stakes** (field 7). Each stake:
+**The stake** (field 7). Its holders are distinct, each share above zero, the shares summing to 1,000,000 (rule 9). Terms breaking any of these are invalid. It is the one stake the agreement defines, on its target, index 0: a reference to the agreement's stake by any other index (a transfer's field 1, a holders' rule's entry, a rule by share) names no stake, and terms or an act carrying one are invalid.
 
-- names its object once;
-- has distinct holders, each share above zero;
-- has shares summing to 1,000,000 (rule 9).
-
-Terms breaking any of these are invalid.
-
-**Null names this collective.** A stake whose object is null is a share of all the collective's income. A holder written null is the collective itself, holding that stake. Only terms carrying a key grammar write null. A stake in the collective held by the collective itself is invalid. Founding terms so carry the members' stakes in the collective, and the stakes of the works it owns, from its birth.
-
-*The mechanic is reused: the collective's identity is its genesis act, which declares the founding agreement, so the founding terms could not name it by its hash. In its own terms, founding or clone, the collective is written null, never by its hash, so that one meaning has one encoding; a clone writing the collective's own hash is invalid where a verifier holds its genesis.*
+**The collective holds no share of itself.** A collective's stake in itself held by the collective is invalid; its shares in works are written in those works' ownership agreements, the collective named there by its identity. *The mechanic of "this collective" is kept for the target alone: the collective's identity is its genesis act, which declares the founding agreement, so the founding terms could not name it by its hash, and write `[1, null]` instead.*
 
 **Forked from** (field 23) appears only in the founding terms of a collective (with field 12, without field 11). It holds the original collective's identity. It is a back-link for readers and decides nothing: the fork act names its successors (rule 91). It is no parent: the founding terms are signed by every founder, as any founding terms are. Terms breaking this are invalid. *A successor is founded before the fork act exists, so it cannot name the act; it names the collective it leaves, rather than its agreement, which may still change before the fork.*
 
-**The release rule** (field 24) says which of a stake's holders must sign its release to the public domain, a rule counted among them (rule 55). It is set in an agreement's founding terms; absent, every holder.
+**The release rule** (field 24) says which of the stake's holders must sign its release to the public domain, a rule counted among them (rule 55). It is set in an agreement's founding terms; absent, every holder.
 
-**A clone every owner signs may change it.** A clone whose field 24 differs from its parent's is a draft until every holder of every stake the parent defines has signed it (rule 45). This is besides the power its mark names: **the ordinary clone rule**, field 24 lying in no area (rule 64).
+**A clone every owner signs may change it.** A clone whose field 24 differs from its parent's is a draft until every holder of the stake the parent defines has signed it (rule 45). This is besides the power its mark names: **the ordinary clone rule**, field 24 lying in no area (rule 64).
 
-*Freedom of making mistakes and fixing them.* The owners are the holders the parent's field 7 names, a holder written null being the collective, whose consent the mark already carries.
+*Freedom of making mistakes and fixing them.* The owners are the holders the parent's field 7 names.
 
-**Field 25 is withdrawn.** Terms carrying field 25 are invalid, and the number is never reused. **Relays are transport**: where a collective's clients publish and look first is client conformance, or a cMIP's (the relay transport cMIP), never the core (rule 57).
+**Fields 8, 14, 25, 28 and 29 are withdrawn.** Terms carrying any of them are invalid, and the numbers are never reused. *Fields 8, 14, 28 and 29 carried the split plan, the split service, the fees and the backups: ownership is one thing, distribution another, and they are a publication's now.* **Relays are transport**: where a collective's clients upload and look first is client conformance, or a cMIP's (the relay transport cMIP), never the core (rule 57).
 
 *Field 25 named a collective's relays, and made an act done only once it was on one of them. That made an act's validity depend on infrastructure: a vanished or hostile operator could freeze a collective, even its decision to change relays; it gave leverage over the collective; it allowed omission to readers checking one relay; and it failed offline verifiers. That crosses MOR's line that an act is valid by its signatures and content wherever held. The relays were a witness of time; the two chains and the tie rule answer "before" without them.*
 
 **An agreement has one time reference.** Where terms carry both field 6 and a cMIP for task 10 in field 2, the two name the same specification, field 6 adding its parameters. Terms where they differ are invalid, founding terms and clones alike. *One check: terms that use either place alone stay valid.*
 
-**Areas** (field 19) appear only in terms that carry a key grammar (field 12) (scope). Area words (field 20) appear only for an area that exists.
+**The layers** (field 19) appear exactly in terms that carry a key grammar (field 12). Every one of the five keys is present, and no other: terms carrying field 12 whose field 19 lacks a layer, or carries a key for a layer the MIRs do not define (0, or above 5), are outside the format, and found nothing (rule 1). Each rule's threshold is between 1 and the number of parties; named parties are parties, none twice. *A later MOR adds a layer by one more key, defined by its MIRs; until then no seventh layer can be written in.*
+
+**Areas** (field 34) appear only in terms that carry a key grammar (field 12) (scope). Area words (field 20) appear only for an area that exists. An area's kinds are act types, `[1, spec, type]`, never a whole layer: that is the layer's rule.
 
 **No two areas reach the same act or the same field.** Two kinds overlap when some act could belong to both, as computed from the six MIR hashes and the terms' own fields 2 and 15 ("Layer"). So:
 
-- `[0, layer]` overlaps `[1, spec, type]` when `spec` is a MIR of that layer, a cMIP the terms name for a task of that layer, or, for Development, an extension they name;
-- an area reaching a whole layer overlaps a field reference to a task of that layer, since that area already decides that task's cMIP (rule 63).
-
-The one exception is a specification the terms name for tasks of two layers or more, never a judicial task. Its acts belong to each of those layers, and are reached by the area reaching each, which then decide them together (rule 60).
+- two `[1, spec, type]` kinds overlap where they name the same type of the same specification;
+- an area reaching a field reference to a task overlaps another area reaching the same task.
 
 A field reference names an operational field or task ("Tiers").
 
-Genesis and rotations are never in an area's reach: the key grammar governs them. Nor are records (type 17), judged by the clone they name. An area whose kind names a genesis or a rotation (Identity's chain acts) or a record is invalid, never read as reaching nothing.
+Genesis and rotations are never in an area's reach: the key grammar governs them. Nor are records (type 17), which any member draws. An area whose kind names a genesis or a rotation (Identity's chain acts) or a record is invalid, never read as reaching nothing.
 
 Terms breaking any of these are invalid.
 
-**An area is followed by its id.** The ids of an agreement's areas (area key 5) are distinct. An area of a clone is the parent's area with the same id, wherever it sits in field 19. Grants (field 5), area words (field 20), steppings down (resignation field 1), marks (`[2, area]`) and a refit (rule 71) name an area by its id. A clone may drop an area, and adds one only under an id that no earlier version of the agreement, back to its founding terms, gave to an area. Terms breaking either are invalid. *An area keeps its id through any redraw, so removing or reordering areas never moves a grant, words or a refit onto another area.*
+**An area is followed by its id.** The ids of an agreement's areas (area key 5) are distinct. An area of a clone is the parent's area with the same id, wherever it sits in field 34. Grants (field 5), area words (field 20), steppings down (resignation field 1), marks (`[2, area]`) and a refit (rule 71) name an area by its id. A clone may drop an area, and adds one only under an id that no earlier version of the agreement, back to its founding terms, gave to an area. Terms breaking either are invalid. *An area keeps its id through any redraw, so removing or reordering areas never moves a grant, words or a refit onto another area.*
 
-*Which layer an act belongs to is computed from its own `spec` field, the six MIR hashes and the collective's own terms, never from a label the cMIP's author chose. A collective that gives Money to some members gives them the Money MIR's own acts, its receipts and claims on every rail among them, and the acts of every Money cMIP it adopted, by its own list. A new rail Module needs no clone at all: the collective's payee pointer, an act of the area reaching Money, or its vault names it, and a receipt counts only on a rail Module so named (Money rule 4).*
+*Which layer an act belongs to is computed from its own `spec` field, the six MIR hashes and the collective's own terms, never from a label the cMIP's author chose. A collective that names some members for Money gives them the Money MIR's own acts, its receipts and claims on every rail among them, its price tags, and the acts of every Money cMIP it adopted, by its own list. A new rail Module needs no clone at all: the collective's payee pointer, an act of Money, or its vault names it, and a receipt counts only on a rail Module so named (Money rule 4).*
 
-*An act of a specification the terms name nowhere falls in no area. In a collective with areas it counts for nothing, unless a `[1, spec, type]` kind of some area names it, since otherwise an unlisted specification would be a way around every area.*
+*An act of a specification the terms name nowhere falls in no layer. It counts for nothing for the collective, unless a `[1, spec, type]` kind of some area names it, since otherwise an unlisted specification would be a way around every rule.*
 
-*A specification named for tasks of two layers belongs to both. Where the two layers are reached by different areas, each area's holders must sign its acts, as for a clone across two areas, and naming it for the second layer needs both areas' power (rule 63), so neither area's holders can bind the other's acts alone.*
+*A specification named for tasks of two layers belongs to both. Where the two layers have different rules, each rule must be met for its acts, as for a clone across two areas, and naming it for the second layer needs both layers' power (rule 63), so neither layer's members can bind the other's acts alone.*
 
-*Stated cost:* *a collective cannot give its releases to one member and its other publications to another by layer alone, since both are Envelopes publications; a `[1, spec, type]` kind still names a single type.*
+*Six layers, one per MIR: a collective can name one rule for its texts and another for its bakes, since Text and Envelopes are layers of their own; releases of code and other bakes are both Envelopes acts, so an area by act type still names a single type within that layer.*
+
 
 ### Signature (type 1)
 
@@ -3064,97 +3054,107 @@ Terms breaking any of these are invalid.
 
 ```cddl
 signature-payload = {
-  0 => hash,                ; the act signed: terms, a clone, an act of a collective an area reaches, a grant within an area,
-                            ; or an abandonment declaration whose authority is a threshold of the other parties;
-                            ; an issuance offer, taking up its proportion (type 26); a collective's
-                            ; stake transfer or release of a work, consenting as an owner;
-                            ; or a standing offer, as a party consenting to it (type 6) or signing onto it (rule 13)
-  ? 1 => signing-key        ; on a collective's founding or clone, the signer's own key, in
-                            ; Identity's form [ scheme, key ], made by its app as it signed (rule 73)
-}
+  0 => hash                 ; the act signed: terms, a clone, an act for a collective whose rule needs several
+                            ; signers, a grant within an area, or an abandonment declaration whose authority is a
+                            ; threshold of the other parties; an issuance offer, taking up its proportion (type 26);
+                            ; a collective's stake transfer or release of a share in a work, consenting as an owner;
+                            ; or a publication, as a party consenting to it (type 6) or signing onto it (rule 13)
+}                           ; key 1 (once a member key named on a collective's founding or clone) is retired and never
+                            ; reused: there is no member key (rule 73)
 ```
 
-A signature naming a key on any act but a collective's founding or clone names no member key: an act bound to it counts for nothing.
-
-The inside names, in `objects`, the act signed as both chain and predecessor: `[[signed, signed]]`. *A signature follows the act it signs.*
+The inside names, in `objects`, the act signed as both chain and predecessor: `[[signed, signed]]`, followed, on an act for a collective, by its chain citations (rule 58). *A signature follows the act it signs.*
 
 Signatures naming one act are parallel consents to it, never a fork among themselves: rule 6's forks are between acts that change an agreement.
 
 A signature counts only while it is valid under Identity's rules. The exception is a signature a collective placed before its line registering its signer's rotation (rule 6), and every act a line of a collective places (rule 6, "Made before, made after", 4). A signature on a deal's version that a later act relies on keeps the version complete (rule 47).
 
-### Standing offer (type 6)
+### Publication (type 6)
 
-*In short: a standing offer sells something at one price to whoever pays, until it is withdrawn or its time runs out. A lone seller makes it alone; co-owners make it under their agreement.*
-
+*In short: a publication is the offer: what is sold, on which terms, with which partners, which split service pays everyone and how each payment is divided, the owners' line read from the ownership agreement it names. Its price is a price tag (Money) naming it. Every party signs it; a later version that sells nothing ends it. A first version that sells nothing is a split agreement.*
 
 ```cddl
-offer-payload = {
-  ? 0 => hash,          ; under: the co-owners' agreement (a version) it is made under; present only where co-owners stand
-                        ; behind it ; absent: a lone seller's offer, itself the agreement with the buyer
-  1 => [* sold],        ; what it sells, ascending by deterministic encoding, none twice; empty only in a later version,
-                        ; which withdraws the offer
-  2 => amount,          ; the price, one amount
-  ? 3 => hash / 0,      ; who is paid: a payee, or 0, the stakes, each holder's own pointer (rule 16); required
-                        ; with field 0 ; absent with no field 0: the signer
-  ? 4 => tstr,          ; the offer's words, canonical text; required where it names a vow
-  ? 5 => any,           ; until: a point on the time reference after which it takes no payment
-  ? 6 => [hash, any],   ; a lone seller's own time reference
-  ? 7 => refund-terms   ; a lone seller's own refund terms
+publication-payload = {
+  ? 0 => [* sold],          ; what it sells, ascending by deterministic encoding, none twice; empty only in a later
+                            ; version, which ends the publication; absent in every version of a split agreement
+  ? 1 => hash,              ; the owners: the ownership agreement whose holders take the owners' line, by its founding
+                            ; version, its line read (rule 12); absent: its drafter, as the lone owner
+  2 => [* partner],         ; the partners, ascending by identity, none twice
+  3 => hash,                ; the split service: receives every payment under it, and pays everyone (rule 16)
+  4 => split-plan,          ; how each payment is divided (rule 22)
+  ? 5 => tstr,              ; its words, canonical text: its terms of delivery, refund and contest; required where it
+                            ; sells a vow
+  ? 6 => [ hash, any ],     ; its time reference: the task cMIP and its parameters
+  ? 7 => any,               ; until: a point on the time reference after which it takes no payment
+  ? 8 => refund-terms,      ; its refund terms
+  9 => { * uint => hash },  ; cMIPs, at most one per task (task number => cMIP hash): its payment cMIP (task 6), its
+                            ; split cMIP (task 8), and others; a judge among them is named for no other task
+  ? 10 => hash,             ; the party it designates to sign its price tags beside the split service: one of its parties
+  ? 11 => [+ hash],         ; the split service's backups, in order: each an identity, a party (rule 17)
+  ? 12 => any               ; what counts as a failed attempt: the split cMIP's parameters for it (only with 11)
 }
-sold = [ 0, publication: hash ]       ; a publication (Envelopes type 0), by its act id
-     / [ 2, [ cmip: hash, any ] ]     ; a proven offer: a delivery whose proof any verifier checks from data alone, under a
+sold = [ 0, bake: hash ]              ; a bake (Envelopes type 0), by its act id
+     / [ 2, [ cmip: hash, any ] ]     ; a proven delivery: one whose proof any verifier checks from data alone, under a
                                       ; cMIP and its parameters (widened from access to bytes; a stream's key alone)
      / [ 3, vow: hash ]               ; a vow (Envelopes type 5), by its name, its genesis id
-```
-
-`[ 1, work ]` (any publication carrying a work) is not defined.
-
-Its `objects`: a later version names `[first, previous]` first. Where field 0 is present, they name the agreement as `[agreement, agreement]`; a collective's offer then cites its chain.
-
-**It counts** where:
-
-- it is valid and public;
-- under a deal, it is signed by every party;
-- its field 3 is a payee the agreement's field 14 lists (in a collective, the collective), or, where the agreement names no split service, the stakes;
-- a lone seller's payee is the signer, or one who accepted it by a signature act (Money rule 17);
-- field 5 needs a time reference.
-
-**A purchase following it** names its agreement (a version of its lineage), or it is no purchase. A payment following a lone seller's offer names no claim and is accepted under the offer's terms; one the time reference places past field 5 is owed back.
-
-A split service's grant key may receipt under an offer that pays its grantor under the grantor's own claim.
-
-**A relay's delivery record counts on a purchase naming an offer** where its object is the media of a publication the offer sells (any of them).
-
-**An offer naming a vow** (`[ 3, vow ]`) sells it with its words, under whatever agreement claims it, or as a lone seller's offer. It names the vow by its genesis id, never a later version. An act this verifier holds that is not a vow, or is a later version, keeps the offer from counting. A vow made void by its signer's rotation does not: the name others wrote down stands. *What the vow promises, how it is delivered, quantities and seats, and what it became are the cMIPs'.*
-
-**A service sold under a cMIP's terms.** *Paying for a service is an agreement.* A lone seller's offer selling access under a cMIP (`[ 2, [ cmip, terms ] ]`) carries that cMIP's terms as its own. The access form is the form of every proven offer, any delivery whose proof a verifier checks from data alone (rule 11); the verifier checks the proof, never the cMIP's say-so. Their deadlines are points on the offer's own time reference (field 6). What a default owes (a refund of the price, to the payer the payment committed to) is judged under them, by a client that holds that cMIP. Its refund terms (field 7) end a refund unpaid past their point.
-
-A pooled anchoring service sells so, a proven offer: its tiers, prices or price scheme, and deadlines are its cMIP's terms, and its tickets and batch publications its acts under the offer. Money carries the refund's payment and shows it repaid (Money rules 19 and 17). *Money says how money moves and that it has moved; Agreements say what must happen, in return or in consequence.*
-
-**Refund terms (terms field 17, an offer's field 7).** `refund-terms = { 0 => [ 0, point: any ] }`: the refund is claimable until this point on the time reference. Terms carrying it name a time reference (rule 33). Past the point, the refund is ended (rule 11).
-
-### Work claim (type 3)
-
-*In short: a work claim ties a work, by its hash, to its creators.*
-
-```cddl
-work-claim-payload = {
-  0 => hash,            ; the work hash
-  1 => [+ hash],        ; the creators, ascending, none twice, the signer (who opens it) among them
-  ? 2 => [hash, any]    ; a work-claim cMIP and what it produces (a pre-publication commitment)
+partner = {
+  0 => hash,                ; the partner: any identity
+  1 => uint,                ; its share of each payment, in millionths, off the top
+  ? 2 => tstr               ; a label, canonical text ("client", "relay", "publisher"), shown to readers
 }
 ```
 
-It is bound when every other creator listed has a signature act naming it. It counts only public or addressed to every creator. It carries no roles. Where no agreement writes shares, the default holder is the creator who opened it.
+`[ 1, work ]` (any bake carrying a work) is not defined.
+
+*A partner's label is shown to every reader the same way, and nothing reads it: no rule and no payment turns on it. It is here, in the core, because naming who takes what is the legible part of distribution, and a label in a cMIP would be one client showing a word another does not; its cost is one optional field that decides nothing.*
+
+Its `objects`: a later version names `[first, previous]` first. Where field 1 is present, they name the ownership agreement as `[agreement, agreement]`; a publication of a collective then cites the collective's chain (rule 58).
+
+**Its parties** are the owners' side (the ownership agreement field 1 names, consenting by its own rule; or, without field 1, its drafter), each partner, the split service, and each backup. **It counts** where:
+
+- it is valid and public;
+- every party of it has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1), an agreement that is a party as rule 15 says;
+- the partners' shares, with what the split plan takes off the top as fixed shares, do not exceed 1,000,000 together;
+- field 7 has a time reference;
+- a later version is signed by the same parties' consent, every party of that version.
+
+A version that does not count sells nothing, and a price tag naming it buys nothing.
+
+**A publication naming a vow** (`[ 3, vow ]`) sells it with its words, under whatever ownership agreement claims it, or as its owner's lone publication (rule 14). It names the vow by its genesis id, never a later version. An act this verifier holds that is not a vow, or is a later version, keeps the publication from counting. A vow made void by its signer's rotation does not: the name others wrote down stands. *What the vow promises, how it is delivered, quantities and seats, and what it became are the cMIPs'.*
+
+**A relay's delivery record counts on a purchase under a publication** where its object is the media of a bake the publication sells (any of them).
+
+**A service sold under a cMIP's terms.** *Paying for a service is an agreement.* A publication selling access under a cMIP (`[ 2, [ cmip, terms ] ]`) carries that cMIP's terms as its own. The access form is the form of every proven delivery, any delivery whose proof a verifier checks from data alone (rule 11); the verifier checks the proof, never the cMIP's say-so. Its deadlines are points on the publication's time reference (field 6). What a default owes (a refund of the price, to the payer the payment committed to) is judged under them, by a client that holds that cMIP. Its refund terms (field 8) end a refund unpaid past their point.
+
+A pooled anchoring service sells so, a proven delivery: its tiers, prices or price scheme, and deadlines are its cMIP's terms, and its tickets and batches its acts under it. Money carries the refund's payment and shows it repaid (Money rules 19 and 17). *Money says how money moves and that it has moved; Agreements say what must happen, in return or in consequence.*
+
+**Refund terms (terms field 17, a publication's field 8).** `refund-terms = { 0 => [ 0, point: any ] }`: the refund is claimable until this point on the time reference. Terms or a publication carrying it name a time reference (rule 33). Past the point, the refund is ended (rule 11).
+
+**A split agreement** is a publication whose versions carry no field 0. It sells nothing and takes no price tag; it divides what reaches its split service for the ownership agreement it names, whose target is a collective (rule 15). A split agreement naming a work's ownership agreement, or naming none, counts for nothing.
+
+### Claim (type 3)
+
+*In short: a claim ties a work, by its hash, to its creators: "I claim to have made this."*
+
+```cddl
+claim-payload = {
+  0 => hash,            ; the work hash
+  1 => [+ hash],        ; the creators, ascending, none twice, the signer (who opens it) among them
+  ? 2 => [hash, any]    ; a claim cMIP and what it produces (a commitment made before upload)
+}
+```
+
+It is bound when every other creator listed has a signature act naming it. It counts only public or addressed to every creator. It carries no roles. Where no ownership agreement targets it, the default holder is the creator who opened it.
+
 
 ### Stake transfer (type 4)
 
-*In short: a holder hands all or part of a stake to a new holder.*
+*In short: a holder hands all or part of its share of a stake to a new holder.*
 
 ```cddl
 transfer-payload = {
   0 => hash,            ; the version of the agreement defining the stake
-  1 => uint,            ; the stake, by its index there
+  1 => uint,            ; the stake, by its index there: 0, the one stake
   2 => hash,            ; to: the new holder
   3 => uint,            ; how much, in millionths of the stake: above zero, at most what the seller still holds at its place on its own line
   ? 4 => [+ hash]       ; what the seller took for it: a payment made before it; read only to find what an over-sale owes back
@@ -3165,9 +3165,9 @@ Its `objects` name the agreement as `[agreement, agreement]`, never a fork.
 
 It takes effect once the seller's chain signature names it and the buyer's signature act completes it (rule 10), where it fits what the seller still held at that place. An over-sale confers nothing. **The buyer's signature act is read as a closing reads another identity's receipt** ("Closing (type 20)"): for a collective's owners' matters it counts where the collective's line placed the transfer (rule 94), and is kept there whatever the buyer's later rotation disowns, shown as a dispute; elsewhere it is judged as Identity judges a signer's own act (Identity rule 34).
 
-**A collective's transfer of a stake it holds in a work** takes effect only once, besides the above, the owners of the collective's stake in itself who have no say consented, by that stake's holders' rule or each such holder signing it by a signature act naming the transfer, placed by the collective's line (rule 95). **For a collective's owners' matters, a transfer counts only where the collective's line placed it** (rule 94): an act of the collective acknowledging it, or a record naming it in field 3.
+**A collective's transfer of a share it holds in a work** takes effect only once, besides the above, the owners of the collective's stake in itself who have no say consented, by that stake's holders' rule or each such holder signing it by a signature act naming the transfer, placed by the collective's line (rule 95). **For a collective's owners' matters, a transfer counts only where the collective's line placed it** (rule 94): an act of the collective acknowledging it, or a record naming it in field 3.
 
-Across versions, a stake is followed by its object. A payment for it fulfils it (the receipt's field 5, the claim's field 4) or is named in its field 4.
+Across versions, the stake is followed as the agreement's one stake. A payment for it fulfils it (the receipt's field 5, the claim's field 4) or is named in its field 4.
 
 ### Issuance offer (type 26)
 
@@ -3191,9 +3191,9 @@ issuance-offer-payload = {
 }
 ```
 
-Signed by the collective, with its own key: an act in its name, done once sealed to every member and on its chain (rule 57), counting as rule 60 says. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, followed by its chain citations, as an action cites (rule 58).
+An act for the collective, drawn by a member: done once sealed to every member and on its chain (rule 57), counting under its rule for Agreements (rule 60). Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, followed by its chain citations, as an action cites (rule 58).
 
-**It reaches a holder** where it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration reaches the member it names; a holder that is itself an agreement, only where it is public (rule 57). Its period runs for a holder only where it reached that holder. Which holders it must reach, and their proportions, is the roster where the offer is placed on the collective's chain (rule 94).
+**It reaches a holder** where it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration reaches the member it names; a holder that is a deal, only where it is public; a holder that is a collective, where it is sealed to each of its members or public (rule 57). Its period runs for a holder only where it reached that holder. Which holders it must reach, and their proportions, is the roster where the offer is placed on the collective's chain (rule 94).
 
 **A holder takes up its proportion** by a signature act naming the offer (type 1), before the point field 4 names, as the time reference judges it, placed by the collective's line or not (rule 96), with its payment where field 5 names a price: a Money receipt or claim fulfilling the take-up (the receipt's field 5, the claim's field 4). A take-up takes the holder's whole proportion; a cMIP of field 7 may offer more.
 
@@ -3218,7 +3218,7 @@ proxy-revocation-payload = {
 }
 ```
 
-A proxy is signed by a holder of the stake, with its own key. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, as a resignation does, and it is never a fork. A revocation is signed by the holder who signed the proxy, and names the proxy as chain and predecessor, `[[proxy, proxy]]`. Each counts only public, or sealed to the collective among its recipients, and only where the collective's line placed it: an act of the collective acknowledging it, or a record naming it in field 3 (rule 97).
+A proxy is signed by a holder of the stake, with its own key. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, as a resignation does, and it is never a fork. A revocation is signed by the holder who signed the proxy, and names the proxy as chain and predecessor, `[[proxy, proxy]]`. Each counts only public, or sealed to the collective's members among its recipients, and only where the collective's line placed it: an act of the collective acknowledging it, or a record naming it in field 3 (rule 97).
 
 A proxy whose signer holds nothing of the stake at its placement, or that names its signer as the proxy, counts for nothing. A proxy act signed by anyone but the holder, a proxy among them, counts for nothing: no sub-proxies (rule 97).
 
@@ -3226,43 +3226,41 @@ A later proxy of the same holder on the same stake, placed by the collective's l
 
 ### Split plan and split (type 8)
 
-*In short: the split plan (terms field 8) says how money reaching the owners is divided; a split (type 8) is the split service's act dividing one payment, payout by payout, which anyone can check against the plan. Fees are their own terms field, 28.*
+*In short: the split plan (publication field 4) says how each payment reaching the split service is divided, beside the partners' shares (field 2); what is left is the owners' line, divided by the ownership agreement's stake; a split (type 8) is the split service's act dividing one payment, payout by payout, which anyone can check against the plan.*
 
 ```cddl
-split-plan = {                ; terms field 8
-  0 => [+ share-rule],      ; stakes, then roles, then named receivers, then metric shares; every share but a
-                            ; stake's is named in key 4, off the top
-  1 => hash,                ; split cMIP, which declares the remainder rule and computes the amounts
-  ; 2 is not used: fees are terms field 28, their own field
-  ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the stakes
-  ? 4 => [+ uint],          ; indexes of shares taken off the top, before the rest is divided; the rest goes to
-                            ; the stakes alone, by their parts
+split-plan = {                ; publication field 4
+  0 => [* share-rule],      ; role shares and metric shares, off the top, beside the partners' shares (field 2)
+  1 => hash,                ; split cMIP, which declares the remainder rule and computes the amounts; the same as
+                            ; field 9's task 8 where both name one
+  ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the owners' line
   ? 5 => uint,              ; who bears payout rail fees: 0 each receiver (default), 1 the split service
   ? 6 => amount / uint,     ; maximum fee per payout the service may deduct: absolute, or in millionths of the payout;
                             ; absent: no cap, flagged before signing (rule 25)
   ? 7 => any,               ; the split cMIP's parameters (a waterfall's thresholds)
-  ? 8 => [+ metric]         ; the metrics the plan divides by (rule 29)
-}
-share-rule = [ 0, stake: uint, part: uint ]         ; a stake, by its index in field 7; paid to its current holders
-           / [ 1, role: tstr, part: uint ]          ; a role, by its name, filled at payment time
-           / [ 2, receiver: hash / null, part: uint ] ; a named receiver that holds no stake (a service, a position);
-                                                    ; null: this collective, its own money, paid to its vault, in a
-                                                    ; collective's terms only, off the top (rule 22)
-           / [ 3, metric: uint, part: uint ]        ; a metric share, by its index in field 8
+  ? 8 => [+ metric],        ; the metrics the plan divides by (rule 29)
+  ? 9 => fees               ; fees, each borne by every share, off the top (rule 28)
+}                           ; keys 2 and 4 are not used: every share but the owners' line is off the top, and a
+                            ; named receiver is a partner (field 2)
+share-rule = [ 1, role: tstr, part: uint ]          ; a role, by its name, filled at payment time
+           / [ 3, metric: uint, part: uint ]        ; a metric share, by its index in key 8
+                                                    ; parts in millionths of each payment; [ 0 ] (a stake) and [ 2 ]
+                                                    ; (a named receiver) are not used: the owners' line is what is
+                                                    ; left, and a named receiver is a partner
 metric     = [ module: hash, measurer: hash, ? params: any ]   ; the measurer named in advance (rule 29)
-unfilled   = [ 0 ] / [ 1 ] / [ 2, party: hash ]     ; to the stakes pro rata / held open / to a named party
-fees       = [+ fee]                                ; terms field 28
-fee        = [ module: hash, part: uint, ? scope ]  ; borne by every stake, off the top (rule 28)
-scope      = [ 0, publication: hash ]               ; payments for this publication; absent: every payment
+unfilled   = [ 0 ] / [ 1 ] / [ 2, party: hash ]     ; to the owners' line / held open / to a named party
+fees       = [+ fee]                                ; key 9
+fee        = [ module: hash, part: uint, ? scope ]  ; borne by every share, off the top (rule 28)
+scope      = [ 0, bake: hash ]                      ; payments for this bake; absent: every payment
            / [ 1, rail: hash ]                      ; payments by this rail Module
 
 split-payload = {
-  0 => hash,                ; the receipt or payer's claim that brought the money to the owners' payee pointer
+  0 => hash,                ; the receipt or payer's claim that brought the money to the split service
   1 => [+ payout],          ; each payout, summing exactly to the amount received
   2 => hash,                ; the split cMIP used
-  3 => hash,                ; the owners' agreement whose stakes it pays
+  3 => hash,                ; the publication whose split plan it follows, by its founding version
   ? 4 => [+ [ stake: uint, [+ [ holder: hash, count: uint ]] ]],  ; the running count of leftover units (rule 9)
-  ? 5 => uint,              ; its number: one numbering across every split the service makes under a deal, any branch, from 1
+  ? 5 => uint,              ; its number: one numbering across every split the service makes under the publication, from 1
   ? 6 => [+ hash],          ; the Modules and cMIPs it ran under (rule 28): the service's statement, never what decides
   ? 7 => [+ hash],          ; the metric records it divides by (rule 29)
   ? 8 => [+ [ stake: uint, transfer: hash ]]   ; per stake, the latest transfer it follows: the service's statement
@@ -3270,114 +3268,87 @@ split-payload = {
 payout = {
   0 => hash,                ; the receiver
   1 => uint,                ; the amount, in the smallest part of the receipt's unit
-  ? 2 => uint,              ; the stake it pays, by its index in the agreement's field 7
+  ? 2 => hash,              ; on the owners' line: the ownership agreement whose stake it pays, by its founding version
+                            ; (the one the publication names, or an owner that is itself an ownership agreement, rule 15)
   ? 3 => tstr,              ; the role it fills
   ? 4 => hash,              ; the evidence for that role: an act signed by someone other than the split service and the payee,
                             ; or, for a rail Module's role share, the receipt or claim naming that rail Module, where the
                             ; payee's own pointer or vault names it (rule 22); only with key 3
   ? 5 => hash,              ; a fee: the module whose fee it pays, its receiver being key 0 ; never with key 2 or 3
   ? 6 => uint,              ; the rail fee deducted, within the plan's maximum
-  ? 7 => uint               ; the metric share it pays, by its index in plan field 0 (rule 29); never with keys 2, 3 or 5
+  ? 7 => uint,              ; the metric share it pays, by its index in plan key 0 (rule 29); never with keys 2, 3 or 5
+  ? 8 => uint               ; the partner it pays, by its index in the publication's field 2; never with keys 2, 3, 5 or 7
 }
 ```
 
-**Fees (terms field 28).** Fees are their own terms field, not a key of the plan; their form is `fees` above. An area may reach field 28 apart from field 8 (`field-ref` `[0, 28]`).
+**Every payout matches its share exactly** (rule 27). Each partner receives its share of the payment. For the owners' line, each holder of the stake in the version in force for the receipt (rule 12) receives its share of what is left, exactly as rule 9 sends each leftover unit under the default rule, and nobody else receives on it.
 
-**Every payout matches its stake exactly** (rule 27). For each stake a split pays, each holder receives its share of what the split pays that stake, exactly as rule 9 sends each leftover unit under the default rule, and nobody else receives on it.
+A holder that is a collective receives at its own payee pointer (rule 23). A holder that is another ownership agreement is paid through it: its part divided among its holders, each payout naming that agreement in key 2 (rule 15).
 
-A holder that is another agreement receives at the one pointer that agreement names for money arriving from above (rule 15). The plan never divides that holder's share among the next agreement's owners.
+Every fee, partner's, role and metric share is taken before the owners' line divides, so it falls alike on every owner. Any deviation, either way, breaks the plan, and is shown so. *No holder is paid a whole smallest unit or more below its exact share, and none above it by as many units as the stake has holders or more, which leaves room for the leftovers of rounding going to one holder (rule 21).*
 
-Every fee is taken before the stakes divide, so it falls alike on every stake. Any deviation, either way, breaks the plan, and is shown so. *No holder is paid a whole smallest unit or more below its exact share, and none above it by as many units as the stake has holders or more, which leaves room for the leftovers of rounding going to one holder (rule 21).*
-
-Each payout is then paid as a simple Money payment, with its own receipt naming the split. A fee taken off the top, and an app share for the client that brought the sale (a role share), are both expressed in the plan.
+Each payout is then paid as a simple Money payment, with its own receipt naming the split. A fee taken off the top, and an app's share for the client that brought the sale (a partner, or a role share), are both expressed in the publication.
 
 **What a verifier checks against the plan:**
 
+- a partner's payout names a partner of the publication, and pays its share;
 - a role payout fills a role the plan names; several fillers of one role are paid equally, within one unit;
-- a named receiver's payout is one the plan names; the collective's own part (a receiver written null) names the collective as its receiver, and is paid to an entry of the collective's vault, never its flow pointer (rule 22);
 - a fee payout is a fee entry's, and every fee an entry makes owed on the payment is paid;
 - a metric payout names a metric share; its receiver is one the plan already pays, never the metric's measurer; the measurer is not the split service; and the split names a record of the metric's Module signed by the measurer (the record's format is the Module's);
-- a payout on a stake whose holder is another agreement names, as its receiver, the one pointer that agreement designates for payments (rule 15): field 14's one grantee, or a lone owner; or, for that payment, a backup of its field 29 once every attempt before it failed, as its split cMIP defines failure (rule 17).
+- an owners' line payout names the ownership agreement in key 2 and pays a holder of its stake in the version in force for the receipt; on a holder that is a collective, its receiver is that collective; on a holder that is another ownership agreement, its receivers are that agreement's holders, nested at most 8 layers;
+- the collective's own part, in a collective's split agreement (a partner naming the collective, rule 22), is paid to an entry of the collective's vault, never its flow pointer.
 
-A holder designating none cannot be paid, and any payout on its holding to anyone else is a mismatch: **never an address the owners did not sign.**
+Any payout to anyone else is a mismatch: **never an address the parties did not sign.**
 
 How much each share gets is the split cMIP's: a verifier without it shows the amounts as unknown, never as wrong.
 
-**A split is delivered to every holder it pays**: each receiver of a payout naming a stake is among its recipients (Envelopes, `to`), unless the split is public, a public split being delivered to everyone. Every fee it takes is a payout naming its module and its receiver. *The core cannot know who owns a service, so it never hides a fee: every holder sees what was taken before their share, and by whom.*
+**A split is delivered to every holder and partner it pays**: each receiver of a payout is among its recipients (Envelopes, `to`), unless the split is public, a public split being delivered to everyone. Every fee it takes is a payout naming its module and its receiver. *The core cannot know who owns a service, so it never hides a fee: every holder sees what was taken before their share, and by whom.*
+
 
 ### Grant (type 9) and revocation (type 10)
 
-*In short: a grant lets a grantee act for the grantor, within limits, with a key of the grantee's own that is scoped to the grant. A revocation removes that key.*
+*In short: a grant lets a grantee act for the grantor, within limits. A collective's grantee acts with its own key, naming the collective and the grant; a person's grantee holds a grant key of the person's, scoped to the grant. A revocation ends the grant.*
 
 ```cddl
 grant-payload = {
   0 => hash,                ; grantee
-  1 => uint,                ; scope: 0 sign new deals, 1 manage named existing ones, 2 act for an identity (post, publish, spend)
-  ? 2 => [+ hash] / null,   ; the agreements concerned, for scope 1; null: this agreement, the deal whose terms list the grant
-                            ; in field 14 ; null only with scope 1, never with field 5, 7 or 8
+  1 => uint,                ; scope: 0 sign new deals, 1 manage named existing ones, 2 act for an identity (post, upload, spend)
+  ? 2 => [+ hash],          ; the agreements concerned, for scope 1
   ? 3 => any,               ; limits: per-deal cap, total, spending, as the grant's cMIP defines
   ? 4 => hash,              ; the cMIP defining the limits
-  ? 5 => uint,              ; for a collective: the area whose power issues it, by its id in the agreement in force at the grant's binding
-  ? 6 => [+ kind],          ; the acts it reaches; required with field 5, and within that area's reach
+  ? 5 => uint,              ; for a collective: the area whose power issues it, by its id in the agreement in force for the grant
+  ? 6 => [+ kind],          ; the acts it reaches; required for a collective's grant, and within the power of its signers
+                            ; (rule 74)
   ? 7 => hash,              ; a reinstatement: the ended grant it reinstates, fields 0 to 6 repeating that grant's (rule 71); only with field 5
-  ? 8 => null,              ; the grantor is this collective, the one whose founding terms name the grant ; never with field 5 or 7
-  9 => signing-key          ; the grant key, in Identity's form [ scheme, key ]: made and held by the grantee, scoped to this grant
-}
+  ? 9 => signing-key        ; a person's grant only, and then required: the grant key, in Identity's form [ scheme, key ],
+                            ; made and held by the grantee, scoped to this grant
+}                           ; key 8 (once "the grantor is this collective", for a grant its founding terms named) is
+                            ; retired and never reused, with terms fields 14 and 29; null in field 2 ("this agreement")
+                            ; likewise
 
 revocation-payload = {
-  0 => hash                 ; the grant whose key it removes
+  0 => hash                 ; the grant it ends
 }
 ```
 
-**The grant key** (field 9). The grant names the public part of a signing key the grantee made and keeps (the grantee makes it, so nobody else holds a key that acts as the grantee's within the collective). **The grant counts only once its grantee signed a signature act naming it** (type 1), accepting it, a grant by founding terms included. **For a collective, the grantee's acceptance is placed as a member's signature is** ("Made before, made after", 2): once an act of the collective acknowledges it, it keeps for the collective the effect that placement gave it, whatever the grantee's later rotation disowns, shown as a dispute; an acceptance no act of the collective placed is judged by Identity alone.
+**A collective's grant** is an act for the collective (rule 58), drawn by a member with their own key, naming the collective on its chain and the previous decision, as every decision does. It carries no field 9: a collective's grant carrying one is invalid, since a collective has no key to scope. **Its grantee acts with its own key**: an act it signs for the collective names the collective on its chain and the grant as the decision it acts under (rule 58), and is judged by rule 80. **The grant counts only once its grantee signed a signature act naming it** (type 1), accepting it. **The grantee's acceptance is placed as a member's signature is** ("Made before, made after", 2): once an act for the collective acknowledges it, it keeps for the collective the effect that placement gave it, whatever the grantee's later rotation disowns, shown as a dispute; an acceptance no act for the collective placed is judged by Identity alone.
 
-An act signed with the grant key names the grant as its `binding` (Identity: a scoped key, which this MIR judges), and its signer is the collective. It is the collective's own act, on the grantee's strand of the collective's actions chain, which cites the grant in `objects` as the decision it acts under (rule 58). It is judged at the latest link of the collective's identity chain among its grant and the decisions it cites.
+**A person's grant** carries field 9, the grant key: the public part of a signing key the grantee made and keeps (the grantee makes it, so nobody else holds a key that acts as the grantee's for the person). A person's grant without field 9 is invalid. An act signed with the grant key names the grant as its `binding` (Identity: a scoped key, which this MIR judges), and its signer is the grantor. It is the person's own act, citing the grant in `objects` on the person's chain. **It counts only once its grantee signed a signature act naming it**, accepting it.
 
-A publication a grantee makes with its grant key is the grantor's own, signed by it, so payment reaches the grantor whatever client pays; it needs no `for` field.
+An act under a grant is backed (rule 80) only within the grant's reach (field 6, or, for a person's grant naming none, every act but a decision), only within the limits its limits cMIP sets (fields 3 and 4: an expiry among them, judged against a time reference), and only while the grant has not ended for it. It is never backed for a decision: no act under a grant is a record, a grant or a revocation, and none places a member's signature or adopts another act for the collective.
 
-An act of the grant key is backed (rule 80) only within the grant's reach (field 6, or, for a grant naming no area, acts no area reaches), only within the limits its limits cMIP sets (fields 3 and 4: an expiry among them, judged against a time reference), and only while the grant has not ended for it. It is never backed for a decision: a grant key signs no record, grant or revocation, and no act of it places a member's signature or adopts another act for the collective.
+A grant survives the collective's rotations. It ends only by a revocation, a departure emptying its area, a layer freezing, a fork or a closing.
 
-A grant survives the collective's rotations. It ends only by a revocation, a departure emptying its area, a fork or a closing.
+**A grant from an area** (field 5) is drawn by a holder of the area and completed by signature acts of the area's other holders (rule 74). Each kind in field 6 must lie within the area's reach: every act it could reach, computed as for overlapping kinds from the agreement in force ("Areas"), is an act the area reaches. Otherwise the grant is invalid.
 
-**A grant from an area** (field 5) is signed by the collective and completed by signature acts of the area's holders (rule 74). Each kind in field 6 must lie within the area's reach: every act it could reach, computed as for overlapping kinds from the agreement in force ("Areas"), is an act the area reaches. Otherwise the grant is invalid.
+**A reinstatement** (field 7) is the exception, and **is a clone of the ended grant.** Its fields 0 to 6 must repeat those of the grant it names, which must be a grant within the area of the same id; one whose fields differ is invalid. It backs acts only within the refitted area's reach (rule 71). The grantee accepts it again, and it takes nothing on.
 
-**A reinstatement** (field 7) is the exception, and **is a clone of the ended grant.** Its fields 0 to 6 must repeat those of the grant it names, which must be a grant within the area of the same id; one whose fields differ is invalid. It backs acts only within the refitted area's reach (rule 71). Its key (field 9) is its own, the grantee accepts it again, and it takes nothing on.
+**Revocation (type 10).** A revocation is a decision of the grantor: for a collective, an act for it citing its chain as every decision does, counting as rule 74 says; for a person, an everyday act of its own key. It names the grant it ends. For a grant within an area, it is completed by that area's holders' signature acts, judged by that area alone (rule 74).
 
-**A grant of this collective by its founding terms** (field 8) is written before the collective exists, so founding terms can name it (field 14, field 29). Its grantor is the collective whose founding terms name it. **It is carried by the founding terms, which every founder signs**: signed by a founder, the core not judging which, it counts through them. The collective's key takes over from then on, for every later grant and revocation. The grantee accepts it by its own signature act. It names no area, and reinstates nothing.
+It is a decision ending powers: **an act under the grant that the revocation's history holds was done within the grant's powers, and binds; any other, racing it or after it, is void** (the tie rule), unless another identity acknowledged it, or a keeper recorded it before recording the revocation: then it is valid and shown as disputed, and confers nothing unless the grantor adopts it (rule 76).
 
-**A payee's grant in a deal.** Where a deal names a split service, each payee grants the service a grant key of its own, written in the deal's terms. The grant names "this agreement" by null (field 2, scope 1), as founding terms name "this collective". So it is written before the deal, and the deal names it: **field 14 lists one grant per payee.**
+*A split service is no grantee: a publication names it, and it receives and signs in its own name (rule 16). A receipt under a person's grant, where the person granted an application its receipts, is the person's own receipt (Money rule 7).*
 
-The grant is a person's grant (rule 73), signed by the payee with its own key, and public. It counts only through the deal: once a deal its grantor signed lists it in field 14 and exists, every party having signed it: signing the deal signs them. Before that, it backs nothing. The split service signs to accept each grant, as every grantee does.
-
-Every grant field 14 lists names the same grantee, the one split service, and is signed by a distinct party. A deal breaking this carries none of them.
-
-**A backup split service holds grants the same way.** Field 29 lists them, one per payee, grouped by service. Each is the payee's own grant naming "this agreement" by null, signed by the payee and accepted by that service, counting once the deal exists, as field 14's do. Every group is signed by the payees that sign field 14's grants, one each. Each group names a service of its own, never field 14's. A deal breaking this carries none of its grants, field 14's included; a verifier not holding every grant it lists cannot tell, and answers unknown. *Which service receives a payment is the split cMIP's, attempt by attempt (rule 17); a backup's grant keys count from the deal's existence, as in a collective, and both services' pointers pass the pointer check (rule 16).*
-
-**A payee's grant counts once a deal its grantor signed lists it and exists, every party having signed.** "This agreement" is the deal with the versions it clones, and a grant listed by two deals its grantor signed serves each. *The mechanic is the collective's founding grant, and the service is no party to the deal, so leaving it stays a revocation, never a renegotiation.*
-
-**Each payee can revoke its own grant** (type 10, an everyday act, public, rule 73); the other payees' grants stand.
-
-**What a split service's grant key may sign.** One rule holds for every split service, whoever granted it, a person or a collective. A split service's grant is a grant field 14 names, or one field 29 names for a backup, in any version of the agreement: a payee's grant in a deal, or a collective's grant.
-
-**Its key signs only receipts for money coming in under the grantor's own claims and offers.** That is, a Money receipt (type 2) whose payee (field 3) is the grantor, and which is a purchase naming the grantor's own claim (field 9: in a deal, the deal or a version of it; in a collective, its agreement or a version of it), or a payment following it (field 5).
-
-It never signs a receipt whose payer (field 2) is the service, nor a payout the grantor is owed (a receipt carrying a batch, field 8, or naming a split in field 5 or in `objects`), and no other act, save one exception.
-
-The exception is a layer's incoming share with the rail's proof behind it. Where the rail pays an account the grantor holds (a bank transfer to the owner), its grant to the next layer's split service lets that service sign for the share on the grantor's behalf: a receipt whose payee is the grantor, naming another identity's split that pays the service as the receiver of a share held by an agreement of the grantor's naming it (rule 15). **The rail's proof is required on that receipt** (the rail's answer, valid). Never a payout of the service's own split, nor such a receipt without the rail's proof: there the limit stands whole. *The owner can grant what it wishes to whom it chooses. The limit stops a service from forging the payee's own receipt for its own split's payouts; with the rail's proof behind the signature, the forgery is impossible, so the limit stays only where no rail proof stands behind it. One rule for all.*
-
-**A grantor may scope its grant more narrowly still**: the kinds it names (field 6), and for a collective the area's reach, still apply before this limit.
-
-"The service" is every service the grantor's agreement names for the split service, its backups included, since money from any of them to the grantor is a payout; a grant to the same identity that neither field 14 nor field 29 names is no split service's grant, and reaches what its kinds name, the grantor's choice, in plain view.
-
-*Example: a label owns a quarter of a film; the film's service owes the label 40. The label's own split service, holding the label's grant key, cannot sign "the label received 40": that is a payout the label is owed, under another agreement's claim. The label signs its own receipt once the 40 arrives.* *Whoever uses a grant key still signs from under its own identity, by the grant key.*
-
-So a payout without the payee's own receipt stays the service's open obligation (rule 30): the service cannot sign "the payee received its payout" in the payee's name. The grant names the grantee's identity, which signed to accept it, so every act of the key is traceable to who used it.
-
-*A payout is a receipt carrying a batch or naming a split; "payments on its offer" are receipts following the deal itself, or purchases of its work, which name its claim anyway; a receipt received by anyone but the grantor is never backed.*
-
-**Revocation (type 10).** A revocation is a decision of the grantor, signed with its own key and citing the collective's chain as an action does. It names the grant whose key it removes, never a place on the grantee's strand. For a grant within an area, it is completed by that area's holders' signature acts, judged by that area alone (rule 74).
-
-It is a decision ending powers: **an act signed with the grant key that the revocation's history holds was done within the grant's powers, and binds; any other, racing it or after it, is void** (the tie rule), unless another identity acknowledged it, or a keeper recorded it before recording the revocation: then it is valid and shown as disputed, and confers nothing unless the grantor adopts it (rule 76).
 
 ### Request to a judge (type 25)
 
@@ -3401,21 +3372,21 @@ Its `objects` name the version as `[agreement, agreement]`. It counts only publi
 
 ### Release (type 5)
 
-*In short: a release ends the owners' claim on a work and publishes its content keys, so the work becomes public domain (rule 55).*
+*In short: a release ends the owners' claim on a work and makes its content keys public, so the work becomes public domain (rule 55).*
 
 ```cddl
 release-payload = {
   0 => hash,                ; the work released, by its hash
   1 => [+ [ agreement: hash, index: uint ]],  ; the stakes in it whose claim ends: the work's owners, past and present
   ? 2 => [+ hash],          ; the work claims binding it to its creators: its creators' history
-  ? 3 => [+ [ publication: hash, key: bstr .size 32 ]],  ; the content key of each publication carrying it, published
+  ? 3 => [+ [ bake: hash, key: bstr .size 32 ]],  ; the content key of each bake carrying it, made public
   ? 4 => [ point: any, keeper: hash ]   ; a timed release: the point on the time reference, and who delivers the keys then
 }                           ; field 3 is present unless field 4 is
 ```
 
 It is signed by one direct owner of the work, with its own key. Every other holder whose signature the release rule asks for adds a signature act naming it (type 1). Its inside names, in `objects`, each agreement whose stake it ends, as chain and predecessor.
 
-**A release is public** (its content key on its outside), so that the content keys it carries are published.
+**A release is public** (its content key on its outside), so that the content keys it carries are public.
 
 A release is complete when:
 
@@ -3426,11 +3397,11 @@ A release is complete when:
 
 **Every direct owner of the work signs, departed holders of a stake in the work included, unless the release rule says otherwise.**
 
-A holder that is a collective signs by its own rules. Its signature (the release itself, or its signature act on it) counts only with its consent. A release, or a collective's signature on one, is reached by the areas reaching every layer a release touches, Envelopes, Money and Agreements, each such area that exists meeting its threshold (rule 60). *Two levels of ownership: the collective owns the work; its members and departed holders own shares of its income, not the work. Releasing is a business decision of the collective; it affects every holder alike. Unlike a price, it ends the claim for good: a price can be raised again, a release cannot be undone.* **And since it pays the holders of the collective's stake in itself less, by effect, it is an owners' matter** (rule 95): the release counts only once the owners of the collective's stake in itself who have no say consent, by that stake's holders' rule or each signing, placed by the collective's line.
+A holder that is a collective signs by its own rules. Its signature (the release itself, or its signature act on it) counts only with its consent. A release, or a collective's signature on one, is reached by the collective's rules for every layer a release touches, Envelopes, Money and Agreements, each met (rule 60). *Two levels of ownership: the collective owns the work; its members and departed holders own shares of its income, not the work. Releasing is a business decision of the collective; it affects every holder alike. Unlike a price, it ends the claim for good: a price can be raised again, a release cannot be undone.* **And since it pays the holders of the collective's stake in itself less, by effect, it is an owners' matter** (rule 95): the release counts only once the owners of the collective's stake in itself who have no say consent, by that stake's holders' rule or each signing, placed by the collective's line.
 
-**A timed release** names a point on the time reference of each agreement whose stake it ends, which must name one, and the identity that delivers the content keys then (field 4). The claim ends at that point, as the time reference judges it, and is undetermined where it answers undetermined. *Stated cost: the keys' delivery rests on that identity; if it vanishes, the work is released in Agreements but its key may never come out; the owners may always publish the key earlier. That identity is named for the keys alone, not as a keeper in rule 37's sense, which never receives content keys as such (rule 43).*
+**A timed release** names a point on the time reference of each agreement whose stake it ends, which must name one, and the identity that delivers the content keys then (field 4). The claim ends at that point, as the time reference judges it, and is undetermined where it answers undetermined. *Stated cost: the keys' delivery rests on that identity; if it vanishes, the work is released in Agreements but its key may never come out; the owners may always make the key public earlier. That identity is named for the keys alone, not as a keeper in rule 37's sense, which never receives content keys as such (rule 43).*
 
-*Every stake in a work lives in its one claiming agreement and its transfers on that agreement's chain, so a release signed by every holder there is complete; a claim the release does not name, by another identity, stays openly contested beside it (rule 7), and the release cannot end it.*
+*Every share in a work lives in its ownership agreement and its transfers on that agreement's chain, so a release signed by every holder there is complete; a claim the release does not name, by another identity, stays openly contested beside it (rule 7), and the release cannot end it.*
 
 ### Negotiation message (type 18)
 
@@ -3477,9 +3448,9 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
-**A contest of a purchase**: field 0 names **the purchase it contests**: the buyer's payer's claim of the payment that is the purchase (rule 12), any of the buyer's own claims of it, or, for an offer at no price, the signature act by which the buyer signed onto the offer (a sign-on, rule 13: a signature act naming the offer, by anyone but the offer's own side). The buyer is the payer the payment's commitment names, an identity (rule 22), or the signer of that signature act: a purchase whose payer committed only a bare key, or that no claim of the payer's records, has no buyer who can contest it (rule 13's stated cost). Field 1, optional, says what was promised and not kept, in words (a buyer may know only that something went wrong). Its inside names the purchase as both chain and predecessor, `[[purchase, purchase]]`. Signed by the buyer, it is shown beside the purchase while the payment is a purchase (rule 12; a payment still pending, or found to be no purchase, shows none), and voids nothing: it changes no payment, refund or delivery, nor any act's validity, status or selection, nor a sale's state. Signed by anyone else, it shows nothing as the buyer's contest. *Bytes that do not match what was sold are caught by the bytes (Envelopes rule 21, and a key delivery that opens nothing is ignored); words that promised something other than what was delivered are not, and this is where the buyer says so.*
+**A contest of a purchase**: field 0 names **the purchase it contests**: the buyer's payer's claim of the payment that is the purchase (rule 12), any of the buyer's own claims of it, or, for a publication with no price tag, the signature act by which the buyer signed onto the publication (a sign-on, rule 13: a signature act naming the publication, by anyone but its own parties). The buyer is the payer the payment's commitment names, an identity (rule 22), or the signer of that signature act: a purchase whose payer committed only a bare key, or that no claim of the payer's records, has no buyer who can contest it (rule 13's stated cost). Field 1, optional, says what was promised and not kept, in words (a buyer may know only that something went wrong). Its inside names the purchase as both chain and predecessor, `[[purchase, purchase]]`. Signed by the buyer, it is shown beside the purchase while the payment is a purchase (rule 12; a payment still pending, or found to be no purchase, shows none), and voids nothing: it changes no payment, refund or delivery, nor any act's validity, status or selection, nor a sale's state. Signed by anyone else, it shows nothing as the buyer's contest. *Bytes that do not match what was sold are caught by the bytes (Envelopes rule 21, and a key delivery that opens nothing is ignored); words that promised something other than what was delivered are not, and this is where the buyer says so.*
 
-*Client conformance: where the offer the buyer paid or signed onto names a vow, the buyer's client names the vow in the contest, as its inside's chain and predecessor, `[[vow, vow]]`, so that the sale is marked.*
+*Client conformance: where the publication the buyer paid or signed onto sells a vow, the buyer's client names the vow in the contest, as its inside's chain and predecessor, `[[vow, vow]]`, so that the sale is marked.*
 
 *Client conformance: where the payee of a purchase is a collective, or an agreement with several parties, the buyer's client makes its claim of the purchase readable by every member of the collective's agreement in force, or by every party of the version the purchase names: sealed to each of them, or its key delivered to each (rule 57). Stated cost: every member or party sees who bought.*
 
@@ -3557,27 +3528,25 @@ The version a line registering a departure puts in force, whose signature the de
 
 ### Record (type 17)
 
-*In short: a record is the collective's everyday line. It writes a new clone of the collective's agreement on the record, or registers members' departures and rotations, or both.*
+*In short: a record is the collective's everyday line, which any member draws. It writes a new clone of the collective's agreement on its chain, or registers members' departures and rotations, or both.*
 
 ```cddl
 record-payload = {
-  ? 0 => hash,              ; the complete clone of the collective's agreement it writes on the record
+  ? 0 => hash,              ; the complete clone of the collective's agreement it writes on the chain
   ? 2 => [+ hash],          ; the signature acts that complete that clone ; present exactly when field 0 is
-  1 => [* kept-tip],        ; the latest act of every other sequence the collective keeps
   ? 3 => [+ hash]           ; what it registers: resignations and steppings down by parties, abandonment
                             ; declarations removing a party's voice, and parties' own rotations, each by its act's id;
                             ; also stake transfers, proxies and their revocations, and take-ups of an
                             ; issuance offer
-}                           ; at least one of fields 0 and 3
-
-kept-tip = [ act: hash, position: uint, summary: hash ]   ; as in Identity: the act's id, its position, and the running summary including it
+}                           ; at least one of fields 0 and 3; key 1 (once the kept tips of the collective's own
+                            ; sequences) is retired and never reused: its tips are in `objects`
 ```
 
-Signed by the collective, with its signing key, as an everyday act in its own sequence. Its inside names, in `objects`, the clone as both chain and predecessor, `[[clone, clone]]`, as a signature does. A record naming no clone names the agreement in force for it the same way, `[[agreement, agreement]]`.
+Drawn by any member of the collective, with their own key, as an everyday act of theirs. Its inside names, in `objects`, the clone as both chain and predecessor, `[[clone, clone]]`, as a signature does; a record naming no clone names the agreement in force for it the same way, `[[agreement, agreement]]`. Then, on the collective's chain (the collective's identity as chain), **the previous decision** and **every other act for the collective its drawer holds that no act it cites already reaches**: its tips (rule 58). A record naming no decision is no decision, and no line.
 
-**A record is the collective's everyday line** ("Made before, made after"): field 1 names the collective's other sequences.
+**A record is the collective's everyday line** ("Made before, made after"): what it names on the collective's chain is its history.
 
-A record is a decision. Its own sequence and the tips field 1 names are the action heads it saw, the previous decision among their history. It carries no other citation.
+A record is a decision. It decides nothing by itself: its clone counts by the clone's own signatures, its registrations by the acts they name. *So letting any member draw one gives nobody a power they lacked. What it gives is timing: the tips that fix the line. Two members drawing records concurrently make a fork of records, which rule 90 settles.*
 
 **A record must be done.** A record that is neither sealed to every member of the agreement in force for it, nor public, is no line: it puts nothing in force, registers nothing, and places no signature (rule 57). *One rule for every act in the collective's name, no exception by type. Example: a key holder draws a record registering a member's resignation, sealed to nobody: it is no line, and the member's voice remains until a record that is done registers it.*
 
@@ -3600,7 +3569,7 @@ A record of a clone that changes the constitutional tier puts nothing in force: 
 
 **A record's two parts count apart.** A record whose clone it does not put in force still registers what its field 3 names, and is still a line.
 
-No area reaches a record, as none reaches a rotation. It is judged by the clone it names alone, whose own mark already carries the consent it needed. So the holders of an area reaching Agreements cannot hold up another area's change. *The key grammar's holders produce the collective's signature on it, as on every act of the collective; they could already withhold that signature from any area's acts, so the record gives them no new power.*
+No layer's rule and no area reaches a record, as none reaches a rotation: any member draws it. It is judged by the clone it names alone, whose own mark already carries the consent it needed. So the members named for Agreements cannot hold up another rule's change.
 
 **Field 3 registers departures and rotations.** Each act it names must be one of these:
 
@@ -3619,7 +3588,7 @@ Each takes effect for the collective's acts at this line ("Made before, made aft
 
 The record is not before itself. A clone the same record writes is judged with the departures it registers already in effect. So a signature it places counts for its departed signer only where an act of the collective placed it before.
 
-*Client conformance:* the collective's client registers a departure, and a member's rotation it learns of, in its next act, as it records a complete clone at once (rule 72). The rotation that follows a departure (rule 69) still fences off the departed member's key share. *A departure needs nobody's permission; the line is the collective's, drawn with the signing key, and a collective that delays it only delays itself.*
+*Client conformance:* a member's client registers a departure, and a member's rotation it learns of, in its next record, as it records a complete clone at once (rule 72). The rotation that follows a departure (rule 69) still fences off the departed member's share of the chain key. *A departure needs nobody's permission; the line is the collective's, any member draws it, and a collective that delays it only delays itself.*
 
 *The rare case, in detail:* when a declaration removes a voice. A declaration removes a voice when:
 
@@ -3701,12 +3670,12 @@ In a deal the authority is one identity, never a threshold of the other parties,
 
 Each declaration sits in the declarations slot (Identity). Kind 0 is **the agreement the collective lives under.**
 
-- A collective's genesis declares its founding agreement: `[AGREEMENTS, 0, agreement]`, the value being its id.
-- A rotation declares, with the same kind, each complete clone that changes the constitutional tier, membership included (rule 69). Its value names the clone and the signature acts that complete it: `[AGREEMENTS, 0, [clone, [+ hash]]]`. Only such clones need the collective's keys to rotate.
+- A collective's genesis declares its founding agreement: `[AGREEMENTS, 0, agreement]`, the value being its id. It declares it in place of a first signing key, and is signed by a chain key (Identity rule 1); its founding agreement's target is `[1, null]`, this collective.
+- A rotation declares, with the same kind, each complete clone that changes the constitutional tier, membership included (rule 69). Its value names the clone and the signature acts that complete it: `[AGREEMENTS, 0, [clone, [+ hash]]]`. Only such clones need the collective's chain key to rotate. **The rotation's history is the history of the signature acts it names**: each cites, on the collective's chain, the previous decision and the acts its signer holds, as an action cites (rule 58). *A rotation carries no `objects`, so its signature acts are how it names the previous decision and the action heads it saw.*
 - The recovery rotation (the one removing a declared member, rule 85), where a declaration taking effect there needs other signatures than its signer's, adds a third element naming those signature acts: `[AGREEMENTS, 0, [clone, [+ hash], [+ hash]]]`.
 - A rollback (rule 93) declares `[AGREEMENTS, 0, [clone, [+ hash], broken, [* hash]]]`. These are: the clone; the signature acts that complete it; the broken act (the rotation's id, as an act of the collective's identity chain); and the acts it registers, each by its act's id, possibly none. Those acts are resignations and steppings down (type 16), declarations of absence (type 13), and the signature acts on those declarations that their authority needs (type 1). Its third element, a hash and not a list, tells it from the recovery rotation's form.
 
-Every other complete clone is written by a record act in the collective's own sequence (rule 72).
+Every other complete clone is written by a record, which any member draws (rule 72).
 
 **A rotation puts its clone in force with the signature acts its declaration names, and only those**, as a record does:
 
@@ -3716,24 +3685,24 @@ Every other complete clone is written by a record act in the collective's own se
 
 A signature act naming the clone that the declaration does not name counts nothing toward it there, whenever it was made. *So no signature arriving after the chain key's ceremony completes the clone late, and the records made since are never judged anew. Identity is unchanged: a declaration's value is the higher MIR's to define (Identity rule 31). The genesis declares founding terms, which exist only when every founder has signed them, and names no signatures.*
 
-For an act the collective's key signs, the agreement in force is the agreement named by the latest declaration of kind 0 at the chain act its key is bound to. Where a valid record made since that declaration counts for it, it is instead the clone named by the latest such record (rule 72):
+For an act for the collective, the agreement in force is the clone furthest along the agreement chain among those put in force by the decisions its history holds (rule 72): the genesis's declaration, the rotations' declarations of kind 0, and the records' clones:
 
-- for a record, a record before it;
-- for an action, a record its history holds, or one before such a record (rule 58).
+- for a record, the decisions in its history;
+- for an action, the decisions its history holds, and those in their histories (rule 58).
 
-Its areas are the ones that act is judged by.
+Its layer rules and areas are the ones that act is judged by.
 
-**A rotation that declares no new agreement changes keys, not rules.** Its declarations slot carries the Agreements declaration on unchanged, and the agreement in force carries forward, recorded clones included. The records made since the last declaration, under that rotation's binding and the earlier ones, keep counting. Only a rotation declaring a new value of kind 0 supersedes the records before it. *Otherwise a collective that adopted a payment cMIP by a record, then rotated to fence off a departed member's share before the refit was signed, would silently undo the adoption made by the area reaching Money for every act under the new key.*
+**A rotation that declares no new agreement changes the chain key, not rules.** Its declarations slot carries the Agreements declaration on unchanged, and the agreement in force carries forward, recorded clones included. The records made before it keep counting. Only a rotation declaring a new value of kind 0 supersedes the records before it. *Otherwise a collective that adopted a payment cMIP by a record, then rotated to fence off a departed member's share before the refit was signed, would silently undo the adoption made under its rule for Money for every act after it.*
 
 *The rare cases, in detail:* a recovery rotation and a rollback.
 
 **A recovery rotation places the signature acts on a declaration that its third element names, and only those**, as it places its clone's.
 
-- Each act the third element names must be a valid signature act (rule 6) naming an abandonment declaration (type 13) against a party that the declared clone takes out of the parties and that the collective's signing key cannot be produced without under the agreement in force at the rotation: the declaration that takes effect at this rotation.
+- Each act the third element names must be a valid signature act (rule 6) naming an abandonment declaration (type 13) against a party that the declared clone takes out of the parties, and without whom no member remains to draw a record, under the agreement in force at the rotation: the declaration that takes effect at this rotation.
 - A rotation naming any other act there puts nothing in force, as one naming an act that is not a signature on its clone.
 - The rotation places each at its own position. The declaration's number is counted there, among the other parties whose voice remains at the rotation, met by its signer with the signers of the signature acts placed at or before it (rule 85).
 
-*The declared member is the one who would draw the collective's line, so no act of the collective can place the others' signatures before the rotation; the rotation itself does, at the chain key's ceremony, so no signature arriving later completes the declaration there.*
+*No member but the declared one remains to draw the collective's line, so no act for the collective can place the others' signatures before the rotation; the rotation itself does, at the chain key's ceremony, so no signature arriving later completes the declaration there.*
 
 **A rollback puts its clone in force as a rotation does, and registers departures as a record does** (rule 93). It counts only in the broken stretch, naming as broken the broken act itself. Further:
 
@@ -3766,7 +3735,7 @@ notice-payload = {
 
 A collective owing money back from a broken stretch to a payer who gave no address (no payee pointer, vault, or refund rail on a claim of theirs) sends that payer, before it closes, **a notice sealed to their identity** (or public). The notice asks where the money should go, with a deadline on a time reference.
 
-Signed by the collective, with its own key. Its inside names the payment as chain and predecessor, `[[payment, payment]]`.
+An act for the collective, drawn by a member. Its inside names the payment as chain and predecessor, `[[payment, payment]]`, followed by its chain citations (rule 58).
 
 If the payer names an address in time, they are paid. If not, the collective may close, the debt named in the closing act, visible and unpaid (rule 93; the closing's field 4).
 
@@ -3788,27 +3757,24 @@ Whether the deadline has passed, with no address given within it, is the time re
 fork-payload = {
   0 => hash,                ; the original's agreement in force at the fork
   1 => hash,                ; the original collective
-  2 => hash,                ; the original's identity-chain act (genesis or a rotation) its latest acts are bound to
-  3 => [* kept-tip],        ; the latest act of every sequence the original keeps under that chain act: the fork's line,
-                            ; the action head it cites
   4 => [2* side],           ; the sides
   ? 5 => [+ fork-share],    ; the original's stakes, where not divided by default
   ? 6 => [+ [ obligation: hash, sides: [+ uint] ]]  ; every obligation in the history it cites: the side, or the sides jointly, owing it
-}
+}                           ; keys 2 and 3 (once the original's chain act and the kept tips of its own sequences) are
+                            ; retired and never reused: the fork's line is what it cites on the collective's chain
 side       = [ successor: hash, members: [+ hash] ]   ; the collective the side founded first, by its identity, and its members
 fork-share = [ agreement: hash, index: uint, [+ share: uint] ]   ; a stake the original holds, and each side's share, in millionths
 ```
 
 Field 4 names each successor once, never the original. Field 5's shares sum to 1,000,000, one per side, one entry per stake. Field 6 names each obligation once, its sides ascending, each a side the act lists. A fork act breaking any of these is no fork.
 
-**How it is signed.** A fork is signed by one member of the original collective, with their own identity, never the collective's key. Its inside names, in `objects`, the original agreement as chain and predecessor, `[[agreement, agreement]]`, followed by `[agreement, ending]` for each earlier fork or closing of the same collective it names, the act it follows on that chain, each once. Its chain citations, if any, come after.
+**How it is signed.** A fork is drawn by one member of the original collective, with their own identity. Its inside names, in `objects`, the original agreement as chain and predecessor, `[[agreement, agreement]]`, followed by `[agreement, ending]` for each earlier fork or closing of the same collective it names, the act it follows on that chain, each once. **Its chain citations come after: on the collective's chain, the previous decision and every act for the collective its drafter holds that no act it cites already reaches. They are the fork's line, the action head it cites.**
 
 **Every member it lists, its own signer included, signs it by a chain signature** (Identity type 16): an act on that member's identity chain, signed with their chain key, naming the fork. A signature act (type 1), or the fork act itself, is no member's signature on it. **Each successor a debt is assigned to signs it as a member does, by a chain signature with its own chain key** (Identity type 16), naming the fork. A successor's signature act (type 1) is no successor's signature on it. *An ending is final, and finality cannot rest on another chain's future, which a signature act, voidable by its signer's later rotation, would be. Stated cost: one chain-key ceremony per successor per fork, in a process already slow and heavy, as rotations are.*
 
 **A fork is complete when:**
 
 - it is valid under Identity;
-- its chain act counts in the original's identity chain, and every kept tip it names holds there (as a rotation's kept ancestry, Identity);
 - the agreement it names is the one in force at its line, the original's records before the line counted (rule 72);
 - every member it lists is a member whose voice remains at the line (rule 65's voices, the departures registered before it counted), is on one side, and signed it by a chain signature that counts in their identity chain and is not void (below);
 - **those members meet the constitutional change rule, counted as rule 65 says**;
@@ -3817,14 +3783,14 @@ Field 4 names each successor once, never the original. Field 5's shares sum to 1
 - **each successor's founding terms pay no kept holder less than the original's agreement in force at the line pays it, as rule 48 reads "paid less", or the kept holders consented as rule 95 says**: the original's stake in itself and the successor's compared, its part of the plan, what each plan takes off the top, the fees, and the split cMIP and its parameters;
 - each successor a debt is assigned to signed it by a chain signature that counts in the successor's identity chain and is not void, the successor's own key grammar producing it;
 - it hands out everything in the history it cites, as the next paragraph says; otherwise the fork does not take effect;
-- the fork is done: sealed to every member of the agreement in force at its line, or public, as it cites the collective's head by its line; otherwise it does not take effect either.
+- the fork is done: sealed to every member of the agreement in force at its line, or public, citing the collective's chain by its line; otherwise it does not take effect either.
 
 *Information runs free: an ending is no exception.* *Client conformance: the members' clients also make a fork public, since creditors and buyers depend on it.*
 
 **What it must hand out.** Field 6 names:
 
 - every obligation of the original in that history, published or not, paid or not, save one that does not bind the collective. An obligation is handed out only if it binds the collective, that is, done (sealed to every member or public, and on its chain, rules 57 and 58) and within its signer's powers, or adopted (rules 76 and 78); one signed with a grant key is included;
-- every obligation an earlier fork handed to the original, where the original's own chain signature on that fork lies in its identity chain before the fork's chain act.
+- every obligation an earlier fork handed to the original, where the history the fork cites holds the original's own chain signature on that earlier fork, or a later link of the original's identity chain.
 
 **Otherwise the fork does not take effect.** A verifier that does not hold every act that history names cannot tell what it must hand out: for it, whether the fork is complete is **unknown**, never "not complete", so a client tells the two apart. It judges the fork once it holds them.
 
@@ -3836,7 +3802,7 @@ Field 4 names each successor once, never the original. Field 5's shares sum to 1
 
 With no stakes written, a member who signs no side keeps each member's equal share, leftovers to the first (rule 9).
 
-**The line.** An act of the original counts as made before the fork when it is bound to an earlier link of the original's identity chain than the fork's chain act, or, bound to that chain act, lies in the history the fork cites: a kept tip it names, their ancestry, and whatever acts there cite on the original's chain, a grantee's act so joined included. Every other act of the original counts as made after it.
+**The line.** An act for the original counts as made before the fork when it lies in the history the fork cites: an act it names on the collective's chain, and whatever acts there cite on that chain, a grantee's act so joined included. Every other act for the original counts as made after it.
 
 *Forking is a constitutional decision. Signing with their own identities keeps the key grammar out of it: a key holder refusing to rotate could otherwise block the fork and keep the identity. If the members are in a position to fork, how they fork is up to them: each side founds its collective first, and the act names it, so no successor needs to claim descent.*
 
@@ -3870,17 +3836,16 @@ Of the complete endings, the one that counts is the one every other names or is 
 closing-payload = {
   0 => hash,                ; the collective's agreement in force at the closing
   1 => hash,                ; the collective
-  2 => hash,                ; its identity-chain act its latest acts are bound to
-  3 => [* kept-tip],        ; the latest act of every sequence it keeps under that chain act: the closing's line
   ? 4 => [+ left-open]      ; money owed back it leaves open (rule 93):
                             ; ascending by payment, none twice
-}
+}                           ; keys 2 and 3 are retired and never reused, as the fork's: the closing's line is what it
+                            ; cites on the collective's chain
 left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
                             ; the payment owed back, by one receipt or claim of it; the notice sent to its payer (type 24), or
                             ; null where it is owed to nobody; a holder that outlives the closing, where the collective chose one
 ```
 
-**How it is signed.** A closing is signed by one member of the collective, with their own identity. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, followed by `[agreement, ending]` for each earlier fork or closing of the collective it names, as a fork does. Its signer and the other members sign it by chain signatures on their identity chains, as for a fork.
+**How it is signed.** A closing is drawn by one member of the collective, with their own identity. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, followed by `[agreement, ending]` for each earlier fork or closing of the collective it names, as a fork does, and then its chain citations, its line, as a fork's. Its signer and the other members sign it by chain signatures on their identity chains, as for a fork.
 
 **A closing is complete when:**
 
@@ -3912,7 +3877,7 @@ The closing needs no entry for it: field 4 stays for money owed back. The closin
 
 A refund past the terms the buyer accepted by paying is ended, and is not a debt that binds the collective: it never blocks a closing.
 
-**After its line**, the collective's keys count for nothing in Agreements, as after a fork, and its open offers are withdrawn, as by a fork. *Work is either sold or made public domain: clean.* *A collective that cannot pay cannot close: it stays open, abandoned, its debts visible. "Holds nothing" is judged on the latest versions of the agreements a verifier holds; a stake sold by a transfer (type 4) is not seen, so a collective that sold one is shown as still holding it.*
+**After its line**, nothing done for the collective counts in Agreements, as after a fork, and its publications sell nothing, as after a fork. *Work is either sold or made public domain: clean.* *A collective that cannot pay cannot close: it stays open, abandoned, its debts visible. "Holds nothing" is judged on the latest versions of the agreements a verifier holds; a stake sold by a transfer (type 4) is not seen, so a collective that sold one is shown as still holding it.*
 
 **Finality and ties.** A complete closing counts only as a fork does:
 
