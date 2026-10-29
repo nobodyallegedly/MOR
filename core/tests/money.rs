@@ -310,8 +310,8 @@ fn shapes_are_strict() {
     let mut m = good;
     m.push((Value::Uint(2), Value::Bytes(h("x").to_vec())));
     assert!(Payload::decode(types::PAYEE_POINTER, &m).is_err());
-    // A type Money does not define.
-    assert_eq!(Payload::decode(5, &[]), Err(FinError::UnknownType(5)));
+    // A type Money does not define (type 5 is the price tag).
+    assert_eq!(Payload::decode(6, &[]), Err(FinError::UnknownType(6)));
     // F267: a claim's field 10 is the previous hop's receipt, a hash; no
     // key after it.
     let claim = Payload::Claim(Claim {

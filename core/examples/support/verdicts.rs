@@ -537,6 +537,11 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.disagreements(&h("receiver")).map_or(json!("unknown"), |x| json!(x.len()))
         }
+        "price tag" => json!(match w.v.price_tag(&h("act")).map(|(_, c)| c) {
+            Some(mor_core::chain::TagCount::Counts) => "counts",
+            Some(mor_core::chain::TagCount::Nobodys(_)) => "nobody's offer",
+            Some(mor_core::chain::TagCount::Unknown(_)) | None => "unknown",
+        }),
         q => panic!("no such question: {q}"),
     }
 }
@@ -1115,6 +1120,50 @@ fn reseal(w: &mut World, p: &Person, inside: &mor_core::act::Inside) -> mor_core
 }
 
 pub fn money(out: &mut Out) {
+    // Rule 18: the price tag (type 5), on a bare bake and under a publication.
+    {
+        use mor_core::money::{PriceTag, Priced};
+        let mut w = World::new();
+        let mut up = w.genesis("an uploader", vec![own_home()], None, None);
+        let mut fan = w.genesis("a fan who re-tags", vec![own_home()], None, None);
+        let mut svc = w.genesis("a split service", vec![own_home()], None, None);
+        let unit = spec("the sat unit, test value");
+        let tag = |priced: Priced, version: u64, previous: Option<Hash>, price: Option<u64>, payee: Hash| {
+            Fin::PriceTag(PriceTag { priced, version, previous, price: price.map(|v| money::Amount { unit, value: v }), payee }).to_map()
+        };
+        let bake = w.everyday_act(&mut up, mirs().envelopes, mor_core::envelopes::types::BAKE, publication(vec![]), None, None);
+        let bake_id = bake.id();
+        let (up_id, fan_id, svc_id) = (up.id, fan.id, svc.id);
+        let own = { let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 1, None, Some(100), up_id), None, None); w.add(&a) };
+        out.case(&mut w, "a price tag on a bare bake this verifier does not hold: unknown", "Money rule 18", "Only the bake's uploader's tag counts on a bare bake: who uploaded it is read from the bake.", Facts::default(), ask("price tag", &own), json!("unknown"), None);
+        w.add(&bake);
+        let other = { let a = w.everyday_act(&mut fan, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 1, None, Some(50), fan_id), None, None); w.add(&a) };
+        let under = { let a = w.everyday_act(&mut svc, mirs().money, money::types::PRICE_TAG, tag(Priced::Publication(spec("a publication's founding version, test value")), 1, None, Some(100), svc_id), None, None); w.add(&a) };
+        let v1 = own;
+        let v2 = { let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 2, Some(v1), None, up_id), Some(vec![Object { chain: v1, predecessor: v1 }]), None); w.add(&a) };
+        let stranger_v2 = { let a = w.everyday_act(&mut fan, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 2, Some(v1), Some(1), fan_id), Some(vec![Object { chain: v1, predecessor: v1 }]), None); w.add(&a) };
+        let both = {
+            let mut m = tag(Priced::Bake(bake_id), 1, None, Some(1), up_id);
+            m.push((Value::Uint(1), Value::Bytes(bake_id.to_vec())));
+            m.sort_by(|a, c| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&c.0)));
+            let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, m, None, None);
+            w.add(&a)
+        };
+        let log = w.log.clone();
+        let fresh = |log: &Vec<(mor_core::act::Act, Option<[u8; 32]>)>| {
+            let mut w = World::new();
+            for (a, _) in log {
+                w.add(a);
+            }
+            w
+        };
+        out.case(&mut w, "the uploader's price tag on its bare bake: counts", "Money rule 18", "On a bare bake, the uploader's tag is the offer: a payment naming it is a payment of the uploader's price.", Facts::default(), ask("price tag", &own), json!("counts"), None);
+        out.case(&mut fresh(&log), "another identity's price tag on someone's bare bake: nobody's offer", "Money rule 18", "Only the uploader's tag counts on a bare bake.", Facts::default(), ask("price tag", &other), json!("nobody's offer"), None);
+        out.case(&mut fresh(&log), "a price tag under a publication, to a verifier reading Money: unknown", "Money rule 18; Agreements rule 12", "Who may sign it, the publication's split service or the party it designates, is Agreements' to judge.", Facts::default(), ask("price tag", &under), json!("unknown"), None);
+        out.case(&mut fresh(&log), "the uploader's second version with no price, naming [first, previous]: valid, withdrawing the tag", "Money rule 18; \"Price tag (type 5)\"", "A version with no price withdraws the tag, by its signer alone.", Facts::default(), ask_status(&v2), json!("valid"), None);
+        out.case(&mut fresh(&log), "a second version by another signer: invalid", "Money, \"Price tag (type 5)\"", "A later version is signed by the same signer.", Facts::default(), ask_status(&stranger_v2), json!("invalid"), None);
+        out.case(&mut fresh(&log), "a price tag naming a bake and a publication: invalid", "Money, \"Price tag (type 5)\"", "Exactly one of fields 0 and 1.", Facts::default(), ask_status(&both), json!("invalid"), None);
+    }
     let unit = spec("a test unit (regtest satoshi)");
     let rail = spec("a rail Module");
     // Receipt and claim of one payment, agreeing; and disagreeing.

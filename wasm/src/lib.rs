@@ -1525,6 +1525,19 @@ impl Verifier {
         })
     }
 
+    /// Whose offer a price tag is (Money rule 18), as a verifier reading
+    /// Money and Envelopes tells it: "counts" (on a bare bake, its
+    /// uploader's), "nobody's offer", or "unknown" (not held, or under a
+    /// publication, which Agreements judges). `null` for no price tag held.
+    #[wasm_bindgen(js_name = priceTag)]
+    pub fn price_tag(&self, act: &str) -> R<Option<String>> {
+        Ok(self.inner.price_tag(&unhex(act)?).map(|(_, c)| match c {
+            mor_core::chain::TagCount::Counts => "counts".into(),
+            mor_core::chain::TagCount::Nobodys(_) => "nobody's offer".into(),
+            mor_core::chain::TagCount::Unknown(_) => "unknown".into(),
+        }))
+    }
+
     /// The standing of an act held: "valid", "disputed", "void", "pending",
     /// "invalid", "unknown", or "scoped" (signed with a key a higher MIR's
     /// act installs, a grant key: Agreements judge it, F128).

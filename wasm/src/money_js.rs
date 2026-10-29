@@ -133,6 +133,10 @@ enum MoneyIn {
     Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn>, #[serde(default)] purchase: Option<(String, String)> },
     #[serde(rename_all = "camelCase")]
     Release { obligation: String },
+    /// A price tag (Money type 5): exactly one of `bake` and `publication`;
+    /// `price` absent withdraws the tag.
+    #[serde(rename_all = "camelCase")]
+    PriceTag { bake: Option<String>, publication: Option<String>, version: u64, previous: Option<String>, price: Option<AmountIn>, payee: String },
 }
 
 fn opt(h: &Option<String>) -> R<Option<Hash>> {
@@ -181,6 +185,17 @@ impl MoneyIn {
                 previous: None,
             }),
             MoneyIn::Release { obligation } => Payload::Release(money::Release { obligation: unhex(obligation)?, against: vec![] }),
+            MoneyIn::PriceTag { bake, publication, version, previous, price, payee } => Payload::PriceTag(money::PriceTag {
+                priced: match (opt(bake)?, opt(publication)?) {
+                    (Some(b), None) => money::Priced::Bake(b),
+                    (None, Some(p)) => money::Priced::Publication(p),
+                    _ => return Err(err("a price tag names exactly one of a bake and a publication")),
+                },
+                version: *version,
+                previous: opt(previous)?,
+                price: price.as_ref().map(AmountIn::core).transpose()?,
+                payee: unhex(payee)?,
+            }),
         })
     }
 
@@ -255,6 +270,13 @@ impl MoneyIn {
                     more.push("what the creditor took instead");
                 }
                 MoneyIn::Release { obligation: hx(&r.obligation) }
+            }
+            Payload::PriceTag(t) => {
+                let (bake, publication) = match &t.priced {
+                    money::Priced::Bake(b) => (Some(hx(b)), None),
+                    money::Priced::Publication(p) => (None, Some(hx(p))),
+                };
+                MoneyIn::PriceTag { bake, publication, version: t.version, previous: t.previous.as_ref().map(hx), price: t.price.as_ref().map(AmountIn::of), payee: hx(&t.payee) }
             }
         };
         (v, more)

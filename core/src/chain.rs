@@ -260,6 +260,18 @@ pub enum SuccessionSeen {
 }
 
 /// The standing of an act.
+/// Whether a price tag counts (Money rule 18), as [`Verifier::price_tag`]
+/// reads it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TagCount {
+    /// It counts: a payment naming it is a payment of its signer's price.
+    Counts,
+    /// Nobody's offer: a payment naming it buys nothing, and is owed back.
+    Nobodys(&'static str),
+    /// Not known to this verifier.
+    Unknown(&'static str),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     /// Valid.
@@ -548,6 +560,9 @@ impl Verifier {
                     .signer
                     .ok_or(money::FinError::Check("a Money act names its signer"))?;
                 let p = money::Payload::decode(inside.type_, &inside.payload)?;
+                if matches!(p, money::Payload::PriceTag(_)) && !act.outside.is_public() {
+                    return Err(money::FinError::Check("a price tag is public (Money, \"Price tag (type 5)\")"));
+                }
                 money::check_signer(&p, &signer, &money::Citations::of(&inside))
             });
         // F295, F296: an Envelopes or Text act outside its type's format,
@@ -1042,6 +1057,39 @@ impl Verifier {
             None => Status::Unknown,
             Some(h) => self.status_cx(&mut Cx::default(), h),
         }
+    }
+
+    /// Whose offer a price tag is (Money rule 18), as a verifier reading
+    /// Money and Envelopes can tell: on a bare bake, it counts only signed
+    /// by the bake's uploader, its signer; under a publication, who may sign
+    /// it is Agreements' to judge (the publication's split service or the
+    /// party it designates), unknown here. `None` for an act that is no
+    /// price tag held.
+    pub fn price_tag(&self, id: &Hash) -> Option<(money::PriceTag, TagCount)> {
+        let (money_spec, _) = self.ack_specs?;
+        let (envelopes, _) = self.never_ack_specs?;
+        let x = self.acts.get(id)?;
+        if x.inside.spec != money_spec {
+            return None;
+        }
+        let Ok(money::Payload::PriceTag(t)) = money::Payload::decode(x.inside.type_, &x.inside.payload) else { return None };
+        let count = match self.status(id) {
+            Status::Invalid => TagCount::Nobodys("the tag is invalid"),
+            Status::Unknown => TagCount::Unknown("the tag's standing is unknown"),
+            Status::Valid => match &t.priced {
+                money::Priced::Publication(_) => TagCount::Unknown("under a publication, who may sign the tag is Agreements' to judge (rule 18)"),
+                money::Priced::Bake(b) => match self.acts.get(b) {
+                    None => TagCount::Unknown("the bake it prices is not held"),
+                    Some(bake) if bake.inside.spec != envelopes || bake.inside.type_ != crate::envelopes::types::BAKE => {
+                        TagCount::Nobodys("field 0 names no bake")
+                    }
+                    Some(bake) if bake.signer() == x.signer() => TagCount::Counts,
+                    Some(_) => TagCount::Nobodys("a tag on a bare bake counts only signed by its uploader (rule 18)"),
+                },
+            },
+            _ => TagCount::Unknown("the tag is not yet valid"),
+        };
+        Some((t, count))
     }
 
     /// The counting rotation of its signer that judges an everyday act
@@ -2032,7 +2080,36 @@ impl Verifier {
         false
     }
 
-/// Text rule 14 (F334): whether a text act's one object, already of
+/// A price tag's later version (Money, "Price tag (type 5)"): whether it
+    /// continues the version its field 3 names (same signer, same bake or
+    /// publication, version one more) on the chain of the first version its
+    /// `objects` name; `None` while either is not held; `Some(true)` for any
+    /// other act, and for a first version.
+    fn tag_continues(&self, x: &Held) -> Option<bool> {
+        let Some((money_spec, _)) = self.ack_specs else { return Some(true) };
+        let tag = |h: &Held| match money::Payload::decode(h.inside.type_, &h.inside.payload) {
+            Ok(money::Payload::PriceTag(t)) if h.inside.spec == money_spec => Some(t),
+            _ => None,
+        };
+        let Some(t) = tag(x) else { return Some(true) };
+        let Some(prev_id) = t.previous else { return Some(true) };
+        let Some((first_id, _)) = t.follows(&money::Citations::of(&x.inside)) else { return Some(false) };
+        let prev = self.acts.get(&prev_id)?;
+        let Some(pt) = tag(prev) else { return Some(false) };
+        let (Some(signer), Some(ps)) = (x.signer(), prev.signer()) else { return Some(false) };
+        if !t.continues(signer, &pt, &prev_id, ps) {
+            return Some(false);
+        }
+        // The chain is the first version: the previous one itself, or the
+        // first its own objects name.
+        let first_of_prev = match pt.previous {
+            None => prev_id,
+            Some(_) => pt.follows(&money::Citations::of(&prev.inside)).map(|(f, _)| f)?,
+        };
+        Some(first_of_prev == first_id)
+    }
+
+    /// Text rule 14 (F334): whether a text act's one object, already of
     /// the right shape (`[signer, decision]`, [`crate::text::check_act`]),
     /// is a collective's pointer to a decision of its own (Agreements rule
     /// 58): its signer's chain declares a founding agreement (Agreements
@@ -2154,7 +2231,16 @@ impl Verifier {
             Some(true) => false,
             None => true,
         };
-        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || text_pointer {
+        // Money rule 18: a later version of a price tag continues the one its
+        // field 3 names, by the same signer, pricing the same bake or
+        // publication, its chain the first version; unknown while those
+        // are not held.
+        let tag_unheld = match self.tag_continues(x) {
+            Some(false) => return Status::Invalid,
+            Some(true) => false,
+            None => true,
+        };
+        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || text_pointer || tag_unheld {
             return Status::Unknown;
         }
         if chain_act {
