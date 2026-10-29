@@ -44,7 +44,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Sequence.** A line of everyday acts by one identity, each naming the previous act in the line. An identity may keep one sequence or several; the split is the owner's choice.
 - **Kept ancestry.** The acts a rotation names as the latest genuine act of each sequence, and every act they descend from. For each tip, the rotation carries its position and the running summary over the sequence up to and including the tip (the summary the act after it would carry: Envelopes, "The running summary"), so anyone can prove an act lies in the kept ancestry without opening any private act.
 - **Everyday act.** Every act other than an identity-chain act (genesis, a rotation, a chain signature): it is signed with a signing key or a scoped key, carries `signer`, `binding` and `prev`, and sits in a sequence.
-- **Chain signature.** An act on the identity chain, signed with the revealed chain key, that names another act and commits the next chain key, and changes nothing else. *The one line of an identity that never branches is its identity chain; a signature placed there is ordered against every other one of the same identity, whatever devices the identity uses. A higher MIR says which of its acts need one: Agreements' forks and closings.*
+- **Chain signature.** An act on the identity chain, signed with the revealed chain key, that names another act and commits the next chain key, and changes nothing else. *The one line of an identity that never branches is its identity chain; a signature placed there is ordered against every other one of the same identity, whatever devices the identity uses. A higher MIR says which of its acts need one: Agreements' forks, closings and stake transfers (a seller's sale, and a collective's, signed by its chain key under its key grammar).*
 
 ### Homes
 
@@ -457,11 +457,11 @@ Void needs the line of every kept tip of the rotation rebuilt, and the act in th
 
 ## Part two: rare cases
 
-*Most identities never meet these. A chain signature is spent only where a higher MIR asks for one (in MOR 1, Agreements' forks and closings). Succession is declared when an identity moves on. A competing rotation needs one chain key used twice. A homeless rotation needs homes that are gone, an escape a home that refuses, and audit an owner who asked for it.*
+*Most identities never meet these. A chain signature is spent only where a higher MIR asks for one (in MOR 1, Agreements' forks, closings and stake transfers). Succession is declared when an identity moves on. A competing rotation needs one chain key used twice. A homeless rotation needs homes that are gone, an escape a home that refuses, and audit an owner who asked for it.*
 
 ### 7. Chain signatures
 
-*In short: a chain signature is an identity-chain act, signed with the chain key like a rotation, that signs another act and changes nothing else but the next chain-key commitment. Agreements uses it so that a member's signatures on forks and closings are ordered.*
+*In short: a chain signature is an identity-chain act, signed with the chain key like a rotation, that signs another act and changes nothing else but the next chain-key commitment. Agreements uses it so that a member's signatures on forks and closings, and a seller's stake transfer, are ordered; a collective's transfer is chain-signed by its own chain key, under its key grammar.*
 
 A chain signature competes for its position with any rotation or chain signature revealing the same chain key, and counts as a rotation counts ("Which rotation counts", section 5): by the receipts of the homes the rule names, or on its own signatures for a self-hosted identity; it is never homeless.
 
@@ -612,7 +612,7 @@ A homeless rotation at position n counts only if all of the following hold:
 
 #### Rule 53. Both keys always get out
 
-A homeless rotation endorsed with the owner's current signing key cannot be voided by an objection. An owner holding both keys can always leave homes that refuse them.
+A homeless rotation endorsed with the owner's current signing key cannot be voided by an objection. An owner holding both keys can always leave homes that refuse them. **For a collective, the homeless rotation, signed by its chain key, is its own escape endorsement**: it needs no other (below).
 
 #### Escape with both keys
 
@@ -626,11 +626,11 @@ It is also the way out of a position contested at a self-hosted home (rule 4): t
 
 An escape endorsement names a homeless rotation in `objects`. Its payload may list, under key 0, earlier rotations at the same position that the owner abandons (for example one a home refused); an abandoned rotation can never count afterwards.
 
-It is signed by the owner's current signing key (for a collective, below): the one bound by the identity-chain act just before the homeless rotation. Its `binding` names that act, or, where that act is a chain signature (which sets no key), the identity-chain act that set the key. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
+It is signed by the owner's current signing key (a collective needs none, below): the one bound by the identity-chain act just before the homeless rotation. Its `binding` names that act, or, where that act is a chain signature (which sets no key), the identity-chain act that set the key. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
 
 An escape endorsement is never judged by the rotation it endorses (rules 33 to 35): it cannot lie in that rotation's kept ancestry, since it names the rotation and so is made after it.
 
-**For a collective, which has no signing key (rule 1), the endorsement is signed by members meeting its constitutional change rule**, each with their own key: each signs an escape endorsement naming the collective's homeless rotation in `objects`, bound as their own acts are, and whether those signers meet the rule is Agreements' to judge ("Collectives in the identity chain"). A client without Agreements shows such an escape unknown. *Without it, a collective at a hostile home would have no way out but the homeless procedure.*
+**For a collective, which has no signing key (rule 1), the homeless rotation, signed by its chain key, is its own escape endorsement; it needs no other, and this section applies to it as to an endorsed rotation**: steps 3 and 4 of the homeless procedure do not apply, steps 1, 2 and 5 do. Identity decides it from its own data: the genesis declares no signing key (rule 1), so the rotation is a collective's. *Stated cost: an old home's objection never voids a collective's homeless rotation; what protects a collective from a thief is its key grammar, k shares, not its homes. For a person, the homes' objection stands in for the second key; a collective's second key is its members.*
 
 ### 12. Finality
 
@@ -722,7 +722,7 @@ Tags and simple values are allowed by the encoding and carried as they are, a ta
 The core sets no length bound beyond these; homes and relays set their own policy.
 
 **Hashes.** Every hash is SHA-256, 32 bytes. A tagged hash is computed as in BIP-340:
-`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes), the Merkle tree of a home's log (RFC 9162, below), and `XWING` (Envelopes).
+`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). *These two tags keep the names they were given, frozen as names: a tag is a fixed string, never a reference to a layer.* A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes), the Merkle tree of a home's log (RFC 9162, below), and `XWING` (Envelopes).
 *Tags keep the hashes of different kinds of object apart, so one can never be passed off as another. A successor protocol MUST use a different tag prefix, so its acts can never replay here (Development).*
 
 **Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIR). The signature is not part of the act id, so a signature can never change which act is meant.
@@ -836,7 +836,7 @@ How an address hint and a null operator are read is in section 4 ("A home's addr
 | 10 | Cosignature | the auditor's signing key | the auditor's sequence |
 | 12 | Objection | the operator's signing key | the operator's sequence |
 | 13 | Absence statement | the auditor's signing key | the auditor's sequence |
-| 14 | Escape endorsement | the owner's current signing key; for a collective, members meeting its constitutional change rule, each with their own key (section 11) | a sequence |
+| 14 | Escape endorsement | the owner's current signing key; a collective makes none, its homeless rotation being its own (section 11) | a sequence |
 | 15 | Witness | signing key | a sequence |
 | 16 | Chain signature | revealed chain key | identity chain |
 

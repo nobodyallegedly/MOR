@@ -431,7 +431,7 @@ Its split service signs its price tag (Money rule 18). A buyer's client finds th
 
 It counts, and sells, once every party has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1). *Partners are any identity: the core does not define a publisher; it may be a curated relay, a client, a label.*
 
-**Self-publishing** is a publication with no partners whose split service is the owner, or one the owners chose. **A lone seller's publication**, naming no ownership agreement, sells what its drafter owns alone: its owners' line is its drafter's. It carries its own words, its deadline and, if the drafter sets any, its own refund terms on its own time reference.
+**Self-publishing** is a publication with no partners whose split service is the owner, or one the owners chose. **A lone seller's publication**, naming no ownership agreement, sells what its drafter owns alone: its owners' line is its drafter's. **Its split service's receipt carries no field 9**, there being no shares to read, and it belongs to itself ("Belongs to"). It carries its own words, its deadline and, if the drafter sets any, its own refund terms on its own time reference.
 
 **A publication changes by versions on its own chain**, each a later version signed by every party of that version. A purchase under any version counts. Two versions of one previous are the parties' fork, shown.
 
@@ -443,7 +443,7 @@ A payment the time reference places past the publication's deadline (field 7) is
 
 The deal is complete when the publication's side either:
 
-- delivers the content key; or
+- delivers the content key: a key delivery by the split service or the party it designates, sealed to the payer, completes every purchase it reaches, a cMIP binding them tighter where it names one; or
 - for a bake whose key is public, **receipts the payment naming the tag** (type 7 is retired).
 
 That proves payment was verified and honoured.
@@ -480,7 +480,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 **A payment is a purchase under a publication when its receipt or claim names, as what it fulfils** (the receipt's field 5, the claim's field 4), **a price tag the publication counts**: one signed by its split service or by the party it designates, naming it (Money rule 18). *A wallet that reads only Money can pay it, and its purchase is valid: the tag names the publication, and a verifier reading Agreements reads the rest.*
 
-**A payment naming a tag the publication does not count** (a tag on it signed by anyone else, or a version carrying no price) **is no purchase: money received for nothing, owed back to the payer as a refund** by whoever received it (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim). A payment naming the publication itself, and no tag, is **a tip through the publication**: no purchase, divided by its split plan as a sale is, owed back to nobody. *A tip to a work goes through the publication where it was found, which pays its partners and gives the owners their line.*
+**A payment naming a tag the publication does not count** (a tag on it signed by anyone else, or a version carrying no price) **is no purchase: money received for nothing, owed back to the payer as a refund** by whoever received it (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim). A payment naming the publication itself, and no tag, is **a tip through the publication**: no purchase, paid to the split service its field 3 names, divided by its split plan as a sale is, owed back to nobody. *A Money-only wallet cannot read field 3: it tips through a tag, or not at all.* *A tip to a work goes through the publication where it was found, which pays its partners and gives the owners their line.*
 
 *Stated here alone: Money carries field 9 and the payment commitment, and pays the refund (Money rule 19); whether a payment is a purchase, and what is owed when it is not, is this rule's.*
 
@@ -1410,7 +1410,7 @@ A contest counts only when signed by someone with standing:
 - a party to the agreement;
 - a holder of a stake the contested act affects;
 - a keeper, arbitrator or verifier the agreement names;
-- the buyer of a purchase, for a contest of that purchase ("Contest (type 14)").
+- the buyer of a purchase, for a contest of that purchase ("Contest (type 14)"); a payment of a bare bake's tag is a sale by the uploader, and gives its payer standing as a purchase does.
 
 A contest never changes any act's validity, status or selection. It is shown alongside what it names.
 
@@ -1512,7 +1512,7 @@ A collective keeps two chains, both made of acts that name it: a decisions chain
 On neither chain are:
 
 - negotiation messages;
-- members' own acts that do not name the collective, Identity's acts among them. An escape endorsement of the collective's homeless rotation is Identity's, judged as Identity section 11 says.
+- members' own acts that do not name the collective, Identity's acts among them. A collective's escape from a hostile home is Identity's: its homeless rotation, signed by its chain key, is its own escape endorsement (Identity section 11).
 
 **How an action cites.** An action names, in its inside's `objects`, the collective's identity as chain, once for each act it cites:
 
@@ -1527,7 +1527,7 @@ These entries come after those the act's type defines, all on that one chain. Ag
 
 *An act within one's powers in a collective is an act for the collective. The chain's role is to make acts unmissable, not to confirm them.*
 
-*Client conformance: the member's client cites the latest decision and every head it holds.*
+**An act for the collective is placed on its line only where a later act for the collective cites it, directly or through acts that do; one nothing cites is outside every line, and counts for nothing.** *Client conformance: a client acting for a collective cites the latest decision and every head it holds.* *Citation places one act at a time on the line: that is its cost, made visible.*
 
 *A member's act for the collective sits in the member's own sequence, so it stays in the member's kept ancestry, and the member's rotation can disown it: Identity rule 34, as for any act. What the collective's line placed stays placed for it, the disowned signature shown as a dispute ("Made before, made after", 4).*
 
@@ -1574,7 +1574,7 @@ Two partners may choose "both", provided they name where a further share sits an
 
 *Client conformance:* **before a party signs a founding, its client shows, layer by layer, what the rule lets one member do alone, Money first.** *The risk a silent default carried is between members, and a warning cannot make every member read it; a choice written and signed by all can. A collective of two artists who never thought about it should not find that either can point its income at themselves because they never thought about it.*
 
-An escape endorsement of the collective's homeless rotation, an Identity act, is signed by members meeting its constitutional change rule (Identity section 11).
+A collective's homeless rotation, signed by its chain key under its key grammar, is its own escape endorsement (Identity section 11): no member signs one.
 
 **When an act counts.** An act for the collective counts in the layer it belongs to ("Layer") only where its signers meet that layer's rule, or the rule of the area within it that reaches the act: its drafter, who signs it with their own key naming the collective (rule 58), and the others, each by a valid signature act naming it (rule 6). Each must be:
 
@@ -1876,19 +1876,19 @@ Unpaid shares stay open debts (Money rule 5) until the holder can receive, for i
 
 #### Rule 69. Changing members
 
-*In short: changing who is in a collective takes a rotation of its keys plus a clone of its agreement that changes the constitutional tier. A rotation that gets this wrong breaks the collective until a rollback brings it back.*
+*In short: changing who is in a collective takes a clone of its agreement that changes the constitutional tier, put in force by a record; a rotation of its chain key only where the key itself must change. A rotation that gets this wrong breaks the collective until a rollback brings it back.*
 
-Changing members means a rotation to new keys plus a clone of the founding agreement. The rotation declares the complete clone as the agreement the collective lives under. It names the signature acts that complete the clone, and places each at its own position. The clone counts as complete there only with those ("Collectives in the identity chain", "Made before, made after").
+**Changing members takes a clone of the collective's agreement changing the constitutional tier, put in force by a record (type 17) that names the signature acts completing it; and a rotation of the chain key where the clone changes the key grammar or removes a party who holds the key or a share of it, the rotation declaring the clone. A clone put in force by a record where a rotation was needed puts nothing in force.** The record or rotation names the signature acts that complete the clone, and places each at its own position; the clone counts as complete there only with those ("Collectives in the identity chain", "Made before, made after"). *The rotation fenced off an old signing key; with none, what remains of its reason is the chain key: a departed member who holds a share of it must not keep one. So the rotation is needed exactly where the key grammar changes or a holder of a share leaves, and a record suffices otherwise. In a shares grammar that is still most departures; in a custodian grammar it is none. Cost: a record's line, not a rotation's, fixes the departure, as it already fixes a resignation.*
 
-Membership is constitutional, so the clone needs the constitutional change rule (rule 64): by default, every party whose voice remains at the rotation. A member whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before the rotation is no longer counted.
+Membership is constitutional, so the clone needs the constitutional change rule (rule 64): by default, every party whose voice remains at its line. A member whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before the rotation is no longer counted.
 
-The rotation is a line, its history that of the signature acts its declaration names (rule 58): a change of members, of a layer's rule or of an area's holders that it declares takes effect for the collective's acts there.
+The record or rotation is a line, a rotation's history that of the signature acts its declaration names (rule 58): a change of members, of a layer's rule or of an area's holders that it puts in force takes effect for the collective's acts there.
 
 A clone that takes a party out of the parties takes it out of every area's holders too. An area it leaves with no holder is written with an empty list of holders, and stands frozen until a constitutional clone gives it a holder (rule 71).
 
 A constitutional clone that removes a party who did not sign it, where the constitutional change rule allows that, takes that party's voice only. The party keeps every stake it holds (rule 48), as a departed holder, under the collective's current rules and judges (rule 68).
 
-Any other change to the constitutional tier (the change rules, the key grammar, the areas) is likewise declared by a rotation before it applies to the collective's acts.
+Any other change to the constitutional tier (the change rules, the layers' rules, the areas) is likewise put in force by a record; one that changes the key grammar is declared by a rotation before it applies to the collective's acts. A rotation may declare any constitutional clone.
 
 Each agreement the chain declares after the founding one MUST:
 
@@ -1900,7 +1900,7 @@ Otherwise the collective's acts that need member signatures count for nothing: *
 
 A rollback is the one exception to this rule: it is a clone of the agreement in force just before the broken act, and need not change the constitutional tier (rule 93).
 
-*A rotation declares only a constitutional clone: a clone changing only the judicial or operational tier is written by a record. And it declares only a direct clone of the agreement in force: every other clone is recorded at once (rule 72), so there is never a clone in between, and one that nothing recorded would have no line at which its completeness was judged.*
+*A rotation declares only a constitutional clone: a clone changing only the judicial or operational tier is written by a record, and a constitutional one by a record too where the key need not change. And a rotation declares only a direct clone of the agreement in force: every other clone is recorded at once (rule 72), so there is never a clone in between, and one that nothing recorded would have no line at which its completeness was judged.*
 
 A rotation declaring nothing new carries the agreement in force forward ("Collectives in the identity chain").
 
@@ -1965,7 +1965,7 @@ Money under publications already signed keeps flowing through the split services
 
 #### Rule 71. Leaving an area
 
-Leaving an area: giving up an area changes the constitution at that level. It is a constitutional clone (rule 64), declared by a rotation (rule 69). It comes about in one of three ways:
+Leaving an area: giving up an area changes the constitution at that level. It is a constitutional clone (rule 64), put in force as rule 69 says: by a record, or a rotation where the key grammar changes. It comes about in one of three ways:
 
 1. the holder leaving nominates a replacement, and the constitutional change rule approves it or not;
 2. the constitutional change rule proposes a replacement, and the holder leaving approves it;
@@ -2026,7 +2026,7 @@ A reinstated grant backs acts as a grant within the refitted area, and only with
 
 #### Rule 72. Every complete clone is written on the record at once
 
-**Every complete clone is written on the collective's record at once.** A clone that changes the constitutional tier is declared by a rotation (rule 69). Every other complete clone of a collective's agreement is written, at once, by a record (type 17), which any member draws with their own key, naming the collective.
+**Every complete clone is written on the collective's record at once.** A clone that changes the key grammar, or removes a party holding the key or a share of it, is declared by a rotation (rule 69). Every other complete clone of a collective's agreement is written, at once, by a record (type 17), which any member draws with their own key, naming the collective.
 
 **The agreement in force for an act for the collective** is the clone put in force by the decisions its history holds, the one furthest along the agreement chain: the founding agreement its genesis declares, the clones its rotations declare, and the clones its records put in force. A rotation declaring nothing new carries the agreement in force forward. Which decisions count:
 
@@ -2366,7 +2366,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
 
 **A broken collective cannot fork or close before it is rolled back** (rule 93): while it is broken, no fork or closing counts, whatever line it names. *Whoever wants to push an official act fixes the issue first.*
 
-- **A. A group splits off, with the powers to do so.** This is an ordinary membership change (rule 69). The collective re-signs, by a constitutional clone and a rotation, and keeps its identity. The members who leave become departed holders, recorded with their stake in the departed members entry (field 22, rule 68), keeping it under equal treatment, the pointer check and no veto. They may found a collective of their own. Members without the powers can still leave one by one (rule 70) and found something new together.
+- **A. A group splits off, with the powers to do so.** This is an ordinary membership change (rule 69). The collective re-signs, by a constitutional clone put in force as rule 69 says (a rotation where a leaver holds a share of the chain key), and keeps its identity. The members who leave become departed holders, recorded with their stake in the departed members entry (field 22, rule 68), keeping it under equal treatment, the pointer check and no veto. They may found a collective of their own. Members without the powers can still leave one by one (rule 70) and found something new together.
 
 - **B. The fork proper,** where both groups want changes and disagree.
 
@@ -3565,7 +3565,7 @@ A record puts its clone in force only if both hold:
 
 Records follow the agreement chain one clone at a time, never skipping it.
 
-A record of a clone that changes the constitutional tier puts nothing in force: only a rotation declares such a clone (rule 69).
+A record of a clone that changes the key grammar, or removes a party who holds the key or a share of it, puts nothing in force: only a rotation declares such a clone (rule 69). A record puts every other constitutional clone in force.
 
 **A record's two parts count apart.** A record whose clone it does not put in force still registers what its field 3 names, and is still a line.
 
@@ -3588,7 +3588,7 @@ Each takes effect for the collective's acts at this line ("Made before, made aft
 
 The record is not before itself. A clone the same record writes is judged with the departures it registers already in effect. So a signature it places counts for its departed signer only where an act of the collective placed it before.
 
-*Client conformance:* a member's client registers a departure, and a member's rotation it learns of, in its next record, as it records a complete clone at once (rule 72). The rotation that follows a departure (rule 69) still fences off the departed member's share of the chain key. *A departure needs nobody's permission; the line is the collective's, any member draws it, and a collective that delays it only delays itself.*
+*Client conformance:* a member's client registers a departure, and a member's rotation it learns of, in its next record, as it records a complete clone at once (rule 72). The rotation that follows the departure of a holder of a share of the chain key (rule 69) fences off the departed member's share of the chain key. *A departure needs nobody's permission; the line is the collective's, any member draws it, and a collective that delays it only delays itself.*
 
 *The rare case, in detail:* when a declaration removes a voice. A declaration removes a voice when:
 
@@ -3666,7 +3666,7 @@ In a deal the authority is one identity, never a threshold of the other parties,
 
 ### Collectives in the identity chain
 
-*In short: a collective's own identity chain says which agreement it lives under. Its genesis declares the founding agreement; a rotation declares a clone that changes the constitutional tier; every other clone is written by a record.*
+*In short: a collective's own identity chain says which agreement it lives under. Its genesis declares the founding agreement; a rotation declares a clone that changes the key grammar, or removes a holder of the key or a share of it; every other clone is written by a record.*
 
 Each declaration sits in the declarations slot (Identity). Kind 0 is **the agreement the collective lives under.**
 
@@ -3854,7 +3854,7 @@ left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
 - **it is done**: sealed to every member of that agreement, or public (client conformance: made public);
 - its signer and the members whose chain signatures on it count are members whose voice remains at the line, its signer among them, and, with the holders below, **meet the constitutional change rule**, counted as rule 65 says;
 - where that rule counts among a stake's holders, a holder who is no member counts toward it only by a chain signature on the closing that counts in their identity chain and is not void, as members do;
-- **the collective holds nothing**: no stake of a latest version of an agreement a verifier holds names it as a holder, by its identity, other than in its own stake in itself, unless the work's release (rule 55) counted with the collective's consent placed before the line;
+- **the collective holds nothing**: no stake of a latest version of an agreement a verifier holds names it as a holder, after the complete transfers of that stake the closing's history cites, each placed on the collective's line (rule 94), are applied as rule 10 counts them; other than its own stake in itself; unless the work's release (rule 55) counted with the collective's consent placed before the line. *A transfer not in the closing's history leaves the collective a holder, as the tie rule already stands for debts.*
 - **the collective owes nothing**: every obligation that binds it and lies before its line, that is, in the history it cites (one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92). An obligation it owes as a successor is placed by the original's line, not its own. **A receipt or a release of another identity counts toward this only where an act of the collective in the closing's history acknowledges it (Envelopes, `acks`), or the receipt is the collective's own**: it is then placed by the collective's line, and kept there whatever its signer's later rotation disowns, shown as a dispute. **A receipt or release nobody acknowledged is shown, and the closing waits** until an act of the collective acknowledges it. **An absentee's money share, left where the collective's own rules sent it, does not block the closing** (below);
 - **no money is owed back from a broken stretch**, whatever the closing's line (rule 93), save what field 4 leaves open as the rules allow (below);
 - **the collective is not broken.**
@@ -3877,7 +3877,7 @@ The closing needs no entry for it: field 4 stays for money owed back. The closin
 
 A refund past the terms the buyer accepted by paying is ended, and is not a debt that binds the collective: it never blocks a closing.
 
-**After its line**, nothing done for the collective counts in Agreements, as after a fork, and its publications sell nothing, as after a fork. *Work is either sold or made public domain: clean.* *A collective that cannot pay cannot close: it stays open, abandoned, its debts visible. "Holds nothing" is judged on the latest versions of the agreements a verifier holds; a stake sold by a transfer (type 4) is not seen, so a collective that sold one is shown as still holding it.*
+**After its line**, nothing done for the collective counts in Agreements, as after a fork, and its publications sell nothing, as after a fork. *Work is either sold or made public domain: clean.* *A collective that cannot pay cannot close: it stays open, abandoned, its debts visible. "Holds nothing" is judged on the latest versions of the agreements a verifier holds, with the complete transfers the closing's history cites applied: a collective that sold its works by transfer can close.*
 
 **Finality and ties.** A complete closing counts only as a fork does:
 
@@ -4211,10 +4211,10 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### The way out, walked
 
 - An owner leaving a work: the transfer alone, both signatures placed; every publication reading the ownership agreement by reference pays the buyer from the next payment: 9.
-- A member leaving a collective: resignation, the record registering it, the clone without them declared by a rotation re-dealing the chain key; their acts for the collective after the line count for nothing, their own acts stay theirs: 9.
+- A member leaving a collective: resignation, the record registering it, the clone without them put in force by a record, or, where they held a share of the chain key, declared by a rotation re-dealing it; their acts for the collective after the line count for nothing, their own acts stay theirs: 9.
 - Succession: a member's plan passes the seat and the stake; a single chain-key holder's successor and escrowed share named; a seat to a member already a party: 9.
 - Closing and fork: a fork's successors founded first and named, the members chain-signing it; a publication over the closed original selling nothing from the line: 9.
-- Rotation and escape: the collective's chain key rotated from shares; its homeless rotation escaped with endorsements by members meeting its constitutional change rule: 9.
+- Rotation and escape: the collective's chain key rotated from shares; its homeless rotation, signed by its chain key, its own escape, which no old home's objection voids: 9.
 - A refund owed back: a payment racing a publication's ending owed back by the split service from what it holds, then by each party in its share: 9.
 - A work cloned to MOR 2: its bake, claim and ownership agreement carried; its publications, distribution, remade: 9.
 
