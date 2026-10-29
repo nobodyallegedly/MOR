@@ -605,10 +605,10 @@ fn an_attackers_signing_key_shows_a_different_fingerprint_on_the_offline_screen(
     let expected = online::signing_fingerprint(&genuine);
     // A compromised online device puts the attacker's key in.
     let mut r = o.plan();
-    r.signing_key = SigningKey {
+    r.signing_key = Some(SigningKey {
         scheme: sig::SCHNORR,
         key: attacker.public().to_vec(),
-    };
+    });
     let rv = review_r(&mut o, &r).unwrap();
     let shown = fingerprint(&sig::SCHNORR, &attacker.public());
     assert!(rv.summary.warns(&shown));

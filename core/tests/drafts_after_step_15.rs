@@ -137,11 +137,16 @@ fn a_text_act_outside_its_format_is_invalid_f295_f296() {
         assert_eq!(w.v.status(&id), Status::Invalid, "{label}");
     }
     // A text act naming an agreement's head in `objects` is no fork of that
-    // agreement: it is not a valid act at all (F296).
+    // agreement. Its one object is of the second shape, `[collective,
+    // decision]` (rule 14): naming a chain this verifier does not hold, it
+    // is unknown; naming an act held that is no identity, invalid.
     let head = sha256(b"an agreement's head");
     let fork_like = next(&mut p, text_spec(), 0, text("a reply"), Some(vec![Object { chain: head, predecessor: head }]), None, "fork-like");
     let fork_like = w.add(&fork_like);
-    assert_eq!(w.v.status(&fork_like), Status::Invalid);
+    assert_eq!(w.v.status(&fork_like), Status::Unknown);
+    let held_head = next(&mut p, text_spec(), 0, text("a reply"), Some(vec![Object { chain: good, predecessor: good }]), None, "naming a held act");
+    let held_head = w.add(&held_head);
+    assert_eq!(w.v.status(&held_head), Status::Invalid);
 }
 
 /// A verifier that does not know which specification is Text's cannot apply
@@ -466,7 +471,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     let sig = unknown_scheme_signature();
     let chain_key = slh("newcomer", 0, 3);
     let g = mor_core::identity::Payload::Genesis(mor_core::identity::Genesis {
-        signing_key: mor_core::identity::SigningKey { scheme: sig.scheme.clone(), key: sig.key.clone() },
+        signing_key: Some(mor_core::identity::SigningKey { scheme: sig.scheme.clone(), key: sig.key.clone() }),
         chain_key: commit(&chain_key),
         homes: vec![own_home()],
         rule: None,
@@ -489,7 +494,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     let ga = act::make(&inside, &[1; 32], &[2; 24], &Addressing { signer: None, binding: None, public: true, to: None }, |_| sig.clone());
     let gid = w.add(&ga);
     assert_eq!(w.v.resolve(&gid).stop, Stop::GenesisUnknown);
-    let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None };
+    let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None, keyless: false };
     let (r, mut q) = w.rotate(&p, Rot::default());
     assert_eq!(w.v.status(&r), Status::Unknown, "a rotation the client can verify, of a chain it cannot resolve");
     let post = w.post(&mut q, "under the new key");

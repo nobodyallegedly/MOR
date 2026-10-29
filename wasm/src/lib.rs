@@ -630,8 +630,17 @@ fn public_addr(signer: Option<Hash>) -> Addressing {
 #[serde(rename_all = "camelCase")]
 struct GenesisIn {
     identity_spec: String,
-    #[serde(with = "serde_bytes")]
-    signing_secret: Vec<u8>,
+    /// The first signing key's secret; absent for a collective, whose
+    /// genesis declares none and is signed by the chain key below
+    /// (Identity rule 1).
+    #[serde(default, with = "serde_bytes")]
+    signing_secret: Option<Vec<u8>>,
+    /// For a collective: the first chain key, which signs the genesis and
+    /// is revealed in its signature; `chainKeyCommit` then commits the next.
+    #[serde(default, with = "serde_bytes")]
+    first_chain_key_seeds: Option<Vec<u8>>,
+    #[serde(default)]
+    first_chain_key_scheme: Option<u8>,
     chain_key_scheme: u8,
     chain_key_commit: String,
     homes: Vec<HomeIn>,
@@ -743,17 +752,23 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
         .transpose()
 }
 
-/// A genesis (Identity type 0), signed by its first signing key, and checked
-/// with the core's genesis checks before it is returned.
+/// A genesis (Identity type 0), signed by its first signing key, or, for a
+/// collective, which declares none, by its first chain key (Identity rule
+/// 1), and checked with the core's genesis checks before it is returned.
 #[wasm_bindgen(js_name = makeGenesis)]
 pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
     let g: GenesisIn = from_js(input)?;
-    let key = schnorr(&g.signing_secret)?;
+    let key = g.signing_secret.as_deref().map(schnorr).transpose()?;
+    let first = match (&key, &g.first_chain_key_seeds, g.first_chain_key_scheme) {
+        (Some(_), None, None) => None,
+        (None, Some(seeds), Some(scheme)) => Some(slh(scheme, seeds)?),
+        _ => return Err(err("a genesis is signed by its first signing key, or, for a collective, by its first chain key: give one")),
+    };
     let payload = Genesis {
-        signing_key: SigningKey {
+        signing_key: key.as_ref().map(|k| SigningKey {
             scheme: sig::SCHNORR,
-            key: key.public().to_vec(),
-        },
+            key: k.public().to_vec(),
+        }),
         chain_key: ChainKeyCommit {
             scheme: Scheme::Founding(g.chain_key_scheme),
             commit: unhex(&g.chain_key_commit)?,
@@ -773,7 +788,11 @@ pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(None),
-        |id| key.sign(id, &random::<32>()),
+        |id| match (&key, &first) {
+            (Some(k), _) => k.sign(id, &random::<32>()),
+            (None, Some(c)) => c.sign(id, Some(&random::<16>())),
+            (None, None) => unreachable!("checked above"),
+        },
     );
     identity::check_genesis(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -798,8 +817,10 @@ struct RotationIn {
     chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
     chain_key_seeds: Vec<u8>,
-    #[serde(with = "serde_bytes")]
-    new_signing_public: Vec<u8>,
+    /// The new signing key; absent for a collective, which has none
+    /// (Identity rule 1, rotation check 4).
+    #[serde(default, with = "serde_bytes")]
+    new_signing_public: Option<Vec<u8>>,
     next_chain_key_scheme: u8,
     next_chain_key_commit: String,
     kept: Vec<TipIn>,
@@ -833,10 +854,11 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
     let payload = Rotation {
         prev: unhex(&r.previous)?,
         position: r.position,
-        signing_key: SigningKey {
-            scheme: sig::SCHNORR,
-            key: arr::<32>(&r.new_signing_public, "a signing public key")?.to_vec(),
-        },
+        signing_key: r
+            .new_signing_public
+            .as_deref()
+            .map(|k| Ok::<_, JsError>(SigningKey { scheme: sig::SCHNORR, key: arr::<32>(k, "a signing public key")?.to_vec() }))
+            .transpose()?,
         chain_key: ChainKeyCommit {
             scheme: Scheme::Founding(r.next_chain_key_scheme),
             commit: unhex(&r.next_chain_key_commit)?,
@@ -1485,7 +1507,7 @@ impl Verifier {
             contested: res.contested.clone(),
             signing_key: latest
                 .as_ref()
-                .map(|s| serde_bytes::ByteBuf::from(s.signing_key.key.clone())),
+                .and_then(|s| s.signing_key.as_ref().map(|k| serde_bytes::ByteBuf::from(k.key.clone()))),
             chain_key_scheme: latest.as_ref().map(|s| match s.chain_key.scheme {
                 Scheme::Founding(n) => n,
                 Scheme::Spec(_) => 0,
@@ -1984,7 +2006,6 @@ struct RecoveryOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GrammarOut {
-    signing: HoldingOut,
     chain_key: HoldingOut,
     recovery: Option<RecoveryOut>,
 }
@@ -2092,6 +2113,8 @@ fn power_out(p: &agreements::Power) -> PowerOut {
         agreements::Power::Judicial => ("judicial", None, None),
         // The stake's holders' rule (F307): `area` carries the stake's index.
         agreements::Power::Holders(s) => ("holders", Some(*s), None),
+        // A layer's rule (field 19): `area` carries the layer.
+        agreements::Power::Layer(l) => ("layer", Some(*l), None),
     };
     PowerOut {
         form: form.into(),
@@ -2136,6 +2159,10 @@ struct TermsOut {
     clone: RuleOut,
     /// The constitutional change rule (field 18); null: every party.
     constitutional: Option<RuleOut>,
+    /// Who acts for the collective in each layer (field 19): layer 1 to 5,
+    /// each with its rule.
+    layers: Vec<(u64, RuleOut)>,
+    /// The areas finer than a layer (field 34).
     areas: Vec<AreaOut>,
     /// Each area's own words, by id.
     area_words: Vec<(u64, String)>,
@@ -2274,6 +2301,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         clone: rule_out(&t.clone),
         constitutional: t.constitutional.as_ref().map(rule_out),
+        layers: t.layers.iter().flatten().map(|(l, r)| (*l, rule_out(r))).collect(),
         areas: t
             .areas()
             .iter()
@@ -2319,7 +2347,6 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         parent: t.parent.as_ref().map(hx),
         grammar: t.grammar.as_ref().map(|g| GrammarOut {
-            signing: holding_out(&g.signing),
             chain_key: holding_out(&g.chain_key),
             recovery: g.recovery.as_ref().map(|r| match r {
                 agreements::Recovery::Custodian { custodian, grant } => RecoveryOut {
@@ -2465,7 +2492,6 @@ pub(crate) fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
 struct GrantOut {
     grantee: String,
     scope: u64,
-    this_agreement: bool,
     agreements: Option<Vec<String>>,
 }
 
@@ -2478,7 +2504,6 @@ pub fn read_grant(payload: &[u8]) -> R<JsValue> {
     to_js(&GrantOut {
         grantee: hx(&g.grantee),
         scope: g.scope,
-        this_agreement: g.this_agreement,
         agreements: g.agreements.as_ref().map(|v| v.iter().map(hx).collect()),
     })
 }
@@ -2710,7 +2735,6 @@ pub fn declaration_payload(agreement: &str, clause: &str, party: &str, outcomes:
 struct RecordIn {
     clone: Option<String>,
     signatures: Option<Vec<String>>,
-    kept: Vec<TipIn>,
     registers: Option<Vec<String>>,
 }
 
@@ -2728,17 +2752,6 @@ pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
     let rec = agreements::Record {
         clone: r.clone.as_deref().map(unhex).transpose()?,
         signatures: hs(&r.signatures)?,
-        kept: r
-            .kept
-            .iter()
-            .map(|t| {
-                Ok(KeptTip {
-                    act: unhex(&t.act)?,
-                    position: t.position,
-                    summary: unhex(&t.summary)?,
-                })
-            })
-            .collect::<R<_>>()?,
         registers: hs(&r.registers)?,
     };
     if rec.clone.is_some() != rec.signatures.is_some() {
@@ -2814,8 +2827,6 @@ struct AreaCountOut {
     voices: Vec<String>,
     needed: usize,
     signers: Vec<String>,
-    /// Among the signers, those who signed with their member key (F353).
-    by_key: Vec<String>,
     /// "within", "above" or "unknown" where the area carries limits (F353).
     limits: Option<String>,
     met: bool,
@@ -3102,7 +3113,6 @@ impl Verifier {
                         voices: a.voices.iter().map(hx).collect(),
                         needed: a.needed,
                         signers: a.signers.iter().map(hx).collect(),
-                        by_key: a.by_key.iter().map(hx).collect(),
                         limits: a.limits.map(|l| match l {
                             agreements::AreaLimits::Within => "within".into(),
                             agreements::AreaLimits::Above => "above".into(),
@@ -3497,39 +3507,27 @@ impl Verifier {
         })
     }
 
-    /// What a fork of `collective` must hand out (F127), its line drawn at
-    /// `chain_act` and `tips` (`[{ act, position, summary }]`) with
-    /// `agreement` in force there: every obligation in the history it would
-    /// cite, its own and those an earlier fork handed to it. Null where the
-    /// line does not hold.
+    /// What a fork of `collective` must hand out, its line the acts `line`
+    /// it would cite on the collective's chain, with `agreement` in force
+    /// there: every obligation in that history, its own and those an
+    /// earlier fork handed to it. Null where the line does not hold.
     #[wasm_bindgen(js_name = agreementsHandOut)]
-    pub fn agreements_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, chain_act: &str, tips: JsValue) -> R<Option<Vec<String>>> {
+    pub fn agreements_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, line: Vec<String>) -> R<Option<Vec<String>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let tips: Vec<TipIn> = from_js(tips)?;
-        let tips = tips
-            .iter()
-            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
-            .collect::<R<Vec<_>>>()?;
-        Ok(view
-            .hand_out(&unhex(collective)?, &unhex(agreement)?, &unhex(chain_act)?, &tips)
-            .map_err(lerr)?
-            .map(|v| v.iter().map(hx).collect()))
+        let line = line.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        Ok(view.hand_out(&unhex(collective)?, &unhex(agreement)?, &line).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
     }
 
-    /// The acts the history a line at `chain_act` and `tips` would cite
-    /// that this verifier does not hold (F127): a member's client signs no
-    /// fork or closing while any is missing (F131 IT2b, client conformance).
+    /// The acts the history of a line citing `line` on the collective's
+    /// chain names that this verifier does not hold: a member's client signs
+    /// no fork or closing while any is missing (client conformance).
     #[wasm_bindgen(js_name = agreementsLineUnheld)]
-    pub fn agreements_line_unheld(&self, specs: JsValue, collective: &str, chain_act: &str, tips: JsValue) -> R<Vec<String>> {
+    pub fn agreements_line_unheld(&self, specs: JsValue, collective: &str, line: Vec<String>) -> R<Vec<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let tips: Vec<TipIn> = from_js(tips)?;
-        let tips = tips
-            .iter()
-            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
-            .collect::<R<Vec<_>>>()?;
-        Ok(view.line_unheld(&unhex(collective)?, &unhex(chain_act)?, &tips).iter().map(hx).collect())
+        let line = line.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        Ok(view.line_unheld(&unhex(collective)?, &line).iter().map(hx).collect())
     }
 
     /// Every fork and closing of `collective` held, complete or not: what a

@@ -191,10 +191,10 @@ impl Owner {
         Rotation {
             prev: self.last.id(),
             position: self.position + 1,
-            signing_key: SigningKey {
+            signing_key: Some(SigningKey {
                 scheme: sig::SCHNORR,
                 key: next.public().to_vec(),
-            },
+            }),
             // Ignored: the offline device supplies it.
             chain_key: ChainKeyCommit {
                 scheme: sig::SLH_128S,

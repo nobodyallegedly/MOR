@@ -91,7 +91,12 @@ impl<'a> AgreementsView<'a> {
     /// an agreement as rule 15 says (every party of a version of its line
     /// signing, the drafter by drafting).
     fn pub_signed(&self, id: &Hash, drafter: &Hash, party: &Hash) -> bool {
-        if party == drafter || !self.signers(id, &[*party]).is_empty() {
+        // A collective drafts by a member's act for it, counting under its
+        // rule for Agreements (rule 60).
+        if party == drafter {
+            return self.founding_of(party).is_none() || self.consent(id).is_ok_and(|c| c.counts());
+        }
+        if !self.signers(id, &[*party]).is_empty() {
             return true;
         }
         // An agreement's line whose drafter is one of its parties: the
@@ -123,7 +128,7 @@ impl<'a> AgreementsView<'a> {
             return Err(AgreementsError::Check("not a publication"));
         }
         let PublicationAct { publication, follows } = Publication::decode(&h.inside)?;
-        let drafter = h.act.outside.signer.ok_or(AgreementsError::Check("a publication has a signer"))?;
+        let drafter = self.author(h).ok_or(AgreementsError::Check("a publication has a signer"))?;
         let mut problems: Vec<String> = vec![];
         if !self.valid(id) {
             problems.push("it is not valid under Identity".into());
@@ -211,11 +216,47 @@ impl<'a> AgreementsView<'a> {
                 Sold::Access(..) => {}
             }
         }
+        // A version of a collective's split agreement that is an owners'
+        // matter (it pays the stake less, rule 95) counts once the stake's
+        // holders consent as their holders' rule asks, each by a signature
+        // act naming the version (rule 94); under every holder, each holder
+        // who is no member signs (rule 48).
+        if let (true, Some((_, prev)), Some(o)) = (publication.is_split_agreement(), follows, &publication.owners) {
+            if let Some((_, pa)) = self.pub_act(&prev) {
+                if !super::super::owners_line_lowered(&pa.publication, &publication).is_empty() {
+                    if let Some(w) = self.owners_consent_problem(id, o)? {
+                        problems.push(w);
+                    }
+                }
+            }
+        }
         let outside_claims = self.outside_claims_of(&publication)?;
         let latest = self.pub_tips(&first);
         let counts = problems.is_empty();
         let ends = publication.ends();
         Ok(PublicationEval { id: *id, publication, follows, first, drafter, parties, unsigned, counts, problems, latest, ends, outside_claims })
+    }
+
+    /// Why the holders of the collective's stake in itself have not
+    /// consented to the owners' matter `id` (rules 48, 94, 95), or `None`:
+    /// the stake read on the ownership agreement `owners` in force; under
+    /// every holder, each holder who is no member signs; under a rule by
+    /// share, the holders signing hold together at least that share.
+    fn owners_consent_problem(&self, id: &Hash, owners: &Hash) -> R<Option<String>> {
+        let t = self.terms(&self.version_in_force(owners)?)?;
+        let Some((i, st)) = t.own_stake() else { return Ok(None) };
+        let roster = st.identified();
+        let signed: Vec<Hash> = roster.iter().map(|(h, _)| *h).filter(|h| !self.signers(id, &[*h]).is_empty()).collect();
+        Ok(match t.holders_rule(i as u64).0 {
+            crate::agreements::HoldersRule::Every => {
+                let missing: Vec<&Hash> = roster.iter().map(|(h, _)| h).filter(|h| !t.parties.contains(h) && !signed.contains(h)).collect();
+                (!missing.is_empty()).then(|| "it pays the collective's stake less, and a holder who is no member has not signed it (rules 48, 94)".into())
+            }
+            crate::agreements::HoldersRule::Share(need) => {
+                let got: u64 = roster.iter().filter(|(h, _)| signed.contains(h)).map(|(_, n)| *n).sum();
+                (got < need).then(|| "it pays the collective's stake less, and its holders signing it do not meet the stake's holders' rule (rule 94)".into())
+            }
+        })
     }
 
     /// The versions of a publication's line held, valid, each with the
@@ -406,7 +447,7 @@ impl<'a> AgreementsView<'a> {
         }
         let v = self.pub_version_for(&first, tag);
         let e = self.publication(&v)?;
-        let signer = h.act.outside.signer.unwrap_or_default();
+        let signer = self.author(h).unwrap_or_default();
         if signer != e.publication.service && e.publication.designated != Some(signer) {
             return Ok(TagUnder::Nobodys("signed neither by the publication's split service nor by the party it designates: nobody's offer under it (rule 12)".into()));
         }
@@ -531,7 +572,20 @@ impl<'a> AgreementsView<'a> {
                 let version = self.pub_version_for(&first, &tag_h.id);
                 let pe = self.publication(&version)?;
                 if !pe.counts {
-                    return no(e, &format!("the publication does not count: {}", pe.problems.join("; ")));
+                    // A publication a collective signed in a broken stretch
+                    // never counted; a sale under it is signed anew after the
+                    // rollback by a receipt of the collective for the same
+                    // payment (rule 93).
+                    let anew = pe.parties.iter().filter(|p| self.founding_of(p).is_some()).any(|c| {
+                        let mut acts = vec![*id];
+                        acts.extend(self.same_payment(id).into_iter().map(|(h, _)| h));
+                        acts.iter().filter_map(|a| self.v.get(a)).any(|r| {
+                            r.inside.type_ == crate::money::types::RECEIPT && self.author(r).as_ref() == Some(c) && self.consent(&r.id).is_ok_and(|k| k.counts())
+                        })
+                    });
+                    if !anew {
+                        return no(e, &format!("the publication does not count: {}", pe.problems.join("; ")));
+                    }
                 }
                 if self.paid_past_until.contains(id) {
                     return no(e, "paid past the publication's deadline, as its time reference answers: owed back (rule 11)");

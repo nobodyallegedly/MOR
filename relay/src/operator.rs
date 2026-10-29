@@ -173,10 +173,10 @@ pub fn create(identity_spec: &Hash, base: &str) -> (Keys, Act) {
         seeds[32..].try_into().unwrap(),
     );
     let g = Payload::Genesis(Genesis {
-        signing_key: SigningKey {
+        signing_key: Some(SigningKey {
             scheme: sig::SCHNORR,
             key: key.public().to_vec(),
-        },
+        }),
         chain_key: ChainKeyCommit {
             scheme,
             commit: chain_key.commitment(),

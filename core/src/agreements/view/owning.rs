@@ -133,7 +133,7 @@ impl<'a> AgreementsView<'a> {
             return Err(AgreementsError::Check("not a stake transfer"));
         }
         let transfer = StakeTransfer::decode(&h.inside)?;
-        let seller = h.act.outside.signer.ok_or(AgreementsError::Check("a transfer has a signer"))?;
+        let seller = self.author(h).ok_or(AgreementsError::Check("a transfer has a signer"))?;
         let mut problems: Vec<String> = vec![];
         if !self.valid(id) {
             problems.push("it is not valid under Identity".into());
@@ -175,7 +175,7 @@ impl<'a> AgreementsView<'a> {
                     splits_paying_seller.push(s);
                 }
             }
-            for r in self.v.signed_by(&seller) {
+            for r in self.payees_acts(&seller) {
                 if self.wrong_payout_receipt(r).is_some_and(|(t, ..)| &t == id) {
                     wrong_receipts.push(r.id);
                 }
@@ -220,7 +220,7 @@ impl<'a> AgreementsView<'a> {
         let Some((object, _)) = self.sold_stake(t, seller) else { return vec![] };
         let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
         let mut out = vec![];
-        for h in self.v.signed_by(seller) {
+        for h in self.payees_acts(seller) {
             if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) || !self.valid(&h.id) {
                 continue;
             }
@@ -448,12 +448,12 @@ impl<'a> AgreementsView<'a> {
             return None;
         }
         let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { return None };
-        let seller = r.act.outside.signer?;
+        let seller = self.author(r)?;
         if x.payee != seller {
             return None;
         }
         let pos = self.v.resolve(&seller).position_of(&r.act.outside.binding?)? as u64;
-        for h in self.v.signed_by(&seller) {
+        for h in self.payees_acts(&seller) {
             if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
                 continue;
             }
@@ -567,8 +567,8 @@ impl<'a> AgreementsView<'a> {
     /// (new in draft 14, F330: "operate by share, die by share"): the holders
     /// field 7 names, and the stake transfers placed in the ending's history,
     /// as [`Self::roster_at`] reads a record's line.
-    pub(super) fn roster_at_ending(&self, col: &Col, ag: &Hash, stake: u64, chain_act: &Hash, tips: &[KeptTip]) -> R<Vec<(Hash, u64)>> {
-        self.roster_by(col, ag, stake, &|x, _| self.before_line(col, x, chain_act, tips))
+    pub(super) fn roster_at_ending(&self, col: &Col, ag: &Hash, stake: u64, line: &[Hash]) -> R<Vec<(Hash, u64)>> {
+        self.roster_by(col, ag, stake, &|x, _| self.before_line(col, x, line))
     }
 
     /// [`Self::roster_at`], with `before` saying whether an act of the
@@ -586,10 +586,7 @@ impl<'a> AgreementsView<'a> {
             .map(|(i, _)| i)
             .collect();
         let mut placed: Vec<Hash> = vec![];
-        for x in self.v.signed_by(&col.id) {
-            if !Self::own_key(col, x) {
-                continue;
-            }
+        for x in self.col_acts(col) {
             // An act of the collective acknowledging an act this verifier
             // does not hold may place a transfer: unknown (F298, F304).
             if self.status(&x.id) != Status::Valid {

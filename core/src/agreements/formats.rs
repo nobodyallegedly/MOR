@@ -16,7 +16,7 @@
 use crate::act::{Inside, Object};
 use crate::cbor::{self, Value};
 use crate::hash::Hash;
-use crate::identity::{Declaration, KeptTip, SigningKey};
+use crate::identity::{Declaration, SigningKey};
 use std::fmt;
 
 /// The Agreements act types (Agreements, "Act formats").
@@ -596,22 +596,18 @@ impl Recovery {
     }
 }
 
-/// `key-grammar` (draft 7): how the keys are held, and a way to rotate.
-/// Key 2 (draft 6's listed act types) is retired and never reused: areas
-/// reach acts (field 19).
+/// `key-grammar` (rule 59): how the chain key is held, and a way to
+/// rotate. Keys 0 and 2 are retired and never reused: a collective has no
+/// signing key.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyGrammar {
-    pub signing: Holding,
     pub chain_key: Holding,
     pub recovery: Option<Recovery>,
 }
 
 impl KeyGrammar {
     pub fn to_value(&self) -> Value {
-        let mut m = vec![
-            (Value::Uint(0), self.signing.to_value()),
-            (Value::Uint(1), self.chain_key.to_value()),
-        ];
+        let mut m = vec![(Value::Uint(1), self.chain_key.to_value())];
         if let Some(r) = &self.recovery {
             m.push((Value::Uint(3), r.to_value()));
         }
@@ -824,6 +820,17 @@ impl Area {
     }
 }
 
+/// The id a layer's lane carries among areas ([`Terms::lane`]): above every
+/// id a format can give an area, so never one of field 34's.
+pub fn lane_id(layer: u64) -> u64 {
+    u64::MAX - layer
+}
+
+/// Whether an area id is a lane's, and of which layer.
+pub fn lane_of(id: u64) -> Option<u64> {
+    (u64::MAX - id <= layers::DEVELOPMENT && u64::MAX - id >= layers::TEXT).then(|| u64::MAX - id)
+}
+
 /// `power`: a change rule of the parent a clone's mark claims to meet.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Power {
@@ -842,6 +849,10 @@ pub enum Power {
     /// its holders at the line, by share (rules 64.4, 65, 94; new in draft
     /// 14, F307).
     Holders(u64),
+    /// `[ 6, layer ]`: the parent's rule for this layer (field 19), for the
+    /// cMIPs it adopts for that layer's tasks and the extensions it
+    /// declares (rules 60, 64).
+    Layer(u64),
 }
 
 impl Power {
@@ -853,6 +864,7 @@ impl Power {
             Power::Plan(p) => Value::Array(vec![Value::Uint(3), b(p)]),
             Power::Judicial => Value::Array(vec![Value::Uint(4)]),
             Power::Holders(s) => Value::Array(vec![Value::Uint(5), Value::Uint(*s)]),
+            Power::Layer(l) => Value::Array(vec![Value::Uint(6), Value::Uint(*l)]),
         }
     }
 
@@ -1173,7 +1185,10 @@ pub struct Terms {
     pub succession: Option<Vec<SuccessionPlan>>,
     /// 18: constitutional change rule; absent: every party.
     pub constitutional: Option<Rule>,
-    /// 19: operational areas.
+    /// 19: who acts for the collective in each layer: the rule for each of
+    /// layers 1 to 5, ascending (rule 60).
+    pub layers: Option<Vec<(u64, Rule)>>,
+    /// 34: areas finer than a layer, powers of members.
     pub areas: Option<Vec<Area>>,
     /// 20: each area's own words, by area id, ascending.
     pub area_words: Option<Vec<(u64, String)>>,
@@ -1240,7 +1255,7 @@ impl Terms {
         self.constitutional.clone().unwrap_or(Rule::All)
     }
 
-    /// The areas (field 19), none if absent.
+    /// The areas finer than a layer (field 34), none if absent.
     pub fn areas(&self) -> &[Area] {
         self.areas.as_deref().unwrap_or(&[])
     }
@@ -1250,9 +1265,42 @@ impl Terms {
         self.areas().iter().find(|a| a.id == id)
     }
 
-    /// The lane: the area reaching this layer as a whole.
-    pub fn lane(&self, layer: u64) -> Option<&Area> {
-        self.areas().iter().find(|a| a.is_lane(layer))
+    /// A layer's rule (field 19).
+    pub fn layer_rule(&self, layer: u64) -> Option<&Rule> {
+        self.layers.iter().flatten().find(|(l, _)| *l == layer).map(|(_, r)| r)
+    }
+
+    /// The lane: a layer's rule read as an area reaching the whole layer,
+    /// its holders the parties the rule counts among, its number what the
+    /// rule asks, its id [`lane_id`] (rule 60): `[0]` every party,
+    /// `[1, k]` any k of them, `[2, names]` those named together.
+    pub fn lane(&self, layer: u64) -> Option<Area> {
+        let r = self.layer_rule(layer)?;
+        let (holders, threshold) = match r {
+            Rule::All => (self.parties.clone(), self.parties.len() as u64),
+            Rule::Threshold(k) => (self.parties.clone(), *k),
+            Rule::Named(n) => (n.clone(), n.len() as u64),
+            _ => return None,
+        };
+        Some(Area {
+            name: format!("layer {layer}"),
+            holders,
+            threshold: threshold.max(1),
+            kinds: Some(vec![Kind::Layer(layer)]),
+            fields: None,
+            id: lane_id(layer),
+            limits: None,
+        })
+    }
+
+    /// Every area an act may fall under: the finer areas (field 34), then
+    /// the five lanes (field 19).
+    pub fn reach_areas(&self) -> Vec<Area> {
+        let mut out: Vec<Area> = self.areas().to_vec();
+        for l in layers::TEXT..=layers::DEVELOPMENT {
+            out.extend(self.lane(l));
+        }
+        out
     }
 
     /// The cMIP named for a task.
@@ -1363,8 +1411,11 @@ impl Terms {
         if let Some(r) = &self.constitutional {
             m.push((Value::Uint(18), r.to_value()));
         }
+        if let Some(l) = &self.layers {
+            m.push((Value::Uint(19), Value::Map(l.iter().map(|(k, r)| (Value::Uint(*k), r.to_value())).collect())));
+        }
         if let Some(a) = &self.areas {
-            m.push((Value::Uint(19), Value::Array(a.iter().map(Area::to_value).collect())));
+            m.push((Value::Uint(34), Value::Array(a.iter().map(Area::to_value).collect())));
         }
         if let Some(w) = &self.area_words {
             m.push((
@@ -1488,7 +1539,7 @@ impl Terms {
                         "terms fields 8, 14, 28 and 29 are withdrawn: the split plan, the split service, the fees and the backups are a publication's",
                     ));
                 }
-                Value::Uint(n) if *n <= 24 || (26..=33).contains(n) => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || (26..=34).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1541,7 +1592,18 @@ impl Terms {
                 })
                 .transpose()?,
             constitutional: get(18).map(rule).transpose()?,
-            areas: get(19)
+            layers: get(19)
+                .map(|v| {
+                    let Value::Map(m) = v else { return Err(AgreementsError::Shape("terms field 19, the layers' rules, is a map by layer")) };
+                    m.iter()
+                        .map(|(k, r)| match k {
+                            Value::Uint(l) => Ok((*l, rule(r)?)),
+                            _ => Err(AgreementsError::Shape("terms field 19: keyed by layer number")),
+                        })
+                        .collect::<R<Vec<_>>>()
+                })
+                .transpose()?,
+            areas: get(34)
                 .map(|v| nonempty(v, "terms areas")?.iter().map(area).collect())
                 .transpose()?,
             area_words: get(20)
@@ -1656,6 +1718,7 @@ impl Terms {
                     Target::Claim(_) => {
                         if self.grammar.is_some()
                             || self.constitutional.is_some()
+                            || self.layers.is_some()
                             || self.areas.is_some()
                             || self.area_words.is_some()
                             || self.departed.is_some()
@@ -1756,9 +1819,9 @@ impl Terms {
                     "a deal changes only with every party's signature: its clone rule must be every party",
                 ));
             }
-            if self.constitutional.is_some() || self.areas.is_some() || self.area_words.is_some() {
+            if self.constitutional.is_some() || self.layers.is_some() || self.areas.is_some() || self.area_words.is_some() {
                 return Err(AgreementsError::Check(
-                    "tiers and areas belong to collectives: a deal carries no field 18, 19 or 20",
+                    "tiers, layers and areas belong to collectives: a deal carries no field 18, 19, 20 or 34",
                 ));
             }
             // B19: in a deal, the absence authority is one identity.
@@ -1876,6 +1939,7 @@ impl Terms {
         }
         if let Some(g) = &self.grammar {
             self.check_grammar(g)?;
+            self.check_layers()?;
             self.check_areas(mirs)?;
             if self.parent.is_none() {
                 // F105, rule 36b: every founder signs the founding terms, so
@@ -2211,6 +2275,31 @@ impl Terms {
         Some(out)
     }
 
+    /// Rule 60: field 19 names a rule for each of layers 1 to 5, and no
+    /// other, ascending; each `[0]`, `[1, k]` with k from 1 to the number
+    /// of parties, or `[2, names]`, distinct parties.
+    fn check_layers(&self) -> R<()> {
+        let Some(l) = &self.layers else {
+            return Err(AgreementsError::Check("a collective's terms name who acts for it in each layer (field 19): founding terms leaving one unnamed found nothing (rule 60)"));
+        };
+        let keys: Vec<u64> = l.iter().map(|(k, _)| *k).collect();
+        if keys != (layers::TEXT..=layers::DEVELOPMENT).collect::<Vec<u64>>() {
+            return Err(AgreementsError::Check("field 19 carries exactly layers 1 to 5, Text, Envelopes, Money, Agreements and Development (rule 60)"));
+        }
+        for (_, r) in l {
+            let ok = match r {
+                Rule::All => true,
+                Rule::Threshold(k) => *k >= 1 && *k <= self.parties.len() as u64,
+                Rule::Named(n) => !n.is_empty() && distinct(n) && n.iter().all(|h| self.parties.contains(h)),
+                _ => false,
+            };
+            if !ok {
+                return Err(AgreementsError::Check("a layer's rule is [0], [1, k] with k from 1 to the number of parties, or [2, names] naming distinct parties (rule 60)"));
+            }
+        }
+        Ok(())
+    }
+
     /// "Areas" and Q21, Q32: fields 18 to 20, areas' holders, numbers,
     /// reach and ids. A clone's number left above its holders is checked
     /// against the parent (the view).
@@ -2237,8 +2326,8 @@ impl Terms {
             }
             for k in a.kinds.iter().flatten() {
                 match k {
-                    Kind::Layer(l) if *l > layers::DEVELOPMENT => {
-                        return Err(AgreementsError::Check("an area names a layer that does not exist"))
+                    Kind::Layer(_) => {
+                        return Err(AgreementsError::Check("an area reaches act types, [1, spec, type]: a whole layer is field 19's (rule 60)"))
                     }
                     Kind::Type { spec, type_ }
                         if (spec == &mirs.identity && (*type_ == 0 || *type_ == 1))
@@ -2295,6 +2384,9 @@ impl Terms {
                 }
             }
         }
+        if self.area_words.is_some() && self.areas.is_none() {
+            return Err(AgreementsError::Check("area words (field 20) only with areas (field 34)"));
+        }
         if let Some(w) = &self.area_words {
             let mut last = None;
             for (id, _) in w {
@@ -2314,7 +2406,7 @@ impl Terms {
     /// to rotate that survives the loss of any one key holder.
     fn check_grammar(&self, g: &KeyGrammar) -> R<()> {
         let parties = &self.parties;
-        for h in [&g.signing, &g.chain_key] {
+        for h in [&g.chain_key] {
             if let Holding::Shares { threshold, members } = h {
                 if members.is_empty()
                     || !distinct(members)
@@ -2409,44 +2501,27 @@ fn check_mark_shape(m: &[MarkEntry]) -> R<()> {
 
 // ---------------------------------------------------------------- signatures
 
-/// Decode a signature act's payload, `{ 0 => hash, ? 1 => signing-key }`,
-/// and check its inside: it names, in `objects`, the act it signs as both
-/// chain and predecessor.
+/// Decode a signature act's payload, `{ 0 => hash }`, and check its
+/// inside: it names, in `objects`, the act it signs as both chain and
+/// predecessor. Field 1 (a member key) is retired: there is no member key
+/// (rule 73).
 pub fn decode_signature(inside: &Inside) -> R<Hash> {
-    Ok(decode_signature_key(inside)?.0)
-}
-
-/// A signature act's act signed and, where it names one, the member key it
-/// carries (field 1; F353, Agreements draft 16): on a collective's founding
-/// or clone, the public half of a key its signer's app made as it signed,
-/// a grant key within the areas that founding or clone gives the signer,
-/// counting from the moment it is complete. A key on any other act is
-/// refused by [`super::AgreementsView`]'s judgement, never here.
-pub fn decode_signature_key(inside: &Inside) -> R<(Hash, Option<SigningKey>)> {
     let mut signed = None;
-    let mut key = None;
     for (k, v) in &inside.payload {
         match k {
             Value::Uint(0) => signed = Some(hash(v, "signature: the act signed")?),
-            Value::Uint(1) => {
-                key = Some(crate::identity::signing_key(v).map_err(|_| AgreementsError::Shape("signature: field 1, the member key, is a signing key [scheme, key] (F353)"))?)
-            }
+            Value::Uint(1) => return Err(AgreementsError::Shape("signature: field 1 is retired: there is no member key (rule 73)")),
             _ => return Err(AgreementsError::Shape("signature: unknown field")),
         }
     }
     let signed = signed.ok_or(AgreementsError::Shape("signature: the act signed"))?;
     check_objects_self(inside, &signed, "signature: objects must name the act signed")?;
-    Ok((signed, key))
+    Ok(signed)
 }
 
 /// The signature payload.
 pub fn signature_payload(signed: &Hash) -> Vec<(Value, Value)> {
     vec![(Value::Uint(0), b(signed))]
-}
-
-/// A holder's signature of a founding or clone naming its member key (F353).
-pub fn signature_payload_with_key(signed: &Hash, key: &SigningKey) -> Vec<(Value, Value)> {
-    vec![(Value::Uint(0), b(signed)), (Value::Uint(1), key.to_value())]
 }
 
 /// F127: an act in a collective's name cites, in `objects`, the
@@ -2992,8 +3067,6 @@ pub struct Record {
     pub clone: Option<Hash>,
     /// 2: the signature acts that complete that clone (A2).
     pub signatures: Option<Vec<Hash>>,
-    /// 1: the latest act of every other sequence the collective keeps.
-    pub kept: Vec<KeptTip>,
     /// 3: what it registers: resignations, steppings down, abandonment
     /// declarations, members' own rotations.
     pub registers: Option<Vec<Hash>>,
@@ -3005,17 +3078,6 @@ impl Record {
         if let Some(c) = &self.clone {
             m.push((Value::Uint(0), b(c)));
         }
-        m.push((
-            Value::Uint(1),
-            Value::Array(
-                self.kept
-                    .iter()
-                    .map(|t| {
-                        Value::Array(vec![b(&t.act), Value::Uint(t.position), b(&t.summary)])
-                    })
-                    .collect(),
-            ),
-        ));
         if let Some(s) = &self.signatures {
             m.push((Value::Uint(2), hashes_value(s)));
         }
@@ -3031,29 +3093,15 @@ impl Record {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in &inside.payload {
             match k {
+                Value::Uint(1) => return Err(AgreementsError::Shape("record: key 1 (kept tips) is retired: a record's tips are in its objects")),
                 Value::Uint(n) if *n <= 3 => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("record: unknown field")),
             }
         }
         let get = |k: u64| f.iter().find(|(n, _)| *n == k).map(|(_, v)| *v);
-        let kept = match get(1).ok_or(AgreementsError::Shape("record: kept tips"))? {
-            Value::Array(a) => a
-                .iter()
-                .map(|t| {
-                    let x = tuple(t, 3, "record: kept tip")?;
-                    Ok(KeptTip {
-                        act: hash(&x[0], "kept tip act")?,
-                        position: uint(&x[1], "kept tip position")?,
-                        summary: hash(&x[2], "kept tip summary")?,
-                    })
-                })
-                .collect::<R<Vec<_>>>()?,
-            _ => return Err(AgreementsError::Shape("record: kept tips")),
-        };
         let r = Record {
             clone: get(0).map(|v| hash(v, "record: the clone")).transpose()?,
             signatures: get(2).map(|v| hashes(v, "record: signatures")).transpose()?,
-            kept,
             registers: get(3).map(|v| hashes(v, "record: registrations")).transpose()?,
         };
         if r.clone.is_some() != r.signatures.is_some() {
@@ -3064,10 +3112,12 @@ impl Record {
         if r.clone.is_none() && r.registers.is_none() {
             return Err(AgreementsError::Shape("record: at least one of fields 0 and 3"));
         }
+        // Its objects: the clone (or the agreement in force) as chain and
+        // predecessor, then its citations on the collective's chain.
         let o = inside.objects.as_deref().unwrap_or(&[]);
-        if o.len() != 1 || o[0].chain != o[0].predecessor {
+        if o.is_empty() || o[0].chain != o[0].predecessor || chain_citations(o, 1).is_err() {
             return Err(AgreementsError::Shape(
-                "record: objects name the clone, or the agreement in force, as chain and predecessor",
+                "record: objects name the clone, or the agreement in force, as chain and predecessor, then the collective's chain",
             ));
         }
         if let Some(c) = &r.clone {
@@ -3101,9 +3151,6 @@ pub struct Grant {
     pub scope: u64,
     /// 2: the agreements concerned, for scope 1.
     pub agreements: Option<Vec<Hash>>,
-    /// 2, null: "this agreement", the deal whose terms list the grant in
-    /// field 14 (F129, H4), as founding terms name "this collective" (S1).
-    pub this_agreement: bool,
     /// 3: limits, as the grant's cMIP defines.
     pub limits: Option<Value>,
     /// 4: the cMIP defining the limits.
@@ -3114,13 +3161,11 @@ pub struct Grant {
     pub kinds: Option<Vec<Kind>>,
     /// 7: a reinstatement: the ended grant it reinstates (Flaw N).
     pub reinstates: Option<Hash>,
-    /// 8, null: the grantor is this collective, the one whose founding
-    /// terms name the grant (F124, S1); absent: the grant's signer.
-    pub by_this: bool,
-    /// 9: the grant key (F128): a key of the collective, scoped to the
-    /// grant, held by the grantee, who made it and keeps its secret part.
-    /// Acts signed with it are the collective's own, bound to this grant.
-    pub key: SigningKey,
+    /// 9: a person's grant only, and then required: the grant key, a key
+    /// of the person scoped to the grant, made and held by the grantee. A
+    /// collective's grant carries none: its grantee acts with its own key
+    /// (rule 73). Key 8 and null in field 2 are retired, never reused.
+    pub key: Option<SigningKey>,
 }
 
 impl Grant {
@@ -3131,8 +3176,6 @@ impl Grant {
         ];
         if let Some(a) = &self.agreements {
             m.push((Value::Uint(2), hashes_value(a)));
-        } else if self.this_agreement {
-            m.push((Value::Uint(2), Value::Null));
         }
         if let Some(l) = &self.limits {
             m.push((Value::Uint(3), l.clone()));
@@ -3149,10 +3192,9 @@ impl Grant {
         if let Some(r) = &self.reinstates {
             m.push((Value::Uint(7), b(r)));
         }
-        if self.by_this {
-            m.push((Value::Uint(8), Value::Null));
+        if let Some(k) = &self.key {
+            m.push((Value::Uint(9), k.to_value()));
         }
-        m.push((Value::Uint(9), self.key.to_value()));
         m
     }
 
@@ -3173,6 +3215,7 @@ impl Grant {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in p {
             match k {
+                Value::Uint(8) => return Err(AgreementsError::Shape("grant: key 8 is retired and never reused")),
                 Value::Uint(n) if *n <= 9 => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("grant: unknown field")),
             }
@@ -3182,10 +3225,10 @@ impl Grant {
             grantee: hash(get(0).ok_or(AgreementsError::Shape("grant: grantee"))?, "grant: grantee")?,
             scope: uint(get(1).ok_or(AgreementsError::Shape("grant: scope"))?, "grant: scope")?,
             agreements: match get(2) {
-                Some(Value::Null) | None => None,
+                Some(Value::Null) => return Err(AgreementsError::Shape("grant: null in field 2 (\"this agreement\") is retired")),
+                None => None,
                 Some(v) => Some(hashes(v, "grant: agreements")?),
             },
-            this_agreement: matches!(get(2), Some(Value::Null)),
             limits: get(3).cloned(),
             limits_cmip: get(4).map(|v| hash(v, "grant: limits cMIP")).transpose()?,
             area: get(5).map(|v| uint(v, "grant: area")).transpose()?,
@@ -3193,24 +3236,10 @@ impl Grant {
                 .map(|v| nonempty(v, "grant: kinds")?.iter().map(kind).collect())
                 .transpose()?,
             reinstates: get(7).map(|v| hash(v, "grant: reinstates")).transpose()?,
-            by_this: match get(8) {
-                None => false,
-                Some(Value::Null) => true,
-                Some(_) => return Err(AgreementsError::Shape("grant: field 8 is null, this collective (S1)")),
-            },
-            key: crate::identity::signing_key(get(9).ok_or(AgreementsError::Shape("grant: field 9, the grant key (F128)"))?)
-                .map_err(|_| AgreementsError::Shape("grant: field 9, the grant key, is a signing key (F128)"))?,
+            key: get(9)
+                .map(|v| crate::identity::signing_key(v).map_err(|_| AgreementsError::Shape("grant: field 9, the grant key, is a signing key")))
+                .transpose()?,
         };
-        if g.by_this && (g.area.is_some() || g.reinstates.is_some()) {
-            return Err(AgreementsError::Shape(
-                "grant: a grant of this collective by its founding terms (field 8) names no area and reinstates nothing",
-            ));
-        }
-        if g.this_agreement && (g.scope != 1 || g.by_this || g.area.is_some() || g.reinstates.is_some()) {
-            return Err(AgreementsError::Shape(
-                "grant: a grant naming this agreement by null (F129, H4) manages that deal (scope 1), and names no area, reinstates nothing and is not a collective's founding grant",
-            ));
-        }
         if g.scope > 2 {
             return Err(AgreementsError::Check("a grant's scope is 0, 1 or 2"));
         }
@@ -3440,27 +3469,6 @@ impl NegotiationMessage {
 
 // ---------------------------------------------------------------- the fork of a collective
 
-fn tip_value(t: &KeptTip) -> Value {
-    Value::Array(vec![b(&t.act), Value::Uint(t.position), b(&t.summary)])
-}
-
-fn tips(v: &Value, w: &'static str) -> R<Vec<KeptTip>> {
-    match v {
-        Value::Array(a) => a
-            .iter()
-            .map(|t| {
-                let x = tuple(t, 3, w)?;
-                Ok(KeptTip {
-                    act: hash(&x[0], w)?,
-                    position: uint(&x[1], w)?,
-                    summary: hash(&x[2], w)?,
-                })
-            })
-            .collect(),
-        _ => Err(AgreementsError::Shape(w)),
-    }
-}
-
 /// One stake the original held, and the share of it each side's successor
 /// takes (fork field 5): `[ agreement, index, [+ share] ]`, in millionths.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -3490,12 +3498,6 @@ pub struct Fork {
     pub agreement: Hash,
     /// 1: the original collective.
     pub collective: Hash,
-    /// 2: the original's identity-chain act (genesis or rotation) its
-    /// latest acts are bound to.
-    pub chain_act: Hash,
-    /// 3: the latest act of every sequence the original keeps under it: the
-    /// fork's line, as a record's or a rotation's kept tips (N2).
-    pub tips: Vec<KeptTip>,
     /// 4: the sides, at least two: each its successor and its members.
     pub sides: Vec<Side>,
     /// 5: shares of stakes the original held, where not the default.
@@ -3505,18 +3507,15 @@ pub struct Fork {
     pub debts: Vec<(Hash, Vec<u64>)>,
 }
 
-fn line_map(agreement: &Hash, collective: &Hash, chain_act: &Hash, t: &[KeptTip]) -> Vec<(Value, Value)> {
-    vec![
-        (Value::Uint(0), b(agreement)),
-        (Value::Uint(1), b(collective)),
-        (Value::Uint(2), b(chain_act)),
-        (Value::Uint(3), Value::Array(t.iter().map(tip_value).collect())),
-    ]
+/// An ending's fields 0 and 1; keys 2 and 3 are retired, never reused:
+/// the ending's line is what it cites on the collective's chain.
+fn line_map(agreement: &Hash, collective: &Hash) -> Vec<(Value, Value)> {
+    vec![(Value::Uint(0), b(agreement)), (Value::Uint(1), b(collective))]
 }
 
 impl Fork {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        let mut m = line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips);
+        let mut m = line_map(&self.agreement, &self.collective);
         m.push((
             Value::Uint(4),
             Value::Array(
@@ -3564,6 +3563,7 @@ impl Fork {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in &inside.payload {
             match k {
+                Value::Uint(2 | 3) => return Err(AgreementsError::Shape("fork: keys 2 and 3 are retired: the fork's line is what it cites on the collective's chain")),
                 Value::Uint(n) if *n <= 6 => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("fork: unknown field")),
             }
@@ -3616,8 +3616,6 @@ impl Fork {
         let x = Fork {
             agreement: hash(req(0, "fork: the agreement")?, "fork: the agreement")?,
             collective: hash(req(1, "fork: the collective")?, "fork: the collective")?,
-            chain_act: hash(req(2, "fork: the chain act")?, "fork: the chain act")?,
-            tips: tips(req(3, "fork: kept tips")?, "fork: kept tip")?,
             sides,
             shares,
             debts,
@@ -3675,8 +3673,6 @@ impl Fork {
 pub struct Closing {
     pub agreement: Hash,
     pub collective: Hash,
-    pub chain_act: Hash,
-    pub tips: Vec<KeptTip>,
     /// 4: the money owed back it leaves open (rule 37d; QG1, F191; F197):
     /// ascending by payment, none twice.
     pub open: Vec<OpenOwed>,
@@ -3724,7 +3720,7 @@ impl OpenOwed {
 
 impl Closing {
     pub fn to_map(&self) -> Vec<(Value, Value)> {
-        let mut m = line_map(&self.agreement, &self.collective, &self.chain_act, &self.tips);
+        let mut m = line_map(&self.agreement, &self.collective);
         if !self.open.is_empty() {
             m.push((Value::Uint(4), Value::Array(self.open.iter().map(OpenOwed::to_value).collect())));
         }
@@ -3735,6 +3731,7 @@ impl Closing {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in &inside.payload {
             match k {
+                Value::Uint(2 | 3) => return Err(AgreementsError::Shape("closing: keys 2 and 3 are retired: the closing's line is what it cites on the collective's chain")),
                 Value::Uint(n) if *n <= 4 => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("closing: unknown field")),
             }
@@ -3751,8 +3748,6 @@ impl Closing {
         let x = Closing {
             agreement: hash(req(0, "closing: the agreement")?, "closing: the agreement")?,
             collective: hash(req(1, "closing: the collective")?, "closing: the collective")?,
-            chain_act: hash(req(2, "closing: the chain act")?, "closing: the chain act")?,
-            tips: tips(req(3, "closing: kept tips")?, "closing: kept tip")?,
             open,
         };
         check_objects_ending(inside, &x.agreement, "closing")?;
@@ -4319,6 +4314,7 @@ fn power(v: &Value) -> R<Power> {
         (3, 2) => Ok(Power::Plan(hash(&a[1], "power party")?)),
         (4, 1) => Ok(Power::Judicial),
         (5, 2) => Ok(Power::Holders(uint(&a[1], "power: the stake whose holders' rule it is")?)),
+        (6, 2) => Ok(Power::Layer(uint(&a[1], "power: the layer")?)),
         _ => Err(AgreementsError::Shape("power")),
     }
 }
@@ -4442,13 +4438,12 @@ pub(crate) fn field<'a>(f: &[(u64, &'a Value)], k: u64) -> Option<&'a Value> {
 
 fn key_grammar(v: &Value) -> R<KeyGrammar> {
     let f = map_fields(v, 4, "key grammar")?;
-    if field(&f, 2).is_some() {
+    if field(&f, 0).is_some() || field(&f, 2).is_some() {
         return Err(AgreementsError::Shape(
-            "key grammar key 2 (draft 6's listed act types) is retired: areas reach acts",
+            "key grammar keys 0 and 2 are retired: a collective has no signing key (rule 59)",
         ));
     }
     Ok(KeyGrammar {
-        signing: holding(field(&f, 0).ok_or(AgreementsError::Shape("key grammar signing key"))?)?,
         chain_key: holding(field(&f, 1).ok_or(AgreementsError::Shape("key grammar chain key"))?)?,
         recovery: field(&f, 3).map(recovery).transpose()?,
     })

@@ -56,6 +56,38 @@ pub struct GenesisPlan {
     pub audit: Option<identity::Audit>,
 }
 
+/// A collective's genesis plan, as the online device hands it to the
+/// dealing device: the genesis payload's fields 2 to 5 (homes, home rule,
+/// declarations, audit), a CBOR map; the dealing device adds field 1, the
+/// commitment, and signs with the chain key (Identity rule 1).
+pub fn genesis_plan_bytes(plan: &GenesisPlan) -> Vec<u8> {
+    let g = Payload::Genesis(Genesis {
+        signing_key: None,
+        chain_key: identity::ChainKeyCommit { scheme: sig::SLH_128S, commit: [0; 32] },
+        homes: plan.homes.clone(),
+        rule: plan.rule,
+        declarations: plan.declarations.clone(),
+        audit: plan.audit.clone(),
+    });
+    let m: Vec<(Value, Value)> = g.to_map().into_iter().filter(|(k, _)| k != &Value::Uint(1)).collect();
+    cbor::encode(&Value::Map(m))
+}
+
+/// The genesis plan [`genesis_plan_bytes`] wrote.
+pub fn read_genesis_plan(bytes: &[u8]) -> Result<GenesisPlan, Rejection> {
+    let na = |e: &str| Rejection::NotAsked(e.to_string());
+    let Ok(Value::Map(mut m)) = cbor::decode(bytes) else { return Err(na("a genesis plan is a map")) };
+    if m.iter().any(|(k, _)| matches!(k, Value::Uint(0 | 1))) {
+        return Err(na("a collective's genesis plan carries no signing key and no commitment"));
+    }
+    m.push((Value::Uint(1), identity::ChainKeyCommit { scheme: sig::SLH_128S, commit: [0; 32] }.to_value()));
+    m.sort_by_key(|(k, _)| cbor::encode(k));
+    match Payload::decode(identity::types::GENESIS, &m) {
+        Ok(Payload::Genesis(g)) => Ok(GenesisPlan { homes: g.homes, rule: g.rule, declarations: g.declarations, audit: g.audit }),
+        _ => Err(na("the genesis plan does not decode")),
+    }
+}
+
 /// A genesis committing to the exported chain key, signed by the first
 /// signing key. Refuses an export for any key but the first.
 pub fn genesis(
@@ -74,10 +106,10 @@ pub fn genesis(
         return Err(Rejection::NotAsked("a genesis commits to key 0".into()));
     }
     let g = Payload::Genesis(Genesis {
-        signing_key: SigningKey {
+        signing_key: Some(SigningKey {
             scheme: sig::SCHNORR,
             key: signing.public().to_vec(),
-        },
+        }),
         chain_key,
         homes: plan.homes,
         rule: plan.rule,
@@ -131,10 +163,18 @@ pub fn pending(
     context: Option<Vec<String>>,
     escape: bool,
 ) -> Message {
+    // The chain key that signs: at position p, key p - 1; for an identity
+    // with no signing key (a collective), whose genesis key 0 signed and
+    // which committed key 1, key p (Identity rule 1).
+    let keyless = prev.open(None).ok().is_some_and(|i| match Payload::decode(i.type_, &i.payload) {
+        Ok(Payload::Genesis(g)) => g.signing_key.is_none(),
+        Ok(Payload::Rotation(x)) => x.signing_key.is_none(),
+        _ => false,
+    });
     Message::PendingRotation(PendingRotation {
         inside: stripped_inside(identity_spec, r),
         prev: prev.encode(),
-        index: r.position - 1,
+        index: if keyless { r.position } else { r.position - 1 },
         context: context.map(|c| c.into_iter().map(String::into_bytes).collect()),
         escape: escape.then_some(true),
         competing: None,
@@ -242,7 +282,7 @@ pub fn accept(
         Some(s) => {
             let k = SchnorrKey::from_secret(&s)
                 .ok_or_else(|| na("the new signing secret is not a key"))?;
-            if r.signing_key.scheme != sig::SCHNORR || r.signing_key.key != k.public() {
+            if r.signing_key.as_ref().is_none_or(|key| key.scheme != sig::SCHNORR || key.key != k.public()) {
                 return Err(na(
                     "the new signing secret does not match the key in the rotation",
                 ));

@@ -6,6 +6,7 @@
 
 use mor_airgap::device::{self, ask_places, Choices, Config, DealPlan, Refusal, Review, Signer, Standing, BACKUP_NOTICE};
 use mor_airgap::msg::{kind, Holder, Message, Role, Share};
+use mor_airgap::online;
 use mor_airgap::seed::{Seed, SeedModule};
 use mor_airgap::shares;
 use mor_airgap::transport::{self, QrReceiver, QrSender};
@@ -34,7 +35,8 @@ PROTOTYPE, FOR TEST IDENTITIES. Keep this machine offline, always.
   mor-signer scan commitment|pending|signed|share OUT read QR frames, one per line, from input
   mor-signer check-share SHARE                        a member checks their own share
   mor-signer rebuild-check SHARE...                   rebuild a dealt key, compare, forget
-  mor-signer deal-genesis K OUTDIR HOLDER...          a collective's first key, dealt as shares
+  mor-signer deal-genesis K OUTDIR HOLDER... --plan FILE  a collective's genesis, signed by its first
+                                     chain key, and the next key dealt as shares
   mor-signer [--dir DIR] sign-collective PENDING OUT OUTDIR K HOLDER... --share FILE...
       HOLDER is member:HEX, custodian:HEX or escrow[:HEX] (an identity hash)
 
@@ -466,6 +468,7 @@ fn main() -> ExitCode {
             while let Some(v) = option(&mut args, "--share", 1) {
                 files.extend(v);
             }
+            let genesis_plan = option(&mut args, "--plan", 1).map(|v| PathBuf::from(&v[0]));
             let (head, rest) = if cmd == "deal-genesis" {
                 (2, &args[..])
             } else {
@@ -489,11 +492,15 @@ fn main() -> ExitCode {
                 holders,
             };
             if cmd == "deal-genesis" {
-                let (export, dealt) = device::deal_genesis(&plan, &mut rng);
+                let plan_file = genesis_plan.clone().unwrap_or_else(|| fail("deal-genesis needs --plan FILE, the genesis plan from the online device"));
+                let bytes = std::fs::read(&plan_file).unwrap_or_else(|e| fail(e));
+                let gplan = online::read_genesis_plan(&bytes).unwrap_or_else(|e| fail(e));
+                println!("The collective's genesis: no signing key (Identity rule 1), {} home(s), {} declaration(s); signed here by its first chain key.", gplan.homes.len(), gplan.declarations.as_ref().map_or(0, |d| d.len()));
+                let (genesis, dealt) = device::deal_genesis(config().identity_spec, &plan, gplan, &mut rng);
                 std::fs::create_dir_all(&outdir).unwrap_or_else(|e| fail(e));
-                let p = outdir.join("commitment.mor");
-                transport::write_file(&p, &export).unwrap_or_else(|e| fail(e));
-                println!("Commitment for the collective's genesis → {}", p.display());
+                let p = outdir.join("genesis.mor");
+                std::fs::write(&p, genesis.encode()).unwrap_or_else(|e| fail(e));
+                println!("The collective's genesis {} → {}", hex(&genesis.id()), p.display());
                 write_shares(&outdir, &dealt);
                 println!("\nNow: every holder runs check-share; then {k} of them bring their shares to a SECOND offline device for rebuild-check.");
             } else {

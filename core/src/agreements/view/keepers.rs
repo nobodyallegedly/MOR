@@ -195,7 +195,7 @@ impl<'a> AgreementsView<'a> {
         // Every action and decision of a collective belongs to the
         // collective's agreement; its identity-chain acts and its Identity
         // everyday acts belong to none.
-        if let Some(c) = x.act.outside.signer.filter(|_| x.inside.spec != self.mirs.identity) {
+        if let Some(c) = self.author(x).filter(|_| x.inside.spec != self.mirs.identity) {
             if let Some(f) = self.founding_of(&c) {
                 if let Ok(Some(ag)) = self.in_force(act) {
                     push(ag, out);
@@ -274,7 +274,7 @@ impl<'a> AgreementsView<'a> {
         let t = self.terms(named).ok()?;
         if t.is_collective() {
             let x = self.v.get(act)?;
-            if let Some(c) = x.act.outside.signer {
+            if let Some(c) = self.author(x) {
                 if self.founding_of(&c).is_some_and(|f| self.lineage(named).ok().is_some_and(|l| l.last().is_some_and(|r| r.0 == f))) {
                     if let Ok(Some(ag)) = self.in_force(act) {
                         return Some(ag);

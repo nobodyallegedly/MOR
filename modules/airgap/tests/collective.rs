@@ -37,33 +37,31 @@ fn plan() -> DealPlan {
     }
 }
 
-/// A collective at genesis: its first key dealt, the shares checked by
-/// every holder and by a rebuild on a second device, and its genesis.
+/// A collective at genesis (Identity rule 1): no signing key; its genesis
+/// declares its founding agreement and is signed on the dealing device by
+/// its first chain key, revealed in the signature, committing the next,
+/// which is dealt as shares, checked by every holder and by a rebuild on a
+/// second device.
 fn collective(rng: &mut TestRng) -> (Act, Vec<Share>) {
-    let (export, dealt) = device::deal_genesis(&plan(), rng);
+    let founding = sha256(b"the collective's founding terms");
+    let plan_bytes = online::genesis_plan_bytes(&GenesisPlan {
+        homes: vec![own_home()],
+        declarations: Some(vec![mor_core::agreements::founding_declaration(&sha256(b"LAW, test value"), &founding)]),
+        ..Default::default()
+    });
+    let gplan = online::read_genesis_plan(&plan_bytes).unwrap();
+    let (g, dealt) = device::deal_genesis(identity_spec(), &plan(), gplan, rng);
     for s in &dealt {
         shares::verify_share(s).unwrap();
         assert_eq!(s.dealing.fingerprint(), dealt[0].dealing.fingerprint());
+        assert_eq!(s.dealing.index, 1, "the genesis commits key 1, the first rotation's");
     }
     // The rebuild check, with shares of members other than the dealer's.
-    let Message::CommitmentExport(e) = &export else {
-        unreachable!()
-    };
-    assert_eq!(
-        shares::rebuild_check(&dealt[1..4]).unwrap(),
-        e.chain_key.commit
-    );
-    let g = online::genesis(
-        identity_spec(),
-        &export.encode(),
-        &signing("the collective", 0),
-        GenesisPlan {
-            homes: vec![own_home()],
-            ..Default::default()
-        },
-        rng,
-    )
-    .unwrap();
+    let gi = g.open(None).unwrap();
+    let Ok(mor_core::identity::Payload::Genesis(gp)) = mor_core::identity::Payload::decode(gi.type_, &gi.payload) else { unreachable!() };
+    assert_eq!(gp.signing_key, None, "a collective's genesis declares no signing key");
+    assert_eq!(shares::rebuild_check(&dealt[1..4]).unwrap(), gp.chain_key.commit);
+    assert_eq!(g.signature.scheme, mor_core::sig::SLH_128S, "signed by a chain key");
     (g, dealt)
 }
 
@@ -78,12 +76,14 @@ fn a_collective_rotation_from_k_shares_with_the_next_shares_verifiably_dealt() {
     let dev = Signer::new(config());
     let mut r = Owner::new("unused", SeedModule::Words, 2).plan();
     r.prev = id;
-    r.signing_key.key = signing("the collective", 1).public().to_vec();
+    // A collective's rotation installs no signing key (rotation check 4).
+    r.signing_key = None;
     let p = online::pending(&identity_spec(), &g, &r, None, false);
     let rv = dev
         .review_collective(&p.encode(), &dealt[..3], &plan(), &mut rng)
         .unwrap();
     assert!(rv.summary.says("Share 1 used: member"));
+    assert!(rv.summary.says("No signing key: a collective's rotation installs none"));
     assert!(!rv.summary.says("RECOVERY PATH"));
     assert!(rv.summary.warns("dealing fingerprint"));
     assert!(rv.summary.warns("rebuild check"));
@@ -114,7 +114,7 @@ fn a_collective_rotation_from_k_shares_with_the_next_shares_verifiably_dealt() {
     let mut r2 = r.clone();
     r2.prev = a.id();
     r2.position = 2;
-    r2.signing_key.key = signing("the collective", 2).public().to_vec();
+    r2.signing_key = None;
     let p2 = online::pending(&identity_spec(), &a, &r2, None, false);
     let used = vec![next[0].clone(), next[1].clone(), next[3].clone()];
     let rv = dev
@@ -240,6 +240,7 @@ fn shares_that_do_not_match_the_previous_act_are_refused() {
     let dev = Signer::new(config());
     let mut r = Owner::new("unused 2", SeedModule::Words, 2).plan();
     r.prev = g.id();
+    r.signing_key = None;
     let p = online::pending(&identity_spec(), &g, &r, None, false);
     assert!(matches!(
         dev.review_collective(&p.encode(), &other[..3], &plan(), &mut rng),
@@ -257,4 +258,21 @@ fn a_seed_of_a_collective_is_an_ordinary_seed_once_rebuilt() {
         Seed::restore(SeedModule::Words, &seed.backup()).unwrap(),
         seed
     );
+}
+
+#[test]
+fn a_collectives_rotation_naming_a_signing_key_or_a_kept_tip_is_refused() {
+    // Rotation check 4 (Identity rule 1): an identity whose genesis declares
+    // no signing key has none for good, and its rotations name no kept tip.
+    let mut rng = TestRng::new("keyless refusals");
+    let (g, dealt) = collective(&mut rng);
+    let dev = Signer::new(config());
+    let mut r = Owner::new("unused 3", SeedModule::Words, 2).plan();
+    r.prev = g.id();
+    let p = online::pending(&identity_spec(), &g, &r, None, false);
+    assert!(matches!(dev.review_collective(&p.encode(), &dealt[..3], &plan(), &mut rng), Err(Refusal::Rotation(w)) if w.contains("no signing key")));
+    r.signing_key = None;
+    r.kept = vec![mor_core::identity::KeptTip { act: g.id(), position: 0, summary: g.id() }];
+    let p = online::pending(&identity_spec(), &g, &r, None, false);
+    assert!(matches!(dev.review_collective(&p.encode(), &dealt[..3], &plan(), &mut rng), Err(Refusal::Rotation(w)) if w.contains("no kept tip")));
 }

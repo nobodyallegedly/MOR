@@ -838,10 +838,14 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
         }
         return Ok(());
     }
+    // A collective's Money act is signed by a member or grantee for it,
+    // naming the collective as chain in `objects`; Agreements judges it
+    // (rule "A collective's Money acts").
+    let names = |who: &Hash| cited.objects.iter().flatten().any(|o| &o.chain == who);
     let ok = match payload {
-        Payload::PayeePointer(p) => &p.payee == signer,
-        Payload::Obligation(o) => &o.debtor == signer,
-        Payload::Receipt(r) => &r.payee == signer,
+        Payload::PayeePointer(p) => &p.payee == signer || names(&p.payee),
+        Payload::Obligation(o) => &o.debtor == signer || names(&o.debtor),
+        Payload::Receipt(r) => &r.payee == signer || names(&r.payee),
         Payload::Claim(_) => true,
         // Its signer must be the obligation's creditor: checked where the
         // obligation is held (Agreements' view, `debt_release`).

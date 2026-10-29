@@ -149,7 +149,12 @@ pub fn describe(
         r.position,
         hexs(&r.prev)
     ));
-    s.warn(key_line(&r.signing_key));
+    match &r.signing_key {
+        Some(k) => s.warn(key_line(k)),
+        // A collective's rotation (Identity rule 1): no signing key, and no
+        // kept tip; its members act with their own keys.
+        None => s.plain("No signing key: a collective's rotation installs none, and keeps no tip (Identity rule 1)"),
+    }
 
     if r.homeless {
         s.warn(

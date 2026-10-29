@@ -1702,9 +1702,12 @@ impl Verifier {
         if self.is_chain_signature(res, k) {
             return None;
         }
+        // Everyday check 4: an identity with no signing key (a collective)
+        // signs no everyday act.
         res.states[k]
             .signing_key
-            .made(&h.act.signature)
+            .as_ref()
+            .is_some_and(|key| key.made(&h.act.signature))
             .then_some(k)
     }
 
@@ -1877,7 +1880,7 @@ impl Verifier {
                     Some(Payload::Endorsement(en))
                         if x.signer() == Some(id)
                             && x.act.outside.binding.as_ref() == Some(&self.key_set_by(prev))
-                            && ps.signing_key.made(&x.act.signature)
+                            && ps.signing_key.as_ref().is_some_and(|k| k.made(&x.act.signature))
                             && names(&x.inside, id, h) =>
                     {
                         Some(en)
@@ -1925,7 +1928,9 @@ impl Verifier {
         if t.winner != Some(h.id) {
             return Hb::No;
         }
-        if self.endorsements(id, prev, ps, &h.id).next().is_some() {
+        // A collective's homeless rotation, signed by its chain key, is its
+        // own escape endorsement (section 11): steps 3 and 4 do not apply.
+        if ps.signing_key.is_none() || self.endorsements(id, prev, ps, &h.id).next().is_some() {
             return Hb::Counts(Basis::Escape);
         }
         let old = ps.operators();
@@ -2148,16 +2153,17 @@ impl Verifier {
         Some(first_of_prev == first_id)
     }
 
-    /// Text rule 14 (F334): whether a text act's one object, already of
-    /// the right shape (`[signer, decision]`, [`crate::text::check_act`]),
-    /// is a collective's pointer to a decision of its own (Agreements rule
-    /// 58): its signer's chain declares a founding agreement (Agreements
-    /// rule 56), and the act it names is a link of that chain or a record
-    /// (Agreements type 17) the collective signed; or (Text draft 10, F343)
-    /// an act signed with a grant key naming the grant its binding names,
-    /// which Agreements judge. `Some(true)` for any act this does not
-    /// concern; `None` (unknown) where the signer's chain or the act named
-    /// is not held, or Agreements' hash is not known here.
+    /// Text rule 14: whether a text act's one object is one of the two
+    /// pointers allowed. First, an act signed with a grant key (a scoped
+    /// key, Identity rule 8) names `[grantor, grant]`: its signer as chain
+    /// and the grant its binding names, which Agreements judge. Second, a
+    /// text signed for a collective by a member or grantee with their own
+    /// key names `[collective, decision]`: a collective (an identity whose
+    /// genesis declares a founding agreement) and a decision of its: a link
+    /// of its identity chain, or a record or grant for it (Agreements rule
+    /// 58). `Some(true)` for any act this does not concern; `None`
+    /// (unknown) where the chain or the act named is not held, or
+    /// Agreements' hash is not known here.
     fn text_pointer(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
         let Some((_, text)) = self.never_ack_specs else { return Some(true) };
         if x.inside.spec != text || x.inside.objects.is_none() {
@@ -2167,59 +2173,29 @@ impl Verifier {
             return Some(false);
         };
         let (_, agreements) = self.ack_specs?;
-        let res = self.resolve_cx(cx, signer);
+        if &o.chain == signer {
+            // The first case: signed with a grant key, naming the grant its
+            // binding names; the binding no link of the signer's chain.
+            let res = self.resolve_cx(cx, signer);
+            if res.links.is_empty() {
+                return None;
+            }
+            let b = x.act.outside.binding?;
+            return Some(res.position_of(&b).is_none() && o.predecessor == b);
+        }
+        // The chain named must be an identity's: an act held that is no
+        // genesis names no identity, and is no collective.
+        if self.acts.get(&o.chain).is_some_and(|c| !matches!(c.payload(), Some(Payload::Genesis(_)))) {
+            return Some(false);
+        }
+        let res = self.resolve_cx(cx, &o.chain);
         if res.links.is_empty() {
             return None;
         }
-        // Text rule 14, its second case (draft 10, F343): an act signed with
-        // a grant key names, as its one object, the grant its binding names,
-        // on its grantor's chain. A binding that is no link of the signer's
-        // identity chain is a scoped key's (Identity rule 8): Agreements
-        // judge whether the grant backs it (rules 73 to 80, `backing`).
         let collective = res
             .states
-            .iter()
-            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
-        if let Some(b) = x.act.outside.binding {
-            // A holder's member key (Text rule 14; Agreements rule 73): the
-            // binding is the holder's signature act on a founding or clone,
-            // naming the key; the one object names, as predecessor, that
-            // founding or clone, the version that is its grant, never the
-            // signature act itself.
-            if res.position_of(&b).is_none() {
-                if let Some(sig) = self.acts.get(&b) {
-                    if sig.inside.spec == agreements && sig.inside.type_ == crate::agreements::types::SIGNATURE && sig.signer() != Some(signer) {
-                        if let Ok((version, Some(_))) = crate::agreements::decode_signature_key(&sig.inside) {
-                            return Some(o.predecessor == version);
-                        }
-                    }
-                }
-            }
-            if o.predecessor == b && res.position_of(&b).is_none() {
-                return Some(true);
-            }
-            if res.position_of(&b).is_none() {
-                match self.acts.get(&b) {
-                    // Text rule 14: signed with a grant key, the second case
-                    // decides, whoever the signer is; a collective's grant
-                    // key naming one of its decisions, not its grant, is
-                    // invalid (the first case is the collective's own key's).
-                    Some(g) if g.inside.spec != self.identity_spec => return Some(false),
-                    // A binding not held may be a holder's signature act: a
-                    // collective's text naming a founding or clone is unknown
-                    // until it holds that signature (Text rule 14).
-                    None if collective
-                        && self
-                            .acts
-                            .get(&o.predecessor)
-                            .is_some_and(|p| p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::TERMS) =>
-                    {
-                        return None
-                    }
-                    _ => {}
-                }
-            }
-        }
+            .first()
+            .is_some_and(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
         if !collective {
             return Some(false);
         }
@@ -2227,10 +2203,10 @@ impl Verifier {
             return Some(true);
         }
         let p = self.acts.get(&o.predecessor)?;
-        // One of its records: an act claiming the collective as signer that
-        // is invalid (another key's) is no decision of its own (Text rule 14;
-        // Agreements rule 58).
-        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD && self.status_cx(cx, p) != Status::Invalid)
+        // One of its records or grants: an act for the collective, naming
+        // it as chain, that is not invalid.
+        let decision = p.inside.spec == agreements && (p.inside.type_ == crate::agreements::types::RECORD || p.inside.type_ == crate::agreements::types::GRANT);
+        Some(decision && p.signer() != Some(&o.chain) && p.inside.objects.iter().flatten().any(|q| q.chain == o.chain) && self.status_cx(cx, p) != Status::Invalid)
     }
 
     fn status_cx(&self, cx: &mut Cx, x: &Held) -> Status {
@@ -2330,7 +2306,7 @@ impl Verifier {
                 _ => Status::Invalid,
             };
         };
-        if self.is_chain_signature(&res, k) || !res.states[k].signing_key.made(&x.act.signature) {
+        if self.is_chain_signature(&res, k) || !res.states[k].signing_key.as_ref().is_some_and(|key| key.made(&x.act.signature)) {
             return Status::Invalid;
         }
         // The rotation is judged first (F168, B5): an act it voids is void

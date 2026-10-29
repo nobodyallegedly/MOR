@@ -57,10 +57,6 @@ fn label() -> Terms {
         }),
         parent: None,
         grammar: Some(KeyGrammar {
-            signing: Holding::Shares {
-                threshold: 2,
-                members: vec![h(1), h(2), h(3)],
-            },
             chain_key: Holding::Shares {
                 threshold: 3,
                 members: vec![h(1), h(2), h(3)],
@@ -73,36 +69,25 @@ fn label() -> Terms {
         extensions: Some(vec![h(EXT)]),
         succession: None,
         constitutional: None,
-        areas: Some(vec![
-            Area {
-                name: "Releases".into(),
-                holders: vec![h(1)],
-                threshold: 1,
-                kinds: Some(vec![
-                    Kind::Type {
-                        spec: m.envelopes,
-                        type_: 0,
-                    },
-                    Kind::Layer(agreements::layers::DEVELOPMENT),
-                ]),
-                fields: None,
-                id: 1,
-                limits: None,
-            },
-            Area {
-                name: "Money".into(),
-                holders: vec![h(2)],
-                threshold: 1,
-                kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
-                fields: None,
-                id: 2,
-                limits: None,
-            },
+        // Who acts in each layer (rule 60): the releases' holder for
+        // Development, the treasurer for Money, any one member elsewhere.
+        layers: Some(vec![
+            (agreements::layers::TEXT, Rule::Threshold(1)),
+            (agreements::layers::ENVELOPES, Rule::Threshold(1)),
+            (agreements::layers::MONEY, Rule::Named(vec![h(2)])),
+            (agreements::layers::AGREEMENTS, Rule::Threshold(1)),
+            (agreements::layers::DEVELOPMENT, Rule::Named(vec![h(1)])),
         ]),
-        area_words: Some(vec![
-            (1, "Releases go out on Fridays.".into()),
-            (2, "Receipts are signed within a week.".into()),
-        ]),
+        areas: Some(vec![Area {
+            name: "Releases".into(),
+            holders: vec![h(1)],
+            threshold: 1,
+            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }]),
+            fields: None,
+            id: 1,
+            limits: None,
+        }]),
+        area_words: Some(vec![(1, "Releases go out on Fridays.".into())]),
         chain: None,
         departed: None,
         // The collective's ownership agreement: its one stake, on itself.
@@ -244,6 +229,7 @@ fn a_deal_has_everyone_as_its_rules() {
     // F107: a deal is terms without a key grammar.
     let mut d = label();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;
@@ -291,6 +277,7 @@ fn a_judge_never_handles_what_it_judges() {
     // Q24 and scenario 1.7: in a deal too.
     let mut d = label();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;
@@ -308,36 +295,47 @@ fn a_judge_never_handles_what_it_judges() {
 #[test]
 fn areas_are_checked() {
     let m = mirs();
+    // A second area, finer than a layer: the Money layer's receipts.
+    let two = || {
+        let mut t = label();
+        t.areas.as_mut().unwrap().push(Area {
+            name: "Receipts".into(),
+            holders: vec![h(2)],
+            threshold: 1,
+            kinds: Some(vec![Kind::Type { spec: m.money, type_: 2 }]),
+            fields: None,
+            id: 2,
+            limits: None,
+        });
+        t
+    };
+    check(&two()).unwrap();
     // Q21: founding terms never list an area without holders.
-    let mut t = label();
+    let mut t = two();
     t.areas.as_mut().unwrap()[1].holders = vec![];
     assert!(check(&t).is_err());
     // A clone may.
-    let mut c = clone_of(&label(), vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
+    let mut c = clone_of(&two(), vec![(Power::Constitutional, vec![h(1), h(2), h(3)])]);
     c.areas.as_mut().unwrap()[1].holders = vec![];
     check(&c).unwrap();
     // Holders are parties.
-    let mut t = label();
+    let mut t = two();
     t.areas.as_mut().unwrap()[1].holders = vec![h(9)];
     assert!(check(&t).is_err());
-    // Q5: no two areas reach the same acts: a Money lane and the
-    // payment cMIP's receipts.
-    let mut t = label();
-    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type {
-        spec: h(PAY),
-        type_: 0,
-    });
+    // Q5: no two areas reach the same acts.
+    let mut t = two();
+    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type { spec: m.money, type_: 2 });
     assert!(check(&t).is_err());
-    // A lane and a field reference to a task of its layer.
+    // An area reaches act types: a whole layer is field 19's (rule 60).
     let mut t = label();
-    t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Task(6)]);
+    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Layer(agreements::layers::MONEY));
     assert!(check(&t).is_err());
     // A field reference to a judicial task.
     let mut t = label();
     t.areas.as_mut().unwrap()[0].fields = Some(vec![FieldRef::Task(11)]);
     assert!(check(&t).is_err());
     // Q32: ids are distinct.
-    let mut t = label();
+    let mut t = two();
     t.areas.as_mut().unwrap()[1].id = 1;
     assert!(check(&t).is_err());
     // Area words only for an area that exists.
@@ -346,24 +344,34 @@ fn areas_are_checked() {
     assert!(check(&t).is_err());
     // Genesis, rotations and records are never in an area's reach.
     let mut t = label();
-    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type {
-        spec: m.identity,
-        type_: 1,
-    });
+    t.areas.as_mut().unwrap()[0].kinds.as_mut().unwrap().push(Kind::Type { spec: m.identity, type_: 1 });
     assert!(check(&t).is_err());
-    // R4: one specification for a Money and an Agreements task, two lanes: valid.
+}
+
+/// Rule 60: a collective's founding names who acts for it in each of the
+/// five layers (field 19), each `[0]`, `[1, k]` or `[2, names]`; one left
+/// unnamed, a sixth, or a rule by share founds nothing.
+#[test]
+fn every_layer_is_named() {
+    check(&label()).unwrap();
     let mut t = label();
-    t.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (11, h(ANCHOR)), (13, h(PAY2))];
-    t.areas.as_mut().unwrap().push(Area {
-        name: "Agreements".into(),
-        holders: vec![h(3)],
-        threshold: 1,
-        kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
-        fields: None,
-        id: 3,
-        limits: None,
-    });
-    check(&t).unwrap();
+    t.layers.as_mut().unwrap().remove(2);
+    assert!(matches!(check(&t), Err(AgreementsError::Check(e)) if e.contains("layers 1 to 5")), "a layer left unnamed");
+    let mut t = label();
+    t.layers.as_mut().unwrap().push((6, Rule::All));
+    assert!(check(&t).is_err(), "no seventh layer smuggled in");
+    let mut t = label();
+    t.layers.as_mut().unwrap()[0].1 = Rule::Threshold(4);
+    assert!(check(&t).is_err(), "a threshold above the parties");
+    let mut t = label();
+    t.layers.as_mut().unwrap()[0].1 = Rule::Named(vec![h(9)]);
+    assert!(check(&t).is_err(), "named parties are parties");
+    let mut t = label();
+    t.layers.as_mut().unwrap()[0].1 = Rule::ByShare { stake: 0, share: 500_000 };
+    assert!(check(&t).is_err(), "a layer's rule is by head");
+    let mut t = label();
+    t.layers = None;
+    assert!(check(&t).is_err(), "a collective without field 19");
 }
 
 #[test]
@@ -383,6 +391,7 @@ fn every_constitutional_voice_is_covered() {
     // A deal needs no clause (rule 49).
     let mut d = label();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;
@@ -451,12 +460,13 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         needs(&p, &c(&|t| t.area_words.as_mut().unwrap()[0].1 = "Releases on Mondays.".into())),
         vec![Power::Area(1)]
     );
-    // 3.7e: two areas' words: both powers.
+    // 3.7e: an area's words and a layer's cMIP: both powers.
     assert_eq!(
         needs(&p, &c(&|t| {
-            t.area_words = Some(vec![(1, "a".into()), (2, "b".into())]);
+            t.area_words = Some(vec![(1, "a".into())]);
+            t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
         })),
-        vec![Power::Area(1), Power::Area(2)]
+        vec![Power::Area(1), Power::Layer(agreements::layers::MONEY)]
     );
     // 3.7l, Q12: an area and a judicial clause: both.
     assert_eq!(
@@ -466,77 +476,80 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         })),
         vec![Power::Judicial, Power::Area(1)]
     );
-    // 3.7g: the payment cMIP is the Money lane's.
+    // 3.7g: the payment cMIP is the Money layer's rule's, [6, 3].
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))])),
-        vec![Power::Area(2)]
+        vec![Power::Layer(agreements::layers::MONEY)]
     );
     // 3.7n, Q15: the anchoring cMIP stays judicial: every member (F121).
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(6, h(PAY)), (11, h(ANCHOR + 5))])),
         vec![Power::Judicial]
     );
-    // A task no area holds: the clone rule (third pass reading).
+    // Every task lies under its layer's rule: task 5 under Envelopes'.
     assert_eq!(
         needs(&p, &c(&|t| t.cmips = vec![(5, h(50)), (6, h(PAY)), (11, h(ANCHOR))])),
+        vec![Power::Layer(agreements::layers::ENVELOPES)]
+    );
+    // An Identity task lies under no layer's rule (a collective's Identity
+    // acts are its chain acts, rule 60): the clone rule (reading).
+    assert_eq!(
+        needs(&p, &c(&|t| t.cmips = vec![(2, h(51)), (6, h(PAY)), (11, h(ANCHOR))])),
         vec![Power::Clone]
     );
-    // 3.7j: dropping an extension declaring only Development: the release
-    // manager alone.
-    assert_eq!(needs(&p, &c(&|t| t.extensions = None)), vec![Power::Area(1)]);
+    // 3.7j: dropping an extension declaring only Development: the rule for
+    // Development, the release manager alone.
+    assert_eq!(needs(&p, &c(&|t| t.extensions = None)), vec![Power::Layer(agreements::layers::DEVELOPMENT)]);
 }
 
 #[test]
 fn extensions_need_every_lane_they_declare() {
     let p = label();
-    let mut t = clone_of(&p, vec![(Power::Area(1), vec![h(1)])]);
+    let dev = Power::Layer(agreements::layers::DEVELOPMENT);
+    let money = Power::Layer(agreements::layers::MONEY);
+    let mut t = clone_of(&p, vec![(dev.clone(), vec![h(1)])]);
     // An extension whose specification is not held: asked for, never guessed.
     t.extensions = Some(vec![h(EXT), h(99)]);
     assert!(matches!(
         powers_needed(&p, &t, &mirs(), &ext_layers),
         Err(AgreementsError::Missing(_))
     ));
-    // 3.7j: one declaring Money needs the treasurer too.
+    // 3.7j: one declaring Money needs the rule for Money too.
     t.extensions = Some(vec![h(EXT), h(EXT_FIN)]);
-    assert_eq!(needs(&p, &t), vec![Power::Area(1), Power::Area(2)]);
+    assert_eq!(needs(&p, &t), vec![money.clone(), dev.clone()]);
     // Q18: dropping it needs the same.
     let mut with = p.clone();
     with.extensions = Some(vec![h(EXT), h(EXT_FIN)]);
-    let mut drop = clone_of(&with, vec![(Power::Area(1), vec![h(1)])]);
+    let mut drop = clone_of(&with, vec![(dev.clone(), vec![h(1)])]);
     drop.extensions = Some(vec![h(EXT)]);
-    assert_eq!(needs(&with, &drop), vec![Power::Area(1), Power::Area(2)]);
+    assert_eq!(needs(&with, &drop), vec![money, dev]);
 }
 
 #[test]
 fn r4_a_specification_serving_two_layers_answers_to_both_lanes() {
-    // 3.7n: the Money lane to member 2, the Agreements lane to member 3.
+    // 3.7n: the rule for Money is member 2's, the rule for Agreements
+    // member 3's.
     let mut p = label();
     p.cmips = vec![(6, h(PAY)), (7, h(PAY2)), (11, h(ANCHOR)), (13, h(PAY2))];
-    p.areas.as_mut().unwrap().push(Area {
-        name: "Agreements".into(),
-        holders: vec![h(3)],
-        threshold: 1,
-        kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
-        fields: None,
-        id: 3,
-        limits: None,
-    });
+    p.layers.as_mut().unwrap()[3].1 = Rule::Named(vec![h(3)]);
     check(&p).unwrap();
-    // Naming that specification for another Money task needs both lanes.
-    let mut t = clone_of(&p, vec![(Power::Area(2), vec![h(2)])]);
+    let (money, ag) = (Power::Layer(agreements::layers::MONEY), Power::Layer(agreements::layers::AGREEMENTS));
+    // Naming that specification for another Money task needs both rules.
+    let mut t = clone_of(&p, vec![(money.clone(), vec![h(2)])]);
     t.cmips = vec![(6, h(PAY2)), (7, h(PAY2)), (11, h(ANCHOR)), (13, h(PAY2))];
-    assert_eq!(needs(&p, &t), vec![Power::Area(2), Power::Area(3)]);
-    // The Agreements lane alone adopts a grant-limits cMIP (task 12).
-    let mut t = clone_of(&p, vec![(Power::Area(3), vec![h(3)])]);
+    assert_eq!(needs(&p, &t), vec![money, ag.clone()]);
+    // The rule for Agreements alone adopts a grant-limits cMIP (task 12).
+    let mut t = clone_of(&p, vec![(ag.clone(), vec![h(3)])]);
     t.cmips.push((12, h(55)));
     t.cmips.sort();
-    assert_eq!(needs(&p, &t), vec![Power::Area(3)]);
+    assert_eq!(needs(&p, &t), vec![ag]);
 }
 
 #[test]
 fn a_deals_clone_needs_every_party() {
     let mut d = label();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;
@@ -767,6 +780,7 @@ fn stakes_are_written_in_millionths() {
     // collective's fields.
     let mut w = label();
     w.grammar = None;
+    w.layers = None;
     w.target = None;
     w.stakes = None;
     w.areas = None;
@@ -802,6 +816,7 @@ fn the_departed_members_entry_records_who_left() {
         ("no share of the collective", Box::new(|t| t.departed.as_mut().unwrap().push(h(5)))),
         ("in a deal", Box::new(|t| {
             t.grammar = None;
+            t.layers = None;
             t.target = None;
             t.stakes = None;
             t.areas = None;
@@ -1028,6 +1043,7 @@ fn rules_by_share_have_their_fields_3_7ah() {
     // A deal's clone rule is every party.
     let mut d = label_owned();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;
@@ -1069,6 +1085,7 @@ fn a_holders_rule_is_a_collectives_only_1_9g_3_7aj() {
     // A deal: invalid.
     let mut d = label_owned();
     d.grammar = None;
+    d.layers = None;
     d.target = None;
     d.stakes = None;
     d.areas = None;

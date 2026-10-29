@@ -146,7 +146,7 @@ fn the_command_line_signer_end_to_end() {
     .unwrap();
     let mut r = Owner::new("cli plan", mor_airgap::seed::SeedModule::Words, 2).plan();
     r.prev = g.id();
-    r.signing_key.key = signing("cli", 1).public().to_vec();
+    r.signing_key.as_mut().unwrap().key = signing("cli", 1).public().to_vec();
     let pending = online::pending(&identity_spec(), &g, &r, None, false);
     transport::write_file(Path::new(&f("pending.mor")), &pending).unwrap();
 
@@ -218,6 +218,18 @@ fn the_command_line_signer_end_to_end() {
             .collect::<String>()
     };
     let shares = dir.join("shares");
+    // The genesis plan from the online device: homes and the founding
+    // agreement's declaration; the dealing device signs the keyless genesis.
+    let plan = dir.join("genesis-plan.cbor");
+    std::fs::write(
+        &plan,
+        mor_airgap::online::genesis_plan_bytes(&mor_airgap::online::GenesisPlan {
+            homes: vec![own_home()],
+            declarations: Some(vec![mor_core::agreements::founding_declaration(&mor_core::hash::sha256(b"LAW, test value"), &mor_core::hash::sha256(b"founding terms"))]),
+            ..Default::default()
+        }),
+    )
+    .unwrap();
     let (ok, out) = run(
         &dir,
         &[
@@ -227,10 +239,15 @@ fn the_command_line_signer_end_to_end() {
             &format!("member:{}", id("a")),
             &format!("member:{}", id("b")),
             "escrow",
+            "--plan",
+            &plan.to_string_lossy(),
         ],
         "",
     );
-    assert!(ok, "{out}");
+    assert!(ok && out.contains("no signing key"), "{out}");
+    let g = mor_core::act::Act::decode(&std::fs::read(shares.join("genesis.mor")).unwrap()).unwrap();
+    let mut v = mor_core::chain::Verifier::new(identity_spec());
+    v.add(g).unwrap();
     let sh = |n: u8| {
         shares
             .join(format!("share-{n}.mor"))

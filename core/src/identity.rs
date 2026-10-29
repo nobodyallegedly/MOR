@@ -140,7 +140,9 @@ pub struct KeptTip {
 /// Genesis (type 0).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Genesis {
-    pub signing_key: SigningKey,
+    /// The first signing key; absent for a collective, which has none for
+    /// good (rule 1).
+    pub signing_key: Option<SigningKey>,
     pub chain_key: ChainKeyCommit,
     pub homes: Vec<Home>,
     pub rule: Option<HomeRule>,
@@ -154,7 +156,8 @@ pub struct Genesis {
 pub struct Rotation {
     pub prev: Hash,
     pub position: u64,
-    pub signing_key: SigningKey,
+    /// The new signing key; absent exactly for a collective (rule 1).
+    pub signing_key: Option<SigningKey>,
     pub chain_key: ChainKeyCommit,
     pub kept: Vec<KeptTip>,
     pub disowned: Option<Vec<Hash>>,
@@ -450,7 +453,7 @@ impl Payload {
             GENESIS => {
                 let f = fields(p, 6, "genesis: unknown key")?;
                 Payload::Genesis(Genesis {
-                    signing_key: signing_key(req(&f, 0, "genesis 0: signing key")?)?,
+                    signing_key: get(&f, 0).map(signing_key).transpose()?,
                     chain_key: chain_key_commit(req(&f, 1, "genesis 1: chain-key commitment")?)?,
                     homes: homes(req(&f, 2, "genesis 2: homes")?)?,
                     rule: get(&f, 3).map(home_rule).transpose()?,
@@ -463,7 +466,7 @@ impl Payload {
                 Payload::Rotation(Rotation {
                     prev: hash(req(&f, 0, "rotation 0: previous act")?, "rotation 0")?,
                     position: uint(req(&f, 1, "rotation 1: position")?, "rotation 1")?,
-                    signing_key: signing_key(req(&f, 2, "rotation 2: signing key")?)?,
+                    signing_key: get(&f, 2).map(signing_key).transpose()?,
                     chain_key: chain_key_commit(req(&f, 3, "rotation 3: chain-key commitment")?)?,
                     kept: kept(req(&f, 4, "rotation 4: kept")?)?,
                     disowned: get(&f, 5)
@@ -667,7 +670,9 @@ impl Payload {
         let mut m = Vec::new();
         match self {
             Payload::Genesis(g) => {
-                put(&mut m, 0, g.signing_key.to_value());
+                if let Some(k) = &g.signing_key {
+                    put(&mut m, 0, k.to_value());
+                }
                 put(&mut m, 1, g.chain_key.to_value());
                 put(&mut m, 2, homes_v(&g.homes));
                 if let Some(r) = &g.rule {
@@ -683,7 +688,9 @@ impl Payload {
             Payload::Rotation(r) => {
                 put(&mut m, 0, b(&r.prev));
                 put(&mut m, 1, Value::Uint(r.position));
-                put(&mut m, 2, r.signing_key.to_value());
+                if let Some(k) = &r.signing_key {
+                    put(&mut m, 2, k.to_value());
+                }
                 put(&mut m, 3, r.chain_key.to_value());
                 let kept = r
                     .kept
@@ -872,10 +879,24 @@ pub fn check_genesis(act: &Act, inside: &Inside, g: &Genesis) -> R<()> {
             "genesis carries signer, binding, prev or objects",
         ));
     }
-    if !g.signing_key.made(&act.signature) {
-        return Err(IdError::Check(
-            "genesis is not signed by the signing key it declares",
-        ));
+    match &g.signing_key {
+        Some(k) if !k.made(&act.signature) => {
+            return Err(IdError::Check(
+                "genesis is not signed by the signing key it declares",
+            ));
+        }
+        Some(_) => {}
+        // A collective's genesis (rule 1): it declares its founding
+        // agreement in place of a signing key, and is signed by a chain key
+        // revealed in its signature (rule 7).
+        None => {
+            if g.declarations.as_ref().is_none_or(|d| d.is_empty()) {
+                return Err(IdError::Check("a genesis declaring no signing key declares its founding agreement (rule 1)"));
+            }
+            if !matches!(act.signature.scheme, crate::sig::SLH_128S | crate::sig::SLH_128F) {
+                return Err(IdError::Check("a genesis declaring no signing key is signed by a chain key (rules 1 and 7)"));
+            }
+        }
     }
     if let Some(r) = &g.rule {
         if !rule_valid(r, &g.homes, None) {
@@ -961,7 +982,9 @@ pub fn names(inside: &Inside, chain: &Hash, target: &Hash) -> bool {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChainState {
     pub identity: Hash,
-    pub signing_key: SigningKey,
+    /// The signing key in effect; `None` for good for an identity whose
+    /// genesis declares none (a collective, rule 1).
+    pub signing_key: Option<SigningKey>,
     pub chain_key: ChainKeyCommit,
     pub homes: Vec<Home>,
     pub rule: Option<HomeRule>,
@@ -1002,6 +1025,14 @@ impl ChainState {
     /// A home rule the rotation leaves in place must still fit the homes it
     /// sets; if it does not, the rotation is invalid (reading, see the README).
     pub fn apply(&self, r: &Rotation) -> R<ChainState> {
+        // Rotation check 4: a new signing key exactly when the genesis
+        // declares one; a rotation of a collective names no kept tip.
+        if self.signing_key.is_some() != r.signing_key.is_some() {
+            return Err(IdError::Check("a rotation carries a new signing key exactly when the genesis declares one (rotation check 4)"));
+        }
+        if self.signing_key.is_none() && !r.kept.is_empty() {
+            return Err(IdError::Check("a rotation of an identity with no signing key names no kept tip (rotation check 4)"));
+        }
         let homes = r.homes.clone().unwrap_or_else(|| self.homes.clone());
         let rule = match r.rule {
             None => self.rule,

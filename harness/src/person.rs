@@ -175,7 +175,7 @@ impl Person {
         let sign = schnorr(seed, &format!("{name}/0"));
         let chain_key = slh(seed, &format!("{name}/0"));
         let g = Payload::Genesis(Genesis {
-            signing_key: signing_key(&sign),
+            signing_key: Some(signing_key(&sign)),
             chain_key: commit(&chain_key),
             homes,
             rule,
@@ -236,7 +236,7 @@ impl Person {
         let payload = Payload::Rotation(Rotation {
             prev: self.binding,
             position: self.position + 1,
-            signing_key: signing_key(&next_sign),
+            signing_key: Some(signing_key(&next_sign)),
             chain_key: commit(&next_chain_key),
             kept,
             disowned: None,
