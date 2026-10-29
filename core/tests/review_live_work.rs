@@ -78,7 +78,7 @@ fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
 /// a sole creator alone).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
     let c = agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
-    agreements_act(w, p, agreements::types::WORK_CLAIM, c.to_map(), None)
+    agreements_act(w, p, agreements::types::CLAIM, c.to_map(), None)
 }
 
 /// A publication (Envelopes type 0) by `p` whose field 1 is `work` and field

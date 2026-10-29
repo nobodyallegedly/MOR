@@ -24,7 +24,7 @@ pub mod types {
     pub const TERMS: u64 = 0;
     pub const SIGNATURE: u64 = 1;
     pub const KEEPER_RECORD: u64 = 2;
-    pub const WORK_CLAIM: u64 = 3;
+    pub const CLAIM: u64 = 3;
     /// A public domain release (rule 17, F121 shape D).
     pub const RELEASE: u64 = 5;
     pub const STANDING_OFFER: u64 = 6;

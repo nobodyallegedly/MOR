@@ -3331,7 +3331,7 @@ fn s7g_agreements_a(out: &mut Out) {
     let e = ag_act(&mut w, &mut cy, agreements::types::TERMS, e.to_map(), None);
     sign(&mut w, &mut cy, &e);
     sign(&mut w, &mut dee, &e);
-    let ballad_claim = ag_act(&mut w, &mut cy, agreements::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(other.to_vec()))], None);
+    let ballad_claim = ag_act(&mut w, &mut cy, agreements::types::CLAIM, vec![(Value::Uint(0), Value::Bytes(other.to_vec()))], None);
     let release = agreements::Release { work: other, stakes: vec![(e, 0)], claims: vec![ballad_claim], keys: vec![(spec("a publication carrying the ballad"), vec![7; 32])], timed: None };
     let unrelated = ag_act(&mut w, &mut cy, agreements::types::RELEASE, release.to_map(), obj(e));
     let base = w.log.clone();

@@ -67,7 +67,7 @@ impl<'a> AgreementsView<'a> {
     pub fn work_owners(&self, work: &Hash) -> R<WorkOwners> {
         let mut claims: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
-            if !self.is_agreements(h, types::WORK_CLAIM) || !self.valid(&h.id) {
+            if !self.is_agreements(h, types::CLAIM) || !self.valid(&h.id) {
                 continue;
             }
             let Ok(c) = WorkClaim::decode(&h.inside, h.act.outside.signer.as_ref()) else { continue };

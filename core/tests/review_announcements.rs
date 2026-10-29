@@ -117,7 +117,7 @@ fn cmip_closing(w: &mut World, p: &mut Person, name: Hash, became: Hash) -> Hash
 /// A work claim by `p` alone on `work`, public; it binds at once (rule 15).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
     let c = agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
-    agreements_act(w, p, agreements::types::WORK_CLAIM, c.to_map(), None)
+    agreements_act(w, p, agreements::types::CLAIM, c.to_map(), None)
 }
 
 /// A lone seller's standing offer (F215) naming `name`, with its words.

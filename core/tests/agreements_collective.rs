@@ -5509,7 +5509,7 @@ fn a_work_is_released_to_the_public_domain() {
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &d);
     sign(&mut w, &mut ben, &d);
-    let claim = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
+    let claim = agreements_act(&mut w, &mut ana, agreements::types::CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
     let release = agreements::Release { work, stakes: vec![(d, 0)], claims: vec![claim], keys: vec![(spec("a publication carrying it"), vec![7; 32])], timed: None };
     let r = agreements_act(&mut w, &mut ana, agreements::types::RELEASE, release.to_map(), obj(d));
     sign(&mut w, &mut ben, &r);
@@ -5523,7 +5523,7 @@ fn a_work_is_released_to_the_public_domain() {
     // N12: the claim it names is history; a claim it does not name is
     // shown beside it, openly contested.
     assert_eq!(view(&w).claim_after_release(&claim, &work).unwrap(), None);
-    let other = agreements_act(&mut w, &mut ben, agreements::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
+    let other = agreements_act(&mut w, &mut ben, agreements::types::CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
     assert_eq!(view(&w).claim_after_release(&other, &work).unwrap(), Some(r));
     // N8: a clone changing the release rule needs every owner, Cy too.
     let mut c = terms(&ana, &ben, &cy, Some(ReleaseRule::Holders(HoldersRule::Share(900_000))));
@@ -11535,7 +11535,7 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
     let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
     let work = spec("a song, F218");
     let claim = agreements::WorkClaim { work, creators: sorted(vec![ana.id, ben.id]), commitment: None };
-    let c = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, claim.to_map(), None);
+    let c = agreements_act(&mut w, &mut ana, agreements::types::CLAIM, claim.to_map(), None);
     let o = view(&w).work_owners(&work).unwrap();
     assert_eq!(o.default_holder, None, "not bound until Ben signs");
     sign(&mut w, &mut ben, &c);
@@ -11545,11 +11545,11 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
     assert!(!o.contested);
     // A sealed claim, addressed to Ana only, counts for nothing (OF16 a).
     let sealed = agreements::WorkClaim { work, creators: sorted(vec![ben.id, stranger.id]), commitment: None };
-    w.private_act(&mut stranger, mirs().agreements, agreements::types::WORK_CLAIM, sealed.to_map(), None, vec![ana.id]);
+    w.private_act(&mut stranger, mirs().agreements, agreements::types::CLAIM, sealed.to_map(), None, vec![ana.id]);
     assert!(!view(&w).work_owners(&work).unwrap().contested);
     // A stranger's public claim: contested, shown as recorded.
     let theirs = agreements::WorkClaim { work, creators: vec![stranger.id], commitment: None };
-    let s = agreements_act(&mut w, &mut stranger, agreements::types::WORK_CLAIM, theirs.to_map(), None);
+    let s = agreements_act(&mut w, &mut stranger, agreements::types::CLAIM, theirs.to_map(), None);
     let o = view(&w).work_owners(&work).unwrap();
     assert!(o.contested && o.claims == sorted(vec![c, s]));
     // Once an agreement writes shares in the work, those are the owners.
@@ -11563,7 +11563,7 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
     assert_eq!(o.agreements, vec![d]);
     // A claim the opener is not among the creators of is refused.
     let bad = agreements::WorkClaim { work, creators: vec![ben.id], commitment: None };
-    let b = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, bad.to_map(), None);
+    let b = agreements_act(&mut w, &mut ana, agreements::types::CLAIM, bad.to_map(), None);
     assert!(!view(&w).work_owners(&work).unwrap().claims.contains(&b));
 }
 
@@ -11941,8 +11941,8 @@ fn draft_11_f254_a_manifest_neither_claims_its_parts_nor_is_reached_by_them() {
     let song = spec("a song");
     let album = spec("an album naming the song");
     let (aid, lid) = (ana.id, label.id);
-    let sc = agreements_act(&mut w, &mut ana, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: song, creators: vec![aid], commitment: None }.to_map(), None);
-    let ac = agreements_act(&mut w, &mut label, agreements::types::WORK_CLAIM, agreements::WorkClaim { work: album, creators: vec![lid], commitment: None }.to_map(), None);
+    let sc = agreements_act(&mut w, &mut ana, agreements::types::CLAIM, agreements::WorkClaim { work: song, creators: vec![aid], commitment: None }.to_map(), None);
+    let ac = agreements_act(&mut w, &mut label, agreements::types::CLAIM, agreements::WorkClaim { work: album, creators: vec![lid], commitment: None }.to_map(), None);
     let (s, a) = (view(&w).work_owners(&song).unwrap(), view(&w).work_owners(&album).unwrap());
     assert_eq!((s.claims, s.default_holder, s.contested), (vec![sc], Some(ana.id), false));
     assert_eq!((a.claims, a.default_holder, a.contested), (vec![ac], Some(label.id), false));

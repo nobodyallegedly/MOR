@@ -244,7 +244,7 @@ pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
         types::TERMS => Terms::decode(p).map(|_| ()),
         types::SIGNATURE => decode_signature(inside).map(|_| ()),
         types::KEEPER_RECORD => KeeperRecord::decode(inside).map(|_| ()),
-        types::WORK_CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
+        types::CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
         new_types::STAKE_TRANSFER => StakeTransfer::decode(inside).map(|_| ()),
         types::RELEASE => Release::decode(inside).map(|_| ()),
         types::STANDING_OFFER => Offer::decode(inside).map(|_| ()),
