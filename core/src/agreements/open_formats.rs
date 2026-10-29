@@ -119,8 +119,8 @@ impl RefundTerms {
 /// agreement), and refused meanwhile, fail closed.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Sold {
-    /// `[ 0, publication ]`: a publication (Envelopes type 0), by its act id.
-    Publication(Hash),
+    /// `[ 0, bake ]`: a bake (Envelopes type 0), by its act id.
+    Bake(Hash),
     /// `[ 2, [ cmip, params ] ]`: something with no work hash yet (a live
     /// stream): a cMIP and its parameters.
     Access(Hash, Vec<u8>),
@@ -134,7 +134,7 @@ pub enum Sold {
 impl Sold {
     pub fn to_value(&self) -> Value {
         match self {
-            Sold::Publication(p) => Value::Array(vec![Value::Uint(0), b(p)]),
+            Sold::Bake(p) => Value::Array(vec![Value::Uint(0), b(p)]),
             Sold::Access(c, params) => Value::Array(vec![
                 Value::Uint(2),
                 Value::Array(vec![b(c), cbor::decode(params).unwrap_or(Value::Null)]),
@@ -143,13 +143,11 @@ impl Sold {
         }
     }
 
-    fn decode(v: &Value) -> R<Sold> {
-        let a = nonempty(v, "offer: what it sells")?;
-        match (uint(&a[0], "offer: what it sells, its form")?, a.len()) {
-            (0, 2) => Ok(Sold::Publication(hash(&a[1], "offer: a publication")?)),
-            (1, 2) => Err(AgreementsError::Unsupported(
-                "offer: a work, any publication carrying it (OF1 [1]): put to Nobody, allegedly, with F216",
-            )),
+    pub(crate) fn decode(v: &Value) -> R<Sold> {
+        let a = nonempty(v, "publication: what it sells")?;
+        match (uint(&a[0], "publication: what it sells, its form")?, a.len()) {
+            (0, 2) => Ok(Sold::Bake(hash(&a[1], "publication: a bake")?)),
+            (1, 2) => Err(AgreementsError::Shape("publication: [1, work], any bake carrying a work, is not defined")),
             (2, 2) => {
                 let x = tuple(&a[1], 2, "offer: access, a cMIP and its parameters")?;
                 Ok(Sold::Access(hash(&x[0], "offer: access, its cMIP")?, cbor::encode(&x[1])))
@@ -353,9 +351,9 @@ impl Offer {
 pub enum FeeScope {
     /// Absent: every payment.
     Every,
-    /// `[ 0, publication ]`: payments for this publication (the receipt's
-    /// field 5 naming it, or an offer selling it).
-    Publication(Hash),
+    /// `[ 0, bake ]`: payments for this bake (a payment under a publication
+    /// selling it).
+    Bake(Hash),
     /// `[ 1, rail ]`: payments by this rail Module (the receipt's field 0).
     Rail(Hash),
 }
@@ -379,7 +377,7 @@ impl Fee {
         let mut v = vec![b(&self.module), Value::Uint(self.part)];
         match &self.scope {
             FeeScope::Every => {}
-            FeeScope::Publication(p) => v.push(Value::Array(vec![Value::Uint(0), b(p)])),
+            FeeScope::Bake(p) => v.push(Value::Array(vec![Value::Uint(0), b(p)])),
             FeeScope::Rail(r) => v.push(Value::Array(vec![Value::Uint(1), b(r)])),
         }
         Value::Array(v)
@@ -395,7 +393,7 @@ impl Fee {
             Some(s) => {
                 let x = tuple(s, 2, "fee: its scope")?;
                 match uint(&x[0], "fee: its scope's form")? {
-                    0 => FeeScope::Publication(hash(&x[1], "fee: a publication")?),
+                    0 => FeeScope::Bake(hash(&x[1], "fee: a bake")?),
                     1 => FeeScope::Rail(hash(&x[1], "fee: a rail Module")?),
                     _ => return Err(AgreementsError::Shape("fee: its scope")),
                 }
@@ -528,6 +526,7 @@ pub struct Metric {
 /// build's: the key stays unused, never reused).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SplitPlan {
+    /// 0: role and metric shares, off the top.
     pub shares: Vec<ShareRule>,
     pub cmip: Hash,
     pub unfilled: Unfilled,
@@ -536,9 +535,12 @@ pub struct SplitPlan {
     pub max_rail_fee: Option<Value>,
     pub params: Option<Value>,
     pub metrics: Vec<Metric>,
+    /// 9: fees, each borne by every share, off the top.
+    pub fees: Vec<Fee>,
 }
 
 impl SplitPlan {
+    /// The plan as a publication's field 4 writes it.
     pub fn to_value(&self) -> Value {
         let mut m = vec![
             (Value::Uint(0), Value::Array(self.shares.iter().map(ShareRule::to_value).collect())),
@@ -548,9 +550,6 @@ impl SplitPlan {
             Unfilled::Stakes => {}
             Unfilled::HeldOpen => m.push((Value::Uint(3), Value::Array(vec![Value::Uint(1)]))),
             Unfilled::To(h) => m.push((Value::Uint(3), Value::Array(vec![Value::Uint(2), b(h)]))),
-        }
-        if !self.top.is_empty() {
-            m.push((Value::Uint(4), Value::Array(self.top.iter().map(|i| Value::Uint(*i)).collect())));
         }
         if self.service_bears_rail_fees {
             m.push((Value::Uint(5), Value::Uint(1)));
@@ -578,21 +577,30 @@ impl SplitPlan {
                 ),
             ));
         }
+        if !self.fees.is_empty() {
+            m.push((Value::Uint(9), Fee::field_value(&self.fees)));
+        }
         Value::Map(m)
     }
 
+    /// A publication's split plan (field 4): role and metric shares off the
+    /// top (keys 2 and 4 are not used: every share but the owners' line is
+    /// off the top, and a named receiver is a partner).
     pub fn decode(v: &Value) -> R<SplitPlan> {
         let Value::Map(m) = v else { return Err(AgreementsError::Shape("split plan")) };
-        if m.iter().any(|(k, _)| k == &Value::Uint(2)) {
-            return Err(AgreementsError::Check("split plan: fees are terms field 28, their own field, since F213"));
+        if m.iter().any(|(k, _)| k == &Value::Uint(2) || k == &Value::Uint(4)) {
+            return Err(AgreementsError::Check("split plan: keys 2 and 4 are not used: every share but the owners' line is off the top"));
         }
-        let f = fields(m, 8, "split plan: unknown field")?;
-        let shares = nonempty(get(&f, 0).ok_or(AgreementsError::Shape("split plan: its shares"))?, "split plan: its shares")?
-            .iter()
-            .map(ShareRule::decode)
-            .collect::<R<Vec<_>>>()?;
+        let f = fields(m, 9, "split plan: unknown field")?;
+        let Value::Array(sv) = get(&f, 0).ok_or(AgreementsError::Shape("split plan: its shares"))? else {
+            return Err(AgreementsError::Shape("split plan: its shares"));
+        };
+        let shares = sv.iter().map(ShareRule::decode).collect::<R<Vec<_>>>()?;
+        if shares.iter().any(|s| !matches!(s, ShareRule::Role { .. } | ShareRule::Metric { .. })) {
+            return Err(AgreementsError::Check("split plan: a share is a role [1, role, part] or a metric share [3, metric, part]; a stake is the owners' line and a named receiver a partner"));
+        }
         if !shares.windows(2).all(|w| w[0].kind() <= w[1].kind()) {
-            return Err(AgreementsError::Check("split plan: stakes, then roles, then named receivers, then metric shares"));
+            return Err(AgreementsError::Check("split plan: roles, then metric shares"));
         }
         let unfilled = match get(&f, 3) {
             None => Unfilled::Stakes,
@@ -606,13 +614,6 @@ impl SplitPlan {
                 }
             }
         };
-        let top: Vec<u64> = match get(&f, 4) {
-            None => vec![],
-            Some(v) => nonempty(v, "split plan: shares off the top")?.iter().map(|x| uint(x, "split plan: a share off the top")).collect::<R<_>>()?,
-        };
-        if !top.windows(2).all(|w| w[0] < w[1]) || top.iter().any(|i| *i as usize >= shares.len()) {
-            return Err(AgreementsError::Check("split plan: shares off the top name shares of field 0, ascending, none twice"));
-        }
         let service_bears_rail_fees = match get(&f, 5) {
             None => false,
             Some(Value::Uint(0)) => false,
@@ -648,16 +649,30 @@ impl SplitPlan {
                 }
             }
         }
+        let fees = get(&f, 9).map(Fee::decode_field).transpose()?.unwrap_or_default();
         Ok(SplitPlan {
             shares,
             cmip: hash(get(&f, 1).ok_or(AgreementsError::Shape("split plan: the split cMIP"))?, "split plan: the split cMIP")?,
             unfilled,
-            top,
+            top: vec![],
             service_bears_rail_fees,
             max_rail_fee,
             params: get(&f, 7).cloned(),
             metrics,
+            fees,
         })
+    }
+
+    /// The fixed parts the plan takes off the top, in millionths: its role
+    /// and metric shares' parts (fees are computed by the split cMIP).
+    pub fn fixed_parts(&self) -> u128 {
+        self.shares
+            .iter()
+            .map(|s| match s {
+                ShareRule::Role { part, .. } | ShareRule::Metric { part, .. } => *part as u128,
+                _ => 0,
+            })
+            .sum()
     }
 
     /// Agreements draft 12 (F280, decided by Nobody, allegedly: "Shared

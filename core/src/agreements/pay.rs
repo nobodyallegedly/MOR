@@ -24,6 +24,7 @@
 
 use super::formats::{Stake, Terms, Who};
 use super::open_formats::{Fee, Metric, ShareRule, SplitPlan, Unfilled};
+use super::publication::Publication;
 use crate::cbor::Value;
 use crate::hash::Hash;
 use crate::money::Amount;
@@ -78,7 +79,8 @@ pub fn stakes_paid_less(parent: &Terms, clone: &Terms) -> Vec<(Who, Vec<PaidLess
         }
         None => parent.stakes.iter().flatten().map(|s| s.object).collect(),
     };
-    let fee = fee_raised(parent.fees.as_deref().unwrap_or(&[]), clone.fees.as_deref().unwrap_or(&[]));
+    // Terms carry no fees: fees are a publication's plan's (key 9).
+    let fee = false;
     let mut out = vec![];
     for o in paid {
         let mut why = vec![];
@@ -113,6 +115,54 @@ pub fn stakes_paid_less(parent: &Terms, clone: &Terms) -> Vec<(Who, Vec<PaidLess
         }
     }
     out
+}
+
+/// Why a later version of a publication pays its owners' line less than
+/// the version it follows (rule 48, read on a publication): a partner added
+/// or its share raised, a role or metric share added or raised, unfilled
+/// roles sent away from the owners' line, the rail fee moved onto the
+/// receivers, the maximum fee raised or removed where they bear it, a fee
+/// added or raised, the split cMIP or its parameters changed. Empty where it
+/// pays the line no less.
+pub fn owners_line_lowered(parent: &Publication, next: &Publication) -> Vec<PaidLess> {
+    let (p, c) = (&parent.plan, &next.plan);
+    let mut why = vec![];
+    if p.cmip != c.cmip || p.params != c.params {
+        why.push(PaidLess::Cmip);
+    }
+    let raised = next.partners.iter().any(|x| parent.partners.iter().find(|y| y.identity == x.identity).is_none_or(|y| y.share < x.share))
+        || c.shares.iter().any(|x| {
+            let part = |s: &ShareRule| match s {
+                ShareRule::Role { part, .. } | ShareRule::Metric { part, .. } => *part,
+                _ => 0,
+            };
+            !p.shares.iter().any(|y| std::mem::discriminant(y) == std::mem::discriminant(x) && same_share(y, x) && part(y) >= part(x))
+        });
+    if raised {
+        why.push(PaidLess::Shares);
+    }
+    if p.unfilled == Unfilled::Stakes && c.unfilled != Unfilled::Stakes && !c.roles().is_empty() {
+        why.push(PaidLess::Unfilled);
+    }
+    if p.service_bears_rail_fees && !c.service_bears_rail_fees {
+        why.push(PaidLess::RailFee);
+    } else if !c.service_bears_rail_fees && max_raised(&p.max_rail_fee, &c.max_rail_fee) {
+        why.push(PaidLess::MaxFee);
+    }
+    if fee_raised(&p.fees, &c.fees) {
+        why.push(PaidLess::Fee);
+    }
+    why
+}
+
+/// Whether two shares of a plan are the same share: one role by its name,
+/// one metric share by its metric.
+fn same_share(a: &ShareRule, b: &ShareRule) -> bool {
+    match (a, b) {
+        (ShareRule::Role { role: x, .. }, ShareRule::Role { role: y, .. }) => x == y,
+        (ShareRule::Metric { metric: x, .. }, ShareRule::Metric { metric: y, .. }) => x == y,
+        _ => false,
+    }
 }
 
 /// The holders whose signature F270 asks of `clone`: every identified holder

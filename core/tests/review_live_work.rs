@@ -34,7 +34,7 @@ use mor_core::act::Object;
 use mor_core::cbor::Value;
 use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::agreements::{self, Field4, AgreementsView, Mirs, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
+use mor_core::agreements::{self, AgreementsView, Mirs, PurchaseVerdict, SaleState, Terms};
 use mor_core::envelopes::vow::Vow;
 
 fn mirs() -> Mirs {
@@ -77,8 +77,7 @@ fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
 /// A work claim by `p` alone on `work`, public; it binds at once (rule 15:
 /// a sole creator alone).
 fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
-    let c = agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
-    agreements_act(w, p, agreements::types::CLAIM, c.to_map(), None)
+    common::claim_alone(w, p, &mirs(), work)
 }
 
 /// A publication (Envelopes type 0) by `p` whose field 1 is `work` and field
@@ -95,20 +94,12 @@ fn publication(w: &mut World, p: &mut Person, work: Hash, locked: Hash) -> Hash 
     w.add(&x)
 }
 
-/// A lone seller's standing offer (F215): no agreement behind it, paid to
-/// the signer.
+/// A lone seller's publication, its price tag by the seller (its own split
+/// service) at 300: the tag.
 fn lone_offer(w: &mut World, p: &mut Person, sold: agreements::Sold, words: Option<&str>) -> Hash {
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![sold],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: None,
-        words: words.map(String::from),
-        until: None,
-        time: None,
-        refund: None,
-    };
-    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
+    let pubn = common::lone_publication(w, p, &mirs(), vec![sold], words);
+    let id = p.id;
+    common::price_tag(w, p, mirs().money, mor_core::money::Priced::Publication(pubn), 300, spec("a unit"), id)
 }
 
 /// A receipt in `payee`'s name for `payer`'s payment following `fulfils`,
@@ -131,45 +122,9 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
     w.add(&a)
 }
 
-/// The smallest deal between two parties, writing one stake in `work`.
-fn deal_on(parties: [Hash; 2], work: Hash) -> Terms {
-    Terms {
-        parties: parties.to_vec(),
-        text: "Two owners of one work.".into(),
-        cmips: vec![(6, spec("a payment cMIP"))],
-        keepers: None,
-        field4: Field4::Rule(Rule::All),
-        clone: Rule::All,
-        time: None,
-        abandonment: None,
-        parent: None,
-        grammar: None,
-        arbitrators: None,
-        split_grant: None,
-        payee_grants: None,
-        extensions: None,
-        succession: None,
-        constitutional: None,
-        areas: None,
-        area_words: None,
-        chain: None,
-        departed: None,
-        stakes: Some(vec![Stake {
-            object: Who::Id(work),
-            holders: vec![(Who::Id(parties[0]), 500_000), (Who::Id(parties[1]), 500_000)],
-        }]),
-        forked_from: None,
-        release_rule: None,
-        settles: None,
-        fork_judge: None,
-        plan: None,
-        refund: None,
-        fees: None,
-        backups: None,
-        holders_rules: None,
-        transfers_counted: None,
-        issues_under: None,
-    }
+/// The ownership agreement of two holders of `claim`, half each.
+fn deal_on(parties: [Hash; 2], claim: Hash) -> Terms {
+    common::ownership_terms(claim, &[(parties[0], 500_000), (parties[1], 500_000)], "Two owners of one work.")
 }
 
 /// Review question 1 (a claim before the content exists), and question 9
@@ -228,11 +183,15 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
     let opening = vow(&mut w, &mut dario, "Dario's match, live");
     claim_alone(&mut w, &mut dario, opening);
     let offer = lone_offer(&mut w, &mut stranger, agreements::Sold::Vow(opening), Some("Dario's match, live"));
-    let e = view(&w).offer(&offer).unwrap();
-    assert!(e.counts, "a lone seller's offer naming a vow counts: {:?}", e.problems);
+    let first = match view(&w).tag_under(&offer).unwrap() {
+        agreements::TagUnder::Counts { publication, .. } => publication,
+        x => panic!("the stranger's tag counts under its own publication: {x:?}"),
+    };
+    let e = view(&w).publication(&first).unwrap();
+    assert!(e.counts, "a lone seller's publication naming a vow counts: {:?}", e.problems);
     let r = receipt(&mut w, &mut stranger, fan.id, offer, None, b"the fan paid the stranger");
     let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("a payment following an offer is judged");
-    assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the stranger's own terms (F215); Dario's claim is nowhere in it");
+    assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the stranger's own publication; Dario's claim is nowhere in it");
     let o = view(&w).work_owners(&opening).unwrap();
     assert!(!o.contested && o.default_holder == Some(dario.id));
     // The fan signs on by their own claim; Dario's contest shows nothing.
@@ -263,40 +222,39 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
 }
 
 /// Review question 3 (what is owned when nothing but a claim stands), and
-/// question 8 (the common case): for a purchase, "claimed" means an
-/// agreement with a stake in the hash (`claimed`, rule 32a: "a work some
-/// agreement claims"), never a bare work claim. Dario, a lone creator with
-/// no agreement, claims the stream's name; a stranger publishes a
-/// publication under that very name and is paid for it: a plain payment,
-/// not even "no purchase". With an agreement writing a stake in the name,
-/// the same payment is no purchase, owed back (F126).
+/// question 8 (the common case), on the four acts: a payment naming a bake
+/// is its uploader's, a bare bake, judged by nobody as a purchase, whatever
+/// claim or ownership agreement stands on the name (Envelopes rule 23: what
+/// the payment names decides). What the owners have against the stranger is
+/// visibility: the stranger's own publication of the copy stands outside
+/// their ownership agreement (rule 14).
 #[test]
-fn today_a_bare_claim_does_not_make_a_name_claimed_for_purchases_an_agreement_does() {
+fn a_payment_to_a_bare_bake_is_its_uploaders_and_a_publication_outside_the_claim_is_shown() {
     let mut w = World::new();
     let mut dario = w.genesis("dario", vec![own_home()], None, None);
     let mut club = w.genesis("the club", vec![own_home()], None, None);
     let mut stranger = w.genesis("a stranger", vec![own_home()], None, None);
     let fan = w.genesis("a fan", vec![own_home()], None, None);
     let opening = spec("the opening segment of Dario's stream");
-    claim_alone(&mut w, &mut dario, opening);
+    let c = claim_alone(&mut w, &mut dario, opening);
     let theirs = publication(&mut w, &mut stranger, opening, spec("the stranger's copy, locked"));
     let r1 = receipt(&mut w, &mut stranger, fan.id, theirs, None, b"first payment");
-    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r1).unwrap(), None, "no agreement claims the name: a plain payment, judged by nobody");
-    // Dario and the club write a stake in the name: now the name is claimed
-    // for purchases, and the stranger's next payment names no claim.
-    let t = deal_on([dario.id, club.id], opening);
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r1).unwrap(), None, "money sent to a bare bake: the uploader's, no purchase");
+    // Dario and the club own the name: the same payment is still the
+    // uploader's (what the payment names decides).
+    let t = deal_on([dario.id, club.id], c);
     let d = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut dario, &d);
     sign(&mut w, &mut club, &d);
     assert_eq!(view(&w).work_owners(&opening).unwrap().agreements, vec![d]);
     let r2 = receipt(&mut w, &mut stranger, fan.id, theirs, None, b"second payment");
-    let p = common::stand_in_answers(view(&w)).purchase(&r2).unwrap().expect("a payment for a claimed work is judged");
-    assert!(matches!(p.verdict, PurchaseVerdict::NoPurchase { .. }), "{:?}", p.verdict);
-    // The first payment is unchanged by the later agreement: judged when
-    // asked, against what the verifier holds; today it is "no purchase" too,
-    // since nothing dates the payment against the agreement.
-    let p1 = common::stand_in_answers(view(&w)).purchase(&r1).unwrap().expect("judged now");
-    assert!(matches!(p1.verdict, PurchaseVerdict::NoPurchase { .. }), "{:?}", p1.verdict);
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r2).unwrap(), None);
+    // The stranger's own publication of the copy is shown outside the
+    // owners' ownership agreement.
+    let p = common::lone_publication(&mut w, &mut stranger, &mirs(), vec![agreements::Sold::Bake(theirs)], None);
+    let e = view(&w).publication(&p).unwrap();
+    assert!(e.counts);
+    assert_eq!(e.outside_claims, vec![d], "a sale outside the claim's ownership agreement: visible, never prevented (rule 14)");
 }
 
 /// Review question 9 (how much core is needed): the purchase rules read a
@@ -312,26 +270,35 @@ fn today_a_publication_under_any_name_is_sold_under_the_agreement_claiming_that_
     let mut club = w.genesis("the club", vec![own_home()], None, None);
     let fan = w.genesis("a fan", vec![own_home()], None, None);
     let opening = spec("the opening segment of Dario's stream");
-    let t = deal_on([dario.id, club.id], opening);
+    let c = claim_alone(&mut w, &mut dario, opening);
+    let t = deal_on([dario.id, club.id], c);
     let d = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut dario, &d);
     sign(&mut w, &mut club, &d);
     let pub_ = publication(&mut w, &mut dario, opening, spec("the stream so far, locked"));
-    // The owners' offer for their publication, under their deal, paid by the
-    // stakes (no split service), signed by both.
-    let o = agreements::Offer {
-        under: Some(d),
-        sold: vec![agreements::Sold::Publication(pub_)],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: Some(agreements::Paid::ByStakes),
+    // The owners' publication of their bake, Dario its split service,
+    // signed by both owners' signatures (the ownership agreement as a
+    // party) and its tag by Dario.
+    let pb = agreements::Publication {
+        sold: Some(vec![agreements::Sold::Bake(pub_)]),
+        owners: Some(d),
+        partners: vec![],
+        service: dario.id,
+        plan: common::test_plan(),
         words: None,
-        until: None,
         time: None,
+        until: None,
         refund: None,
+        cmips: vec![],
+        designated: None,
+        backups: vec![],
+        failed: None,
     };
-    let offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
-    sign(&mut w, &mut club, &offer);
-    assert!(view(&w).offer(&offer).unwrap().counts);
+    let pid = agreements_act(&mut w, &mut dario, agreements::types::PUBLICATION, pb.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
+    sign(&mut w, &mut club, &pid);
+    assert!(view(&w).publication(&pid).unwrap().counts);
+    let did = dario.id;
+    let offer = common::price_tag(&mut w, &mut dario, mirs().money, mor_core::money::Priced::Publication(pid), 300, spec("a unit"), did);
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(d), b"the fan paid the owners");
     let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("judged");
     assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the claiming agreement, the name being any hash");

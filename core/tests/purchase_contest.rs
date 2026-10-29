@@ -54,19 +54,16 @@ fn obj(x: Hash) -> Option<Vec<Object>> {
     Some(vec![Object { chain: x, predecessor: x }])
 }
 
-/// A lone seller's standing offer selling `sold` at `price`, with its words.
+/// A lone seller's publication selling `sold`, with its words, and its
+/// price tag at `price` (none where `price` is zero): the tag, or, with no
+/// price, the publication.
 fn offer(w: &mut World, p: &mut Person, sold: agreements::Sold, price: u64, words: &str) -> Hash {
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![sold],
-        price: Amount { unit: spec("a unit"), value: price },
-        paid: None,
-        words: Some(words.into()),
-        until: None,
-        time: None,
-        refund: None,
-    };
-    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
+    let pubn = common::lone_publication(w, p, &mirs(), vec![sold], Some(words));
+    if price == 0 {
+        return pubn;
+    }
+    let id = p.id;
+    common::price_tag(w, p, mirs().money, mor_core::money::Priced::Publication(pubn), price, spec("a unit"), id)
 }
 
 /// A proven offer: access to the recording, under an access cMIP's terms.
@@ -154,9 +151,9 @@ fn signed_by_anyone_else_it_shows_nothing() {
     assert!(view_with(&w, &[claim]).purchase_contests(&claim).unwrap().is_empty());
 }
 
-/// A free purchase: the buyer's signature act on an offer at no price is
-/// the purchase, and the buyer contests it. The seller's own signature on
-/// its offer is no purchase.
+/// A free purchase: the buyer's signature act on a publication with no
+/// price tag is the purchase, and the buyer contests it. The seller's own
+/// signature on its publication is no purchase.
 #[test]
 fn a_free_purchase_is_contested_by_its_signature_act() {
     let mut w = World::new();

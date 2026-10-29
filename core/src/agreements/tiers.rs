@@ -78,7 +78,7 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     // F307): the clone rule, and every holder of the stake whose entry
     // changes (rule 45). 31 and 32 each version states for itself, never
     // compared (F309, F316).
-    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD, super::formats::BACKUPS_FIELD, 30]) {
+    for n in (0..=24u64).filter(|n| *n != 23).chain([30]) {
         if n == 16 && removal_only(parent, clone) {
             // M1 (F124): the seat part of a removed member's plan goes with
             // the removal, as their areas do; the stake part stays.

@@ -82,17 +82,19 @@ impl<'a> AgreementsView<'a> {
             }
         }
         claims.sort();
+        // The ownership agreements whose target is a claim of the work
+        // (rule 8): their holders are the owners as recorded.
         let mut agreements: Vec<Hash> = vec![];
         for h in self.v.held_acts() {
             if !self.is_agreements(h, types::TERMS) {
                 continue;
             }
             let Ok(t) = self.terms(&h.id) else { continue };
-            if t.stake_on(&Who::Id(*work)).is_none() || self.agreement(&h.id)?.exists != Some(true) {
+            if self.target_work(&t).as_ref() != Some(work) || self.agreement(&h.id)?.exists != Some(true) {
                 continue;
             }
             let v = self.version_in_force(&h.id)?;
-            if !agreements.contains(&v) && self.terms(&v).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some()) {
+            if !agreements.contains(&v) {
                 agreements.push(v);
             }
         }
@@ -106,6 +108,24 @@ impl<'a> AgreementsView<'a> {
 }
 
 impl<'a> AgreementsView<'a> {
+    /// The work a claim binds (its field 0), where `claim` is a held claim.
+    pub(super) fn claim_work(&self, claim: &Hash) -> Option<Hash> {
+        let h = self.v.get(claim)?;
+        if !self.is_agreements(h, types::CLAIM) {
+            return None;
+        }
+        WorkClaim::decode(&h.inside, h.act.outside.signer.as_ref()).ok().map(|c| c.work)
+    }
+
+    /// The work an ownership agreement's target claims: the work its claim
+    /// binds, for a work's ownership agreement (`[0, claim]`).
+    pub(super) fn target_work(&self, t: &Terms) -> Option<Hash> {
+        match t.target? {
+            Target::Claim(c) => self.claim_work(&c),
+            Target::Collective => None,
+        }
+    }
+
     /// A stake transfer, judged (rule 14; F217).
     pub fn transfer(&self, id: &Hash) -> R<TransferEval> {
         let h = self.held(id)?;
@@ -305,21 +325,21 @@ impl<'a> AgreementsView<'a> {
             let lineage = root(&e.transfer.agreement);
             let from = splits
                 .iter()
-                .filter(|(_, s)| root(&s.agreement) == lineage && s.transfers.iter().any(|(_, t)| *t == tid))
+                .filter(|(_, s)| self.split_owners(s) == lineage && s.transfers.iter().any(|(_, t)| *t == tid))
                 .filter_map(|(_, s)| s.number)
                 .min();
             let held = e.held_before.unwrap_or(0);
             let keeps = held.saturating_sub(e.transfer.share);
             for (h, s) in splits {
-                if root(&s.agreement) != lineage {
+                if self.split_owners(s) != lineage {
                     continue;
                 }
                 let cites = s.transfers.iter().any(|(_, t)| *t == tid);
                 if !cites && !(from.is_some() && s.number.is_some_and(|n| Some(n) > from)) {
                     continue;
                 }
-                let Ok(st) = self.terms(&s.agreement) else { continue };
-                let on_stake = |p: &Payout| p.stake.and_then(|k| st.stakes.as_ref()?.get(k as usize).map(|x| x.object)) == Some(object);
+                let _ = object;
+                let on_stake = |p: &Payout| p.stake.is_some() && p.owners == lineage;
                 let pot: u128 = s.payouts.iter().filter(|p| on_stake(p)).map(|p| p.amount as u128).sum();
                 for (i, p) in s.payouts.iter().enumerate() {
                     if p.receiver != e.seller || !on_stake(p) {
@@ -401,12 +421,13 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let Ok(s) = Split::decode(&h.inside.payload) else { continue };
-            if root(&s.agreement).is_none() || root(&s.agreement) != root(&t.agreement) {
+            let owners = self.split_owners(&s);
+            if owners.is_none() || owners != root(&t.agreement) {
                 continue;
             }
-            let Ok(st) = self.terms(&s.agreement) else { continue };
+            let _ = object;
             for (i, p) in s.payouts.iter().enumerate() {
-                let same = p.stake.and_then(|k| st.stakes.as_ref()?.get(k as usize).map(|x| x.object)) == Some(object);
+                let same = p.stake.is_some() && p.owners == owners;
                 if &p.receiver == seller && same {
                     out.push((h.id, i));
                 }

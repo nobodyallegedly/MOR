@@ -1310,14 +1310,7 @@ impl Verifier {
 
 // ---------------------------------------------------------------- the anchoring cMIP, for a payment buying an anchor
 
-use mor_anchoring::service::{self as anchor_svc, Price, Terms, Tier};
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct TierIn {
-    price: u64,
-    blocks: u64,
-}
+use mor_anchoring::service::{self as anchor_svc};
 
 /// A pooled anchoring service's standing offer (the anchoring cMIP, item 9;
 /// an Agreements standing offer, type 6, a lone seller's, F225): its tiers,
@@ -1325,25 +1318,8 @@ struct TierIn {
 /// network. `{ type, payload }`, to sign under the Agreements MIR's spec.
 #[wasm_bindgen(js_name = anchoringOffer)]
 pub fn anchoring_offer(network: u32, tiers: JsValue, words: Option<String>) -> R<JsValue> {
-    let n = Network::from_number(network as u64).ok_or_else(|| err("networks are 0 to 3"))?;
-    let ts: Vec<TierIn> = from_js(tiers)?;
-    if ts.is_empty() {
-        return Err(err("an offer has at least one tier"));
-    }
-    let terms = Terms { reference: mor_onchain::clock::reference(n), tiers: ts.iter().map(|t| Tier { price: Price::Fixed(t.price), blocks: t.blocks }).collect() };
-    let o = terms.standing_offer(mor_onchain::unit(n), words, None);
-    to_js(&MadeOut { type_: mor_core::agreements::types::STANDING_OFFER, payload: cbor::encode(&Value::Map(o.to_map())) })
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct OfferOut {
-    id: String,
-    payee: String,
-    unit: String,
-    network: Option<u64>,
-    tiers: Vec<TierIn>,
-    words: Option<String>,
+    let _ = (network, tiers, words);
+    Err(err("the anchoring cMIP still makes a standing offer, which the core no longer reads: a publication (Agreements type 6) with a price tag replaces it, once the cMIP moves"))
 }
 
 /// A standing offer act read as this cMIP's (the anchoring cMIP, item 9;
@@ -1351,30 +1327,8 @@ struct OfferOut {
 /// and its tiers. Throws where it is no anchoring offer, saying why.
 #[wasm_bindgen(js_name = anchoringReadOffer)]
 pub fn anchoring_read_offer(act: &[u8]) -> R<JsValue> {
-    let a = mor_core::act::Act::decode(act).map_err(err)?;
-    let inside = a.open(None).map_err(|_| err("an offer is public"))?;
-    let signer = a.outside.signer.ok_or_else(|| err("an offer names its signer"))?;
-    if inside.type_ != mor_core::agreements::types::STANDING_OFFER {
-        return Err(err("not a standing offer"));
-    }
-    let oa = mor_core::agreements::Offer::decode(&inside).map_err(err)?;
-    let o = anchor_svc::Offer::read(a.id(), signer, &oa.offer).map_err(err)?;
-    let network = if o.terms.reference.cmip == mor_onchain::clock::spec() {
-        match &o.terms.reference.params {
-            Value::Uint(n) => Some(*n),
-            _ => None,
-        }
-    } else {
-        None
-    };
-    to_js(&OfferOut {
-        id: hx(&o.id),
-        payee: hx(&o.payee),
-        unit: hx(&o.price.unit),
-        network,
-        tiers: o.terms.tiers.iter().map(|t| TierIn { price: t.price.most(), blocks: t.blocks }).collect(),
-        words: oa.offer.words.clone(),
-    })
+    let _ = act;
+    Err(err("the anchoring cMIP still reads a standing offer, which the core no longer reads: a publication (Agreements type 6) with a price tag replaces it, once the cMIP moves"))
 }
 
 #[derive(Deserialize, Serialize)]

@@ -38,6 +38,7 @@ use wasm_bindgen::prelude::*;
 type R<T> = Result<T, JsError>;
 
 mod money_js;
+mod publication_js;
 
 fn err(s: impl std::fmt::Display) -> JsError {
     JsError::new(&s.to_string())
@@ -1538,6 +1539,19 @@ impl Verifier {
         }))
     }
 
+    /// Who uploaded a bake, as a verifier reading Money and Envelopes tells
+    /// it (Money, "Only identities have payee pointers"): the signer's
+    /// identity hash, or "unknown" where the bake names another chain, a
+    /// collective's perhaps, which a Money-only wallet refuses to tip.
+    /// `null` for no bake held.
+    #[wasm_bindgen(js_name = bakeUploader)]
+    pub fn bake_uploader(&self, bake: &str) -> R<Option<String>> {
+        Ok(self.inner.bake_uploader(&unhex(bake)?).map(|u| match u {
+            mor_core::chain::Uploader::Signer(h) => hx(&h),
+            mor_core::chain::Uploader::Unknown(_) => "unknown".into(),
+        }))
+    }
+
     /// The standing of an act held: "valid", "disputed", "void", "pending",
     /// "invalid", "unknown", or "scoped" (signed with a key a higher MIR's
     /// act installs, a grant key: Agreements judge it, F128).
@@ -2131,9 +2145,9 @@ struct TermsOut {
     parent: Option<String>,
     grammar: Option<GrammarOut>,
     arbitrators: Option<Vec<String>>,
-    split_grant: Option<String>,
-    /// Field 14 in a deal: each payee's grant to the split service (F129, H4).
-    payee_grants: Option<Vec<String>>,
+    /// The target (field 33): `["claim", hash]` or `["collective", null]`;
+    /// null for terms that own nothing.
+    target: Option<(String, Option<String>)>,
     extensions: Option<Vec<String>>,
     succession: Option<Vec<SuccessionOut>>,
     /// Stakes (field 7): each object, and its holders' shares in millionths;
@@ -2146,8 +2160,6 @@ struct TermsOut {
     /// hash in a one-element list. The split service left the chain (F249,
     /// F250): its backups are `backups`.
     chain: Vec<(String, Vec<(Vec<String>, u64)>)>,
-    /// The split service's backups (field 29, F249, F250), or null.
-    backups: Option<BackupsOut>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder. Counted by share
@@ -2165,12 +2177,8 @@ struct TermsOut {
     /// In a deal, the judge that settles its forks, one of field 13 (field
     /// 27, QF2, F190); null: none does.
     fork_judge: Option<String>,
-    /// The split plan (field 8), as the core decodes it; null if absent.
-    plan: Option<PlanOut>,
     /// The refund terms (field 17, F219); null if absent.
     refund: Option<RefundOut>,
-    /// The fees (field 28, F213, F214); null if absent.
-    fees: Option<Vec<FeeOut>>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -2202,7 +2210,7 @@ struct MaxFeeOut {
 /// The split plan (terms field 8) as `readTerms` shows it.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PlanOut {
+pub(crate) struct PlanOut {
     shares: Vec<PlanShareOut>,
     /// The split cMIP that computes the amounts (key 1).
     cmip: String,
@@ -2227,30 +2235,6 @@ struct PlanOut {
 #[serde(rename_all = "camelCase")]
 struct RefundOut {
     until: Option<u64>,
-}
-
-/// A fee entry (field 28): the Module it is owed to, its part, and when it
-/// applies: "every" payment, payments for a "publication", or by a "rail".
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FeeOut {
-    module: String,
-    part: u64,
-    scope: String,
-    of: Option<String>,
-}
-
-/// Terms field 29 as `readTerms` shows it (F249, F250): each backup split
-/// service after field 14's, in order, by its grants (one in a collective,
-/// one per payee in a deal); the split cMIP whose fields they are; and
-/// whether the terms carry that cMIP's failure condition (key 1, which the
-/// core never reads).
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct BackupsOut {
-    services: Vec<Vec<String>>,
-    split_cmip: Option<String>,
-    failure: bool,
 }
 
 /// A stake as `readTerms` shows it: its object and holders, null for this
@@ -2353,8 +2337,10 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             }),
         }),
         arbitrators: t.arbitrators.as_ref().map(hs),
-        split_grant: t.split_grant.as_ref().map(hx),
-        payee_grants: t.payee_grants.as_ref().map(|g| g.iter().map(hx).collect()),
+        target: t.target.map(|x| match x {
+            agreements::Target::Claim(c) => ("claim".to_string(), Some(hx(&c))),
+            agreements::Target::Collective => ("collective".to_string(), None),
+        }),
         extensions: t.extensions.as_ref().map(hs),
         succession: t.succession.as_ref().map(|s| {
             s.iter()
@@ -2385,11 +2371,6 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 (j, l.next.iter().map(|(t, p)| (vec![hx(t)], *p)).collect())
             })
             .collect(),
-        backups: t.backups.as_ref().map(|b| BackupsOut {
-            services: b.services.iter().map(|e| e.hashes().iter().map(hx).collect()).collect(),
-            split_cmip: t.split_cmip().as_ref().map(hx),
-            failure: b.failure.is_some(),
-        }),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(release_rule_out),
         holders_rules: t.holders_rules.as_ref().map(|v| {
@@ -2408,35 +2389,17 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
         fork_judge: t.fork_judge.as_ref().map(hx),
-        plan: t.plan.as_ref().map(plan_out),
         refund: t.refund.as_ref().map(|r| RefundOut {
             until: match &r.until {
                 Value::Uint(n) => Some(*n),
                 _ => None,
             },
         }),
-        fees: t.fees.as_ref().map(|f| {
-            f.iter()
-                .map(|x| {
-                    let (scope, of) = match &x.scope {
-                        agreements::FeeScope::Every => ("every", None),
-                        agreements::FeeScope::Publication(h) => ("publication", Some(hx(h))),
-                        agreements::FeeScope::Rail(h) => ("rail", Some(hx(h))),
-                    };
-                    FeeOut {
-                        module: hx(&x.module),
-                        part: x.part,
-                        scope: scope.into(),
-                        of,
-                    }
-                })
-                .collect()
-        }),
         problem: t.check(&s.mirs()?).err().map(|e| problem(&e)),
     })
 }
 
-fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
+pub(crate) fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
     let share = |kind: &str, part: u64| PlanShareOut {
         kind: kind.into(),
         stake: None,
@@ -3607,27 +3570,6 @@ impl Verifier {
         Ok(view.collective_of(&unhex(agreement)?).map_err(lerr)?.map(|h| hx(&h)))
     }
 
-    /// Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-    /// each holder for `amount` on the stake in `object` (hex, or null for
-    /// the collective itself), or why it cannot. Leftovers by largest
-    /// remainder; a tied unit is the payer's to decide, at most one per tie
-    /// (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-    /// with the smallest identity hash, a choice, not a rule.
-    #[wasm_bindgen(js_name = agreementsPayerSplit)]
-    pub fn agreements_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
-        let s = specs_of(specs)?;
-        let view = s.view(&self.inner)?;
-        let o = match object {
-            Some(x) => agreements::Who::Id(unhex(&x)?),
-            None => agreements::Who::This,
-        };
-        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
-        to_js(&match r {
-            Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
-            Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
-        })
-    }
-
     /// Rule 15a's turns (F165, F171): for `stake` (its index) of
     /// `agreement`'s version in force, the leftover units each holder has
     /// received so far from `service`'s splits, as `previous` (the
@@ -3637,13 +3579,12 @@ impl Verifier {
     /// `previous` is not held, not one of the service's splits for the
     /// stake, or carries no count.
     #[wasm_bindgen(js_name = agreementsSplitTurns)]
-    pub fn agreements_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
+    pub fn agreements_split_turns(&self, specs: JsValue, service: &str, owners: &str, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let in_force = view.version_in_force(&unhex(agreement)?).map_err(lerr)?;
         let holders = holders.iter().map(|h| Ok((unhex(h)?, 0))).collect::<R<Vec<_>>>()?;
         let previous = previous.map(|p| unhex(&p)).transpose()?;
-        let t = view.turns(&unhex(service)?, &in_force, stake, &holders, previous.as_ref()).map_err(lerr)?;
+        let t = view.turns(&unhex(service)?, &unhex(owners)?, &holders, previous.as_ref()).map_err(lerr)?;
         Ok(t.map(|v| v.into_iter().map(|n| n as f64).collect()))
     }
 
@@ -3866,7 +3807,7 @@ impl Verifier {
         let view = s.view(&self.inner)?;
         let e = view.split(&unhex(id)?).map_err(lerr)?;
         to_js(&SplitOut {
-            agreement: hx(&e.split.agreement),
+            publication: hx(&e.split.publication),
             sums: e.sums,
             payouts: e
                 .split
@@ -4083,13 +4024,6 @@ struct DebtReleaseOut {
     against: Vec<String>,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PayerSplitOut {
-    pays: Vec<(String, u64)>,
-    why: Option<String>,
-}
-
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct PointerOut {
@@ -4104,7 +4038,8 @@ struct PointerOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SplitOut {
-    agreement: String,
+    /// The publication it follows (split field 3), by its first version.
+    publication: String,
     sums: Option<bool>,
     payouts: Vec<(String, u64, Option<u64>, Option<String>)>,
     fees: Vec<(String, String, u64)>,

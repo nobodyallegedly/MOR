@@ -272,6 +272,19 @@ pub enum TagCount {
     Unknown(&'static str),
 }
 
+/// Who uploaded a bake, as a verifier reading Money and Envelopes can
+/// tell ([`Verifier::bake_uploader`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Uploader {
+    /// Its signer: a payment naming the bare bake is a tip to it.
+    Signer(Hash),
+    /// Not known to this verifier: a bake naming another chain, a
+    /// collective's perhaps, is the collective's where Agreements says so.
+    /// A Money-only wallet refuses to tip it (Money, "Only identities have
+    /// payee pointers").
+    Unknown(&'static str),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     /// Valid.
@@ -1083,6 +1096,9 @@ impl Verifier {
                     Some(bake) if bake.inside.spec != envelopes || bake.inside.type_ != crate::envelopes::types::BAKE => {
                         TagCount::Nobodys("field 0 names no bake")
                     }
+                    Some(_) if matches!(self.bake_uploader(b), Some(Uploader::Unknown(_))) => {
+                        TagCount::Unknown("the bake's uploader is not known without Agreements: it names another chain, a collective's perhaps")
+                    }
                     Some(bake) if bake.signer() == x.signer() => TagCount::Counts,
                     Some(_) => TagCount::Nobodys("a tag on a bare bake counts only signed by its uploader (rule 18)"),
                 },
@@ -1090,6 +1106,29 @@ impl Verifier {
             _ => TagCount::Unknown("the tag is not yet valid"),
         };
         Some((t, count))
+    }
+
+    /// Who uploaded a bake (Envelopes, "Bake"): its signer, where it names
+    /// no chain but its own line (its first version, which its signer also
+    /// signed); a bake naming another chain in `objects` (a member's bake
+    /// naming the collective, Agreements rule 58) is the collective's where
+    /// Agreements says so, unknown here. `None` for an act that is no bake
+    /// held.
+    pub fn bake_uploader(&self, bake: &Hash) -> Option<Uploader> {
+        let (envelopes, _) = self.never_ack_specs?;
+        let x = self.acts.get(bake)?;
+        if x.inside.spec != envelopes || x.inside.type_ != crate::envelopes::types::BAKE {
+            return None;
+        }
+        let signer = *x.signer()?;
+        for o in x.inside.objects.iter().flatten() {
+            match self.acts.get(&o.chain) {
+                Some(g) if g.inside.spec == envelopes && g.inside.type_ == crate::envelopes::types::BAKE && g.signer() == Some(&signer) => {}
+                Some(_) => return Some(Uploader::Unknown("the bake names another chain in objects, a collective's perhaps: whose bake it is, Agreements judges (Envelopes, \"Bake\")")),
+                None => return Some(Uploader::Unknown("the bake names a chain this verifier does not hold")),
+            }
+        }
+        Some(Uploader::Signer(signer))
     }
 
     /// The counting rotation of its signer that judges an everyday act

@@ -34,7 +34,7 @@ mod common;
 
 use common::{own_home, Person, Rot, World};
 use mor_core::act::Object;
-use mor_core::agreements::{self, AgreementsView, Field4, Mirs, PurchaseVerdict, Rule, SaleState, Stake, Terms, Who};
+use mor_core::agreements::{self, AgreementsView, Mirs, PurchaseVerdict, SaleState, Terms, Who};
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::envelopes::vow::Vow;
@@ -120,19 +120,41 @@ fn claim_alone(w: &mut World, p: &mut Person, work: Hash) -> Hash {
     agreements_act(w, p, agreements::types::CLAIM, c.to_map(), None)
 }
 
-/// A lone seller's standing offer (F215) naming `name`, with its words.
+/// A lone seller's publication naming the vow `name`, with its words, and
+/// its price tag at 300 by the seller, its own split service: the tag.
 fn lone_offer(w: &mut World, p: &mut Person, name: Hash, words: &str) -> Hash {
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Vow(name)],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: None,
-        words: Some(words.into()),
-        until: None,
+    let pubn = common::lone_publication(w, p, &mirs(), vec![agreements::Sold::Vow(name)], Some(words));
+    let id = p.id;
+    common::price_tag(w, p, mirs().money, mor_core::money::Priced::Publication(pubn), 300, spec("a unit"), id)
+}
+
+/// The publication a tag prices.
+fn pub_of(w: &World, tag: &Hash) -> Hash {
+    match view(w).tag_under(tag).unwrap() {
+        agreements::TagUnder::Counts { publication, .. } => publication,
+        x => panic!("{x:?}"),
+    }
+}
+
+/// A publication under the ownership agreement `owners`, selling `sold`,
+/// drafted by `by` as its split service: its id.
+fn owners_publication(w: &mut World, by: &mut Person, owners: Hash, sold: agreements::Sold, words: Option<&str>) -> Hash {
+    let pb = agreements::Publication {
+        sold: Some(vec![sold]),
+        owners: Some(owners),
+        partners: vec![],
+        service: by.id,
+        plan: common::test_plan(),
+        words: words.map(String::from),
         time: None,
+        until: None,
         refund: None,
+        cmips: vec![],
+        designated: None,
+        backups: vec![],
+        failed: None,
     };
-    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
+    agreements_act(w, by, agreements::types::PUBLICATION, pb.to_map(), Some(vec![Object { chain: owners, predecessor: owners }]))
 }
 
 /// A receipt in `payee`'s name for `payer`'s payment following `fulfils`,
@@ -183,44 +205,8 @@ fn owned_by(mut t: Terms, owner: Hash) -> Terms {
     t
 }
 
-fn deal_on(parties: [Hash; 2], object: Hash) -> Terms {
-    Terms {
-        parties: parties.to_vec(),
-        text: "Two owners of one vow.".into(),
-        cmips: vec![(6, spec("a payment cMIP"))],
-        keepers: None,
-        field4: Field4::Rule(Rule::All),
-        clone: Rule::All,
-        time: None,
-        abandonment: None,
-        parent: None,
-        grammar: None,
-        arbitrators: None,
-        split_grant: None,
-        payee_grants: None,
-        extensions: None,
-        succession: None,
-        constitutional: None,
-        areas: None,
-        area_words: None,
-        chain: None,
-        departed: None,
-        stakes: Some(vec![Stake {
-            object: Who::Id(object),
-            holders: vec![(Who::Id(parties[0]), 500_000), (Who::Id(parties[1]), 500_000)],
-        }]),
-        forked_from: None,
-        release_rule: None,
-        settles: None,
-        fork_judge: None,
-        plan: None,
-        refund: None,
-        fees: None,
-        backups: None,
-        holders_rules: None,
-        transfers_counted: None,
-        issues_under: None,
-    }
+fn deal_on(parties: [Hash; 2], claim: Hash) -> Terms {
+    common::ownership_terms(claim, &[(parties[0], 500_000), (parties[1], 500_000)], "Two owners of one vow.")
 }
 
 /// The kept tip of a sequence at position `k` (1-based).
@@ -247,7 +233,7 @@ fn a_vow_is_sold_without_count_each_sale_with_its_own_state() {
     let mut club = w.genesis("the club", vec![own_home()], None, None);
     let concert = vow(&mut w, &mut club, "A concert in the hall, 12 December, 500 seats");
     let offer = lone_offer(&mut w, &mut club, concert, "One seat. 500 seats in all.");
-    assert!(view(&w).offer(&offer).unwrap().counts);
+    assert!(view(&w).publication(&pub_of(&w, &offer)).unwrap().counts);
     let mut claims = vec![];
     for i in 0..3 {
         let mut f = w.genesis(&format!("fan {i}"), vec![own_home()], None, None);
@@ -291,8 +277,8 @@ fn voiding_a_vow_voids_its_signers_acts_never_the_name_others_wrote_down() {
     assert_eq!(w.v.status(&before), Status::Valid, "the kept act stands");
     assert_eq!(w.v.status(&opening), Status::Void, "the vow is the signer's own act: voided by the rotation (Identity rules 16, 17)");
     assert_eq!(w.v.status(&thiefs_claim), Status::Void, "and so is the claim made after it on the same line");
-    let e = view(&w).offer(&offer).unwrap();
-    assert!(e.counts, "the club's offer naming the void vow still counts: {:?}", e.problems);
+    let e = view(&w).publication(&pub_of(&w, &offer)).unwrap();
+    assert!(e.counts, "the club's publication naming the void vow still counts: {:?}", e.problems);
     assert_eq!(common::stand_in_answers(view(&w)).purchase(&r).unwrap().unwrap().verdict, PurchaseVerdict::Purchase, "the fan's purchase under it is still a purchase");
     let v = view_with(&w, &[c]).vow(&opening).unwrap();
     assert!(v.void, "the vow is shown void: the name points at a void act");
@@ -349,8 +335,8 @@ fn what_a_vow_became_is_the_cmips_and_the_core_reads_only_its_chain() {
     fork.sort();
     assert_eq!(view(&w).vow(&album).unwrap().latest, fork, "two versions of one previous: the signer's fork, shown");
     assert!(view(&w).vow(&v2).is_err(), "a later version is not a vow's name");
-    let o = lone_offer(&mut w, &mut dario, v2, "The album, preordered.");
-    let e = view(&w).offer(&o).unwrap();
+    let o = common::lone_publication(&mut w, &mut dario, &mirs(), vec![agreements::Sold::Vow(v2)], Some("The album, preordered."));
+    let e = view(&w).publication(&o).unwrap();
     assert!(!e.counts && e.problems.iter().any(|p| p.contains("genesis")), "an offer names the vow by its genesis, for good: {:?}", e.problems);
 }
 
@@ -376,50 +362,42 @@ fn an_offer_naming_a_vow_under_a_second_agreement_is_shown_outside_the_first() {
     let stream = vow(&mut w, &mut dario, "The cup final, from the stands");
     // F284 (Agreements draft 13, rule 14): a stake in a vow is held by the
     // vow's signer, Dario, in each deal made on it.
-    let t1 = owned_by(deal_on([dario.id, club.id], stream), dario.id).to_map();
+    let named = claim_alone(&mut w, &mut dario, stream);
+    let t1 = owned_by(deal_on([dario.id, club.id], named), dario.id).to_map();
     let with_club = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t1, None);
     sign(&mut w, &mut dario, &with_club);
     sign(&mut w, &mut club, &with_club);
-    let t2 = owned_by(deal_on([dario.id, sponsor.id], stream), dario.id).to_map();
+    let t2 = owned_by(deal_on([dario.id, sponsor.id], named), dario.id).to_map();
     let with_sponsor = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t2, None);
     sign(&mut w, &mut dario, &with_sponsor);
     sign(&mut w, &mut sponsor, &with_sponsor);
     let mut both = vec![with_club, with_sponsor];
     both.sort();
-    assert_eq!(view(&w).work_owners(&stream).unwrap().agreements, both, "two agreements claim the vow");
-    let o = agreements::Offer {
-        under: Some(with_sponsor),
-        sold: vec![agreements::Sold::Vow(stream)],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: Some(agreements::Paid::ByStakes),
-        words: Some("Live access to the cup final.".into()),
-        until: None,
-        time: None,
-        refund: None,
-    };
-    let offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, o.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
-    sign(&mut w, &mut sponsor, &offer);
-    let e = view(&w).offer(&offer).unwrap();
-    assert!(e.counts && e.unsigned.is_empty(), "valid, and it counts under the sponsor's deal: {:?}", e.problems);
-    assert_eq!(e.outside_claims, vec![with_club], "shown outside the club's deal, which claims the vow (rule 15b, F247)");
-    // A lone seller's offer on the vow is outside both claiming deals.
-    let alone = lone_offer(&mut w, &mut dario, stream, "The cup final, sold alone.");
-    assert_eq!(view(&w).offer(&alone).unwrap().outside_claims, both, "under no claiming agreement: outside both");
+    assert_eq!(view(&w).work_owners(&stream).unwrap().agreements, both, "two ownership agreements claim the vow");
+    let pubn = owners_publication(&mut w, &mut dario, with_sponsor, agreements::Sold::Vow(stream), Some("Live access to the cup final."));
+    sign(&mut w, &mut sponsor, &pubn);
+    let e = view(&w).publication(&pubn).unwrap();
+    assert!(e.counts && e.unsigned.is_empty(), "valid, and it counts under the sponsor's ownership agreement: {:?}", e.problems);
+    assert_eq!(e.outside_claims, vec![with_club], "shown outside the club's ownership agreement, which claims the vow (rule 14)");
+    let did = dario.id;
+    let offer = common::price_tag(&mut w, &mut dario, mirs().money, mor_core::money::Priced::Publication(pubn), 300, spec("a unit"), did);
+    // A lone seller's publication of the vow is outside both.
+    let alone = common::lone_publication(&mut w, &mut dario, &mirs(), vec![agreements::Sold::Vow(stream)], Some("The cup final, sold alone."));
+    assert_eq!(view(&w).publication(&alone).unwrap().outside_claims, both, "under no claiming ownership agreement: outside both");
     // A work, claimed and sold the same way, is read the same way.
     let song = spec("a song the club's deal claims");
-    let t3 = deal_on([dario.id, club.id], song).to_map();
+    let song_claim = claim_alone(&mut w, &mut dario, song);
+    let t3 = deal_on([dario.id, club.id], song_claim).to_map();
     let song_deal = agreements_act(&mut w, &mut dario, agreements::types::TERMS, t3, None);
     sign(&mut w, &mut dario, &song_deal);
     sign(&mut w, &mut club, &song_deal);
-    let publication = {
+    let bake = {
         let x = w.everyday_act(&mut dario, mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(song.to_vec())), (Value::Uint(2), Value::Bytes(spec("locked").to_vec()))], None, None);
         w.add(&x)
     };
-    let mut ow = o.clone();
-    ow.sold = vec![agreements::Sold::Publication(publication)];
-    let work_offer = agreements_act(&mut w, &mut dario, agreements::types::STANDING_OFFER, ow.to_map(), Some(vec![Object { chain: with_sponsor, predecessor: with_sponsor }]));
-    sign(&mut w, &mut sponsor, &work_offer);
-    assert_eq!(view(&w).offer(&work_offer).unwrap().outside_claims, vec![song_deal], "a work's offer outside its claiming deal: the same answer");
+    let work_pub = owners_publication(&mut w, &mut dario, with_sponsor, agreements::Sold::Bake(bake), None);
+    sign(&mut w, &mut sponsor, &work_pub);
+    assert_eq!(view(&w).publication(&work_pub).unwrap().outside_claims, vec![song_deal], "a work's publication outside its claiming ownership agreement: the same answer");
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
     let c = payers_claim(&mut w, &mut fan, dario.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
     let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("judged");

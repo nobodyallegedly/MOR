@@ -43,10 +43,10 @@ use std::collections::{BTreeMap, BTreeSet};
 /// (F172): the time checks the core used before, for a caller to compute
 /// [`AgreementsView::absence_accepted`] with.
 pub mod reference_absence_proof;
-/// The selling side of step 12b: offers judged, and what a purchase under
-/// one paid for.
-mod selling;
-pub use selling::OfferEval;
+/// The publication (rules 11 to 17): publications judged, their price
+/// tags, purchases by tag, and shares by reference.
+mod publishing;
+pub use publishing::{PublicationEval, TagUnder};
 /// Client conformance on a deal's versions (F221, F222).
 mod deals;
 pub use deals::SuccessorCheck;
@@ -802,8 +802,7 @@ impl<'a> AgreementsView<'a> {
         }
         let Some(f) = self.founding_of(collective) else { return false };
         let Ok(t) = self.terms(&f) else { return false };
-        t.split_grant == Some(g.id)
-            || t.chain.iter().flatten().any(|l| l.successors().contains(&g.id))
+        t.chain.iter().flatten().any(|l| l.successors().contains(&g.id))
     }
 
     // ------------------------------------------------------------ members' keys (F353)
@@ -1097,9 +1096,8 @@ impl<'a> AgreementsView<'a> {
             if self.is_agreements(x, types::TERMS) {
                 return Terms::decode(&x.inside.payload).is_ok_and(|t| t.parent == Some(*act));
             }
-            if self.is_agreements(x, types::SPLIT) {
-                return Split::decode(&x.inside.payload).is_ok_and(|s| s.agreement == *act);
-            }
+            // A split relies on the version its receipt names in field 9
+            // (rule 12): the receipt itself, below, says so.
             if x.inside.spec == self.mirs.money {
                 return match Fin::decode(x.inside.type_, &x.inside.payload) {
                     Ok(Fin::Receipt(r)) => r.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
@@ -1145,6 +1143,9 @@ impl<'a> AgreementsView<'a> {
     fn clone_static(&self, parent: &Terms, clone: &Terms, lineage: &[(Hash, Terms)], rollback: bool) -> R<Result<Vec<Power>, String>> {
         if parent.is_collective() != clone.is_collective() {
             return Ok(Err("a clone keeps the parent's kind: a collective, or a deal".into()));
+        }
+        if parent.target != clone.target {
+            return Ok(Err("a clone keeps its parent's target (field 33)".into()));
         }
         let Some(mark) = clone.field4.mark() else {
             return Ok(Err("a clone carries a mark".into()));
@@ -2273,11 +2274,13 @@ impl<'a> AgreementsView<'a> {
     /// missing below the highest, the numbers carried twice, and the
     /// splits carrying none.
     pub fn split_numbers(&self, service: &Hash, agreement: &Hash) -> R<SplitNumbers> {
-        let root = self.lineage(agreement)?.pop().expect("a lineage has a root").0;
+        // One numbering across every split the service makes under the
+        // publication `agreement` (its first version).
+        let root = *agreement;
         let mut seen: BTreeMap<u64, Vec<Hash>> = BTreeMap::new();
         let mut unnumbered = vec![];
         for (h, sp) in self.splits_of(service) {
-            if self.lineage(&sp.agreement).ok().and_then(|l| l.last().map(|r| r.0)) != Some(root) {
+            if sp.publication != root {
                 continue;
             }
             match sp.number {
@@ -3902,6 +3905,9 @@ impl<'a> AgreementsView<'a> {
         if !lineage[0].1.parties.contains(&d.party) {
             return self.holder_declaration(h, d, &lineage);
         }
+        if d.outcomes.is_empty() {
+            return Ok(Err("a declaration against a party states at least one outcome (\"Abandonment declaration (type 13)\")".into()));
+        }
         // Field 1 is the last version, back from field 0, that the party
         // signed (rule 51), judged where the declaration is used (F172): a
         // signature on a later version counts against it only where
@@ -3958,15 +3964,15 @@ impl<'a> AgreementsView<'a> {
         if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
             return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
         }
-        // Agreements draft 12, rule 89 (F279): where the party's succession
-        // plan names a stake successor, its stake goes by succession; a
-        // declaration stating outcome 1 or 2 is refused, never read as the
+        // Rule 89: where the party's succession plan names a stake
+        // successor, its stake goes by succession; a declaration stating
+        // outcome 1 is refused, never read as the
         // plan (proposal, `docs/f270-build.md`): the outcomes are the
         // authority's signed words.
         let heirs = lineage[0].1.succession.iter().flatten().any(|s| s.party == d.party && s.stakes.as_ref().is_some_and(|v| !v.is_empty()));
-        if heirs && d.outcomes.iter().any(|o| *o == outcomes::STAKE_REDISTRIBUTED || *o == outcomes::STAKE_TRANSFERRED) {
+        if heirs && d.outcomes.contains(&outcomes::STAKE_REDISTRIBUTED) {
             return Ok(Err(
-                "outcome 1 or 2 against a party whose succession plan names a stake successor: its stake goes to that successor by succession (rule 89, F279)".into(),
+                "outcome 1 against a party whose succession plan names a stake successor: its stake goes to that successor by succession (rule 89)".into(),
             ));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
@@ -3980,16 +3986,14 @@ impl<'a> AgreementsView<'a> {
         Ok(Ok((d, clause)))
     }
 
-    /// Agreements draft 14, rule 85 (F313): a declaration naming a holder
-    /// of the collective's stake in itself who is no party (a departed
-    /// holder, a stake successor, a buyer), made under the clause in force
-    /// (that of the agreement it names, field 1 naming a version of its
-    /// lineage), signed by its authority, with the stake-moving outcomes
-    /// only: outcome 1 or 2 where the holder's succession plan names no
-    /// stake successor; where it names one, the stake goes by succession
-    /// (rule 89), and the declaration states outcome 0 alone, which removes
-    /// no voice (the holder has none) and moves the stake to the successor
-    /// (F330). Never 3 or 4; outcome 0 against no other holder.
+    /// Rule 85: a declaration naming a holder of the collective's stake in
+    /// itself who is no party (a departed holder, a stake successor, a
+    /// buyer), made under the clause in force (that of the agreement it
+    /// names, field 1 naming a version of its lineage), signed by its
+    /// authority, with the stake-moving outcomes only: outcome 1 where the
+    /// holder's succession plan names no stake successor; where it names
+    /// one, no outcome (field 3 empty), the stake going by succession (rule
+    /// 89). Never 0, 3 or 4.
     fn holder_declaration(&self, h: &Held, d: AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let t = &lineage[0].1;
         let holds = t.is_collective() && t.own_stake().is_some_and(|(_, st)| st.identified().iter().any(|(x, n)| *x == d.party && *n > 0));
@@ -4006,10 +4010,10 @@ impl<'a> AgreementsView<'a> {
             return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
         }
         let heirs = t.succession.iter().flatten().any(|s| s.party == d.party && s.stakes.as_ref().is_some_and(|v| !v.is_empty()));
-        let allowed: &[u64] = if heirs { &[outcomes::VOICE_REMOVED] } else { &[outcomes::STAKE_REDISTRIBUTED, outcomes::STAKE_TRANSFERRED] };
-        if !d.outcomes.iter().all(|o| allowed.contains(o)) {
+        let stated: &[u64] = if heirs { &[] } else { &[outcomes::STAKE_REDISTRIBUTED] };
+        if d.outcomes != stated {
             return Ok(Err(
-                "against a holder who is no party, only the stake-moving outcomes: outcome 0 alone, the stake passing by succession, where its plan names a stake successor, else outcome 1 or 2; never 3 or 4 (rule 85; new in draft 14, F313, F330)".into(),
+                "against a holder who is no party, only the stake-moving outcomes: none, the stake passing by succession, where its plan names a stake successor, else outcome 1; never 0, 3 or 4 (rule 85)".into(),
             ));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
@@ -4166,8 +4170,10 @@ impl<'a> AgreementsView<'a> {
                     continue;
                 }
                 if let Ok((d, c)) = self.declaration_used(&h.id, by, at)? {
+                    // A declaration stating no outcome, against a holder
+                    // who is no party, passes the stake by succession.
                     if &d.party == party
-                        && stating.iter().any(|o| d.outcomes.contains(o))
+                        && (stating.iter().any(|o| d.outcomes.contains(o)) || (d.outcomes.is_empty() && stating.len() > 1))
                         && ids.contains(&d.agreement)
                     {
                         out.push((h.id, d, c, w));
@@ -4656,8 +4662,8 @@ impl<'a> AgreementsView<'a> {
         if x.inside.spec == self.mirs.agreements && super::open_formats::RETIRED_TYPES.contains(&x.inside.type_) {
             return Ok(Consent::Invalid { agreement: ag, reason: format!("Agreements type {} is retired, never reused (step 12b)", x.inside.type_) });
         }
-        if self.is_agreements(x, types::STANDING_OFFER) {
-            if let Err(e) = super::open_formats::Offer::decode(&x.inside) {
+        if self.is_agreements(x, types::PUBLICATION) {
+            if let Err(e) = crate::agreements::Publication::decode(&x.inside) {
                 return Ok(Consent::Invalid { agreement: ag, reason: e.to_string() });
             }
         }
@@ -5011,211 +5017,10 @@ impl<'a> AgreementsView<'a> {
         Ok(false)
     }
 
-    /// The services a deal's grants name, if they are well formed (F129,
-    /// H4; H6's grants per payee, F250): field 14 and each backup of field
-    /// 29 list, each, one grant per payee to one service: every grant held,
-    /// naming this agreement by null and the group's one grantee, each
-    /// signed by a distinct party; every group signed by the same payees as
-    /// field 14, each to a service of its own. `None` otherwise: the deal
-    /// then carries none of them (reading 3, fail closed). Field 14's
-    /// service comes first, the designated pointer (F248), then the
-    /// backups, in order (F249, F250).
-    fn deal_services(&self, t: &Terms) -> Option<Vec<Hash>> {
-        let list = t.payee_grants.as_ref()?;
-        let mut groups = vec![list.clone()];
-        for e in t.backups.iter().flat_map(|b| &b.services) {
-            match e {
-                ServiceGrants::PerPayee(g) => groups.push(g.clone()),
-                ServiceGrants::One(_) => return None,
-            }
-        }
-        let mut services: Vec<Hash> = vec![];
-        let mut payees: Option<Vec<Hash>> = None;
-        for group in &groups {
-            let mut grantee = None;
-            let mut grantors: Vec<Hash> = vec![];
-            for x in group {
-                let xh = self.v.get(x).filter(|xh| self.is_agreements(xh, types::GRANT))?;
-                let xg = Grant::decode(&xh.inside.payload).ok()?;
-                let by = xh.act.outside.signer?;
-                if !xg.this_agreement || grantors.contains(&by) || !t.parties.contains(&by) || *grantee.get_or_insert(xg.grantee) != xg.grantee {
-                    return None;
-                }
-                grantors.push(by);
-            }
-            grantors.sort();
-            if payees.get_or_insert_with(|| grantors.clone()) != &grantors {
-                return None;
-            }
-            let service = grantee?;
-            if services.contains(&service) {
-                return None;
-            }
-            services.push(service);
-        }
-        Some(services)
-    }
 
-    /// The deals that carry a grant naming "this agreement" by null (F129,
-    /// H4; H6's grants, F250): held terms of a deal listing it in field 14,
-    /// or in a backup group of field 29, which
-    /// exist (every party signed them), its grantor among their parties,
-    /// their grants well formed ([`Self::deal_services`]). "This
-    /// agreement" is each such deal, with the versions it clones. With
-    /// them, every service those deals name for the split service.
-    fn carrying_deals(&self, gh: &Held, grantor: &Hash) -> R<(Vec<Hash>, Vec<Hash>)> {
-        let mut out = vec![];
-        let mut all_services = vec![];
-        for h in self.v.held_acts() {
-            if !self.is_agreements(h, types::TERMS) {
-                continue;
-            }
-            let Ok(t) = self.terms(&h.id) else { continue };
-            let listed = t.payee_grants.iter().flatten().any(|x| x == &gh.id) || t.backups.as_ref().is_some_and(|b| b.grants().contains(&gh.id));
-            if t.is_collective() || !listed || !t.parties.contains(grantor) {
-                continue;
-            }
-            if self.agreement(&h.id)?.exists != Some(true) {
-                continue;
-            }
-            let Some(services) = self.deal_services(&t) else { continue };
-            for s in services {
-                if !all_services.contains(&s) {
-                    all_services.push(s);
-                }
-            }
-            for (id, _) in self.lineage(&h.id)? {
-                if !out.contains(&id) {
-                    out.push(id);
-                }
-            }
-        }
-        Ok((out, all_services))
-    }
 
-    /// What keeps an act of a payee's grant key to a deal's split service,
-    /// or to a backup of field 29, from being backed (F129, H4, H5; H6's
-    /// grants, F250), or nothing. The grant counts only
-    /// through a deal its grantor signed that lists it ("signing the deal
-    /// signs them"); its key is a split service's grant key
-    /// ([`Self::split_key_problem`]).
-    fn deal_grant_problem(&self, gh: &Held, g: &Grant, grantor: &Hash, y: &Held) -> R<Option<String>> {
-        let (deals, mut services) = self.carrying_deals(gh, grantor)?;
-        if deals.is_empty() {
-            return Ok(Some(
-                "the grant names this agreement, and no deal its grantor signed lists it, in field 14 or for a backup in field 29, with one grant per payee to one split service and to each backup (F129, H4; H6, F250)".into(),
-            ));
-        }
-        if !services.contains(&g.grantee) {
-            services.push(g.grantee);
-        }
-        Ok(self.split_key_problem(y, grantor, &g.grantee, &deals, &services))
-    }
 
-    /// The services a collective's agreement names for its split service,
-    /// in any version of the lineage of `agreement` or of the collective's
-    /// current agreement (field 14 and its backups, field 29), if one of
-    /// them names the grant `gh` (F130, H7): with the versions, its own
-    /// claims and offers. The current lineage too, so that an act citing an
-    /// older head than the version naming the service is held to the limit
-    /// all the same.
-    fn collective_split_grant(&self, collective: &Hash, agreement: &Hash, gh: &Hash) -> R<Option<(Vec<Hash>, Vec<Hash>)>> {
-        let mut lineage = self.lineage(agreement)?;
-        if let Some(cur) = self.current(collective)? {
-            for (id, t) in self.lineage(&cur.agreement)? {
-                if !lineage.iter().any(|(x, _)| *x == id) {
-                    lineage.push((id, t));
-                }
-            }
-        }
-        let mut named = false;
-        let mut services = vec![];
-        for (_, t) in &lineage {
-            let mut grants: Vec<Hash> = t.split_grant.iter().copied().collect();
-            grants.extend(t.backups.iter().flat_map(Backups::grants));
-            named |= grants.contains(gh);
-            for x in grants {
-                if let Some(s) = self.v.get(&x).and_then(|xh| Grant::decode(&xh.inside.payload).ok()).map(|xg| xg.grantee) {
-                    if !services.contains(&s) {
-                        services.push(s);
-                    }
-                }
-            }
-        }
-        Ok(named.then(|| (lineage.into_iter().map(|(id, _)| id).collect(), services)))
-    }
 
-    /// What a split service's grant key may sign (F129, H5; F130, H7: one
-    /// rule for every split service, whoever granted it, a person or a
-    /// collective): only a Money receipt for money coming in under the
-    /// grantor's own claims and offers, received by the grantor: a purchase
-    /// naming one of `own` (field 9), or a payment following one (field 5);
-    /// never one whose payer is a split service the grantor's agreements
-    /// name (`services`), nor a split's payout (a batch, or a split named
-    /// in field 5 or `objects`). Narrower kinds the grantor named still
-    /// apply, before this.
-    fn split_key_problem(&self, y: &Held, grantor: &Hash, grantee: &Hash, own: &[Hash], services: &[Hash]) -> Option<String> {
-        use crate::money::{self as fin, Payer, Payload as Fin};
-        if y.inside.spec != self.mirs.money || y.inside.type_ != fin::types::RECEIPT {
-            return Some("a split service's grant key signs only receipts for money coming in under its grantor's own claims and offers (F129, H5; F130, H7)".into());
-        }
-        let Ok(Fin::Receipt(r)) = Fin::decode(y.inside.type_, &y.inside.payload) else {
-            return Some("the receipt does not decode".into());
-        };
-        if &r.payee != grantor {
-            return Some("a split service's grant key signs only receipts its grantor received (F129, H5; F130, H7)".into());
-        }
-        if matches!(&r.payer, Some(Payer::Identity(p)) if services.contains(p)) {
-            return Some(
-                "a split service's grant key never signs a receipt whose payer is the split service itself (F129, H5; F130, H7; rule 29)".into(),
-            );
-        }
-        let names_split = |x: &Hash| self.v.get(x).is_some_and(|h| self.is_agreements(h, types::SPLIT));
-        let objects_split = y.inside.objects.iter().flatten().any(|o| names_split(&o.chain) || names_split(&o.predecessor));
-        if r.batch.is_some() || names_split(&r.fulfils) || objects_split {
-            // F235, as amended by Nobody, allegedly, 10 October 2026: where
-            // the rail pays an account the owner holds, the owner's grant
-            // lets the next layer's split service sign for the incoming
-            // share on the owner's behalf, the rail's proof required on that
-            // receipt: a payout of another identity's split naming the
-            // service as the receiver of a share held by an agreement of the
-            // grantor's that names it. Never a payout of the service's own
-            // split, nor one without the rail's proof (H5, H7 stand).
-            let layer = r.batch.is_none() && self.layer_share(y, grantee).is_some_and(|a| own.contains(&a));
-            if layer && self.rail_valid.contains_key(&y.id) {
-                // Rule 15: where the rail pays the service itself, the
-                // service receipts the share in its own name, never with a
-                // grant key: the rail's answer placing the payment at the
-                // service's own pointer or vault says so.
-                let paid_to = match self.rail_valid.get(&y.id) {
-                    Some(fin::PaidAt::Flow(p)) => self.v.get(p).filter(|h| h.inside.spec == self.mirs.money).and_then(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
-                        Ok(Fin::PayeePointer(q)) => Some(q.payee),
-                        _ => None,
-                    }),
-                    Some(fin::PaidAt::VaultEntry(a, _)) => self.v.get(a).and_then(|h| h.act.outside.signer),
-                    None => None,
-                };
-                if paid_to.as_ref() == Some(grantee) {
-                    return Some("the rail paid the split service itself: it receipts the share in its own name, never with a grant key (rule 15; F235)".into());
-                }
-                return None;
-            }
-            return Some("a split service's grant key never signs a split's payout, one its grantor is owed, save a layer's incoming share with the rail's proof behind it (F129, H5; F130, H7; F235; rule 29)".into());
-        }
-        // Step 12b (H5's reading 4, lifted): a receipt following an offer
-        // is the grantor's only where the offer pays the grantor under its
-        // own claim.
-        if let Some(Some(w)) = self.offer_receipt_problem(&r.fulfils, grantor, own) {
-            return Some(w);
-        }
-        let incoming = r.purchase.as_ref().is_some_and(|p| own.contains(&p.agreement)) || own.contains(&r.fulfils);
-        if !incoming {
-            return Some(
-                "a split service's grant key signs only receipts for money coming in under its grantor's own claims and offers (in a deal, money coming into the deal): a purchase naming one, or a payment following one (F129, H5; F130, H7)".into(),
-            );
-        }
-        None
-    }
 
     /// The revocations of a grant that count (F128): decisions of the
     /// grantor, signed with its own key, naming the grant.
@@ -5326,19 +5131,6 @@ impl<'a> AgreementsView<'a> {
             if let Some(w) = self.scope_problem(&g, y)? {
                 return not(&w);
             }
-            // F130, H7: a collective's split service, named by its field 14
-            // or as a backup in field 29 (F250), signs with its grant key only
-            // receipts for money coming in under the collective's own claims
-            // and offers; a collective's grant in a deal, as a payee's.
-            if g.this_agreement {
-                if let Some(w) = self.deal_grant_problem(gh, &g, &c, y)? {
-                    return not(&w);
-                }
-            } else if let Some((own, services)) = self.collective_split_grant(&c, &ag, &gh.id)? {
-                if let Some(w) = self.split_key_problem(y, &c, &g.grantee, &own, &services) {
-                    return not(&w);
-                }
-            }
             // F126: an act in the collective's name is done only once sealed
             // to every member.
             if let Some(w) = self.not_done(y, &ag)? {
@@ -5360,12 +5152,6 @@ impl<'a> AgreementsView<'a> {
             }
             if let Some(w) = self.scope_problem(&g, y)? {
                 return not(&w);
-            }
-            // F129, H4 and H5: a payee's grant to a deal's split service.
-            if g.this_agreement {
-                if let Some(w) = self.deal_grant_problem(gh, &g, &c, y)? {
-                    return not(&w);
-                }
             }
         }
         // An adoption (rule 40; rule 76): an act of the collective's own key
@@ -5608,7 +5394,7 @@ impl<'a> AgreementsView<'a> {
                 .is_some_and(|s| set.contains(&s) || self.v.get(&s).is_some_and(names)));
         }
         if self.is_agreements(y, types::SPLIT) {
-            return Ok(Split::decode(&y.inside.payload).is_ok_and(|s| set.contains(&s.agreement)));
+            return Ok(Split::decode(&y.inside.payload).is_ok_and(|s| self.split_owners(&s).is_some_and(|o| set.contains(&o))));
         }
         if self.is_agreements(y, types::RELEASE) {
             return Ok(Release::decode(&y.inside).is_ok_and(|r| r.stakes.iter().any(|(a, _)| set.contains(a))));
@@ -6158,8 +5944,14 @@ impl<'a> AgreementsView<'a> {
             // The object paid for: the media of the publication the payment
             // fulfils; for a payment following an offer, of a publication
             // the offer sells (step 12b; Fable's 4b).
-            let mut paid_for: Vec<Hash> = self.publication_field(&fulfils, 2).into_iter().collect();
-            paid_for.extend(self.offer_media(&fulfils));
+            let mut paid_for: Vec<Hash> = self.bake_field(&fulfils, 2).into_iter().collect();
+            paid_for.extend(self.pub_media(&fulfils));
+            if let Some((_, t)) = self.tag_of(&fulfils) {
+                match t.priced {
+                    crate::money::Priced::Bake(b) => paid_for.extend(self.bake_field(&b, 2)),
+                    crate::money::Priced::Publication(p) => paid_for.extend(self.pub_media(&p)),
+                }
+            }
             if !object.is_some_and(|o| paid_for.contains(&o)) {
                 return false;
             }
@@ -6452,6 +6244,11 @@ pub struct SplitEval {
     /// vault: to its flow pointer, its split service's address, which
     /// would split it again. Any entry breaks the plan.
     pub own_not_to_vault: Vec<Hash>,
+    /// Partners not paid their share of the payment exactly, within one unit
+    /// (rule 21): `stake` is the partner's index in the publication's field 2.
+    pub partners_mismatched: Vec<Mismatch>,
+    /// The version of the publication the split was judged under.
+    pub publication: Hash,
 }
 
 /// A break in a split service's tally chain for a stake (rule 15a, rule
@@ -6729,6 +6526,9 @@ pub struct PurchaseEval {
     pub verdict: PurchaseVerdict,
     /// Who a refund would be owed to (Money rule 10a).
     pub refund_to: crate::money::RefundTo,
+    /// Where the tag's payee is not the publication's split service: that
+    /// payee, which bypasses the service (rule 16); the purchase stands.
+    pub bypassing: Option<Hash>,
 }
 
 /// A deal read as rule 45b reads its forks (F186).
@@ -7502,7 +7302,7 @@ impl<'a> AgreementsView<'a> {
                 // the line: a release it signs after its line counts for
                 // nothing (rule 47a).
                 let released = match st.object {
-                    Who::Id(w) => match self.released(&w)? {
+                    Who::Id(c) => match self.claim_work(&c).map(|w| self.released(&w)).transpose()?.flatten() {
                         Some(r) if r.release.stakes.contains(&(id, i as u64)) => {
                             let rh = self.held(&r.id)?;
                             let mine: Vec<&Held> = std::iter::once(rh)
@@ -7885,16 +7685,6 @@ impl<'a> AgreementsView<'a> {
         Ok((!self.before_line(&col, x, &e.chain_act, &e.tips)).then_some(e.by))
     }
 
-    /// The fork or closing that withdrew a standing offer of a collective it
-    /// ended: every open offer of the original, whenever made (Q6).
-    pub fn offer_withdrawn(&self, offer: &Hash) -> R<Option<Hash>> {
-        let x = self.held(offer)?;
-        if !self.is_agreements(x, types::STANDING_OFFER) {
-            return Ok(None);
-        }
-        let Some(c) = x.act.outside.signer else { return Ok(None) };
-        Ok(self.closed_by(&c)?.map(|e| e.by))
-    }
 
     /// Who takes a stake the original held, after its fork: each side's
     /// share of it, in millionths of the stake, as the fork names, else by
@@ -8176,21 +7966,16 @@ impl<'a> AgreementsView<'a> {
         if rec.0.is_some_and(|id| !self.rail_named_at(id, at)) {
             return false;
         }
-        // Money rule 4 (F392): paid to another identity's pointer, it
-        // counts only where that identity is the grantee of a grant of the
-        // payee's that the agreement or offer the payment follows lists in
-        // field 14 or 29, the agreement's designated pointer (Agreements
-        // rules 15 and 17), and the pointer counts on the grantee's own
-        // chain, within its vault (rules 1 and 3).
+        // Money rule 4: the pointer is the payee's own.
         if let fin::PaidAt::Flow(p) = at {
             let other = self.v.get(p).filter(|h| h.inside.spec == self.mirs.money).and_then(|h| match fin::Payload::decode(h.inside.type_, &h.inside.payload) {
                 Ok(fin::Payload::PayeePointer(q)) if &q.payee != payee => Some(q.payee),
                 _ => None,
             });
-            if let Some(g) = other {
-                return self.designated_grantees(payee, fulfils).contains(&g)
-                    && self.pointers_held(&g).is_ok_and(|held| fin::pointer_counts(&held, p))
-                    && fin::flow_followed_vault(Some(self.vault_in_force(&g).as_slice()).filter(|v| !v.is_empty()), amount);
+            // Paid to another identity's pointer, it counts for that
+            // identity, never for the payee (Money rule 4).
+            if other.is_some() {
+                return false;
             }
         }
         let res = self.v.resolve(payee);
@@ -8261,72 +8046,6 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
-    /// Money rule 4's clause (F392, decided by Nobody, allegedly, 23
-    /// October 2026): the identities whose pointer is a designated pointer
-    /// for `payee` on a payment following `fulfils`: where `fulfils` is an
-    /// agreement's terms, an offer made under an agreement, or an obligation
-    /// naming one, the grantee of each grant of the payee's that those terms
-    /// (or their version in force) list in field 14 or 29. The grant is the
-    /// payee's own act (F145): held, signed by the payee, valid, and, for a
-    /// collective, its consent counting (rule 7); in a deal, the deal carries
-    /// its grants ([`Self::deal_services`]: one service per group, every
-    /// grant naming this agreement).
-    pub(super) fn designated_grantees(&self, payee: &Hash, fulfils: &Hash) -> Vec<Hash> {
-        use crate::money::Payload as Fin;
-        let Some(x) = self.v.get(fulfils) else { return vec![] };
-        let named: Option<Hash> = if self.is_agreements(x, types::TERMS) {
-            Some(*fulfils)
-        } else if self.is_agreements(x, types::STANDING_OFFER) {
-            self.offer(fulfils).ok().and_then(|o| o.offer.under)
-        } else if x.inside.spec == self.mirs.money {
-            match Fin::decode(x.inside.type_, &x.inside.payload) {
-                Ok(Fin::Obligation(o)) if o.creditor == *payee => o.agreement,
-                _ => None,
-            }
-        } else {
-            None
-        };
-        let Some(named) = named else { return vec![] };
-        let mut versions = vec![named];
-        if let Ok(v) = self.latest_version(&named) {
-            if v != named {
-                versions.push(v);
-            }
-        }
-        let mut out = vec![];
-        for v in versions {
-            let Ok(t) = self.terms(&v) else { continue };
-            let mut grants: Vec<Hash> = t.split_grant.iter().copied().collect();
-            grants.extend(t.payee_grants.iter().flatten().copied());
-            grants.extend(t.backups.iter().flat_map(Backups::grants));
-            if !t.is_collective() && self.deal_services(&t).is_none() {
-                continue;
-            }
-            // A collective's grant is the collective's own: signed with its
-            // keys, its consent counting, or by a founder for "this
-            // collective" in the founding terms that list it.
-            let ours = !t.is_collective() || self.collective_of(&v).ok().flatten() == Some(*payee);
-            if !ours {
-                continue;
-            }
-            for g in grants {
-                let Some(gh) = self.v.get(&g).filter(|h| self.is_agreements(h, types::GRANT)) else { continue };
-                let Ok(gr) = Grant::decode(&gh.inside.payload) else { continue };
-                if !self.valid(&g) {
-                    continue;
-                }
-                let own = gh.act.outside.signer == Some(*payee) && (!t.is_collective() || self.consent(&g).is_ok_and(|c| c.counts()));
-                let founding = t.is_collective() && t.parent.is_none() && gr.by_this && gh.act.outside.signer.is_some_and(|x| t.parties.contains(&x));
-                if !own && !founding {
-                    continue;
-                }
-                if !out.contains(&gr.grantee) {
-                    out.push(gr.grantee);
-                }
-            }
-        }
-        out
-    }
 
     /// Whether a held receipt or claim counts for its payee where the rail
     /// answered it paid (Money rules 4, 12 to 15; [`Self::payment_counts`]),
@@ -8497,6 +8216,24 @@ impl<'a> AgreementsView<'a> {
         };
         let x = self.v.get(fulfils)?;
         let mut complete = true;
+        // A payment of a price tag (Money rule 17): the payee's own acts are
+        // the tag, where the payee signed it, and its signature acts on the
+        // publication the tag names; a tag another identity signed is not
+        // the payee's act.
+        if x.inside.spec == self.mirs.money {
+            if let Ok(Fin::PriceTag(t)) = Fin::decode(x.inside.type_, &x.inside.payload) {
+                let mut acts: Vec<Hash> = vec![];
+                if x.act.outside.signer.as_ref() == Some(payee) && ok(fulfils) {
+                    acts.push(*fulfils);
+                }
+                if let fin::Priced::Publication(p) = t.priced {
+                    for v in self.pub_versions(&p).into_iter().map(|(v, _)| v) {
+                        acts.extend(self.payees_acts_on(&v, payee, &ok).unwrap_or_default());
+                    }
+                }
+                return Some(self.holding_through(&acts, payee, complete));
+            }
+        }
         let acts: Vec<Hash> = if x.inside.spec == self.mirs.money {
             let o = match Fin::decode(x.inside.type_, &x.inside.payload) {
                 Ok(Fin::Obligation(o)) => o,
@@ -8566,10 +8303,16 @@ impl<'a> AgreementsView<'a> {
         } else {
             self.payees_acts_on(fulfils, payee, &ok)?
         };
+        Some(self.holding_through(&acts, payee, complete))
+    }
+
+    /// The payee pointers the payee's own acts `acts` hold (Money rule 17),
+    /// through the payee's own acts only.
+    fn holding_through(&self, acts: &[Hash], payee: &Hash, mut complete: bool) -> crate::money::Holding {
+        use crate::money::{self as fin, Payload as Fin};
         let mut pointers = vec![];
         for a in acts {
-            let Some(h) = self.v.get(&a) else { continue };
-            // F157: through the payee's own acts only.
+            let Some(h) = self.v.get(a) else { continue };
             let held = fin::holds_own(self.v, fin::cites(&h.inside), payee);
             complete &= held.complete;
             for p in held.acts {
@@ -8584,22 +8327,21 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        Some(fin::Holding { pointers, complete })
+        fin::Holding { pointers, complete }
     }
 
-    /// The payee's own acts on an agreement or offer `a` (F145, F168 13):
-    /// its signature acts naming the agreement (Agreements type 0); for an offer
-    /// (Agreements type 6), the offer itself where the payee signed it, and the
-    /// payee's signature acts accepting it: an offer another identity
-    /// signed is not the payee's act, its acceptance is. Each where `ok`
-    /// says it stands. `None` where `a` is not held, or is neither.
+    /// The payee's own acts on an agreement or publication `a` (Money rule
+    /// 17): its signature acts naming it (Agreements type 1); for a
+    /// publication (type 6), the publication itself where the payee drafted
+    /// it. Each where `ok` says it stands. `None` where `a` is not held, or
+    /// is neither.
     fn payees_acts_on(&self, a: &Hash, payee: &Hash, ok: &dyn Fn(&Hash) -> bool) -> Option<Vec<Hash>> {
         let x = self.v.get(a)?;
-        if !self.is_agreements(x, types::TERMS) && !self.is_agreements(x, types::STANDING_OFFER) {
+        if !self.is_agreements(x, types::TERMS) && !self.is_agreements(x, types::PUBLICATION) {
             return None;
         }
         let mut out: Vec<Hash> = vec![];
-        if self.is_agreements(x, types::STANDING_OFFER) && x.act.outside.signer.as_ref() == Some(payee) && ok(a) {
+        if self.is_agreements(x, types::PUBLICATION) && x.act.outside.signer.as_ref() == Some(payee) && ok(a) {
             out.push(*a);
         }
         out.extend(
@@ -9184,53 +8926,7 @@ impl<'a> AgreementsView<'a> {
         self.open_debts(&col, None)
     }
 
-    /// The work a payment is for (F126): a publication's work hash, where
-    /// some agreement held carries a stake in it (a claimed work); `None`
-    /// for a standing offer (its format is open) or anything else.
-    fn work_of(&self, fulfils: &Hash) -> Option<Hash> {
-        if let Some(w) = self.offer_work(fulfils) {
-            return Some(w);
-        }
-        let x = self.v.get(fulfils)?;
-        if x.inside.spec != self.mirs.envelopes || x.inside.type_ != 0 {
-            return None;
-        }
-        x.inside.payload.iter().find_map(|(k, v)| match (k, v) {
-            (crate::cbor::Value::Uint(1), crate::cbor::Value::Bytes(b)) => b.as_slice().try_into().ok(),
-            _ => None,
-        })
-    }
 
-    /// Whether some agreement carries a stake in `work` (rule 12, "a work
-    /// some agreement claims"): only an agreement that exists (rule 1)
-    /// claims, a deal's version every party signed, or a collective's
-    /// clone a record or rotation put in force; terms nobody signed claim
-    /// nothing. `None` (unknown) where terms staking the work are held but
-    /// whether they exist rests on an act this verifier does not hold, and
-    /// no agreement held is known to claim it.
-    fn claimed(&self, work: &Hash) -> Option<bool> {
-        let mut unknown = false;
-        for x in self.v.held_acts() {
-            if !self.is_agreements(x, types::TERMS) || !self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some()) {
-                continue;
-            }
-            match self.agreement(&x.id).map(|a| a.exists) {
-                Ok(Some(true)) => return Some(true),
-                Ok(Some(false)) => {}
-                // A collective's clone: it exists where it is, or was, in
-                // force, a version of the lineage of the agreement in force.
-                Ok(None) => match self.latest_version(&x.id).and_then(|v| self.lineage(&v)) {
-                    Ok(l) if l.iter().any(|(i, _)| i == &x.id) => return Some(true),
-                    Ok(_) => {}
-                    Err(AgreementsError::Missing(_)) => unknown = true,
-                    Err(_) => {}
-                },
-                Err(AgreementsError::Missing(_)) => unknown = true,
-                Err(_) => {}
-            }
-        }
-        (!unknown).then_some(false)
-    }
 
     /// The version in force of an agreement, against which a split of it
     /// is judged (rule 26): [`Self::latest_version`].
@@ -9283,22 +8979,6 @@ impl<'a> AgreementsView<'a> {
         })
     }
 
-    /// The version a payment naming the version `named` is bought under:
-    /// as [`Self::version_for`]; but in a tangled fork (F188, DQ1 to DQ4),
-    /// any buyer who paid under a version every party signed stays
-    /// protected, as for a simple fork (A4): that version.
-    fn bought_under(&self, named: &Hash) -> R<Hash> {
-        let t = self.terms(named)?;
-        if !t.is_collective() {
-            let root = self.lineage(named)?.pop().expect("a lineage has a root").0;
-            if let DealState::Tangled { branches, .. } = self.deal_state(&root)? {
-                if branches.iter().flatten().any(|x| x == named) {
-                    return Ok(*named);
-                }
-            }
-        }
-        self.version_for(named)
-    }
 
     /// The complete versions of a deal cloning `at` (rule 45b): clones of
     /// it every party whose voice remains signed, valid.
@@ -9776,42 +9456,6 @@ impl<'a> AgreementsView<'a> {
         }))
     }
 
-    /// The act at which a work's claim under `agreement` is current, as this
-    /// verifier holds it (F126): the latest version of the agreement, or,
-    /// where a collective holding the work's stake in it was ended by a fork
-    /// or closing, that act; or the work's release.
-    fn claim_line(&self, agreement: &Hash, work: Option<&Hash>) -> R<Hash> {
-        let v = self.bought_under(agreement)?;
-        if let Some(w) = work {
-            if let Some(r) = self.released(w)? {
-                return Ok(r.id);
-            }
-        }
-        let t = self.terms(&v)?;
-        let this = if t.is_collective() { self.collective_of(&v)? } else { None };
-        for st in t.stakes.iter().flatten() {
-            if work.is_some_and(|w| st.object != Who::Id(*w)) || st.object == Who::This {
-                continue;
-            }
-            for (h, _) in &st.holders {
-                if let Some(c) = h.resolve(this.as_ref()) {
-                    if let Some(e) = self.closed_by(&c)? {
-                        return Ok(e.by);
-                    }
-                }
-            }
-        }
-        // F392: a work the collective sells under its own stake: the
-        // collective's own fork or closing.
-        if let (Some(c), Some(w)) = (this, work) {
-            if sold_under_own_stake(&t, w) {
-                if let Some(e) = self.closed_by(&c)? {
-                    return Ok(e.by);
-                }
-            }
-        }
-        Ok(v)
-    }
 
     /// A payment for a work, judged (F126): a purchase names the claim it
     /// pays under (receipt or claim field 9). A payment for a claimed work,
@@ -9846,285 +9490,7 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
-    fn purchase_read(&self, id: &Hash) -> R<Option<PurchaseEval>> {
-        use crate::money::{self as fin, Payer, Payload as Fin};
-        let x = self.held(id)?;
-        if x.inside.spec != self.mirs.money {
-            return Ok(None);
-        }
-        let (purchase, fulfils, refund_to, rail) = match Fin::decode(x.inside.type_, &x.inside.payload) {
-            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, fin::refund_owed_to(&r), r.rail),
-            Ok(Fin::Claim(c)) => {
-                let signer = x.act.outside.signer.unwrap_or_default();
-                let to = match c.payer(&signer) {
-                    Payer::Identity(h) => fin::RefundTo::Identity(h),
-                    Payer::Key(k) => fin::RefundTo::Key(k),
-                };
-                (c.purchase.clone(), c.fulfils, to, c.rail)
-            }
-            _ => return Ok(None),
-        };
-        // F224: a payment for a stake transfer is a purchase of the stake,
-        // unless the transfer is an over-sale on the seller's own line: then
-        // it confers nothing, and the payment is money received for
-        // nothing, owed back by the seller (Agreements rule 14; the refund paid by Money rule 10a; F242, M6).
-        // A receipt or claim whose verification answer is not valid is no
-        // purchase and no sale; pending or not held, unknown (Money rules
-        // 8 and 10). One the rail found invalid is judged
-        // below, as a wrong receipt.
-        let unanswered = !self.rail_counts(id) && !self.rail_invalid.contains(id);
-        if let Some(t) = self.transfer_paid_by(id, &fulfils) {
-            let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
-            if unanswered {
-                e.verdict = PurchaseVerdict::Unknown;
-                return Ok(Some(e));
-            }
-            if self.transfer(&t)?.over_sale {
-                e.verdict = PurchaseVerdict::NoPurchase {
-                    why: "it pays for a stake transfer that is an over-sale on the seller's own line: the transfer confers nothing, and the payment is owed back by the seller, paid as a refund (F224; Agreements rule 14; Money rule 10a)".into(),
-                };
-            }
-            return Ok(Some(e));
-        }
-        // Money rule 18: a payment to an identity's own pointer (a tip) or
-        // toward an obligation is no purchase and names nothing: a claim
-        // its field 9 names anyway makes it no payment for a work.
-        if self.v.get(&fulfils).is_some_and(|f| f.inside.spec == self.mirs.money && matches!(f.inside.type_, fin::types::PAYEE_POINTER | fin::types::OBLIGATION)) {
-            return Ok(None);
-        }
-        let work = self.work_of(&fulfils);
-        let for_offer = self.v.get(&fulfils).is_some_and(|f| self.is_agreements(f, types::STANDING_OFFER));
-        let claimed = match work {
-            Some(w) if !for_offer => self.claimed(&w),
-            _ => Some(false),
-        };
-        let for_work = for_offer || claimed != Some(false);
-        if purchase.is_none() && !for_work {
-            return Ok(None);
-        }
-        let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
-        if unanswered || (purchase.is_none() && claimed.is_none()) {
-            e.verdict = PurchaseVerdict::Unknown;
-            return Ok(Some(e));
-        }
-        let no = |mut e: PurchaseEval, w: &str| {
-            e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
-            Ok(Some(e))
-        };
-        // Step 12b, a payment following a standing offer: the offer must
-        // count; a lone seller's offer is itself the agreement with the
-        // buyer, so a payment following it names no claim and is accepted
-        // under its terms (F215); one following co-owners' offer names
-        // their agreement, a version of its lineage (the offer's field 0;
-        // mechanic, the build's).
-        if for_offer {
-            let o = match self.offer(&fulfils) {
-                Ok(o) => o,
-                Err(w) => return no(e, &format!("the offer it follows is not in the offer's format: {w}")),
-            };
-            if !o.counts {
-                return no(e, &format!("the offer it follows does not count: {}", o.problems.join("; ")));
-            }
-            if o.withdraws {
-                return no(e, "it follows a version of the offer that withdraws it: no purchase, owed back (rule 32)");
-            }
-            if self.paid_past_until.contains(id) {
-                return no(e, "paid past the offer's deadline, as the time reference answers: owed back (rule 32; OF4)");
-            }
-            match (&o.offer.under, &purchase) {
-                (None, _) => return Ok(Some(e)),
-                (Some(u), Some(p)) => {
-                    let same = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
-                    if same(u).is_none() || same(u) != same(&p.agreement) {
-                        return no(e, "it names another agreement than the one the offer is made under (the offer's field 0)");
-                    }
-                }
-                (Some(_), None) => {}
-            }
-        }
-        // F131 (IT3): the payment decides. The claim is the one the
-        // payment's commitment names; a receipt naming another is a wrong
-        // receipt, which the rail shows: its commitment, recomputed from it,
-        // is not the one the rail proof carries.
-        if self.rail_invalid.contains(id) {
-            e.verdict = PurchaseVerdict::WrongReceipt {
-                why: "its rail proof does not carry the commitment recomputed from it: the payment committed to another claim; a wrong receipt counts for nothing (F131, IT3)".into(),
-            };
-            return Ok(Some(e));
-        }
-        if self.same_payment(id).iter().any(|(x, q)| q != &purchase && self.rail_counts(x)) {
-            // Receipts of one payment naming different claims, and no rail
-            // answer yet saying which one the payment committed to.
-            e.verdict = PurchaseVerdict::Unrecorded;
-            return Ok(Some(e));
-        }
-        let Some(p) = purchase else {
-            return no(e, "it names no claim: a Money-only payment for a claimed work is no purchase (F126)");
-        };
-        let Ok(t) = self.terms(&p.agreement) else {
-            return no(e, "the agreement it names is not held terms");
-        };
-        if let Some(w) = &work {
-            if work_stake(&t, w).is_none() && self.latest_version(&p.agreement).ok().and_then(|v| self.terms(&v).ok()).is_none_or(|v| work_stake(&v, w).is_none()) {
-                return no(e, "the agreement it names carries no stake in the work it pays for");
-            }
-        }
-        // The line: a version of the agreement, or an act ending a holder
-        // of the work's stake in it, or the work's release.
-        let in_history = match self.v.get(&p.line) {
-            None => false,
-            Some(l) if self.is_agreements(l, types::TERMS) => {
-                self.lineage(&p.line).is_ok_and(|ls| ls.iter().any(|(i, _)| i == &p.agreement))
-            }
-            Some(l) if self.is_agreements(l, types::FORK) || self.is_agreements(l, types::CLOSING) || self.is_agreements(l, types::RELEASE) => {
-                self.ending_carries_claim(l, &p.agreement, work.as_ref())
-            }
-            Some(_) => false,
-        };
-        if !in_history {
-            return no(e, "the line it names carries none of that agreement's claims");
-        }
-        // F186: while a deal stands forked, a purchase may follow either
-        // branch, judged against that branch's latest version.
-        let named = match self.v.get(&p.line) {
-            Some(l) if self.is_agreements(l, types::TERMS) => p.line,
-            _ => p.agreement,
-        };
-        let current = self.claim_line(&named, work.as_ref())?;
-        let sellers = self.sellers(&p, work.as_ref())?;
-        // RB2, BQ2 and BQ3 (decided 9 October 2026): a broken collective
-        // keeps exactly what its rules before the break allowed, judged by
-        // the offer the payment names, not by when it was paid. A payment
-        // under an offer made during the broken stretch is no purchase,
-        // owed back to the payer, unless the sale is signed anew after the
-        // rollback: a receipt of the collective for the same payment that
-        // counts. An acknowledgement adopting the stretch's receipt is not
-        // signing anew. A payment under an offer made before the break is
-        // kept.
-        let payee = match crate::money::Payload::decode(x.inside.type_, &x.inside.payload) {
-            Ok(crate::money::Payload::Receipt(r)) => Some(r.payee),
-            Ok(crate::money::Payload::Claim(c)) => Some(c.payee),
-            _ => None,
-        };
-        for c in sellers.iter().chain(payee.iter().filter(|p| !sellers.contains(p))) {
-            if let Some(anew) = self.under_stretch_offer(id, &p.line, c)? {
-                if !anew {
-                    return no(
-                        e,
-                        "it names an offer made while the collective that sells it was broken: no purchase, owed back to the payer unless the sale is signed anew after the rollback (rule 37d, RB2, BQ2)",
-                    );
-                }
-            }
-        }
-        if !self.is_push_rail(&rail) {
-            // W4 (F128), request rails: the claim the payment names is the
-            // one the seller's request committed to, so a buyer cannot pay a
-            // version the seller has left. Where the seller is a collective,
-            // the payment becomes a sale once its actions chain records it
-            // (F127, W2); one the original's chain never recorded before the
-            // fork or closing that superseded its claim is refunded.
-            if sellers.is_empty() {
-                return Ok(Some(e));
-            }
-            for c in &sellers {
-                if self.recorded(id, c, &p, work.as_ref(), &current, true)? {
-                    return Ok(Some(e));
-                }
-            }
-            if p.line != current && sellers.iter().any(|c| matches!(self.closed_by(c), Ok(Some(ref x)) if x.by == current)) {
-                return no(
-                    e,
-                    "the seller's actions chain never recorded it before the fork or closing that superseded its claim: no purchase, refunded (F127, W2)",
-                );
-            }
-            e.verdict = PurchaseVerdict::Unrecorded;
-            return Ok(Some(e));
-        }
-        // W4 (F128), push rails: each holder the claim names settles on its
-        // own chain. A holder's receipt recorded before that holder's
-        // signature on the act superseding the claim is a sale under it; one
-        // recorded after it is not. The payment is a purchase only if every
-        // holder's receipt is a sale; otherwise every holder refunds what it
-        // received, and the buyer buys again under the current claim.
-        let holders = self.claim_holders(&p, work.as_ref())?;
-        if holders.is_empty() {
-            return no(e, "the claim it names has no holder of the work's stake");
-        }
-        let superseded = self.claim_version(&current, work.as_ref())? != self.claim_version(&p.line, work.as_ref())?;
-        let mut waiting = false;
-        for h in &holders {
-            let col = self.col(h);
-            let collective = (0..col.res.links.len()).any(|k| self.declares(&col, k));
-            let sale = if collective {
-                if self.recorded(id, h, &p, work.as_ref(), &current, false)? {
-                    Some(true)
-                } else if !self.holder_receipts(id, h).is_empty()
-                    || (p.line != current && matches!(self.closed_by(h), Ok(Some(ref x)) if x.by == current))
-                {
-                    // Its receipt came too late, or its fork or closing
-                    // superseded the claim before its chain recorded it.
-                    Some(false)
-                } else {
-                    None
-                }
-            } else {
-                let rs = self.holder_receipts(id, h);
-                if rs.is_empty() {
-                    None
-                } else if !superseded {
-                    Some(true)
-                } else {
-                    let over = self.superseding(&p, &current, work.as_ref())?;
-                    Some(rs.iter().any(|r| !self.after_own_signature(r, h, &over)))
-                }
-            };
-            match sale {
-                Some(true) => {}
-                Some(false) => {
-                    return no(
-                        e,
-                        "on a push rail, a holder recorded its receipt after its own signature on the act superseding the claim: no purchase, every holder refunds (F128, W4)",
-                    )
-                }
-                None => waiting = true,
-            }
-        }
-        if waiting {
-            e.verdict = PurchaseVerdict::Unrecorded;
-        }
-        Ok(Some(e))
-    }
 
-    /// Whether a fork, closing or release `l` named as a purchase's line
-    /// carries a claim of `agreement` (rule 12: "the fork, closing or
-    /// release that last changed who is paid for the work"): a fork or
-    /// closing of a collective holding the work's stake in a version of
-    /// that agreement, or of the collective selling it under its own stake
-    /// (F392); a release of the work ending a stake of that agreement's
-    /// lineage. One unrelated to the agreement carries none of its claims.
-    fn ending_carries_claim(&self, l: &Held, agreement: &Hash, work: Option<&Hash>) -> bool {
-        let root = |a: &Hash| self.lineage(a).ok().and_then(|x| x.last().map(|y| y.0));
-        if self.is_agreements(l, types::RELEASE) {
-            let Ok(r) = Release::decode(&l.inside) else { return false };
-            return work.is_none_or(|w| *w == r.work) && r.stakes.iter().any(|(a, _)| root(a).is_some() && root(a) == root(agreement));
-        }
-        let ended = if self.is_agreements(l, types::FORK) {
-            Fork::decode(&l.inside).ok().map(|f| f.collective)
-        } else {
-            Closing::decode(&l.inside).ok().map(|c| c.collective)
-        };
-        let Some(ended) = ended else { return false };
-        let mut versions = vec![*agreement];
-        if let Ok(v) = self.latest_version(agreement) {
-            versions.push(v);
-        }
-        versions.iter().any(|v| {
-            let Ok(t) = self.terms(v) else { return false };
-            let this = if t.is_collective() { self.collective_of(v).ok().flatten() } else { None };
-            let holds = t.stakes.iter().flatten().filter(|st| st.object != Who::This && work.is_none_or(|w| st.object == Who::Id(*w))).any(|st| st.holders.iter().any(|(h, _)| h.resolve(this.as_ref()) == Some(ended)));
-            holds || (this == Some(ended) && work.is_some_and(|w| sold_under_own_stake(&t, w)))
-        })
-    }
 
     /// The versions of collective `c`'s agreement made during a broken
     /// stretch (rule 37d): for each stretch, the agreement in force just
@@ -10156,58 +9522,6 @@ impl<'a> AgreementsView<'a> {
         Ok(out)
     }
 
-    /// Whether a payment naming the version `line` was made under an offer
-    /// of collective `c`'s broken stretch (rule 37d; BQ2, BQ3, decided 9
-    /// October 2026): judged by the offer it names, never by when it was
-    /// paid. `Some(true)` where a receipt of `c` for the same payment
-    /// counts, signing the sale anew after the rollback; `Some(false)`
-    /// where none does; `None` where the offer it names was not made during
-    /// a stretch: kept, as the rules before the break allowed.
-    fn under_stretch_offer(&self, id: &Hash, line: &Hash, c: &Hash) -> R<Option<bool>> {
-        use crate::money::Payload as Fin;
-        let col = self.col(c);
-        if !(0..col.res.links.len()).any(|k| self.declares(&col, k)) {
-            return Ok(None);
-        }
-        let Some(l) = self.v.get(line) else { return Ok(None) };
-        if !self.is_agreements(l, types::TERMS) {
-            return Ok(None);
-        }
-        let Ok(ls) = self.lineage(line) else { return Ok(None) };
-        let ls: Vec<Hash> = ls.into_iter().map(|(i, _)| i).collect();
-        let of_stretch = self
-            .stretch_bounds(&col)?
-            .iter()
-            .any(|(before, back)| line != before && ls.contains(before) && back.is_none_or(|r| !ls.contains(&r)));
-        if !of_stretch {
-            return Ok(None);
-        }
-        let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
-            _ => None,
-        };
-        let mine = self.v.get(id).and_then(proof);
-        let mut anew = false;
-        for h in self.v.signed_by(c) {
-            if h.inside.spec != self.mirs.money
-                || h.inside.type_ != crate::money::types::RECEIPT
-                || !self.valid(&h.id)
-                || !self.rail_counts(&h.id)
-                || !(h.id == *id || mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x))))
-            {
-                continue;
-            }
-            let in_stretch = match col.pos(h) {
-                Some(k) => self.base(&col, k)?.is_err() && (0..=k).any(|j| self.declares(&col, j)),
-                None => self.in_a_stretch(&col, h)?.is_some(),
-            };
-            if !in_stretch && self.consent(&h.id)?.counts() {
-                anew = true;
-            }
-        }
-        Ok(Some(anew))
-    }
 
     /// Whether `n` is a notice of `collective` (Agreements type 24; F197, decided
     /// 10 October 2026) naming one of the acts `of` a payment owed back to
@@ -10327,7 +9641,12 @@ impl<'a> AgreementsView<'a> {
                 Ok(Fin::Claim(c)) => c.fulfils,
                 _ => return false,
             };
-            self.offer_act(&fulfils).is_some_and(|(_, o)| o.offer.under.is_none() && o.offer.refund.is_some())
+            // The publication whose tag the payment follows carries refund
+            // terms (its field 8).
+            match self.tag_of(&fulfils).map(|(_, t)| t.priced) {
+                Some(crate::money::Priced::Publication(p)) => self.publication(&self.pub_version_for(&p, &h.id)).is_ok_and(|e| e.publication.refund.is_some()),
+                _ => false,
+            }
         });
         from_claim || from_offer
     }
@@ -10454,46 +9773,6 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
-    /// The holders of the work's stake in the claim a purchase names (W4,
-    /// F128): the successors where it names a fork; otherwise the holders
-    /// in that version of the claiming agreement, a holder written null
-    /// being the collective whose terms they are.
-    fn claim_holders(&self, p: &crate::money::Purchase, work: Option<&Hash>) -> R<Vec<Hash>> {
-        if let Some(l) = self.v.get(&p.line) {
-            if self.is_agreements(l, types::FORK) {
-                if let Ok(f) = Fork::decode(&l.inside) {
-                    return Ok(f.sides.iter().map(|s| s.successor).collect());
-                }
-            }
-        }
-        let version = match self.v.get(&p.line) {
-            Some(l) if self.is_agreements(l, types::TERMS) => p.line,
-            _ => p.agreement,
-        };
-        let t = self.terms(&version)?;
-        let this = if t.is_collective() { self.collective_of(&p.agreement)? } else { None };
-        let mut out = vec![];
-        for st in t.stakes.iter().flatten() {
-            if st.object == Who::This || work.is_some_and(|w| st.object != Who::Id(*w)) {
-                continue;
-            }
-            for (h, _) in &st.holders {
-                if let Some(c) = h.resolve(this.as_ref()) {
-                    if !out.contains(&c) {
-                        out.push(c);
-                    }
-                }
-            }
-        }
-        // F392: a work the collective sells under its own stake: the
-        // collective holds it, and settles on its own chain.
-        if let (Some(c), Some(w)) = (this, work) {
-            if sold_under_own_stake(&t, w) && !out.contains(&c) {
-                out.push(c);
-            }
-        }
-        Ok(out)
-    }
 
     /// The receipts `holder` signed for the same rail payment as `id` (the
     /// payment itself, where `holder` signed it, or a receipt carrying the
@@ -10520,25 +9799,6 @@ impl<'a> AgreementsView<'a> {
             .collect()
     }
 
-    /// The acts superseding the claim a purchase names, up to the current
-    /// claim (W4): the versions of the claiming agreement after the one it
-    /// names, or the fork, closing or release that is current.
-    fn superseding(&self, p: &crate::money::Purchase, current: &Hash, work: Option<&Hash>) -> R<Vec<Hash>> {
-        let named = self.claim_version(&p.line, work)?;
-        match self.v.get(current) {
-            Some(c) if self.is_agreements(c, types::TERMS) => {
-                let mut out = vec![];
-                for (v, _) in self.lineage(current)? {
-                    if v == named || v == p.line {
-                        break;
-                    }
-                    out.push(v);
-                }
-                Ok(out)
-            }
-            _ => Ok(vec![*current]),
-        }
-    }
 
     /// Whether `holder`'s receipt `r` was recorded after its own signature
     /// on one of the acts `over` (W4, F128): that signature (the act itself,
@@ -10570,152 +9830,8 @@ impl<'a> AgreementsView<'a> {
         false
     }
 
-    /// The version at which a claim stands, from a version of its agreement
-    /// (F126 reading 4, confirmed in F127): back through the parents while
-    /// the work's stake, who is paid for it, stays the same. A fork, closing
-    /// or release stands for itself.
-    fn claim_version(&self, line: &Hash, work: Option<&Hash>) -> R<Hash> {
-        let Some(l) = self.v.get(line) else { return Ok(*line) };
-        if !self.is_agreements(l, types::TERMS) {
-            return Ok(*line);
-        }
-        let Some(w) = work else { return Ok(*line) };
-        let mut at = *line;
-        let mut t = self.terms(&at)?;
-        for _ in 0..10_000 {
-            let Some(p) = t.parent else { break };
-            let Ok(pt) = self.terms(&p) else { break };
-            if work_stake(&pt, w).map(|(_, s)| s.clone()) != work_stake(&t, w).map(|(_, s)| s.clone()) {
-                break;
-            }
-            at = p;
-            t = pt;
-        }
-        Ok(at)
-    }
 
-    /// The collectives that sell a work under a purchase's claim (F127,
-    /// W2): the holders of the work's stake in the agreement it names that
-    /// are collectives, and, where the claim names a fork, its successors.
-    fn sellers(&self, p: &crate::money::Purchase, work: Option<&Hash>) -> R<Vec<Hash>> {
-        let mut out = vec![];
-        if let Some(l) = self.v.get(&p.line) {
-            if self.is_agreements(l, types::FORK) {
-                if let Ok(f) = Fork::decode(&l.inside) {
-                    out.extend(f.sides.iter().map(|s| s.successor));
-                    return Ok(out);
-                }
-            }
-        }
-        let t = self.terms(&p.agreement)?;
-        let this = if t.is_collective() { self.collective_of(&p.agreement)? } else { None };
-        for st in t.stakes.iter().flatten() {
-            if st.object == Who::This || work.is_some_and(|w| st.object != Who::Id(*w)) {
-                continue;
-            }
-            for (h, _) in &st.holders {
-                if let Some(c) = h.resolve(this.as_ref()) {
-                    let col = self.col(&c);
-                    if (0..col.res.links.len()).any(|k| self.declares(&col, k)) && !out.contains(&c) {
-                        out.push(c);
-                    }
-                }
-            }
-        }
-        // F392: a work the collective sells under its own stake: the
-        // collective sells it.
-        if let (Some(c), Some(w)) = (this, work) {
-            let col = self.col(&c);
-            if sold_under_own_stake(&t, w) && (0..col.res.links.len()).any(|k| self.declares(&col, k)) && !out.contains(&c) {
-                out.push(c);
-            }
-        }
-        Ok(out)
-    }
 
-    /// Whether collective `c`'s actions chain records the payment `id`
-    /// where the claim it names was current (F127, W2): an act in its name
-    /// that counts (done, on its chain, not void at an ending), signed by it
-    /// or by its split service under its grant, that is the payment's
-    /// receipt, acknowledges it, or is a receipt for the same rail proof.
-    fn recorded(
-        &self,
-        id: &Hash,
-        c: &Hash,
-        p: &crate::money::Purchase,
-        work: Option<&Hash>,
-        current: &Hash,
-        request: bool,
-    ) -> R<bool> {
-        use crate::money::Payload as Fin;
-        let x = self.held(id)?;
-        let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
-            _ => None,
-        };
-        let mine = proof(x);
-        let mut candidates: Vec<&Held> = vec![x];
-        candidates.extend(self.v.acknowledgements(id));
-        // The payment is the rail proof's (one proof, one payment): an act
-        // acknowledging any receipt for it records it, so that one payment
-        // is never a purchase by one receipt and refunded by another. Found
-        // by the Agreements invariants (`docs/law-invariants.md`, IC4).
-        for h in self.v.held_acts() {
-            if h.id != *id
-                && h.inside.spec == self.mirs.money
-                && h.inside.type_ == crate::money::types::RECEIPT
-                && mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x)))
-            {
-                candidates.push(h);
-                candidates.extend(self.v.acknowledgements(&h.id));
-            }
-        }
-        let claim_here = self.claim_version(&p.line, work)?;
-        for r in candidates {
-            if !self.rail_counts(&r.id) {
-                continue;
-            }
-            // Signed with the collective's own key, or with a grant key of
-            // its, its split service's among them (F128, reading 6).
-            if r.act.outside.signer.as_ref() != Some(c) || !self.valid(&r.id) || !self.consent(&r.id)?.counts() {
-                continue;
-            }
-            // W4 (F128): on a request rail the claim is the one the
-            // seller's request committed to: the recording act counting is
-            // enough.
-            if request {
-                return Ok(true);
-            }
-            let at = self.in_force(&r.id)?;
-            // Where the claim it names was current at that act.
-            let current_there = match self.v.get(&p.line) {
-                Some(l) if self.is_agreements(l, types::TERMS) => {
-                    let version = match at {
-                        Some(a) if self.lineage(&a)?.iter().any(|(i, _)| i == &p.agreement) => a,
-                        _ => self.latest_version(&p.agreement)?,
-                    };
-                    self.claim_version(&version, work)? == claim_here
-                }
-                _ => &p.line == current,
-            };
-            // A release by the seller, an action on its chain, ends the claim
-            // (W4, F128): a receipt recorded after it, its history holding the
-            // release, is no sale; one recorded before it, or knowing nothing
-            // of it, is judged as it knew the claim.
-            let released_first = match self.v.get(current) {
-                Some(rl) if self.is_agreements(rl, types::RELEASE) && rl.act.outside.signer.as_ref() == Some(c) => {
-                    let col = self.col(c);
-                    self.before_struct(&col, rl, Line::Record(r))
-                }
-                _ => false,
-            };
-            if current_there && !released_first {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
 
     // ------------------------------------------------------------ the pointer
 
@@ -10788,40 +9904,14 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
-    /// The pointer check (rule 18, F123, F124 P2): where `agreement` names a
-    /// split service, the payee pointer of `owners` counts for Agreements only if
-    /// every address in it also appears in the split service's own signed
-    /// pointer in force, and every entry of the owners' vault in force in
-    /// that service's own vault, or both in those of a backup the split
-    /// cMIP's fields name (field 29; reading 4, F250).
+    /// The pointer check (rule 16): where a collective names a split
+    /// agreement, its payee pointer counts, for Agreements, only if every
+    /// address in it also appears in the split service's own signed pointer
+    /// in force, and every entry of its vault in force in that service's own
+    /// vault, or both in those of a backup the split agreement names.
+    /// `agreement` is the collective's ownership agreement (any version).
     pub fn pointer_check(&self, owners: &Hash, agreement: &Hash) -> R<PointerCheck> {
-        let t = self.terms(agreement)?;
-        // F129, H4: in a deal, the payee's own grant to the service.
-        let g = match (&t.split_grant, &t.payee_grants) {
-            (Some(g), _) => *g,
-            (None, Some(list)) => match list.iter().find(|x| self.v.get(x).is_some_and(|h| h.act.outside.signer == Some(*owners))) {
-                Some(g) => *g,
-                None => {
-                    return Ok(PointerCheck::Undetermined {
-                        reason: "the deal lists no grant of this payee to its split service that this verifier holds (F129, H4)".into(),
-                    })
-                }
-            },
-            (None, None) => return Ok(PointerCheck::NoSplitService),
-        };
-        let mut grants = vec![g];
-        for e in t.backups.iter().flat_map(|b| &b.services) {
-            match e {
-                ServiceGrants::One(h) => grants.push(*h),
-                // H6's grants, F250: in a deal, the payee's own grant to
-                // each backup.
-                ServiceGrants::PerPayee(list) => {
-                    if let Some(x) = list.iter().find(|x| self.v.get(x).is_some_and(|h| h.act.outside.signer == Some(*owners))) {
-                        grants.push(*x);
-                    }
-                }
-            }
-        }
+        let Some(sa) = self.split_agreement_of(agreement)? else { return Ok(PointerCheck::NoSplitService) };
         let undetermined = |w: String| Ok(PointerCheck::Undetermined { reason: w });
         let (pid, mine) = match self.pointer_in_force(owners)? {
             Ok(x) => x,
@@ -10829,14 +9919,7 @@ impl<'a> AgreementsView<'a> {
         };
         let my_vault = self.vault_in_force(owners);
         let mut first_missing = None;
-        for g in grants {
-            let Some(gh) = self.v.get(&g) else {
-                return undetermined("the split service's grant is not held".into());
-            };
-            let Ok(grant) = Grant::decode(&gh.inside.payload) else {
-                return undetermined("the split service's grant does not decode".into());
-            };
-            let service = grant.grantee;
+        for service in sa.publication.services() {
             let theirs = match self.pointer_in_force(&service)? {
                 Ok((_, p)) => p,
                 Err(_) => continue,
@@ -10855,110 +9938,48 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
-    /// Payer-side splitting (F124 P2, F64): where the owners' agreement
-    /// names no split service, what a paying wallet that reads Agreements pay each
-    /// holder's own pointer for `amount` on the stake in `object`, by its
-    /// shares, leftovers by largest remainder (rule 15a, F150), the order of
-    /// holders deciding nothing. Where holders with equal remainders compete
-    /// for a leftover unit, the payer decides, at most one unit per tie, a
-    /// stated cost (F165, F168, 10: no receipt exists when the payer
-    /// divides, so no hash can); this wallet gives it to the tied holder
-    /// whose identity hash is smallest, a choice, not a rule: any other is
-    /// as conforming. A holder that is a collective splitting payer-side
-    /// too is followed to the holders of its stake in itself: one flow,
-    /// holders' identities as destinations. `Err` where the agreement names
-    /// a split service, or no such stake.
-    pub fn payer_split(&self, agreement: &Hash, object: &Who, amount: u64) -> R<Result<Vec<(Hash, u64)>, String>> {
-        self.payer_split_depth(agreement, object, amount, 0)
-    }
-
-    fn payer_split_depth(&self, agreement: &Hash, object: &Who, amount: u64, depth: usize) -> R<Result<Vec<(Hash, u64)>, String>> {
-        if depth >= NESTING_BOUND {
-            return Ok(Err("agreements nested deeper than the nesting bound, 8 (draft 11, rule 15, F254)".into()));
-        }
-        let t = self.terms(agreement)?;
-        if t.split_grant.is_some() || t.payee_grants.is_some() {
-            return Ok(Err("the agreement names a split service: payments go to the owners' pointer, which leads to it".into()));
-        }
-        let Some((_, stake)) = t.stake_on(object) else {
-            return Ok(Err("the agreement defines no such stake".into()));
-        };
-        let this = if t.is_collective() { self.collective_of(agreement)? } else { None };
-        let mut ids: Vec<(Hash, u64)> = vec![];
-        for (h, n) in &stake.holders {
-            let Some(id) = h.resolve(this.as_ref()) else {
-                return Ok(Err("a holder written null, and the collective is not held".into()));
-            };
-            ids.push((id, *n));
-        }
-        // The payer decides a tied unit (F168, 10): this wallet's choice.
-        let parts = match divide_stake(amount, &ids, Ties::Turns(&[])) {
-            Ok(p) => p,
-            Err(w) => return Ok(Err(w)),
-        };
-        let mut out: Vec<(Hash, u64)> = vec![];
-        let mut add = |h: Hash, n: u64| match out.iter_mut().find(|(x, _)| *x == h) {
-            Some(e) => e.1 += n,
-            None => out.push((h, n)),
-        };
-        for ((id, _), n) in ids.into_iter().zip(parts) {
-            // F216: a holder that is a work's agreement (a deal) passes its
-            // line on, outside in, to its stake in the work the publication
-            // carries (or the object itself where it is the work).
-            if self.v.get(&id).is_some_and(|h| self.is_agreements(h, types::TERMS)) {
-                // Draft 11, rule 15 (F254): named by its line, its founding
-                // version; a later version names no line, and is not paid.
-                if !self.names_a_line(&id) {
-                    return Ok(Err("a holder names an agreement by a later version, not its line (rule 15, F254)".into()));
-                }
-                let v = self.version_in_force(&id)?;
-                if !self.terms(&v)?.is_collective() {
-                    let work = match object {
-                        Who::Id(x) => self.publication_field(x, 1).unwrap_or(*x),
-                        Who::This => return Ok(Err("a work's agreement holds no stake in a collective itself".into())),
-                    };
-                    match self.payer_split_depth(&v, &Who::Id(work), n, depth + 1)? {
-                        Ok(inner) => inner.into_iter().for_each(|(x, m)| add(x, m)),
-                        Err(w) => return Ok(Err(w)),
-                    }
-                    continue;
+    /// A collective's split agreement in force (rule 15): the latest counting
+    /// version of a split agreement naming the collective's ownership
+    /// agreement `agreement` (by its line), where one is held.
+    pub(super) fn split_agreement_of(&self, agreement: &Hash) -> R<Option<PublicationEval>> {
+        let Some(root) = self.line_of(agreement) else { return Ok(None) };
+        let mut best: Option<PublicationEval> = None;
+        for h in self.v.held_acts() {
+            let Some((_, a)) = self.pub_act(&h.id) else { continue };
+            if a.follows.is_some() || !a.publication.is_split_agreement() || a.publication.owners != Some(root) {
+                continue;
+            }
+            for tip in self.pub_tips(&h.id) {
+                let e = self.publication(&tip)?;
+                if e.counts {
+                    best = Some(e);
+                    break;
                 }
             }
-            let inner = match self.current(&id)? {
-                Some(cur) if Some(id) != this || *object != Who::This => {
-                    let ct = self.terms(&cur.agreement)?;
-                    if ct.split_grant.is_none() && ct.payee_grants.is_none() && ct.own_stake().is_some() {
-                        Some(self.payer_split_depth(&cur.agreement, &Who::This, n, depth + 1)?)
-                    } else {
-                        None
-                    }
+            if best.is_none() {
+                let e = self.publication(&h.id)?;
+                if e.counts {
+                    best = Some(e);
                 }
-                _ => None,
-            };
-            match inner {
-                Some(Ok(v)) => v.into_iter().for_each(|(x, m)| add(x, m)),
-                Some(Err(w)) => return Ok(Err(w)),
-                None => add(id, n),
             }
         }
-        Ok(Ok(out))
+        Ok(best)
     }
 
     // ------------------------------------------------------------ splits
 
-    /// A split, judged: conservation, each fee and its receiver, delivery
-    /// to every holder it pays (Q9), and every payout matching its stake
-    /// exactly (N10): for each stake it pays, each holder gets their share
-    /// of what the split pays that stake, within one smallest unit of
-    /// rounding per payout, so every fee falls alike on every stake.
+    /// A split, judged against the publication it follows (rules 16 to 29):
+    /// conservation, each fee and its receiver, delivery to every holder
+    /// and partner it pays, each partner paid its share exactly, and the
+    /// owners' line divided by the stake read by reference, within one
+    /// smallest unit of rounding per payout.
     pub fn split(&self, id: &Hash) -> R<SplitEval> {
         self.judged_r(|| self.split_unjudged(id))
     }
 
     /// Whether a split's payouts sum exactly to the amount its receipt or
-    /// claim shows (rule 21), summed wide: payouts that overflow 64 bits
-    /// never sum to the amount received, and never panic the verifier
-    /// (`docs/law-invariants.md`, IC7). `None` where the receipt is not held.
+    /// claim shows (rule 21), summed wide. `None` where the receipt is not
+    /// held.
     fn split_sums(&self, s: &Split) -> Option<bool> {
         use crate::money::Payload as Fin;
         let total: u128 = s.payouts.iter().map(|p| p.amount as u128).sum();
@@ -10969,9 +9990,41 @@ impl<'a> AgreementsView<'a> {
         })
     }
 
-    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
-    /// only where it depends on whether two records whose payment is not
-    /// stated are one payment (Money rule 12).
+    /// The version of a split's publication the payment it names is judged
+    /// under: the version a tag the payment follows was read under, or, for
+    /// a payment following no tag, the version the receipt's history holds.
+    fn split_pub_version(&self, s: &Split) -> Hash {
+        use crate::money::Payload as Fin;
+        let fulfils = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+            Ok(Fin::Receipt(x)) => Some(x.fulfils),
+            Ok(Fin::Claim(x)) => Some(x.fulfils),
+            _ => None,
+        });
+        match fulfils.filter(|f| self.tag_of(f).is_some()) {
+            Some(tag) => self.pub_version_for(&s.publication, &tag),
+            None => self.pub_version_for(&s.publication, &s.receipt),
+        }
+    }
+
+    /// The ownership agreement's version whose stake pays a split's owners'
+    /// line (rule 12): read by reference from the receipt's field 9 where it
+    /// names one, the version in force otherwise.
+    fn split_owners_version(&self, s: &Split, owners: &Hash) -> R<Hash> {
+        use crate::money::Payload as Fin;
+        let named = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+            Ok(Fin::Receipt(x)) => x.purchase,
+            Ok(Fin::Claim(x)) => x.purchase,
+            _ => None,
+        });
+        match named {
+            Some(p) if &p.agreement == owners => match self.version_by_reference(&s.receipt, owners, &p.line)? {
+                Ok(v) => Ok(v),
+                Err(_) => self.version_in_force(owners),
+            },
+            _ => self.version_in_force(owners),
+        }
+    }
+
     fn split_unjudged(&self, id: &Hash) -> R<SplitEval> {
         use crate::money::Payload as Fin;
         let h = self.held(id)?;
@@ -10979,463 +10032,389 @@ impl<'a> AgreementsView<'a> {
             return Err(AgreementsError::Check("not a split"));
         }
         let s = Split::decode(&h.inside.payload)?;
-        // Rule 21, summed wide ([`Self::split_sums`]).
         let sums = self.split_sums(&s);
-        let fees = s
-            .payouts
-            .iter()
-            .filter_map(|p| p.fee_module.map(|m| (m, p.receiver, p.amount)))
-            .collect();
+        let fees = s.payouts.iter().filter_map(|p| p.fee_module.map(|m| (m, p.receiver, p.amount))).collect();
         let public = h.act.outside.content_key.is_some();
         let to = h.act.outside.to.clone().unwrap_or_default();
         let mut undelivered = vec![];
         for p in &s.payouts {
-            if p.stake.is_some() && !public && !to.contains(&p.receiver) && !undelivered.contains(&p.receiver) {
+            if (p.stake.is_some() || p.partner.is_some()) && !public && !to.contains(&p.receiver) && !undelivered.contains(&p.receiver) {
                 undelivered.push(p.receiver);
             }
         }
-        // Rule 26: the stakes as currently held, those of the agreement in
-        // force (audit, October 2026, gap 8). A split naming an older
-        // version is judged against the version in force all the same.
-        let in_force = self.version_for(&s.agreement)?;
-        let t = self.terms(&in_force)?;
-        let collective = if t.is_collective() { self.collective_of(&in_force)? } else { None };
-        let mut problems = vec![];
-        if in_force != s.agreement {
-            problems.push("it names a version of the owners' agreement that is not in force: the stakes as currently held are the version in force's (rule 26)".to_string());
+        let mut problems: Vec<String> = vec![];
+        let mut e = SplitEval {
+            id: *id,
+            split: s.clone(),
+            sums,
+            fees,
+            undelivered,
+            collective: None,
+            mismatched: vec![],
+            problems: vec![],
+            in_force: s.publication,
+            unevidenced: vec![],
+            unplanned: vec![],
+            turns_unknown: vec![],
+            breaks: vec![],
+            count_unknown: vec![],
+            numbering: None,
+            cites: crate::money::Citations::of(&h.inside).acts(),
+            unequal_roles: vec![],
+            fees_skipped: vec![],
+            metric_problems: vec![],
+            own_not_to_vault: vec![],
+            partners_mismatched: vec![],
+            publication: s.publication,
+        };
+        match self.pub_act(&s.publication) {
+            Some((_, a)) if a.follows.is_none() => {}
+            Some(_) => problems.push("it names a publication by a later version, not its first (\"Split (type 8)\")".into()),
+            None => {
+                problems.push("the publication it names is not held".into());
+                e.problems = problems;
+                return Ok(e);
+            }
         }
-        // Rule 20: signed by the split service with its own key; a
-        // service the agreement in force names (field 14, or a backup of
-        // field 29: a backup that received money splits it, F250), never
-        // anyone else.
+        let version = self.split_pub_version(&s);
+        e.publication = version;
+        let pe = self.publication(&version)?;
+        if !pe.counts {
+            problems.push(format!("the publication it follows does not count: {}", pe.problems.join("; ")));
+        }
+        let p = &pe.publication;
         if !self.valid(id) {
             problems.push("it is not valid under Identity".into());
         }
         if self.key_grant(h).is_some() {
             problems.push("it is signed with a grant key, not the service's own key (rule 20)".into());
         }
-        let services = self.named_services(&t)?;
+        let services = p.services();
         match h.act.outside.signer {
-            Some(signer) if services.contains(&signer) => {}
-            _ if services.is_empty() => {
-                problems.push("the agreement in force names no split service this verifier can read (rule 18): payer-side splitting, or grants not held, and no split is its".into())
+            Some(signer) if services.contains(&signer) => {
+                // A backup splits a payment only where every attempt before
+                // it failed for that payment (rule 17).
+                let mut acts = vec![s.receipt];
+                acts.extend(self.same_payment(&s.receipt).into_iter().map(|(x, _)| x));
+                let before: Vec<Hash> = services.iter().take_while(|x| **x != signer).copied().collect();
+                if before.iter().any(|b| !acts.iter().any(|a| self.attempts_failed.contains(&(*a, *b)))) {
+                    problems.push("a backup splits a payment only once every attempt before it failed for that payment (rule 17)".into());
+                }
             }
-            _ => problems.push("its signer is none of the split services the agreement in force names (rule 20)".into()),
+            _ => problems.push("its signer is none of the split services the publication names (rule 20)".into()),
         }
-        // Agreements draft 11, rules 15 and 17 applied to a direct buyer's
-        // payment (new in draft 11, F260): every payer tries the services
-        // in order, attempt by attempt. A backup that received a buyer's
-        // payment directly, not a layer's share, splits it only where every
-        // attempt before it failed for that payment.
-        if let Some(signer) = h.act.outside.signer {
-            let direct = self.v.get(&s.receipt).is_some_and(|r| self.layer_share(r, &signer).is_none());
-            if direct && services.first().is_some_and(|f| *f != signer) && services.contains(&signer) && self.direct_receiver(&s.agreement, &s.receipt) != Some(signer) {
-                problems.push("a backup splits a buyer's payment only once every attempt before it failed for that payment (rules 15, 17; F260)".into());
-            }
-        }
-        // Rule 22: each role payout names its evidence, which must hold. A
-        // rail Module's share is evidenced by a receipt or claim naming the
-        // Module, which the payee's own pointer or vault must name (F119);
-        // any other role, by an act signed by neither the service nor the
-        // payee, which the payer the payment commits to acknowledges (F184,
-        // QG3, F193, F194). The payee is the identity the payment was made to.
         let payee = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
             Ok(Fin::Receipt(x)) => Some(x.payee),
             Ok(Fin::Claim(x)) => Some(x.payee),
             _ => None,
         });
-        let mut unevidenced = vec![];
-        let mut unplanned = vec![];
-        // Step 12b: the plan (terms field 8) and the fees (field 28) of
-        // the version in force say which roles, receivers, fees and metric
-        // shares a payout may pay; without a plan, none can be checked.
-        let plan = t.plan.clone();
-        let fee_entries = t.fees.clone().unwrap_or_default();
-        let planned = |p: &Payout| -> bool {
-            let Some(plan) = &plan else { return false };
-            if let Some(r) = &p.role {
-                return plan.roles().contains(&r.as_str());
-            }
-            if let Some(m) = &p.fee_module {
-                return fee_entries.iter().any(|f| &f.module == m);
-            }
-            if let Some(i) = p.metric {
-                return matches!(plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }));
-            }
-            // The collective's own part off the top (rule 22, F312): paid
-            // to the collective itself.
-            let own = plan.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. }));
-            plan.receivers().contains(&p.receiver) || (own && collective == Some(p.receiver))
+        let total: u128 = s.payouts.iter().map(|x| x.amount as u128).sum();
+        let collective = match &p.owners {
+            Some(o) => self.collective_of(o)?,
+            None => None,
         };
-        for p in &s.payouts {
-            if p.role.is_some() && plan.is_some() && !planned(p) && !unplanned.contains(&p.receiver) {
-                unplanned.push(p.receiver);
+        e.collective = collective;
+        // What a payout may pay: a partner of the publication, a role, a fee
+        // or a metric share of its plan, or the owners' line.
+        let mut unplanned: Vec<Hash> = vec![];
+        let mut unevidenced: Vec<Hash> = vec![];
+        let lone_owner = p.owners.is_none().then_some(pe.drafter);
+        for x in &s.payouts {
+            let planned = if let Some(i) = x.partner {
+                p.partners.get(i as usize).is_some_and(|q| q.identity == x.receiver)
+            } else if let Some(r) = &x.role {
+                p.plan.roles().contains(&r.as_str())
+            } else if let Some(m) = &x.fee_module {
+                p.plan.fees.iter().any(|f| &f.module == m)
+            } else if let Some(i) = x.metric {
+                matches!(p.plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }))
+            } else if x.stake.is_some() {
+                true
+            } else {
+                lone_owner == Some(x.receiver)
+            };
+            if !planned && !unplanned.contains(&x.receiver) {
+                unplanned.push(x.receiver);
             }
-            if p.role.is_some() {
-                let holds = match (p.evidence, payee, h.act.outside.signer) {
+            if x.role.is_some() {
+                let holds = match (x.evidence, payee, h.act.outside.signer) {
                     (Some(ev), Some(payee), Some(service)) => {
-                        let role = match self.v.get(&ev).map(|x| (x.inside.spec == self.mirs.money, Fin::decode(x.inside.type_, &x.inside.payload))) {
-                            Some((true, Ok(Fin::Receipt(x)))) => Role::RailModule(x.rail),
-                            Some((true, Ok(Fin::Claim(x)))) => Role::RailModule(x.rail),
+                        let role = match self.v.get(&ev).map(|y| (y.inside.spec == self.mirs.money, Fin::decode(y.inside.type_, &y.inside.payload))) {
+                            Some((true, Ok(Fin::Receipt(y)))) => Role::RailModule(y.rail),
+                            Some((true, Ok(Fin::Claim(y)))) => Role::RailModule(y.rail),
                             _ => Role::Other,
                         };
-                        self.v.get(&ev).is_some()
-                            && self.role_evidence(&ev, &role, &service, &payee)?
-                            && (role != Role::Other || self.payer_acknowledged(&ev, &s.receipt))
+                        self.v.get(&ev).is_some() && self.role_evidence(&ev, &role, &service, &payee)? && (role != Role::Other || self.payer_acknowledged(&ev, &s.receipt))
                     }
                     _ => false,
                 };
-                if !holds && !unevidenced.contains(&p.receiver) {
-                    unevidenced.push(p.receiver);
+                if !holds && !unevidenced.contains(&x.receiver) {
+                    unevidenced.push(x.receiver);
                 }
-            } else if p.stake.is_none() && !planned(p) && !unplanned.contains(&p.receiver) {
-                unplanned.push(p.receiver);
             }
         }
-        // OF11 (a), Fable's reading: several fillers of one role, equally.
-        let mut unequal_roles: Vec<String> = vec![];
-        let mut roles: Vec<&String> = s.payouts.iter().filter_map(|p| p.role.as_ref()).collect();
+        e.unplanned = unplanned;
+        e.unevidenced = unevidenced;
+        // Several fillers of one role, paid equally within one unit.
+        let mut roles: Vec<&String> = s.payouts.iter().filter_map(|x| x.role.as_ref()).collect();
         roles.sort();
         roles.dedup();
         for r in roles {
             let mut by: BTreeMap<Hash, u128> = BTreeMap::new();
-            for p in s.payouts.iter().filter(|p| p.role.as_ref() == Some(r)) {
-                *by.entry(p.receiver).or_default() += p.amount as u128;
+            for x in s.payouts.iter().filter(|x| x.role.as_ref() == Some(r)) {
+                *by.entry(x.receiver).or_default() += x.amount as u128;
             }
             let (lo, hi) = (by.values().min().copied().unwrap_or(0), by.values().max().copied().unwrap_or(0));
             if hi > lo + 1 {
-                unequal_roles.push(r.clone());
+                e.unequal_roles.push(r.clone());
             }
         }
-        // F214: a fee is owed as its entry states; the service applies it.
-        let (paid_for, rail_of) = match self.v.get(&s.receipt).map(|r| Fin::decode(r.inside.type_, &r.inside.payload)) {
-            Some(Ok(Fin::Receipt(x))) => (Some(x.fulfils), Some(x.rail)),
-            Some(Ok(Fin::Claim(x))) => (Some(x.fulfils), Some(x.rail)),
-            _ => (None, None),
-        };
-        let mut fees_skipped: Vec<Hash> = vec![];
-        for f in &fee_entries {
+        // Each partner its share of the payment exactly, within one unit.
+        for (i, q) in p.partners.iter().enumerate() {
+            let paid: u128 = s.payouts.iter().filter(|x| x.partner == Some(i as u64)).map(|x| x.amount as u128).sum();
+            let exact = total * q.share as u128;
+            let m = MILLION as u128;
+            if paid * m + m <= exact || paid * m >= exact + m {
+                e.partners_mismatched.push(Mismatch { stake: i as u64, holder: q.identity, paid: paid as u64, due: (exact / m) as u64 });
+            }
+        }
+        // Fees each entry makes owed on this payment.
+        let rail_of = self.v.get(&s.receipt).and_then(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
+            Ok(Fin::Receipt(x)) => Some(x.rail),
+            Ok(Fin::Claim(x)) => Some(x.rail),
+            _ => None,
+        });
+        for f in &p.plan.fees {
             let owed = match &f.scope {
                 super::open_formats::FeeScope::Every => true,
                 super::open_formats::FeeScope::Rail(r) => rail_of.as_ref() == Some(r),
-                super::open_formats::FeeScope::Publication(pb) => {
-                    paid_for.as_ref() == Some(pb)
-                        || paid_for.is_some_and(|x| {
-                            self.offer_act(&x).is_some_and(|(_, o)| o.offer.sold.contains(&super::open_formats::Sold::Publication(*pb)))
-                        })
-                }
+                super::open_formats::FeeScope::Bake(b) => p.sold.iter().flatten().any(|x| x == &super::open_formats::Sold::Bake(*b)),
             };
-            if owed && !s.payouts.iter().any(|p| p.fee_module == Some(f.module)) && !fees_skipped.contains(&f.module) {
-                fees_skipped.push(f.module);
+            if owed && !s.payouts.iter().any(|x| x.fee_module == Some(f.module)) && !e.fees_skipped.contains(&f.module) {
+                e.fees_skipped.push(f.module);
             }
         }
-        if !fees_skipped.is_empty() {
-            problems.push("it leaves out a fee the agreement's fee entry makes owed on this payment: a wrong split, the fee the service's open obligation (F214; rule 29)".into());
+        if !e.fees_skipped.is_empty() {
+            problems.push("it leaves out a fee the publication's plan makes owed on this payment: a wrong split, the fee the service's open obligation (rule 28)".into());
         }
-        // Rule 28 (metrics), with Fable's review 2.7 and OF13 (a), (d).
-        let mut metric_problems: Vec<String> = vec![];
-        let metric_payouts: Vec<&Payout> = s.payouts.iter().filter(|p| p.metric.is_some()).collect();
+        // The owners' line, divided by the stake read by reference.
+        let mut owners_holders: Vec<Hash> = vec![];
+        if let Some(o) = &p.owners {
+            let line: Vec<&Payout> = s.payouts.iter().filter(|x| x.stake.is_some()).collect();
+            for x in &line {
+                if x.owners.as_ref() != Some(o) && !self.nested_owner(o, x.owners.as_ref(), 0) {
+                    e.mismatched.push(Mismatch { stake: 0, holder: x.receiver, paid: x.amount, due: 0 });
+                }
+            }
+            let version = self.split_owners_version(&s, o)?;
+            e.in_force = version;
+            self.check_owners_line(h, &s, o, &version, &line, &mut e, &mut owners_holders, 0)?;
+        }
+        // Metric shares: their measurer, their records, paying only those the
+        // plan already pays.
+        let metric_payouts: Vec<&Payout> = s.payouts.iter().filter(|x| x.metric.is_some()).collect();
         if !metric_payouts.is_empty() {
-            match &plan {
-                None => metric_problems.push("a metric payout, and no plan naming a metric (rule 28)".into()),
-                Some(plan) => {
-                    let mut already: Vec<Hash> = plan.receivers();
-                    for st in t.stakes.iter().flatten() {
-                        already.extend(st.holders.iter().filter_map(|(w, _)| w.resolve(collective.as_ref())));
-                    }
-                    for p in &metric_payouts {
-                        let i = p.metric.unwrap_or_default() as usize;
-                        let Some(super::open_formats::ShareRule::Metric { metric, .. }) = plan.shares.get(i) else {
-                            metric_problems.push("a metric payout names no metric share of the plan".into());
-                            continue;
-                        };
-                        let Some(m) = plan.metrics.get(*metric as usize) else { continue };
-                        if Some(m.measurer) == h.act.outside.signer {
-                            metric_problems.push("the metric's measurer is the split service (rule 28)".into());
-                        }
-                        if metric_payouts.iter().any(|q| q.metric == p.metric && q.receiver == m.measurer) {
-                            metric_problems.push("the metric's measurer is paid by its own metric (review 2.7; F194)".into());
-                        }
-                        if !already.contains(&p.receiver) {
-                            metric_problems.push("a metric pays only identities the plan already pays (OF13 a)".into());
-                        }
-                        let recorded = s.metric_records.iter().any(|r| {
-                            self.v.get(r).is_some_and(|x| x.inside.spec == m.module && x.act.outside.signer == Some(m.measurer) && self.valid(r))
-                        });
-                        if !recorded {
-                            metric_problems.push("no record of the metric's Module signed by its measurer is named (rule 28; OF13 d)".into());
-                        }
-                    }
-                    metric_problems.sort();
-                    metric_problems.dedup();
+            let mut already: Vec<Hash> = p.partners.iter().map(|q| q.identity).collect();
+            already.extend(owners_holders.iter().copied());
+            for x in &metric_payouts {
+                let i = x.metric.unwrap_or_default() as usize;
+                let Some(super::open_formats::ShareRule::Metric { metric, .. }) = p.plan.shares.get(i) else {
+                    e.metric_problems.push("a metric payout names no metric share of the plan".into());
+                    continue;
+                };
+                let Some(mm) = p.plan.metrics.get(*metric as usize) else { continue };
+                if Some(mm.measurer) == h.act.outside.signer {
+                    e.metric_problems.push("the metric's measurer is the split service (rule 29)".into());
+                }
+                if metric_payouts.iter().any(|q| q.metric == x.metric && q.receiver == mm.measurer) {
+                    e.metric_problems.push("the metric's measurer is paid by its own metric (rule 29)".into());
+                }
+                if !already.contains(&x.receiver) {
+                    e.metric_problems.push("a metric pays only identities the plan already pays (rule 29)".into());
+                }
+                let recorded = s.metric_records.iter().any(|r| self.v.get(r).is_some_and(|y| y.inside.spec == mm.module && y.act.outside.signer == Some(mm.measurer) && self.valid(r)));
+                if !recorded {
+                    e.metric_problems.push("no record of the metric's Module signed by its measurer is named (rule 29)".into());
                 }
             }
+            e.metric_problems.sort();
+            e.metric_problems.dedup();
         }
-        let mut mismatched = vec![];
-        let mut turns_unknown = vec![];
-        let mut breaks = vec![];
-        let mut count_unknown = vec![];
-        let mut idxs: Vec<u64> = s.payouts.iter().filter_map(|p| p.stake).collect();
-        idxs.sort();
-        idxs.dedup();
-        for idx in idxs {
-            // F235 (decided by Nobody, allegedly, 10 October 2026, QK3,
-            // replacing QJ2 a), as F244 restates it (QL1, "The publisher
-            // pays the pointer specified by the work's agreement") and F248
-            // designates it (QV2, "The publisher pays the one designated by
-            // the work agreement"): money passes layer by layer; a holder
-            // that is another agreement (a work's, F216; or a publication's
-            // in a pool's) is paid by a payout naming the one pointer that
-            // agreement's version in force designates for payments (its
-            // split service, an owner acting as treasury among them, or a
-            // lone owner), as the receiver of its share; such a payout is
-            // read as paid to that holder. Or, per payment, a backup of the
-            // split cMIP's fields (field 29), where the caller states that
-            // every attempt before it failed for this split (F249, F250:
-            // attempts, not stages; `attempts_failed`). The layer above
-            // never divides the next layer's share: an agreement designating
-            // none cannot be paid through a layer, and any payout on its
-            // holding to anyone else, a backup whose earlier attempts are not
-            // stated failed included, is a mismatch. Never an address the
-            // owners did not sign (F250).
-            // A receiver that is itself a holder of the stake is read as
-            // paid in its own name (mechanic, the build's).
-            // Rules 14 and 26: the stakes as currently held, field 7 of the
-            // version in force and the transfers that took effect on it.
-            let as_held: Vec<(Option<Hash>, u64)> = t
-                .stakes
-                .iter()
-                .flatten()
-                .nth(idx as usize)
-                .map(|st| self.holders_as_held(&in_force, idx, st, st.holders.iter().map(|(w, n)| (w.resolve(collective.as_ref()), *n)).collect()))
-                .unwrap_or_default();
-            let direct: Vec<Hash> = as_held.iter().filter_map(|(w, _)| *w).collect();
-            let mapped: Vec<Payout> = s
-                .payouts
-                .iter()
-                .filter(|p| p.stake == Some(idx))
-                .map(|p| {
-                    let mut q = p.clone();
-                    if !direct.contains(&p.receiver) {
-                        if let Some(a) = direct.iter().find(|a| self.layer_receiver(a, id) == Some(p.receiver)) {
-                            q.receiver = *a;
-                        }
-                    }
-                    q
-                })
-                .collect();
-            let paid_on: Vec<&Payout> = mapped.iter().collect();
-            let pot: u128 = paid_on.iter().map(|p| p.amount as u128).sum();
-            if t.stakes.iter().flatten().nth(idx as usize).is_none() {
-                for p in paid_on {
-                    mismatched.push(Mismatch { stake: idx, holder: p.receiver, paid: p.amount, due: 0 });
-                }
-                continue;
-            }
-            let holders = as_held;
-            // Rule 15a's default (rule 21: no split cMIP's declared
-            // remainder rule has a reader yet): each holder its share
-            // rounded down, leftovers by largest remainder, ties by turns
-            // as the previous split act for the stake counts them (F165,
-            // F171); where the money came by a payer's claim with no
-            // receipt, the payer decides a tied unit (F168, 10); where the
-            // turns cannot be read from the acts held, a tied unit is
-            // unknown, never the rest (F165).
-            let ids: Option<Vec<(Hash, u64)>> = holders.iter().map(|(w, n)| w.map(|w| (w, *n))).collect();
-            let range: Option<Vec<(Hash, u64, u64)>> = match &ids {
-                Some(ids) => {
-                    let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
-                    let rounded = round_stake(pot64, ids);
-                    let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mirs.money && r.inside.type_ == crate::money::types::RECEIPT);
-                    // The tally chain (rule 15a, F171): the previous split
-                    // act for the stake, the count it carries, and this
-                    // split's place after it.
-                    let before = match h.act.outside.signer {
-                        Some(service) => self.tally_check(h, &s, &service, &in_force, idx, ids, pot64, &paid_on, &mut breaks, &mut count_unknown)?,
-                        None => None,
-                    };
-                    let turns = if rounded.units == 0 || !by_receipt {
-                        None
-                    } else {
-                        before.map(|b| ids.iter().map(|(w, _)| b.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect::<Vec<u64>>())
-                    };
-                    if rounded.units > 0 && by_receipt && turns.is_none() && !turns_unknown.contains(&idx) {
-                        turns_unknown.push(idx);
-                    }
-                    let parts = match &turns {
-                        Some(counts) => divide_stake(pot64, ids, Ties::Turns(counts)).unwrap_or(rounded.parts.clone()),
-                        None => rounded.parts.clone(),
-                    };
-                    let free = turns.is_none();
-                    let mut out: Vec<(Hash, u64, u64)> = vec![];
-                    for (i, (who, _)) in ids.iter().enumerate() {
-                        let up = u64::from(free && rounded.tied.contains(&i));
-                        match out.iter_mut().find(|(x, _, _)| x == who) {
-                            Some(e) => {
-                                e.1 += parts[i];
-                                e.2 += parts[i] + up;
-                            }
-                            None => out.push((*who, parts[i], parts[i] + up)),
-                        }
-                    }
-                    Some(out)
-                }
-                None => None,
-            };
-            if let Some(range) = range {
-                for (who, lo, hi) in range {
-                    let paid: u128 = paid_on.iter().filter(|p| p.receiver == who).map(|p| p.amount as u128).sum();
-                    if paid < lo as u128 || paid > hi as u128 {
-                        mismatched.push(Mismatch { stake: idx, holder: who, paid: paid as u64, due: lo });
-                    }
-                }
-            } else {
-                for (who, share) in &holders {
-                    let paid: u128 = paid_on.iter().filter(|p| Some(p.receiver) == *who).map(|p| p.amount as u128).sum();
-                    let exact = pot * (*share as u128); // in millionths of a unit
-                    let m = MILLION as u128;
-                    // Short of its exact share by a whole unit or more, or
-                    // over it by a whole unit or more (F150, F162, 11).
-                    if paid * m + m <= exact || paid * m >= exact + m {
-                        mismatched.push(Mismatch {
-                            stake: idx,
-                            holder: who.unwrap_or_default(),
-                            paid: paid as u64,
-                            due: (exact / m) as u64,
-                        });
-                    }
-                }
-            }
-            for p in paid_on {
-                if !holders.iter().any(|(w, _)| *w == Some(p.receiver)) {
-                    mismatched.push(Mismatch { stake: idx, holder: p.receiver, paid: p.amount, due: 0 });
-                }
-            }
-        }
-        // QF4 (decided 9 October 2026, F190): a deal's split carries its
-        // number, one no other split of its service under the deal carries;
-        // otherwise it is a deviation that breaks the plan, as a reset of the
-        // tally chain is (rule 15a, F171). A gap is the holder's alarm only.
-        let numbering = match (t.is_collective(), h.act.outside.signer) {
-            (false, Some(service)) => match s.number {
+        // One numbering across every split the service makes under the
+        // publication; a split with none, or a number another carries,
+        // breaks the plan.
+        if let Some(service) = h.act.outside.signer {
+            e.numbering = match s.number {
                 None => Some(NumberBreak::Unnumbered),
                 Some(n) => {
-                    let with: Vec<Hash> = self
-                        .split_numbers(&service, &s.agreement)?
-                        .numbers
-                        .into_iter()
-                        .filter(|(m, x)| *m == n && x != id)
-                        .map(|(_, x)| x)
-                        .collect();
+                    let with: Vec<Hash> = self.split_numbers(&service, &s.publication)?.numbers.into_iter().filter(|(m, x)| *m == n && x != id).map(|(_, x)| x).collect();
                     (!with.is_empty()).then_some(NumberBreak::Repeated { number: n, with })
                 }
-            },
-            _ => None,
-        };
-        // Rule 22 (F312): the collective's own part paid to its vault.
-        let mut own_not_to_vault = vec![];
-        if let (Some(c), true) = (collective, t.plan.as_ref().is_some_and(|p| p.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. })))) {
-            if s.payouts.iter().any(|p| p.receiver == c && p.stake.is_none()) {
-                for r in self.v.signed_by(&c) {
+            };
+        }
+        // The collective's own part, a partner naming the collective in its
+        // split agreement, is paid to its vault (rule 22).
+        if let (Some(c), true) = (collective, p.is_split_agreement()) {
+            let idx: Vec<u64> = p.partners.iter().enumerate().filter(|(_, q)| q.identity == c).map(|(i, _)| i as u64).collect();
+            if !idx.is_empty() && s.payouts.iter().any(|x| x.partner.is_some_and(|i| idx.contains(&i))) {
+                for r in self.v.held_acts() {
                     if r.inside.spec != self.mirs.money || !self.valid(&r.id) {
                         continue;
                     }
                     let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
                     let names = x.fulfils == *id || r.inside.objects.iter().flatten().any(|o| o.chain == *id || o.predecessor == *id);
                     if names && x.payee == c && self.rail_valid.get(&r.id).is_some_and(|at| !matches!(at, crate::money::PaidAt::VaultEntry(v, _) if *v == c)) {
-                        own_not_to_vault.push(r.id);
+                        e.own_not_to_vault.push(r.id);
                     }
+                }
+                if self.vault_in_force(&c).is_empty() {
+                    problems.push("a collective keeps its own part only where it declares a vault (rule 22)".into());
                 }
             }
         }
-        Ok(SplitEval {
-            id: *id,
-            split: s,
-            sums,
-            fees,
-            undelivered,
-            collective,
-            mismatched,
-            problems,
-            in_force,
-            unevidenced,
-            unplanned,
-            turns_unknown,
-            breaks,
-            count_unknown,
-            numbering,
-            cites: crate::money::Citations::of(&h.inside).acts(),
-            unequal_roles,
-            fees_skipped,
-            metric_problems,
-            own_not_to_vault,
-        })
+        e.problems = problems;
+        Ok(e)
     }
 
-    /// Rule 15a's turns (F165, F171): for stake `idx` of the agreement in
-    /// force `in_force`, the leftover units each of `holders` has received
-    /// so far from `service`'s splits, as the split act `previous` (the
-    /// service's latest split for the stake, which its next split cites)
-    /// carries them in its running count (field 4); in the holders' order.
-    /// With no `previous`, no split so far: every count is zero. `None`
-    /// where `previous` is not held, is not one of the service's splits
-    /// for the same stake under a version on that agreement's line
-    /// (Agreements draft 11, rule 9, F266: the count runs across versions),
-    /// or carries no count for it:
-    /// shown as unknown, never guessed.
-    ///
-    /// *Since F171 the count is read from two acts; F165's walk back
-    /// through every earlier receipt is gone.*
-    pub fn turns(&self, service: &Hash, in_force: &Hash, idx: u64, holders: &[(Hash, u64)], previous: Option<&Hash>) -> R<Option<Vec<u64>>> {
+    /// Whether `named` is an ownership agreement reached from `owners` as a
+    /// holder of its stake, at most eight layers down (rule 15).
+    fn nested_owner(&self, owners: &Hash, named: Option<&Hash>, depth: usize) -> bool {
+        let Some(named) = named else { return false };
+        if depth >= NESTING_BOUND {
+            return false;
+        }
+        let Ok(v) = self.version_in_force(owners) else { return false };
+        let Ok(t) = self.terms(&v) else { return false };
+        t.stakes.iter().flatten().flat_map(|st| st.holders.iter()).filter_map(|(w, _)| w.id()).any(|x| x == named || (self.names_a_line(x) && self.nested_owner(x, Some(named), depth + 1)))
+    }
+
+    /// The owners' line of a split under the ownership agreement `owners`,
+    /// read at `version` (rules 9, 12, 15): every holder its share of what
+    /// is paid on the line, leftovers by largest remainder with ties by
+    /// turns along the service's splits, a holder that is itself an
+    /// ownership agreement paid through it (its part divided among its own
+    /// holders, each payout naming it), at most eight layers.
+    #[allow(clippy::too_many_arguments)]
+    fn check_owners_line(&self, h: &Held, s: &Split, owners: &Hash, version: &Hash, line: &[&Payout], e: &mut SplitEval, holders_out: &mut Vec<Hash>, depth: usize) -> R<()> {
+        if depth >= NESTING_BOUND {
+            return Ok(());
+        }
+        let t = self.terms(version)?;
+        let Some(stake) = t.stakes.iter().flatten().next() else {
+            for x in line {
+                e.mismatched.push(Mismatch { stake: 0, holder: x.receiver, paid: x.amount, due: 0 });
+            }
+            return Ok(());
+        };
+        let as_held: Vec<(Option<Hash>, u64)> = self.holders_as_held(version, 0, stake, stake.holders.iter().map(|(w, n)| (w.id().copied(), *n)).collect());
+        // A holder that is an ownership agreement is paid through it: its
+        // part is the payouts naming it, and those reaching its own holders.
+        let mapped: Vec<Payout> = line
+            .iter()
+            .map(|x| {
+                let mut q = (*x).clone();
+                if x.owners.as_ref() != Some(owners) {
+                    if let Some(a) = as_held.iter().filter_map(|(w, _)| *w).find(|a| x.owners.as_ref() == Some(a) || self.nested_owner(a, x.owners.as_ref(), 0)) {
+                        q.receiver = a;
+                    }
+                }
+                q
+            })
+            .collect();
+        let paid_on: Vec<&Payout> = mapped.iter().collect();
+        let pot: u128 = paid_on.iter().map(|x| x.amount as u128).sum();
+        let ids: Option<Vec<(Hash, u64)>> = as_held.iter().map(|(w, n)| w.map(|w| (w, *n))).collect();
+        holders_out.extend(as_held.iter().filter_map(|(w, _)| *w));
+        let Some(ids) = ids else { return Ok(()) };
+        let pot64 = u64::try_from(pot).unwrap_or(u64::MAX);
+        let rounded = round_stake(pot64, &ids);
+        let by_receipt = self.v.get(&s.receipt).is_some_and(|r| r.inside.spec == self.mirs.money && r.inside.type_ == crate::money::types::RECEIPT);
+        let before = match (depth, h.act.outside.signer) {
+            (0, Some(service)) => self.tally_check(h, s, &service, owners, &ids, pot64, &paid_on, &mut e.breaks, &mut e.count_unknown)?,
+            _ => None,
+        };
+        let turns = if rounded.units == 0 || !by_receipt || depth > 0 {
+            None
+        } else {
+            before.map(|b| ids.iter().map(|(w, _)| b.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect::<Vec<u64>>())
+        };
+        if rounded.units > 0 && by_receipt && turns.is_none() && depth == 0 && !e.turns_unknown.contains(&0) {
+            e.turns_unknown.push(0);
+        }
+        let parts = match &turns {
+            Some(counts) => divide_stake(pot64, &ids, Ties::Turns(counts)).unwrap_or(rounded.parts.clone()),
+            None => rounded.parts.clone(),
+        };
+        let free = turns.is_none();
+        for (i, (who, _)) in ids.iter().enumerate() {
+            let (lo, hi) = (parts[i], parts[i] + u64::from(free && rounded.tied.contains(&i)));
+            let got: u128 = paid_on.iter().filter(|x| x.receiver == *who).map(|x| x.amount as u128).sum();
+            if got < lo as u128 || got > hi as u128 {
+                e.mismatched.push(Mismatch { stake: 0, holder: *who, paid: got as u64, due: lo });
+            }
+        }
+        for x in &paid_on {
+            if !ids.iter().any(|(w, _)| *w == x.receiver) {
+                e.mismatched.push(Mismatch { stake: 0, holder: x.receiver, paid: x.amount, due: 0 });
+            }
+        }
+        // Each holder that is an ownership agreement: its part divided among
+        // its own holders, by the payouts naming it.
+        for (a, _) in &ids {
+            if !self.names_a_line(a) || !self.terms(a).is_ok_and(|x| x.target.is_some()) {
+                continue;
+            }
+            let inner: Vec<&Payout> = line.iter().filter(|x| x.owners.as_ref() == Some(a) || self.nested_owner(a, x.owners.as_ref(), 0)).copied().collect();
+            if inner.is_empty() {
+                continue;
+            }
+            let v = self.version_in_force(a)?;
+            let mut sub = SplitEval { mismatched: vec![], breaks: vec![], count_unknown: vec![], turns_unknown: vec![], ..e.clone() };
+            self.check_owners_line(h, s, a, &v, &inner, &mut sub, holders_out, depth + 1)?;
+            e.mismatched.extend(sub.mismatched.into_iter().filter(|m| m.holder != *a));
+        }
+        Ok(())
+    }
+
+    /// Rule 9's turns: the leftover units each of `holders` has received so
+    /// far from `service`'s splits on the owners' line of `owners` (its
+    /// founding version), as the split act `previous` carries them in its
+    /// running count; with no `previous`, every count is zero; `None` where
+    /// `previous` is not held, not one of the service's splits on that line,
+    /// or carries no count.
+    pub fn turns(&self, service: &Hash, owners: &Hash, holders: &[(Hash, u64)], previous: Option<&Hash>) -> R<Option<Vec<u64>>> {
         let Some(p) = previous else { return Ok(Some(vec![0; holders.len()])) };
         let Some(ph) = self.v.get(p) else { return Ok(None) };
-        let Some((split, j)) = self.tally_member(ph, service, in_force, idx)? else { return Ok(None) };
-        let Some(count) = split.tally_of(j) else { return Ok(None) };
+        let Some(split) = self.tally_member(ph, service, owners)? else { return Ok(None) };
+        let Some(count) = split.tally_of(0) else { return Ok(None) };
         Ok(Some(holders.iter().map(|(w, _)| count.iter().filter(|(x, _)| x == w).map(|(_, n)| *n).sum()).collect()))
     }
 
-    /// The split `h` as a link of `service`'s tally chain for stake `idx`
-    /// of the agreement in force `in_force` (F171): one of the service's
-    /// splits, valid and signed with its own key, under a version judged
-    /// under `in_force` (as before F266: a version whose act is read under
-    /// it, such as one that no longer counts) or on its line (a version
-    /// before it), paying the same stake; with the index that stake has in the version the split
-    /// names. `None` otherwise.
-    ///
-    /// Agreements draft 11, rule 9 (new in draft 11, F266): the turn count
-    /// runs along the service's receipts across every version of the deal;
-    /// "the same stake" is the same holders' share in the same work (the
-    /// stake's object), whatever its place in the list; a new holder starts
-    /// at zero. *Mechanic, the build's:* a split's stake indexes are read on
-    /// the version it names; "a version on the line" keeps the turns per
-    /// branch while a deal stands forked (rule 9: "along that branch's
-    /// receipts"), the splits before the fork belonging to both branches.
-    fn tally_member(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Option<(Split, u64)>> {
+    /// The split `h` as a link of `service`'s tally chain on the owners'
+    /// line of `owners` (rule 9): one of the service's splits, valid and
+    /// signed with its own key, under a publication naming `owners`, paying
+    /// the owners' line. The count runs along the service's splits across
+    /// every version of the ownership agreement, and every publication
+    /// naming it.
+    fn tally_member(&self, h: &Held, service: &Hash, owners: &Hash) -> R<Option<Split>> {
         if h.act.outside.signer.as_ref() != Some(service) || !self.is_agreements(h, types::SPLIT) || !self.valid(&h.id) || self.key_grant(h).is_some() {
             return Ok(None);
         }
         let Ok(x) = Split::decode(&h.inside.payload) else { return Ok(None) };
-        let judged_here = self.version_for(&x.agreement).ok().as_ref() == Some(in_force);
-        let on_line = judged_here || self.lineage(in_force).is_ok_and(|l| l.iter().any(|(v, _)| *v == x.agreement));
-        if !on_line {
+        let Some((_, a)) = self.pub_act(&x.publication) else { return Ok(None) };
+        if a.publication.owners.as_ref() != Some(owners) || !x.payouts.iter().any(|p| p.stake.is_some()) {
             return Ok(None);
         }
-        let Some(work) = self.terms(in_force)?.stakes.iter().flatten().nth(idx as usize).map(|st| st.object.clone()) else { return Ok(None) };
-        let Ok(named) = self.terms(&x.agreement) else { return Ok(None) };
-        let Some(j) = named.stakes.iter().flatten().position(|st| st.object == work).map(|j| j as u64) else { return Ok(None) };
-        if !x.payouts.iter().any(|p| p.stake == Some(j)) {
-            return Ok(None);
-        }
-        Ok(Some((x, j)))
+        Ok(Some(x))
     }
 
-    /// Where `h` sits in `service`'s tally chain for stake `idx` (F171):
-    /// the previous split for the stake its envelope cites.
-    fn prior(&self, h: &Held, service: &Hash, in_force: &Hash, idx: u64) -> R<Prior> {
+    /// Where `h` sits in `service`'s tally chain on `owners`' line: the
+    /// previous split its envelope cites.
+    fn prior(&self, h: &Held, service: &Hash, owners: &Hash) -> R<Prior> {
         let mut found = vec![];
         for c in crate::money::Citations::of(&h.inside).acts() {
             let Some(x) = self.v.get(&c) else { return Ok(Prior::Unknown) };
-            if self.tally_member(x, service, in_force, idx)?.is_some() && !found.contains(&c) {
+            if self.tally_member(x, service, owners)?.is_some() && !found.contains(&c) {
                 found.push(c);
             }
         }
@@ -11446,46 +10425,38 @@ impl<'a> AgreementsView<'a> {
         })
     }
 
-    /// Rule 15a's tally chain, for the split `h` (decoded `s`) of `service`
-    /// on stake `idx` (F171): finds the previous split it cites; pushes to
-    /// `breaks` a reset or a fork the acts held show, a running count that
-    /// is not the previous one plus this split's leftover units, or a
-    /// count missing; pushes the stake to `count_unknown` where the
-    /// previous count cannot be read. Returns the count before this split
-    /// (empty for the first), from which its ties take turns; `None` where
-    /// unknown.
+    /// Rule 9's tally chain for the split `h` (decoded `s`) of `service` on
+    /// `owners`' line: finds the previous split it cites; pushes to `breaks`
+    /// a reset or a fork the acts held show, a running count that is not the
+    /// previous one plus this split's leftover units, or a count missing;
+    /// pushes to `count_unknown` where the previous count cannot be read.
+    /// Returns the count before this split; `None` where unknown.
     #[allow(clippy::too_many_arguments)]
     fn tally_check(
         &self,
         h: &Held,
         s: &Split,
         service: &Hash,
-        in_force: &Hash,
-        idx: u64,
+        owners: &Hash,
         ids: &[(Hash, u64)],
         pot: u64,
         paid_on: &[&Payout],
         breaks: &mut Vec<ChainBreak>,
         count_unknown: &mut Vec<u64>,
     ) -> R<Option<Vec<(Hash, u64)>>> {
-        // A split that is not the service's own (rule 20) is in no chain:
-        // its problems say so.
-        if self.tally_member(h, service, in_force, idx)?.is_none() {
+        if self.tally_member(h, service, owners)?.is_none() {
             return Ok(None);
         }
-        let prior = self.prior(h, service, in_force, idx)?;
-        // The other splits of the chain held, and what each cites: a second
-        // start is a reset, a second split citing the same previous one a
-        // fork (rule 15a, rule 46b, F171).
+        let prior = self.prior(h, service, owners)?;
         let mut first_too = vec![];
         let mut same_previous = vec![];
         for y in self.v.signed_by(service) {
-            if y.id == h.id || self.tally_member(y, service, in_force, idx)?.is_none() {
+            if y.id == h.id || self.tally_member(y, service, owners)?.is_none() {
                 continue;
             }
             match &prior {
                 Prior::First => {
-                    if self.prior(y, service, in_force, idx)? == Prior::First {
+                    if self.prior(y, service, owners)? == Prior::First {
                         first_too.push(y.id);
                     }
                 }
@@ -11500,38 +10471,36 @@ impl<'a> AgreementsView<'a> {
         first_too.sort();
         same_previous.sort();
         if !first_too.is_empty() {
-            breaks.push(ChainBreak::Reset { stake: idx, with: first_too });
+            breaks.push(ChainBreak::Reset { stake: 0, with: first_too });
         }
         if let Prior::After(p) = &prior {
             if !same_previous.is_empty() {
-                breaks.push(ChainBreak::Fork { stake: idx, previous: *p, with: same_previous });
+                breaks.push(ChainBreak::Fork { stake: 0, previous: *p, with: same_previous });
             }
         }
         let before: Option<Vec<(Hash, u64)>> = match &prior {
             Prior::First => Some(vec![]),
-            // F266: the previous split's count for the same stake, by its
-            // index in the version that split names.
             Prior::After(p) => match self.v.get(p) {
-                Some(x) => self.tally_member(x, service, in_force, idx)?.and_then(|(x, j)| x.tally_of(j).map(|c| c.to_vec())),
+                Some(x) => self.tally_member(x, service, owners)?.and_then(|x| x.tally_of(0).map(|c| c.to_vec())),
                 None => None,
             },
             Prior::Unknown => None,
         };
-        let carried = s.tally_of(idx);
+        let carried = s.tally_of(0);
         if carried.is_none() {
-            breaks.push(ChainBreak::NoCount { stake: idx });
+            breaks.push(ChainBreak::NoCount { stake: 0 });
         }
         match (&before, carried) {
             (None, _) => {
-                if !count_unknown.contains(&idx) {
-                    count_unknown.push(idx);
+                if !count_unknown.contains(&0) {
+                    count_unknown.push(0);
                 }
             }
             (Some(b), Some(c)) => {
                 let paid: Vec<(Hash, u64)> = paid_on.iter().map(|p| (p.receiver, p.amount)).collect();
                 let expected = running_count(b, &leftovers(pot, ids, &paid));
                 if !same_count(c, &expected) {
-                    breaks.push(ChainBreak::Count { stake: idx, carried: c.to_vec(), expected });
+                    breaks.push(ChainBreak::Count { stake: 0, carried: c.to_vec(), expected });
                 }
             }
             (Some(_), None) => {}
@@ -11539,74 +10508,8 @@ impl<'a> AgreementsView<'a> {
         Ok(before)
     }
 
-    /// The split services an agreement's terms name (rule 18), in order:
-    /// in a collective, the grantee of field 14's grant, then of each
-    /// backup's grant (field 29, F250); in a deal, the services its payees'
-    /// grants name ([`Self::deal_services`]). The first is the designated
-    /// pointer (F248).
-    fn named_services(&self, t: &Terms) -> R<Vec<Hash>> {
-        if !t.is_collective() {
-            return Ok(self.deal_services(t).unwrap_or_default());
-        }
-        let mut grants: Vec<Hash> = t.split_grant.iter().copied().collect();
-        grants.extend(t.backups.iter().flat_map(Backups::grants));
-        let mut out = vec![];
-        for g in grants {
-            if let Some(s) = self.v.get(&g).filter(|x| self.is_agreements(x, types::GRANT)).and_then(|x| Grant::decode(&x.inside.payload).ok()).map(|x| x.grantee) {
-                if !out.contains(&s) {
-                    out.push(s);
-                }
-            }
-        }
-        Ok(out)
-    }
-
-    /// The identities that name `service` as their split service, by any
-    /// version of an agreement held (rule 18): a collective, by field 14's
-    /// grant or a backup's (field 29); in a deal, each payee whose own
-    /// grant to the service the deal lists.
-    fn grantors_of(&self, service: &Hash) -> R<Vec<Hash>> {
-        let mut out = vec![];
-        for x in self.v.held_acts() {
-            if !self.is_agreements(x, types::TERMS) {
-                continue;
-            }
-            let Ok(t) = self.terms(&x.id) else { continue };
-            if t.is_collective() {
-                // A version in force, or one the version in force descends
-                // from: a draft clone names nothing.
-                let Some(c) = self.collective_of(&x.id)? else { continue };
-                let Some(cur) = self.current(&c)? else { continue };
-                if !self.lineage(&cur.agreement)?.iter().any(|(i, _)| i == &x.id) {
-                    continue;
-                }
-                if self.named_services(&t)?.contains(service) && !out.contains(&c) {
-                    out.push(c);
-                }
-                continue;
-            }
-            // A deal that exists: every party signed it.
-            if self.agreement(&x.id)?.exists != Some(true) {
-                continue;
-            }
-            let mut grants: Vec<Hash> = t.payee_grants.iter().flatten().copied().collect();
-            grants.extend(t.backups.iter().flat_map(Backups::grants));
-            for g in grants {
-                let Some(gh) = self.v.get(&g).filter(|x| self.is_agreements(x, types::GRANT)) else { continue };
-                if Grant::decode(&gh.inside.payload).is_ok_and(|x| &x.grantee == service) {
-                    if let Some(p) = gh.act.outside.signer.filter(|p| t.parties.contains(p)) {
-                        if !out.contains(&p) {
-                            out.push(p);
-                        }
-                    }
-                }
-            }
-        }
-        Ok(out)
-    }
-
-    /// The splits a service published with its own key (rule 20), valid
-    /// under Identity, each decoded.
+    /// The splits a service signed with its own key (rule 20), valid under
+    /// Identity, each decoded.
     fn splits_of(&self, service: &Hash) -> Vec<(&'a Held, Split)> {
         self.v
             .signed_by(service)
@@ -11615,100 +10518,24 @@ impl<'a> AgreementsView<'a> {
             .collect()
     }
 
-    /// The split services of an agreement named as a holder (F216, F235):
-    /// where `holder` is an agreement this verifier holds, the split
-    /// services its version in force names (field 14, and its backups,
-    /// field 29); none otherwise. Read for a service's own account only
-    /// (`layer_share`): a service named there that received a layer's share
-    /// holds it as an open obligation until split, the designated one or
-    /// not (rules 20, 29); which pointer a layer pays, per payment, is
-    /// [`Self::receiver_for`]'s alone (F248, F250).
-    fn layer_services(&self, holder: &Hash) -> Vec<Hash> {
-        let Some(h) = self.v.get(holder) else { return vec![] };
-        if !self.is_agreements(h, types::TERMS) {
-            return vec![];
+    /// The publications a service is the split service or a backup of: the
+    /// first versions held whose line, at any counting version, names it.
+    fn served_by(&self, service: &Hash) -> Vec<Hash> {
+        let mut out = vec![];
+        for h in self.v.held_acts() {
+            let Some((_, a)) = self.pub_act(&h.id) else { continue };
+            let first = a.follows.map(|(f, _)| f).unwrap_or(h.id);
+            if a.publication.services().contains(service) && !out.contains(&first) {
+                out.push(first);
+            }
         }
-        let Ok(v) = self.version_in_force(holder) else { return vec![] };
-        let Ok(t) = self.terms(&v) else { return vec![] };
-        self.named_services(&t).unwrap_or_default()
+        out
     }
 
-    /// The pointers an agreement named as a holder signed for payments, in
-    /// order (F248, F249, F250): the receivers of that agreement's share in
-    /// a layer above (Agreements rule 16, the split plan), the same whoever
-    /// pays. The first is the designated pointer (F248, decided by Nobody,
-    /// allegedly, 11 October 2026, QV2: "The publisher pays the one
-    /// designated by the work agreement. A work always accept payments at
-    /// the same addresses. The publisher simply points to it."; F244); the
-    /// rest are the backups of the split cMIP's fields (field 29), tried per
-    /// payment, in order, each only where the attempt before it failed (F249,
-    /// F250). Read from the version in force, reusing what the terms already
-    /// write (mechanic, the build's): **its split service, field 14's one
-    /// grantee** (in a deal every grant field 14 lists names the same
-    /// service, or the deal carries none of them, F129 reading 3; in a
-    /// collective, its one grant), which may be one of its owners acting as
-    /// treasury for the joint venture, then its backups; or, where it names
-    /// no split service, **a lone owner**, a deal of one party holding every
-    /// stake it writes, whose own payee pointer receives it with nothing to
-    /// split (F244). Empty otherwise: an agreement designating none cannot be
-    /// paid through a layer until it designates one.
-    pub fn signed_receivers(&self, holder: &Hash) -> Vec<Hash> {
-        let Some(h) = self.v.get(holder) else { return vec![] };
-        if !self.is_agreements(h, types::TERMS) {
-            return vec![];
-        }
-        let Ok(v) = self.version_in_force(holder) else { return vec![] };
-        let Ok(t) = self.terms(&v) else { return vec![] };
-        if t.split_grant.is_some() || t.payee_grants.is_some() {
-            // Field 14's service first (`deal_services`, `named_services`); a
-            // deal whose grants break F129 reading 3 or H6 carries none.
-            return self.named_services(&t).unwrap_or_default();
-        }
-        match t.parties.as_slice() {
-            [lone] if t.stakes.iter().flatten().all(|st| st.holders.iter().all(|(w, _)| w == &Who::Id(*lone))) => vec![*lone],
-            _ => vec![],
-        }
-    }
-
-    /// The receiver for one payment to an agreement (the split task, F250):
-    /// the first of [`Self::signed_receivers`] whose attempt for `payment`
-    /// the caller does not state failed (`attempts_failed`, the split
-    /// cMIP's answer). Attempts run per payment: field 14's service first,
-    /// the next only where the attempt before it failed; another payment
-    /// starts again from field 14's (F249: "Everything reverts back if
-    /// attempts 1 succeeds."). `None` where the agreement signed no
-    /// receiver, or every attempt failed: the money stays where it is, an
-    /// open obligation of whoever holds it (rules 24, 29), and never goes to
-    /// an address the owners did not sign.
-    pub fn receiver_for(&self, holder: &Hash, payment: &Hash) -> Option<Hash> {
-        self.signed_receivers(holder).into_iter().find(|s| !self.attempts_failed.contains(&(*payment, *s)))
-    }
-
-    /// The receiver for a buyer's payment made directly to the owners
-    /// (Agreements draft 11, rule 17, new in draft 11, F260): as
-    /// [`Self::receiver_for`], every payer trying the services the
-    /// agreement names, field 14's then field 29's, in order, attempt by
-    /// attempt; the attempts stated failed for any act of the same rail
-    /// payment (`payment`, the buyer's claim or the receipt) count for it
-    /// (mechanic, the build's: one payment, whichever of its acts the
-    /// split cMIP's answer names).
-    pub fn direct_receiver(&self, agreement: &Hash, payment: &Hash) -> Option<Hash> {
-        let mut acts = vec![*payment];
-        acts.extend(self.same_payment(payment).into_iter().map(|(h, _)| h));
-        self.signed_receivers(agreement).into_iter().find(|s| !acts.iter().any(|a| self.attempts_failed.contains(&(*a, *s))))
-    }
-
-    /// The pointer that receives an agreement's share in a layer above, for
-    /// the payment the split `split` makes ([`Self::receiver_for`]).
-    fn layer_receiver(&self, holder: &Hash, split: &Hash) -> Option<Hash> {
-        self.receiver_for(holder, split)
-    }
-
-    /// Where the receipt `y` is a split service receipting the share of a
-    /// layer (F235): a Money receipt fulfilling or naming a split signed by
-    /// another identity than `service`, which pays `service` on a stake
-    /// held by an agreement naming `service` as its split service; that
-    /// agreement. `None` otherwise.
+    /// Where the receipt `y`, signed by `service`, receipts a collective's
+    /// share paid by another's split (rule 15): a split of another service
+    /// paying a collective whose split agreement names `service`; that
+    /// split agreement's first version. `None` otherwise.
     fn layer_share(&self, y: &Held, service: &Hash) -> Option<Hash> {
         use crate::money::Payload as Fin;
         if y.inside.spec != self.mirs.money {
@@ -11722,21 +10549,21 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let Ok(s) = Split::decode(&sh.inside.payload) else { continue };
-            let Ok(v) = self.version_for(&s.agreement) else { continue };
-            let Ok(t) = self.terms(&v) else { continue };
-            let collective = if t.is_collective() { self.collective_of(&v).ok().flatten() } else { None };
-            for p in s.payouts.iter().filter(|p| &p.receiver == service) {
-                let Some(stake) = p.stake.and_then(|i| t.stakes.iter().flatten().nth(i as usize)) else { continue };
-                for (w, _) in &stake.holders {
-                    if let Some(a) = w.resolve(collective.as_ref()) {
-                        if self.layer_services(&a).contains(service) {
-                            return Some(a);
-                        }
+            for p in &s.payouts {
+                let Ok(Some(f)) = self.founding_ag_of(&p.receiver) else { continue };
+                if let Ok(Some(sa)) = self.split_agreement_of(&f) {
+                    if sa.publication.services().contains(service) {
+                        return Some(sa.first);
                     }
                 }
             }
         }
         None
+    }
+
+    /// A collective's founding agreement, where `who` is a collective held.
+    fn founding_ag_of(&self, who: &Hash) -> R<Option<Hash>> {
+        Ok(self.founding_of(who))
     }
 
     /// What a split service owes (rule 29; audit, October 2026, gap 3).
@@ -11755,144 +10582,101 @@ impl<'a> AgreementsView<'a> {
         self.judged_r(|| self.service_account_unjudged(service))
     }
 
-    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
-    /// only where it depends on whether two records whose payment is not
-    /// stated are one payment (Money rule 12).
     fn service_account_unjudged(&self, service: &Hash) -> R<ServiceAccount> {
         use crate::money::Payload as Fin;
         let splits = self.splits_of(service);
-        // Rule 21: a split that does not sum exactly is invalid: the receipt
-        // or claim it names stays without a matching split (rule 30).
         let split_names = |payment: &Hash| splits.iter().any(|(_, s)| &s.receipt == payment && self.split_sums(s) != Some(false));
+        let served = self.served_by(service);
+        // What a payment to the service is under: a price tag of a
+        // publication it serves, or that publication itself (a tip); a
+        // collective's share another split paid it (its split agreement).
+        let under = |fulfils: &Hash| -> Option<Hash> {
+            if let Some((_, t)) = self.tag_of(fulfils) {
+                if let crate::money::Priced::Publication(p) = t.priced {
+                    return served.contains(&p).then_some(p);
+                }
+                return None;
+            }
+            if let Some((_, a)) = self.pub_act(fulfils) {
+                let first = a.follows.map(|(f, _)| f).unwrap_or(*fulfils);
+                return served.contains(&first).then_some(first);
+            }
+            None
+        };
         let mut unsplit = vec![];
-        // Receipts the service signed with a grant key, backed.
-        for h in self.v.held_acts() {
-            if h.inside.spec != self.mirs.money {
-                continue;
-            }
-            let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if !self.key_grant(h).is_some_and(|(_, g)| &g.grantee == service) {
-                continue;
-            }
-            // Backed, binding after the grant ended (rule 30), or unknown
-            // under a limited grant (rule 18d): the service signed that the
-            // money came in, and answers for it either way.
-            if !matches!(self.backing(&h.id)?, Backing::Backed { .. } | Backing::Binds { .. } | Backing::Unknown { .. }) {
-                continue;
-            }
-            if !split_names(&h.id) {
-                unsplit.push(Unsplit {
-                    payment: h.id,
-                    claim: false,
-                    receiver: r.payee,
-                    // F235: a layer's share received on its owner's behalf
-                    // is split under the agreement that holds it.
-                    agreement: self.layer_share(h, service).unwrap_or(r.purchase.as_ref().map(|p| p.agreement).unwrap_or(r.fulfils)),
-                    amount: r.amount,
-                });
-            }
-        }
-        // F235: a layer's share the service receipted in its own name, as
-        // the receiver an earlier layer's split names: its to split under
-        // the agreement that holds that share.
         for h in self.v.signed_by(service) {
-            if self.key_grant(h).is_some() || !self.valid(&h.id) {
+            if h.inside.spec != self.mirs.money || self.key_grant(h).is_some() || !self.valid(&h.id) {
                 continue;
             }
             let Ok(Fin::Receipt(r)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if h.inside.spec != self.mirs.money || &r.payee != service {
+            if &r.payee != service {
                 continue;
             }
-            let Some(agreement) = self.layer_share(h, service) else { continue };
+            let Some(agreement) = under(&r.fulfils).or_else(|| self.layer_share(h, service)) else { continue };
             if !split_names(&h.id) {
                 unsplit.push(Unsplit { payment: h.id, claim: false, receiver: r.payee, agreement, amount: r.amount });
             }
         }
-        // Payers' claims showing money arrived for a grantor without a receipt.
-        let grantors = self.grantors_of(service)?;
+        // Payers' claims showing money arrived at the service without its
+        // receipt.
         for h in self.v.held_acts() {
             if h.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&h.id) || !self.payers_claim(h) {
                 continue;
             }
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { continue };
-            if !grantors.contains(&c.payee) {
+            if &c.payee != service {
                 continue;
             }
-            if self.receipts_for_proof(&c.proof).iter().any(|(_, r)| r.payee == c.payee) {
+            let Some(agreement) = under(&c.fulfils) else { continue };
+            if self.receipts_for_proof(&c.proof).iter().any(|(_, r)| &r.payee == service) {
                 continue;
             }
             if !split_names(&h.id) {
-                unsplit.push(Unsplit {
-                    payment: h.id,
-                    claim: true,
-                    receiver: c.payee,
-                    agreement: c.purchase.as_ref().map(|p| p.agreement).unwrap_or(c.fulfils),
-                    amount: c.amount,
-                });
+                unsplit.push(Unsplit { payment: h.id, claim: true, receiver: c.payee, agreement, amount: c.amount });
             }
         }
-        // F235, as amended: an owner's grant to the receiving service signs
-        // for the share on the owner's behalf, the rail's proof behind it
-        // (consent checks it): such a receipt is the receiver's.
-        let on_behalf: Vec<(Hash, &Held)> = self
-            .v
-            .held_acts()
-            .filter(|r| r.inside.spec == self.mirs.money && r.inside.type_ == crate::money::types::RECEIPT)
-            .filter_map(|r| self.key_grant(r).map(|(_, g)| (g.grantee, r)))
-            .collect();
-        // Each payout, discharged by the receiver's own receipts naming the split.
+        // Each payout, discharged by its receiver's own receipts naming the
+        // split; a collective's, by its split service's receipt naming it.
         let mut unpaid = vec![];
         let mut owed_to_buyers: Vec<(Hash, usize, Hash, u64)> = vec![];
         for (sh, s) in &splits {
             for (i, p) in s.payouts.iter().enumerate() {
                 let mut received: u64 = 0;
-                let behalf = on_behalf.iter().filter(|(g, _)| g == &p.receiver).map(|(_, r)| *r);
-                for r in self.v.signed_by(&p.receiver).chain(behalf) {
-                    let own = r.act.outside.signer == Some(p.receiver);
-                    if r.inside.spec != self.mirs.money || (own && self.key_grant(r).is_some()) || !self.valid(&r.id) {
-                        continue;
+                let mut payers: Vec<Hash> = vec![p.receiver];
+                if let Ok(Some(f)) = self.founding_ag_of(&p.receiver) {
+                    if let Ok(Some(sa)) = self.split_agreement_of(&f) {
+                        payers.extend(sa.publication.services());
                     }
-                    let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
-                    let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
-                    let payee = if own { p.receiver } else { r.act.outside.signer.unwrap_or_default() };
-                    if x.payee != payee || !names || !self.consent(&r.id)?.counts() {
-                        continue;
-                    }
-                    if !own && self.layer_share(r, &p.receiver).is_none() {
-                        continue;
-                    }
-                    // F217: a seller's payout receipt for a stake it has
-                    // transferred, after the transfer on its own line, is a
-                    // wrong receipt: it discharges nothing, and the buyer is
-                    // owed the share sold.
-                    if let Some((_, buyer, split, idx, owed)) = self.wrong_payout_receipt(r) {
-                        if split == sh.id && idx == i && !owed_to_buyers.contains(&(split, idx, buyer, owed)) {
-                            owed_to_buyers.push((split, idx, buyer, owed));
+                }
+                for who in &payers {
+                    for r in self.v.signed_by(who) {
+                        if r.inside.spec != self.mirs.money || self.key_grant(r).is_some() || !self.valid(&r.id) {
+                            continue;
                         }
-                        continue;
+                        let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
+                        let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
+                        if &x.payee != who || !names || !self.consent(&r.id)?.counts() {
+                            continue;
+                        }
+                        if let Some((_, buyer, split, idx, owed)) = self.wrong_payout_receipt(r) {
+                            if split == sh.id && idx == i && !owed_to_buyers.contains(&(split, idx, buyer, owed)) {
+                                owed_to_buyers.push((split, idx, buyer, owed));
+                            }
+                            continue;
+                        }
+                        received = received.saturating_add(x.amount.value);
                     }
-                    received = received.saturating_add(x.amount.value);
                 }
                 if received < p.amount {
-                    unpaid.push(Unpaid {
-                        split: sh.id,
-                        payout: i,
-                        receiver: p.receiver,
-                        agreement: s.agreement,
-                        amount: p.amount,
-                        received,
-                    });
+                    unpaid.push(Unpaid { split: sh.id, payout: i, receiver: p.receiver, agreement: s.publication, amount: p.amount, received });
                 }
             }
         }
-        // F223: from the service's first split citing a transfer, the
-        // seller's payouts on that stake are owed to the buyer.
         for (split, idx, buyer, owed) in self.owed_from_citing_splits(&splits) {
             if !owed_to_buyers.iter().any(|(s, i, b, _)| *s == split && *i == idx && *b == buyer) {
                 owed_to_buyers.push((split, idx, buyer, owed));
             }
         }
-        // F214: each fee its splits left out, its open obligation.
         let mut fees_skipped = vec![];
         for (sh, _) in &splits {
             for m in self.split(&sh.id)?.fees_skipped {
@@ -11914,7 +10698,7 @@ impl<'a> AgreementsView<'a> {
     /// - where `me` is the payment's payee (payer-side splitting, rule 18,
     ///   or a lone owner, F244), the payment is its cut;
     /// - otherwise each split that names the payment (rule 20), signed by a
-    ///   split service the agreement names, field 14's or a backup's (F250),
+    ///   split service the publication names, field 3's or a backup's,
     ///   assigns it its payouts to `me`; a payout to another receiver that
     ///   receipts it in its own name, naming the split, is the next layer's
     ///   payment (F235), followed in turn.
@@ -11958,10 +10742,29 @@ impl<'a> AgreementsView<'a> {
             .held_acts()
             .filter(|h| self.is_agreements(h, types::SPLIT) && Split::decode(&h.inside.payload).is_ok_and(|s| acts.contains(&s.receipt)))
             .collect();
-        // Paid to me directly (payer-side splitting, or a lone owner): the
-        // payment is my cut. Not where a split service received it in my
-        // name, by a grant key: that money is the service's to split.
-        let by_service = acts.iter().filter_map(|a| self.v.get(a)).any(|h| self.key_grant(h).is_some());
+        // Paid to me directly (a lone seller its own split service, or a
+        // tip): the payment is my cut. Not where I received it as the split
+        // service of a publication with other parties (its owners, its
+        // partners): that money is mine to split (rule 20).
+        let fulfils = match Fin::decode(ph.inside.type_, &ph.inside.payload) {
+            Ok(Fin::Receipt(r)) => r.fulfils,
+            Ok(Fin::Claim(c)) => c.fulfils,
+            _ => *payment,
+        };
+        let first = match self.tag_of(&fulfils) {
+            Some((_, t)) => match t.priced {
+                crate::money::Priced::Publication(f) => Some(f),
+                crate::money::Priced::Bake(_) => None,
+            },
+            None => self.pub_act(&fulfils).map(|(_, a)| a.follows.map(|(f, _)| f).unwrap_or(fulfils)),
+        };
+        let by_service = match first {
+            Some(f) => {
+                let pe = self.publication(&self.pub_version_for(&f, payment))?;
+                pe.publication.services().contains(me) && (pe.publication.owners.is_some() || !pe.publication.partners.is_empty() || &pe.drafter != me)
+            }
+            None => false,
+        };
         if splits.is_empty() && &payee == me && !by_service {
             out.due = out.due.saturating_add(amount);
             let proof = self.proof_of(payment);
@@ -12110,10 +10913,10 @@ impl<'a> AgreementsView<'a> {
         for (ag, i) in &r.stakes {
             let lineage = self.lineage(ag)?;
             let named = &lineage[0].1;
-            let Some(stake) = named.stakes.iter().flatten().nth(*i as usize) else {
+            let Some(_stake) = named.stakes.iter().flatten().nth(*i as usize) else {
                 return fail(e, "a release names a stake its agreement does not define");
             };
-            if stake.object != Who::Id(r.work) {
+            if self.target_work(named).as_ref() != Some(&r.work) {
                 return fail(e, "a release names a stake in another work");
             }
             // The release rule, the holders and the time reference are those
@@ -12128,7 +10931,7 @@ impl<'a> AgreementsView<'a> {
                 return fail(e, "a release names a version of the claiming agreement that is neither in force nor one the version in force descends from (rule 17)");
             }
             let t = &in_force[0].1;
-            let Some((_, stake)) = t.stake_on(&Who::Id(r.work)) else {
+            let Some(stake) = t.stakes.iter().flatten().next().filter(|_| self.target_work(t).as_ref() == Some(&r.work)) else {
                 return fail(e, "the claiming agreement in force holds no stake in the work (rule 17)");
             };
             if r.timed.is_some() && t.time.is_none() && t.cmip(TIME_REFERENCE_TASK).is_none() {
@@ -12243,18 +11046,4 @@ fn hex_of(h: &Hash) -> String {
     h.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// The stake a payment for work `w` is paid under in terms `t` (F392,
-/// decided by the MOR lead under delegation, 23 October 2026; the
-/// glossary's "Stake"): the stake whose object is the work, or, in a
-/// collective's terms with none, the collective's own stake (object null),
-/// a share of all its income, a stake in every work the collective sells
-/// under its agreement.
-fn work_stake<'t>(t: &'t Terms, w: &Hash) -> Option<(usize, &'t Stake)> {
-    t.stake_on(&Who::Id(*w)).or_else(|| if t.is_collective() { t.own_stake() } else { None })
-}
 
-/// Whether work `w` is sold under the collective's own stake in terms `t`:
-/// a collective's terms with no stake in the work and a stake in itself.
-fn sold_under_own_stake(t: &Terms, w: &Hash) -> bool {
-    t.is_collective() && t.stake_on(&Who::Id(*w)).is_none() && t.own_stake().is_some()
-}

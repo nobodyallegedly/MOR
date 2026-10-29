@@ -718,3 +718,113 @@ pub fn stand_in_answers(mut v: mor_core::agreements::AgreementsView<'_>) -> mor_
     }
     v
 }
+
+/// A lone seller's publication (Agreements type 6, rule 11): `seller` sells
+/// `sold`, with its words, naming no ownership agreement and no partner, and
+/// is its own split service, under a test split cMIP. Held; its id.
+pub fn lone_publication(w: &mut World, seller: &mut Person, mirs: &mor_core::agreements::Mirs, sold: Vec<mor_core::agreements::Sold>, words: Option<&str>) -> Hash {
+    let p = mor_core::agreements::Publication {
+        sold: Some(sold),
+        owners: None,
+        partners: vec![],
+        service: seller.id,
+        plan: test_plan(),
+        words: words.map(String::from),
+        time: None,
+        until: None,
+        refund: None,
+        cmips: vec![],
+        designated: None,
+        backups: vec![],
+        failed: None,
+    };
+    let a = w.everyday_act(seller, mirs.agreements, mor_core::agreements::types::PUBLICATION, p.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A split plan with no share off the top, under a test split cMIP.
+pub fn test_plan() -> mor_core::agreements::SplitPlan {
+    mor_core::agreements::SplitPlan {
+        shares: vec![],
+        cmip: sha256(b"mor test data: a split cMIP"),
+        unfilled: mor_core::agreements::Unfilled::Stakes,
+        top: vec![],
+        service_bears_rail_fees: false,
+        max_rail_fee: None,
+        params: None,
+        metrics: vec![],
+        fees: vec![],
+    }
+}
+
+/// A first price tag (Money type 5) signed by `signer`, pricing the
+/// publication `first` (or, with `bake`, a bare bake) at `price` of `unit`,
+/// payable to `payee`. Held; its id.
+pub fn price_tag(w: &mut World, signer: &mut Person, money: Hash, priced: mor_core::money::Priced, price: u64, unit: Hash, payee: Hash) -> Hash {
+    let t = mor_core::money::Payload::PriceTag(mor_core::money::PriceTag {
+        priced,
+        version: 1,
+        previous: None,
+        price: Some(mor_core::money::Amount { unit, value: price }),
+        payee,
+    });
+    let a = w.everyday_act(signer, money, mor_core::money::types::PRICE_TAG, t.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A deal's terms between `parties` with `text`, every party signing and
+/// changing it, naming one payment cMIP, and nothing else: the base other
+/// terms are written from.
+pub fn deal_terms(parties: &[Hash], text: &str) -> mor_core::agreements::Terms {
+    use mor_core::agreements::{Field4, Rule, Terms};
+    Terms {
+        parties: parties.to_vec(),
+        text: text.into(),
+        cmips: vec![(6, sha256(b"a payment cMIP"))],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: None,
+        target: None,
+        forked_from: None,
+        release_rule: None,
+        settles: None,
+        fork_judge: None,
+        plan: None,
+        fees: None,
+        refund: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
+    }
+}
+
+/// A work's ownership agreement (rule 8): a deal among `holders`' identities
+/// targeting the claim `claim`, its one stake their shares.
+pub fn ownership_terms(claim: Hash, holders: &[(Hash, u64)], text: &str) -> mor_core::agreements::Terms {
+    use mor_core::agreements::{Stake, Target, Who};
+    let parties: Vec<Hash> = holders.iter().map(|(h, _)| *h).collect();
+    let mut t = deal_terms(&parties, text);
+    t.target = Some(Target::Claim(claim));
+    t.stakes = Some(vec![Stake { object: Who::Id(claim), holders: holders.iter().map(|(h, n)| (Who::Id(*h), *n)).collect() }]);
+    t
+}
+
+/// A claim (Agreements type 3) of `work` by `p` alone, public. Held; its id.
+pub fn claim_alone(w: &mut World, p: &mut Person, mirs: &mor_core::agreements::Mirs, work: Hash) -> Hash {
+    let c = mor_core::agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
+    let a = w.everyday_act(p, mirs.agreements, mor_core::agreements::types::CLAIM, c.to_map(), None, None);
+    w.add(&a)
+}

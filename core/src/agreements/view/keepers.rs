@@ -249,15 +249,17 @@ impl<'a> AgreementsView<'a> {
                 }
                 _ => {}
             }
-        } else if self.is_agreements(x, types::STANDING_OFFER) {
-            match crate::agreements::Offer::decode(&x.inside) {
-                Ok(oa) => match oa.offer.under {
-                    Some(u) => follow(&u, out),
-                    // A lone seller's offer is itself the agreement its
-                    // payments belong to.
-                    None => push(*act, out),
-                },
-                Err(_) => {}
+        } else if let Some((_, pa)) = self.pub_act(act) {
+            // A publication belongs to the ownership agreement it names; a
+            // lone seller's to itself.
+            match pa.publication.owners {
+                Some(o) => follow(&o, out),
+                None => push(*act, out),
+            }
+        } else if let Some((_, t)) = self.tag_of(act) {
+            // A price tag belongs through its publication.
+            if let crate::money::Priced::Publication(p) = t.priced {
+                follow(&p, out);
             }
         }
     }

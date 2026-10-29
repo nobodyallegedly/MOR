@@ -113,3 +113,30 @@ fn a_later_version_by_the_same_signer_continues_it_and_no_price_withdraws_it() {
     assert_eq!(w.v.status(&wrong_chain), Status::Invalid, "its chain is the first version");
 }
 
+
+/// Money, "Only identities have payee pointers": a Money-only wallet reads
+/// a bare bake's signer as its uploader and tips that identity; a bake that
+/// names another chain in `objects` (a member's bake naming the collective,
+/// Agreements rule 58) has an uploader only Agreements can tell, so a
+/// Money-only wallet refuses to tip it, and its tag is unknown here.
+#[test]
+fn a_money_only_wallet_refuses_to_tip_a_bake_naming_a_collective() {
+    use mor_core::chain::Uploader;
+    let mut w = World::new();
+    let mut up = w.operator("a member who uploads");
+    let up_id = up.id;
+    let band = w.operator("the band, a chain the member names");
+    let own = w.everyday_act(&mut up, envelopes_spec(), mor_core::envelopes::types::BAKE, publication(vec![]), None, None);
+    let own = w.add(&own);
+    assert_eq!(w.v.bake_uploader(&own), Some(Uploader::Signer(up_id)));
+    let named = w.everyday_act(&mut up, envelopes_spec(), mor_core::envelopes::types::BAKE, publication(vec![]), Some(vec![Object { chain: band.id, predecessor: band.id }]), None);
+    let named = w.add(&named);
+    assert!(matches!(w.v.bake_uploader(&named), Some(Uploader::Unknown(_))), "whose bake it is, Agreements judges");
+    let t = w.everyday_act(&mut up, money_spec(), money::types::PRICE_TAG, tag(Priced::Bake(named), 1, None, Some(100), up_id), None, None);
+    let t = w.add(&t);
+    assert!(matches!(w.v.price_tag(&t), Some((_, TagCount::Unknown(_)))), "its tag is unknown to a Money-only verifier");
+    // A later version of the member's own bake names only its own line.
+    let next = w.everyday_act(&mut up, envelopes_spec(), mor_core::envelopes::types::BAKE, publication(vec![]), Some(vec![Object { chain: own, predecessor: own }]), None);
+    let next = w.add(&next);
+    assert_eq!(w.v.bake_uploader(&next), Some(Uploader::Signer(up_id)));
+}

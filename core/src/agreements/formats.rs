@@ -27,7 +27,9 @@ pub mod types {
     pub const CLAIM: u64 = 3;
     /// A public domain release (rule 17, F121 shape D).
     pub const RELEASE: u64 = 5;
-    pub const STANDING_OFFER: u64 = 6;
+    /// The publication: the offer, with its partners, split service and
+    /// split plan (rules 11 to 17).
+    pub const PUBLICATION: u64 = 6;
     /// A split (rules 20 to 24, F121 Q9).
     pub const SPLIT: u64 = 8;
     pub const GRANT: u64 = 9;
@@ -97,7 +99,6 @@ pub const TIME_REFERENCE_TASK: u64 = 10;
 /// Terms field 29: the split service's backups, in order, and what counts
 /// as a failed attempt, fields of the split cMIP the plan names (F249,
 /// F250). Judicial, as field 14 (rule 44a).
-pub const BACKUPS_FIELD: u64 = 29;
 
 /// Stakes and succession shares are written in millionths.
 pub const MILLION: u64 = 1_000_000;
@@ -942,109 +943,6 @@ pub struct ChainLink {
     pub judge: Judge,
     pub next: Vec<(Hash, u64)>,
 }
-
-/// The grants by which the owners name one split service: in a
-/// collective, its one grant; in a deal, one grant per payee, each naming
-/// "this agreement" by null (F129, H4; H6's grants per payee, F250).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ServiceGrants {
-    /// `hash`: a collective's grant.
-    One(Hash),
-    /// `[+ hash]`: a deal's grants, one per payee, as many as field 14
-    /// lists.
-    PerPayee(Vec<Hash>),
-}
-
-impl From<Hash> for ServiceGrants {
-    fn from(h: Hash) -> Self {
-        ServiceGrants::One(h)
-    }
-}
-
-impl ServiceGrants {
-    pub fn to_value(&self) -> Value {
-        match self {
-            ServiceGrants::One(h) => b(h),
-            ServiceGrants::PerPayee(g) => hashes_value(g),
-        }
-    }
-
-    /// Every grant it names.
-    pub fn hashes(&self) -> Vec<Hash> {
-        match self {
-            ServiceGrants::One(h) => vec![*h],
-            ServiceGrants::PerPayee(g) => g.clone(),
-        }
-    }
-}
-
-/// Terms field 29 (F249, F250, decided by Nobody, allegedly, 11 October
-/// 2026: "That agreement names a cMIP and within the cMIP fields it specify
-/// the split service, its backup and its failure condition to move from
-/// primary to back up service"): the split service's backups, after field
-/// 14's, in order, and what counts as a failed attempt, as the split cMIP
-/// the plan names (field 8, key 1) defines it. Signed with the terms.
-///
-/// ```cddl
-/// backups = {
-///   0 => [+ hash / [+ hash]],  ; each backup service, in order: a collective's grant, or a deal's grants, one per payee
-///   ? 1 => any                 ; what counts as a failed attempt: the split cMIP's parameters for it
-/// }
-/// ```
-///
-/// Attempts run per payment, never by stages (F249): field 14's service
-/// first, the next only where the attempt before it failed as the split
-/// cMIP defines failure; the next payment starts again from field 14's.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Backups {
-    /// 0: each backup service, in order.
-    pub services: Vec<ServiceGrants>,
-    /// 1: the split cMIP's parameters for a failed attempt; the core never
-    /// reads them.
-    pub failure: Option<Value>,
-}
-
-impl Backups {
-    pub fn to_value(&self) -> Value {
-        let mut m = vec![(Value::Uint(0), Value::Array(self.services.iter().map(ServiceGrants::to_value).collect()))];
-        if let Some(f) = &self.failure {
-            m.push((Value::Uint(1), f.clone()));
-        }
-        Value::Map(m)
-    }
-
-    fn decode(v: &Value) -> R<Backups> {
-        let Value::Map(m) = v else {
-            return Err(AgreementsError::Shape("terms field 29: the split service's backups"));
-        };
-        let mut services = None;
-        let mut failure = None;
-        for (k, x) in m {
-            match uint(k, "backups key")? {
-                0 => {
-                    services = Some(
-                        nonempty(x, "backups: the services")?
-                            .iter()
-                            .map(|e| match e {
-                                Value::Array(_) => Ok(ServiceGrants::PerPayee(hashes(e, "backups: a service's grants, one per payee")?)),
-                                e => Ok(ServiceGrants::One(hash(e, "backups: a service's grant")?)),
-                            })
-                            .collect::<R<Vec<_>>>()?,
-                    )
-                }
-                1 => failure = Some(x.clone()),
-                _ => return Err(AgreementsError::Shape("backups: unknown key")),
-            }
-        }
-        Ok(Backups { services: services.ok_or(AgreementsError::Shape("backups: the services"))?, failure })
-    }
-
-    /// Every grant it names, in order.
-    pub fn grants(&self) -> Vec<Hash> {
-        self.services.iter().flat_map(ServiceGrants::hashes).collect()
-    }
-}
-
 impl ChainLink {
     pub fn to_value(&self) -> Value {
         Value::Array(vec![
@@ -1171,6 +1069,42 @@ impl Who {
     }
 }
 
+/// An ownership agreement's target (terms field 33): `[0, claim]`, a work's
+/// claim (Agreements type 3) by its act id; or `[1, null]`, the collective
+/// these terms found, the identity whose genesis declares them or the terms
+/// they clone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Target {
+    Claim(Hash),
+    Collective,
+}
+
+impl Target {
+    pub fn to_value(&self) -> Value {
+        match self {
+            Target::Claim(c) => Value::Array(vec![Value::Uint(0), b(c)]),
+            Target::Collective => Value::Array(vec![Value::Uint(1), Value::Null]),
+        }
+    }
+
+    fn decode(v: &Value) -> R<Target> {
+        let a = tuple(v, 2, "target: [kind, hash]")?;
+        match (uint(&a[0], "target: its kind")?, &a[1]) {
+            (0, x) => Ok(Target::Claim(hash(x, "target: a claim")?)),
+            (1, Value::Null) => Ok(Target::Collective),
+            _ => Err(AgreementsError::Shape("target: [0, claim] or [1, null]")),
+        }
+    }
+
+    /// The stake's object, as the view reads it.
+    pub fn object(&self) -> Who {
+        match self {
+            Target::Claim(c) => Who::Id(*c),
+            Target::Collective => Who::This,
+        }
+    }
+}
+
 /// One stake of terms field 7: `[ object, [+ [ holder, share ]] ]`, its
 /// shares in millionths summing to 1,000,000. An object or holder written
 /// null is this collective (S1); a stake whose object is this collective is
@@ -1233,12 +1167,6 @@ pub struct Terms {
     pub grammar: Option<KeyGrammar>,
     /// 13: arbitrators or verifiers.
     pub arbitrators: Option<Vec<Hash>>,
-    /// 14, in a collective: the split service's grant, one hash (its one
-    /// payee is the collective).
-    pub split_grant: Option<Hash>,
-    /// 14, in a deal: the payees' grants to the split service, one per
-    /// payee, each naming "this agreement" by null (F129, H4).
-    pub payee_grants: Option<Vec<Hash>>,
     /// 15: extensions.
     pub extensions: Option<Vec<Hash>>,
     /// 16: succession plans of parties.
@@ -1254,8 +1182,12 @@ pub struct Terms {
     /// 22: the departed members entry: who left, and nothing else (F121,
     /// F124 N5); their stake is in field 7.
     pub departed: Option<Vec<Hash>>,
-    /// 7: stakes, in works, publications, or the collective itself (Q8).
+    /// 7: the one stake, on the target (field 33): its holders and their
+    /// shares, read as one `Stake` whose object is the target (a claim, or
+    /// this collective, `Who::This`).
     pub stakes: Option<Vec<Stake>>,
+    /// 33: the target: present, these terms are an ownership agreement.
+    pub target: Option<Target>,
     /// 23: forked from: the original collective, a back-link only, deciding
     /// nothing (F121, F124 N4).
     pub forked_from: Option<Hash>,
@@ -1272,17 +1204,18 @@ pub struct Terms {
     /// field 13 (rule 45b, DQ8; QF2, F190, decided 9 October 2026); absent,
     /// no judge settles them, and the deal waits on its reference.
     pub fork_judge: Option<Hash>,
-    /// 8: the split plan (step 12b; `open_formats::SplitPlan`).
+    /// 28: withdrawn, never reused: fees are a publication's plan's (key 9).
+    /// Kept for code that reads it until it moves; always `None` in terms
+    /// decoded, and terms carrying it are refused.
+    pub fees: Option<Vec<super::open_formats::Fee>>,
+    /// 8: withdrawn, never reused: the split plan is a publication's. Kept
+    /// so that terms carrying it can still be written, and refused; always
+    /// `None` in terms decoded.
     pub plan: Option<super::open_formats::SplitPlan>,
     /// 17: refund terms (step 12b; F219): a fixed point on the time
     /// reference past which a refund owed on a payment under these terms
     /// is ended.
     pub refund: Option<super::open_formats::RefundTerms>,
-    /// 28: fees, their own field (F213), each with its scope (F214).
-    pub fees: Option<Vec<super::open_formats::Fee>>,
-    /// 29: the split service's backups, in order, and what counts as a
-    /// failed attempt: the split cMIP's fields (F249, F250).
-    pub backups: Option<Backups>,
     /// 30: the holders' rules, per stake, ascending by stake, each with its
     /// standing waiver of pre-emption where it carries one (rules 94, 96;
     /// new in draft 14, F307, F328); a collective's only (F314).
@@ -1418,12 +1351,6 @@ impl Terms {
         if let Some(a) = &self.arbitrators {
             m.push((Value::Uint(13), hashes_value(a)));
         }
-        if let Some(g) = &self.split_grant {
-            m.push((Value::Uint(14), b(g)));
-        }
-        if let Some(g) = &self.payee_grants {
-            m.push((Value::Uint(14), hashes_value(g)));
-        }
         if let Some(e) = &self.extensions {
             m.push((Value::Uint(15), hashes_value(e)));
         }
@@ -1456,7 +1383,12 @@ impl Terms {
             m.push((Value::Uint(22), hashes_value(d)));
         }
         if let Some(st) = &self.stakes {
-            m.push((Value::Uint(7), Value::Array(st.iter().map(Stake::to_value).collect())));
+            // The one stake, as its holders and shares: `[+ [holder, share]]`.
+            let holders: Vec<Value> = st.iter().flat_map(|s| s.holders.iter()).map(|(h, n)| Value::Array(vec![h.to_value(), Value::Uint(*n)])).collect();
+            m.push((Value::Uint(7), Value::Array(holders)));
+        }
+        if let Some(t) = &self.target {
+            m.push((Value::Uint(33), t.to_value()));
         }
         if let Some(f) = &self.forked_from {
             m.push((Value::Uint(23), b(f)));
@@ -1475,12 +1407,6 @@ impl Terms {
         }
         if let Some(x) = &self.refund {
             m.push((Value::Uint(17), x.to_value()));
-        }
-        if let Some(x) = &self.fees {
-            m.push((Value::Uint(super::open_formats::FEES_FIELD), super::open_formats::Fee::field_value(x)));
-        }
-        if let Some(x) = &self.backups {
-            m.push((Value::Uint(BACKUPS_FIELD), x.to_value()));
         }
         if let Some(x) = &self.holders_rules {
             m.push((
@@ -1553,7 +1479,16 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || (26..=32).contains(n) => f.push((*n, v)),
+                // 8, 14, 28 and 29 (the split plan, the split service, the
+                // fees, the backups) are withdrawn, never reused: they are a
+                // publication's.
+                Value::Uint(n @ (8 | 14 | 28 | 29)) => {
+                    let _ = n;
+                    return Err(AgreementsError::Check(
+                        "terms fields 8, 14, 28 and 29 are withdrawn: the split plan, the split service, the fees and the backups are a publication's",
+                    ));
+                }
+                Value::Uint(n) if *n <= 24 || (26..=33).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1596,15 +1531,6 @@ impl Terms {
             arbitrators: get(13)
                 .map(|v| hashes(v, "terms arbitrators"))
                 .transpose()?,
-            split_grant: match get(14) {
-                Some(v @ Value::Bytes(_)) => Some(hash(v, "terms split grant")?),
-                Some(Value::Array(_)) | None => None,
-                Some(_) => return Err(AgreementsError::Shape("terms field 14: a grant, or a deal's list of grants (F129)")),
-            },
-            payee_grants: match get(14) {
-                Some(v @ Value::Array(_)) => Some(hashes(v, "terms payee grants")?),
-                _ => None,
-            },
             extensions: get(15).map(|v| hashes(v, "terms extensions")).transpose()?,
             succession: get(16)
                 .map(|v| {
@@ -1638,34 +1564,28 @@ impl Terms {
                 .map(|v| nonempty(v, "chain of judgment")?.iter().map(chain_link).collect())
                 .transpose()?,
             departed: get(22).map(|v| hashes(v, "departed members")).transpose()?,
-            stakes: get(7)
-                .map(|v| {
-                    nonempty(v, "stakes")?
+            stakes: match (get(7), get(33).map(Target::decode).transpose()?) {
+                (None, _) => None,
+                (Some(_), None) => return Err(AgreementsError::Check("terms field 7, the stake, appears only with a target (field 33)")),
+                (Some(v), Some(t)) => Some(vec![Stake {
+                    object: t.object(),
+                    holders: nonempty(v, "the stake's holders")?
                         .iter()
-                        .map(|e| {
-                            let a = tuple(e, 2, "stake")?;
-                            Ok(Stake {
-                                object: who(&a[0], "stake object")?,
-                                holders: nonempty(&a[1], "stake holders")?
-                                    .iter()
-                                    .map(|x| {
-                                        let y = tuple(x, 2, "stake holder")?;
-                                        Ok((who(&y[0], "stake holder")?, uint(&y[1], "stake share")?))
-                                    })
-                                    .collect::<R<Vec<_>>>()?,
-                            })
+                        .map(|x| {
+                            let y = tuple(x, 2, "a holder and its share")?;
+                            Ok((Who::Id(hash(&y[0], "a holder")?), uint(&y[1], "a share")?))
                         })
-                        .collect()
-                })
-                .transpose()?,
+                        .collect::<R<Vec<_>>>()?,
+                }]),
+            },
+            target: get(33).map(Target::decode).transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
             release_rule: get(24).map(release_rule).transpose()?,
             settles: get(26).map(|v| hashes(v, "settles")).transpose()?,
             fork_judge: get(27).map(|v| hash(v, "the judge of forks")).transpose()?,
-            plan: get(8).map(super::open_formats::SplitPlan::decode).transpose()?,
+            plan: None,
+            fees: None,
             refund: get(17).map(super::open_formats::RefundTerms::decode).transpose()?,
-            fees: get(super::open_formats::FEES_FIELD).map(super::open_formats::Fee::decode_field).transpose()?,
-            backups: get(BACKUPS_FIELD).map(Backups::decode).transpose()?,
             holders_rules: get(30)
                 .map(|v| {
                     nonempty(v, "holders' rules")?
@@ -1704,13 +1624,54 @@ impl Terms {
         if self.refund.is_some() && self.time.is_none() && self.cmip(TIME_REFERENCE_TASK).is_none() {
             return Err(AgreementsError::Check("refund terms are a point on the agreement's time reference: terms carrying field 17 name one (rule 33; F219)"));
         }
-        if let Some(p) = &self.plan {
-            p.check_overhead()?;
-            let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
-            for s in &p.shares {
-                if let super::open_formats::ShareRule::Stake { stake, .. } = s {
-                    if *stake >= n {
-                        return Err(AgreementsError::Check("split plan: a stake share names a stake of field 7 (rule 26)"));
+        if self.plan.is_some() || self.fees.is_some() {
+            return Err(AgreementsError::Check("terms fields 8 and 28 are withdrawn: the split plan and the fees are a publication's"));
+        }
+        Ok(())
+    }
+
+    /// The target's checks ("The target"): a work's ownership agreement
+    /// (`[0, claim]`) refuses the collective's fields; a collective's
+    /// (`[1, null]`) requires its key grammar; terms carrying a key grammar
+    /// target the collective; the stake (field 7) appears exactly with a
+    /// target; an ownership agreement never names the split task.
+    fn check_target(&self) -> R<()> {
+        match self.target {
+            None => {
+                if self.stakes.is_some() {
+                    return Err(AgreementsError::Check("terms field 7, the stake, appears only with a target (field 33)"));
+                }
+                if self.grammar.is_some() {
+                    return Err(AgreementsError::Check("terms carrying a key grammar (field 12) target the collective they found, [1, null] (field 33)"));
+                }
+            }
+            Some(t) => {
+                if self.stakes.is_none() {
+                    return Err(AgreementsError::Check("an ownership agreement (field 33) carries its stake (field 7)"));
+                }
+                if self.cmip(SPLIT_TASK).is_some() {
+                    return Err(AgreementsError::Check("an ownership agreement never names the split task (8): the split is a publication's"));
+                }
+                match t {
+                    Target::Claim(_) => {
+                        if self.grammar.is_some()
+                            || self.constitutional.is_some()
+                            || self.areas.is_some()
+                            || self.area_words.is_some()
+                            || self.departed.is_some()
+                            || self.forked_from.is_some()
+                            || self.holders_rules.is_some()
+                            || self.issues_under.is_some()
+                        {
+                            return Err(AgreementsError::Check(
+                                "a work's ownership agreement ([0, claim]) carries none of a collective's fields (12, 18, 19, 20, 22, 23, 30, 32, 34)",
+                            ));
+                        }
+                    }
+                    Target::Collective => {
+                        if self.grammar.is_none() {
+                            return Err(AgreementsError::Check("a collective's ownership agreement ([1, null]) carries its key grammar (field 12)"));
+                        }
                     }
                 }
             }
@@ -1735,6 +1696,7 @@ impl Terms {
     /// the view's ([`super::AgreementsView::agreement`]).
     pub fn check(&self, mirs: &Mirs) -> R<()> {
         self.check_open_formats()?;
+        self.check_target()?;
         let parties = &self.parties;
         if !distinct(parties) {
             return Err(AgreementsError::Check("a party is listed twice"));
@@ -1799,28 +1761,12 @@ impl Terms {
                     "tiers and areas belong to collectives: a deal carries no field 18, 19 or 20",
                 ));
             }
-            // F129, H4: a deal lists its payees' grants, one per payee.
-            if self.split_grant.is_some() {
-                return Err(AgreementsError::Check(
-                    "a deal lists its payees' grants to the split service in field 14, one per payee (F129, H4)",
-                ));
-            }
-            if let Some(g) = &self.payee_grants {
-                if g.is_empty() || !distinct(g) {
-                    return Err(AgreementsError::Check("field 14 lists each payee's grant once (F129, H4)"));
-                }
-            }
             // B19: in a deal, the absence authority is one identity.
             if matches!(&self.abandonment, Some(Abandonment { authority: Authority::Others(_), .. })) {
                 return Err(AgreementsError::Check(
                     "in a deal, the absence authority is one identity, never a threshold of the other parties (B19)",
                 ));
             }
-        }
-        if self.is_collective() && self.payee_grants.is_some() {
-            return Err(AgreementsError::Check(
-                "a collective names its split service by one grant in field 14; a list of payees' grants is a deal's (F129, H4)",
-            ));
         }
         if let Some(k) = &self.keepers {
             if !distinct(&k.operators) || !k.rule.fits(&k.operators) {
@@ -1838,7 +1784,6 @@ impl Terms {
         }
         self.check_judges()?;
         self.check_chain()?;
-        self.check_backups()?;
         self.check_departed()?;
         self.check_stakes()?;
         if let Some(r) = &self.release_rule {
@@ -1897,6 +1842,9 @@ impl Terms {
                 return Err(AgreementsError::Check(
                     "the abandonment clause lists unknown or repeated outcomes",
                 ));
+            }
+            if a.outcomes.contains(&outcomes::STAKE_TRANSFERRED) {
+                return Err(AgreementsError::Check("the abandonment clause lists outcome 2, struck: succession passes a stake (rule 89)"));
             }
         }
         for s in self.succession.iter().flatten() {
@@ -2096,63 +2044,6 @@ impl Terms {
         Ok(())
     }
 
-    /// The split service's backups (field 29, F249, F250): only where field
-    /// 14 names a split service and the terms name the split cMIP whose
-    /// fields they are (field 2's task 8, or the plan's key 1, the same
-    /// where both); in a collective each backup one grant, in a deal
-    /// one grant per payee, as many as field 14 lists (H6's grants per
-    /// payee); every grant of field 14 and field 29 listed once. Who signed
-    /// each grant, and that each names one service of its own, is the
-    /// view's ([`crate::agreements::AgreementsView`]): a deal whose grants
-    /// break it carries none of them (F129 reading 3).
-    fn check_backups(&self) -> R<()> {
-        let Some(bk) = &self.backups else { return Ok(()) };
-        if self.split_grant.is_none() && self.payee_grants.is_none() {
-            return Err(AgreementsError::Check(
-                "backups follow a split service: terms field 29 needs field 14 (F249, F250)",
-            ));
-        }
-        // The split cMIP whose fields they are: field 2's for task 8, or the
-        // plan's key 1; where both name one, the same (reading, the build's).
-        match (self.cmip(SPLIT_TASK), self.plan.as_ref().map(|p| &p.cmip)) {
-            (None, None) => {
-                return Err(AgreementsError::Check(
-                    "backups are fields of the split cMIP the agreement names: terms field 29 needs a split cMIP, in field 2 (task 8) or the split plan (F250)",
-                ))
-            }
-            (Some(a), Some(b)) if a != b => {
-                return Err(AgreementsError::Check(
-                    "field 2 and the split plan name two split cMIPs: field 29's backups belong to one (F250)",
-                ))
-            }
-            _ => {}
-        }
-        let mut all: Vec<Hash> = self.split_grant.iter().copied().chain(self.payee_grants.iter().flatten().copied()).collect();
-        for e in &bk.services {
-            match (e, &self.payee_grants) {
-                (ServiceGrants::One(_), None) => {}
-                (ServiceGrants::PerPayee(g), Some(list)) if g.len() == list.len() => {}
-                (_, None) => {
-                    return Err(AgreementsError::Check(
-                        "in a collective, each backup split service is one grant of the collective (F250)",
-                    ))
-                }
-                (_, Some(_)) => {
-                    return Err(AgreementsError::Check(
-                        "in a deal, each backup split service is a group of grants, one per payee, as many as field 14 lists (H6, F250)",
-                    ))
-                }
-            }
-            all.extend(e.hashes());
-        }
-        if !distinct(&all) {
-            return Err(AgreementsError::Check(
-                "each grant to the split service and to each backup is listed once (H6, F250)",
-            ));
-        }
-        Ok(())
-    }
-
     /// The departed members entry (field 22, F121, F124 N5): in a
     /// collective only; each holder once, none of them a party, each a
     /// holder of the stake in the collective itself (field 7), which is what
@@ -2189,11 +2080,6 @@ impl Terms {
     /// change rule counts among a stake's holders, an abandonment clause
     /// able to move a vanished holder's stake (rule 61; F328, Q11).
     fn check_draft_14(&self) -> R<()> {
-        // Rule 22 (F312): the collective's own part, a named receiver
-        // written null, in a collective's terms only.
-        if !self.is_collective() && self.plan.as_ref().is_some_and(|p| p.shares.iter().any(|s| matches!(s, super::open_formats::ShareRule::Own { .. }))) {
-            return Err(AgreementsError::Check("split plan: a receiver written null is the collective itself, in a collective's terms only (rule 22; new in draft 14, F312)"));
-        }
         let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
         let stakes_ok = |r: &Rule| r.stakes().iter().all(|s| *s < n);
         let nested = |r: &Rule| matches!(r, Rule::AllOf(rs) if rs.iter().any(|x| matches!(x, Rule::AllOf(_))));
@@ -2212,7 +2098,7 @@ impl Terms {
             if let Some(stake) = r.holders_stake() {
                 // F328, Q11: "better do it upstream".
                 let a = self.abandonment.as_ref();
-                let moves = a.is_some_and(|a| a.outcomes.contains(&outcomes::STAKE_REDISTRIBUTED) || a.outcomes.contains(&outcomes::STAKE_TRANSFERRED));
+                let moves = a.is_some_and(|a| a.outcomes.contains(&outcomes::STAKE_REDISTRIBUTED));
                 let holders: Vec<Hash> = self
                     .stakes
                     .iter()
@@ -2231,7 +2117,7 @@ impl Terms {
                 });
                 if !moves || !declares_all {
                     return Err(AgreementsError::Check(
-                        "a constitution counting membership among a stake's holders needs an abandonment clause allowing outcome 1 or 2, whose authority can declare each holder who is no party absent (rule 61; new in draft 14, F328)",
+                        "a constitution counting membership among a stake's holders needs an abandonment clause allowing outcome 1, whose authority can declare each holder who is no party absent (rule 61)",
                     ));
                 }
             }
@@ -2281,9 +2167,8 @@ impl Terms {
 
     fn check_stakes(&self) -> R<()> {
         let Some(st) = &self.stakes else { return Ok(()) };
-        let objects: Vec<Who> = st.iter().map(|s| s.object).collect();
-        if objects.iter().enumerate().any(|(i, o)| objects[..i].contains(o)) {
-            return Err(AgreementsError::Check("two stakes on one object"));
+        if st.len() != 1 {
+            return Err(AgreementsError::Check("an ownership agreement carries one stake, on its target"));
         }
         // Shares are summed wide: summed in 64 bits, shares near the top
         // could wrap round to exactly 1,000,000 and pass (found by the Agreements
@@ -2371,7 +2256,7 @@ impl Terms {
             for f in a.fields.iter().flatten() {
                 let ok = match f {
                     // 28, fees, placed on their own (F213).
-                    FieldRef::Field(n) => [7, 8, 17, super::open_formats::FEES_FIELD].contains(n),
+                    FieldRef::Field(n) => [7, 17].contains(n),
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
@@ -3065,8 +2950,11 @@ impl AbsenceDeclaration {
                 Value::Uint(2) => party = Some(hash(v, "declaration: the party")?),
                 Value::Uint(3) => {
                     outs = Some(
-                        nonempty(v, "declaration: outcomes")?
-                            .iter()
+                        match v {
+                            Value::Array(a) => a.as_slice(),
+                            _ => return Err(AgreementsError::Shape("declaration: outcomes")),
+                        }
+                        .iter()
                             .map(|x| uint(x, "declaration: outcome"))
                             .collect::<R<Vec<u64>>>()?,
                     )
@@ -3086,6 +2974,9 @@ impl AbsenceDeclaration {
             return Err(AgreementsError::Check(
                 "a declaration's outcomes are known ones, ascending, none twice",
             ));
+        }
+        if d.outcomes.contains(&outcomes::STAKE_TRANSFERRED) {
+            return Err(AgreementsError::Check("a declaration states outcome 2, struck: succession passes a stake (rule 89)"));
         }
         check_objects_self(inside, &d.agreement, "declaration: objects must name the agreement")?;
         Ok(d)
@@ -4004,8 +3895,12 @@ pub struct Payout {
     pub receiver: Hash,
     /// 1: how much, in the smallest part of the receipt's unit.
     pub amount: u64,
-    /// 2: the stake it pays, by its index in the agreement's terms.
+    /// Whether it pays the owners' line (key 2 present): `Some(0)`, the one
+    /// stake. Set on decoding; key 2 itself is `owners`.
     pub stake: Option<u64>,
+    /// 2: on the owners' line, the ownership agreement whose stake it pays,
+    /// by its founding version.
+    pub owners: Option<Hash>,
     /// 3: the role it fills.
     pub role: Option<String>,
     /// 4: the evidence for that role.
@@ -4017,6 +3912,8 @@ pub struct Payout {
     /// 7: the metric share it pays, by its index in the plan's field 0
     /// (rule 28; step 12b).
     pub metric: Option<u64>,
+    /// 8: the partner it pays, by its index in the publication's field 2.
+    pub partner: Option<u64>,
 }
 
 impl Payout {
@@ -4025,8 +3922,8 @@ impl Payout {
             (Value::Uint(0), b(&self.receiver)),
             (Value::Uint(1), Value::Uint(self.amount)),
         ];
-        if let Some(x) = self.stake {
-            m.push((Value::Uint(2), Value::Uint(x)));
+        if let Some(x) = &self.owners {
+            m.push((Value::Uint(2), b(x)));
         }
         if let Some(x) = &self.role {
             m.push((Value::Uint(3), Value::Text(x.clone())));
@@ -4043,6 +3940,9 @@ impl Payout {
         if let Some(x) = self.metric {
             m.push((Value::Uint(7), Value::Uint(x)));
         }
+        if let Some(x) = self.partner {
+            m.push((Value::Uint(8), Value::Uint(x)));
+        }
         Value::Map(m)
     }
 }
@@ -4058,8 +3958,8 @@ pub struct Split {
     pub payouts: Vec<Payout>,
     /// 2: the split cMIP used.
     pub cmip: Hash,
-    /// 3: the owners' agreement whose stakes it pays.
-    pub agreement: Hash,
+    /// 3: the publication whose split plan it follows, by its founding version.
+    pub publication: Hash,
     /// 4: the tally (rule 15a; F165, F171, F178 item 15): for each stake it
     /// pays, the running count of leftover units each holder has received
     /// from the service's splits for that stake, this split's included.
@@ -4140,7 +4040,7 @@ impl Split {
             (Value::Uint(0), b(&self.receipt)),
             (Value::Uint(1), Value::Array(self.payouts.iter().map(Payout::to_value).collect())),
             (Value::Uint(2), b(&self.cmip)),
-            (Value::Uint(3), b(&self.agreement)),
+            (Value::Uint(3), b(&self.publication)),
         ];
         if let Some(t) = &self.tally {
             let v = t
@@ -4177,12 +4077,13 @@ impl Split {
         let payouts = nonempty(req(1, "split: payouts")?, "split: payouts")?
             .iter()
             .map(|v| {
-                let fl = map_fields(v, 8, "split: a payout")?;
+                let fl = map_fields(v, 9, "split: a payout")?;
                 let pf = |k| field(&fl, k);
                 Ok(Payout {
                     receiver: hash(pf(0).ok_or(AgreementsError::Shape("payout: receiver"))?, "payout: receiver")?,
                     amount: uint(pf(1).ok_or(AgreementsError::Shape("payout: amount"))?, "payout: amount")?,
-                    stake: pf(2).map(|v| uint(v, "payout: stake")).transpose()?,
+                    stake: pf(2).map(|_| 0),
+                    owners: pf(2).map(|v| hash(v, "payout: the ownership agreement")).transpose()?,
                     role: pf(3)
                         .map(|v| match v {
                             Value::Text(t) => Ok(t.clone()),
@@ -4193,6 +4094,7 @@ impl Split {
                     fee_module: pf(5).map(|v| hash(v, "payout: fee module")).transpose()?,
                     rail_fee: pf(6).map(|v| uint(v, "payout: rail fee")).transpose()?,
                     metric: pf(7).map(|v| uint(v, "payout: metric share")).transpose()?,
+                    partner: pf(8).map(|v| uint(v, "payout: the partner")).transpose()?,
                 })
             })
             .collect::<R<Vec<_>>>()?;
@@ -4206,12 +4108,15 @@ impl Split {
             if x.metric.is_some() && (x.stake.is_some() || x.role.is_some() || x.fee_module.is_some()) {
                 return Err(AgreementsError::Check("a payout pays a fee, a stake, a role or a metric share, one at a time"));
             }
+            if x.partner.is_some() && (x.stake.is_some() || x.role.is_some() || x.fee_module.is_some() || x.metric.is_some()) {
+                return Err(AgreementsError::Check("a payout pays a partner, the owners' line, a role, a fee or a metric share, one at a time"));
+            }
         }
         Ok(Split {
             receipt: hash(req(0, "split: the receipt")?, "split: the receipt")?,
             payouts,
             cmip: hash(req(2, "split: the split cMIP")?, "split: the split cMIP")?,
-            agreement: hash(req(3, "split: the agreement")?, "split: the agreement")?,
+            publication: hash(req(3, "split: the publication")?, "split: the publication")?,
             tally: get(4).map(decode_tally).transpose()?,
             number: match get(5).map(|v| uint(v, "split: its number")).transpose()? {
                 Some(0) => return Err(AgreementsError::Shape("split: its number counts from 1 (DQ6)")),
@@ -4549,12 +4454,6 @@ fn key_grammar(v: &Value) -> R<KeyGrammar> {
     })
 }
 
-pub(crate) fn who(v: &Value, w: &'static str) -> R<Who> {
-    match v {
-        Value::Null => Ok(Who::This),
-        _ => Ok(Who::Id(hash(v, w)?)),
-    }
-}
 
 fn pairs(v: &Value, w: &'static str) -> R<Vec<(Hash, u64)>> {
     nonempty(v, w)?

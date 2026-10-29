@@ -37,7 +37,7 @@ impl Sold {
     /// Its class (draft 11, rule 11, F261).
     pub fn class(&self) -> OfferClass {
         match self {
-            Sold::Publication(p) => OfferClass::Publication(*p),
+            Sold::Bake(p) => OfferClass::Publication(*p),
             Sold::Access(c, params) => OfferClass::Proven { cmip: *c, params: params.clone() },
             Sold::Vow(v) => OfferClass::Promised(*v),
         }
