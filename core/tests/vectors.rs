@@ -469,6 +469,21 @@ fn verdict_vectors() {
                     mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
                     mor_core::chain::SpecClaim::Unknown => "unknown",
                 }),
+                "transfer" => with_facts(&v, &mirs, facts)
+                    .transfer(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| json!({ "effective": e.effective, "wrong_receipts": e.wrong_receipts.iter().map(hex::encode).collect::<Vec<_>>() })),
+                "split" => with_facts(&v, &mirs, facts).split(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hex::encode(x.holder)).collect();
+                    m.sort();
+                    m.dedup();
+                    json!({ "mismatched": m })
+                }),
+                "record" => with_facts(&v, &mirs, facts)
+                    .record(&h(&ask["collective"]), &h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(hex::encode) })),
+                "owed back by" => with_facts(&v, &mirs, facts)
+                    .owed_back_by(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");

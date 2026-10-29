@@ -2402,7 +2402,7 @@ pub fn agreements(out: &mut Out) {
     let c = w.genesis_with("a collective that sells", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
     // The collective's own pointer, naming the rail, drafted by Ben, whom
     // the rule for Money names, for the collective.
-    let ptr = pointer_act(&mut w, &mut m[1].acting_for(c.id, vec![c.id]), b"the collective's address at its split service");
+    pointer_act(&mut w, &mut m[1].acting_for(c.id, vec![c.id]), b"the collective's address at its split service");
     let mut fan = w.genesis("a fan of the collective", vec![own_home()], None, None);
     let work_hash = spec("the collective's album");
     let mut ana = m[0].acting_for(c.id, vec![c.id]);
@@ -2437,7 +2437,7 @@ pub fn agreements(out: &mut Out) {
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
-    let mut j0 = w.genesis("the judge", vec![own_home()], None, None);
+    let j0 = w.genesis("the judge", vec![own_home()], None, None);
     let mut t = deal(&[ana.id, ben.id], None);
     t.text = "A deal its parties settle themselves.".into();
     t.arbitrators = Some(vec![j0.id]);
@@ -2964,7 +2964,7 @@ fn s7g_text(out: &mut Out) {
     // Rule 14: a text naming a "collective" that is no collective, and one
     // signed by a member the rule for Text does not name.
     let mut w = World::new();
-    let mut col = collective(&mut w, &[1], 1);
+    let col = collective(&mut w, &[1], 1);
     let (fd, cid) = (col.founding, col.id);
     let dee = w.genesis("dee", vec![own_home()], None, None);
     let mut ana = col.m[0].clone();
