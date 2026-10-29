@@ -33,9 +33,10 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Act.** Any signed object.
 - **Envelopes.** The signed container of an act.
 - **Identity hash.** The hash of an identity's genesis act. It is the identity.
-- **Signing key.** The key that signs everyday acts. It cannot change the identity chain.
-- **Chain key.** A key from a post-quantum family, committed in advance by its hash, revealed and used once, to sign a rotation or a chain signature.
-- **Scoped key.** A key of an identity that an act of a higher MIR installs, limited to a scope that MIR defines: a grant key, a collective's or a person's (a payee's grant to a deal's split service among them), installed by its grant and removed by its revocation (Agreements rules 73 to 80), or, for a collective holder's member key, named by the holder's signature of the collective's founding or a clone and replaced by a later version (Agreements rule 73). It signs everyday acts in the identity's name, never an identity-chain act, and only that MIR says whether it counts. *It is added and removed by everyday acts (for a grant key, the grant and its revocation; for a member key, the holder's signature and a later version), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it. A holder's member key is the exception Agreements makes for a signature a collective's line placed: its holder's later rotation leaves it as it is for the collective (Agreements rule 73).*
+- **Signing key.** The key that signs everyday acts. It cannot change the identity chain. A collective has none (rule 1).
+- **Chain key.** A key from a post-quantum family, committed in advance by its hash, revealed and used once, to sign a rotation or a chain signature, or, for a collective, its genesis (rule 7).
+- **Scoped key.** A key of a person that an act of a higher MIR installs, limited to a scope that MIR defines: a grant key, installed by its grant and removed by its revocation (Agreements rules 73 to 80). It signs everyday acts in the person's name, never an identity-chain act, and only that MIR says whether it counts. *It is added and removed by everyday acts (the grant and its revocation), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it. A collective has no scoped key: it has no signing key to scope, and its members and grantees act for it with their own keys (Agreements rule 58).*
+- **Collective.** An identity whose genesis declares its founding agreement in place of a first signing key (rule 1). It has a chain key and no signing key: it signs no everyday act, and its members act for it with their own keys, judged by Agreements.
 
 ### Chains and sequences
 
@@ -83,6 +84,8 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 
 Genesis MUST be signed by the signing key it declares, and MUST declare at least one home.
 
+**A collective's genesis declares its founding agreement in place of a first signing key** (an Agreements declaration of kind 0 in its declarations slot), and is signed by a chain key, revealed in its signature, its chain-key commitment naming the next chain key, as a rotation's does. An identity whose genesis declares no signing key has none for good: its rotations install none (rotation check 4), and it signs no everyday act (everyday check 2). *A one-way door in the format, written knowing it: once a genesis may omit its signing key, every verifier accepts both forms for good. It is the price of a collective with no key of its own, which acts through its members.*
+
 *Forging a genesis only creates a different identity, never a copy of an existing one, because the identity hash fixes the original.*
 
 #### Rule 2. Several homes: the home rule, and its default
@@ -111,7 +114,7 @@ Two rotations served at one position of a self-hosted identity, by a thief and t
 #### The genesis checks
 
 1. `signer`, `binding`, `prev` and `objects` are absent.
-2. The key in the signature equals the signing key in the payload.
+2. The key in the signature equals the signing key in the payload; or, where the payload declares none (field 0 absent), the signature is by a chain key of a chain-key scheme, and the declarations slot carries an Agreements declaration of kind 0 (Agreements, "Collectives in the identity chain"), whose value Identity does not read.
 3. At least one home is declared.
 4. If a home rule is present: the homes have at least two distinct operators; an index is lower than the number of homes; a threshold is greater than half the number of distinct operators and no greater than that number. Homes are counted per operator: several homes run by one operator count as one, since one stolen key signs for all of them.
 5. If an audit requirement is present: at least one auditor is declared, and the threshold is at least one and no greater than the number of auditors.
@@ -135,9 +138,9 @@ A verifier MUST run the verification procedures of this MIR. In particular, it M
 
 A signing key MUST NOT sign acts that add to the identity chain, save the genesis that declares it (rule 1).
 
-#### Rule 7. A chain key signs only rotations and chain signatures
+#### Rule 7. A chain key signs only rotations, chain signatures and a collective's genesis
 
-An act signed with a chain key MUST be a rotation or a chain signature. Any other act signed with a chain key is invalid.
+An act signed with a chain key MUST be a rotation, a chain signature, or the genesis of an identity that declares no signing key (rule 1). Any other act signed with a chain key is invalid.
 
 #### Rule 8. Scoped keys
 
@@ -149,7 +152,7 @@ A client that does not implement that MIR MUST show the act as unknown, never as
 
 A scoped key never signs an Identity act, nor an act that adds to the identity chain; it never counts as the identity's signing key in a rotation's judgement (rules 33 to 35).
 
-*Identity cannot read Agreements (a lower layer never depends on a higher one), so it carries the key's signature and leaves the key's standing to the MIR that installed it, as it carries declarations whose kinds higher MIRs define (rule 31). Stated cost: a client without Agreements cannot tell that a grant key is the collective's; it shows the act as unknown.*
+*Identity cannot read Agreements (a lower layer never depends on a higher one), so it carries the key's signature and leaves the key's standing to the MIR that installed it, as it carries declarations whose kinds higher MIRs define (rule 31). Stated cost: a client without Agreements cannot tell whether a grant key's act is backed by its grant; it shows the act as unknown.*
 
 
 #### Rule 9. A client implements every MIR it acts on
@@ -171,6 +174,7 @@ These run on every act.
 1. `signer` and `binding` are present, and `prev` is present.
 2. `binding` names an act of the signer's identity chain, genesis or a rotation, never a chain signature, that counts, and the key in the signature equals the signing key that act set; where that act is a rotation that does not count yet (rule 28), the act is pending, never valid and not invalid, until that rotation counts (rule 28), and, once that rotation can no longer count, the binding names no act that counts; or, for an act signed with a scoped key, `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8). A scoped act whose binding the verifier has not held is unknown, never invalid.
 3. If a later rotation of the signer counts, the act's status follows rules 33 to 35. A rotation judges only acts signed with the key it replaces, never an act signed with a scoped key.
+4. An everyday act whose signer is a collective (an identity whose genesis declares no signing key, rule 1) is invalid: a collective signs no everyday act. *What a collective does is signed by its members, each with their own key, naming the collective (Agreements rule 58).*
 
 
 ### 3. Everyday acts: witness, routes, names and links
@@ -206,6 +210,8 @@ A witness act says only: **"I received this act and rely on it."** It is the one
 *Client conformance.* A client MUST NOT sign a witness act as a side effect of another gesture (a like, a reply, opening or saving a message). Before signing one, it MUST say what it does, in plain words, for example: "This keeps the act visible as disputed even if its author later disowns it. It is public: anyone can see that you rely on this act, though not what it says."
 
 *No verifier can check that a client did this; it is conformance, not validity, like the Text MIR's rule that what you sign is what you saw.*
+
+*Client conformance.* **A client that signs a witness act keeps a copy of every act it names, and makes it available where its own signer's acts are found** (its outbox routes). The same holds for any acknowledgement an Identity, Money or Agreements act carries. *A witnessed act does not vanish with its author: a signed act verifies from any copy, so what someone relied on survives in the hands of whoever relied on it, whatever its author later has homes and relays delete.*
 
 #### Rule 12. Anyone can find anyone
 
@@ -369,7 +375,7 @@ Clients and key Modules SHOULD keep the signing key and the chain key separate, 
 1. `signer` is present; `binding` and `prev` are absent.
 2. The previous act named is the signer's identity-chain act at position (this position minus one).
 3. The signature's scheme and key hash to the chain-key commitment of that previous act: `tagged_hash("MOR/safety", scheme || key)` equals it.
-4. A new signing key and a next chain-key commitment are present; the position (field 1) is at least 1; a homeless rotation (field 11) declares a new set of homes (field 6).
+4. A next chain-key commitment is present, and a new signing key exactly when the genesis declares one: a rotation of a collective (rule 1) carries no signing key and names no kept tip; the position (field 1) is at least 1; a homeless rotation (field 11) declares a new set of homes (field 6).
 5. Any new home rule or audit requirement meets the conditions for genesis, counted against the new set of homes if one is given. A home rule the rotation leaves in place must meet them too, against the new set of homes; if it does not, the rotation is invalid. *The owner's client sends a rule that fits, or null for the default, whenever it changes the homes; it never quietly changes a protection the owner chose.*
 6. A closure flag is valid on any rotation; it has effect only for identities whose declared homes name the signer as operator.
 7. A kept tip fits when the running summary the rotation records for it is the running summary of its sequence up to and including the tip (Envelopes, "The running summary"); a verifier can tell only where it holds every act of that sequence up to the tip. A tip that does not fit keeps nothing, itself included; where the verifier does not hold the sequence, the tip itself is kept by its name, and what lies below it is unknown to the verifier (section 6). This check decides what the rotation keeps, never whether the rotation is valid: a tip that does not fit never makes the rotation invalid, whatever the verifier holds, and is no failure of the rotation checks under rule 29. *A thief holding the chain key already chooses what to keep; a summary that does not fit gives nobody anything, and comes only from a broken client. A rotation's validity stays fixed by its bytes: a home receipts it without holding the owner's private lines, so no check that needs them can decide whether it is valid, and so whether it can count. Stated cost: an owner's broken client voids its own line at a change of keys; others' reliance survives by acknowledgement and keepers, and the owner rotates again with the next chain key.*
@@ -620,9 +626,11 @@ It is also the way out of a position contested at a self-hosted home (rule 4): t
 
 An escape endorsement names a homeless rotation in `objects`. Its payload may list, under key 0, earlier rotations at the same position that the owner abandons (for example one a home refused); an abandoned rotation can never count afterwards.
 
-It is signed by the owner's current signing key: the one bound by the identity-chain act just before the homeless rotation. Its `binding` names that act, or, where that act is a chain signature (which sets no key), the identity-chain act that set the key. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
+It is signed by the owner's current signing key (for a collective, below): the one bound by the identity-chain act just before the homeless rotation. Its `binding` names that act, or, where that act is a chain signature (which sets no key), the identity-chain act that set the key. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
 
 An escape endorsement is never judged by the rotation it endorses (rules 33 to 35): it cannot lie in that rotation's kept ancestry, since it names the rotation and so is made after it.
+
+**For a collective, which has no signing key (rule 1), the endorsement is signed by members meeting its constitutional change rule**, each with their own key: each signs an escape endorsement naming the collective's homeless rotation in `objects`, bound as their own acts are, and whether those signers meet the rule is Agreements' to judge ("Collectives in the identity chain"). A client without Agreements shows such an escape unknown. *Without it, a collective at a hostile home would have no way out but the homeless procedure.*
 
 ### 12. Finality
 
@@ -815,7 +823,7 @@ How an address hint and a null operator are read is in section 4 ("A home's addr
 
 | Type | Name | Signed by | Adds to |
 | --- | --- | --- | --- |
-| 0 | Genesis | first signing key | identity chain |
+| 0 | Genesis | first signing key; for a collective, a chain key (rule 1) | identity chain |
 | 1 | Rotation | revealed chain key | identity chain |
 | 2 | Receipt | the operator's signing key | the operator's sequence |
 | 3 | Routes | signing key | a sequence |
@@ -828,7 +836,7 @@ How an address hint and a null operator are read is in section 4 ("A home's addr
 | 10 | Cosignature | the auditor's signing key | the auditor's sequence |
 | 12 | Objection | the operator's signing key | the operator's sequence |
 | 13 | Absence statement | the auditor's signing key | the auditor's sequence |
-| 14 | Escape endorsement | the owner's current signing key | a sequence |
+| 14 | Escape endorsement | the owner's current signing key; for a collective, members meeting its constitutional change rule, each with their own key (section 11) | a sequence |
 | 15 | Witness | signing key | a sequence |
 | 16 | Chain signature | revealed chain key | identity chain |
 
@@ -838,7 +846,8 @@ How an address hint and a null operator are read is in section 4 ("A home's addr
 
 ```cddl
 genesis-payload = {
-  0 => signing-key,       ; the first signing key
+  ? 0 => signing-key,     ; the first signing key; absent for a collective, whose declarations (field 4) name its
+                          ; founding agreement (rule 1)
   1 => chain-key-commit,     ; commitment to the first chain key
   2 => [+ home],          ; one or more homes
   ? 3 => home-rule,       ; only with several homes; absent means the default (rule 2)
@@ -847,7 +856,7 @@ genesis-payload = {
 }
 ```
 
-Outside: no `signer` or `binding`. Inside: `spec`, `type` 0 and `payload`, with no `prev` or `objects`. The signature is by the first signing key. The identity hash is the act id of the genesis.
+Outside: no `signer` or `binding`. Inside: `spec`, `type` 0 and `payload`, with no `prev` or `objects`. The signature is by the first signing key, or, for a collective, which declares none, by a chain key revealed in the signature itself, as for a rotation (rule 1). The identity hash is the act id of the genesis.
 
 ### Rotation (type 1)
 
@@ -855,7 +864,7 @@ Outside: no `signer` or `binding`. Inside: `spec`, `type` 0 and `payload`, with 
 rotation-payload = {
   0 => hash,               ; the previous identity-chain act
   1 => uint,               ; position in the identity chain: 1 for the first rotation
-  2 => signing-key,        ; the new signing key
+  ? 2 => signing-key,      ; the new signing key; absent exactly for a collective (rule 1)
   3 => chain-key-commit,      ; commitment to the next chain key
   4 => [* kept-tip],       ; kept: the latest genuine act of each kept sequence
   ? 5 => [+ hash],         ; disowned: acts within the kept ancestry the owner voids
@@ -1010,7 +1019,7 @@ The acts a witness act witnesses are named in its `acks` (Envelopes), at least o
 
 Bridges themselves, the software that carries content, messages or payments between MOR and another protocol, are Modules built on these cMIPs and on grants.
 
-A collective is an identity like any other. Its keys may be held under its founding agreement's key grammar (Agreements): by one holder, by a threshold of members producing one ordinary signature, or by a custodian. Every grammar leaves a way to rotate that needs less than every member (Agreements). Identity sees only the resulting signatures.
+A collective is an identity with a chain key and no signing key (rule 1). Its chain key is held under its founding agreement's key grammar (Agreements): by one holder, by a custodian, or as shares any k of n members can rebuild. Every grammar leaves a way to rotate that needs less than every member (Agreements). Identity sees only the resulting signatures; what the collective does is signed by its members, each with their own key, and judged by Agreements.
 
 Key storage, backup and recovery are Modules built on this vocabulary; they need no task because they create no act the core must read. Signature-scheme specifications are published through Development; a new signing-key scheme is adopted by clients implementing it, and installed by rotation.
 
@@ -1082,7 +1091,8 @@ Components exercised (freeze test suite v30; scenario and step numbers are the s
 - Linking an outside identifier; signing in after a rotation: 5.
 - Rotation to a signing key of a new scheme; unknown to a client without it: 8.
 - Two identities on disjoint relays reaching each other through homes and routes: 5.
-- An act signed with a collective's grant key: scoped under Identity, judged by Agreements; signed with another key than the one its binding installs, or bound to nothing held, not the collective's: 3.
+- A collective's genesis, declaring its founding agreement and no signing key, signed by a chain key; its rotation installing no signing key; an everyday act signed as the collective, invalid; a genesis declaring no signing key and no Agreements declaration, invalid: 3.
+- An act signed with a person's grant key: scoped under Identity, judged by Agreements; signed with another key than the one its binding installs, or bound to nothing held, unknown or not the grantor's: 3.
 - A chain signature: pending until its home receipts it; same key and binding afterwards, no act judged; a later rotation naming it as predecessor; a binding naming it invalid; a spent chain key revealed again never counting: 3.9aa.
 - Evidence voided by its signer's rotation: an objection to the journalist's homeless rotation signed with a stolen operator key and witnessed by an accomplice, disowned by the operator's rotation, voids nothing, and the exit counts; a cosignature of a forged log summary disowned by the auditor protects no receipt; a witness act disowned by its signer keeps no post disputed: 5.7e.
 - An objection to the journalist's homeless rotation signed with a stolen operator key, before the operator rotates: the homeless rotation voided, the stated cost; the journalist, holding both keys, leaves at once by the escape: 5.7e.
