@@ -336,4 +336,25 @@ A fresh agent read the eight texts and nothing else, and reported 22 findings. W
 ## Step 8: releases, the pull request and CI
 
 - **Not yet done.** Main is not yet merged, and the six web releases (the display client, Dub, Kišib, Damgar, Ummia and Edubba) are not rebuilt. This report stops at the start of the final merge, as asked.
-- **CI.** The Rust workspace tests and both vector checks pass locally. The client tests' results, run as CI runs them, are below.
+- **CI, checked myself** (pull request #113, head as pushed with this report).
+  - **Green on GitHub:** `linux` and `mac`, the Rust workspace tests.
+  - **Green locally:** the regenerated vectors (byte for byte) and the Python check.
+  - **Red on GitHub:** `regtest` and `all`. Every red step is a client following the core, which this session was not to change (`clients/` beyond `built/`), or a release not yet rebuilt.
+- **The client tests, run as `test.yml` runs them** (locally, after `npm run wasm`).
+  - **Passing:** connector, genesis, grants, longform, anchoring-service, reports, repo, split-service.
+  - **Failing for a reason in this session**, each the suite to follow:
+    - *A withdrawal is now invalid*, and these apps sign or expect one:
+      - `barebone` 6, "a withdrawn picture is no longer shown";
+      - `barebone` 12, "withdrawn by its signer";
+      - `dub` 9 and the profile picture it withdraws.
+    - *The layers are renumbered*, and these apps write an area's kind `[0, layer]` in the old numbers:
+      - `desk` round 3, "one key of Publishing counts", also red on GitHub's `regtest`;
+      - `desk` 3 to 5, the grant's cap, expiry and revocation;
+      - `desk` 86, 89 and 96, member keys and areas;
+      - `damgar` 14, a member acting within the Money area;
+      - `ummia` 16, a collective's release.
+    - *The core's type tables moved* (`BAKE`, `RETIRED_WITHDRAWAL`, `PRICE_TAG`, `CLAIM`): `desk` 15, `core-types.test.ts` (Q31).
+    - *The eight texts changed*, so their test hashes did: `ummia` 12, "the eight texts: built-in titles, keyed by their test hashes".
+    - *The releases are not rebuilt:* `site`, "the display client built twice is the same, and is the one published in the release" (`gateway.js` differs from `built/`), red on GitHub's `all`; and the `site` gateway tests.
+  - **Not judged here:** the tests that start a browser (collective, manage, kit, kishib, testwallet, reader, and most of dub, damgar, site and ummia). They could not launch Chromium in this container (a Playwright build mismatch, nothing to do with MOR). GitHub's run is the reference for them.
+- **What step 8 then needs:** merge main; rebuild the six releases' `built/` (the display client, Dub, Kišib, Damgar, Ummia, Edubba); and, before GitHub can be green, the lead's answer to Q31 and the Dubsar Suite's follow-up on the client tests above. Those are in `clients/`, outside what this session may touch.
