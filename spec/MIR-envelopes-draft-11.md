@@ -231,7 +231,7 @@ A bake whose size (field 3) is not the size of the unlocked media is shown as in
 
 #### Rule 23. Money sent to a bare bake is its uploader's
 
-Money sent to a bake that no publication carries, a tip or a payment of its uploader's price tag (Money), is its uploader's: it is paid to the uploader's payee pointer, unsplit. *Unless there is a publication, the tip goes to the uploader, with no split possible.* A tip or a sale found through a publication goes through that publication, which pays its partners and the owners (Agreements).
+Money sent to a bake, a tip naming the bake or a payment of its uploader's price tag (Money), is its uploader's: it is paid to the uploader's payee pointer, unsplit, whether or not a publication also sells that bake; what a payment names decides, never what else exists. *Unless there is a publication, the tip goes to the uploader, with no split possible.* A tip or a sale found through a publication goes through that publication, which pays its partners and the owners (Agreements).
 
 A bake an act of a collective made (a member's bake naming the collective, Agreements rule 58) is the collective's, its uploader the collective; whether it is the collective's is Agreements' to judge, and a Money-only wallet shows its uploader unknown.
 
