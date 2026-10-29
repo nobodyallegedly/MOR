@@ -15,7 +15,9 @@ Some marks recur:
 
 *Working rule:* where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
 
-The MIR has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats. Part five is the tasks, the reasoning and the freeze scenarios.
+The MIR has five parts. Part one is agreements as they run most of the time: making and signing, claims and ownership, publications and splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an identity its members act for under its ownership agreement, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats. Part five is the tasks, the reasoning and the freeze scenarios.
+
+*From bake to publication, in four acts, each saying one thing:* a **bake** (Envelopes), "I uploaded this"; a **claim**, "I claim to have made this"; an **ownership agreement**, "we have agreed that this is how we claim joint ownership"; a **publication**, "this is how we agree to publish it with these specified partners". *Ownership is one thing, distribution another: one work has one ownership agreement and may have many publications, each with its own price, partners and split, the owners' shares read from the ownership agreement in all of them.*
 
 ## Purpose
 
@@ -23,9 +25,9 @@ Agreements is the language of verifiable agreements between identities. It defin
 
 - how an agreement is proposed, signed, recorded and changed (by cloning, never by editing);
 - keepers: the notaries that record deals as they happen, so that a rotation cannot erase what someone relied on;
-- stakes in works and publications: how they are bound, transferred and released;
-- splits: how money that reached the owners' payee pointer is divided, exactly, including module fees and shares assigned to roles;
-- offers accepted by payment, conditions, and time;
+- claims, and the ownership agreements that write who owns a work, or a collective, in what shares, and how the owners decide;
+- publications: how a work is sold, at which price tag, on which terms, with which partners, and how money that reached the publication's split service is divided, exactly, the owners' shares read by reference to their ownership agreement, module fees and shares assigned to roles included;
+- conditions, and time;
 - grants and collectives: acting for others, within limits;
 - abandonment, and what happens when someone disappears from a deal;
 - non-performance: the core never enforces, but it makes default impossible to hide.
@@ -34,133 +36,143 @@ Money ends when money reaches a payee pointer. Agreements say who owns what, how
 
 ## Dependencies
 
-Agreements builds on Identity, Envelopes, Text and Money.
+Agreements builds on Identity, Text, Envelopes and Money.
 
 Agreements are optional per client, but all or nothing: a client implements it fully, or shows its acts as unknown (core, client conformance). A client that acts on agreements implements Agreements.
 
-No rule of a lower layer depends on Agreements. Where Agreements need a lower layer to carry something, it is a field there (the publication's `for`, Envelopes).
+No rule of a lower layer depends on Agreements. Where Agreements need a lower layer to carry something, it is a field there (the publication a price tag names, Money).
 
-**Only acts valid in their own format count.** Every act a rule of this MIR counts, its own or another specification's (a receipt, a claim, a publication, a rotation, a cMIP's act), counts only where it is valid under the specification that defines it. An act whose type its specification does not define, or whose payload is outside that specification's format, is invalid (Envelopes rule 30), and no rule of this MIR counts it; an act under a specification the verifier does not implement is unknown to it. The rule reaches the acts of the core's own types; a cMIP's act (a delivery, use or metric record) counts where the verifier reads its format, as the cMIP defines it. A format rule is one decided from the act's own bytes; a bound that needs other acts (a transfer's field 3, at most what the seller still holds) is a status rule, judged where this MIR says, never a format rule: an over-sale is a valid act that confers nothing (rule 10). *One rule for every layer, as the MICS's common conventions say: a verifier never counts here what the act's own MIR or cMIP refuses.*
+**Only acts valid in their own format count.** Every act a rule of this MIR counts, its own or another specification's (a receipt, a claim, a bake, a price tag, a rotation, a cMIP's act), counts only where it is valid under the specification that defines it. An act whose type its specification does not define, or whose payload is outside that specification's format, is invalid (Envelopes rule 30), and no rule of this MIR counts it; an act under a specification the verifier does not implement is unknown to it. The rule reaches the acts of the core's own types; a cMIP's act (a delivery, use or metric record) counts where the verifier reads its format, as the cMIP defines it. A format rule is one decided from the act's own bytes; a bound that needs other acts (a transfer's field 3, at most what the seller still holds) is a status rule, judged where this MIR says, never a format rule: an over-sale is a valid act that confers nothing (rule 10). *One rule for every layer, as the MICS's common conventions say: a verifier never counts here what the act's own MIR or cMIP refuses.*
 
 ## Words used in this MIR
 
 ### Agreements and signing
 
 - **Terms.** An act proposing an agreement: its parties, its text, its cMIPs, its keepers and its rules.
-- **Signature.** An act by one party naming terms (or a clone, a transfer, a release) as agreed. Each act has one signer, so every agreement is its terms plus one signature act per party.
+- **Signature.** An act by one party naming terms (or a clone, a publication, a transfer, a release) as agreed. Each act has one signer, so every agreement is its terms plus one signature act per party.
 - **Agreement.** Terms together with the signatures its rules require. Its id is the id of its terms act. An agreement commits identities, not keys: a later rotation changes the pen, never the promise. A party is bound only through its own signature act.
-- **Agreement chain.** The acts on one agreement: signatures, clones, records, transfers, payouts, contests. Each names, in `objects` (Envelopes), the chain and the act it follows.
+- **Agreement chain.** The acts on one agreement: signatures, clones, records, transfers, contests. Each names, in `objects` (Envelopes), the chain and the act it follows.
 - **Deal.** An agreement that founds no collective: its terms carry no key grammar. A deal exists when every party has signed it, and changes only with every party's signature.
 - **Position.** An agreement that confers income without ownership.
-- **Standing offer.** Published terms that anyone accepts by paying.
-- **Proven offer, promised offer.** Offers are of two classes.
-  - **Proven:** its delivery leaves a proof that any verifier can check from data alone, no one's word trusted: a hash in an anchoring batch; a key that decrypts to the promised hash; a rail swap's payment proof; a deterministic computation re-run to the same hash; a bounty whose answer checks itself. A proven offer uses the access form, `[ 2, [ cMIP, params ] ]` (rule 11).
+- **Proven delivery, promised delivery.** What a publication sells is delivered in one of two ways.
+  - **Proven:** its delivery leaves a proof that any verifier can check from data alone, no one's word trusted: a hash in an anchoring batch; a key that decrypts to the promised hash; a rail swap's payment proof; a deterministic computation re-run to the same hash; a bounty whose answer checks itself. It is sold in the access form, `[ 2, [ cMIP, params ] ]` (rule 11).
   - **Promised:** its delivery rests on someone's word, so it names a vow, and each sale is confirmed or contested by those who signed onto it (rule 13). A service's signed word alone (counts, checks, quality) and anything ongoing (hosting over time) stay promised.
   - A cMIP may produce the proof; **the verifier checks the proof itself, never the cMIP's say-so.**
 - **Negotiation message.** An Agreements act carrying text, by which two sides negotiate (type 18, rule 52). Each message names the previous message of its thread, and acknowledges the latest one received from the other side. Like every Agreements act it may carry acknowledgements (Envelopes rule 18); a text act never can.
 
-### Works, stakes and selling
+### Claims and ownership
 
-- **Work claim.** An act binding a work's hash to its creators.
-- **Stake.** A share in a work or a publication. An agreement defines it, and it is identified by that agreement and its index in the agreement's stakes list. The shares in each always add up to 100%. The current holder of a stake is whoever the transfer chain on the agreement names.
-  A stake whose object is the collective whose agreement defines it is a share of all that collective's income, whoever earns it and whenever, and so a stake in every work the collective sells under that agreement. It decides what every holder is paid, member or departed.
-  **A stake whose object is a vow is held by the vow's signer: a deal made on a vow has an owner** (rule 14).
+- **Claim.** An act binding a work's hash to its creators (type 3): "I claim to have made this." Its own act, never a mark on a bake. It records who says they made a work, and in what order; never legitimacy.
+- **Ownership agreement.** Terms carrying a target (terms field 33): ownership only, saying who owns what share of the target, and how the owners decide (change rules, keepers, judges, succession, absence). One act type, with two targets, written `[kind, hash]`:
+  - kind 0, **a claim**: a work's ownership agreement, built from the work's claim; a deal;
+  - kind 1, **an identity it founds**: a collective's ownership agreement, its founding and every clone of it, which also carries the collective's key grammar, its rules for each layer and its finer areas, and founds the collective (Part two).
+
+  A work's ownership agreement refuses the collective's fields; a collective's requires them ("Terms (type 0)"). It carries no split, no fees and no split service: those are a publication's.
+- **Stake.** The shares in an ownership agreement's target: one stake per ownership agreement, on its target, its holders and their shares written in terms field 7, adding up to 100%. It is identified by that agreement and its index, 0. The current holder of a share is whoever field 7 and the transfer chain on the agreement name.
+  A stake whose target is the collective itself is a share of all that collective's income, whoever earns it and whenever, and so a share of what every work the collective owns brings it. It decides what every holder is paid, member or departed.
 - **Holders' rule.** For a stake of a collective, how its holders consent together to the owners' matters: every holder (the default), or owners holding together at least a stated share of the stake. It reaches only changes that hit every owner of the stake alike, binds only holders who accepted it by signing or buying, and changes only with every holder (rule 94, terms field 30). The release rule (field 24) is its first instance.
-- **Owners' matters.** What a stake's owners consent to by their holders' rule, or each signing: what the stake is paid, an issuance in it, a collective's sale or release of a work, and a fork's successors' founding terms paying a kept holder less (rule 95).
+- **Owners' matters.** What a stake's owners consent to by their holders' rule, or each signing: what the stake is paid, an issuance in it, a collective's sale or release of a share it holds in a work, and a fork's successors' founding terms paying a kept holder less (rule 95).
 - **Issuance.** A version adding new holders to a stake, every existing share scaled by the same factor, decided by the holders' rule and pre-emptive: each existing holder first offered its proportion on the same terms by an issuance offer (type 26), waived only by every holder (rule 96).
 - **Proxy.** A holder's act handing its vote on the owners' matters of one stake to another identity, for one version or until revoked; never its money or property, nor anything needing every holder (rule 97, type 27).
-- **Purchase.** A payment for a work under an Agreements claim, naming the claim it pays under: the claiming agreement, and the line at which the payer's client read it current (Money receipt and claim field 9, Money rule 18).
-  - On a request rail, the claim it names is the one the seller's request committed to.
-  - On a push rail, each holder the claim names settles it on its own chain (rule 12).
 
-  Where the seller is a collective, the purchase becomes a **sale** once the collective's actions chain records it (rule 12).
-- **Vow.** An act naming in words something to come, something MOR cannot hash or cannot hash yet: its own chain, its genesis id its name for good (Envelopes type 5). Offers naming it sell it, and each sale of it is pending, confirmed or contested (rule 13). A vow covers anything MOR cannot hash, existing or to come, and every sale of a physical good or of a service names one, unless its delivery is proven; it holds one or more promises, which may be bundled; it names what is promised to the buyer, never the event itself; two vows on one event stay separate, each referencing the event where it exists on MOR, not each other.
+### Publications and selling
+
+- **Publication.** The act (type 6) that is the offer: "this is how we agree to publish it with these specified partners." It names what is sold, its terms (delivery, refund, contest), its partners, the split service that receives every payment and pays everyone, and its split plan; the owners' line is read by reference to the ownership agreement it names. Its price is a price tag (Money) that names it. Every party signs it: the owners' side, each partner and the split service (rule 11). Self-publishing included: an owner may be its own split service, with no partner. Ended by a later version that sells nothing.
+- **Split agreement.** A publication's first version selling nothing (field 0 absent): it sells nothing, and divides what reaches its split service for the ownership agreement it names. A collective's own split service is named so, by a split agreement pointing at the collective's ownership agreement (rule 15).
+- **Partner.** An identity a publication names to take a share of each payment, off the top: a publisher, a relay, a client, a split service; any identity. Each partner entry carries the identity, its share and an optional label. *Publisher* is the word for a partner who publishes.
+- **Price tag.** A Money act (Money type 5) naming a bake or a publication, its price and its payee (Money rule 18). Under a publication, only a tag signed by its split service, or by the party it designates, counts.
+- **Purchase.** A payment naming a price tag a publication counts, a purchase under that publication (rule 12; Money rule 18): its split service's receipt names, in field 9, the ownership agreement and the version on its line whose shares it pays.
+  - On a request rail, the tag and the version of the publication it names are those the seller's request committed to.
+  - On a push rail, the split service settles it on its own chain (rule 12).
+
+  A payment of a bare bake's tag is a sale by the bake's uploader, unsplit (Envelopes rule 23; Money rule 18).
+- **Vow.** An act naming in words something to come, something MOR cannot hash or cannot hash yet: its own chain, its genesis id its name for good (Envelopes type 5). Publications naming it sell it, and each sale of it is pending, confirmed or contested (rule 13). A vow covers anything MOR cannot hash, existing or to come, and every sale of a physical good or of a service names one, unless its delivery is proven; it holds one or more promises, which may be bundled; it names what is promised to the buyer, never the event itself; two vows on one event stay separate, each referencing the event where it exists on MOR, not each other.
 - **Request rail, push rail.** A request rail is one on which the payee's side commits to each payment before it is made (the payment cMIP's commitment, which an invoice carries). A push rail is one on which the payer pays an address with no such request. The rail Module's specification says which it is (payment cMIP).
 
 ### Money and splits
 
-- **Split plan.** The part of an agreement that says how incoming payments are divided: fixed shares on stakes, role shares, a maximum fee per payout where it states one, and what happens to unfilled roles. Fees are their own terms field, 28, beside it. **Every share paying anyone but a stake is paid off the top, as overhead; what is left goes to the stakes alone.**
-- **Split service.** An identity that receives payments on behalf of a work's owners, divides each one according to their agreement, and pays every party out. It can be a company, a collective, a friend running software, or the owners themselves; a sole creator is simply their own split service.
-  Where an agreement names one, the payee pointer of the identity its publications are made for counts, for Agreements, only if both hold (rule 16):
-  - every address in it also appears in that service's own signed pointer in force;
-  - every entry of its vault in force also appears in the service's own signed vault.
-- **Payer-side splitting.** The other split model. Where an agreement names no split service, the payer's wallet, reading Agreements, pays each holder's own pointer by the stakes of the work's claim: one flow, with the holders' identities as destinations.
-- **Split.** A split service's signed act dividing one incoming payment into payouts (type 8, rule 20). It is delivered to every holder it pays, and names each fee and who received it.
+- **Split plan.** The part of a publication that says how each incoming payment is divided (publication field 4): partners first, each by its share, then role shares and metric shares, all off the top, then a maximum fee per payout where it states one, what happens to unfilled roles, and the fees; **what is left is the owners' line**, divided among the owners by their shares, read by reference to the ownership agreement. **Every share paying anyone but the owners is paid off the top, as overhead; what is left goes to the owners alone.**
+- **Owners' line.** What a payment leaves for the owners once every share off the top is paid, divided among the holders of the ownership agreement's stake by their shares in the version in force for the payment's receipt (rule 12).
+- **Split service.** The identity a publication names to receive every payment under it (its price tags pay its own pointer), divide each one by the publication's split plan, and pay everyone. It can be a company, a collective, a friend running software, or the owners themselves; a sole creator is simply their own split service. No partner holds others' money: the split service pays everyone.
+- **Split.** A split service's signed act dividing one incoming payment into payouts (type 8, rule 20). It is delivered to every holder and partner it pays, and names each fee and who received it.
 - **Payout.** One receiver's part of a split, paid as a simple Money payment with its own receipt.
 - **Role share.** A share assigned to a role rather than to a named party, filled when the payment happens. For example: the reposter who led to the sale, the relay that served the file, a service the payer chose, the rail Modules the payment ran through.
   Its evidence is an act signed by a party other than the split service and the payee. **That evidence counts only when the payer the payment commits to acknowledges it in its claim** (rule 22).
   The exception is a rail Module's role share: its evidence is the receipt or claim naming that rail Module, where the payee's own pointer or vault names it (rule 22).
-  A helper the owners chose in advance takes a named share instead, and needs no evidence.
+  A helper the parties chose in advance is a partner instead, and needs no evidence.
 
 ### Judges, keepers and time
 
 - **Keeper.** A relay, operated by an identity, that an agreement names to record the acts around a deal as they arrive, and to sign what it recorded: a notary stamping sealed envelopes. A keeper records act ids and signers, never content. A record counts only alongside the act it names, and only for an act that belongs to an agreement naming that keeper (rule 42).
 - **Belongs to.** An act belongs to an agreement when it names, in `objects`, that agreement, an act of its chain or an act that belongs to it; or through the act it answers:
-  - a Money receipt or payment claim, through the claim it pays under (its field 9, the claiming agreement), and through what it fulfils or followed (the receipt's field 5, the claim's field 4): the agreement itself, or an obligation, offer or act that belongs to it;
-  - an obligation, through the agreement or offer it arises from (its field 4);
-  - a standing offer, through the agreement it is made under (its field 0); a lone seller's offer is itself the agreement its payments belong to.
+  - a Money receipt or payment claim, through the ownership agreement it pays the shares of (its field 9), and through what it fulfils or followed (the receipt's field 5, the claim's field 4): the agreement itself, or an obligation, price tag, publication or act that belongs to it;
+  - an obligation, through the agreement or publication it arises from (its field 4);
+  - a publication, through the ownership agreement it names (its field 1); a price tag, through the publication it names (its field 1).
 
-  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. A verifier follows "belongs to" from act to act, as far as the acts it holds allow, at no fixed depth: each act an `objects` entry names, chain and predecessor alike, and each act answered (a Money record's claim and what it fulfils, an obligation's agreement or offer, an offer's agreement) is one step, whatever the act named is, save an Identity act (an identity's genesis, rotations and chain signatures, and its Identity everyday acts), at which the path ends. What it finds through acts it holds stands; where a step names an act it does not hold, whether the act belongs to anything beyond that step is unknown to it.
+  An act may belong to several agreements. An act that belongs to none (a post, a claim alone, a bake, a rotation) has no keeper of its own: only an anchor places it. A verifier follows "belongs to" from act to act, as far as the acts it holds allow, at no fixed depth: each act an `objects` entry names, chain and predecessor alike, and each act answered (a Money record's ownership agreement and what it fulfils, an obligation's agreement or publication, a publication's ownership agreement, a price tag's publication) is one step, whatever the act named is, save an Identity act (an identity's genesis, rotations and chain signatures, and its Identity everyday acts), at which the path ends. What it finds through acts it holds stands; where a step names an act it does not hold, whether the act belongs to anything beyond that step is unknown to it.
 
-  **Its keepers are those of the version in force for the act.** For a deal, the latest complete version, on the line of the version the act names, that the act's history holds (what its `prev` and the predecessors its `objects` name, followed back), or the version it names where its history holds none on that line; for a collective, the agreement in force at the act (rule 60). Every action and decision of a collective belongs to the collective's agreement, whatever it names: an act of the collective's own key, of a grant key the collective issued, or of a holder's member key (rule 73). Its genesis, its rotations and its Identity everyday acts belong to none, as every identity's. *A keeper a clone removed no longer speaks for acts under the clone; a keeper a clone added speaks from the version naming it.* *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
+  **Its keepers are those of the version in force for the act.** For a deal, the latest complete version, on the line of the version the act names, that the act's history holds (what its `prev` and the predecessors its `objects` name, followed back), or the version it names where its history holds none on that line; for a collective, the agreement in force at the act (rule 60). Every act for a collective (an act naming it on its chain, rule 58) belongs to the collective's agreement, whatever else it names. Its genesis, its rotations and its Identity acts belong to none, as every identity's. *A keeper a clone removed no longer speaks for acts under the clone; a keeper a clone added speaks from the version naming it.* *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks). Unlike a keeper, it receives the keys of the acts it must judge, by ordinary key delivery.
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
-- **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms. *Before and after among acts done in a collective's name are judged on the collective's own sequence ("Made before, made after"); the time reference judges deadlines and absence.*
+- **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms. *Before and after among acts done for a collective are judged on the collective's own chain ("Made before, made after"); the time reference judges deadlines and absence.*
 - **Concurrency rule.** Retired: terms field 10 is withdrawn, never reused. A fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it.
 - **Contest.** A signed objection to another act, by someone with standing. It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
 - **Standing.** Who may contest an act: a party to its agreement, a holder of a stake it affects, or a keeper, arbitrator or verifier the agreement names; and, for a purchase, its buyer.
 
 ### Collectives
 
-- **Collective.** Several identities acting together as one identity. A collective is a full identity (Identity MIR), with its own genesis, homes, signing key and chain key. Its founding agreement says how its members hold and use those keys.
-- **This collective.** In a collective's own terms, null written as a stake's object or holder, or as a grant's grantor, names the collective whose agreement it is. This is the same device by which Identity lets a genesis name itself as its home's operator by null. Founding terms can so name a collective that does not exist yet.
-- **Key grammar.** The part of a collective's founding agreement that says how its keys are held and activated, and the way to rotate that needs less than every member.
+- **Collective.** Several identities acting together as one identity. A collective is an identity (Identity MIR) with its own genesis, homes and chain key, and **no signing key of its own**: its genesis declares its founding agreement in place of one (Identity rule 1). Its members act for it with their own keys, each act naming the collective, under the rules its ownership agreement names; Agreements judges them. *The collective grants powers to its members, not to keys.*
+- **This collective.** In a collective's own terms, the target written `[1, null]` names the collective whose agreement it is: the identity whose genesis declares these terms, or the terms they clone. This is the same device by which Identity lets a genesis name itself as its home's operator by null. Founding terms can so name a collective that does not exist yet.
+- **Key grammar.** The part of a collective's founding agreement that says how its chain key is held, and the way to rotate that needs less than every member.
+- **Layer rule.** For each of the five layers a collective acts in (1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development), who acts for the collective there: a rule in the terms' grammar, written in terms field 19. A founding that leaves one unnamed founds nothing (rule 60).
 - **Tier.** In a collective's founding agreement and its clones, each field of the terms belongs to one of three tiers ("Tiers"):
-  - Constitutional: who decides. The parties (membership), the change rules, the key grammar, the areas, the constitution's words, the departed members entry.
+  - Constitutional: who decides. The parties (membership), the change rules, the key grammar, the layer rules and the areas, the constitution's words, the departed members entry.
   - Judicial: who judges, and by what. The protected clauses, changed only with every member's signature (rule 67).
   - Operational: everything else.
 
   Deals have no tiers (scope).
-- **Protected clause.** In a collective, a clause that can move a party's stake or voice, or decide who wins a dispute. The protected clauses are: the abandonment clause, the succession plan, the keepers, the split service and its backups (field 29), the time reference, the arbitrators or verifiers, the condition and anchoring cMIPs, and the chain of judgment.
-  Together they are the judicial tier, which changes only with every member's signature, one version for everyone (rule 67). The split service and its backups are operational in kind, and protected as a stated exception, since they can move money. A deal needs no protected clauses: no clone of it completes without every party.
+- **Protected clause.** In a collective, a clause that can move a party's stake or voice, or decide who wins a dispute. The protected clauses are: the abandonment clause, the succession plan, the keepers, the time reference, the arbitrators or verifiers, the condition and anchoring cMIPs, and the chain of judgment; and, outside the terms, the collective's own split agreement, which names the service that receives its income (rule 15).
+  Together they are the judicial tier, which changes only with every member's signature, one version for everyone (rule 67). The collective's split agreement is operational in kind, and protected as a stated exception, since it can move money. A deal needs no protected clauses: no clone of it completes without every party.
 - **Change rules.** The rules a collective's clone must meet, each covering part of the terms:
   - the **constitutional change rule** (terms field 18; every party when none was agreed);
   - the **judicial tier's rule**: every party whose voice remains, fixed by this MIR and never by the terms (rule 67);
-  - the **clone rule** (field 5), for operational matters outside every area;
+  - the **clone rule** (field 5), for operational matters outside every layer rule and area;
+  - the **rule of each layer** (field 19), for the cMIPs the collective adopts for that layer's tasks;
   - the **power** over each area.
 
   In a deal, the signing rule and the clone rule are every party.
-- **Power.** The right to bring a change into force: the constitutional change rule, the judicial tier's rule, the clone rule, or an area's holders meeting its threshold.
+- **Power.** The right to bring a change into force: the constitutional change rule, the judicial tier's rule, the clone rule, a layer's rule, or an area's holders meeting its threshold.
 - **Mark.** A clone's terms field 4: which of the parent's change rules it claims to meet, and the parties whose signatures meet it.
-- **Area.** A part of a collective's operational tier that the constitution gives to some of its members, the area's **holders.** An area covers acts of the collective, by whole layer or by act type, and operational fields of its terms.
+- **Area.** A part of a collective's acts or operational fields, finer than a layer, that the constitution gives to some of its members, the area's **holders** (terms field 34). An area covers acts of the collective by act type, `[1, spec, type]`, within a layer, and operational fields of its terms; it narrows the layer's rule for the acts it reaches.
   - Its holders alone decide there, and may grant within it.
   - Its holders, and the rule they act by, change only by a constitutional change; a holder may step down from it at once (rule 71).
   - An area with no holder whose voice remains stands frozen; a clone may list none at all.
-
-  An area reaching a whole layer also decides which cMIPs the collective adopts for that layer's tasks, and an area reaching Development decides which extensions it adopts. Below, "the area reaching Money" (or another layer) is such an area.
 - **Layer.** One of MOR's six layers, one per MIR (core, "Structure"), numbered wherever a format names one: 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development. Which layer an act belongs to depends on its `spec`:
   - An act whose `spec` is a MIR belongs to that MIR's layer.
   - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIR defining it (Development, "The tasks the core defines").
   - An act whose `spec` is an extension the agreement names (field 15) belongs to Development.
-  - An act whose `spec` is a specification the agreement in force names neither for a task nor as an extension belongs to no layer. In a collective with areas it counts for nothing, unless an area reaches it by a kind naming its type (rule 60).
+  - An act whose `spec` is a specification the agreement in force names neither for a task nor as an extension belongs to no layer, and counts for nothing for the collective, unless an area reaches it by a kind naming its type (rule 60).
 
-  Development defines no tasks and no act types of its own: specifications and releases are Envelopes publications.
+  Development defines no act types of its own: specifications and releases of code are Envelopes bakes, in layer 2.
 - **Extension.** A cMIP an agreement names outside the listed tasks (field 15), which adds rules and never relaxes the core's (Development). Its specification declares the layers it acts on (Development, specification field 10); its own acts belong to Development.
-- **Voice.** A party's say in an agreement: it counts toward the agreement's change rules and, in a collective, toward the areas it holds.
+- **Voice.** A party's say in an agreement: it counts toward the agreement's change rules and, in a collective, toward its layer rules and the areas it holds.
   - A party loses its voice only by its own resignation (rule 70), by an abandonment declaration (rule 89), or by a constitutional clone that removes it (rule 69).
   - It loses its voice in one area by stepping down from it (rule 71), or by a constitutional clone that replaces it there.
   - It never loses its stake that way.
 
-  In a collective, a resignation, a stepping down and a declaration take effect at the collective's line registering them ("Made before, made after"), and keep that effect for the collective whatever their signer's later rotation disowns.
-- **Departed holder.** An identity that left a collective, by resigning or by being removed, and kept a stake in it. Its stake is in the collective's stakes (field 7), which decide what it is paid; it is consulted on the owners' matters (rule 95), and may be declared absent though no party (rule 85). The collective's **departed members entry** records only that the identity is departed, without voice (terms field 22, rule 68).
+  In a collective, a resignation, a stepping down and a declaration take effect at the collective's line registering them ("Made before, made after"), and keep that effect for the collective whatever their signer's later rotation disowns. **A member's power ends at the collective's line that registers their departure; their own key continues to sign their own acts.**
+- **Departed holder.** An identity that left a collective, by resigning or by being removed, and kept a share of its stake. Its share is in the collective's stake (field 7), which decides what it is paid; it is consulted on the owners' matters (rule 95), and may be declared absent though no party (rule 85). The collective's **departed members entry** records only that the identity is departed, without voice (terms field 22, rule 68).
 
 ### A collective's acts, in order
 
-- **Record.** The collective's everyday line (type 17, rule 72). It is the act by which the collective:
-  - writes a complete clone of its agreement in its own sequence, naming the signature acts that complete it, so that the collective's later acts are judged under it;
+- **The collective's chain.** The acts done for a collective: each names the collective's identity as chain in `objects`, with the decision it acts under, and the other acts on the chain it knows (rule 58). Its members' own sequences are never read for it.
+- **Record.** The collective's everyday line (type 17, rule 72), which any member draws with their own key. It is the act by which the collective:
+  - writes a complete clone of its agreement on its chain, naming the signature acts that complete it, so that the collective's later acts are judged under it;
   - registers its members' departures and rotations.
-- **Line.** An act of a collective, in its own sequence, at which an event that changes who may act for it takes effect for its acts. A line is a record (type 17) or a rotation of the collective, each naming the latest act of every other sequence the collective keeps. What was done in the collective's name counts as made before or after a line by its place in the collective's own sequence, that is, by whether the history the line cites holds it ("Made before, made after").
+
+  A record decides nothing by itself: its clone counts by the clone's own signatures, its registrations by the acts they name.
+- **Line.** An act of a collective at which an event that changes who may act for it takes effect for its acts: a record (type 17), a rotation of the collective, a fork or a closing. What was done for the collective counts as made before or after a line by whether the history the line cites holds it ("Made before, made after").
 - **Decisions chain.** A collective's decisions, in order:
   - its genesis (founding);
   - its rotations (members joining or leaving, every constitutional change);
@@ -168,37 +180,30 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - its grants and revocations;
   - its fork or closing.
 
-  Each decision cites the previous decision and the action head it saw:
-  - a record, by its own sequence and the tips it names;
-  - a rotation, by its kept tips (Identity);
-  - a grant or revocation, by its own sequence and its citations in `objects`, as an action cites;
-  - a fork or closing, by its chain act and tips.
-
-  Records, rotations, forks and closings are the lines.
-- **Actions chain.** Every other act in a collective's name: debts, payments, publications, releases, sales, the acts signed with a grant key. Each cites, in `objects`, on the collective's chain (the collective's identity as chain), the decision it acts under and the heads it joins. Its own sequence's previous act counts as cited (rule 58). Identity's own everyday acts carry no objects and are on neither chain; nor are negotiation messages, which are talk.
-- **History.** What a decision or an action cites, transitively: the previous acts of its own sequence, the tips it names, what each act reached cites on the collective's chain, and the tips of each record reached. An act is before a line when the line's history holds it.
-- **Tie rule.** When a decision ending powers (a fork, a closing, a departure, a grant's revocation, a departure emptying an area) and an action using them cite neither each other, the ending wins: the action is void, or, against a grant's revocation, void or disputed under rule 76. *A counterparty protects itself by waiting until the actions chain visibly moves past its act before delivering.*
-- **Done.** An act in a collective's name (signed with its key, or with a grant key of its) is done once both hold (rule 57):
+  **Each decision names the previous decision in `objects`, as an action names the decision it acts under** (a rotation, which carries no `objects`, by the signature acts its declaration names, rule 58); a decision naming none, or one that is no decision of the collective, is no decision. Records, rotations, forks and closings are the lines.
+- **Actions chain.** Every other act done for a collective: debts, payments, bakes, publications, releases, sales, and its grantees' acts. Each cites, in `objects`, on the collective's chain (the collective's identity as chain), the decision it acts under and the other acts it joins (rule 58). Negotiation messages are on neither chain, being talk.
+- **History.** What a decision or an action cites on the collective's chain, transitively: the acts it names there, what each act reached names there, the tips of each record reached, and the signature acts each rotation reached names. An act is before a line when the line's history holds it.
+- **Tie rule.** When a decision ending powers (a fork, a closing, a departure, a grant's revocation, a departure emptying an area) and an action using them cite neither each other, the ending wins: the action is void, or, against a grant's revocation, void or disputed under rule 76. *A counterparty protects itself by waiting until the collective's chain visibly moves past its act before delivering.*
+- **Done.** An act for a collective is done once both hold (rule 57):
   - it is sealed to every member of the agreement in force for it (or public);
-  - it is on the chain, citing the collective's head as its signer knew it.
+  - it is on the chain, citing the collective's latest decision as its signer knew it.
 
-  Where the collective's stake in itself has holders who are no members, a Money act in its name is done only once sealed to every holder of that stake as well, or public (rule 57).
+  Where the collective's stake in itself has holders who are no members, a Money act for it is done only once sealed to every holder of that stake as well, or public (rule 57).
 
-  Before that, even signed, it is planning, and binds no one, its signer included. Where it is held is never a condition: relays are transport. This is so for records too, and for forks and closings: one rule for every act in the collective's name. *One thing is to act, another to read.*
+  Before that, even signed, it is planning, and binds no one, its signer included. Where it is held is never a condition: relays are transport. This is so for records too, and for forks and closings: one rule for every act done for the collective. *One thing is to act, another to read.*
 
 ### Grants
 
-- **Grant.** A delegation of authority, with limits, from an identity or collective to another identity. A grant never reaches beyond the power of whoever issued it. A collective's grant is a decision naming the grantee's own identity, which signs to accept it, and hands the grantee a grant key. In a deal, each payee's grant to the split service is written in the deal's terms (field 14), naming "this agreement" by null.
-- **Grant key.** A key of an identity, a person or a collective (extended), scoped to one grant's area and reach. The grant names it (field 9); the grantee makes and holds it. It is like a device of the collective limited to that scope. What it signs is the grantor's own act (for a collective, a strand of its actions chain), citing the grant. A revocation removes it, as a decision ending powers. Every grant key ends at a fork's line. *In the end, it is an extra key tied to both the collective's and the grantee's identities.* *Stated cost:* *a stolen grant key acts within its scope until revoked.*
-- **This agreement.** In a payee's grant to a deal's split service, null written as the agreement concerned (grant field 2) names the deal whose terms list that grant in field 14, with the versions it clones. It works as null in a collective's terms names "this collective". A grant can so name a deal that does not exist yet.
-- **Payee.** In a deal naming a split service, a party whose own payee pointer receives the deal's incoming money, and who grants the service a grant key for it (field 14).
+- **Grant.** A delegation of authority, with limits, from an identity or collective to another identity. A grant never reaches beyond the power of whoever issued it. A collective's grant is a decision naming the grantee's own identity, which signs to accept it; the grantee then acts for the collective with its own key, naming the collective and the grant (rule 73). A person's grant hands its grantee a grant key.
+- **Grant key.** A key of a person, scoped to one grant's reach (Identity's scoped key). The grant names it (field 9); the grantee makes and holds it. What it signs is the person's own act, citing the grant. A revocation removes it. *It is an extra key tied to both the person's and the grantee's identities.* *Stated cost:* *a stolen grant key acts within its scope until revoked.* A collective hands no grant key: it has no signing key to scope.
+- *"This agreement" (null as the deal concerned in a payee's grant to a deal's split service) and the payee's grant in a deal are retired with terms field 14: a publication names its split service, which receives in its own name.*
 
 ### Ending
 
-- **Release to the public domain.** An act ending a work's claim, at once or at a point it names on the time reference (type 5, rule 55). After it:
+- **Release to the public domain.** An act ending a work's ownership, at once or at a point it names on the time reference (type 5, rule 55). After it:
   - nobody earns from the work as its owner any more;
   - its history, who made it and who owned it, stays named;
-  - its content key is published, or delivered at that point by the identity the act names.
+  - its content key is made public, or delivered at that point by the identity the act names.
 - **Fork of a collective.** The end of a collective whose members split into sides that will not agree (type 19, terms field 23, rule 91).
   - Each side first founds its successor.
   - A fork act names the successors, signed by the members on its sides with their own identities under the constitutional change rule.
@@ -206,9 +211,10 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - Each successor names the original in "forked from", a back-link only.
 
   Not to be confused with a fork of records or of an agreement chain (rules 6, 72, 90), which rule 90 settles.
-- **Closing.** The end of a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor. It is a closing act, signed under the constitutional change rule. After its line, the collective's keys count for nothing in Agreements (type 20, rule 91). The selling and releasing are ordinary acts before the closing. An absentee's money share follows the collective's own rules, and stays visible as an open obligation wherever they sent it; the closing names nothing for it.
-- **A deal's end.** A deal has no closing act. It ends, or winds down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed, and to whom its outer agreement now pays (rules 15, 47).
-- **Creditor's release.** An act by which a creditor ends an obligation owed to it without full payment, for instance against stakes or a partial payment. Only the creditor signs it (rule 92). It is a Money act (Money type 4; Agreements type 21 retired). A collective creditor signs it by the area reaching Money alone. A release traded for future terms is also an Agreements agreement, signed by the area reaching Agreements, which the release names. *MOR has no court and cannot force a creditor to let go: a debt ends by payment or by its creditor's word.*
+- **Closing.** The end of a collective that holds nothing and owes nothing: every share it held sold or released, every debt paid or released by its creditor. It is a closing act, signed under the constitutional change rule. After its line, nothing done for the collective counts in Agreements (type 20, rule 91). The selling and releasing are ordinary acts before the closing. An absentee's money share follows the collective's own rules, and stays visible as an open obligation wherever they sent it; the closing names nothing for it.
+- **A deal's end.** A deal has no closing act. It ends, or winds down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed, and to whom it now pays (rules 15, 47).
+- **Creditor's release.** An act by which a creditor ends an obligation owed to it without full payment, for instance against stakes or a partial payment. Only the creditor signs it (rule 92). It is a Money act (Money type 4; Agreements type 21 retired). A collective creditor signs it under its rule for Money alone. A release traded for future terms is also an Agreements agreement, signed under the collective's rule for Agreements, which the release names. *MOR has no court and cannot force a creditor to let go: a debt ends by payment or by its creditor's word.*
+
 
 ## Part one: agreements as they run most of the time
 
@@ -280,30 +286,32 @@ The one exception: a member's signature act that a collective placed before its 
 
 **A deal's version, once relied on, stays complete**, as rule 47 says, the disowned signature shown as a dispute.
 
-### 2. Works and stakes
+### 2. Claims and ownership
 
 #### Rule 7. Binding a work
 
-A work is bound to its creators only by an explicit work claim:
+A work is bound to its creators only by an explicit claim:
 
 - a sole creator, by its claim alone;
 - several creators, by one creator's claim completed by signature acts from all the others, and bound only when all are present.
 
-A publication is a neutral carrier: carrying or quoting a work, or pointing to a web resource, claims nothing.
+A bake is a neutral carrier: carrying or quoting a work, or pointing to a web resource, claims nothing. A bake says one thing only, who uploaded it (Envelopes rule 23).
 
-The core records claims and their order, never legitimacy. Order is not evidence of authorship; a claim cMIP MAY carry a pre-publication commitment.
+The core records claims and their order, never legitimacy. Order is not evidence of authorship; a claim cMIP MAY carry a commitment made before upload. *A claim is used to build agreements and as a defence. Where no claim is made, and no agreement builds on one, nothing in Agreements speaks for the work; and a claim, even with an anchor, proves only "first on MOR": MOR is not a court.*
 
 Where claims from different identities conflict, priority can only be decided where they meet: by anchoring, or by a keeper of an agreement both claims belong to that recorded both. Otherwise they remain openly contested.
 
-**A work claim counts only public or addressed to every creator it names.** It names no roles.
+**A claim counts only public or addressed to every creator it names.** It names no roles.
 
-In MOR's eyes the owners are who the recorded work claim names, with the shares its agreement gives. **Where no agreement writes shares, the default holder is the creator who opened the work claim.** A client shows it "as recorded", any contest beside it, never as legitimacy.
+**A work's ownership agreement** is an ownership agreement whose target is the work's claim (terms field 33, `[0, claim]`). In MOR's eyes the owners are those its stake names, with the shares it gives. **Where no ownership agreement targets the claim, the default holder is the creator who opened the claim.** A client shows it "as recorded", any contest beside it, never as legitimacy.
 
-**A manifest neither claims its parts nor is reached by their claims.** A manifest work (an album naming its songs) is a work of its own: its claim binds the manifest's hash, never the parts it names, and a claim on a part never reaches the manifest. The parts' owners take part in it by agreement: the manifest's agreement has the parts' agreements as parties (rule 15).
+**Ownership is one thing, distribution another.** An ownership agreement says only who owns what share, and how the owners decide; it carries no split, no fees and no split service. How the work is sold, at what price, with which partners and who takes what, is a publication's (rule 11), and one work may have many publications, the owners' shares read from the ownership agreement in each (rule 12).
+
+**A manifest neither claims its parts nor is reached by their claims.** A manifest work (an album naming its songs) is a work of its own: its claim binds the manifest's hash, never the parts it names, and a claim on a part never reaches the manifest. The parts' owners take part in it by agreement: the manifest's ownership agreement has the parts' ownership agreements among its holders (rule 15).
 
 #### Rule 8. Stake rule
 
-Any act that changes the size of a stake requires its holder's signature.
+Any act that changes the size of a share of a stake requires its holder's signature.
 
 **The one exception is an issuance**: new holders added to a stake, every existing holder's share scaled by the same factor, decided by the stake's holders' rule and pre-emptive, as rule 96 says. A share added any other way still needs every holder whose share it lowers. **A holder is whoever field 7 and the transfers placed say** (rule 10): a buyer who completed a transfer is the holder of what it bought, for this rule as for rule 48.
 
@@ -311,15 +319,15 @@ A signature on an agreement is consent to everything it defines, including pre-a
 
 #### Rule 9. Stakes are written in millionths
 
-Stakes are written in millionths, summing to 1,000,000.
+Shares are written in millionths, summing to 1,000,000.
 
 *In short: when a payment does not divide exactly, the few leftover units go to the holders whose exact shares were cut the most, and ties take turns. The holders keep the chain of receipts that proves it.*
 
-Leftover units from dividing a stake go one each to the holders whose exact shares have the largest fractional remainders.
+Leftover units from dividing the owners' line go one each to the holders whose exact shares have the largest fractional remainders.
 
 Holders with equal remainders take turns. A tied unit goes to the tied holder that has received the fewest leftover units from this stake so far, counted along the dividing split service's own receipts for the stake. Where that count is equal, it goes to the holder whose identity hash is smallest.
 
-**The count runs along the service's receipts across every version of the deal, the same stake being the same holder's share in the same work whatever its place in the list, and a new holder starting at zero.**
+**The count runs along the service's receipts across every version of the ownership agreement, the same share being the same holder's share whatever its place in the list, and a new holder starting at zero.**
 
 The order in which holders are listed decides nothing.
 
@@ -343,97 +351,104 @@ Splits made from a payer's claim are in the chain. A new holder starts keeping t
 
 *The rare cases, in detail.*
 
-**Where the payer divides** (a payer-side split, or a split from a payer's claim with no receipt), the payer decides each tied unit, at most one per tie (no hash, since the receipts do not exist when the payer divides). This is a stated cost, since a payer who is not a holder gains nothing by it.
+**Where the payer divides** (a split from a payer's claim with no receipt), the payer decides each tied unit, at most one per tie (no hash, since the receipts do not exist when the payer divides). This is a stated cost, since a payer who is not a holder gains nothing by it.
 
 **A fork's division** keeps ties among sides by the hash of the fork act with each side, which every member signs and any may refuse. Among members counted alike, it gives leftovers to the first as listed in the agreement in force, an order every member signed.
 
-**While a deal stands forked, the turns stay per branch.** Each split is judged under its branch's latest version, and its stake's holders there take their turns along that branch's receipts.
+**While an ownership agreement stands forked, the turns stay per branch.** Each split is judged under the version its receipt names, and its stake's holders there take their turns along that branch's receipts.
 
-**One numbering runs across every split the service makes under the deal, on any branch.** Each split shows its number (split key 5), from 1, each one more than the service's split under the deal before it.
+**One numbering runs across every split the service makes under the publication, for any version of the ownership agreement.** Each split shows its number (split key 5), from 1, each one more than the service's split under the publication before it.
 
 *Client conformance:* **a holder's client MUST raise the alarm when the numbers on the splits it receives skip.** Splits are then being made where it is not shown, and a gap reveals a hidden branch even to the party a bait branch was hiding from. *One count across both branches acts as an alarm.*
 
-**A deal's split that carries no number, or a number another split of the same service under the deal carries, is a deviation that breaks the plan**, as two receipts citing the same one are: shown on every split carrying it.
+**A split that carries no number, or a number another split of the same service under the publication carries, is a deviation that breaks the plan**, as two receipts citing the same one are: shown on every split carrying it.
 
 A gap stays the holder's alarm, not a deviation: the split missing may only not have reached that holder.
 
 #### Rule 10. Transfer
 
-By default, a stake is sold or given by a transfer signed by the seller and completed by the buyer's signature. Other holders are notified, not asked.
+By default, a share of a stake is sold or given by a transfer signed by the seller and completed by the buyer's signature. Other holders are notified, not asked.
 
-**For a collective's owners' matters, a transfer counts only where the collective's line placed it** (rule 94): until then the seller holds, for the collective, what field 7 and the transfers already placed say. Money follows transfers as this rule says, unchanged. **The buyer accepts the holders' rule of the version in force at the placement** (rule 94), never of the version the transfer names in its field 0, which may be a stale one. **A collective's transfer of a stake it holds in a work is an owners' matter** (rule 95).
+**For a collective's owners' matters, a transfer counts only where the collective's line placed it** (rule 94): until then the seller holds, for the collective, what field 7 and the transfers already placed say. Money follows transfers as this rule says, unchanged. **The buyer accepts the holders' rule of the version in force at the placement** (rule 94), never of the version the transfer names in its field 0, which may be a stale one. **A collective's transfer of a share it holds in a work is an owners' matter** (rule 95).
 
-The new holder inherits the full position. The transfers name the current holder of each stake, and a split service MUST follow them.
+The new holder inherits the full position. The transfers name the current holder of each share, and a split service MUST follow them: **a share's payouts become its buyer's once the transfer is complete, both signatures placed**, and every publication reading the ownership agreement by reference pays the buyer from then on.
 
 **A sale takes effect on the seller's own line.** The seller signs the transfer by a chain signature too (Identity type 16), which fixes its place.
 
-**Once the seller has signed it, a payout receipt the seller signs for that stake after it on the seller's own line is a wrong receipt, counting for nothing.** That payout is owed to the buyer, in the share sold, as the split service's open obligation (rule 30), the service settling with the seller.
+**Once the seller has signed it, a payout receipt the seller signs for that share after it on the seller's own line is a wrong receipt, counting for nothing.** That payout is owed to the buyer, in the share sold, as the split service's open obligation (rule 30), the service settling with the seller.
 
 *Stated cost:* between the transfer and the service's first split following it (split key 8, the service's statement, never the moment), a colluding seller and service can keep paying the seller. The buyer's protection is to anchor the transfer. Otherwise the trail shows it, and the service is liable once it is shown.
 
-*Client conformance:* a co-owner's and the buyer's client show a split paying a seller for a stake the seller has transferred, beside the transfer.
+*Client conformance:* a co-owner's and the buyer's client show a split paying a seller for a share the seller has transferred, beside the transfer.
 
 *The rare cases, in detail.*
 
-**"After" on the seller's own line.** Identity binds an everyday act to genesis or a rotation, never to a chain signature. So **a seller's payout receipt for a stake it transferred is after the transfer, and wrong, once it is bound to a rotation later than the transfer's chain signature**, on the seller's identity line.
+**"After" on the seller's own line.** Identity binds an everyday act to genesis or a rotation, never to a chain signature. So **a seller's payout receipt for a share it transferred is after the transfer, and wrong, once it is bound to a rotation later than the transfer's chain signature**, on the seller's identity line.
 
-**Until then, what moves the money is the service.** From its first split citing the transfer (split key 8), every payout to the seller for that stake is the service's debt to the buyer, receipted or not.
+**Until then, what moves the money is the service.** From its first split citing the transfer (split key 8), every payout to the seller for that share is the service's debt to the buyer, receipted or not.
 
-"First" and "from" are read on the service's split numbers under the deal: the citing split, and every split of the service under the same lineage numbered above the lowest citing one. What is owed is what the payout gives the seller above its due once the transfer and those before it on the seller's line are followed, at most the share sold of what the split pays the stake.
+"First" and "from" are read on the service's split numbers under the publication: the citing split, and every split of the service under the same publication numbered above the lowest citing one. What is owed is what the payout gives the seller above its due once the transfer and those before it on the seller's line are followed, at most the share sold of what the split pays the stake.
 
 *Stated cost, the window's second edge:* the window accepted as legible closes at the earlier of the service's first split citing the transfer and the seller's next rotation. Within it, a colluding seller and service can keep paying the seller, the trail showing it.
 
-**A stake sold twice is settled on the seller's own line**:
+**A share sold twice is settled on the seller's own line**:
 
 - a stake's transfers are ordered on the seller's own line, by their chain signatures' places;
 - each is checked against what the seller still held at that point;
 - transfers that fit are all valid, so two partial sales are not a fork;
 - **an over-sale confers nothing, and its payment is owed back by the seller** (money received for nothing), paid as a refund (Money rule 19; stated here, not in Money rule 18).
 
-What the seller still held is its share in the version the transfer names, less each transfer of the same stake (by its object, across the lineage) placed before it on its line that fitted what was left; an over-sale before it consumes nothing. An earlier transfer counts from the seller's chain signature, whether its buyer has completed it yet or not, so a later buyer's client sees it before paying.
+What the seller still held is its share in the version the transfer names, less each transfer of the same stake (across the lineage) placed before it on its line that fitted what was left; an over-sale before it consumes nothing. An earlier transfer counts from the seller's chain signature, whether its buyer has completed it yet or not, so a later buyer's client sees it before paying.
 
 The payment for a transfer is a Money receipt or claim fulfilling it (the receipt's field 5, the claim's field 4), or one the transfer's field 4 names. The over-sale's payment is owed back by the seller. *A transfer cannot name by hash a payment made after it; such a payment names the transfer it fulfils (field 5).*
 
 *Client conformance*: **a buyer's client pays only once the seller's transfer is receipted by the seller's homes** (its chain signature counted on the seller's resolved line) **and checked against what the seller still holds.** Nobody polices it: it is prevented where it can be and undeniable where it cannot, a refund debt any wallet sees, with signed proof of the double sale.
 
-### 3. Selling
 
-#### Rule 11. Standing offers, accepted by performance
+### 3. Publications
 
-*In short: a seller publishes a standing offer, a buyer accepts it by paying, and the deal is complete when the seller's side delivers.*
+#### Rule 11. Publications, accepted by payment
 
-*How it runs most of the time:* a seller publishes an offer. The offer is always public. It names:
+*In short: the publication is the offer. The owners, with whatever partners they choose, sign a publication saying what is sold, on which terms, who takes what and which split service pays everyone; its split service signs its price tag; a buyer accepts by paying the tag; the deal is complete when the seller's side delivers.*
 
-- what it sells: publications; a vow (a promised offer); or a delivery proven under a cMIP's terms (a proven offer, the access form);
-- its price;
-- who is paid.
+*How it runs most of the time:* the owners of a work, under their ownership agreement, and their partners (a publisher, a relay, a client) sign a publication. The publication is always public. It names:
 
-A buyer's client finds the latest version of the offer and pays. The seller's side delivers the content key.
+- what it sells: bakes; a vow (a promised delivery); or a delivery proven under a cMIP's terms (a proven delivery, the access form);
+- the ownership agreement whose holders are its owners, by its founding version;
+- its partners, each with its share and an optional label;
+- its split service, which receives every payment and pays everyone, and its split plan;
+- its terms: its words, its deadline, its refund terms, on its time reference.
+
+Its split service signs its price tag (Money rule 18). A buyer's client finds the latest version of the publication and of its tag, and pays the tag. The split service receipts the payment, delivers the content key, and divides the payment: partners first, then the owners' line by their shares (rule 12).
 
 *Owners publish terms; anyone accepts by paying them.*
 
-**A lone seller's offer, with no co-owners behind it, is itself the agreement between seller and buyer.** It carries its price, its words, its deadline and, if the seller sets any, its own refund terms on its own time reference. The buyer's payment accepts them and names no claim.
+**Who signs a publication.** A publication is a deal among its parties, each bound only by its own signature (rule 1):
 
-Co-owners' offer works differently. It:
+- **the owners' side**: where it names an ownership agreement (field 1), that agreement, as a party consenting by its own rule (rule 15: in a deal every party; in a collective, under its rule for Agreements, rule 60); where it names none, its drafter alone, selling as the lone owner of what it sells;
+- **each partner** it names;
+- **its split service.**
 
-- names their agreement (field 0);
-- is signed under its rule (in a deal, every party);
-- pays a payee its field 14 lists or, where it names no split service, the stakes.
+It counts, and sells, once every party has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1). *Partners are any identity: the core does not define a publisher; it may be a curated relay, a client, a label.*
 
-A purchase following it names that agreement. Its refund terms are the agreement's (field 17).
+**Self-publishing** is a publication with no partners whose split service is the owner, or one the owners chose. **A lone seller's publication**, naming no ownership agreement, sells what its drafter owns alone: its owners' line is its drafter's. It carries its own words, its deadline and, if the drafter sets any, its own refund terms on its own time reference.
 
-An offer changes by versions on its own chain. A version selling nothing withdraws the offer. A purchase under any version counts. Two versions of one previous are the seller's fork, shown.
+**A publication changes by versions on its own chain**, each a later version signed by every party of that version. A purchase under any version counts. Two versions of one previous are the parties' fork, shown.
 
-A payment the time reference places past the offer's deadline is owed back. A payment whose place is undetermined is a purchase: the seller who chose a push rail bears it.
+**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it. Past sales stand. **A payment racing the ending** (one its split service receipts that the ending's history does not hold, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30).
 
-The deal is complete when the offer's side either:
+**Two stops, two different people's.** A publication's ending is a version every party signs, so no party ends a publication alone. **A price tag's withdrawal is its signer's alone** (Money rule 18): the publication's split service, or the party it designates to sign its tags. Withdrawing the tag stops sales at that price, and is the one-sided stop, held by the publication's side; ending the publication stops it for everyone, and needs everyone. *So a co-owner, or the uploader of a bake the publication sells, cannot stop the publication's sales alone; the publication's side can stop selling at once, and the parties together end it.*
+
+A payment the time reference places past the publication's deadline (field 7) is owed back. A payment whose place is undetermined is a purchase: the seller who chose a push rail bears it.
+
+The deal is complete when the publication's side either:
 
 - delivers the content key; or
-- for a publication whose key is public, **receipts the payment naming the offer** (type 7 is retired).
+- for a bake whose key is public, **receipts the payment naming the tag** (type 7 is retired).
 
 That proves payment was verified and honoured.
 
-A payment that receives neither, such as one arriving after a withdrawal, creates an obligation to refund it.
+A payment that receives neither, such as one arriving after the publication ended, creates an obligation to refund it.
 
 A refund owed on a payment whose payer is not named is owed to whoever signs with the key the payment committed to as its payer. They claim it by a payment claim carrying that key's signature and naming where to be paid (Money rule 19). It is never owed to whoever presents the rail proof, which others on the route may hold too. A payment that committed to no key leaves its refund unclaimable by anyone.
 
@@ -441,106 +456,73 @@ The obligation stays open and visible until claimed and discharged. A seller who
 
 **The vault's limit protects refunds too.** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rule 17, with rule 3's limit). A payer that declares no vault has no vault rule (Money rule 3). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; the vault exists partly to protect large debts.* A refund owed to a bare key (Money rule 19) has no vault, so the limit does not reach it (Money rule 17).
 
-The offer's terms MAY say how long a refund stays claimable, on the time reference. The core sets no lapse. **A refund past the terms the buyer accepted by paying is ended**: the obligation closes there, the owners keep the money, and it does not block a closing. The terms are a fixed point on the time reference (terms field 17, or a lone seller's offer's own). Terms written in bad faith are not refused: they stay public, for anyone to judge.
+The publication's terms MAY say how long a refund stays claimable, on its time reference. The core sets no lapse. **A refund past the terms the buyer accepted by paying is ended**: the obligation closes there, the owners keep the money, and it does not block a closing. The terms are a fixed point on the time reference (publication field 8). Terms written in bad faith are not refused: they stay public, for anyone to judge.
 
 *Client conformance:* the buyer's client shows the deadline before paying.
 
-Paid access to a live stream, which has no work hash until it ends, is sold by a standing offer, not a publication. **The class follows what is sold.** A seller who promises the stream sells a vow, a promised offer (rule 13; the live media cMIP): the key delivered in keeping the vow is a proof that sits in the sale as evidence (rule 13), and the buyer still confirms or contests. *A stream cut short: the key worked, the promise did not.* A seller selling only a key to what already exists, such as the recording, sells a proven offer, under the access form. *An offer selling a stream's access under the access form with no vow sells the key only, and is read so.*
+Paid access to a live stream, which has no work hash until it ends, is sold by a publication selling a vow or a proven delivery, never by a bake. **The class follows what is sold.** A seller who promises the stream sells a vow, a promised delivery (rule 13; the live media cMIP): the key delivered in keeping the vow is a proof that sits in the sale as evidence (rule 13), and the buyer still confirms or contests. *A stream cut short: the key worked, the promise did not.* A seller selling only a key to what already exists, such as the recording, sells a proven delivery, under the access form. *A publication selling a stream's access under the access form with no vow sells the key only, and is read so.*
 
-**Two classes of offers: proven and promised.** What an offer sells is delivered either with a proof or on someone's word.
+**Two classes of delivery: proven and promised.** What a publication sells is delivered either with a proof or on someone's word.
 
-- **A proven offer** sells a delivery that leaves a proof any verifier can check from data alone, no one's word trusted. It uses the access form, `[ 2, [ cMIP, params ] ]`, under that cMIP's terms ("A service sold under a cMIP's terms"). The form is **widened from access to bytes to any delivery proven this way**: access to bytes (a key that decrypts to the promised hash, such as a subscription's keys), anchoring (a hash in a batch), a rail swap (the payment's proof), a deterministic computation (re-run to the same hash), a bounty whose answer checks itself.
-- **A promised offer** names a vow (`[ 3, vow ]`, rule 13). Each sale is confirmed or contested by those who signed onto the vow. A service's signed word alone (counts, checks, quality) and anything ongoing (hosting over time) are promised.
+- **A proven delivery** leaves a proof any verifier can check from data alone, no one's word trusted. It is sold in the access form, `[ 2, [ cMIP, params ] ]`, under that cMIP's terms ("A service sold under a cMIP's terms"). The form is **widened from access to bytes to any delivery proven this way**: access to bytes (a key that decrypts to the promised hash, such as a subscription's keys), anchoring (a hash in a batch), a rail swap (the payment's proof), a deterministic computation (re-run to the same hash), a bounty whose answer checks itself.
+- **A promised delivery** names a vow (`[ 3, vow ]`, rule 13). Each sale is confirmed or contested by those who signed onto the vow. A service's signed word alone (counts, checks, quality) and anything ongoing (hosting over time) are promised.
 - **A cMIP may produce the proof; the verifier checks the proof itself, never the cMIP's say-so.** A delivery the verifier cannot check from data it holds is not proven, whatever the cMIP signs.
-- **A pooled anchoring service is a proven offer:** the hash is in the batch or it is not.
-- **Each proven offer names its checker**: the cMIP in its access form. The checker is not a task (Development, "The checker is not a task"): no agreement names one by a task number, so a collective sets no checker for all its offers. A cMIP that checks proofs of delivery declares so in its specification, by Development's field 12, for discovery only: a verifier asks the checker of whatever cMIP the offer names.
+- **A pooled anchoring service is a proven delivery:** the hash is in the batch or it is not.
+- **Each proven delivery names its checker**: the cMIP in its access form. The checker is not a task (Development, "The checker is not a task"): no agreement names one by a task number, so a collective sets no checker for all its publications. A cMIP that checks proofs of delivery declares so in its specification, by Development's field 12, for discovery only: a verifier asks the checker of whatever cMIP the publication names for the delivery.
 
-*A proven offer needs no one's confirmation, since its proof is the confirmation; a promised one needs its signer's.*
+*A proven delivery needs no one's confirmation, since its proof is the confirmation; a promised one needs its signer's.*
 
-*The widening changes no format. A verifier tells the classes apart by what an offer sells, and asks the checker of the cMIP a proven offer names, among those it holds, for a proof's verdict; with none held, the delivery is not proven for it.*
+*The widening changes no format. A verifier tells the classes apart by what a publication sells, and asks the checker of the cMIP a proven delivery names, among those it holds, for a proof's verdict; with none held, the delivery is not proven for it.*
 
-#### Rule 12. A purchase names the claim it pays under
+#### Rule 12. A purchase names a publication's price tag
 
-*In short: a payment for a standing offer, or for a publication carrying a claimed work, is a purchase only if it names the claim it pays under.*
+*In short: a payment is a purchase under a publication when it names a price tag the publication counts; the split service's receipt names the version of the ownership agreement whose shares it pays, and the owners' line is divided by that version.*
 
-Buying a work under an Agreements claim is not pure money, since the work's claim and offer are Agreements. So a payment is a purchase only if its receipt or claim names the claim it pays under (Money receipt and claim field 9), save a payment following a lone seller's offer, which names no claim: the offer is itself the agreement it pays under (rule 11; Money rule 18). This holds for:
+**A payment is a purchase under a publication when its receipt or claim names, as what it fulfils** (the receipt's field 5, the claim's field 4), **a price tag the publication counts**: one signed by its split service or by the party it designates, naming it (Money rule 18). *A wallet that reads only Money can pay it, and its purchase is valid: the tag names the publication, and a verifier reading Agreements reads the rest.*
 
-- a payment for a standing offer;
-- a payment for a publication carrying a work some agreement claims.
+**A payment naming a tag the publication does not count** (a tag on it signed by anyone else, or a version carrying no price) **is no purchase: money received for nothing, owed back to the payer as a refund** by whoever received it (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim). A payment naming the publication itself, and no tag, is **a tip through the publication**: no purchase, divided by its split plan as a sale is, owed back to nobody. *A tip to a work goes through the publication where it was found, which pays its partners and gives the owners their line.*
 
-The claim named is two things:
+*Stated here alone: Money carries field 9 and the payment commitment, and pays the refund (Money rule 19); whether a payment is a purchase, and what is owed when it is not, is this rule's.*
 
-- the claiming agreement; and
-- the line at which the payer's client read it current: a version of that agreement, or the fork, closing or release that last changed who is paid for the work.
+**The owners' shares are read by reference, from one named version.** The split service's receipt of a purchase names, in field 9, the ownership agreement the publication names, by its founding version, and a version on that agreement's line. **The version in force for that receipt is the latest complete version on that line its history holds** (what its `prev` and the predecessors its `objects` name, followed back), or, where its history holds none later, the version it names; the owners' line of that payment is divided by that version's stake. **A receipt naming a version on no line of the agreement the publication names is a wrong receipt**, and so, until the fork is settled, **is one naming a version of a fork of the ownership agreement other than its reference** (rule 47). *One version, named in signed bytes, read by the rule "the version in force for the act" already has: checkable. A share change racing a payment applies from the next payment: a clone completing concurrently is on the line but not in the receipt's history. Nobody loses more than one payment's difference, and the trail shows which version paid.*
 
-The payer's client therefore reads the work's Agreements claim. A Money-only wallet cannot make a valid purchase.
+**A publication names an ownership agreement by its founding version, and reads its line.** Replaced by a clone, the line continues, and the publication follows it. Where the owners found a new ownership agreement for the same work, the publication keeps reading the old one, until its parties end it and publish anew.
 
-**A payment naming no claim, or a line that carries none of that agreement's claims, is no purchase: money received for nothing, owed back to the payer as a refund** (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim), save a payment following a lone seller's offer, as said above.
+**Which version of the publication a payment buys is settled where the payment truly takes place.**
 
-*The claim a purchase may name is read as the current version of the claiming agreement the payment names. So every agreement holding a stake in the work is a claim a purchase may name, a sale under another shown outside the first by rule 14 (Money rule 18).*
+**On a request rail**, the payee's side commits to each payment before it is made (the payment cMIP's commitment, which an invoice carries). There, **the tag and the publication's version a purchase names are those the seller's request committed to**, so a buyer cannot pay a version the seller has left. The payment is a purchase under it, whatever the publication became after.
 
-*Stated here alone: Money carries field 9 and the payment commitment, and pays the refund (rule 19); whether a payment is a purchase, and what is owed when it is not, is this rule's.*
+**On a push rail**, the payer pays an address with no request. There, **the split service settles it on its own chain**: a receipt it records before its own signature on the version ending the publication is a sale under the publication; a receipt recorded after that signature, its own history holding it, is not, and is owed back as a payment racing the ending (rule 11). Until the split service has signed its receipt, the payment is **pending.**
 
-**Which claim the payment buys under is settled where the payment truly takes place.**
-
-
-**On a request rail**, the payee's side commits to each payment before it is made (the payment cMIP's commitment, which an invoice carries). There, **the claim a purchase names is the one the seller's request committed to**, so a buyer cannot pay a version the seller has left. The payment is a purchase under it, whatever the claim became after.
-
-**On a push rail**, the payer pays an address with no request. There, **each holder of the work's stake in the claim named settles on its own chain**:
-
-- a receipt that holder records before its own signature on the act superseding the claim is a sale under the old claim. The superseding act is a version of the claiming agreement changing who is paid, a release, a fork or a closing;
-- a receipt recorded after that signature, its own history holding it, is not.
-
-**The payment is a purchase only if every holder's receipt is a sale; otherwise every holder refunds what it received** (paid by Money rule 19), and the buyer buys again under the current claim. Until every holder has signed its receipt, the payment is **pending.**
-
-A push payment to several holders is one rail payment: their receipts carry its one rail proof.
-
-*The clock is when each holder records, the only one MOR has, and it belongs to the one answering for it. A receipt on another of the holder's sequences than its signature is not after it: each holder answers for its own devices.*
-
-**Where the seller is a collective, a payment becomes a sale once the collective's actions chain records it.** It is recorded by an act that:
-
-- is in the collective's name and counts (done, on its chain, not void at an ending);
-- is signed with the collective's own key or with a grant key of its, its split service's among them;
-- is the payment's receipt, acknowledges it, or is a receipt for the same rail proof.
-
-And the claim must match:
-
-- on a request rail, the claim is the one the request committed to;
-- on a push rail, the claim named was current as that act's agreement in force reads it, and before the collective's own release where the release is current.
-
-Until the seller's chain records it, the payment is **pending**: a sale once recorded.
-
-*The payment is the buyer's act; the sale is the collective's, on its chain, where the fork's line can place it.* *No payment is undetermined.* *"Records it" and "the claim current at an act": the latest version, in force for it, that changed who is paid for the work.*
+*The clock is when the split service records, the only one MOR has, and it belongs to the one answering for it. A receipt on another of the service's sequences than its signature is not after it: the service answers for its own devices.*
 
 *The rare cases, in detail.*
 
-*Wrong receipts.* **The payment decides.** **The claim is the one the payment's commitment names** (the payment cMIP: a purchase names its claim). **A receipt naming another claim is a wrong receipt, shown as such, counting for nothing**: neither a sale nor a refund. Its commitment, recomputed from it, is not the one the rail proof carries, so the rail shows it. The push-rail rule above then applies to the holders' receipts naming the payment's claim, each settled on its own holder's chain.
+*Wrong receipts.* **The payment decides.** **The tag, and the ownership version, are those the payment's commitment names** (the payment cMIP). **A receipt naming another tag or version is a wrong receipt, shown as such, counting for nothing**: neither a sale nor a refund. Its commitment, recomputed from it, is not the one the rail proof carries, so the rail shows it.
 
-Until a verifier has the rail's answer, receipts of one payment naming different claims are judged none of them a sale or a refund: the payment is **pending** (Money rule 18), and whether it is a purchase is unknown (Money rule 8).
+Until a verifier has the rail's answer, receipts of one payment naming different tags or versions are judged none of them a sale or a refund: the payment is **pending** (Money rule 18), and whether it is a purchase is unknown (Money rule 8).
 
-*One payment shown as both a purchase and a refund cannot arise: of two receipts naming different claims, at most one carries the payment's commitment.*
+*One payment shown as both a purchase and a refund cannot arise: of two receipts naming different tags, at most one carries the payment's commitment.*
 
-*Payments the chain did not record in time.* **A payment the original's chain never recorded before the fork or closing that superseded its claim is no purchase, and is refunded** (paid by Money rule 19). A sale in the fork's history stays a purchase. A payment recorded concurrently with the fork falls under the tie rule: the fork wins, and it is refunded.
+*Owners that ended.* **A publication whose ownership agreement names a closed collective as owner, or names an ownership agreement that is itself closed, sells nothing from the closing's line; a payment after it is owed back**, as a payment racing an ending is (rule 11). An ownership agreement is closed when a release ends its target's claim (rule 55); a collective, by its fork or closing (rule 91). "After it" is read as the tie rule reads an ending ("Made before, made after", 7).
 
-*Client conformance:* a split service whose grant has ended issues no payment request. So on rails where the payee's side issues each request (invoices), a payment to a superseded claim cannot happen.
+*Client conformance:* a split service whose publication has ended issues no payment request. So on rails where the payee's side issues each request (invoices), a payment to an ended publication cannot happen.
 
-*Stated cost: a wallet that reads only Money can pay a claimed work's publication, but cannot tell whether it bought it: its payment is no purchase, and the money is owed back to it; it can still receive the refund (Money rule 19).*
+*Stated cost: a wallet that reads only Money can pay a publication's tag and make a valid purchase, but cannot itself tell whether the publication still counts: a payment racing its ending is owed back to it, and it can receive the refund (Money rule 19).*
 
-*Client conformance, a strong SHOULD:* **before paying, a buyer's client finds the offer and verifies that it is truly the latest in its chain**, fetching the seller's latest version from its homes or relays, **and warns where what it shows is outdated.**
+*Client conformance, a strong SHOULD:* **before paying, a buyer's client finds the publication and its tag and verifies that each is truly the latest in its chain**, fetching the latest version from the seller's homes or relays, **and warns where what it shows is outdated.**
 
-*What is already in place stands: a purchase names the version and the point at which the client read it current; on a request rail the seller commits to the version sold; on a push rail each holder settles on its own chain. Guidance, not rule: sellers prefer request rails for sales; an offer may carry its own expiry on a named time reference.*
-
+*What is already in place stands: a purchase names the tag and the version at which the client read it current; on a request rail the seller commits to the version sold; on a push rail the split service settles on its own chain. Guidance, not rule: sellers prefer request rails for sales; a publication may carry its own expiry on a named time reference.*
 
 #### Rule 13. Vows: the state of each sale
 
 *In short: for each sale of a vow, the core records only whether it is pending, confirmed or contested.*
 
-
 The core keeps only the grammar:
 
 - a vow (Envelopes type 5);
-- offers naming it with their words (the offer format);
-- **the state of each sale of it**: was what the offered deal promised respected.
+- publications naming it with their words (the publication format);
+- **the state of each sale of it**: was what the publication promised respected.
 
 **Each sale is pending, confirmed or contested.**
 
@@ -550,39 +532,37 @@ The core keeps only the grammar:
 
 **Only someone who signed onto the vow may confirm or contest it**, **at any price, including none.** They sign on:
 
-- for a payment that is a purchase under an offer naming the vow (rule 12), by their own payer's claim;
-- for an offer at no price, by a signature act naming the offer.
+- for a payment that is a purchase under a publication naming the vow (rule 12), by their own payer's claim;
+- for a publication with no price tag, by a signature act naming the publication.
 
 **A vow nobody signed onto carries no state.**
 
-**What a vow covers.** A vow covers anything MOR cannot hash, existing or to come: a good in stock or to be made, a service, an hourly rate, storage, a seat. **Every sale of a physical good or of a service names a vow** (an offer's `[ 3, vow ]`), **unless its delivery is proven** (a proven offer, under the access form, rule 11), so each such sale is pending, confirmed or contested. One form for one task. *MOR needs a structured way of selling something that has no bytes, or no bytes yet.*
+**What a vow covers.** A vow covers anything MOR cannot hash, existing or to come: a good in stock or to be made, a service, an hourly rate, storage, a seat. **Every sale of a physical good or of a service names a vow** (a publication's `[ 3, vow ]`), **unless its delivery is proven** (a proven delivery, under the access form, rule 11), so each such sale is pending, confirmed or contested. One form for one task. *MOR needs a structured way of selling something that has no bytes, or no bytes yet.*
 
 **A proof may sit inside a vow as evidence.** A promised sale may carry a proof of delivery beside the buyer's confirmation or contest: it is evidence, shown, and replaces neither. The sale's state is still the signer's confirmation or contest alone. How a proof is carried and shown is the cMIP's.
 
 **Promises, and bundles.** A vow holds one or more promises. A seller bundles them as it chooses, in public: a season, a series, a single match. What each promise is, and how promises are listed, is the vow's words or a cMIP's.
 
 - **A contest names the sale it contests**, never the whole vow ("Contest (type 14)"). **Naming the promise that failed is optional** (field 1): a buyer may know only that something went wrong. One failed match marks one buyer's sale contested, not the season's every sale.
-- **A confirmation likewise names the sale** it confirms. A buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer.
-- **What a buyer is owed back when part of a bundle fails is set by the bundle's terms**: the offer's words, its agreement's, or a cMIP's. The core fixes no partial refund.
+- **A confirmation likewise names the sale** it confirms. A buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the publication.
+- **What a buyer is owed back when part of a bundle fails is set by the bundle's terms**: the publication's words, or a cMIP's. The core fixes no partial refund.
 
-
-**A vow names what is promised to the buyer, never the event itself.** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". **Two vows on one event stay separate**: neither references the other. This is how they are made, not a check a verifier runs: a vow naming another stays valid (below). **Each may reference the event, where the event exists on MOR as an act of its own** (in its `refs`, Envelopes), never as a vow, since a vow names what is promised. A reference carries no claim, no stake and no marking under rule 14. Each vow sits under its own agreement; whether an agreement claims a vow, and how its rights are managed, is its signer's business.
+**A vow names what is promised to the buyer, never the event itself.** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". **Two vows on one event stay separate**: neither references the other. This is how they are made, not a check a verifier runs: a vow naming another stays valid (below). **Each may reference the event, where the event exists on MOR as an act of its own** (in its `refs`, Envelopes), never as a vow, since a vow names what is promised. A reference carries no claim, no stake and no marking under rule 14. Each vow sits under its own ownership; whether an ownership agreement claims a vow, and how its rights are managed, is its signer's business.
 
 **A vow's reference to another vow is not an act about it.** Any vow may still name another in its `refs`; that reference moves none of the other vow's sales' states: acknowledging the referring vow confirms no sale of the vow it names.
-
 
 These hold too:
 
 - "an act about the vow" is one of its versions, or a valid act naming its name in `objects` or `refs`, except another vow naming it in `refs` (above);
 - a contest prevails over a confirmation and voids nothing;
 - a free sale is confirmed by any valid act of the buyer's acknowledging such an act;
-- a sign-on by signature is by anyone other than the offer's own side (its signer, its payee, the parties of its agreement);
+- a sign-on by signature is by anyone other than the publication's own parties;
 - a payment whose buyer signed nothing the verifier holds, or committed only a bare key, is a purchase nobody signed onto, listed, with no state (a stated cost of rule 22).
 
 **Everything about the substance is the cMIPs'**:
 
 - what is claimed or delivered and how it is confirmed;
-- what a vow became and how claims reach it (an ordinary work claim, dated by itself under rule 7, so nothing is backdated);
+- what a vow became and how claims reach it (an ordinary claim, dated by itself under rule 7, so nothing is backdated);
 - quantities and seats;
 - delivery points;
 - kinds;
@@ -592,149 +572,101 @@ These hold too:
 
 **Rule 7 speaks of works only:** a claim on a vow's name covers nothing it became.
 
-#### Rule 14. A sale is tied to the seller's agreement, not to the work's stakes
+#### Rule 14. A sale is tied to the seller's ownership agreement, not to the work's claim alone
 
-The core cannot tie a sale of a work to that work's stakes. It ties a sale to the agreement of whoever sells, and makes a sale outside the claiming agreement visible to those it concerns.
+The core cannot tie a sale of a work to the one ownership that is right. It ties a sale to the ownership agreement its publication names, and makes a sale outside the claim's ownership agreement visible to those it concerns.
 
-A publication or standing offer for a work with an existing claim, not signed under that claim's agreement, is a valid act that visibly contradicts a signed agreement:
+A publication, or a bare bake's price tag, for a work whose claim an ownership agreement targets, not signed under that ownership agreement, is a valid act that visibly contradicts it:
 
-- the claim's holders contest it;
+- the ownership agreement's holders contest it;
 - a keeper has the claim on record;
 - the seller's own split shows what they took.
 
-*The bits and bolts are all in the core: work claims with order, contests with standing, keeper records, the published split, the publication's `for` field, and the payer's claim. A client that refuses to sell a claimed work under a plan that does not pay the claim's holders, or a reputation service that reads contests, can be built on them, and adoption decides.*
+**A payment following such a publication or tag is a purchase under it, read as the signer's own sale and shown outside the ownership agreement whose claim it contradicts; nothing is owed back to the buyer for it.** *The buyer whose client showed the contradiction before paying keeps what they bought; the other owners' remedy is theirs, and the greed is legible.*
 
-*Client conformance.* A client SHOULD show such a publication or offer as outside the claiming agreement.
+*The bits and bolts are all in the core: claims with order, ownership agreements, contests with standing, keeper records, the published split, and the payer's claim. A client that refuses to buy from a publication outside the claim's ownership agreement, or a reputation service that reads contests, can be built on them, and adoption decides.*
 
-**A vow's name is read as a work's.** A standing offer naming a vow (`[ 3, vow ]`, rule 13) in which an agreement writes a stake, not signed under that agreement, is the same valid act visibly contradicting it, shown as outside it. One rule for anything sold under a claim, bytes or not: a buyer sees that the seller is not the agreement claiming the vow.
+*Client conformance.* A client SHOULD show such a publication or tag as outside the claim's ownership agreement.
 
-"Signed under that claim's agreement" is read as made under a version of that agreement's line (the offer's field 0). A lone seller's offer is under none. Whether every party of a deal signed the offer is checked as rule 11 says (in a deal, every party).
+**A vow's name is read as a work's.** A publication selling a vow whose name a claim binds, where an ownership agreement targets that claim, not signed under that ownership agreement, is the same valid act visibly contradicting it, shown as outside it. One rule for anything sold under a claim, bytes or not: a buyer sees that the seller is not the ownership agreement claiming the vow.
 
-**A deal made on a vow has an owner: the vow's signer, who holds the stake.** A stake an agreement writes in a vow, its object the vow's name, is held by the vow's signer; in a collective's terms, the collective's own vow is held by the collective, written null. The overhead (a platform's fee, a helper's share, a fee) comes off the top (rule 22), and what is left is the owner's. A version that pays the owner less needs the owner's signature where the owner has no voice in the power making it (rule 48): in a deal the owner who is a party signs every version anyway (rule 47). Terms writing a stake in a vow held otherwise are invalid, signed by every party or not.
+"Signed under that ownership agreement" is read as a publication naming a version of that agreement's line (its field 1), the agreement having signed it as a party (rule 11). A lone seller's publication is under none.
 
-*The deal is based on a vow, and somebody owns the vow.* *A worker's vow, a job booked through a platform: the job's agreement writes the stake in her vow, held by her; the platform's fee comes off the top; what is left is hers, and the platform raising its fee needs her signature.*
+**A vow has an owner: its signer.** A publication selling a vow that no ownership agreement claims pays its owners' line to the vow's signer, who signs it as the owners' side; an ownership agreement whose target is a claim on a vow's name gives the vow's signer the whole stake in its founding version. Its terms giving it otherwise are invalid, signed by every party or not, where the verifier holds the vow. The overhead (a platform's share as a partner, a helper's share, a fee) comes off the top (rule 22), and what is left is the owner's. A version that pays the owner less needs the owner's signature (rule 48).
 
-- The vow's signer holds the whole stake in the version that first writes it (the founding terms, or a clone whose parent writes no stake in that vow). From then on the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
-- **A deal selling a vow it writes no stake in.** An offer made under an agreement and naming a vow counts whether or not that version writes a stake in the vow: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where another agreement claims the vow (above); the owner's protection is her own signature on the deal, and what her client shows before she signs (her client flags terms dividing money with no stake: "No owner").
-- The vow's signer is read from the vow the verifier holds, by its name (its genesis). A verifier that does not hold the vow cannot tell its name from a work's hash, and judges nothing, as for an offer's `[ 3, vow ]` ("Standing offer (type 6)").
+*Somebody owns the vow.* *A worker's vow, a job booked through a platform: the platform's publication sells her vow, the platform a partner taking its share off the top; what is left is hers, she signs the publication as its owner, and the platform raising its share needs her signature.*
 
-*Budgets are not vows: the vote that decides where a common budget goes is a cMIP's; the projects answering the need make vows, each a deal with its owner, which the budget pays.*
+- From its founding version on, the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
+- **A publication selling a vow that it does not pay the vow's owner.** A publication naming a vow counts whether or not it pays the vow's signer: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where an ownership agreement claims the vow (above); the owner's protection is her own signature, and what her client shows before she signs (her client flags a publication dividing money with no owner: "No owner").
+- The vow's signer is read from the vow the verifier holds, by its name (its genesis). A verifier that does not hold the vow cannot tell its name from a work's hash, and judges nothing, as for a publication's `[ 3, vow ]` ("Publication (type 6)").
 
-**After the fork of a collective, the original's stake passes to the successors in the shares the fork act gives them (rule 91): a successor's sale is under the claiming agreement, as a holder of that stake, never outside it.**
+*Budgets are not vows: the vote that decides where a common budget goes is a cMIP's; the projects answering the need make vows, each sold by a publication with its owner, which the budget pays.*
 
-*Stated cost:* a resale under a fresh vow escapes this marking. A holder of a claimed piece who signs a fresh vow for the same object and sells under it is marked by nothing here: this rule reads only offers naming the claimed vow, and the core cannot tell that two vows describe one object, since the object is what MOR cannot hash. Catching it is the provenance cMIP's, with registries and reputation. The point of cheating stays easy to find: it is the fresh vow, signed by the reseller.
+**After the fork of a collective, the original's shares in works pass to the successors in the shares the fork act gives them (rule 91): a successor's publication under the work's ownership agreement is under it, as a holder, never outside it.**
 
-#### Rule 15. A publication carries two agreements
+*Stated cost:* a resale under a fresh vow escapes this marking. A holder of a claimed piece who signs a fresh vow for the same object and sells under it is marked by nothing here: this rule reads only publications naming the claimed vow, and the core cannot tell that two vows describe one object, since the object is what MOR cannot hash. Catching it is the provenance cMIP's, with registries and reputation. The point of cheating stays easy to find: it is the fresh vow, signed by the reseller.
 
-A publication carries two agreements: the publication's own, and the work's.
+#### Rule 15. One ownership, many publications: money passes layer by layer
 
-*How it runs most of the time:* the owners sell through their own publication, and only the work's agreement divides.
+*In short: each publication pays its partners off the top, then gives the owners their line, divided by the ownership agreement's shares, read by reference; an owner that is a collective, or another ownership agreement, splits again behind it.*
 
-Where a publisher carries the work:
+*How it runs most of the time:* the owners sell through their own publication, and their line is divided by their shares.
 
-- **the publication's agreement** sets the terms of use and divides the publication's income among its participants, a publisher's share among them;
-- **the work's agreement** is one participant of it, consenting by its own rule (in a deal, every party signing the publication's agreement), and divides whatever reaches it.
+**One work, one ownership agreement, many publications.** The same owned work may be published in several places, each publication with its own price tag, partners and split. **The owners' shares are the same in all**: every publication reads them from the ownership agreement it names (rule 12), never copies them.
 
-A sale through the publication passes outside in. The publication's split gives the work's agreement its line, which nobody on the publication's side changes alone (rule 27 at each envelope). Then the work's split divides it.
+A sale through a publication is divided once, by its split service: **partners first**, each by its share; then the role, metric and fee shares the split plan names, all off the top; **then the owners' line**, divided among the holders of the ownership agreement's stake by their shares (rule 22). Nobody on the publication's side changes the owners' line alone (rule 27). A partner holds a share in the publication, never in the work, by construction. Recoupment and every other shape are the publication's split cMIP's.
 
-A publisher holds a stake in the publication's agreement, never in the work, by construction. No stake is marked as a publisher's. Recoupment and every other shape are the publication's split cMIP's.
+**Money passes layer by layer**: a pool (a subscription service's, splitting by its stated rules; freeze scenario 7), then each publication, then the owners, then, behind an owner that is a collective or another ownership agreement, its own owners, as many layers as the agreements chain. *Money is split envelope by envelope, deal by deal, and can reward more participants than the work and the publisher: the pipe too.*
 
+**An owner that is a collective is paid at the collective's own payee pointer**, which leads to the split service its own split agreement names; *it adds one layer of splitting when the money gets to that identity.* The collective's split agreement then divides what arrives by the collective's own stake, read by reference to its ownership agreement.
 
-**Money passes layer by layer**: a pool (a subscription service's, splitting by its stated rules; freeze scenario 7), then each publication's agreement, then the work's agreement, as many layers as the agreements chain. *Money is split envelope by envelope, deal by deal, and can reward more participants than the work and the publisher: the pipe too.*
+**An owner that is another ownership agreement** (a manifest's parts, rule 7) **is paid through it**: the split service divides that owner's part among that agreement's holders by their shares, read by reference as the owners' line is (rule 12), the receipt naming that agreement's version too. A part holding nothing on its line of the split is paid nothing.
 
-**The receiver of a layer's share is the one pointer the next layer's agreement names for money arriving from above.** The layer above never divides the next layer's share. Behind that pointer is the next agreement's own business:
+**A collective's own split agreement.** A collective names the service that receives its income by a split agreement: a publication whose first version sells nothing (field 0 absent), naming the collective's ownership agreement (field 1), a split service and a split plan, with partners where it pays any. *The split service is an agreement that points to the ownership of the collective, to attribute shares, as a publication does.* It is the collective's protected clause: signed for the collective under the judicial tier's rule, every member whose voice remains (rule 67), as the split service always was, since it can move money. *A collective that operates with a single wallet names none; its income stays at its pointer, and spending it is its business under its rule for Money.*
 
-- a lone owner's payee pointer (nothing to split);
-- a split service;
-- or an owner acting as treasury for the joint venture.
+**Where a collective names a split agreement, its payee pointer counts, for Agreements, only where its addresses and vault entries are the split service's** (rule 16).
 
+**Any agreement may be a party to another.**
 
-**The work's agreement designates the one pointer at which it accepts payments, the same whoever pays**: a buyer directly, or a layer above. The publisher points there and divides nothing. Its obligation for the work's share is discharged once that share reaches the designated pointer (Money's receipt shows it). What follows is the work's agreement's alone. *The work's agreement states the pointer, the publishing agreement the cut; the publisher delivers the cut and its responsibility ends there.*
-
-*The rare cases, in detail.*
-
-**The designation is field 14's one grantee**, reusing what the terms already write, read from the holding agreement's version in force:
-
-- in a deal, every grant field 14 lists names the same service, or the deal carries none of them ("A payee's grant in a deal");
-- in a collective, its one grant;
-- an owner acting as treasury being an owner so named.
-
-**Where it names no split service, a deal of one party holding every stake it writes designates that party's own payee pointer**, the one pointer its terms can mean.
-
-**A backup of the split cMIP's fields (field 29) receives a payment only once the attempt before it failed for that payment, as the cMIP defines failure. The next payment starts again from the designated pointer** (rule 17). *A backup is no link of a chain of judgment: it acts only where the attempt before it failed.* So the designated pointer is always the first. A layer's obligation for the share ends when it reaches the first service in order whose attempt succeeds, Money's receipt the proof.
-
-**An agreement cannot be paid through a layer until it designates one pointer.** This covers:
-
-- an agreement designating none (several owners and no split service: payer-side splitting, rule 16);
-- an agreement naming several split services without designating one (field 14's grants naming different services, which the deal then does not carry).
-
-A verifier reads a payout to the designated pointer as paid to that agreement's holding. It reads a payout to anyone else on that holding as a mismatch (rule 27): an owner it does not designate, or a backup whose earlier attempts did not fail for that payment.
-
-Who receipts the incoming share depends on the rail:
-
-- **where the pointer is a split service and the rail pays the service itself** (Lightning to its own node), **that service receipts the share in its own name**, never with a grant key, its receipt naming the split as Money's routes chain receipts (rule 23);
-- **where the rail pays an account an owner holds** (a bank transfer to the owner), **the owner may grant the service to sign for that incoming share on its behalf, the rail's proof required on that receipt** ("What a split service's grant key may sign").
-
-Either way the service **splits it under its own agreement** (rules 20, 30: until a split of its names that receipt, it is the service's open obligation). A lone owner receipts its share as any payee does, with nothing to split.
-
-Each layer may pay more participants than the work and the publisher (relays and other pipes, by role shares, rule 22), as its agreement says.
-
-**Rule 16's limits on what a split service's grant key signs stand** everywhere else.
-
-A deal that is a party of another deal signs it where every party of its version in force signs it, a party that is itself a deal signing the same way, at most eight layers deep.
-
-**Any agreement may be a party to another.** The two agreements of a publication are one case of a general rule.
-
-- **Any agreement may be a party of any agreement**, consenting by its own rule. A collective signs with its own keys. A deal, having none, consents when its own parties sign under its own rule: every party (rule 47).
-- **As a party it holds stakes**, paid at the one pointer it designates.
-- **It is named by its line**: its founding version, never a single later version. Every later version of the inner agreement carries what it signed outward, and cannot escape it by re-versioning. Money goes to the pointer the inner agreement's version in force designates. *What happens in that envelope is separate from the publishing deal.*
-- **No loops.** An agreement is never a party of itself, directly or through others: terms making one so are refused; a verifier that cannot follow every layer of it answers unknown.
+- **Any agreement may be a party of any agreement**, consenting by its own rule. An ownership agreement signs a publication where every party of its version in force signs it, a party that is itself an agreement signing the same way (a deal); a collective signs through a member, under its rule for Agreements (rule 60).
+- **As a party it holds what the agreement gives it**: an owner's share, a partner's share.
+- **It is named by its line**: its founding version, never a single later version. Every later version of the inner agreement carries what it signed outward, and cannot escape it by re-versioning. *What happens in that envelope is separate from the publishing deal.*
+- **No loops.** An agreement is never a party of itself, nor an owner of itself, directly or through others: terms making one so are refused; a verifier that cannot follow every layer of it answers unknown.
 - **Nesting is bounded at 8 layers**, a freeze parameter ("Parameters").
-- **When an inner agreement ends, its stakes move by ordinary acts, and what is still owed stays visible:**
-  - **A collective is liquidated by ordinary sales and transfers before its closing**: each stake sold or moved by a stake transfer (rule 10), or released (rule 55). The closing (type 20) still counts only once the collective holds nothing (rule 91). **An absentee's money share follows the collective's own rules**: its split plan, its absence clause, its terms, written before anyone left. What those rules could not deliver stays visible as an open obligation wherever they sent it, until a valid claim appears: never lost, never taken ("Closing (type 20)"). The closing needs no entry for it; its field 4 stays for money owed back. No new field. *Batching those acts together is a client's or a cMIP's convenience, never a second way in the core.*
-  - **A deal ends, or winds down, by a clone every party signs** (rule 47), **stating its new conditions**: where its stakes went, what is still owed, as open obligations, and to whom its outer agreement now pays (its designated pointer). What those conditions are depends on the deal. **A deal has no closing act.** A party who is absent is handled by the absence rules: in a deal, one identity judges absence (rules 85 to 89).
-  - Either way, the outer agreement keeps paying the one pointer the inner agreement's version in force designates, its own terms unchanged.
+- **When an inner agreement ends, its shares move by ordinary acts, and what is still owed stays visible:**
+  - **A collective is liquidated by ordinary sales and transfers before its closing**: each share it holds sold or moved by a transfer (rule 10), or released (rule 55). The closing (type 20) still counts only once the collective holds nothing (rule 91). **An absentee's money share follows the collective's own rules**: its split agreement, its absence clause, its terms, written before anyone left. What those rules could not deliver stays visible as an open obligation wherever they sent it, until a valid claim appears: never lost, never taken ("Closing (type 20)"). The closing needs no entry for it; its field 4 stays for money owed back. No new field. *Batching those acts together is a client's or a cMIP's convenience, never a second way in the core.*
+  - **A deal ends, or winds down, by a clone every party signs** (rule 47), **stating its new conditions**: where its shares went, and what is still owed, as open obligations. What those conditions are depends on the deal. **A deal has no closing act.** A party who is absent is handled by the absence rules: in a deal, one identity judges absence (rules 85 to 89).
+  - Either way, a publication keeps reading the inner agreement's line, its own terms unchanged.
 - **A manifest neither claims its parts nor is reached by their claims** (rule 7).
 
 *A deal's last clone needs nothing new: it is an ordinary clone of a deal.*
 
-**Responsibility ends at the designated pointer, in every chain of agreements.** Any agreement paying another agreement pays the pointer that agreement designates, and its responsibility for that payment ends there, Money's receipt the proof: a publisher paying a work, an agency paying a production company paying its crew, a compilation paying its parts. What follows is the receiving agreement's alone. *The network is segmented so that the point of failure or cheating is easily found.*
+**Responsibility ends at the owner's pointer, in every chain of agreements.** A split service paying an owner pays the owner's pointer, or, for an owner that is another ownership agreement, its holders through it, and its responsibility for that payout ends there, Money's receipt the proof: a publisher's publication paying a work's owners, an agency paying a production company paying its crew, a compilation paying its parts. What follows is the receiving owner's alone. *The network is segmented so that the point of failure or cheating is easily found.*
 
-**A compilation is a layer with its parts' consent, a derivative without it.** With the parts' agreements as its parties, a compilation (a course of lessons by different teachers, an anthology) is a layer: it pays each part's designated pointer, and its responsibility ends there. Without their consent it is a derivative: its own work, paying its sources by its own agreement, its published split showing whether it honours them.
+**A compilation is a layer with its parts' consent, a derivative without it.** With the parts' ownership agreements among its owners, a compilation (a course of lessons by different teachers, an anthology) is a layer: it pays each part through its ownership agreement, and its responsibility ends there. Without their consent it is a derivative: its own work, paying its sources by its own publication, its published split showing whether it honours them.
+
 
 ### 4. Splits
 
-How a split service runs is defined by the split cMIP its owners' agreement names. Agreements keep only the vocabulary and the guarantees below.
+How a split service runs is defined by the split cMIP its publication names (publication field 9, task 8; or the split plan's key 1). Agreements keep only the vocabulary and the guarantees below.
 
-*In short: who names the split service, what it may sign, and what it is handed.*
+*In short: who names the split service, what it signs, and what it is handed.*
 
-#### Rule 16. Named by grant key
+#### Rule 16. Named by the publication
 
-The owners' agreement names the split service through a grant, with any limits the owners choose (for example how long it may hold money, or which rails it may use), handing the service a grant key.
+A publication names its split service (field 3): the identity that receives every payment under it, divides each one by its split plan, and pays everyone. The service is a party: it signs the publication to accept it (rule 11), with any limits the parties choose in the publication's terms (for example how long it may hold money, or which rails it may use).
 
-The grant:
+**The service receives in its own name.** The publication's price tags, which the service signs or a party it designates signs, name the service as their payee (Money rule 18), so a payment goes to the service's own payee pointer and vault, and the service signs its receipt as the payee of that hop, with its own key, naming in field 9 the ownership agreement and the version whose shares it pays (rule 12). *No partner holds others' money: the split service pays everyone, and no service signs in anyone else's name.*
 
-- **in a collective, one grant of the collective** (field 14, one hash). A collective's field 14 stays one hash, its one payee being the collective;
-- **in a deal, one grant per payee**, each naming "this agreement" by null and signed by the payee, the service holding one grant key per payee (field 14, a list; "Grant (type 9)").
+**A price tag whose payee is not the split service bypasses it.** A payment to a pointer that bypasses the service is still a purchase; the pointer is shown as bypassing, and **what every other share of that payment would have been under the split plan is an open obligation of the identity that received it** (rule 30), shown beside the pointer. *The amounts are the plan's and the receipt's, both held.*
 
-**Every split service's grant key, in a deal or a collective, signs only receipts for money coming in under the grantor's own claims and offers.** It never signs one whose payer is the service, nor a payout the grantor is owed ("What a split service's grant key may sign"). The one exception: a layer's incoming share on the owner's behalf, with the rail's proof behind it (rule 15).
-
-The grant is revocable at any time under the agreement's rule. In a deal, each payee revokes its own.
-
-**Two models, chosen per collective**:
-
-- a split service: two flows (payer to owners' pointer, service to holders);
-- or payer-side splitting: one flow, the payer's wallet paying each holder's own pointer by the stakes of the work's claim, with no intermediary to bypass, each holder's own vault protecting its share.
-
-The model is chosen by naming a split service (field 14) or not; no field says which.
-
-The pointer check, in detail. **Where an agreement names a split service, the payee pointer of the identity its publications are made for counts, for Agreements, only if:**
+**A collective's split agreement and its pointer.** Where a collective names a split agreement (rule 15), **the collective's payee pointer counts, for Agreements, only if:**
 
 - every address in it also appears in the split service's own signed pointer in force;
 - and every entry of its vault in force appears in the service's own signed vault;
-- or both appear in those of a backup the split cMIP's fields name (field 29).
+- or both appear in those of a backup the split agreement names (field 11).
 
-In each case one service carries every address and every vault entry. The identity its publications are made for is the owners' collective, the sole owner, or, in a deal, each payee whose own grant field 14 lists.
+In each case one service carries every address and every vault entry.
 
 An address is a rail, a rail Module and the address bytes it reads (Money, payee pointer). That is how money reaches the service (Money).
 
@@ -742,21 +674,21 @@ An address is a rail, a rail Module and the address bytes it reads (Money, payee
 
 *Stated cost:* a wallet that reads only Money cannot check it, and pays the pointer as it stands; payers who want the protection use wallets that read Agreements.
 
-*Make it legible: a bypass needs the service to sign, publicly, for an address that is not its own: collusion in plain view. No format changes. Set aside: a "receiver" field (anyone can write any name next to their own address); a pointer delegating to another identity's pointer (cleanest, but a change to Money and every wallet); making every pointer change need every stake holder (every new rail would need everyone); sending every buyer's claim to every owner (it reveals buyers).*
+*Make it legible: a bypass needs the service, or the party the publication designates, to sign, publicly, for an address that is not its own: collusion in plain view. Set aside: a "receiver" field (anyone can write any name next to their own address); a pointer delegating to another identity's pointer (cleanest, but a change to Money and every wallet); sending every buyer's claim to every owner (it reveals buyers).*
 
-*Stated cost, for payer-side splitting: several payments, partial payment if one fails, owners' pointers visible to the buyer, and a wallet that reads Agreements.*
+*Payer-side splitting, where a payer's wallet paid each owner's own pointer by the shares, is not a core model: a price tag names one payee, which any wallet can pay, and the split service pays everyone. Owners who want less exposure choose services that pay out at once (rule 32).*
 
-#### Rule 17. The split task, handed to the split cMIP the agreement names
+#### Rule 17. The split task, handed to the split cMIP the publication names
 
-The split task is handed to the split cMIP the agreement names.
+The split task is handed to the split cMIP the publication names.
 
-*How it runs most of the time:* one split service, field 14's, receives every payment.
+*How it runs most of the time:* one split service, field 3's, receives every payment.
 
-**The split service, its backups in order and what counts as a failed attempt are fields of the split cMIP**, signed with the terms (field 14, then field 29).
+**The split service, its backups in order and what counts as a failed attempt are fields of the publication, read by its split cMIP**, signed with it by every party (fields 3, 11 and 12).
 
 **Attempts run per payment, not by stages:**
 
-- each payment is tried at the first service (the designated pointer);
+- each payment is tried at the first service (field 3's, the tag's payee);
 - only if that attempt fails, as the cMIP defines failure, is the next tried, and so on;
 - **the next payment starts again from the first.**
 
@@ -764,28 +696,23 @@ The split task is handed to the split cMIP the agreement names.
 
 A payer's obligation ends when the payment reaches the first service in order whose attempt succeeds, Money's receipt the proof.
 
-**Every payer tries the services in order.** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). In Money's pointer format, the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16).
+**Every payer tries the services in order**, a layer above as a buyer: it pays the tag's payee, and, where that attempt fails as the cMIP defines failure, the next backup, the payment still naming the tag. **A backup receipts in its own name**, as the first service does, and splits by the same plan.
 
-**The task:** the cMIP accepts the agreement and the attempts made for a payment, and produces the receiver for this payment.
+**The task:** the cMIP accepts the publication and the attempts made for a payment, and produces the receiver for this payment.
 
-**The guarantee, the core's: money goes only to an address the owners signed.**
+**The guarantee, the core's: money goes only to an address the parties signed.**
 
-- A cMIP chooses among the services the signed terms name (field 14's and field 29's), never invents one.
-- A payout to anyone else on the agreement's holding is a mismatch (rule 27), whatever any cMIP answers.
+- A cMIP chooses among the services the publication names (field 3's and field 11's), never invents one.
+- A payout to anyone else on the owners' line is a mismatch (rule 27), whatever any cMIP answers.
 - Where every attempt fails, the money stays where it is, an open obligation of whoever holds it (rules 24, 30).
 
-*What counts as failure depends on rails and services, so it is the cMIP's arena. A verifier that does not hold the cMIP, or its answer for a payment, reads a payout to the designated pointer as paid on the holding, and a payout to a backup as unknown, never as a mismatch, as a client not holding a judge's specification shows its question as unknown (rule 35).*
-
+*What counts as failure depends on rails and services, so it is the cMIP's arena. A verifier that does not hold the cMIP, or its answer for a payment, reads a payment to the first service as received under the publication, and one to a backup as unknown, never as a mismatch, as a client not holding a judge's specification shows its question as unknown (rule 35).*
 
 #### Rule 18. Each participant's check
 
-Once a purchase triggers the agreement, each participant checks: **is my cut at my flow address, or at my vault where needed?**
+Once a purchase triggers the publication, each participant checks: **is my cut at my flow address, or at my vault where needed?**
 
-
-Its cut is what the splits that follow the purchase assign it, layer by layer (rule 15):
-
-- the payment itself, where it is the payee (payer-side splitting, or a lone owner);
-- otherwise, its payouts in each split naming the payment, signed by a service the agreement names, field 14's or a backup's, whoever paid, a direct buyer included.
+Its cut is what the splits that follow the purchase assign it, layer by layer (rule 15): its payouts in each split naming the payment, signed by a service the publication names, field 3's or a backup's.
 
 It has arrived when its own receipts, valid, each with the rail's answer, place that much at its payee pointer or at an entry of its vault (Money rules 1, 3).
 
@@ -797,7 +724,7 @@ The split service receives:
 
 - the incoming payment (an ordinary Money payment, for which it signs the receipt);
 - any payer's claim for it;
-- the split plan from the agreement;
+- the split plan from the publication, and the shares from the ownership agreement it names;
 - the evidence for role shares: the referral the payer signed in its claim, and any act offered as a helper's evidence (a relay's delivery record, a service's use record) once the claim of the payer the payment commits to acknowledges it;
 - and, for a rail Module, the receipt or claim naming it.
 
@@ -805,11 +732,11 @@ The split service receives:
 
 *In short: what the split service must do with every payment it receives.*
 
-#### Rule 20. Publish a split
+#### Rule 20. Sign a split
 
-For every incoming receipt, and for every payer's claim that shows money arrived without one, the service publishes a split. The split is signed with its own key, names that receipt or claim, and lists every payout.
+For every incoming receipt, and for every payer's claim that shows money arrived without one, the service signs a split. The split is signed with its own key, names that receipt or claim, and lists every payout.
 
-**It delivers the split to every holder it pays, departed or not, and names each fee and who received it** ("Split plan and split"). A split not delivered to a holder it pays is shown so.
+**It delivers the split to every holder and partner it pays, departed or not, and names each fee and who received it** ("Split plan and split"). A split not delivered to a holder it pays is shown so.
 
 #### Rule 21. Conservation
 
@@ -821,13 +748,13 @@ The split cMIP declares its remainder rule; where it declares none, leftovers fo
 
 #### Rule 22. Role shares with evidence
 
-**Every share paying anyone but a stake, a role share, a named receiver or a metric share, is paid off the top only, as overhead; what is left goes to the stakes alone, and within each stake by its holders' shares. A plan putting a non-owner in the rest is invalid.** *Subtle ways to dilute are stopped: shared ownership means shared fruits. Weights between several stakes stay a business choice.*
+**Every share paying anyone but the owners, a partner's share, a role share or a metric share, is paid off the top only, as overhead; what is left, the owners' line, goes to the owners alone, by their shares. A plan putting a non-owner in the rest is invalid.** *Subtle ways to dilute are stopped: shared ownership means shared fruits.*
 
-**A collective may keep money for itself, off the top of its own plan.** Its split plan may name the collective itself as a named receiver, written null ("this collective"). That part is the collective's own money, kept, and never split again: it is **paid to the collective's vault** (Money rule 2, "The vault"), never to its designated pointer, which is its split service's address (field 14) and would split it again. A plan naming the collective off the top is invalid where the collective declares no vault; a verifier that does not hold the collective's identity chain answers unknown. Raising that part pays the stakes less, so it is an owners' matter (rules 48, 95); **spending it is the collective's business**, done under its areas. *A rule that "the reserve pays no member without the owners' agreement" is not one a verifier can decide, money at the collective's pointer being fungible; what the owners get instead is sight (rule 57).*
+**A collective may keep money for itself, off the top of its own split.** Its split agreement may name the collective itself as a partner. That part is the collective's own money, kept, and never split again: it is **paid to the collective's vault** (Money rule 2, "The vault"), never to its flow pointer, which leads to its split service and would split it again. A split agreement naming the collective as a partner is invalid where the collective declares no vault; a verifier that does not hold the collective's identity chain answers unknown. Raising that part pays the holders less, so it is an owners' matter (rules 48, 95); **spending it is the collective's business**, done under its rule for Money. *A rule that "the reserve pays no member without the owners' agreement" is not one a verifier can decide, money at the collective's pointer being fungible; what the owners get instead is sight (rule 57).*
 
 *In short: a role share pays a helper known only at payment time, and, save a rail Module's, it counts only when the payer's own claim vouches for the helper.*
 
-*How it runs most of the time:* the owners name in advance the helpers they pay (a host, a mastering service), by a named share in the plan, and no evidence is needed. A role share pays for help known only at payment time, and **its evidence counts only when the payer the payment commits to acknowledges it**, in its claim for the payment: the payer chose the helper, and the payer's own signature says so.
+*How it runs most of the time:* the parties name in advance the helpers they pay (a host, a mastering service), as partners, and no evidence is needed. A role share pays for help known only at payment time, and **its evidence counts only when the payer the payment commits to acknowledges it**, in its claim for the payment: the payer chose the helper, and the payer's own signature says so.
 
 Each role payout names who filled the role and the proof. The proof MUST be an act signed by someone other than the split service and the payee.
 
@@ -846,15 +773,15 @@ One no claim acknowledges is evidence of nothing. A claim may acknowledge severa
 
 **No service is paid on its own record alone**:
 
-- a service the owners chose in advance is paid by a named share;
+- a service the parties chose in advance is paid as a partner;
 - a service the payer chose at payment time is paid by a role share only when the payer acknowledges its use record, as for a relay;
 - a service evidenced only by its own record is not paid.
 
-A service that worked unnamed is paid by whoever chose it: the owners (by naming it in a new version), the payer (through a client that carries the choice into the payment), or the relay or service that used it (by its own agreement with it).
+A service that worked unnamed is paid by whoever chose it: the parties (by naming it in a new version), the payer (through a client that carries the choice into the payment), or the relay or service that used it (by its own agreement with it).
 
 *Whether a client carries a user's choices into the payment is good practice for client developers, the builders' choice, legible to those who look: a payer may pay the pipe if it wishes to.*
 
-*A helper's own signature alone would let it claim help it never gave, and paying for usage invites faking usage; the confirming signature comes from the other side of the deal, as for a referral.* *Stated cost: a payer and a helper together can acknowledge help that never happened, which the owners bound by the size of the share they offer, as for a self-referral.*
+*A helper's own signature alone would let it claim help it never gave, and paying for usage invites faking usage; the confirming signature comes from the other side of the deal, as for a referral.* *Stated cost: a payer and a helper together can acknowledge help that never happened, which the parties bound by the size of the share they offer, as for a self-referral.*
 
 A referral the service names on its own earns nothing.
 
@@ -862,19 +789,19 @@ A referral the service names on its own earns nothing.
 
 - its proof is the receipt or claim naming that rail Module in its field 0 (Money rule 20);
 - it counts even when the split service signs it, provided that rail Module is one the payee's own payee pointer or vault names, where the payment was paid (Money rule 4);
-- the payee is the identity the payment was made to, whose pointer leads to the split service (rule 16).
+- the payee is the identity the payment was made to: the split service.
 
 A receipt or claim naming a rail Module the payee's pointer and vault never named is evidence of nothing, and counts for nothing as a receipt either (Money rule 4).
 
-*The service cannot invent a Module: what it may name is fixed by the payee, publicly, and the Module's own rule checks the rail's proof. Requiring a third party's signature here would leave only the payer's claim, which payers publish by choice, so most uses would go unrecorded.*
+*The service cannot invent a Module: what it may name is fixed by the payee, publicly, and the Module's own rule checks the rail's proof. Requiring a third party's signature here would leave only the payer's claim, which payers make public by choice, so most uses would go unrecorded.*
 
-*Stated cost: where the payee's pointer or vault names two rail Modules for one rail, whoever issues the invoice, here the split service, chooses which of them earns; the pointer shows it publicly, and the payee's agreement with the service can constrain it.*
+*Stated cost: where the payee's pointer or vault names two rail Modules for one rail, whoever issues the invoice, here the split service, chooses which of them earns; the pointer shows it publicly, and the publication's terms can constrain it.*
 
 Anyone can check the evidence afterwards.
 
-A role share nobody fills follows the option the plan chose: to the owners pro rata, held open as an obligation, or to a named party. **Absent a choice, it goes to the stakes, in proportion to their parts**, shown before signing (Development rule 13).
+A role share nobody fills follows the option the plan chose: to the owners pro rata, held open as an obligation, or to a named party. **Absent a choice, it goes to the owners' line**, shown before signing (Development rule 13).
 
-**A role share is named by its role, never by a cMIP's hash**: a new transport cMIP needs no clone of every plan.
+**A role share is named by its role, never by a cMIP's hash**: a new transport cMIP needs no new version of every publication.
 
 **Evidence is acknowledged in the claim written at payment.** *Client conformance:* a buyer's client fetches, asks the relay for its delivery record, and acknowledges it in the claim it writes at payment.
 
@@ -884,15 +811,9 @@ Several fillers of one role divide it equally.
 
 #### Rule 23. Pay out
 
-Each payout is paid as a simple Money payment to the current holder of the stake, or the named receiver, with its own receipt naming the split.
+Each payout is paid as a simple Money payment to the current holder of the share, or the partner, with its own receipt naming the split.
 
-**A stake held by another agreement is paid to the one pointer that agreement designates for payments** (rule 15). That pointer is:
-
-- its split service, field 14's one grantee, which receipts it in its own name and splits it under that agreement, an owner acting as treasury being named so;
-- or a lone owner, with nothing to split;
-- or, for one payment, a backup of that agreement's field 29 once the attempts before it failed (rule 17).
-
-An agreement designating none cannot be paid through a layer until it designates one.
+**A share held by a collective is paid to the collective's own payee pointer**, which leads to its split service (rule 15); **a share held by another ownership agreement is paid through it**, to its holders by their shares (rule 15). A share held by an agreement that names no holder cannot be paid until it does.
 
 #### Rule 24. Keep what it cannot deliver
 
@@ -904,46 +825,45 @@ The split plan says who bears each payout's rail fee: each receiver by default, 
 
 A payout is discharged when its receipt shows the amount minus a fee no greater than that maximum, where the plan states one (Money rule 21). A shortfall beyond it is an open obligation of the service (stated here, not in Money).
 
-*Client conformance*: **before a party signs terms whose split plan states no maximum fee per payout, its client MUST flag the absence**: where a receiver bears its payout's rail fee, any fee may then come off its payout, and no shortfall is the service's obligation.
+*Client conformance*: **before a party signs a publication whose split plan states no maximum fee per payout, its client MUST flag the absence**: where a receiver bears its payout's rail fee, any fee may then come off its payout, and no shortfall is the service's obligation.
 
 *Flag the risk: whether to cap the fee is the parties' choice; the core keeps only that the choice is seen before signing.*
 
 #### Rule 26. Batching
 
-The grant may allow the service to accumulate and pay out periodically or above a threshold, measured on the agreement's time reference.
+The publication's split plan, by its split cMIP's parameters, may allow the service to accumulate and pay out periodically or above a threshold, measured on the publication's time reference.
 
-Every incoming receipt must still be matched by a published split, so accumulation is visible. Payouts paid with one rail payment name the same batch in their receipts (Money).
+Every incoming receipt must still be matched by a split, so accumulation is visible. Payouts paid with one rail payment name the same batch in their receipts (Money).
 
 *In short: what the split service may never do.*
 
 #### Rule 27. Only the plan
 
-A split service MUST NOT pay anyone outside the plan's stakes as currently held, roles as evidenced, and named receivers.
+A split service MUST NOT pay anyone outside the owners as the ownership agreement's version in force for the receipt names them, the partners, the roles as evidenced, and the fees the plan makes owed.
 
-It MUST NOT change the plan: only the owners can, by cloning their agreement.
+It MUST NOT change the plan: only the publication's parties can, by a new version.
 
 #### Rule 28. Fees
 
-*In short: a Module states its fee, but only the agreement's own fee entry makes a fee owed.*
+*In short: a Module states its fee, but only the publication's own fee entry makes a fee owed.*
 
-A Module states its fee in its own specification (Development field 7), machine-readable and informative. **Only a fee entry of the agreement (terms field 28) makes a fee owed**, and nothing is forced.
+A Module states its fee in its own specification (Development field 7), machine-readable and informative. **Only a fee entry of the publication's split plan (key 9) makes a fee owed**, and nothing is forced.
 
-Fees are their own field, so a constitution can place them in an area apart from the split plan, or leave them to the clone rule. The bearers (every stake, fees coming off the top) consent by the power the field falls under, save a holder with no voice in it, a deal's holder who is no party or a collective's departed holder: a version adding or raising a fee its stake bears needs that holder's signature (rule 48), or, in a collective, the stake's holders' rule where that holder accepted one (rule 94).
+The bearers (every share, fees coming off the top) consent by the publication's signatures: every party signs it, and a holder of the ownership agreement with no voice in the power that signs for the owners' side signs a version adding or raising a fee its share bears (rule 48), or, in a collective, the stake's holders' rule where that holder accepted one (rule 94).
 
-A fee entry says when it applies: every payment, payments for a named publication, or payments by a named rail. **A split leaving out a fee its entry makes owed is a wrong split, and the fee is the service's open obligation.** The split's list of Modules (key 6) is the service's statement, never what decides.
-
+A fee entry says when it applies: every payment, payments for a named bake, or payments by a named rail. **A split leaving out a fee its entry makes owed is a wrong split, and the fee is the service's open obligation.** The split's list of Modules (key 6) is the service's statement, never what decides.
 
 #### Rule 29. Attention
 
 A split may follow plays, views or any metric a module reports.
 
-**A metric share is paid off the top only, as overhead, like every share paying anyone but a stake** (rule 22).
+**A metric share is paid off the top only, as overhead, like every share paying anyone but the owners** (rule 22).
 
 The metric, its module and the resulting payouts are named (the metric and its share in the plan, the records in split key 7), so it is legible like any other.
 
 The metric's evidence is a record signed by the identity running the service that measured it: never by the split service, and never by a Module, which signs nothing.
 
-*In short: what the service owes when something is not paid, and how owners change services.*
+*In short: what the service owes when something is not paid, and how the parties change services.*
 
 #### Rule 30. Open obligations
 
@@ -952,25 +872,30 @@ Each of these is an open obligation of the service, naming exactly one receiver 
 - every incoming receipt, and every payer's claim showing money arrived, without a matching split;
 - every payout without a receipt;
 - **every fee a split left out though its entry made it owed**;
-- **every payout a seller receipted after transferring the stake, owed to the buyer.**
+- **every payout a seller receipted after transferring the share, owed to the buyer**;
+- **every payment racing the publication's ending, owed back to its payer, from what the service holds of it** (rule 11).
+
+And of another identity:
+
+- **past what the service holds, what a party received of a payment owed back, of that party, in the share it received** (rule 11);
+- **what the other shares of a payment to a pointer bypassing the service would have been, of the identity that received it** (rule 16).
 
 **A metric's measurer is none of the identities the metric divides among, nor the split service** (rule 29). A metric pays only identities the plan already pays.
 
 #### Rule 31. Switching services
 
-The owners switch services by revoking the grant, naming a new one, and having the identity publications are made for publish a new version of its payee pointer.
+The parties switch services by a new version of the publication naming another split service (field 3), every party signing it, the new service among them. The old service withdraws its tags (Money rule 18), and the new one signs its own.
 
-In a deal, each payee revokes its own grant, and the parties clone the deal, every party signing, its field 14 listing the payees' grants to the new service.
+**A backup the publication already names (field 11) needs no new version.** It receives a payment whenever the attempts before it fail, payment by payment, and the next payment is tried at field 3's service again (rule 17).
 
-**A backup the split cMIP's fields already name (field 29), with one grant per payee in a deal, needs no clone.** It receives a payment whenever the attempts before it fail, payment by payment, and the next payment is tried at field 14's service again (rule 17).
-
-Switching for good, so that field 14 names another service, is this rule's revocation and clone.
+A collective switches the service of its own split agreement by a new version of it, signed as rule 15 says, and points its payee pointer at the new service (rule 16).
 
 The old service still owes payouts on everything it received before.
 
 #### Rule 32. The trust that remains
 
-*Between receiving and paying out, the service holds other people's money. MOR cannot prevent theft, but makes it provable from the receipts and the payers' claims: hiding income requires the payer's silence or collusion. Owners who want less exposure choose services that pay out immediately, or payer-side splitting cMIPs, where capable clients pay each owner's pointer directly and no service's honesty is needed.*
+*Between receiving and paying out, the service holds other people's money. MOR cannot prevent theft, but makes it provable from the receipts and the payers' claims: hiding income requires the payer's silence or collusion. Parties who want less exposure choose services that pay out at once, under a split cMIP that says so.*
+
 
 ### 5. Time, conditions and judges
 
