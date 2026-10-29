@@ -1444,11 +1444,15 @@ Its legal effect lies outside the core.
 
 ### 10. A collective
 
-#### Rule 56. A collective is a full identity
+#### Rule 56. A collective is an identity its members act for
 
-A collective is a full identity, with its own genesis, homes, signing key and chain key.
+A collective is an identity with its own genesis, homes and chain key, and **no signing key of its own** (Identity rule 1).
 
-It uses the Identity MIR unchanged: it signs its own receipts, sets its own payee pointers, and rotates. Its genesis declares its founding agreement (an Agreements declaration in the declarations slot), and the agreement carries its key grammar.
+Its genesis declares its founding agreement (an Agreements declaration in the declarations slot) in place of a first signing key, and is signed by a chain key. That agreement is an ownership agreement whose target is the collective itself (`[1, null]`, terms field 33): it carries the members' stake in the collective, the key grammar of its chain key, who acts for it in each layer (field 19) and its finer areas (field 34). Every clone of it is the collective's ownership agreement too.
+
+It uses the Identity MIR for its chain as any identity does: it rotates, and its homes receipt its chain acts. **It signs no everyday act: its members act for it, each with their own key, naming the collective** (rule 58), and Agreements judges each such act. *Collectives only have chain keys, and grant powers to the individual keys of their members: the collective grants powers to its members, not to keys. There is no member key.*
+
+*Stated cost: a client knowing only Identity, or only Money, judges nothing a collective does; it shows every act for a collective unknown, and a Money-only wallet cannot pay a collective. Customers use agreements; only tips do not.*
 
 #### Rule 57. An act is done once sealed to every member and on the chain
 
@@ -1456,30 +1460,30 @@ A collective's act is done only once it is sealed to every member and on its cha
 
 *In short: what a collective does, every member can see, and it is written on the collective's own chain. Until both are true, the act is only a plan.*
 
-An act in a collective's name, signed with its key or with a grant key of its, is done, and binds the collective, only once both of these hold:
+An act for a collective, signed by a member or a grantee naming it (rule 58), is done, and binds the collective, only once both of these hold:
 
 - it is sealed to every member: every party of the agreement in force for it is among its recipients (Envelopes, `to`), or the act is public; and
-- it is on the collective's chain, citing its head as its signer knew it (rule 58).
+- it is on the collective's chain, citing its latest decision as its signer knew it (rule 58).
 
-Before that, even signed, it is planning. It binds no one, its signer included. It counts for nothing in Agreements: an area's signatures on it complete nothing, and an obligation it carries binds no one.
+Before that, even signed, it is planning. It binds no one, its signer included. It counts for nothing in Agreements: signatures on it complete nothing, and an obligation it carries binds no one.
 
 *A counterparty is safe once a later act of the collective cites its act, against everything but the collusion of an ending's signers, which stays visible* (rules 76, 79).
 
-*Client conformance:* the collective's client drafts the act, signs it, seals it to every member, and publishes it where the collective's clients look.
+*Client conformance:* the member's client drafts the act, signs it, seals it to every member, and uploads it where the collective's clients look.
 
 *Powers can be segmented, but information runs free: a continuous assembly where matters are exposed, which only bothers cheaters.*
 
 *Stated cost: a collective keeps no secret from its own members. What a collective plans can stay with some members for a while; once done, it is a fact that touches everyone in it.*
 
-**Owners without a say see the collective's Money acts.** For a collective whose stake in itself has holders who are no members, a Money act in its name (a receipt, an obligation, a payout, a payee pointer) is done only once it is sealed to every holder of that stake, members and others, or public, besides being on its chain; until then it binds no one. The holders are those the agreement in force for the act and the transfers its line placed name (rule 94). *Client conformance:* the collective's client makes those acts public by default.
+**Owners without a say see the collective's Money acts.** For a collective whose stake in itself has holders who are no members, a Money act for it (a receipt, an obligation, a payout, a payee pointer, a price tag) is done only once it is sealed to every holder of that stake, members and others, or public, besides being on its chain; until then it binds no one. The holders are those the agreement in force for the act and the transfers its line placed name (rule 94). *Client conformance:* the member's client makes those acts public by default.
 
 *Stated cost: more recipients per sealed act, or publicity; such a collective loses privacy from its owners only. The right of exit means little to an owner who cannot see why to leave.*
 
-**Where a holder of the stake is itself an agreement, the act is public; for a collective holder, it is sealed to the collective.** A deal has no line, so no verifier could tell which of its versions was in force when the act was sealed; publicity reaches every party of every version. Sealed to an agreement's own hash (its pointer, its split service's address), or to the parties of one of its versions, an act reaches no holder that is an agreement. Where a collective seals to the parties of an agreement it names elsewhere, "the version in force" is the version the act itself names. This holds wherever an act must reach a holder: a collective's Money acts here, and an issuance offer (rule 96).
+**A collective is sealed to by sealing to each of its members, or by publicity; no act is sealed to a collective's own key**, since it has none (Envelopes, "Encryption key"). Where a holder of the stake is itself a collective, the act is sealed to each member of that collective's agreement in force, or public; **where a holder is a deal, the act is public.** A deal has no line, so no verifier could tell which of its versions was in force when the act was sealed; publicity reaches every party of every version. Sealed to an agreement's own hash, or to the parties of one of its versions, an act reaches no holder that is a deal. Where a collective seals to the parties of an agreement it names elsewhere, "the version in force" is the version the act itself names. This holds wherever an act must reach a holder: a collective's Money acts here, and an issuance offer (rule 96).
 
-**Where an act is held is never a condition.** An act is valid by its signatures, seals and citations wherever a verifier holds it. Relays are transport: they are where a collective's clients publish and look first, a matter of client conformance or of a cMIP (the relay transport cMIP), never of the core. A verifier states where it found each act as information only; no validity rests on it.
+**Where an act is held is never a condition.** An act is valid by its signatures, seals and citations wherever a verifier holds it. Relays are transport: they are where a collective's clients upload and look first, a matter of client conformance or of a cMIP (the relay transport cMIP), never of the core. A verifier states where it found each act as information only; no validity rests on it.
 
-One rule covers every act in the collective's name, with no exception by type. That includes records, and forks and closings:
+One rule covers every act for the collective, with no exception by type. That includes records, and forks and closings:
 
 - a record not done is no line ("Record (type 17)");
 - a fork or closing not done takes no effect (rule 91).
@@ -1491,56 +1495,49 @@ One rule covers every act in the collective's name, with no exception by type. T
 
 #### Rule 58. Two chains
 
-A collective keeps two chains: a decisions chain and an actions chain.
+A collective keeps two chains, both made of acts that name it: a decisions chain and an actions chain.
 
-**The decisions chain** holds its genesis, rotations and records (which write its clones and register who joins and leaves), its grants and revocations, and its fork or closing. Each decision cites the previous decision and the action head it saw, by what it already names:
+**A member acts for the collective with their own key, the act naming the collective in `objects`**: the collective's identity as chain, once for each act it cites on the collective's chain. **An act that does not name it is the member's own.** An act naming it counts for the collective only where Agreements finds its signer a party who may act there: a member meeting, with the others who signed it, the rule of the layer the act falls in, or of the area within it, under the agreement in force at the decision it cites (rule 60); or a grantee whose grant backs it (rule 80). **A stranger's act naming a collective counts for nothing, and is shown as nobody's**, as a stranger's act naming a grant is. *Anyone can write a collective's name in `objects`; it counts only where Agreements finds the signer acting within a power. And a member cannot later say "that was mine" of an act whose bytes name the collective, nor the collective claim a member's act that does not: the attribution is in the signed bytes.*
 
-- a record, by its own sequence and kept tips;
-- a rotation, by its kept tips (Identity);
-- a grant or revocation, by its own sequence and its citations in `objects`, as an action cites;
-- a fork or closing, by its chain act and tips.
+**The decisions chain** holds its genesis, rotations and records (which write its clones and register who joins and leaves), its grants and revocations, and its fork or closing. **Each decision names the previous decision in `objects`, as an action names the decision it acts under**, with the other acts on the chain it knows:
 
-Decisions keep their formats.
+- a record, a grant or a revocation, in its `objects` on the collective's chain;
+- a fork or closing, in its `objects`, after the entries its type defines;
+- a rotation, which carries no `objects` (Identity), by the signature acts its Agreements declaration names, each of which cites the collective's chain as an action does ("Collectives in the identity chain").
 
-**The actions chain** holds every other act signed with the collective's key or a grant key of its: debts, payments, publications, releases, sales, and the acts of its grantees' strands.
+**A decision naming none, or one that is no decision of the collective, is no decision.** The genesis names none, being the first.
+
+**The actions chain** holds every other act done for the collective: debts, payments, bakes, publications, releases, sales, and its grantees' acts.
 
 On neither chain are:
 
 - negotiation messages;
-- Identity's own everyday acts, which count for nothing in Agreements. A witness act of the collective is one of them: it adopts nothing and places nothing.
+- members' own acts that do not name the collective, Identity's acts among them. An escape endorsement of the collective's homeless rotation is Identity's, judged as Identity section 11 says.
 
 **How an action cites.** An action names, in its inside's `objects`, the collective's identity as chain, once for each act it cites:
 
-- the decision it acts under: a record of the collective, or a link of its identity chain, under the action's own key or an earlier one; for an action signed with a holder's member key, the founding or clone that named the key, its grant (rule 73), stands as such a decision; and
-- each head of another device it knows, so that the next act joins the heads where several devices signed at once.
+- the decision it acts under: a record of the collective, a link of its identity chain, or, for a grantee, its grant (rule 73); and
+- each other act on the collective's chain it knows that no act it cites already reaches, so that the next act joins the heads where several members signed at once.
 
-Its own sequence's previous act counts as cited. These entries come after those the act's type defines, all on that one chain. Agreements' formats allow them there: signature, release, resignation, declaration, terms.
+These entries come after those the act's type defines, all on that one chain. Agreements' formats allow them there: signature, release, resignation, declaration, terms, publication. **A signer's own `prev` is never followed for the collective**: a member's sequences are theirs, not the collective's. *Client conformance:* a member's client cites, among the heads, its own last act for the collective.
 
-**An act within its signer's powers counts for the collective as soon as it is done and cites the collective's head as the signer knew it.** It is judged under what its decisions leave in force: the chain's declarations, records carried forward under earlier keys, and, under its own key, the records its history holds and those before them (rule 72). A record it never cites decides nothing for it, save by the tie rule ("Made before, made after", 7). An action is judged under the decisions its history holds.
+**An act within its signer's powers counts for the collective as soon as it is done and cites the collective's latest decision as the signer knew it.** It is judged under the decisions its history holds (rule 72). A record it never cites decides nothing for it, save by the tie rule ("Made before, made after", 7).
 
 **An action citing no decision, or naming on the collective's chain an act that is not on it, is on no chain of the collective, and counts for nothing.** **An action citing a decision is unknown while the decision it cites is not held, and counts for nothing where it is held and is no decision of the collective.**
 
-**An act signed with a grant key cites, among its decisions, its grant.** The grantee's strand is like a device of the collective, limited to the grant's scope.
-
 *An act within one's powers in a collective is an act for the collective. The chain's role is to make acts unmissable, not to confirm them.*
 
-*Client conformance: the collective's client cites its latest decision and every head it holds.*
+*Client conformance: the member's client cites the latest decision and every head it holds.*
 
-*Identity's own everyday acts (a witness act, routes, an encryption key) carry no objects (Identity) and are on neither chain.*
+*A member's act for the collective sits in the member's own sequence, so it stays in the member's kept ancestry, and the member's rotation can disown it: Identity rule 34, as for any act. What the collective's line placed stays placed for it, the disowned signature shown as a dispute ("Made before, made after", 4).*
 
 #### Rule 59. Key grammar
 
-The founding agreement says how the collective's keys are held and activated, according to the members' taste.
-
-**The signing key** is held in one of these ways:
-
-- one holder;
-- a threshold: any k of n members jointly produce one ordinary signature, for example with FROST threshold schnorr;
-- a custodian holding the key under the collective's grant.
+The founding agreement says how the collective's chain key is held, according to the members' taste. **A collective has no signing key** (rule 56): the key grammar is the chain key's alone.
 
 **The chain key** is held by one holder, by a custodian, or as shares: split so that any k of n members can rebuild it.
 
-**Rotating with a shared chain key.** At rotation, k members bring their shares to one offline device, which rebuilds the key, signs once and forgets it.
+**Rotating with a shared chain key.** At rotation, k members bring their shares to one offline device, which rebuilds the key, signs once and forgets it. The same holds for the chain key that signs the collective's genesis (Identity rule 1).
 
 *For that moment one device holds the whole key; that is the price, and it holds the next key too, before dealing its shares. Nothing can prove a device forgot a key.*
 
@@ -1555,94 +1552,87 @@ The Module that does it MUST deal the shares of the next key verifiably, and hav
 
 A key holder is anyone holding the whole key or a share of it: a member, a custodian, the holder of an escrowed share.
 
-**Where one person holds the chain key, the agreement MUST name a successor (a seat successor in that holder's succession plan) and an escrowed share released to them under its succession or abandonment clause.** A single custodian likewise needs a recovery path held by another.
+**Where one person holds the chain key, the agreement MUST name a successor (a seat successor in that holder's succession plan) and an escrowed share released to them under its succession or abandonment clause.** A single custodian likewise needs a recovery path held by another. *"No key of its own" is not "no key": the chain key still needs a way out that survives its holder.*
 
 A grammar without such a way is invalid.
 
 Two partners may choose "both", provided they name where a further share sits and who releases it. Whether the path works is the members' risk, stated.
 
-*For a single holder, one construction: the key is split so that any two of four shares rebuild it; the holder keeps two and signs alone, the successor and a keeper hold one each, useless alone. When the named authority declares the holder absent, the keeper releases its share and the successor rotates the collective to a new key; the succession clone passes the seat.*
+*For a single holder, one construction: the key is split so that any two of four shares rebuild it; the holder keeps two and rotates alone, the successor and a keeper hold one each, useless alone. When the named authority declares the holder absent, the keeper releases its share and the successor rotates the collective to a new key; the succession clone passes the seat.*
 
 **That succession clone also carries a succession plan for the successor, naming their own seat successor, signed by them in the same clone** (rules 64, 83). So the key always has a named successor, and the clone meets this rule.
 
 *The successor signs the clone to join anyway, so the plan they add is signed by them; the escrowed share stays where the key grammar's recovery path puts it, released by the same clause.*
 
-Where members want individual consent to show, the constitution gives acts of the collective to areas (rule 60).
+#### Rule 60. Layers and areas: who acts for the collective
 
-#### Rule 60. Areas: rules by layer, powers of members
+**A collective's founding names, for each layer a collective acts in (Text, Envelopes, Money, Agreements, Development), who acts for it there: a rule in the form of every other rule of these terms. An act of the collective in a layer counts under that layer's rule, or under an area's rule where an area within the layer reaches it. A founding that leaves a layer unnamed is outside the format and founds nothing. Identity's acts of a collective are its chain acts, governed by the key grammar; it signs no other. The layer's rule governs the layer's everyday acts, and, in Agreements, grants and revocations, which reach no further than their issuer's power (rule 74); it never governs a clone, a fork or a closing, which take the rules their changes need (rules 64, 91), nor a record, which any member draws and which decides nothing by itself. A layer whose named actors have all left stands frozen (rule 71) until a clone names others.**
 
-A collective's founding agreement may divide its acts and its operational fields into areas, each held by some of its members.
+*In short: the founders write down, layer by layer, who may act for the collective alone or together; nothing about it is left unsaid. Finer areas, by act type, may narrow a layer.*
 
-*In short: an area is a part of the collective's business that some members decide on. An act in that area counts only when enough of them sign it.*
+**The layers' rules** are terms field 19, a map keyed by layer number (1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development), each a rule in the terms' grammar: `[0]` every party whose voice remains, `[1, k]` any k of them (`[1, 1]` any one member alone), `[2, [+ hash]]` these named parties together. A founding whose map lacks one of the five keys is outside the format and founds nothing (rule 1); so is one carrying a key for a layer the MIRs do not define, so that no seventh layer is smuggled in before a later MOR defines it. A clone keeps every key too. *An app may offer to name every layer at once with the same rule; the founding still carries each layer named. Stated cost: one more step at founding, the app offering the usual choices.*
 
-An area is drawn either:
+*Client conformance:* **before a party signs a founding, its client shows, layer by layer, what the rule lets one member do alone, Money first.** *The risk a silent default carried is between members, and a warning cannot make every member read it; a choice written and signed by all can. A collective of two artists who never thought about it should not find that either can point its income at themselves because they never thought about it.*
 
-- by whole layer (Text, Envelopes, Money, Agreements, Development); or
-- by act type within a specification.
+An escape endorsement of the collective's homeless rotation, an Identity act, is signed by members meeting its constitutional change rule (Identity section 11).
 
-Genesis and rotations lie outside any area: the key grammar governs them (terms field 19, "Areas"). An area over the Identity layer reaches the collective's other Identity acts. The collective's everyday Identity acts count for nothing in Agreements.
+**When an act counts.** An act for the collective counts in the layer it belongs to ("Layer") only where its signers meet that layer's rule, or the rule of the area within it that reaches the act: its drafter, who signs it with their own key naming the collective (rule 58), and the others, each by a valid signature act naming it (rule 6). Each must be:
 
-**When an act counts.** An act of the collective that an area reaches counts only with valid signature acts naming it (rule 6), meeting the area's threshold as rule 65 counts it, by holders of that area who:
+- a party of the agreement in force for the act, and, for an area, a holder of it there;
+- one who signed that agreement, or a version it descends from by complete clones; and
+- one whose voice remains there for that act ("Made before, made after", rules 70, 71).
 
-- are holders of that area in the agreement in force;
-- each signed it, or a version it descends from by complete clones; and
-- still have a voice there for that act ("Made before, made after", rules 70, 71).
+The rule is counted as rule 65 counts it. *So under `[1, 1]` one member's act counts; under `[1, 2]` one member's act and another member's signature, each with their own key.*
 
-**Members' own keys count as their signatures.** An act of the collective signed with a holder's own key (rule 73), and a signature act of the collective naming an act, signed with a holder's own key, each count as that holder's signature there, in every area reaching the act that the agreement in force for it gives that holder. So an area of one takes one member's act; an area of two takes one member's act and another member's signature, each with their own key. The Money acts a member key may sign for the collective are those Money rule 7 lists. *Where an area needs two signatures, it needs two keys within that area.* The holders' signature acts with their own identity keys count too.
+**An area's limits are a cMIP's.** An area may name a cMIP judging limits on its holders' acts, with its parameters (area key 6). It adds to this rule, never relaxes it: the act counts at the area's number only where the cMIP judges it within them, and as that cMIP asks beyond them. A verifier that does not hold the cMIP, or holds no verdict of it for the act, answers unknown for the area, and the act does not count there. *Capping an area is left to cMIPs; what the core keeps is this rule. A limits cMIP may add a second signature and make the first conditional: within its cap, the area's number; above it, one more holder's signature.*
 
-**An area's limits are a cMIP's.** An area may name a cMIP judging limits on its holders' keys, with its parameters (area key 6). It adds to this rule, never relaxes it: the act counts at the area's number only where the cMIP judges it within them, and as that cMIP asks beyond them. A verifier that does not hold the cMIP, or holds no verdict of it for the act, answers unknown for the area, and the act does not count there. *Capping an area is left to cMIPs; what the core keeps is this rule. A limits cMIP may add a second signature and make the first conditional: within its cap, the area's number; above it, one more holder's key.*
+**The agreement in force for that act** is the one rule 72 picks from the decisions its history holds.
 
-**The agreement in force for that act** is the one the collective's identity chain declared at the chain act its signing key is bound to (its binding). Where the act comes after a record made since that declaration, it is instead the clone such a record put in force, as rule 72 picks it. **For an act signed with a holder's member key**, whose binding is the holder's signature act (rule 73), it is the one rule 72 picks for the act, starting from the version that named the key, from the decisions its history holds: the clones the collective's identity chain declares there, and its records.
+An act of a layer or area that stands frozen counts for nothing (rule 71).
 
-An act of an area that stands frozen counts for nothing (rule 71).
+*Layers and areas are one construct at two grains: a rule for a whole layer, named at founding for every layer; an area that narrows it for single act types or operational fields, held by some members, with one set of rules for holding it, granting within it and changing it.*
 
-An act no area reaches counts on the collective's own signature, as any identity's act does, unless its specification is unadopted (below).
-
-*So when members change, the rotation that declares the clone also fences off the old rules: whatever the old key signs afterwards is void under Identity, whoever signs it. Members' own identities do not rotate when they leave a collective; without this, former members could sign under the old rules at any later time, and no one could tell.*
-
-*An area says whose consent counts; the key grammar says who can physically produce the collective's signature. A holder who should act alone without holding the key acts under a grant issued within the area (rule 74), with the grant key it hands them.*
-
-*Layers and areas are one construct: a rule for a whole layer is an area that reaches that layer, held by the members who decide on it; an area may also reach single act types, and operational fields, with one set of rules for holding it, granting within it and changing it.*
-
-**What an area reaching a layer reaches.** It reaches every act of that layer ("Layer"):
+**What a layer's rule reaches.** It reaches every act of that layer ("Layer"):
 
 - the MIR's own acts;
 - the acts of the cMIPs the agreement in force names for that layer's tasks;
 - for Development, the acts of the extensions it names.
 
-An act that belongs to two layers or more, of a specification named for tasks of each, is reached by the area reaching each. It counts only when each such area's holders meet its threshold, as a clone across two areas does.
+An area within a layer reaches the acts its kinds name, `[1, spec, type]`, each act of a type of that layer, and takes them out of the layer's rule. An act that belongs to two layers or more, of a specification named for tasks of each, is reached by the rule of each, or of the area within each that reaches it. It counts only when each is met, as a clone across two areas is.
 
-**An area reaching a layer decides what the collective adopts for that layer**:
+**A layer's rule decides what the collective adopts for that layer** (rule 64):
 
-- which cMIP fills each of that layer's tasks. So the holders of the area reaching Money adopt a new payment cMIP alone; the rails beneath it are named by the collective's payee pointer, an act of that area, or its vault;
-- for the area reaching Development, which extensions the collective adopts.
+- which cMIP fills each of that layer's tasks, save the judicial tasks. So the members the founding names for Money adopt a new payment cMIP; the rails beneath it are named by the collective's payee pointer, an act of that layer, or its vault;
+- for Development, which extensions the collective adopts.
 
-**Specifications the collective has not adopted.** In a collective whose agreement in force has any area, an act whose `spec` is a specification that agreement names neither for a task (field 2) nor as an extension (field 15) counts for nothing. The one exception: an area reaches it by a kind naming its type, `[1, spec, type]`; then it counts as that area decides.
+An area whose field references name a task (`[1, task]`) decides that task's cMIP instead.
+
+**Specifications the collective has not adopted.** An act for a collective whose `spec` is a specification its agreement in force names neither for a task (field 2) nor as an extension (field 15) counts for nothing. The one exception: an area reaches it by a kind naming its type, `[1, spec, type]`; then it counts as that area decides.
 
 To count, the specification must first be adopted, under the powers its adoption needs (rule 64):
 
-- for an operational task, the area reaching that task's layer;
-- as an extension, the area reaching Development with the area reaching each layer it declares.
+- for an operational task, the rule of that task's layer;
+- as an extension, the rule of Development with the rule of each layer it declares.
 
 An act of a MIR is never such an act.
 
-*Otherwise an unlisted specification would be a way around every area: whoever holds the collective's key could act under a specification nobody adopted, around the area's holders. A rail is not adopted this way: it is named by the collective's own pointer or vault (Money rule 4). With adoption in the area's own hands, waiting costs little.*
+*Otherwise an unlisted specification would be a way around every rule: a member could act under a specification nobody adopted, around the rule of its layer. A rail is not adopted this way: it is named by the collective's own pointer or vault (Money rule 4). With adoption under the layer's own rule, waiting costs little.*
 
-**The judicial tasks.** The tasks of the judicial tier (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof) stay judicial, outside the area reaching Agreements. Neither the holders of the area reaching Agreements nor any other area changes them. They change only with every member's signature (rule 67). That includes a version that also changes the constitution, which needs the constitutional change rule too (rule 64.1).
+**The judicial tasks.** The tasks of the judicial tier (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof) stay judicial, outside the rule for Agreements. Neither the rule for Agreements nor any other changes them. They change only with every member's signature (rule 67). That includes a version that also changes the constitution, which needs the constitutional change rule too (rule 64.1).
 
-The area reaching Agreements adopts the cMIPs for Agreements' other tasks (8 split, 12 grant limits, 13 work claims).
+The rule for Agreements adopts the cMIPs for Agreements' other tasks (12 grant limits, 13 claims). *The split task (8) is a publication's: a collective names its split cMIP in its split agreement (rule 15).*
 
-**A specification adopted for a judicial task is adopted for no other task, and is no extension** ("Areas"). So a judge is never joined to an area.
+**A specification adopted for a judicial task is adopted for no other task, and is no extension** ("Areas"). So a judge is never joined to a layer's rule or an area.
 
-*Each judicial task can decide who wins a dispute, and one area's holder picking a friendlier judge after the fact is worse than a majority doing it.*
+*Each judicial task can decide who wins a dispute, and one member picking a friendlier judge after the fact is worse than a majority doing it.*
 
-**Extensions.** An extension acting on another layer needs the area reaching that layer too, in the same clone, all at once. Its specification declares the layers it acts on (Development, specification field 10), so a client knows whose approval to ask (rule 63).
+**Extensions.** An extension acting on another layer needs that layer's rule too, in the same clone, all at once. Its specification declares the layers it acts on (Development, specification field 10), so a client knows whose approval to ask (rule 63).
 
-**Dropping an extension needs the same approvals as adopting it**: the area reaching Development and the area reaching each layer it declares.
+**Dropping an extension needs the same approvals as adopting it**: the rule of Development and the rule of each layer it declares.
 
 *Modules and cMIPs are governed on the layer they sit in.*
 
-The declaration is not trusted for enforcement. In a collective, a verifier applies an extension's rules only to acts of Development and of the layers whose power its adoption met. So an extension that under-declares binds nothing beyond the areas whose holders approved it.
+The declaration is not trusted for enforcement. In a collective, a verifier applies an extension's rules only to acts of Development and of the layers whose rule its adoption met. So an extension that under-declares binds nothing beyond the layers whose members approved it.
 
 Nothing an extension does relaxes the core (Development rule 20): the MIRs' own acts stay in their own layers, whatever an extension adds around them.
 
@@ -1658,11 +1648,12 @@ Coverage is judged under the clause in force, one version for everyone (rule 67)
 
 **Under a rule by share** (`[3, stake, share]`), those parties are every party holding part of that stake, so that every member whose share alone can block the rule is covered; under "all of", the parties of each rule in it.
 
-**Under a constitutional change rule counted among a stake's holders**, holders who are no parties are counted too. A holder has no voice for the clause to remove; its stake moves by a declaration naming it (rule 85). **Such a collective's abandonment clause MUST allow moving a vanished holder's stake, outcome 1 or 2, and its authority must be able to declare each holder of that stake who is no party absent; otherwise the terms are invalid, as for a party.** *Better done upstream: the promise that a lost member never freezes the constitution, carried to owners.*
+**Under a constitutional change rule counted among a stake's holders**, holders who are no parties are counted too. A holder has no voice for the clause to remove; its share moves by a declaration naming it (rule 85). **Such a collective's abandonment clause MUST allow moving a vanished holder's share, outcome 1, and its authority must be able to declare each holder of that stake who is no party absent; otherwise the terms are invalid, as for a party.** *Better done upstream: the promise that a lost member never freezes the constitution, carried to owners.*
 
 A founding agreement or clone of a collective that leaves such a party uncovered is invalid, as a key grammar without a way to rotate is.
 
 *The constitution is the tier that can repair every other (reassign an area, revoke a grant, refit the key grammar), so it alone must never freeze; it freezes only through the loss of someone whose signature it needs. A member without constitutional power needs no clause: their loss is repaired from above. This is the promise that a dead member never freezes the collective, carried from the keys (rule 59) to the rules.*
+
 
 ### 11. Tiers and clones
 
@@ -1680,24 +1671,24 @@ Every field belongs to one tier.
 | --- | --- | --- |
 | 0 | Parties | Constitutional (membership) |
 | 1 | The words: the constitution's and general words | Constitutional |
-| 2 | cMIPs, per task | Tasks 9 (condition evaluation), 10 (time reference), 11 (anchoring) and 14 (absence proof; its cMIP named in the abandonment clause's key 3): judicial, outside the area reaching Agreements. Every other task: operational, in the area reaching the task's layer where an area holds it, and of each other layer the same specification serves. A specification named for a judicial task, or in field 6, is named for no other task and as no extension |
+| 2 | cMIPs, per task | Tasks 9 (condition evaluation), 10 (time reference), 11 (anchoring) and 14 (absence proof; its cMIP named in the abandonment clause's key 3): judicial, outside the rule for Agreements. Every other task: operational, under the rule of the task's layer (field 19), or in an area naming the task, and under the rule of each other layer the same specification serves. Task 8 (split) is never named here: it is a publication's. A specification named for a judicial task, or in field 6, is named for no other task and as no extension |
 | 3 | Keepers | Judicial |
 | 4 | Signing rule, or a clone's mark | None: each version states its own |
 | 5 | Clone rule | Constitutional |
 | 6 | Time reference | Judicial |
-| 7 | Stakes | Operational |
-| 8 | Split plan | Operational |
+| 7 | The stake: its holders and their shares in the target | Operational |
+| 8 | *Withdrawn*: once the split plan, now a publication's; never reused | — |
 | 9 | Abandonment clause | Judicial |
 | 10 | *Withdrawn*: once the concurrency rule; rule 90's default stands; never reused | — |
 | 11 | Parent | None: every clone names its own |
 | 12 | Key grammar | Constitutional |
 | 13 | Arbitrators or verifiers | Judicial |
-| 14 | The split service's grant: the designated pointer, the first of the split cMIP's addresses | Judicial (the stated exception: operational in kind, able to move money) |
-| 15 | Extensions | Operational, per extension, added or dropped: in the area reaching Development, and in the area reaching each layer the extension declares in its specification (Development field 10) |
+| 14 | *Withdrawn*: once the split service's grant, now a publication's split service; never reused | — |
+| 15 | Extensions | Operational, per extension, added or dropped: under the rule of Development, and of each layer the extension declares in its specification (Development field 10) |
 | 16 | Succession plans | Judicial |
 | 17 | Refund terms | Operational |
 | 18 | Constitutional change rule | Constitutional |
-| 19 | Areas | Constitutional |
+| 19 | Layers: who acts for the collective in each of the five layers | Constitutional |
 | 20 | Area words, per area | Operational, in the area whose id it carries |
 | 21 | Chain of judgment | Judicial |
 | 22 | Departed members entry | Constitutional; it records only who is departed, the stake being in field 7 |
@@ -1706,36 +1697,38 @@ Every field belongs to one tier.
 | 25 | *Withdrawn*: once the relays; never reused | — |
 | 26 | Settles: the tips a deal's settling version drops | None: a deal's clone only; deals have no tiers |
 | 27 | The judge of forks | None: a deal only; deals have no tiers |
-| 28 | Fees | Operational: an area may reach it apart from field 8 (`field-ref` `[0, 28]`); otherwise the clone rule |
-| 29 | The split service's backups, and what counts as a failed attempt | Judicial, as field 14: able to move money |
+| 28 | *Withdrawn*: once the fees, now a publication's split plan's; never reused | — |
+| 29 | *Withdrawn*: once the split service's backups, now a publication's; never reused | — |
 | 30 | Holders' rules, per stake | Operational, in no area, as field 24: the clone rule, and every holder of the stake whose entry changes; changed by nobody's majority (rules 45, 94) |
 | 31 | Transfers counted | None: a deal's clone states its own; deals have no tiers |
 | 32 | Issues under | None: each issuance names its own offer; its change of field 7 is an owners' matter (rules 95, 96) |
+| 33 | Target: a claim, or the collective itself | None: founding terms set it, and every clone repeats it |
+| 34 | Areas, finer than a layer | Constitutional |
 
-An area's field references (area key 4) name only operational fields and tasks: fields 7, 8, 17 and 28, and tasks of field 2 other than 9, 10, 11 and 14 (fields 10 and 25 are withdrawn).
+An area's field references (area key 4) name only operational fields and tasks: fields 7 and 17, and tasks of field 2 other than 8, 9, 10, 11 and 14 (fields 8, 10, 14, 25, 28 and 29 are withdrawn).
 
 
-*Field 4 belongs to no tier: in a clone it is a mark of fact, written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes. Who signs what for the collective is its areas, which are constitutional. Each area carries its own words, changed by its holders with it, so the words never go stale and no area's holder rewrites the constitution's.*
+*Field 4 belongs to no tier: in a clone it is a mark of fact, written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes. Who signs what for the collective is its layer rules and its areas, which are constitutional. Each area carries its own words, changed by its holders with it, so the words never go stale and no area's holder rewrites the constitution's.*
 
 #### Rule 63. What a clone changes
 
-*In short: a clone's changes are found by comparing it with its parent, field by field; each change belongs to its field's tier and, when operational, to an area or to none.*
+*In short: a clone's changes are found by comparing it with its parent, field by field; each change belongs to its field's tier and, when operational, to a layer's rule, an area, or neither.*
 
 A clone changes a field when the field's deterministic encoding in the clone differs from the parent's, or the field is present in one and absent in the other.
 
-Fields 2, 15 and 20 are compared entry by entry: by task number, by extension and by area id. Each differing entry (added, removed or replaced) is one change.
+Fields 2, 15, 19 and 20 are compared entry by entry: by task number, by extension, by layer and by area id. Each differing entry (added, removed or replaced) is one change.
 
-Fields 4 and 11 are never compared, nor field 23: a clone never carries it ("Terms"). Nor are fields 31 and 32, which each version states for itself; field 30 is compared entry by entry, by stake, each differing entry one change.
+Fields 4 and 11 are never compared, nor field 23: a clone never carries it ("Terms"). Nor are fields 31 and 32, which each version states for itself, nor field 33, which a clone repeats; field 30 is compared entry by entry, by stake, each differing entry one change.
 
 **A change of field 16 that only takes, for each party the clone takes out of the parties, the seat part of its succession plan (keys 2 and 3), is no change of its own.** This holds where the plan stays for its stake part, or goes where it has none, and every other plan stays as it was. It goes with the removal, as the party's areas do.
 
 Each change is in the tier of its field or entry (rule 62). An operational change lies:
-- for an entry of field 2: in the parent's area reaching that task's layer as a whole, the area reaching that layer; where no area reaches that layer, in the parent's area whose field references name that task, `[1, task]`; where none does, in no area, under the clone rule. Where the specification the clone names for that task is also named in the clone for a task of another layer, it lies in the area reaching that layer too. A clone naming one specification for a judicial task and for another task is invalid, whatever its mark;
-- for an entry of field 15: in the parent's area reaching Development, and in the area reaching each layer that the extension added or dropped declares in its specification (Development, field 10). Dropping an extension needs the same powers as adopting it. A clone naming as an extension a specification it names as a judge is invalid, whatever its mark;
+- for an entry of field 2: under the parent's rule for that task's layer, `[6, layer]`; or, where an area of the parent names that task by a field reference, `[1, task]`, in that area instead. Where the specification the clone names for that task is also named in the clone for a task of another layer, it lies under that layer's rule too. A clone naming one specification for a judicial task and for another task is invalid, whatever its mark;
+- for an entry of field 15: under the parent's rule for Development, and the rule of each layer that the extension added or dropped declares in its specification (Development, field 10). Dropping an extension needs the same powers as adopting it. A clone naming as an extension a specification it names as a judge is invalid, whatever its mark;
 - for an entry of field 20: in the area whose id it carries;
 - otherwise: in the parent's area whose field references name that field.
 
-The part of a change lying in a layer that no area of the parent reaches, and any other operational change, lies in no area.
+Any other operational change lies under no layer's rule and in no area.
 
 #### Rule 64. Which powers a clone needs
 
@@ -1745,11 +1738,12 @@ Which powers a clone needs, from its changes alone:
 
 1. If any change is constitutional: the constitutional change rule, `[0]`. Where some change is also judicial, the judicial tier's rule, `[4]`, is needed too: the version stays a draft until both are met, its mark naming both. *Without this, two members of three could change a judge by adding a one-word change to the constitution. The constitutional change rule still changes every other tier alone; a judge needs every member as well.*
 2. Otherwise:
+   - the rule of each layer under which some change lies, `[6, layer]`, one for each such layer;
    - the power of each area in which some change lies, `[2, area]`, one for each such area;
-   - the clone rule, `[1]`, if some operational change, or part of one, lies in no area, or if the clone changes nothing;
+   - the clone rule, `[1]`, if some operational change, or part of one, lies under no layer's rule and in no area, or if the clone changes nothing;
    - and the judicial tier's rule, `[4]`, if some change is judicial (rule 67).
 
-   So a clone that changes an area and something outside every area needs both, its mark naming both.
+   So a clone that changes an area and something outside every area and layer's rule needs both, its mark naming both.
 3. A clone that executes a party's succession plan may instead name that plan, `[3, party]`, alone, where rule 83 allows a seat to pass automatically. It may do so provided it changes nothing but what the plan gives:
    - the party out of the parties (field 0), its seat successors in;
    - the party out of the holders of every area it held, nothing else in the areas changed;
@@ -1773,10 +1767,11 @@ A clone needing several powers comes into force only when each is met, all at on
 - the constitutional change rule: among the parent's parties, under the parent's field 18, or every party when the parent has none;
 - the judicial tier's rule: among the parent's parties, every one of them;
 - the clone rule: among the parent's parties, under its field 5;
+- a layer's rule, `[6, layer]`: among the parent's parties, under the parent's field 19 entry for that layer;
 - an area's power: among that area's holders in the parent, at least its threshold of them;
 - a stake's holders' rule, `[5, stake]`: among that stake's holders at the line, by share (rule 94); and a constitutional change rule counted among a stake's holders, likewise.
 
-In each, only parties whose voice remains are counted, a stake's holders aside, who are counted by what they hold. This is judged on the collective's own sequence at the act, or, for a clone, at the record or rotation that puts it in force ("Made before, made after"). Left out are:
+In each, only parties whose voice remains are counted, a stake's holders aside, who are counted by what they hold. This is judged on the collective's chain at the act, or, for a clone, at the record or rotation that puts it in force ("Made before, made after"). Left out are:
 - a party whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before it;
 - for one area, a holder whose stepping down from it (rule 71) the collective registered on such a line.
 
@@ -1794,6 +1789,7 @@ They stay left out under every parent descending from the agreement in which the
 **When fewer voices remain than a rule's number asks for, all the remaining voices together meet it; where enough remain, the number stands as written.** This holds for every number an agreement states, and for the judicial tier's "every party":
 - the constitutional change rule;
 - the clone rule;
+- a layer's rule;
 - an area's threshold, one a clone left above the area's holders included;
 - an abandonment authority that is a threshold of the other parties (rule 85).
 
@@ -1855,16 +1851,16 @@ In a deal no clone completes without everyone, so the question never arises.
 
 Collectives only. A collective's departed members entry (terms field 22) records only who left, without voice. Their stake is in the collective's stakes (field 7), which decide what every holder is paid.
 
-**A departed holder has no control and no veto:** it is counted in no change rule and no area, and the collective's current rules and judges apply to it. Its one signature is on what lowers its own stake or its pay (rule 48), never on anything else. **It is paid, and consulted on the owners' matters** (rules 94, 95): what its stake is paid, an issuance in it, a sale or release of the collective's works, a fork's successors' plans, by the stake's holders' rule where it accepted one, else by its own signature; and it sees the collective's Money acts (rule 57). A constitution may also count it among the holders choosing members (rule 69).
+**A departed holder has no control and no veto:** it is counted in no change rule, no layer's rule and no area, and the collective's current rules and judges apply to it. Its one signature is on what lowers its own stake or its pay (rule 48), never on anything else. **It is paid, and consulted on the owners' matters** (rules 94, 95): what its stake is paid, an issuance in it, a sale or release of the collective's works, a fork's successors' plans, by the stake's holders' rule where it accepted one, else by its own signature; and it sees the collective's Money acts (rule 57). A constitution may also count it among the holders choosing members (rule 69).
 
-Its stake never shrinks without its signature (rule 48). A clone that lowers its share in field 7, or drops it, is a draft until that holder signs it (rule 45), as for every holder. **Nor is what its stake is paid lowered without it:** a clone that lowers its stake's part of the split plan, or adds or raises a fee its stake bears, is a draft until it signs (rule 48). *This protects what it is paid; it gives it no say in anything else.*
+Its stake never shrinks without its signature (rule 48). A clone that lowers its share in field 7, or drops it, is a draft until that holder signs it (rule 45), as for every holder. **Nor is what its stake is paid lowered without it:** a version of the collective's split agreement that pays its stake less, by raising a partner's share or a fee, adding a role or metric share, or changing the split cMIP, is a draft until it signs (rule 48). *This protects what it is paid; it gives it no say in anything else.*
 
 The stake is a share of all the collective's income, not only of what was made while it was a member.
 
 Every term applies equally to every stake, member or departed:
 - a term may not treat a departed holder's stake worse than a member's of the same size;
 - a fee raised for the departed is raised for the members;
-- a fee paid to a service the members own is public. *Client conformance*: a verifier cannot see who owns a service, so the collective's client MUST disclose it to the members.
+- a fee paid to a service the members own is public. *Client conformance*: a verifier cannot see who owns a service, so the member's client MUST disclose it to the members.
 
 The stakes decide every holder's money (field 7), and every payout matches its stake exactly, every fee alike for every stake ("Split plan and split", rule 27). Equal treatment is what following the stakes with uniform fees produces, not a separate test, and any deviation, either way, breaks the plan. *A member who wants to give income to another transfers part of a stake.*
 
@@ -1886,7 +1882,7 @@ Changing members means a rotation to new keys plus a clone of the founding agree
 
 Membership is constitutional, so the clone needs the constitutional change rule (rule 64): by default, every party whose voice remains at the rotation. A member whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before the rotation is no longer counted.
 
-The rotation is a line by its kept tips: a change of members, or of an area's holders, that it declares takes effect for the collective's acts there.
+The rotation is a line, its history that of the signature acts its declaration names (rule 58): a change of members, of a layer's rule or of an area's holders that it declares takes effect for the collective's acts there.
 
 A clone that takes a party out of the parties takes it out of every area's holders too. An area it leaves with no holder is written with an empty list of holders, and stands frozen until a constitutional clone gives it a holder (rule 71).
 
@@ -1908,13 +1904,13 @@ A rollback is the one exception to this rule: it is a clone of the agreement in 
 
 A rotation declaring nothing new carries the agreement in force forward ("Collectives in the identity chain").
 
-*Clones that change only the judicial or operational tier need no rotation: they change neither who holds the collective's keys nor who decides, so there is no old key to fence off. They are written on the collective's record by a record act instead (rule 72). The collective's key resembles a chain key more than a signing key in that regard.*
+*Clones that change only the judicial or operational tier need no rotation: they change neither who holds the chain key nor who decides. They are written on the collective's chain by a record instead (rule 72), which any member draws.*
 
-A departing member hands over nothing: the remaining members rotate to keys the departing member never held, and re-split the chain key among the members who stay or join.
+A departing member hands over nothing: there is no key of the collective's to hand over but the chain key, which the members rotate to one the departing member never held, re-split among the members who stay or join. *A member's power ends at the line that registers their departure; their own key continues to sign their own acts.*
 
 **Owners may choose who runs the collective, as a choice at founding.** A collective may, in its constitution, count the power over membership among a stake's holders by share: its constitutional change rule (field 18) written as a rule among the holders of a stake, members or not (`[5, stake, share]`), alone or with the members' own rule ("all of"). The default stays members choosing members. The holders sign the clone as its mark names them (rules 45, 46), counted as rule 65 says.
 
-**How it is kept: as every constitution is, by the broken collective** (rule 93). A rotation that moves the keys without the signatures this constitution requires breaks the collective, its acts counting for nothing until a rollback, visibly: the operators cannot rotate around the owners' rule.
+**How it is kept: as every constitution is, by the broken collective** (rule 93). A rotation that moves the chain key without the signatures this constitution requires breaks the collective, its acts counting for nothing until a rollback, visibly: the operators cannot rotate around the owners' rule.
 
 **It binds only through the keys**, a stated cost. Rule 93 punishes a rotation made; it cannot compel a rotation refused. A clone removing operator-members needs a rotation (above), which needs the chain key they hold. Where the key holders refuse it, the owners' vote stands complete and unexecuted, visible to every reader of the chain; the collective is not broken, and runs on under the old members. The owners keep the owners' matters (they can refuse every fee, issuance and sale, rule 95) and the exit, not replacement.
 
@@ -1926,13 +1922,13 @@ A departing member hands over nothing: the remaining members rotate to keys the 
 
 A member can always leave alone. A party to a collective's agreement gives up its voice by a resignation act (type 16), without anyone else's signature.
 
-**The resignation takes effect for the collective at the collective's line registering it** (record field 3). The collective's client draws that line in its next act. **Once registered, it stays taken for the collective, whatever its signer's later rotation disowns** ("Made before, made after", 4): the member comes back only by a constitutional clone naming them.
+**The resignation takes effect for the collective at the collective's line registering it** (record field 3). Any member's client draws that line in its next act for the collective, by a record (rule 72). **Once registered, it stays taken for the collective, whatever its signer's later rotation disowns** ("Made before, made after", 4): the member comes back only by a constitutional clone naming them.
 
 From that line on, the party's signature acts count toward no change rule and no area of that agreement, or of any agreement descending from it. A signature of the party placed before the line stays valid, and still counts toward what it signed. For that clone or act alone, its signer still counts among the voices that remain, so the departure never lowers the number the rule asks for ("Made before, made after", rule 65).
 
 The party keeps its stake, and stays bound by what it signed; it is then a departed holder (rule 68).
 
-The remaining members then rotate the collective's keys (rule 69) and clone it without the departed party, which takes the party out of every area it held too. They record the departed party, with its stake in the collective itself (field 7), in the departed members entry (field 22).
+The remaining members then rotate the collective's chain key (rule 69) and clone its agreement without the departed party, which takes the party out of every area it held too. They record the departed party, with its stake in the collective itself (field 7), in the departed members entry (field 22).
 
 Meanwhile, from the line on, each rule, and each area the party held, is counted among the voices that remain (rule 65). An area left with no holder stands frozen from that line until a constitutional clone gives it a holder, as in rule 71. Every grant in it ends at that line, to be reinstated, where wanted, by cloning it at the refit.
 
@@ -1949,7 +1945,7 @@ A record drawn in the broken stretch is no line and registers nothing (rule 93).
 
 **Stepping down during the broken stretch is treated as resigning**: a client allows it, and the rollback registers it. *A rollback whose clone names that member again as a holder of the area, and which they sign, gives the area back to them, as any constitutional clone they sign naming them does (rule 71), so a client leaves them out of it.*
 
-*A resignation cannot make the constitutional change rule impossible: a number is counted among the voices that remain, and all of them meet it where fewer remain than it names (rule 65). Where a departure takes away a share of the collective's key that the rollback's rotation needs, the key grammar's own way through applies: a resignation counts like a loss (above). Neither case is new to a broken collective.*
+*A resignation cannot make the constitutional change rule impossible: a number is counted among the voices that remain, and all of them meet it where fewer remain than it names (rule 65). Where a departure takes away a share of the collective's chain key that the rollback's rotation needs, the key grammar's own way through applies: a resignation counts like a loss (above). Neither case is new to a broken collective.*
 
 **The last voice.** *Client conformance:* where the member resigning is **the last voice that remains** in the collective, the client MUST say so in plain words before the resignation is signed. The member is the last voice that remains where no other party of the agreement in force (during a broken stretch, of the agreement in force just before the broken act) keeps a voice there as rule 65 counts it. The client says that the collective's works will be frozen as they stand, and nobody will be able to change, release or move them. Leaving stays the member's alone: the client says it, and never blocks it. *It is the sign at the entry of a danger zone.*
 
@@ -1965,7 +1961,7 @@ Its constitution freezes as it stands, and nobody can add or remove a member, re
 
 *Stated cost: when the last voice has left, the collective's works freeze as they stand.* Its works stay published and claimed, and every former member keeps its stake as a departed holder (rule 68). Nothing about them can be decided any more, a release to the public domain included, since a collective owner releases only by its own rules and no voice remains to meet them (rule 65). A broken collective can no longer be rolled back. No rule prevents it: *someone with stakes in works worth keeping does not resign.*
 
-Money under offers already published keeps flowing through a split service the founding terms name by a grant tied to no area while that grant stands, as through any grant.
+Money under publications already signed keeps flowing through the split services they name, and the collective's own income through its split agreement, while they stand.
 
 #### Rule 71. Leaving an area
 
@@ -1996,7 +1992,7 @@ The stepping down takes effect for the collective at the collective's line regis
 
 **A departure that empties an area ends every grant in it: a decision ending powers.**
 
-- An act signed with such a grant's key that the line's history holds was done within the grant's powers, and binds.
+- An act under such a grant that the line's history holds was done within the grant's powers, and binds.
 - One racing it (neither citing the other) is void, the ending winning (the tie rule).
 - Every act after it is void.
 
@@ -2008,11 +2004,12 @@ A void act binds the collective only where the collective itself, by an act of i
 
 The change ends the freeze once a constitutional clone is declared that changes that area's entry of field 19, the entry with its id, so that it has a holder whose voice remains.
 
+**A layer whose named actors have all left stands frozen likewise**: where its rule names parties (`[2, [+ hash]]`) none of whose voice remains, or where no voice remains at all. Its acts after the line that froze it count for nothing, and every grant issued under it ends at that line, until a constitutional clone names others (rule 60), which rule 64's "membership is constitutional" forces into the clone of the departure. *A rule counting every party, or a number of them, never freezes while a voice remains, all the remaining voices meeting it (rule 65).*
+
 **At the refit, the new holders may reinstate any ended grant by cloning it.** A reinstatement is a grant (type 9):
 
 - whose field 7 names the ended grant, and whose fields 0 to 6 are that grant's;
-- with a grant key of its own (field 9);
-- signed by the collective and completed by signature acts of the refitted area's holders, meeting the area's own rule, its threshold as for any grant within it (rule 74);
+- drawn by a holder of the refitted area, naming the collective, and completed by signature acts of the others, meeting the area's own rule, its threshold as for any grant within it (rule 74);
 - accepted by the grantee.
 
 It is a new decision, judged at its own place like any act the area reaches (rule 60). It counts only when made after the line at which the new holders took the area, since before it the area has no holder to complete it. One reinstatement for each grant, never one for several, and nothing is reinstated automatically.
@@ -2021,7 +2018,7 @@ A signature act naming the ended grant itself reinstates nothing: it is placed a
 
 A reinstated grant backs acts as a grant within the refitted area, and only within that area's reach (rule 80), from its own place on. **It takes nothing on**: the acts under the ended grant stay as the ending left them.
 
-*With grant keys, the grantee's acts are on the collective's own chain, so the line that emptied the area places them as it places every act, and nothing is left to decide later.*
+*A grantee's acts name the collective's chain, so the line that emptied the area places them as it places every act, and nothing is left to decide later.*
 
 *Stepping down thus works as resigning does (rule 70): neither can be played against the other, and one holder cannot stop the co-holders' work at will, nor keep an area frozen by withholding the signature its refit needs. A grant is the area's, not one holder's: a grant made within the area before the stepping down, even one to the holder who stepped down, keeps backing acts while the area runs, until its remaining holders revoke it (rule 74).*
 
@@ -2029,13 +2026,13 @@ A reinstated grant backs acts as a grant within the refitted area, and only with
 
 #### Rule 72. Every complete clone is written on the record at once
 
-**Every complete clone is written on the collective's record at once.** A clone that changes the constitutional tier is declared by a rotation (rule 69). Every other complete clone of a collective's agreement is written, at once, by a record act (type 17) that the collective signs in its own sequence.
+**Every complete clone is written on the collective's record at once.** A clone that changes the constitutional tier is declared by a rotation (rule 69). Every other complete clone of a collective's agreement is written, at once, by a record (type 17), which any member draws with their own key, naming the collective.
 
-For an act the collective's key signs, the agreement in force is the one the chain declares at the act's binding. For an act a holder's member key signs, it is the one the last bullet below picks. Where a valid record made since that declaration counts for the act, the agreement in force is instead the clone named by the latest such record, the one furthest along the agreement chain. Such a record may be under the same binding, or under an earlier one that a rotation declaring nothing new carried forward. Which records count:
+**The agreement in force for an act for the collective** is the clone put in force by the decisions its history holds, the one furthest along the agreement chain: the founding agreement its genesis declares, the clones its rotations declare, and the clones its records put in force. A rotation declaring nothing new carries the agreement in force forward. Which decisions count:
 
-- for a record itself, only the records before it;
-- for an action, the records under an earlier binding carried forward, and, under its own, the records its history holds and those before them (rule 58). A record it never cites decides nothing for it, a concurrent one included, save by the tie rule ("Made before, made after", 7);
-- for an action signed with a holder's member key, whose binding is no link of the collective's chain: starting from the version that named the key, the clones declared by the links of the collective's identity chain its history holds, and the records its history holds and those before them, the latest furthest along the agreement chain.
+- for a record itself, only the decisions in its history;
+- for a rotation, the decisions in the histories of the signature acts its declaration names;
+- for an action, the decisions its history holds, and those in their histories (rule 58). A record it never cites decides nothing for it, a concurrent one included, save by the tie rule ("Made before, made after", 7).
 
 **Records on concurrent lines are a fork of the agreement chain, settled as rule 90 says.** Where two valid records of different clones of the same parent, neither before the other, both count for an act (a record after both, or an action whose history holds both), it is judged under the parent itself, the earlier version staying in force, until a clone of either branch, recorded after both lines, resolves it, as rule 90 says. *The concurrency rule (field 10) is withdrawn.*
 
@@ -2048,9 +2045,9 @@ A record of a clone counts only if:
 
 So records follow the agreement chain one clone at a time. A rotation's declaration of a new agreement supersedes every record before it, and a rotation declaring nothing new supersedes none.
 
-*MOR has no clock, so an operational clone that nothing writes on the collective's record could not tell which of the collective's acts it governs: a payment cMIP the area reaching Money adopted would not govern the collective's acts until the next rotation, and acts of a cMIP adopted for a task would fall in no area, counting on the collective's own signature, without the area's holders. The record fixes the moment in the collective's own sequence, with the signing key; only clones that change who decides need the chain key's ceremony.*
+*MOR has no clock, so an operational clone that nothing writes on the collective's chain could not tell which of the collective's acts it governs: a payment cMIP the members named for Money adopted would not govern the collective's acts until the next rotation, and acts of a cMIP adopted for a task would fall under no rule. The record fixes the moment on the collective's chain, drawn by any member; only clones that change who decides need the chain key's ceremony.*
 
-*Until the record exists, the collective's acts are judged under the agreement before the clone: a delay, visible, which the key grammar's holders could already cause by withholding the collective's signature from any act.*
+*Until the record exists, the collective's acts are judged under the agreement before the clone: a delay, visible, which any member can end by drawing the record.*
 
 ### 13. Grants
 
