@@ -341,7 +341,7 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 
 - the post-quantum chain key keeps identities continuous through a break of elliptic-curve signatures, and signing keys migrate to a post-quantum scheme by adoption, before a break, since afterwards everything signed with the old scheme can be forged and only owners holding both keys still leave;
 - succession declared in a rotation, and two-way links, let identities move and be confirmed from both sides;
-- agreements are always in core format, so they can be cloned across;
+- agreements are always in core format, so they can be cloned across: a work crosses as its bake, its claim and its ownership agreement, while its publications, which are distribution, are remade;
 - anchoring before a break keeps history trustworthy, at each party's choice: the chain key secures the exit, not what is left behind;
 - extensions in wide use show MOR 2 which tasks it needs;
 - a successor changes the tag prefix, so nothing replays across the two;
