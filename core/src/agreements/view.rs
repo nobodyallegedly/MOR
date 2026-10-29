@@ -4744,7 +4744,7 @@ impl<'a> AgreementsView<'a> {
         // decides by its own rules across the lanes of every layer a release
         // touches: Envelopes, Money and Agreements.
         if self.is_release_act(x) {
-            for l in [layers::ENVELOPES_AND_TEXT, layers::MONEY, layers::AGREEMENTS] {
+            for l in [layers::ENVELOPES, layers::MONEY, layers::AGREEMENTS] {
                 if let Some(a) = t.lane(l) {
                     if !reaching.iter().any(|r| r.id == a.id) {
                         reaching.push(a);

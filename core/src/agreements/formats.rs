@@ -69,10 +69,11 @@ pub mod kinds {
 /// The core's layers, as Agreements' kinds number them (Agreements, `kind`).
 pub mod layers {
     pub const IDENTITY: u64 = 0;
-    pub const ENVELOPES_AND_TEXT: u64 = 1;
-    pub const MONEY: u64 = 2;
-    pub const AGREEMENTS: u64 = 3;
-    pub const DEVELOPMENT: u64 = 4;
+    pub const TEXT: u64 = 1;
+    pub const ENVELOPES: u64 = 2;
+    pub const MONEY: u64 = 3;
+    pub const AGREEMENTS: u64 = 4;
+    pub const DEVELOPMENT: u64 = 5;
 }
 
 /// The highest task number (Development, task table).
@@ -210,9 +211,10 @@ pub fn divide_stake(total: u64, holders: &[(Hash, u64)], ties: Ties) -> Result<V
 pub fn task_layer(task: u64) -> Option<u64> {
     match task {
         1..=3 => Some(layers::IDENTITY),
-        4 | 5 => Some(layers::ENVELOPES_AND_TEXT),
+        4 => Some(layers::TEXT),
+        5 | 11 => Some(layers::ENVELOPES),
         6 | 7 => Some(layers::MONEY),
-        8..=14 => Some(layers::AGREEMENTS),
+        8..=10 | 12..=14 => Some(layers::AGREEMENTS),
         _ => None,
     }
 }
@@ -235,8 +237,10 @@ impl Mirs {
     pub fn layer(&self, spec: &Hash) -> Option<u64> {
         if spec == &self.identity {
             Some(layers::IDENTITY)
-        } else if spec == &self.envelopes || spec == &self.text {
-            Some(layers::ENVELOPES_AND_TEXT)
+        } else if spec == &self.text {
+            Some(layers::TEXT)
+        } else if spec == &self.envelopes {
+            Some(layers::ENVELOPES)
         } else if spec == &self.money {
             Some(layers::MONEY)
         } else if spec == &self.agreements {

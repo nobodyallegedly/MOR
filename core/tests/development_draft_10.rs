@@ -94,7 +94,8 @@ fn content_not_in_the_format_is_no_specification_8_3() {
     };
     assert!(base(vec![(10, arr(vec![0, 3]))]).is_ok());
     assert!(base(vec![(10, arr(vec![3, 0]))]).is_err(), "not ascending");
-    assert!(base(vec![(10, arr(vec![4]))]).is_err(), "not a layer");
+    assert!(base(vec![(10, arr(vec![5]))]).is_err(), "not a layer");
+    assert!(base(vec![(10, arr(vec![1, 2, 4]))]).is_ok(), "Text, Envelopes and Agreements are layers 1, 2 and 4");
     assert!(base(vec![(14, Value::Uint(1))]).is_err(), "a field the format does not define");
     assert!(base(vec![(12, Value::Bool(true))]).is_ok());
     assert!(base(vec![(12, Value::Bool(false))]).is_err());

@@ -16197,7 +16197,7 @@ fn an_act_a_revocation_misses_is_void_or_disputed_rule_76() {
 fn a_member_keys_text_names_its_version_text_rule_14() {
     let mut lab = Lab::new(&|t| {
         let a = t.areas.as_mut().unwrap().iter_mut().find(|a| a.id == 1).unwrap();
-        a.kinds.as_mut().unwrap().push(Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT));
+        a.kinds.as_mut().unwrap().push(Kind::Layer(agreements::layers::TEXT));
     });
     let f = lab.founding;
     let label = lab.c[0].id;

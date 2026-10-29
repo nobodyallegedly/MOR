@@ -197,7 +197,7 @@ fn collective_terms(ids: &[Hash], authority: Hash, keeper: Hash, money_holders: 
             name: "Releases".into(),
             holders: vec![ids[0]],
             threshold: 1,
-            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }, Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT)]),
+            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }, Kind::Layer(agreements::layers::ENVELOPES)]),
             fields: None,
             id: 1,
             limits: None,
@@ -3573,7 +3573,7 @@ fn s7g_agreements_c(out: &mut Out) {
         let cid = col.c.id;
         let mut app = w.genesis("the collective's publishing app", vec![own_home()], None, None);
         let k = schnorr("the collective's publishing app/grant key", 0);
-        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::ENVELOPES)]), reinstates: None, by_this: false, key: signing_key(&k) };
         let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
         sign(&mut w, &mut col.m[0], &gid);
         let acc = sign(&mut w, &mut app, &gid);
