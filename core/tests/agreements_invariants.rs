@@ -23,20 +23,17 @@
 
 mod common;
 
-use common::{own_home, publication, schnorr, signing_key, Person, World};
+use common::{own_home, publication, Person, World};
 use mor_core::act::{Act, Object};
 use mor_core::cbor::Value;
 use mor_core::chain::{Status, Verifier};
 use mor_core::money::{self as fin, Amount, Payer, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
-use mor_core::identity::KeptTip;
 use mor_core::agreements::{
     self, outcomes, Abandonment, Area, Authority, Backing, Field4, Grant, Holding, KeyGrammar, Kind,
     AgreementsView, MarkEntry, Mirs, Power, Record, Recovery, Resignation, Rule, Terms, Who,
 };
 use mor_core::lock::ContentKey;
-use mor_core::mmr::Mmr;
-use mor_core::sig::SchnorrKey;
 use proptest::prelude::*;
 use proptest::test_runner::{Config, RngAlgorithm, TestCaseError, TestRng, TestRunner};
 use std::collections::{BTreeMap, BTreeSet};
@@ -155,22 +152,6 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
     agreements_act(w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), obj(*x))
 }
 
-fn grant_key(name: &str) -> (SchnorrKey, mor_core::identity::SigningKey) {
-    let k = schnorr(&format!("{name}/grant"), 0);
-    let p = signing_key(&k);
-    (k, p)
-}
-
-/// The kept tip of a sequence at position `k` (1-based): the line a fork,
-/// closing or record names. `k` below the sequence's length draws a stale
-/// line, one that leaves the later acts out.
-fn tip_at(seq: &[Hash], k: usize) -> KeptTip {
-    KeptTip {
-        act: seq[k - 1],
-        position: k as u64,
-        summary: Mmr::from_ids(&seq[..k]).root(),
-    }
-}
 
 /// Divide in millionths, leftovers to the first: a fork's members counted
 /// alike, for the share each leaving member keeps (how their ties are
@@ -217,19 +198,15 @@ impl Stats {
     }
 }
 
-/// Every act a collective's chain names that this act cites (F127): its
-/// sequence's previous act, its `objects` on the chain, and, for a record,
-/// its kept tips. Read from the acts held, independently of the library.
+/// Every act a collective's chain names that this act cites (rule 58,
+/// F127): its `objects` on the chain, and nothing else; a member's own
+/// `prev` is never followed. (A rotation's history is that of the signature
+/// acts its declaration names; these stories make no rotation of the
+/// collective, so the walk stops at its genesis.) Read from the acts held,
+/// independently of the library.
 fn cites_on(v: &Verifier, chain: &Hash, x: &Hash) -> Vec<Hash> {
     let Some(h) = v.get(x) else { return vec![] };
-    let mut out: Vec<Hash> = h.inside.prev.iter().flatten().copied().collect();
-    out.extend(h.inside.objects.iter().flatten().filter(|o| &o.chain == chain).map(|o| o.predecessor));
-    if h.inside.spec == mirs().agreements && h.inside.type_ == agreements::types::RECORD {
-        if let Ok(r) = Record::decode(&h.inside) {
-            out.extend(r.kept.iter().map(|t| t.act));
-        }
-    }
-    out
+    h.inside.objects.iter().flatten().filter(|o| &o.chain == chain).map(|o| o.predecessor).collect()
 }
 
 /// The history of a set of starting acts on a collective's chain: every act
@@ -525,7 +502,6 @@ enum K {
 
 struct GrantInfo {
     id: Hash,
-    agent: usize,
     in_area: bool,
     accepted: bool,
     holders_signed: bool,
@@ -537,7 +513,8 @@ struct GrantInfo {
 struct EndingInfo {
     id: Hash,
     fork: bool,
-    tips: Vec<Hash>,
+    /// Its line: what it cites on the collective's chain.
+    line: Vec<Hash>,
     /// The members it lists: a fork's sides, a closing's voices.
     listed: Vec<Hash>,
 }
@@ -547,7 +524,10 @@ struct ColWorld {
     shape: Shape,
     /// Each member's devices.
     m: Vec<Vec<Person>>,
-    /// The collective's devices.
+    /// The collective's devices: devices of member 0 (the drafter, who
+    /// never leaves) acting for it with their own key (rule 58), each act
+    /// citing the decisions it knows, its device's previous act and the
+    /// heads it joins.
     c: Vec<Person>,
     col: Hash,
     founding: Hash,
@@ -605,7 +585,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, _work: Hash) -> Terms
         name: "Money".into(),
         holders: ids.iter().enumerate().filter(|(i, _)| mask & (1 << i) != 0).map(|(_, h)| *h).collect(),
         threshold: k as u64,
-        kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
+        kinds: Some(money_kinds()),
         fields: None,
         id: 2,
         limits: None,
@@ -621,7 +601,6 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, _work: Hash) -> Terms
         abandonment: Some(Abandonment { authority: Authority::Named(authority), outcomes: vec![outcomes::VOICE_REMOVED], proof: None }),
         parent: None,
         grammar: Some(KeyGrammar {
-            signing: Holding::Shares { threshold: 1, members: ids.to_vec() },
             chain_key: Holding::Shares { threshold: ids.len() as u64, members: ids.to_vec() },
             recovery: Some(Recovery::Escrow { authority }),
         }),
@@ -629,6 +608,9 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, _work: Hash) -> Terms
         extensions: None,
         succession: None,
         constitutional: shape.constitutional.map(|k| Rule::Threshold(k as u64)),
+        // Any one member acts for the collective in every layer (rule 60);
+        // the Money lane, where drawn, is a finer area (field 34).
+        layers: Some(common::layers_all(Rule::Threshold(1))),
         areas: lane.map(|a| vec![a]),
         area_words: None,
         chain: None,
@@ -648,6 +630,13 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, _work: Hash) -> Terms
         transfers_counted: None,
         issues_under: None,
     }
+}
+
+/// The acts the Money lane reaches (field 34 reaches types): every Money
+/// act the collective makes here, its payee pointer, its debts and its
+/// receipts.
+fn money_kinds() -> Vec<Kind> {
+    [0, 1, 2].into_iter().map(|t| Kind::Type { spec: mirs().money, type_: t }).collect()
 }
 
 /// `n` equal shares in millionths, the leftover to the first.
@@ -691,10 +680,9 @@ impl ColWorld {
         for d in m.iter_mut() {
             sign(&mut w, &mut d[0], &founding);
         }
-        let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
-        c0.cite = Some((c0.id, vec![c0.id]));
+        let c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
         let col = c0.id;
-        let c = vec![c0; shape.devices];
+        let c = (0..shape.devices).map(|_| m[0][0].acting_for(col, vec![col])).collect();
         let agents = (0..2).map(|i| w.genesis(&format!("agent {i}"), vec![own_home()], None, None)).collect();
         let creditors = (0..2).map(|i| w.genesis(&format!("creditor {i}"), vec![own_home()], None, None)).collect();
         let stranger = w.genesis("a stranger", vec![own_home()], None, None);
@@ -779,19 +767,44 @@ impl ColWorld {
         sign(&mut self.w, &mut self.m[i][d], x)
     }
 
+    /// The lane's holders sign `x`; with its drafter where a holder, the
+    /// holders it carries (the drafter counts as a signer, rule 60).
     fn lane_sign(&mut self, x: &Hash) -> Vec<Hash> {
         let ids = self.ids();
         let holders = self.lane_now();
         for h in &holders {
             let i = ids.iter().position(|x| x == h).unwrap();
-            self.member_sign(i, x);
+            if i != 0 {
+                self.member_sign(i, x);
+            }
         }
-        holders
+        let mut out = self.info.get(x).map(|f| f.lane_signed.clone()).unwrap_or_default();
+        out.extend(holders);
+        out.sort();
+        out.dedup();
+        out
     }
 
-    /// An act on a strand of the collective's actions chain (a device, or
-    /// a grant key's strand): citing the decisions the strand knows and
-    /// these joined heads, or nothing when `cited` is false; sealed as asked.
+    /// Whether `x` is held and names the collective's chain in `objects`.
+    fn on_chain(&self, x: &Hash) -> bool {
+        self.w.v.get(x).is_some_and(|h| h.inside.objects.iter().flatten().any(|o| o.chain == self.col))
+    }
+
+    /// The acts of a device (or a grantee's strand) on the collective's
+    /// chain, in the order made.
+    fn chain_acts(&self, p: &Person) -> Vec<Hash> {
+        p.seq.iter().filter(|x| self.on_chain(x)).copied().collect()
+    }
+
+    /// The previous act of a device on the collective's chain, if any.
+    fn head_of(&self, p: &Person) -> Option<Hash> {
+        self.chain_acts(p).last().copied()
+    }
+
+    /// An act on a strand of the collective's actions chain (a device of
+    /// the drafter, or a grantee's strand): citing the decisions the strand
+    /// knows, its previous act there and these joined heads, or nothing
+    /// when `cited` is false; sealed as asked.
     #[allow(clippy::too_many_arguments)]
     fn act_on(&mut self, who: Who2, spec_: Hash, type_: u64, payload: Vec<(Value, Value)>, mut objects: Vec<Object>, joined: &[Hash], cited: bool, seal: Seal, acks: Option<Vec<Hash>>, extra_to: &[Hash]) -> Hash {
         let col = self.col;
@@ -802,8 +815,14 @@ impl ColWorld {
             Who2::Strand(g, s) => std::mem::replace(&mut self.grants[g].strands[s], blank),
         };
         if cited {
-            let ds = p.cite.as_ref().map(|c| c.1.clone()).unwrap_or_default();
-            objects.extend(ds.iter().chain(joined).map(|d| Object { chain: col, predecessor: *d }));
+            let mut ds = p.cite.as_ref().map(|c| c.1.clone()).unwrap_or_default();
+            ds.extend(self.head_of(&p));
+            for j in joined {
+                if !ds.contains(j) {
+                    ds.push(*j);
+                }
+            }
+            objects.extend(ds.iter().map(|d| Object { chain: col, predecessor: *d }));
         }
         let saved = p.cite.take();
         let objects = (!objects.is_empty()).then_some(objects);
@@ -831,15 +850,20 @@ impl ColWorld {
         id
     }
 
+    /// The generator's bookkeeping for `x`. An act of a device is drafted
+    /// by member 0, who counts as a signer where a holder of the lane.
     fn note(&mut self, x: Hash, seal: Seal, cited: bool, grant: Option<usize>, kind: K) {
-        self.info.insert(x, Info { seal, cited, grant, kind, lane_signed: vec![] });
+        let drafter = self.ids()[0];
+        let lane_signed = if grant.is_none() && self.lane_holders.contains(&drafter) { vec![drafter] } else { vec![] };
+        self.info.insert(x, Info { seal, cited, grant, kind, lane_signed });
     }
 
-    /// The heads of every strand, as joinable acts: devices, then grant strands.
+    /// The heads of every strand, as joinable acts on the collective's
+    /// chain: devices, then grantees' strands.
     fn heads(&self) -> Vec<Hash> {
-        let mut v: Vec<Hash> = self.c.iter().filter_map(|d| d.seq.last().copied()).collect();
+        let mut v: Vec<Hash> = self.c.iter().filter_map(|d| self.head_of(d)).collect();
         for g in &self.grants {
-            v.extend(g.strands.iter().filter_map(|s| s.seq.last().copied()));
+            v.extend(g.strands.iter().filter_map(|s| self.head_of(s)));
         }
         v
     }
@@ -895,16 +919,28 @@ impl ColWorld {
         t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Judicial, signers: sorted(self.ids()) }]);
         let k = agreements_act(&mut self.w, &mut self.m[0][0], agreements::types::TERMS, t.to_map(), obj(self.founding));
         let sigs: Vec<Hash> = (0..self.m.len()).map(|i| sign(&mut self.w, &mut self.m[i][0], &k)).collect();
-        let r = Record { clone: Some(k), signatures: Some(sigs), kept: vec![], registers: None };
+        let r = Record { clone: Some(k), signatures: Some(sigs), registers: None };
         let rec = self.record(0, r, k, &[], true);
         self.current = k;
         self.current_record = Some(rec);
     }
 
-    /// A record on device `d`: a decision citing by its kept tips (F127).
-    fn record(&mut self, d: usize, r: Record, named: Hash, _tips: &[usize], inform: bool) -> Hash {
+    /// A record on device `d`, drawn by its member: a decision citing, on
+    /// the collective's chain, its genesis, the device's previous act there
+    /// and the heads `kept` (rule 58, F127); what the device was told of
+    /// reaches it only through those.
+    fn record(&mut self, d: usize, r: Record, named: Hash, kept: &[Hash], inform: bool) -> Hash {
+        let mut ds = vec![self.col];
+        ds.extend(self.head_of(&self.c[d]));
+        for k in kept {
+            if !ds.contains(k) {
+                ds.push(*k);
+            }
+        }
+        let mut objects = obj(named).unwrap();
+        objects.extend(ds.iter().map(|x| Object { chain: self.col, predecessor: *x }));
         let saved = self.c[d].cite.take();
-        let a = self.w.everyday_act(&mut self.c[d], mirs().agreements, agreements::types::RECORD, r.to_map(), obj(named), None);
+        let a = self.w.everyday_act(&mut self.c[d], mirs().agreements, agreements::types::RECORD, r.to_map(), Some(objects), None);
         self.c[d].cite = saved;
         let id = self.w.add(&a);
         for (i, dev) in self.c.iter_mut().enumerate() {
@@ -920,19 +956,23 @@ impl ColWorld {
         let in_area = in_area && self.shape.lane.is_some();
         let a = self.agents[agent].clone();
         let n = self.grants.len();
-        let (k, pk) = grant_key(&format!("{:?} grant {n}", a.id));
+        // A collective's grant carries no key: its grantee acts with its own.
         let g = Grant {
             grantee: a.id,
             scope: 2,
             agreements: None,
-            this_agreement: false,
             limits: None,
             limits_cmip: None,
             area: in_area.then_some(2),
-            kinds: in_area.then(|| vec![Kind::Layer(agreements::layers::MONEY)]),
+            // Field 6 (rule 74): within the area, its Money acts; otherwise
+            // every layer, but Money where the lane holds it.
+            kinds: Some(if in_area {
+                money_kinds()
+            } else {
+                (1..=5).filter(|l| self.shape.lane.is_none() || *l != agreements::layers::MONEY).map(Kind::Layer).collect()
+            }),
             reinstates: None,
-            by_this: false,
-            key: pk,
+            key: None,
         };
         let id = self.act_on(Who2::Dev(d), mirs().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.note(id, Seal::Public, true, None, K::GrantAct);
@@ -943,12 +983,8 @@ impl ColWorld {
         if accept {
             sign(&mut self.w, &mut self.agents[agent], &id);
         }
-        let mut strand = self.c[0].clone();
-        strand.binding = id;
-        strand.sign = k.clone();
-        strand.seq = vec![];
-        strand.cite = Some((self.col, vec![id]));
-        self.grants.push(GrantInfo { id, agent, in_area, accepted: accept, holders_signed: holders_sign, strands: vec![strand.clone(), strand], service });
+        let strand = self.agents[agent].acting_for(self.col, vec![id]);
+        self.grants.push(GrantInfo { id, in_area, accepted: accept, holders_signed: holders_sign, strands: vec![strand.clone(), strand], service });
         n
     }
 
@@ -956,17 +992,20 @@ impl ColWorld {
         Fin::Obligation(fin::Obligation { debtor: self.col, creditor, amount: Amount { unit: unit(), value: amount }, pointer: spec("its pointer"), agreement: None }).to_map()
     }
 
-    /// The line a fork or closing draws: each device's tip, `stale` acts back.
-    fn line(&self, stale: u8) -> Vec<KeptTip> {
-        let mut out: Vec<KeptTip> = self
-            .c
-            .iter()
-            .filter(|d| !d.seq.is_empty())
-            .map(|d| tip_at(&d.seq, d.seq.len().saturating_sub(stale as usize).max(1)))
-            .collect();
+    /// The line a fork or closing draws, as what it cites on the
+    /// collective's chain: its genesis, and each device's act `stale` acts
+    /// back from its latest there (none, where it has made fewer).
+    fn line(&self, stale: u8) -> Vec<Hash> {
+        let mut out = vec![self.col];
+        for d in &self.c {
+            let acts = self.chain_acts(d);
+            if let Some(k) = acts.len().checked_sub(stale as usize + 1) {
+                out.push(acts[k]);
+            }
+        }
         if self.line_strands {
             for g in &self.grants {
-                out.extend(g.strands.iter().filter(|d| !d.seq.is_empty()).map(|d| tip_at(&d.seq, d.seq.len())));
+                out.extend(g.strands.iter().filter_map(|s| self.head_of(s)));
             }
         }
         out
@@ -1085,13 +1124,12 @@ impl ColWorld {
                         (x, K::Publication)
                     }
                     AgentWhat::Record => {
-                        let r = Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![spec("a departure")]) };
+                        let r = Record { clone: None, signatures: None, registers: Some(vec![spec("a departure")]) };
                         let x = self.act_on(Who2::Strand(gi, s), mirs().agreements, agreements::types::RECORD, r.to_map(), vec![Object { chain: self.current, predecessor: self.current }], &[], true, seal, None, &[]);
                         (x, K::Record)
                     }
                     AgentWhat::Grant => {
-                        let (_, pk) = grant_key("a grant the grant key made");
-                        let g = Grant { grantee: self.agents[0].id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this: false, key: pk };
+                        let g = Grant { grantee: self.agents[0].id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, key: None };
                         let x = self.act_on(Who2::Strand(gi, s), mirs().agreements, agreements::types::GRANT, g.to_map(), vec![], &[], true, seal, None, &[]);
                         (x, K::GrantAct)
                     }
@@ -1128,8 +1166,10 @@ impl ColWorld {
                 self.note(x, Seal::Public, true, None, K::Ack { target: t });
             }
             Op::Resign { member, area_only, dev, tips, inform } => {
+                // Member 0 drafts the devices' acts and never leaves: its
+                // voice is what they count by (rule 60).
                 let n = self.m.len();
-                let i = member as usize % n;
+                let i = 1 + member as usize % (n - 1);
                 let who = self.ids()[i];
                 if self.gone().contains(&who) || self.gone().len() + 1 >= n {
                     return;
@@ -1139,15 +1179,15 @@ impl ColWorld {
                 let cur = self.current;
                 let res = agreements_act(&mut self.w, &mut self.m[i][0], agreements::types::RESIGNATION, res.to_map(), obj(cur));
                 let d = dev as usize % devs;
-                let kept: Vec<KeptTip> = self
+                let kept: Vec<Hash> = self
                     .c
                     .iter()
                     .enumerate()
-                    .filter(|(j, x)| *j != d && !x.seq.is_empty() && tips & (1 << j) != 0)
-                    .map(|(_, x)| tip_at(&x.seq, x.seq.len()))
+                    .filter(|(j, _)| *j != d && tips & (1 << j) != 0)
+                    .filter_map(|(_, x)| self.head_of(x))
                     .collect();
-                let r = Record { clone: None, signatures: None, kept, registers: Some(vec![res]) };
-                let rec = self.record(d, r, cur, &[], inform);
+                let r = Record { clone: None, signatures: None, registers: Some(vec![res]) };
+                let rec = self.record(d, r, cur, &kept, inform);
                 self.note(rec, Seal::Public, true, None, K::Record);
                 // A record naming no clone names the agreement in force for
                 // it, or it is no line and registers nothing (record, type
@@ -1186,9 +1226,8 @@ impl ColWorld {
                 let kept: Vec<(Hash, u64)> = leaving.iter().map(|l| (ids[*l], pct[voices.iter().position(|v| v == l).unwrap()])).collect();
                 let sa = self.successor(&a, &kept);
                 let sb = self.successor(&b, &kept);
-                let tips = self.line(stale);
-                let chain_act = self.c[0].binding;
-                let owed = self.view().hand_out(&self.col, &self.current, &chain_act, &tips).ok().flatten().unwrap_or_default();
+                let line = self.line(stale);
+                let owed = self.view().hand_out(&self.col, &self.current, &line).ok().flatten().unwrap_or_default();
                 let mut list: Vec<(Hash, Vec<u64>)> = owed.iter().map(|d| (*d, match self.rng.below(3) { 0 => vec![0], 1 => vec![1], _ => vec![0, 1] })).collect();
                 match debts {
                     DebtsMode::Honest => {}
@@ -1208,14 +1247,12 @@ impl ColWorld {
                 let f = agreements::Fork {
                     agreement: self.current,
                     collective: self.col,
-                    chain_act,
-                    tips: tips.clone(),
                     sides: vec![agreements::Side { successor: sa, members: a.iter().map(|i| ids[*i]).collect() }, agreements::Side { successor: sb, members: b.iter().map(|i| ids[*i]).collect() }],
                     shares: vec![],
                     debts: list,
                 };
                 let signer = a[0];
-                let o = self.ending_objects(names);
+                let o = self.ending_objects(names, &line);
                 let x = match seal {
                     Seal::Public => agreements_act(&mut self.w, &mut self.m[signer][0], agreements::types::FORK, f.to_map(), o),
                     _ => {
@@ -1241,7 +1278,7 @@ impl ColWorld {
                     }
                 }
                 let listed = a.iter().chain(b.iter()).map(|m| ids[*m]).collect();
-                self.endings.push(EndingInfo { id: x, fork: true, tips: tips.iter().map(|t| t.act).collect(), listed });
+                self.endings.push(EndingInfo { id: x, fork: true, line, listed });
             }
             Op::Closing { stale, seal, all_sign, names } => {
                 if self.endings.len() >= 3 {
@@ -1250,8 +1287,8 @@ impl ColWorld {
                 let ids = self.ids();
                 let gone = self.gone();
                 let voices: Vec<usize> = (0..ids.len()).filter(|i| !gone.contains(&ids[*i])).collect();
-                let tips = self.line(stale);
-                let c = agreements::Closing { agreement: self.current, collective: self.col, chain_act: self.c[0].binding, tips: tips.clone(), open: vec![] };
+                let line = self.line(stale);
+                let c = agreements::Closing { agreement: self.current, collective: self.col, open: vec![] };
                 if voices.is_empty() {
                     return;
                 }
@@ -1271,7 +1308,7 @@ impl ColWorld {
                     }
                 };
                 let signer = signers[0];
-                let o = self.ending_objects(names);
+                let o = self.ending_objects(names, &line);
                 let x = match seal {
                     Seal::Public => agreements_act(&mut self.w, &mut self.m[signer][0], agreements::types::CLOSING, c.to_map(), o),
                     _ => {
@@ -1284,7 +1321,7 @@ impl ColWorld {
                     self.member_end(*m, &x, false);
                 }
                 let listed = voices.iter().map(|m| ids[*m]).collect();
-                self.endings.push(EndingInfo { id: x, fork: false, tips: tips.iter().map(|t| t.act).collect(), listed });
+                self.endings.push(EndingInfo { id: x, fork: false, line, listed });
             }
             Op::LateSign { ending, member } => {
                 if self.endings.is_empty() {
@@ -1389,7 +1426,7 @@ impl ColWorld {
         if self.first_end.is_none() && !self.endings.is_empty() {
             let lv = self.view();
             if let Ok(Some(e)) = lv.closed_by(&self.col) {
-                let snap = self.ending_snapshot(&lv, &e.tips.iter().map(|t| t.act).collect::<Vec<_>>());
+                let snap = self.ending_snapshot(&lv, &e.line);
                 self.first_end = Some((i, e.by, snap));
             }
         }
@@ -1471,15 +1508,16 @@ impl ColWorld {
         (left.into_iter().collect(), names, no_ending)
     }
 
-    /// An ending's `objects`: the agreement as chain and predecessor, and,
+    /// An ending's `objects`: the agreement as chain and predecessor;
     /// where it names them, every earlier ending as the act it follows on
-    /// that chain (F131, IT1).
-    fn ending_objects(&self, names: bool) -> Option<Vec<Object>> {
+    /// that chain (F131, IT1); then its line, on the collective's chain.
+    fn ending_objects(&self, names: bool, line: &[Hash]) -> Option<Vec<Object>> {
         let cur = self.current;
         let mut o = obj(cur).unwrap();
         if names {
             o.extend(self.endings.iter().map(|e| Object { chain: cur, predecessor: e.id }));
         }
+        o.extend(line.iter().map(|x| Object { chain: self.col, predecessor: *x }));
         Some(o)
     }
 
@@ -1512,17 +1550,17 @@ impl ColWorld {
         self.counts(lv, x)
     }
 
-    /// Acts of the collective's own key acknowledging `y` that count: an
-    /// adoption (rule 40, A6).
+    /// Acts for the collective, not a grantee's, acknowledging `y` that
+    /// count: an adoption (rule 40, A6).
     fn adopters(&self, lv: &AgreementsView, y: &Hash) -> Vec<Hash> {
-        // F131 (IT2a): an act of the collective's own key whose history
-        // holds it (reading U3) adopts it too.
+        // F131 (IT2a): an act for the collective whose history holds it
+        // (reading U3) adopts it too.
         let cites = |a: &Hash| history_of(&self.w.v, &self.col, a).contains(y);
         self.info
             .iter()
             // F142 (rule 42): a witness act (K::Ack) is on neither chain, and
             // adopts nothing; the collective adopts by an action citing it.
-            .filter(|(a, f)| !matches!(f.kind, K::Ack { .. }) && f.grant.is_none() && *a != y && self.w.v.get(a).is_some_and(|h| h.act.outside.signer == Some(self.col)) && cites(a))
+            .filter(|(a, f)| !matches!(f.kind, K::Ack { .. }) && f.grant.is_none() && *a != y && self.w.v.get(a).is_some() && cites(a))
             .filter(|(a, _)| lv.consent(a).map(|c| c.counts()).unwrap_or(false) && self.w.v.status(a) == Status::Valid)
             .map(|(a, _)| *a)
             .collect()
@@ -1686,7 +1724,10 @@ impl ColWorld {
         for (x, f) in &self.info {
             // F156 (rule 35b): the collective's witness act is on neither
             // chain and counts for nothing in Agreements.
-            if matches!(f.kind, K::Ack { .. }) && lv.consent(x).is_ok_and(|c| c.counts()) {
+            // Keyless (rule 58): the witness act is its member's own, not
+            // the collective's (`NotCollective`); it must count for nothing
+            // as the collective's.
+            if matches!(f.kind, K::Ack { .. }) && lv.consent(x).is_ok_and(|c| c.counts() && c != agreements::Consent::NotCollective) {
                 bad.push(format!("WITNESS-COUNTS: a witness act of the collective counts in Agreements (F156): {x:?} consent={:?}", lv.consent(x)));
             }
             if f.kind == K::Record || matches!(f.kind, K::Ack { .. }) {
@@ -1735,7 +1776,7 @@ impl ColWorld {
         // Endings: the tie rule, handing out, owing (rules 47a, 47b; F127).
         let ended = lv.closed_by(&col).map_err(|e| format!("{e:?}"))?;
         if let Some(e) = &ended {
-            let he = history(v, &col, &e.tips.iter().map(|t| t.act).collect::<Vec<_>>());
+            let he = history(v, &col, &e.line);
             for (x, f) in &self.info {
                 if matches!(f.kind, K::Record | K::Ack { .. } | K::Revocation { .. } | K::GrantAct) && f.grant.is_none() {
                     continue;
@@ -1750,7 +1791,7 @@ impl ColWorld {
             }
         }
         for en in &self.endings {
-            let he = history(v, &col, &en.tips);
+            let he = history(v, &col, &en.line);
             if en.fork {
                 let fe = lv.fork(&en.id).map_err(|e| format!("{e:?}"))?;
                 if !fe.complete {
@@ -1849,8 +1890,8 @@ impl ColWorld {
             if now != Some(*e) {
                 bad.push(format!("{code}: the ending {e:?}, complete after step {at}, no longer ends the collective (now {now:?})"));
             }
-            let tips: Vec<Hash> = self.endings.iter().find(|x| x.id == *e).map(|x| x.tips.clone()).unwrap_or_default();
-            let again = self.ending_snapshot(&lv, &tips);
+            let line: Vec<Hash> = self.endings.iter().find(|x| x.id == *e).map(|x| x.line.clone()).unwrap_or_default();
+            let again = self.ending_snapshot(&lv, &line);
             for (x, s) in snap {
                 if again.get(x) != Some(s) {
                     bad.push(format!("{code}: act {x:?} in the ending's history changed after it: {s} -> {:?}", again.get(x)));
@@ -3069,8 +3110,7 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
     for p in m.iter_mut() {
         sign(&mut w, p, &founding);
     }
-    let mut c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
-    c0.cite = Some((c0.id, vec![c0.id]));
+    let c0 = w.genesis_with("collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
     // The clone: new shares; the clone rule's power, by the members it
     // needs (operational field 7, in no area).
     let mut after = millionths(&c.after[..k]);
@@ -3103,13 +3143,10 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
             signed.insert(*h);
         }
     }
-    let r = Record { clone: Some(clone), signatures: Some(named), kept: vec![], registers: None };
-    let a = {
-        let saved = c0.cite.take();
-        let a = w.everyday_act(&mut c0, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(clone), None);
-        c0.cite = saved;
-        a
-    };
+    let r = Record { clone: Some(clone), signatures: Some(named), registers: None };
+    // Any member draws the record (rule 69), citing the genesis.
+    let mut drawer = m[0].acting_for(c0.id, vec![c0.id]);
+    let a = w.everyday_act(&mut drawer, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(clone), None);
     let rec = w.add(&a);
     let lv = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let puts = lv.record(&c0.id, &rec).map_err(|e| format!("{e:?}"))?.puts;
@@ -3173,11 +3210,13 @@ fn ic1_a_debt_citing_nothing_binds_no_one() {
     let cw = run_col(&two(), &[debt_op(0, false)], 0);
     let d = cw.debts[0];
     let lv = cw.view();
-    assert!(matches!(lv.consent(&d).unwrap(), agreements::Consent::Uncited { .. }));
+    // Keyless (rule 58): an act naming nothing on the collective's chain
+    // is its member's own, not the collective's.
+    assert!(matches!(lv.consent(&d).unwrap(), agreements::Consent::Uncited { .. } | agreements::Consent::NotCollective), "{:?}", lv.consent(&d));
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
-    // The same in a collective with a Money lane whose holder never
-    // signed the debt (rule 36a): not the collective's.
-    let lane = Shape { lane: Some((1, 1)), ..two() };
+    // The same in a collective with a Money lane whose holder (Ben, not
+    // the drafter) never signed the debt (rule 36a): not the collective's.
+    let lane = Shape { lane: Some((2, 1)), ..two() };
     let cw = run_col(&lane, &[Op::Debt { dev: 0, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: false }], 0);
     assert_eq!(cw.view().obligation_binds(&cw.debts[0]).unwrap(), Some(false));
     let cw = run_col(&lane, &[debt_op(0, true)], 0);
@@ -3217,7 +3256,7 @@ fn ic3_a_revoked_act_stays_void_inside_a_forks_history() {
     cw.line_strands = true;
     cw.apply(3, &fork_op(0, DebtsMode::Honest));
     let y = *cw.info.iter().find(|(_, f)| f.grant.is_some()).unwrap().0;
-    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&y), "the fork's history holds it");
+    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].line).contains(&y), "the fork's history holds it");
     let lv = cw.view();
     assert!(lv.closed_by(&cw.col).unwrap().is_some(), "the fork ends the collective: {:?}", lv.fork(&cw.endings[0].id).unwrap().why);
     assert!(matches!(lv.backing(&y).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(&y));
@@ -3283,7 +3322,7 @@ fn ic5_no_successor_owes_a_debt_outside_the_forks_history() {
 #[test]
 fn ic10_a_fork_hands_out_only_debts_that_bind() {
     let uncited = run_col(&two(), &[debt_op(0, false), fork_op(0, DebtsMode::Nothing)], 0);
-    let lane = Shape { lane: Some((1, 1)), ..two() };
+    let lane = Shape { lane: Some((2, 1)), ..two() };
     let unsigned = run_col(&lane, &[Op::Debt { dev: 0, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: false }, fork_op(0, DebtsMode::Nothing)], 0);
     for (cw, why) in [(uncited, "on no chain (rule 35b)"), (unsigned, "beyond its signer's powers: the lane never signed it (rule 36a)")] {
         let lv = cw.view();
@@ -3392,7 +3431,7 @@ fn f266_a_split_under_a_version_that_stopped_counting_stays_in_the_chain() {
 /// F131 made ENDING-UNDONE a failure again.
 #[test]
 fn ic8_a_record_after_the_ending_registers_nothing() {
-    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let ops = [
         Op::Grant { dev: 49, agent: 0, in_area: true, accept: false, holders_sign: true },
         Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
@@ -3413,7 +3452,7 @@ fn ic8_a_record_after_the_ending_registers_nothing() {
 /// until F131 made SAFE-ONCE-CITED a failure again.
 #[test]
 fn ic9_a_departure_racing_a_citation_takes_no_voice() {
-    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((3, 1)), owns_work: false };
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((6, 1)), owns_work: false };
     let ops = [
         Op::Grant { dev: 1, agent: 0, in_area: true, accept: false, holders_sign: true },
         Op::Join { dev: 29, other: 0 },
@@ -3431,7 +3470,7 @@ fn ic9_a_departure_racing_a_citation_takes_no_voice() {
     // a later act of the device that signed the grant holds it without
     // holding the departure. (A first fix, skipping the departure outright,
     // brought the departed holder's voice back and failed the grant.)
-    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((3, 2)), owns_work: true };
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((6, 2)), owns_work: true };
     let ops = [
         Op::Resign { member: 0, area_only: false, dev: 91, tips: 5, inform: false },
         Op::Grant { dev: 12, agent: 0, in_area: true, accept: false, holders_sign: true },
@@ -3473,15 +3512,17 @@ fn it1_a_complete_ending_is_final() {
 /// of `signers` with a chain signature (F132), naming in `objects` the
 /// endings `names` (none: an ending drawn without knowing the others).
 fn close_with(cw: &mut ColWorld, signers: &[usize], names: &[Hash]) -> Hash {
-    let c = agreements::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0), open: vec![] };
+    let c = agreements::Closing { agreement: cw.current, collective: cw.col, open: vec![] };
+    let line = cw.line(0);
     let mut o = obj(cw.current).unwrap();
     o.extend(names.iter().map(|e| Object { chain: cw.current, predecessor: *e }));
+    o.extend(line.iter().map(|x| Object { chain: cw.col, predecessor: *x }));
     let x = agreements_act(&mut cw.w, &mut cw.m[signers[0]][0], agreements::types::CLOSING, c.to_map(), Some(o));
     for m in signers {
         cw.member_end(*m, &x, false);
     }
     let listed = cw.ids();
-    cw.endings.push(EndingInfo { id: x, fork: false, tips: c.tips.iter().map(|t| t.act).collect(), listed });
+    cw.endings.push(EndingInfo { id: x, fork: false, line, listed });
     x
 }
 
@@ -3519,8 +3560,9 @@ fn u1_a_signers_chain_orders_two_endings() {
     drop(lv);
     // Signature acts (Agreements type 1) on a closing, the old way: no signature.
     let ids = cw.ids();
-    let c = agreements::Closing { agreement: cw.current, collective: cw.col, chain_act: cw.c[0].binding, tips: cw.line(0), open: vec![] };
-    let x = agreements_act(&mut cw.w, &mut cw.m[0][0], agreements::types::CLOSING, c.to_map(), obj(cw.current));
+    let c = agreements::Closing { agreement: cw.current, collective: cw.col, open: vec![] };
+    let o = cw.ending_objects(false, &cw.line(0));
+    let x = agreements_act(&mut cw.w, &mut cw.m[0][0], agreements::types::CLOSING, c.to_map(), o);
     sign(&mut cw.w, &mut cw.m[1][0], &x);
     let e = cw.view().closing(&x).unwrap();
     assert!(e.signed.is_empty() && !e.complete, "{:?}", e.why);
@@ -3698,7 +3740,7 @@ fn it2b_a_stale_line_is_a_stated_cost() {
     // leaves out an act the collective's own chain had moved past.
     assert_eq!(cw.w.v.status(&d), Status::Valid);
     assert_eq!(cw.w.v.status(&citing), Status::Valid);
-    assert!(!history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&citing));
+    assert!(!history(&cw.w.v, &cw.col, &cw.endings[0].line).contains(&citing));
 }
 
 /// IT3, decided (F131): the payment decides. One push payment, its
@@ -3740,13 +3782,6 @@ fn it3_the_payments_claim_decides() {
 }
 
 
-// verifier2 (docs/verifier2-report.md): exports the random collective
-// histories above, and the library's verdicts on them, for the independent
-// verifier in verifier2/ to judge. Ignored unless asked for; changes nothing.
-mod verifier2_export {
-    include!("../../verifier2/export/export.rs");
-}
-
 /// OF1 (the oracle, not the core; `docs/fork-hands-out-2026-10-09.md`): a
 /// record naming no clone names the agreement in force for it, or it is no
 /// line and registers nothing (record, type 17). Seed
@@ -3758,7 +3793,7 @@ mod verifier2_export {
 /// holders: the debt binds no one, and the fork leaves it out.
 #[test]
 fn of1_a_record_naming_an_agreement_not_in_force_registers_nothing() {
-    let shape = Shape { members: 5, devices: 3, member_devices: 1, constitutional: None, lane: Some((18, 2)), owns_work: true };
+    let shape = Shape { members: 5, devices: 3, member_devices: 1, constitutional: None, lane: Some((20, 2)), owns_work: true };
     let story = |tips: u8, succ_sign: bool| {
         [
             Op::Resign { member: 21, area_only: true, dev: 7, tips, inform: false },
@@ -3823,7 +3858,7 @@ fn of1_a_record_naming_an_agreement_not_in_force_registers_nothing() {
 /// The debt binds no one, and the fork rightly leaves it out.
 #[test]
 fn of2_a_fork_leaves_out_a_debt_a_revocation_voided() {
-    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let ops = [
         Op::Grant { dev: 0, agent: 0, in_area: true, accept: true, holders_sign: true },
         Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
@@ -3835,7 +3870,7 @@ fn of2_a_fork_leaves_out_a_debt_a_revocation_voided() {
     let cw = run_col(&shape, &ops, 0);
     let lv = cw.view();
     let d = cw.debts[0];
-    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].tips).contains(&d), "the fork's history holds it");
+    assert!(history(&cw.w.v, &cw.col, &cw.endings[0].line).contains(&d), "the fork's history holds it");
     assert!(matches!(lv.backing(&d).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("G1")), "{:?}", lv.backing(&d));
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(false));
     assert_eq!(cw.voiding_revocations(&lv, &d).len(), 1, "device 0's revocation; device 2's does not count");
@@ -3869,7 +3904,7 @@ fn of2_a_fork_leaves_out_a_debt_a_revocation_voided() {
 /// one; the fork, whose history holds both, rightly leaves it out.
 #[test]
 fn of3_a_departure_racing_a_debt_freezes_the_lane_for_it() {
-    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((4, 1)), owns_work: false };
     let story = |tips: u8, succ_sign: bool| {
         [
             Op::Debt { dev: 61, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
@@ -3880,7 +3915,7 @@ fn of3_a_departure_racing_a_debt_freezes_the_lane_for_it() {
     let cw = run_col(&shape, &story(120, false), 0);
     let lv = cw.view();
     let d = cw.debts[0];
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     assert!(he.contains(&d) && he.contains(&cw.departures[0].0), "the fork's history holds the debt and the line");
     assert!(!history_of(&cw.w.v, &cw.col, &cw.departures[0].0).contains(&d), "the line does not hold the debt");
     assert!(matches!(lv.consent(&d).unwrap(), agreements::Consent::Areas { ref areas, .. } if areas[0].frozen), "{:?}", lv.consent(&d));
@@ -3896,7 +3931,7 @@ fn of3_a_departure_racing_a_debt_freezes_the_lane_for_it() {
     let cw = run_col(&shape, &story(122, true), 0);
     let lv = cw.view();
     let d = cw.debts[0];
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     assert!(history_of(&cw.w.v, &cw.col, &cw.departures[0].0).contains(&d));
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
     assert!(cw.lane_meets(&d, &he, &BTreeSet::new()));
@@ -3917,18 +3952,18 @@ fn of3_a_departure_racing_a_debt_freezes_the_lane_for_it() {
 /// debt binds no one; the fork rightly leaves it out.
 #[test]
 fn of4_a_departure_before_the_citation_is_not_set_aside() {
-    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 3, devices: 2, member_devices: 1, constitutional: None, lane: Some((4, 1)), owns_work: false };
     let ops = [
         Op::Debt { dev: 61, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
         Op::Resign { member: 63, area_only: true, dev: 110, tips: 120, inform: false },
-        Op::Resign { member: 0, area_only: false, dev: 0, tips: 2, inform: false },
+        Op::Resign { member: 1, area_only: false, dev: 0, tips: 2, inform: false },
         Op::Grant { dev: 14, agent: 0, in_area: false, accept: false, holders_sign: false },
         Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
     ];
     let cw = run_col(&shape, &ops, 0);
     let lv = cw.view();
     let d = cw.debts[0];
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     let step_down = cw.departures[0].0;
     let adopters = cw.adopters(&lv, &d);
     assert_eq!(adopters.len(), 1, "the grant adopts the debt");
@@ -3953,7 +3988,7 @@ fn of4_a_departure_before_the_citation_is_not_set_aside() {
     let cw = run_col(&shape, &ops, 0);
     let lv = cw.view();
     let d = cw.debts[0];
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     assert!(!cw.lane_meets(&d, &he, &BTreeSet::new()), "as judged, the lane is frozen for it");
     assert!(cw.lane_counts(&lv, &d, &he));
     assert_eq!(lv.obligation_binds(&d).unwrap(), Some(true));
@@ -3973,7 +4008,7 @@ fn of4_a_departure_before_the_citation_is_not_set_aside() {
 /// holder signed it.
 #[test]
 fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
-    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 2, devices: 3, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let story = |tips: u8, succ_sign: bool| {
         [
             Op::Grant { dev: 57, agent: 0, in_area: true, accept: true, holders_sign: true },
@@ -3986,7 +4021,7 @@ fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
     let cw = run_col(&shape, &story(44, false), 0);
     let lv = cw.view();
     let (g, d, l) = (cw.grants[0].id, cw.debts[0], cw.departures[0].0);
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     assert!(he.contains(&d) && !history_of(&cw.w.v, &cw.col, &l).contains(&g), "the line does not hold the grant");
     assert!(!lv.consent(&g).unwrap().counts(), "{:?}", lv.consent(&g));
     assert!(!cw.lane_counts(&lv, &g, &he));
@@ -4003,7 +4038,7 @@ fn of5_a_grant_racing_the_line_that_empties_its_area_never_counts() {
     let cw = run_col(&shape, &story(45, true), 0);
     let lv = cw.view();
     let (g, d) = (cw.grants[0].id, cw.debts[0]);
-    let he = history(&cw.w.v, &cw.col, &cw.endings[0].tips);
+    let he = history(&cw.w.v, &cw.col, &cw.endings[0].line);
     assert!(lv.consent(&g).unwrap().counts(), "{:?}", lv.consent(&g));
     assert!(cw.lane_counts(&lv, &g, &he));
     assert_eq!(cw.voiding_lines(&lv, &d).len(), 1);
@@ -4044,7 +4079,7 @@ fn of6_a_pointer_left_outside_a_fork_counts_for_payments_already_made() {
 /// sign a new one.
 #[test]
 fn of7_a_departure_after_a_fork_never_changes_whether_it_took_effect() {
-    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((1, 1)), owns_work: false };
+    let shape = Shape { members: 2, devices: 2, member_devices: 1, constitutional: None, lane: Some((2, 1)), owns_work: false };
     let ops = [
         Op::Debt { dev: 7, seal: Seal::Public, cited: true, creditor: 0, amount: 1, lane_sign: true },
         Op::Fork { stale: 0, sides: 0, debts: DebtsMode::DropOne, seal: Seal::Public, all_sign: true, succ_sign: false, names: false },
@@ -4087,3 +4122,27 @@ fn push_rail_spec() -> mor_core::development::Rail {
     Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
 }
 
+
+#[test]
+fn zz_debug() {
+    let shape = Shape { devices: 2, ..two() };
+    let ops = [
+        Op::Grant { dev: 0, agent: 0, in_area: false, accept: true, holders_sign: false },
+        Op::AgentAct { grant: 0, strand: 0, what: AgentWhat::InScope, seal: Seal::Public },
+        Op::Revoke { grant: 0, dev: 0, join_strand: false, holders_sign: false },
+    ];
+    let mut cw = run_col(&shape, &ops, 0);
+    cw.line_strands = true;
+    cw.apply(3, &fork_op(0, DebtsMode::Honest));
+    let lv = cw.view();
+    eprintln!("fork consent {:?}", lv.consent(&cw.endings[0].id).map(|c| c.counts()));
+    let y = *cw.info.iter().find(|(_, f)| f.grant.is_some()).unwrap().0;
+    eprintln!("y {:?}", lv.backing(&y));
+    // the same, the fork never completing (one member does not sign)
+    let mut cw = run_col(&shape, &ops, 0);
+    cw.line_strands = true;
+    cw.apply(3, &Op::Fork { stale: 0, sides: 0, debts: DebtsMode::Honest, seal: Seal::Public, all_sign: false, succ_sign: true, names: true });
+    let lv = cw.view();
+    eprintln!("incomplete fork {:?} consent {:?}", lv.fork(&cw.endings[0].id).map(|f| f.complete), lv.consent(&cw.endings[0].id).map(|c| c.counts()));
+    eprintln!("y {:?}", lv.backing(&y));
+}

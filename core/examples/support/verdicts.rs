@@ -31,6 +31,9 @@ fn spec(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
 
+#[path = "scenario9.rs"]
+mod scenario9;
+
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mirs {
@@ -596,6 +599,39 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             Some(mor_core::chain::TagCount::Nobodys(_)) => "nobody's offer",
             Some(mor_core::chain::TagCount::Unknown(_)) | None => "unknown",
         }),
+        // A stake transfer (Agreements rule 10): whether it takes effect, and
+        // the seller's payout receipts after its place, wrong receipts.
+        "transfer" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.transfer(&h("act")).map_or(json!("unknown"), |e| json!({ "effective": e.effective, "wrong_receipts": e.wrong_receipts.iter().map(|x| hx(x)).collect::<Vec<_>>() }))
+        }
+        // A split (rules 15 and 30): the holders and partners it pays other
+        // than its plan says; any breaks the plan.
+        "split" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.split(&h("act")).map_or(json!("unknown"), |e| {
+                let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hx(&x.holder)).collect();
+                m.sort();
+                m.dedup();
+                json!({ "mismatched": m })
+            })
+        }
+        // A record of a collective (rule 69): whether it is a line, and the
+        // clone it puts in force.
+        "record" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.record(&h("collective"), &h("act")).map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(|x| hx(&x)) }))
+        }
+        // Who owes a payment back, and how much (rule 11): the split service
+        // from what it holds, then each party in the share it received.
+        "owed back by" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.owed_back_by(&h("act")).map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hx(who), n])).collect::<Vec<_>>()))
+        }
         q => panic!("no such question: {q}"),
     }
 }
@@ -1069,6 +1105,7 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w, "a rotation built on a rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
         "The rotation it builds on lost its position for good; nothing it waits on can make it count.", Facts::default(), ask_status(&on_rival), json!("invalid"), None);
     s7g_identity(out);
+    scenario9::identity(out);
     s7g_development_identity(out);
 }
 
@@ -2581,6 +2618,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_a(out);
     s7g_agreements_b(out);
     s7g_agreements_c(out);
+    scenario9::agreements(out);
 }
 
 pub fn development(out: &mut Vec<J>) {
