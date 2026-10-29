@@ -105,6 +105,7 @@ fn replay(log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)], leav
 pub fn agreements(out: &mut Out) {
     walk_1(out);
     walk_2(out);
+    walk_3(out);
 }
 
 /// A collective of Ana, Ben and Cy, its founding changed by `f` before
@@ -301,4 +302,85 @@ fn walk_1(out: &mut Out) {
         "Her chain signature fixed the transfer's place on her own line; a receipt she signs after it, for the stake sold, counts for nothing, and that payout is owed to Cy.",
         Facts::default(), ask("transfer", &x), json!({ "effective": true, "wrong_receipts": [hx(&wrong)] }), None);
     let _ = (cy_signs, cs);
+}
+
+/// 9.3, succession: Ben dies; his plan passes his seat to Dee and his share
+/// to two children.
+fn walk_3(out: &mut Out) {
+    let mut w = World::new();
+    let mut dee = w.genesis("dee, ben's colleague", vec![own_home()], None, None);
+    let dee_id = dee.id;
+    let (c1, c2) = (spec("ben's first child"), spec("ben's second child"));
+    let mut col = band(&mut w, "a band whose member dies", &|t, ids| {
+        t.layers = Some(layers_all(Rule::Threshold(1)));
+        t.succession = Some(vec![agreements::SuccessionPlan { party: ids[1], stakes: Some(vec![(c1, 500_000), (c2, 500_000)]), seats: Some(vec![dee_id]), entry: Some(0) }]);
+    });
+    let mut authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
+    let (f, cid) = (col.founding, col.id);
+    let (ana_id, ben_id, cy_id) = (col.m[0].id, col.m[1].id, col.m[2].id);
+    let d = agreements::AbsenceDeclaration { agreement: f, clause: f, party: ben_id, outcomes: vec![outcomes::VOICE_REMOVED] };
+    let d = ag_act(&mut w, &mut authority, agreements::types::DECLARATION, d.to_map(), obj(f));
+    let rec = {
+        let mut cy = col.m[2].acting_for(cid, vec![cid]);
+        let a = w.everyday_act(&mut cy, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, registers: Some(vec![d]) }.to_map(), obj(f), None);
+        w.add(&a)
+    };
+    eprintln!("DBG rec {:?}", view(&w).record(&cid, &rec).map(|e| e.not_a_line));
+    out.case(&mut w, "9.3 a record registering the abandonment authority's declaration of Ben: the line", "Agreements rules 69 and 83",
+        "The authority's declaration triggers the plan; any member draws the record registering it, naming the band and its genesis.", Facts::default(), ask_record(&cid, &rec), json!({ "line": true, "puts": null }), None);
+    // The seat passes as a constitutional clone marked with the plan, Dee
+    // in Ben's place, every threshold unchanged, the plan dropped.
+    let new = vec![ana_id, dee_id, cy_id];
+    let mut t = view(&w).terms(&f).unwrap();
+    t.parent = Some(f);
+    t.parties = new.clone();
+    t.succession = None;
+    t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 3, members: new.clone() };
+    t.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Plan(ben_id), signers: vec![dee_id] }]);
+    let k = ag_act(&mut w, &mut col.m[0], agreements::types::TERMS, t.to_map(), obj(f));
+    let sd = sign(&mut w, &mut dee, &k);
+    out.case(&mut w, "9.3 the clone marked with Ben's plan, Dee in his place, every threshold unchanged: not invalid", "Agreements rule 83",
+        "Marked with the plan alone, signed by the seat successor, changing only what the plan gives.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k) }), json!("not invalid"), None);
+    let mut t2 = view(&w).terms(&k).unwrap();
+    t2.text = "Other words, slipped into the succession.".into();
+    t2.parent = Some(f);
+    let bad = ag_act(&mut w, &mut col.m[0], agreements::types::TERMS, t2.to_map(), obj(f));
+    out.case(&mut w, "9.3 the same clone changing the words too: invalid", "Agreements rule 83",
+        "A clone marked with the plan alone that changes anything more is invalid.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&bad) }), json!("invalid"), None);
+    let (rot, _) = w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k, &[sd])]), ..Default::default() });
+    out.case(&mut w, "9.3 the rotation declaring the succession clone: valid", "Agreements rules 69 and 83; Identity rule 7",
+        "The band's chain key, rebuilt, declares the clone; the keys are re-dealt to Dee in Ben's place.", Facts::default(), ask_status(&rot), json!("valid"), None);
+    let mut dee_for = dee.acting_for(cid, vec![rot]);
+    let x = text_act(&mut w, &mut dee_for, "Dee's first notice for the band.", None);
+    eprintln!("DBG dee {:?}", view(&w).consent(&x));
+    out.case(&mut w, "9.3 Dee's text for the band, citing the rotation: it counts", "Agreements rules 58 and 83",
+        "Dee holds the seat in the agreement in force for the act.", Facts::default(), ask("consent counts", &x), json!(true), None);
+
+    // Rule 59: a single chain-key holder has a named successor and an
+    // escrowed share; a founding naming a single holder with neither is
+    // refused.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let heir = spec("ana's successor for the key holding");
+    let ana_id = ana.id;
+    let single = move |plan: bool, escrow: bool| {
+        let mut t = deal(&[ana_id], None);
+        t.text = format!("A band of one, plan {plan}, escrow {escrow}.");
+        t.grammar = Some(KeyGrammar { chain_key: Holding::One(ana_id), recovery: escrow.then_some(Recovery::Escrow { authority: spec("an authority") }) });
+        t.abandonment = Some(Abandonment { authority: Authority::Named(spec("an authority")), outcomes: vec![outcomes::VOICE_REMOVED], proof: None });
+        t.layers = Some(layers_all(Rule::All));
+        t.target = Some(agreements::Target::Collective);
+        t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: vec![(agreements::Who::Id(ana_id), 1_000_000)] }]);
+        if plan {
+            t.succession = Some(vec![agreements::SuccessionPlan { party: ana_id, stakes: None, seats: Some(vec![heir]), entry: None }]);
+        }
+        t
+    };
+    let ok = { let t = single(true, true); ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None) };
+    let none = { let t = single(false, false); ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None) };
+    out.case(&mut w, "9.3 a founding naming a single chain-key holder with a successor and an escrowed share: not invalid", "Agreements rule 59",
+        "A single holder still has a named successor and an escrowed share.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&ok) }), json!("not invalid"), None);
+    eprintln!("DBG none {:?}", view(&w).agreement(&none).map(|a| a.invalid));
+    out.case(&mut w, "9.3 a founding naming a single chain-key holder with neither: invalid", "Agreements rule 59",
+        "No successor is named and no share escrowed: the key would die with its holder.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&none) }), json!("invalid"), None);
 }

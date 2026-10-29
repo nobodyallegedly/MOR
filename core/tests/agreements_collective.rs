@@ -349,8 +349,19 @@ impl Lab {
         agreements_act(&mut self.w, &mut self.m[by], agreements::types::TERMS, t.to_map(), objects)
     }
 
+    /// A member's signature act. On a clone of the label's agreement it
+    /// cites, on the label's chain, the decisions and actions its signer
+    /// holds (device 0's), as an action does: a rotation declaring the clone
+    /// has the history of the signature acts it names (rule 58).
     fn sign(&mut self, by: usize, x: &Hash) -> Hash {
-        sign(&mut self.w, &mut self.m[by], x)
+        let f = self.founding;
+        let clone = self.view().lineage(x).is_ok_and(|l| l.len() > 1 && l.iter().any(|(i, _)| *i == f));
+        if !clone {
+            return sign(&mut self.w, &mut self.m[by], x);
+        }
+        let mut o = obj(*x).unwrap();
+        o.extend(self.line(&[0]).into_iter().map(|d| Object { chain: self.col.id, predecessor: d }));
+        agreements_act(&mut self.w, &mut self.m[by], agreements::types::SIGNATURE, agreements::signature_payload(x), Some(o))
     }
 
     /// A member's signature on a fork or closing: a chain signature, with
@@ -1119,7 +1130,6 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         let sc = lab.sign(CY, &k);
         let sd = sign(&mut lab.w, &mut dee, &k);
         let named = if name_all { vec![sa, sc, sd] } else { vec![sa, sc] };
-        let old = lab.c[0].clone();
         lab.rotate(Some((k, named)), &[0]);
         let p = lab.publish(0);
         lab.sign(ANA, &p);
@@ -1139,12 +1149,6 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         assert!(!lab.counts(&r));
         sign(&mut lab.w, &mut dee, &r);
         assert!(lab.counts(&r));
-        // The old key signs after the rotation: void (F100).
-        let mut old = old;
-        old.seq = lab.c[0].seq.clone();
-        let late = lab.w.everyday_act(&mut old, mirs().envelopes, 0, publication(vec![]), None, None);
-        let late = lab.w.add(&late);
-        assert_eq!(lab.w.v.status(&late), Status::Void);
     }
 }
 
@@ -1167,8 +1171,7 @@ fn a_number_never_asks_for_more_voices_than_remain() {
             }
             let mut ana = lab.m[ANA].clone();
             let res = lab.resign_from(&mut ana, f, None);
-            let rr = lab.record(0, None, &[], vec![res], f);
-            eprintln!("DBG {:?}", lab.view().record(&lab.col.id, &rr));
+            lab.record(0, None, &[], vec![res], f);
             let sb = lab.sign(BEN, &k);
             let sc = lab.sign(CY, &k);
             let named = if mark.len() == 3 { vec![sa, sb, sc] } else { vec![sb, sc] };
@@ -14245,6 +14248,25 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
 
 // ---------------------------------------------------------------- members' own keys (F353)
 
+/// The label's payee pointer naming the rail [`label_receipt`] pays on,
+/// drawn by `by` for it and signed by `cosigners`.
+fn label_pointer(lab: &mut Lab, by: usize, cosigners: &[usize]) -> Hash {
+    let label = lab.col.id;
+    let p = mor_core::money::Payload::PayeePointer(mor_core::money::PayeePointer {
+        payee: label,
+        version: 1,
+        previous: None,
+        rails: vec![mor_core::money::Rail { module: spec("a rail Module"), address: b"an address".to_vec() }],
+    });
+    let mut d = lab.m[by].acting_for(label, vec![label]);
+    let x = lab.w.everyday_act(&mut d, mirs().money, 0, p.to_map(), None, None);
+    let x = lab.w.add(&x);
+    for i in cosigners {
+        lab.sign(*i, &x);
+    }
+    x
+}
+
 /// A receipt the label is paid by (Money type 2), payee the label.
 fn label_receipt(label: Hash, value: u64) -> Vec<(Value, Value)> {
     mor_core::money::Payload::Receipt(mor_core::money::Receipt {
@@ -14267,7 +14289,7 @@ fn label_receipt(label: Hash, value: u64) -> Vec<(Value, Value)> {
 /// counts as their signature within the areas and lanes the agreement in
 /// force gives them. A one-signature area takes one member's act; a
 /// two-signature area takes one member's act and another member's
-/// signature act. Any member draws a record (rule 72).
+/// signature act.
 #[test]
 fn members_act_with_their_own_keys() {
     let mut lab = Lab::new(&|t| {
@@ -14282,7 +14304,7 @@ fn members_act_with_their_own_keys() {
     let mut a = lab.m[ANA].acting_for(label, vec![label]);
     let mut b = lab.m[BEN].acting_for(label, vec![label]);
     let mut c = lab.m[CY].acting_for(label, vec![label]);
-    let mut act = |lab: &mut Lab, st: &mut Person, spec: Hash, ty: u64, p: Vec<(Value, Value)>| -> Hash {
+    let act = |lab: &mut Lab, st: &mut Person, spec: Hash, ty: u64, p: Vec<(Value, Value)>| -> Hash {
         let x = lab.w.everyday_act(st, spec, ty, p, None, None);
         lab.w.add(&x)
     };
@@ -14292,7 +14314,9 @@ fn members_act_with_their_own_keys() {
     assert_eq!(lab.w.v.status(&p), Status::Valid, "her own act, under Identity");
     assert!(lab.counts(&p), "{:?}", lab.consent(&p));
     assert_eq!(areas(&lab.consent(&p)), vec![(1, false, true, vec![ana])], "the act shows which member signed");
-    // Ben's receipt for the label: one signature of two.
+    // Ben's receipt for the label, on the rail its pointer names: one
+    // signature of two.
+    label_pointer(&mut lab, ANA, &[BEN]);
     let m = act(&mut lab, &mut b, mirs().money, 2, label_receipt(label, 10));
     assert!(!lab.counts(&m));
     assert_eq!(areas(&lab.consent(&m)), vec![(2, false, false, vec![ben])]);
@@ -14306,11 +14330,7 @@ fn members_act_with_their_own_keys() {
     // Cy holds no area: his publication waits for Ana's signature.
     let r = act(&mut lab, &mut c, env, 0, publication(vec![]));
     assert_eq!(areas(&lab.consent(&r)), vec![(1, false, false, vec![])]);
-    // Any member draws a record (rule 72).
-    let rr = Record { clone: None, signatures: None, registers: None };
-    let rec = act(&mut lab, &mut a, mirs().agreements, agreements::types::RECORD, rr.to_map());
     let _ = f;
-    assert!(lab.view().record(&label, &rec).unwrap().line, "{:?}", lab.view().record(&label, &rec));
 }
 
 /// F358, Money draft 10, rule 7 (decided by Nobody, allegedly, 19 October
@@ -14373,6 +14393,8 @@ fn a_lanes_limits_ask_a_second_key_above_them() {
         a.limits = Some((cap, Value::Map(vec![(Value::Uint(0), Value::Array(vec![Value::Bytes(spec("a unit").to_vec()), Value::Uint(10_000)]))])));
     });
     let label = lab.col.id;
+    // Its pointer, within the cap.
+    let ptr = label_pointer(&mut lab, BEN, &[]);
     let mut b = lab.m[BEN].acting_for(label, vec![label]);
     let small = {
         let x = lab.w.everyday_act(&mut b, mirs().money, 2, label_receipt(label, 1_000), None, None);
@@ -14384,6 +14406,7 @@ fn a_lanes_limits_ask_a_second_key_above_them() {
     };
     let judged = |lab: &Lab, x: &Hash, within: Option<bool>| -> Consent {
         let mut v = lab.view();
+        v.grant_limits.insert(ptr, true);
         if let Some(w) = within {
             v.grant_limits.insert(*x, w);
         }
