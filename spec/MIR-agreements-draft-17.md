@@ -930,7 +930,7 @@ For each judge it names, an agreement may name, in its terms (field 21), the one
 - for a judicial task, other specifications;
 - for a keeper's operator, an arbitrator or verifier, or the abandonment authority, other identities.
 
-*The split service is no judge: its backups are attempts per payment, not stages (rule 17, field 29), and this rule's periods and deadlines do not apply to them.*
+*The split service is no judge: its backups are attempts per payment, not stages (rule 17, publication field 11), and this rule's periods and deadlines do not apply to them.*
 
 Everyone signs the chain with the terms: every party in a deal, every member in a collective, as for the whole judicial tier (rule 67).
 
@@ -1060,7 +1060,7 @@ A clone is a draft until all of these hold:
 - every party its mark names has a valid signature act naming it, and every holder it names under a power counted among holders (`[5, stake]`, or a constitutional change rule counted among a stake's holders);
 - every party it adds, and every party it makes a holder of an area it did not hold, has one too;
 - every holder whose share of a stake it drops or lowers has one too, member or not (rule 48);
-- every holder it pays less, by lowering the stake's part of the split plan or adding or raising a fee the stake bears, who has no voice in the power making that change (a deal's holder who is no party, a collective's departed holder), has one too (rule 48); **or, in a collective, where the stake's holders' rule reaches the change and binds that holder, holders meeting the rule have signed, its mark naming them** (`[5, stake]`, rules 64, 94);
+- for a version of a collective's split agreement, every holder of the collective's stake in itself it pays less, by raising what it takes off the top, who has no voice in the power making that change (a departed holder, a stake successor, a buyer), has one too (rule 48); **or, in a collective, where the stake's holders' rule reaches the change and binds that holder, holders meeting the rule have signed, its mark naming them** (`[5, stake]`, rules 64, 94);
 - for an issuance, the stake's holders' rule is met, every new holder has one, and the offer's checks hold, or every holder of the stake has one (rule 96): pro rata issuance under the holders' rule is excepted from the bullet on shares dropped or lowered;
 - for an owners' matter of rule 95, the owners' consent that rule asks for is given;
 - every departed holder whose own stake plan it changes has one too;
@@ -1099,14 +1099,14 @@ Majorities, areas and tiers belong to collectives. Rules 62 to 66, 67, 68, 90 an
 
 **What others relied on stands: a version relied on stays complete.** A deal has no line of its own, so nothing places its versions' signatures as a collective's line places them. Instead, once any party's or keeper's later act relies on a complete version, the version keeps its completeness for everyone, whatever a signer's later rotation disowns; the disowned signature is shown as a dispute, the relying act its place. An act relies on a version when it names it:
 
-- a purchase naming it (rule 12);
-- a split under it (rule 20);
+- a split service's receipt naming it in field 9 (rule 12);
+- a split dividing by it (rule 20);
 - a keeper's record of it (rule 37);
 - a later version cloning it (rule 45).
 
 *Checkable: the relying act names the version. Without it, a party who rotates and disowns its signature on a completed version would uncomplete it for everyone, the parent coming back into force under purchases and splits already made under the version.* A version nothing relies on yet is judged by its signatures as Identity judges them.
 
-**A deal ends, or winds down, by such a clone.** A deal has no closing act. Its parties end it, or wind it down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed (open obligations), and, where the deal is a party of another agreement, to whom that outer agreement now pays (its designated pointer, rule 15). What those conditions are depends on the deal. A party who is absent is handled by the absence rules (rules 85 to 89; in a deal one identity judges absence): where the deal provides it, the declaration removes the absent party's voice (rule 89), and the clone completes with the parties whose voice remains; the absent party's stake is never reduced without it (rule 48).
+**A deal ends, or winds down, by such a clone.** A deal has no closing act. Its parties end it, or wind it down, by a clone every party signs, stating its new conditions: where its shares went, and what is still owed (open obligations). What those conditions are depends on the deal. A party who is absent is handled by the absence rules (rules 85 to 89; in a deal one identity judges absence): where the deal provides it, the declaration removes the absent party's voice (rule 89), and the clone completes with the parties whose voice remains; the absent party's stake is never reduced without it (rule 48).
 
 *Stated cost: one silent party blocks every change to a deal, however large: one person can hold everything until all agree, as in deal making in everyday life. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it (rule 89); succession plans; and, for many parties or a long relationship, a collective.*
 
@@ -1120,7 +1120,7 @@ Then, in short: the reference holds while the deal has two branches; a new act m
 
 **The reference.** While the deal has two branches, the version before the split is the reference. It is the last version every party agrees on, what a verifier reports in force, and the point the settlement names.
 
-**Acts on either branch.** A new act may follow either branch, and counts. A payment, a split, a sale or a release naming a version of a branch is judged under that branch's latest version. One naming the reference is judged under the reference. Every party signed both branches, so what is done under either counts, in Agreements and in Money alike, which cannot be separated here.
+**Acts on either branch.** A new act may follow either branch, and counts. A payment, a split, a sale or a release naming a version of a branch is judged under that branch's latest version. One naming the reference is judged under the reference. Every party signed both branches, so what is done under either counts, in Agreements and in Money alike, which cannot be separated here. **For an ownership agreement, the shares a payment pays are those of the reference until the fork is settled**: a split service's receipt naming, in field 9, a version of the fork other than its reference is a wrong receipt (rule 12), the purchase under the publication standing.
 
 *The buyer is protected from the parties' human error: the version before the split cannot always count, given the decentralized nature of the network.*
 
@@ -1224,9 +1224,9 @@ What the request shows: that a party who signed the reference knew of the fork w
 - a version they do not hold raises it too: an unknown version is the hidden fork the alarm exists for, to be fetched from the payer's relays;
 - a payment naming an older version of the same line, with no fork, raises a plain notice, not the alarm.
 
-*A fork and an outdated offer are not the same issue; alarm fatigue would teach sellers to ignore the alarm the day a bait branch shows up.*
+*A fork and an outdated publication are not the same issue; alarm fatigue would teach sellers to ignore the alarm the day a bait branch shows up.*
 
-*A payment under an agreement names the version it followed (Money, the claim's field 9, and the receipt's), so a purchase under the other branch reaches the sellers as signed evidence of the fork: they are the participants who can look for the full picture once made aware of the need to look.*
+*A payment under a publication names the ownership agreement's version it followed (Money, the receipt's field 9, and the claim's), so a purchase read under the other branch reaches the sellers as signed evidence of the fork: they are the participants who can look for the full picture once made aware of the need to look.*
 
 #### Rule 48. No stake reduced without its holder
 
@@ -1234,9 +1234,9 @@ A clone can never reduce a stake without its holder's signature, unless the agre
 
 **A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's**: a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 or 2 redistributes or transfers it.
 
-**Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change.** A version that lowers a stake's part of the split plan (field 8), or adds or raises a fee the stake bears (field 28), needs the signature of every holder of that stake it pays less who has no voice in the power making that change:
-- in a deal, a holder who is no party (every party signs every version of a deal, rule 47);
-- in a collective, **every holder who is no member: a departed holder (rule 68), a stake successor who received a stake by succession (rule 83), and a holder who bought part of a stake (rule 10).** *A change paying such a holder less is a new version, born from a clone, and every holder it pays less who has no voice in the power making it signs it.*
+**Nor is what a stake is paid lowered without its holder, where that holder has no voice in the power making the change.** For a collective's stake in itself, a version of the collective's split agreement (rule 15) that pays the stake less needs the signature of every holder of the stake it pays less who has no voice in the power making that change: **every holder who is no member: a departed holder (rule 68), a stake successor who received a share by succession (rule 83), and a holder who bought part of the stake (rule 10).** *A change paying such a holder less is a new version, and every holder it pays less who has no voice in the power making it signs it.*
+
+For a work's stake, what a publication takes off the top is distribution, which the owners' side signs (rule 11): in a deal, every party (rule 47). *Stated cost: a holder of a work's stake who is no party, a buyer of a share, is paid the owners' line of each publication the parties sign, without signing it; who buys a share buys a share of the owners' line, and becomes a party only by a clone naming it.*
 
 A member, who holds the power or chose it by signing the constitution, is left to the collective's own rules (rules 64, 65).
 
@@ -1246,13 +1246,13 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 *Abandonment protects operational flow; it is not meant to change stakes or pay. What it can trigger in that regard is succession, the stake and its pay going to the successor.*
 
-**A stake is paid less by any change that lowers what it receives from a payment or can expect from the plan as written**: another share added or raised, a role share added, unfilled roles sent elsewhere, the rail fee moved onto receivers, the maximum fee raised or removed, the split cMIP or its parameters changed, as well as a fee added or raised. **What a cMIP pays cannot be read from the plan alone, so changing the split cMIP or its parameters counts.** **A share added within a stake by an issuance under its holders' rule (rule 96) is not "paid less" in this sense; one added any other way still is.** **The collective's own part off the top (rule 22) is overhead like any other: raising it pays the stakes less.**
+**A stake is paid less by any change that lowers what it receives from a payment or can expect from the split plan as written**: a partner's share added or raised, a role share added, unfilled roles sent elsewhere, the rail fee moved onto receivers, the maximum fee raised or removed, the split cMIP or its parameters changed, as well as a fee added or raised. **What a cMIP pays cannot be read from the plan alone, so changing the split cMIP or its parameters counts.** **A share added within a stake by an issuance under its holders' rule (rule 96) is not "paid less" in this sense; one added any other way still is.** **The collective's own part off the top (rule 22) is overhead like any other: raising it pays the stake less.**
 
 *What money sees and money expects is what matters. Judged by effect: what reaches the stake from a payment, and what it can expect from the plan as written.*
 
-**Since a plan pays non-owners off the top only, every share in the rest is a stake's**: a stake is paid less by anything taken off the top added or raised (a role share, a named receiver, a metric share), by a role nobody fills sent away from the stakes, or by its part lowered against the other stakes' parts; never by a non-owner's share in the rest, which no valid plan has.
+**Since a split plan pays non-owners off the top only, the rest is the owners'**: a stake is paid less by anything taken off the top added or raised (a partner's share, a role share, a metric share, a fee), or by a role nobody fills sent away from the owners; never by a non-owner's share in the rest, which no valid plan has.
 
-*The voices chose the power over fields 8 and 28; those without one did not, and what a stake is paid is what no choice of theirs may break.*
+*The voices chose the power over the collective's split agreement; those without one did not, and what a stake is paid is what no choice of theirs may break.*
 
 #### Rule 94. The holders' rule
 
@@ -1287,26 +1287,26 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 #### Rule 95. The owners' matters
 
-*In short: what a stake's owners consent to together: what it is paid, new shares in it, a sale or release of the works its income comes from, and what a fork's successors pay the owners they keep.*
+*In short: what a stake's owners consent to together: what it is paid, new shares in it, a sale or release of the shares in works its income comes from, and what a fork's successors pay the owners they keep.*
 
 **A stake's owners' matters** are the changes its holders consent to by its holders' rule (rule 94), or, where it is every holder, each holder with no voice in the power making the change by its own signature:
 
-1. **what the stake is paid** (rule 48), the collective's own part off the top among it (rule 22);
+1. **what the stake is paid** by the collective's split agreement (rule 48), the collective's own part off the top among it (rule 22);
 2. **an issuance in it** (rule 96);
-3. **a collective's transfer (type 4) or release (type 5) of a stake it holds in a work**, for the holders of the collective's stake in itself;
+3. **a collective's transfer (type 4) or release (type 5) of a share it holds in a work**, for the holders of the collective's stake in itself;
 4. **a fork's completeness, where a successor's founding terms pay a kept holder less** than the original's agreement in force at the fork's line, for the kept holders of the original's stake in itself (rule 91).
 
 *Every one of them hits every holder of the stake alike, so a holders' rule can reach it (rule 94). The core cannot tell "substantially all" the works from one song, nor a fair price from a token one; what a rule can say is who consents.*
 
-**A sale or release of a work** (3). A transfer or release of a stake a collective holds in a work counts only once the owners of the collective's stake in itself who have no say consent: holders of that stake meeting its holders' rule, or, where it is every holder, each holder who is no member, by a signature act naming the transfer or the release. Those signature acts count where the collective's line placed them (an act of the collective acknowledging them, "Made before, made after", 2), the roster at that line (rule 94), and are kept there. *Without it, the members sell the works for a token sum to a collective of their own, and a departed holder's 25% of all the collective's income is "25% of nothing", unsigned.*
+**A sale or release of a share in a work** (3). A transfer or release of a share a collective holds in a work counts only once the owners of the collective's stake in itself who have no say consent: holders of that stake meeting its holders' rule, or, where it is every holder, each holder who is no member, by a signature act naming the transfer or the release. Those signature acts count where the collective's line placed them (an act of the collective acknowledging them, "Made before, made after", 2), the roster at that line (rule 94), and are kept there. *Without it, the members sell the works for a token sum to a collective of their own, and a departed holder's 25% of all the collective's income is "25% of nothing", unsigned.*
 
-**A fork's successors** (4). For each successor, its founding terms must pay no kept holder (a departed holder of the original, or a member whose voice remains on no side) less than the original's agreement in force at the fork's line pays it, as rule 48 reads "paid less". The comparison runs between the original's stake in itself and the successor's, each written null in its own terms and read across the two collectives as the kept holders' stake: its part of the split plan against the other stakes', what each plan takes off the top, the fees each stake bears, and the split cMIP and its parameters. Where a successor's founding terms pay a kept holder less, the fork completes only once the kept holders consent: holders of the original's stake in itself meeting its holders' rule, or, where it is every holder, each kept holder paid less, by a signature act naming the successor's founding terms, as a holder who is no party signs a deal's version. **A kept holder's consent counts only where an act of the original in the fork's history acknowledges it**, as a closing relies on a release: placed by the original's line and kept there, so a kept holder's later rotation never unmakes a complete fork; one nobody acknowledged is shown, and the fork waits. *A chain-key ceremony per kept holder per fork would weigh on passive owners.* *With the same plan the check is met at once; with no kept holders there is nothing to check.*
+**A fork's successors** (4). For each successor, its founding terms and the split agreement its founding names first must pay no kept holder (a departed holder of the original, or a member whose voice remains on no side) less than the original's agreement and split agreement in force at the fork's line pay it, as rule 48 reads "paid less". The comparison runs between the original's stake in itself and the successor's, each its target's stake, read across the two collectives as the kept holders' stake: what each split agreement takes off the top, the fees each bears, and the split cMIP and its parameters. Where a successor's founding terms pay a kept holder less, the fork completes only once the kept holders consent: holders of the original's stake in itself meeting its holders' rule, or, where it is every holder, each kept holder paid less, by a signature act naming the successor's founding terms, as a holder who is no party signs a deal's version. **A kept holder's consent counts only where an act of the original in the fork's history acknowledges it**, as a closing relies on a release: placed by the original's line and kept there, so a kept holder's later rotation never unmakes a complete fork; one nobody acknowledged is shown, and the fork waits. *A chain-key ceremony per kept holder per fork would weigh on passive owners.* *With the same plan the check is met at once; with no kept holders there is nothing to check.*
 
 **The way out against an owner who vanished** is the declaration of absence, which may name a holder who is no party (rule 85): its stake moves to its stake successor, who consents or not, or by outcome 1 or 2.
 
 *Stated cost:* *a members' collective with departed holders and no holders' rule waits for their signatures on its sales and releases of works, and on a fork whose successors' plans pay them less, as its fee changes already do. Shared ownership means shared fruits.*
 
-**Prices are no owners' matter.** The price of what a collective sells, and whether it publishes at all, are the collective's business, decided under its areas (rule 60). Owners who have no say are protected by sight (rule 57) and by the exit (rule 10), never by a vote on prices. *Stated cost:* *the members can offer every work at a token price, or at none; offers are public, so the owners see it, and can leave. A vote on every price is not one owners could cast.*
+**Prices and publications are no owners' matter.** The price of what a collective sells, and whether and with whom it publishes, are the collective's business, decided under its rules for each layer (rule 60). Owners who have no say are protected by sight (rule 57) and by the exit (rule 10), never by a vote on prices. *Stated cost:* *the members can price every work at a token price, or at none, or publish it with partners taking most of each sale; publications and price tags are public, so the owners see it, and can leave. A vote on every price is not one owners could cast.*
 
 #### Rule 96. Issuance, with pre-emption
 
@@ -1426,11 +1426,11 @@ A release does three things:
 
 - **the claim ends**: nobody earns from the work as its owner any more, and no sale of it is outside a claim;
 - **its history stays named**: the stakes it ends and the claims naming its creators;
-- **its content key is published**: anyone may carry or sell copies.
+- **its content key is made public**: anyone may carry or sell copies.
 
-It needs every direct owner's signature, departed holders of a stake in the work included, a collective owner signing by its own rules across the areas of every layer a release touches. This holds unless the release rule says otherwise (field 24, set at founding, changed only by a clone every owner signs).
+It needs every direct owner's signature, departed holders of a share in the work included, a collective owner signing by its own rules, under its rule for each layer a release touches. This holds unless the release rule says otherwise (field 24, set at founding, changed only by a clone every owner signs).
 
-**The release rule is the holders' rule's first instance, and its threshold is counted by share**: "holders together holding at least this share of the stake", never a number of heads, so a holder splitting its share among identities it controls gains nothing. **A collective's release of a stake it holds in a work is an owners' matter** (rule 95): it counts only once the owners of the collective's stake in itself who have no say consent.
+**The release rule is the holders' rule's first instance, and its threshold is counted by share**: "holders together holding at least this share of the stake", never a number of heads, so a holder splitting its share among identities it controls gains nothing. **A collective's release of a share it holds in a work is an owners' matter** (rule 95): it counts only once the owners of the collective's stake in itself who have no say consent.
 
 **A release is permanent.**
 
