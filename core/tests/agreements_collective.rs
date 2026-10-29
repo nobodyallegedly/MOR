@@ -366,14 +366,22 @@ impl Lab {
     /// holds (device 0's), as an action does: a rotation declaring the clone
     /// has the history of the signature acts it names (rule 58).
     fn sign(&mut self, by: usize, x: &Hash) -> Hash {
+        let mut p = self.m[by].clone();
+        let id = self.sign_by(&mut p, x);
+        self.m[by] = p;
+        id
+    }
+
+    /// [`Lab::sign`] by anyone: a joining member's, say.
+    fn sign_by(&mut self, p: &mut Person, x: &Hash) -> Hash {
         let f = self.founding;
         let clone = self.view().lineage(x).is_ok_and(|l| l.len() > 1 && l.iter().any(|(i, _)| *i == f));
         if !clone {
-            return sign(&mut self.w, &mut self.m[by], x);
+            return sign(&mut self.w, p, x);
         }
         let mut o = obj(*x).unwrap();
         o.extend(self.line(&[0]).into_iter().map(|d| Object { chain: self.col.id, predecessor: d }));
-        agreements_act(&mut self.w, &mut self.m[by], agreements::types::SIGNATURE, agreements::signature_payload(x), Some(o))
+        agreements_act(&mut self.w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), Some(o))
     }
 
     /// A member's signature on a fork or closing: a chain signature, with
@@ -1179,7 +1187,7 @@ fn a_rotation_declares_the_membership_clone_with_its_signatures() {
         let k = lab.propose(ANA, &t);
         let sa = lab.sign(ANA, &k);
         let sc = lab.sign(CY, &k);
-        let sd = sign(&mut lab.w, &mut dee, &k);
+        let sd = lab.sign_by(&mut dee, &k);
         let named = if name_all { vec![sa, sc, sd] } else { vec![sa, sc] };
         lab.rotate(Some((k, named)), &[0]);
         let p = lab.publish(0);
@@ -2846,7 +2854,7 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
     let sa = lab.sign(ANA, &k);
     let sc = lab.sign(CY, &k);
     let mut dee = dee;
-    let sd = sign(&mut lab.w, &mut dee, &k);
+    let sd = lab.sign_by(&mut dee, &k);
     lab.rotate(Some((k, vec![sa, sc, sd])), &[0]);
     let y = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut dee, &y);
@@ -2860,7 +2868,6 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
 /// every threshold unchanged, the executed plan dropped; the rotation
 /// declaring it re-deals the keys to include the successor.
 #[test]
-#[ignore = "core: rules 64 and 83: a succession clone takes the party off every area it held (field 34), yet the plan check allows changes to fields 0, 12, 16 and 19 only, so it refuses it as changing more than the plan gives (field 34 missing since the areas moved there)"]
 fn a_seat_passes_by_automatic_succession() {
     // (declared, a stranger's plan cloned by two of three, Ben holds Money alone)
     for (declared, stranger, alone) in [
@@ -2959,7 +2966,7 @@ fn a_seat_passes_by_automatic_succession() {
         let t = planned(&lab, &|_| {});
         let k = lab.propose(ANA, &t);
         assert_eq!(lab.view().agreement(&k).unwrap().invalid, None);
-        let sd = sign(&mut lab.w, &mut dee, &k);
+        let sd = lab.sign_by(&mut dee, &k);
         lab.rotate(Some((k, vec![sd])), &[0]);
         let y = lab.publish(0);
         lab.sign(ANA, &y);
@@ -3051,7 +3058,6 @@ fn what_b14_leaves_open_is_refused() {
 /// or with it for someone else, out of place, or where the party did not
 /// hold the chain key alone, the clone is invalid.
 #[test]
-#[ignore = "core: rules 64 and 83: a succession clone takes the party off every area it held (field 34), yet the plan check allows changes to fields 0, 12, 16 and 19 only, so it refuses it as changing more than the plan gives (field 34 missing since the areas moved there)"]
 fn a_sole_chain_key_holders_successor_names_their_own_successor() {
     // Founded with a first successor named for Ben (rule 36); the members
     // then name Dee instead, all three signing, so Ben's seat passes
@@ -3119,7 +3125,7 @@ fn a_sole_chain_key_holders_successor_names_their_own_successor() {
     let t = planned(&lab, vec![dee_plan.clone(), ana_plan.clone()]);
     let k = lab.propose(ANA, &t);
     assert_eq!(lab.view().agreement(&k).unwrap().invalid, None);
-    let sd = sign(&mut lab.w, &mut dee, &k);
+    let sd = lab.sign_by(&mut dee, &k);
     lab.rotate(Some((k, vec![sd])), &[0]);
     let y = lab.publish(0);
     lab.sign(ANA, &y);
@@ -4473,7 +4479,6 @@ fn two_splits_citing_the_same_previous_fork_the_chain_a_deviation() {
 /// evidence that holds (rule 22, F119); a fee or a named receiver the plan
 /// does not state is shown, never passed.
 #[test]
-#[ignore = "core: rules 20 and 58: a split the service signs naming a collective on its chain, under that collective's grant, is an act for the collective, not the service's in its own name; the split check reads it as the service's own split and finds no problem"]
 fn a_split_is_the_named_services_act_under_the_version_in_force() {
     use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
@@ -4534,7 +4539,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
         let a = lab.w.everyday_act(&mut st, mirs().agreements, agreements::types::SPLIT, split(incoming, by_stakes.clone()).to_map(), None, None);
         lab.w.add(&a)
     };
-    assert!(!lab.view().split(&x).unwrap().problems.is_empty(), "{:?}", lab.view().split(&x).unwrap().problems);
+    assert!(lab.view().split(&x).unwrap().problems.iter().any(|p| p.contains("own name")), "{:?}", lab.view().split(&x).unwrap().problems);
     // Cy sells his share to Ana: a clone every holder signs, recorded. A
     // receipt naming it pays the owners' line by its stake.
     let t2 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN, CY])], &|t| {
@@ -6291,7 +6296,6 @@ fn a_collective_releases_a_debt_by_its_money_lane() {
 /// nothing (reading). An Agreements act of the collective carries the citations
 /// after the entries its type defines.
 #[test]
-#[ignore = "core: rule 58: counts_before reads the collective from the act's signer, a member, not from the collective the act names, so before and after among a keyless collective's acts are judged on the member's chain"]
 fn a_collective_keeps_two_chains() {
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
@@ -7444,10 +7448,12 @@ fn f187_6_a_departing_members_placed_signature_counts_at_the_rollback() {
     let drafted = |lab: &mut Lab, mark: Vec<usize>| -> (Hash, Vec<Hash>) {
         let t = lab.clone_terms(&f, vec![(Power::Constitutional, mark)], &|t| t.text = "Drafted before the break.".into());
         let k = lab.propose(ANA, &t);
-        let s: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &k)).collect();
-        for x in &s {
-            lab.acknowledge(0, *x);
-        }
+        // Cy's signature, acknowledged on the label's chain before Ana and
+        // Ben sign: their signature acts cite the acknowledgement, so a
+        // rotation naming them holds it (rule 58).
+        let sc = lab.sign(CY, &k);
+        lab.acknowledge(0, sc);
+        let s: Vec<Hash> = [ANA, BEN].iter().map(|w| lab.sign(*w, &k)).chain([sc]).collect();
         (k, s)
     };
     let (two, s2) = drafted(&mut lab, vec![ANA, BEN]);
@@ -7629,9 +7635,13 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
     assert!(lab.view().broken_act(&col).unwrap().is_some());
-    // During the stretch: the grantee, citing only its grant, counts for nothing.
+    // During the stretch: the grantee, citing its grant and the latest
+    // decision it holds, the broken rotation (rule 58, client conformance),
+    // counts for nothing.
+    st.cite.as_mut().unwrap().1.push(rot1);
     let during = act(&mut lab, &mut st);
-    assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("RB1")), "{:?}", lab.view().backing(&during).unwrap());
+    st.cite.as_mut().unwrap().1.retain(|x| *x != rot1);
+    assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("broken stretch")), "{:?}", lab.view().backing(&during).unwrap());
     assert!(!lab.counts(&during));
     assert_eq!(lab.view().backing(&early).unwrap(), Backing::Backed { grant: g }, "made before the break, it stands");
     // A grant made in the stretch counts for nothing, then and after.
@@ -8459,10 +8469,14 @@ fn bq1_after_a_rollback_a_grantees_act_counts_once_it_cites_the_rollback() {
     let rs: Vec<Hash> = [ANA, BEN, CY].iter().map(|w| lab.sign(*w, &r)).collect();
     let back = roll_back(&mut lab, r, &rs, rot1, &[]);
     assert_eq!(lab.view().broken(&col).unwrap(), None);
-    assert!(matches!(lab.view().backing(&unseen).unwrap(), Backing::NotBacked { .. }), "made just before the break, taken in by nothing");
-    // After the rollback, citing nothing newer: nothing.
+    // Draft 17, rule 93 (stated cost): "an act that cites only decisions
+    // before the break is judged under the rules before it, even where it
+    // was made during the stretch or after the rollback". Made just before
+    // the break, or after the rollback citing nothing newer: backed, under
+    // the rules before the break.
+    assert_eq!(lab.view().backing(&unseen).unwrap(), Backing::Backed { grant: g }, "made just before the break, judged as before it");
     let stale = act(&mut lab, &mut st);
-    assert!(matches!(lab.view().backing(&stale).unwrap(), Backing::NotBacked { .. }));
+    assert_eq!(lab.view().backing(&stale).unwrap(), Backing::Backed { grant: g });
     // Citing the rollback: it counts.
     st.cite.as_mut().unwrap().1.push(back);
     let fresh = act(&mut lab, &mut st);
@@ -13712,7 +13726,7 @@ fn owners_choose_the_operators_3_7ae() {
     // The owners sign: complete, and unexecuted while no rotation declares it.
     let t = constitutional(&lab, vec![dee.id, eve.id], Rule::Threshold(3));
     let k = lab.propose(ANA, &t);
-    let sd = sign(&mut lab.w, &mut dee, &k);
+    let sd = lab.sign_by(&mut dee, &k);
     let se = sign(&mut lab.w, &mut eve, &k);
     let a = lab.view().agreement(&k).unwrap();
     // A collective's clone is judged at a line (rule 45); the rotation that

@@ -4075,7 +4075,8 @@ impl<'a> AgreementsView<'a> {
             return Err("it does not drop the executed plan alone from the succession plans (B14)".into());
         }
         for c in changes(parent, clone) {
-            if !matches!(c, Change::Field(0 | 12 | 16 | 19)) {
+            // Field 34: the party taken off every area it held (rule 64).
+            if !matches!(c, Change::Field(0 | 12 | 16 | 19 | 34)) {
                 return Err("it changes more than the plan gives (rule 44c)".into());
             }
         }
@@ -4189,7 +4190,8 @@ impl<'a> AgreementsView<'a> {
     /// `line` (a record or rotation of the same collective).
     pub fn counts_before(&self, x: &Hash, line: &Hash) -> R<bool> {
         let xh = self.held(x)?;
-        let c = xh.act.outside.signer.ok_or(AgreementsError::Check("the act has no signer"))?;
+        // The collective an act for it names (rule 58), else its signer.
+        let c = self.author(xh).ok_or(AgreementsError::Check("the act has no signer"))?;
         let col = self.col(&c);
         let lh = self.held(line)?;
         let l = match col.res.position_of(line) {
@@ -9801,6 +9803,9 @@ impl<'a> AgreementsView<'a> {
         }
         if self.key_grant(h).is_some() {
             problems.push("it is signed with a grant key, not the service's own key (rule 20)".into());
+        }
+        if self.named_collective(h).is_some() {
+            problems.push("it is signed for a collective it names (rule 58), not in the service's own name (rule 20)".into());
         }
         let services = p.services();
         match h.act.outside.signer {

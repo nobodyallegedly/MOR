@@ -102,7 +102,9 @@ impl<'a> AgreementsView<'a> {
         if h.inside.spec != self.mirs.envelopes || h.inside.type_ != crate::envelopes::types::VOW {
             return None;
         }
-        Vow::decode(&h.inside, h.act.outside.signer.as_ref()).ok().map(|v| (h, v))
+        // A collective's vow cites its chain, named by its identity: the
+        // collective the act names (rule 58), else its signer.
+        Vow::decode(&h.inside, self.author(h).as_ref()).ok().map(|v| (h, v))
     }
 
     /// A held vow act, valid under Identity.
@@ -139,7 +141,8 @@ impl<'a> AgreementsView<'a> {
         if v.follows.is_some() {
             return Ok(None);
         }
-        let Some(signer) = g.act.outside.signer else { return Ok(None) };
+        // A collective's vow is drawn by a member naming it (rule 58).
+        let Some(signer) = self.author(g) else { return Ok(None) };
         if t.is_collective() && self.collective_of(agreement)? == Some(signer) {
             return Ok(Some(Who::This));
         }
