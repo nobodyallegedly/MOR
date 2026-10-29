@@ -197,7 +197,7 @@ fn collective_terms(ids: &[Hash], authority: Hash, keeper: Hash, money_holders: 
             name: "Releases".into(),
             holders: vec![ids[0]],
             threshold: 1,
-            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }, Kind::Layer(agreements::layers::ENVELOPES)]),
+            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }, Kind::Layer(agreements::layers::TEXT), Kind::Layer(agreements::layers::ENVELOPES)]),
             fields: None,
             id: 1,
             limits: None,
@@ -2974,7 +2974,7 @@ fn s7g_envelopes(out: &mut Out) {
     let a = w.everyday_act(&mut q, mirs().text, 0, say("Received."), None, Some(vec![post]));
     let text_ack = w.add(&a);
     let like = w.like(&mut q, spec("a reaction cMIP, test value"), post);
-    let a = w.everyday_act(&mut q, env, et::PUBLICATION, publication(vec![]), None, Some(vec![post]));
+    let a = w.everyday_act(&mut q, env, et::BAKE, publication(vec![]), None, Some(vec![post]));
     let pub_ack = w.add(&a);
     let witness = w.ack(&mut q, post);
     let log = w.log.clone();
@@ -3020,28 +3020,34 @@ fn s7g_envelopes(out: &mut Out) {
     let private_routes = w.private_act(&mut p, identity_spec(), mor_core::identity::types::ROUTES, routes(1, None), None, vec![pid]);
     out.case(&mut w, "a private routes act: invalid", "Envelopes rule 8; Identity, \"Every act defined by this MIR is public, except a private link\"", "Its content key is held, as its recipient holds it; an Identity act other than a link's is public.", Facts::default(), ask_status(&private_routes), json!("invalid"), None);
 
-    // Rule 24: a withdrawal, by the publication's signer or its for.
+    // Rule 24 retired: a bake is never withdrawn; type 3 is retired, and a
+    // bake carrying field 7 or 8 (reserved) is invalid ("Bake (type 0)").
     let mut w = World::new();
     let mut publisher = w.genesis("lea", vec![own_home()], None, None);
     let mut creator = w.genesis("mio", vec![own_home()], None, None);
     let mut stranger = w.genesis("ned", vec![own_home()], None, None);
-    let pubn = w.everyday_act(&mut publisher, env, et::PUBLICATION, publication(vec![(Value::Uint(8), Value::Bytes(creator.id.to_vec()))]), None, None);
+    let pubn = w.everyday_act(&mut publisher, env, et::BAKE, publication(vec![(Value::Uint(8), Value::Bytes(creator.id.to_vec()))]), None, None);
     let pid = pubn.id();
     let naming = || Some(vec![Object { chain: pid, predecessor: pid }]);
-    let by_stranger = { let a = w.everyday_act(&mut stranger, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
-    out.case(&mut w, "a withdrawal whose publication this verifier does not hold: unknown", "Envelopes rule 24", "Who may withdraw is read from the publication: its signer, or its for.", Facts::default(), ask_status(&by_stranger), json!("unknown"), None);
+    let by_stranger = { let a = w.everyday_act(&mut stranger, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    out.case(&mut w, "an act of the retired type 3 naming a bake this verifier does not hold: invalid", "Envelopes rule 24 (retired) and rule 30; \"Withdrawal (retired type 3)\"", "Type 3 is retired, never reused: an act of it is invalid, whatever it names.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
     w.add(&pubn);
-    let by_creator = { let a = w.everyday_act(&mut creator, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
-    let by_publisher = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    let by_creator = { let a = w.everyday_act(&mut creator, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    let by_publisher = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
     let text = { let a = w.everyday_act(&mut publisher, mirs().text, 0, say("Not a publication."), None, None); w.add(&a) };
-    let not_pub = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], obj(text), None); w.add(&a) };
-    let no_entry = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], Some(vec![Object { chain: pid, predecessor: text }]), None); w.add(&a) };
+    let not_pub = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], obj(text), None); w.add(&a) };
+    let no_entry = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], Some(vec![Object { chain: pid, predecessor: text }]), None); w.add(&a) };
+    let priced = { let a = w.everyday_act(&mut publisher, env, et::BAKE, publication(vec![(Value::Uint(7), Value::Uint(100))]), None, None); w.add(&a) };
+    let plain = { let a = w.everyday_act(&mut creator, env, et::BAKE, publication(vec![]), None, None); w.add(&a) };
     let log = w.log.clone();
-    out.case(&mut w, "a withdrawal signed by a stranger: invalid", "Envelopes rule 24: valid only if signed by the publication's signer or by the identity its for names", "No other authority exists at this layer.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a withdrawal signed by the identity the publication's for names: valid", "Envelopes rule 24", "The for field gives a client with no Agreements what it needs to judge a withdrawal.", Facts::default(), ask_status(&by_creator), json!("valid"), None);
-    out.case(&mut fresh(&log), "a withdrawal signed by the publication's signer: valid", "Envelopes rule 24", "Its signer may withdraw it.", Facts::default(), ask_status(&by_publisher), json!("valid"), None);
-    out.case(&mut fresh(&log), "a withdrawal naming an act that is no publication: invalid", "Envelopes rule 24: a withdrawal names a publication in objects", "The act named as both chain and predecessor is a text act.", Facts::default(), ask_status(&not_pub), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a withdrawal without the entry [publication, publication]: invalid", "Envelopes rule 24; \"Withdrawal (type 3)\"; rule 30", "Its one entry names the publication as chain and another act as predecessor: outside its format.", Facts::default(), ask_status(&no_entry), json!("invalid"), None);
+    out.case(&mut w, "an act of the retired type 3 signed by a stranger: invalid", "Envelopes rule 24 (retired) and rule 30", "Type 3 is retired: no authority withdraws a bake.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 signed by the identity a bake's field 8 names: invalid", "Envelopes rule 24 (retired) and rule 30", "A bake is never withdrawn; what stops is a price tag or a publication.", Facts::default(), ask_status(&by_creator), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 signed by the bake's uploader: invalid", "Envelopes rule 24 (retired) and rule 30", "A bake is never withdrawn, by its uploader either: the uploader withdraws a price tag instead (Money rule 18).", Facts::default(), ask_status(&by_publisher), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 naming a text act: invalid", "Envelopes rule 30", "Type 3 is retired.", Facts::default(), ask_status(&not_pub), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 without the entry [bake, bake]: invalid", "Envelopes rule 30", "Type 3 is retired.", Facts::default(), ask_status(&no_entry), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake carrying field 8, reserved: invalid", "Envelopes, \"Bake (type 0)\"; rule 30", "Fields 7 and 8 are reserved, never reused: a bake names nobody it is made for.", Facts::default(), ask_status(&pid), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake carrying field 7, reserved: invalid", "Envelopes, \"Bake (type 0)\"; rule 30", "A bake carries no price: its price is a price tag (Money type 5).", Facts::default(), ask_status(&priced), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake with fields 0 to 4 and nothing reserved: valid", "Envelopes, \"Bake (type 0)\"", "A bake says only who uploaded it.", Facts::default(), ask_status(&plain), json!("valid"), None);
 
     // Rule 30: an act of a type this MIR does not define, or outside its format.
     let mut w = World::new();
@@ -3049,10 +3055,10 @@ fn s7g_envelopes(out: &mut Out) {
     let retired = { let a = w.everyday_act(&mut p, env, et::RETIRED_COMMITMENT, vec![(Value::Uint(0), Value::Uint(3))], None, None); w.add(&a) };
     let mut no_nonce = publication(vec![]);
     no_nonce.retain(|(k, _)| *k != Value::Uint(4));
-    let no_nonce = { let a = w.everyday_act(&mut p, env, et::PUBLICATION, no_nonce, None, None); w.add(&a) };
+    let no_nonce = { let a = w.everyday_act(&mut p, env, et::BAKE, no_nonce, None, None); w.add(&a) };
     let log = w.log.clone();
     out.case(&mut w, "an Envelopes act of type 2, retired: invalid", "Envelopes rule 30; \"Types defined by this MIR\": type 2 retired, never reused", "An act of a type this MIR does not define is invalid.", Facts::default(), ask_status(&retired), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a publication without its nonce (field 4): invalid", "Envelopes rule 30; \"Publication (type 0)\"", "A payload outside its type's format is invalid.", Facts::default(), ask_status(&no_nonce), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake without its nonce (field 4): invalid", "Envelopes rule 30; \"Bake (type 0)\"", "A payload outside its type's format is invalid.", Facts::default(), ask_status(&no_nonce), json!("invalid"), None);
 
     // Rule 11: a key delivery is valid as an act by its shape.
     let mut w = World::new();
@@ -3573,7 +3579,7 @@ fn s7g_agreements_c(out: &mut Out) {
         let cid = col.c.id;
         let mut app = w.genesis("the collective's publishing app", vec![own_home()], None, None);
         let k = schnorr("the collective's publishing app/grant key", 0);
-        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::ENVELOPES)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::TEXT), Kind::Layer(agreements::layers::ENVELOPES)]), reinstates: None, by_this: false, key: signing_key(&k) };
         let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
         sign(&mut w, &mut col.m[0], &gid);
         let acc = sign(&mut w, &mut app, &gid);
@@ -3778,11 +3784,13 @@ fn s7g_development(out: &mut Vec<J>) {
     // Layers an extension acts on (field 10), and the checker's field 12.
     push("field 10 out of order: no specification", "Development, \"Layers an extension acts on\"; freeze scenario, Part one",
         "Field 10 is ascending, without repeats.", &cmip(vec![(10, arr(vec![u(2), u(0)]))], "An extension acting on Money and Identity."), &[], none.clone());
-    push("field 10 naming layer 4: no specification", "Development, \"Layers an extension acts on\"",
-        "The layers are 0 Identity, 1 Envelopes and Text, 2 Money, 3 Agreements.", &cmip(vec![(10, arr(vec![u(4)]))], "An extension acting on a fifth layer."), &[], none.clone());
+    push("field 10 naming layer 4, Agreements: a specification", "Development, \"Layers an extension acts on\"; MICS, \"Structure\"",
+        "The layers are 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development: 4 is Agreements.", &cmip(vec![(10, arr(vec![u(4)]))], "An extension acting on a fifth layer."), &[], spec_.clone());
+    push("field 10 naming layer 5, Development itself: no specification", "Development, \"Layers an extension acts on\"",
+        "Field 10 names layers 0 to 4: an extension's own acts are Development's.", &cmip(vec![(10, arr(vec![u(5)]))], "An extension acting on Development."), &[], none.clone());
     push("field 10 empty: no specification", fmt, "`[+ uint]` holds at least one item.", &cmip(vec![(10, arr(vec![]))], "An extension declaring an empty list."), &[], none.clone());
     push("field 10 ascending on a cMIP: a specification", "Development, \"Layers an extension acts on\"",
-        "Money and Agreements, ascending.", &cmip(vec![(10, arr(vec![u(2), u(3)]))], "An extension acting on Money and Agreements."), &[], spec_.clone());
+        "Envelopes and Money (layers 2 and 3), ascending.", &cmip(vec![(10, arr(vec![u(2), u(3)]))], "An extension acting on Money and Agreements."), &[], spec_.clone());
     push("field 12 on a cMIP: a specification", "Development, \"A proof-of-delivery checker\"",
         "A cMIP declaring itself a checker.", &cmip(vec![(12, Value::Bool(true))], "A proof checker."), &[], spec_.clone());
     push("field 12 false: no specification", fmt, "Field 12 is the value true alone.", &cmip(vec![(12, Value::Bool(false))], "A cMIP writing false."), &[], none.clone());

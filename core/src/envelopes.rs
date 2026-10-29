@@ -32,14 +32,18 @@ pub mod vow;
 
 /// The types this MIR defines (Envelopes, "Types defined by this MIR").
 pub mod types {
-    pub const PUBLICATION: u64 = 0;
+    /// A bake: media made into an act; its signer is its uploader
+    /// (Envelopes, "Bake (type 0)").
+    pub const BAKE: u64 = 0;
     pub const KEY_DELIVERY: u64 = 1;
     /// Retired in Envelopes draft 10 (F294): was the relay's commitment,
     /// which left the core for the relay transport cMIP. Never reused: an
     /// Envelopes act of type 2 is of a type the MIR does not define, and
     /// invalid (rule 30, F295).
     pub const RETIRED_COMMITMENT: u64 = 2;
-    pub const WITHDRAWAL: u64 = 3;
+    /// Retired: was the withdrawal. A bake is never withdrawn (Envelopes
+    /// rule 24). Never reused: an Envelopes act of type 3 is invalid.
+    pub const RETIRED_WITHDRAWAL: u64 = 3;
     pub const ENCRYPTION_KEY: u64 = 4;
     /// A vow (F237; "announcement" in the texts until the redraft, F241):
     /// an act naming something to come, its genesis id its name for good.
@@ -435,7 +439,7 @@ impl EncryptionKey {
 /// The key-delivery payload (Envelopes type 1):
 /// `{ 0 => hash, 1 => bstr .size 32, ? 2 => true }`: the act whose content
 /// key this is, the key, and, when present, that it is the key of the media
-/// that act (a publication) describes rather than of the act itself.
+/// that act (a bake) describes rather than of the act itself.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyDelivery {
     pub target: Hash,
@@ -480,10 +484,9 @@ impl KeyDelivery {
     }
 }
 
-/// An Envelopes act in its type's format (Envelopes draft 10, rule 30,
-/// F295; the MICS's common conventions): of a type this MIR defines (0, 1,
-/// 3, 4, 5; type 2 retired, F294), its payload in that type's format, and a
-/// withdrawal carrying the entry `[publication, publication]` (F294). An
+/// An Envelopes act in its type's format (Envelopes rule 30; the MICS's
+/// common conventions): of a type this MIR defines (0, 1, 4, 5; types 2
+/// and 3 retired), its payload in that type's format. An
 /// act that fails is invalid wherever the Envelopes MIR is implemented,
 /// which every client does (MICS, "Client conformance"). `signer` is
 /// the act's, whose own chain entries (a collective's actions chain) a
@@ -491,43 +494,33 @@ impl KeyDelivery {
 pub fn check_act(inside: &Inside, signer: Option<&Hash>) -> R<()> {
     let p = &inside.payload;
     match inside.type_ {
-        types::PUBLICATION => {
-            let f = map_fields(p, &[0, 1, 2, 3, 4, 5, 6, 7, 8], "publication: a field its format does not define")?;
+        types::BAKE => {
+            // Fields 7 and 8 are reserved, never reused: a bake carrying
+            // either is invalid (Envelopes, "Bake (type 0)").
+            let f = map_fields(p, &[0, 1, 2, 3, 4, 5, 6], "bake: a field its format does not define (fields 7 and 8 are reserved)")?;
             for k in [0, 1, 2] {
-                hash(get(&f, k).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication: fields 0 to 2 are hashes")?;
+                hash(get(&f, k).ok_or(EnvError::Shape("bake: fields 0 to 4 are required"))?, "bake: fields 0 to 2 are hashes")?;
             }
-            uint(get(&f, 3).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication 3: the size")?;
-            let n = bytes(get(&f, 4).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication 4: the nonce")?;
+            uint(get(&f, 3).ok_or(EnvError::Shape("bake: fields 0 to 4 are required"))?, "bake 3: the size")?;
+            let n = bytes(get(&f, 4).ok_or(EnvError::Shape("bake: fields 0 to 4 are required"))?, "bake 4: the nonce")?;
             if n.len() != 24 {
-                return Err(EnvError::Shape("publication 4: the nonce is 24 bytes"));
+                return Err(EnvError::Shape("bake 4: the nonce is 24 bytes"));
             }
             if let Some(k) = get(&f, 5) {
-                hash(k, "publication 5: a 32-byte content key")?;
+                hash(k, "bake 5: a 32-byte content key")?;
             }
             if let Some(w) = get(&f, 6) {
-                let w = array(w, "publication 6: where the bytes can be fetched")?;
+                let w = array(w, "bake 6: where the bytes can be fetched")?;
                 if w.is_empty() || !w.iter().all(|x| matches!(x, Value::Text(_))) {
-                    return Err(EnvError::Shape("publication 6: one or more text strings"));
+                    return Err(EnvError::Shape("bake 6: one or more text strings"));
                 }
-            }
-            if let Some(h) = get(&f, 8) {
-                hash(h, "publication 8: for")?;
             }
             Ok(())
         }
         types::KEY_DELIVERY => KeyDelivery::decode(p).map(|_| ()),
-        types::WITHDRAWAL => {
-            if !p.is_empty() {
-                return Err(EnvError::Shape("withdrawal: its payload is empty"));
-            }
-            if !inside.objects.iter().flatten().any(|o| o.chain == o.predecessor) {
-                return Err(EnvError::Shape("withdrawal: its objects carry [publication, publication]"));
-            }
-            Ok(())
-        }
         types::ENCRYPTION_KEY => EncryptionKey::decode(p).map(|_| ()),
         types::VOW => vow::Vow::decode(inside, signer).map(|_| ()),
-        _ => Err(EnvError::Shape("a type the Envelopes MIR does not define (type 2 retired, F294)")),
+        _ => Err(EnvError::Shape("a type the Envelopes MIR does not define (types 2 and 3 retired)")),
     }
 }
 

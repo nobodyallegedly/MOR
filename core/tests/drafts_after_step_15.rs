@@ -176,10 +176,10 @@ fn an_envelopes_act_outside_its_format_is_invalid_f294_f295() {
     let pubn = next(&mut p, env, 0, publication_payload(), None, None, "publication");
     let pubn = w.add(&pubn);
     assert_eq!(w.v.status(&pubn), Status::Valid);
-    // A withdrawal in its format: `{}` with the entry [publication, publication].
+    // Type 3, the withdrawal, is retired: a bake is never withdrawn.
     let wd = next(&mut p, env, 3, vec![], Some(vec![Object { chain: pubn, predecessor: pubn }]), None, "withdrawal");
     let wd = w.add(&wd);
-    assert_eq!(w.v.status(&wd), Status::Valid);
+    assert_eq!(w.v.status(&wd), Status::Invalid);
     let mut extra = publication_payload();
     extra.push((Value::Uint(9), Value::Uint(1)));
     let mut no_nonce = publication_payload();
@@ -592,7 +592,7 @@ fn identity_routes_names_and_links_outside_their_format_are_invalid_f295() {
 /// publication's signer or by the identity its `for` names; while the
 /// publication is not held, unknown (F298).
 #[test]
-fn a_withdrawal_counts_only_by_the_publications_signer_or_for() {
+fn no_act_withdraws_a_bake_and_its_fields_7_and_8_are_reserved() {
     let mut w = World::new();
     let mut publisher = w.operator("publisher");
     let mut creator = w.operator("creator");
@@ -609,10 +609,16 @@ fn a_withdrawal_counts_only_by_the_publications_signer_or_for() {
     let by_publisher = next(&mut publisher, env, 3, vec![], naming(), None, "publisher's");
     let ids: Vec<Hash> = [&by_stranger, &by_creator, &by_publisher].iter().map(|a| w.add(a)).collect();
     for id in &ids {
-        assert_eq!(w.v.status(id), Status::Unknown, "the publication not held");
+        assert_eq!(w.v.status(id), Status::Invalid, "type 3 is retired, whatever it names");
     }
-    w.add(&pubn);
-    assert_eq!(w.v.status(&ids[0]), Status::Invalid);
-    assert_eq!(w.v.status(&ids[1]), Status::Valid, "by the identity its for names");
-    assert_eq!(w.v.status(&ids[2]), Status::Valid, "by its signer");
+    let pid = w.add(&pubn);
+    assert_eq!(w.v.status(&pid), Status::Invalid, "a bake carrying field 8, reserved");
+    let mut priced = publication(vec![]);
+    priced.push((Value::Uint(7), Value::Uint(100)));
+    let priced = next(&mut creator, env, 0, priced, None, None, "priced");
+    let priced = w.add(&priced);
+    assert_eq!(w.v.status(&priced), Status::Invalid, "a bake carrying field 7, reserved");
+    for id in &ids {
+        assert_eq!(w.v.status(id), Status::Invalid);
+    }
 }

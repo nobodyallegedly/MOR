@@ -2032,29 +2032,6 @@ impl Verifier {
         false
     }
 
-    /// For an Envelopes withdrawal (type 3), whether its signer is the
-    /// publication's signer or the identity the publication's `for` (field
-    /// 8) names; `None` while the publication is not held. `Some(true)` for
-    /// any other act.
-    fn withdrawal_by_authority(&self, x: &Held) -> Option<bool> {
-        let Some((envelopes, _)) = self.never_ack_specs else { return Some(true) };
-        if x.inside.spec != envelopes || x.inside.type_ != crate::envelopes::types::WITHDRAWAL {
-            return Some(true);
-        }
-        let Some(o) = x.inside.objects.iter().flatten().find(|o| o.chain == o.predecessor) else {
-            return Some(true);
-        };
-        let p = self.acts.get(&o.predecessor)?;
-        if p.inside.spec != envelopes || p.inside.type_ != crate::envelopes::types::PUBLICATION {
-            return Some(false);
-        }
-        let for_ = p.inside.payload.iter().find(|(k, _)| *k == crate::cbor::Value::Uint(8)).and_then(|(_, v)| match v {
-            crate::cbor::Value::Bytes(b) => Hash::try_from(b.as_slice()).ok(),
-            _ => None,
-        });
-        Some(x.signer().is_some() && (x.signer() == p.signer() || x.signer() == for_.as_ref()))
-    }
-
 /// Text rule 14 (F334): whether a text act's one object, already of
     /// the right shape (`[signer, decision]`, [`crate::text::check_act`]),
     /// is a collective's pointer to a decision of its own (Agreements rule
@@ -2177,15 +2154,7 @@ impl Verifier {
             Some(true) => false,
             None => true,
         };
-        // Envelopes rule 24 (draft 10, section 10): a withdrawal is valid
-        // only if signed by the publication's signer or by the identity its
-        // `for` names; unknown while the publication is not held (F298).
-        let withdrawal_of_unheld = match self.withdrawal_by_authority(x) {
-            Some(false) => return Status::Invalid,
-            Some(true) => false,
-            None => true,
-        };
-        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || withdrawal_of_unheld || text_pointer {
+        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || text_pointer {
             return Status::Unknown;
         }
         if chain_act {

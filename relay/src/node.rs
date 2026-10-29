@@ -53,7 +53,7 @@ impl Specs {
 
 /// Envelopes types a relay reads.
 pub mod envelopes_types {
-    pub const PUBLICATION: u64 = 0;
+    pub const BAKE: u64 = 0;
     pub const ENCRYPTION_KEY: u64 = 4;
 }
 
@@ -1541,7 +1541,7 @@ impl Node {
                 _ => {}
             }
         }
-        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::PUBLICATION {
+        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::BAKE {
             out.extend(as_hash(field(2)));
         }
         out.sort();
@@ -1695,7 +1695,7 @@ impl Node {
         if self.cfg.policy == Policy::Allowlist
             && !self
                 .store
-                .any_about(&h, &self.specs.envelopes, envelopes_types::PUBLICATION)?
+                .any_about(&h, &self.specs.envelopes, envelopes_types::BAKE)?
         {
             return wire(
                 code::NOT_ACCEPTED,
