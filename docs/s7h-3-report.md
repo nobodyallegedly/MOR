@@ -73,7 +73,30 @@ A reader given only the eight texts read each changed sentence, and scenario 9 w
 
 What it found fitting at once: 9.1's transfer wording, 9.2's re-dealt grammar under rule 59's "both" option, 9.3's outcome 0, and 9.5's and 9.7's pass lines.
 
-SECOND_READING
+**A second reading** of the answered texts found these fitting:
+- the vow story across the MICS, rule 14, 9f and the lists;
+- 9.1's obligation window;
+- 9.2's re-dealt grammar under rule 59;
+- 9.3's outcome 0;
+- 9.5 against Identity rules 20, 49 and 53;
+- the `[3, vow]` format line;
+- the pass lines.
+
+What it found next was answered in turn:
+- **Rule 58.** The new sentence denied the tie rule's and placements' use of lines. It now says a line decides whether an act counts "only where 'Made before, made after' says so".
+- **The transfer.** The MICS, the suite's list, its scenario 1.4 and Agreements' freeze line still had it naming "the work's chain". All now say "the agreement's chain", as its format and 9.1 do.
+- **The holders' refund** (Q2) is carried into the MICS, the suite's list, its scenario 2.6, 9.6 and its pass line.
+- **The vow.** Read "as a lone seller's, whoever signed the vow". "No owner" comes before she signs anything about it, everywhere. The MICS's stated cost names "an ownership agreement the publication names". 9f shows the platform's lone publication of her claimed vow as outside her agreement.
+- **Layers' rules under a plan.** The successor is written "once for each seat, as in field 0", so a successor already named gains no power by the plan, and the false-mark list names layers' rules too. The format is written `[2, [+ hash]]`.
+- **9.7.** The bake's work hash is no longer said to cross unchanged, and Development rule 27 is cited for "every hash is new" alone.
+
+Left as questions:
+- the price tag's withdrawal (question 1, with two further points: a plain change of price, and a withdrawal signed by the designated party, which the split service's history may not hold);
+- the lone seller of another's vow, read by rule 11's words "sells what its drafter owns alone";
+- 9.1's citation of rule 30 beside rule 10's "receipted or not";
+- rule 11's and rule 12's two racing tests for a receipt on another of the service's sequences.
+
+They are added to question 5.
 
 ## Questions
 
@@ -104,7 +127,11 @@ Each is in plain words, then precisely, with the options, my lean and its cost.
    - Agreements' freeze line "transfer naming both chains";
    - 9.1's pass line "from the next payment", beside rule 10's stated-cost window;
    - 9.3's "counts twice" beside rule 81's "no voting weight";
-   - 9.3's fourth case, "the other signature acts" where "nobody but the declared member remains".
+   - 9.3's fourth case, "the other signature acts" where "nobody but the declared member remains";
+   - rule 11's "sells what its drafter owns alone", beside a lone publication of another's vow;
+   - 9.1's citation of rule 30, beside rule 10's "receipted or not";
+   - rule 11's and rule 12's racing tests, which differ for a receipt on another of the service's sequences;
+   - a tag's price change, and a withdrawal signed by the designated party, under Q5's push-rail test.
    - *Lean:* one pass of words in the next text session.
 6. **The c-box's own vectors README** (`scripts/c-box/vectors-README.md`) is outside this session's folders, so it lacks the S7h-3 bullet.
    - *Lean:* copy it from `core/vectors/README.md` when `scripts/` is next open.
