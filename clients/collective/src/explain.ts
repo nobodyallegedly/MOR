@@ -284,7 +284,9 @@ export function powerWords(p: PowerOut, areas: AreaRead[], names: Names): string
       return a ? `the power of the “${a.name}” area (area ${p.area})` : `the power of area ${p.area}`;
     }
     case 'plan':
-      return `the succession plan of ${names(p.party ?? '')}`;
+      // S7h-4 (rules 64 and 83): a plan-marked clone passes the party's stakes to its stake successors, in the plan's parts,
+      // and changes a layer's rule only by putting the seat successor in the party's place; any other clone under it is invalid.
+      return `the succession plan of ${names(p.party ?? '')} (its clone must pass ${names(p.party ?? '')}’s stakes to the heirs the plan names, in its parts, and may change a layer’s rule only by putting the successor in ${names(p.party ?? '')}’s place: Agreements rules 64 and 83)`;
     case 'judicial':
       return "the judicial tier's rule, every member whose voice remains";
     case 'layer':

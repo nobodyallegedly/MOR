@@ -6013,6 +6013,17 @@ async function readIdentity(id, address2, via, identitySpec) {
     const s = served(id, b, identitySpec);
     if (s && s.position === latest.position + 1 && s.previous === latest.act) next.push(s);
   }
+  const oldHomes = (r2.homes ?? []).map((x) => x.hint);
+  for (const s of next) {
+    if (!s.homeless) continue;
+    for (const hint of oldHomes) {
+      try {
+        const o = (await relayAt(hint, via).putAct(s.bytes)).objection;
+        if (o) look.verifier.add(o);
+      } catch {
+      }
+    }
+  }
   const binding = bindingOf(look, chainActs);
   const lines2 = linesOf({ identity: id, binding, own: [], acts });
   return { id, look, chainActs, places, next, lines: lines2, acts, binding };
@@ -6055,9 +6066,21 @@ function recordWords(rd) {
     return { text: `${what}: act ${actForm(l.act)}${how}; ${n} receipt${n === 1 ? "" : "s"} held.`, tone: "ok" };
   });
   if (r.stop === "contested") chain.push({ text: `Contested at position ${r.links.length}: two rotations revealing one chain key are served there, and no rule settles them. Until it ends, no change of its keys counts.`, tone: "bad" });
-  if (r.stop === "pending" || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes\u2019 receipts: ${r.waiting.join(", ") || "one rotation"}.`, tone: "warn" });
+  const isVoid = (x) => {
+    try {
+      return rd.look.verifier.status(x) === "void";
+    } catch {
+      return false;
+    }
+  };
+  const waiting = r.waiting.filter((x) => !isVoid(x));
+  if (r.stop === "pending" && !r.waiting.some(isVoid) || waiting.length) chain.push({ text: `A change of its keys waits for its homes\u2019 receipts: ${waiting.join(", ") || "one rotation"}.`, tone: "warn" });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
+    if (!counted && s.homeless && isVoid(s.id)) {
+      chain.push({ text: `Void: the homeless change of its keys at position ${s.position}, act ${actForm(s.id)}. A home of its old set, still alive, objected to it, and no escape endorsement signed with its signing key backs it (Identity rule 49): it can never count.`, tone: "bad" });
+      continue;
+    }
     if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, ${s.signingFingerprint ? `installing the signing key ${s.signingFingerprint}` : "installing no signing key (a collective\u2019s)"}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
   }
   out.push({ heading: "Its chain and receipts", lines: chain });
@@ -7111,7 +7134,7 @@ function powerWords(p, areas, names) {
       return a ? `the power of the \u201C${a.name}\u201D area (area ${p.area})` : `the power of area ${p.area}`;
     }
     case "plan":
-      return `the succession plan of ${names(p.party ?? "")}`;
+      return `the succession plan of ${names(p.party ?? "")} (its clone must pass ${names(p.party ?? "")}\u2019s stakes to the heirs the plan names, in its parts, and may change a layer\u2019s rule only by putting the successor in ${names(p.party ?? "")}\u2019s place: Agreements rules 64 and 83)`;
     case "judicial":
       return "the judicial tier's rule, every member whose voice remains";
     case "layer":
