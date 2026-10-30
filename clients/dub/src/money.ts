@@ -124,7 +124,7 @@ export interface SealedShown {
   /** Said plainly where its uploader is no owner of the work, as the claim's ownership agreement names them (Agreements rule 14). */
   outside: string | null;
   /** The owners' own publication of the same work, where Dub has read one: buy there instead. */
-  owners: { post: string; signer: string; price: string; words: string } | null;
+  owners: { post: string; signer: string; bake: string; price: string; words: string } | null;
   /** What this identity can end on it, named by its layer: its price tag (Money), or its publication (Agreements). A bake itself is never withdrawn. */
   ends: 'tag' | 'publication' | null;
   /** The work's hash (the bake's field 1). */
@@ -171,6 +171,7 @@ interface OwnersSeen {
   deal: DealRead;
   post: string | null;
   signer: string | null;
+  bake: string | null;
   price: string | null;
   words: string | null;
 }
@@ -619,7 +620,8 @@ export class DubMoney {
     };
     // Its ownership, where read: said plainly when its uploader is none of the owners (Agreements rule 14).
     if (pr.deal) {
-      await this.ownersSeen(pr.deal, p.work, hints, via, post ? { post: describeAct(post).id as string, signer: (describeAct(post) as { signer?: string }).signer ?? null, price: counts ? out.price : null, words: pr.through?.words ?? null } : null);
+      const pd = post ? (describeAct(post) as { id: string; signer?: string }) : null;
+      await this.ownersSeen(pr.deal, p.work, hints, via, pd ? { post: pd.id, signer: pd.signer ?? null, bake: p.bake, price: counts ? out.price : null, words: pr.through?.words ?? null } : null);
     }
     this.outsideOf(out, pr.uploader, me.id);
     if (p.seller === me.id) {
@@ -648,7 +650,7 @@ export class DubMoney {
   private owned = new Map<string, OwnersSeen>();
 
   /** Keep what was read of a work's owners: its claim's work hash, from the claim itself. */
-  private async ownersSeen(deal: DealRead, work: string, hints: string[], via: Via, own: { post: string; signer: string | null; price: string | null; words: string | null } | null): Promise<void> {
+  private async ownersSeen(deal: DealRead, work: string, hints: string[], via: Via, own: { post: string; signer: string | null; bake: string; price: string | null; words: string | null } | null): Promise<void> {
     let w = work;
     if (deal.claim) {
       const c = await actAt(deal.claim, hints, via);
@@ -660,7 +662,7 @@ export class DubMoney {
     const holders = deal.owners.map(([h]) => h);
     // Their own publication: the one sold by one of the owners, naming the ownership agreement.
     const theirs = own && own.signer && holders.includes(own.signer) && own.price ? own : null;
-    this.owned.set(w, { deal, post: theirs?.post ?? before?.post ?? null, signer: theirs?.signer ?? before?.signer ?? null, price: theirs?.price ?? before?.price ?? null, words: theirs?.words ?? before?.words ?? null });
+    this.owned.set(w, { deal, post: theirs?.post ?? before?.post ?? null, signer: theirs?.signer ?? before?.signer ?? null, bake: theirs?.bake ?? before?.bake ?? null, price: theirs?.price ?? before?.price ?? null, words: theirs?.words ?? before?.words ?? null });
   }
 
   /**
@@ -676,7 +678,7 @@ export class DubMoney {
     if (!owners.length || owners.some(([h]) => h === uploader)) return;
     const who = owners.map(([h, n]) => `${h === me ? 'you' : short(h)} (${pct(n)})`).join(', ');
     out.outside = `Its uploader, ${uploader === me ? 'you' : short(uploader)}, is not one of this work’s owners as its claim’s ownership agreement names them: ${who}. Paying here pays the uploader alone, outside that agreement; the owners are paid nothing of it.`;
-    if (seen.post && seen.signer && seen.post !== out.publication) out.owners = { post: seen.post, signer: seen.signer, price: seen.price ?? 'its price', words: `The owners sell it themselves, through their own publication: ${seen.price ?? 'its price'}.` };
+    if (seen.post && seen.signer && seen.bake && seen.bake !== out.bake) out.owners = { post: seen.post, signer: seen.signer, bake: seen.bake, price: seen.price ?? 'its price', words: `The owners sell it themselves, through their own publication: ${seen.price ?? 'its price'}.` };
   }
 
   /** A price read as the deal line's shape (`throughLine`). */

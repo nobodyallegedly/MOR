@@ -1911,7 +1911,7 @@ app.addEventListener('submit', async (ev) => {
     case 'identity-renew':
     case 'real-renew': {
       const id = fid === 'identity-renew' ? form.dataset.identity! : form.dataset.collective!;
-      const r = await busy('Reading it from its homes, and checking the words…', () => (fid === 'identity-renew' ? c.ask<Done>('identity renew', { identity: id, words: words(d.get('words')) }) : c.ask<Done>('real collective renew', { collective: id, words: words(d.get('words')) })), form);
+      const r = await busy('Reading it from its homes, and checking the words…', () => (fid === 'identity-renew' ? c.ask<Done>('identity renew', { identity: id, words: words(d.get('words')) }) : c.ask<Done>('real collective renew', { collective: id })), form);
       form.reset();
       if (r) {
         spentNow = spentNow.filter((x) => x.id !== id);

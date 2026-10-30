@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SPECS } from '../../genesis/src/core.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { Client, newKey } from '../../desk/src/page/api.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
@@ -95,23 +96,36 @@ export async function edubba(homes: string[], relays: string[], chain?: ChainSou
  * and iPa at two keys, Development by iPh. A, iPa and iPh are Dubs; the
  * collective's ID is returned.
  */
+/**
+ * The founding grid of the release collective (round 8: the layers
+ * renumbered, Text 1, Envelopes 2, Money 3, Agreements 4, Development 5; a
+ * whole layer is the grid's layer row, a finer area names its kinds): its
+ * releases, bakes (Envelopes type 0), in a finer "Publishing" area held by A
+ * and iPa at two signatures; Development by iPh alone. Before, "Publishing"
+ * was the old layer 1, Text and Envelopes together, which is never one
+ * layer now.
+ */
+export function publishingGrid(A: string, iPa: string, iPh: string) {
+  const all = [A, iPa, iPh];
+  return {
+    members: all,
+    constitution: { holders: all, number: 3 },
+    chainKey: 2,
+    absence: 2,
+    layers: { 1: { holders: all, number: 1 }, 2: { holders: [A, iPa], number: 2 }, 3: { holders: all, number: 3 }, 4: { holders: all, number: 3 }, 5: { holders: [iPh], number: 1 } },
+    areas: [{ name: 'Publishing', layer: 2, kinds: [`${SPECS.envelopes}:0`], holders: [A, iPa], number: 2 }],
+    clone: 2,
+    shares: { [A]: 34, [iPa]: 33, [iPh]: 33 },
+  };
+}
+
 export async function releaseCollective(H: string[], R: string[]) {
   const e = await edubba(H, R);
   const A = await dub(H, R);
   const iPa = await dub(H, R);
   const iPh = await dub(H, R);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
-  const grid = {
-    members: [A.id, iPa.id, iPh.id],
-    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
-    chainKey: 2,
-    absence: 2,
-    areas: [
-      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id], number: 2 },
-      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
-    ],
-    clone: 2,
-  };
+  const grid = publishingGrid(A.id, iPa.id, iPh.id);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
   assert.deepEqual(rv.reading.blocking, []);

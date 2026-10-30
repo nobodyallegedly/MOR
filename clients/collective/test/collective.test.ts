@@ -11,13 +11,13 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { actId, openWithKey, signaturePayload } from '../../genesis/src/core.ts';
+import { MIRS, actId, openWithKey, signaturePayload } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy, ownLine } from '../../genesis/src/lines.ts';
-import { sign as agreementsSign } from '../../repo/src/agreements.ts';
+import { pointerPayload, sign as agreementsSign } from '../../repo/src/agreements.ts';
 import { verifyRelease } from '../../repo/src/release.ts';
-import { REPO_SPECS, AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
+import { REPO_SPECS, AGREEMENTS_TYPES, MONEY_TYPES, TEST_RAIL } from '../../repo/src/specs.ts';
 import type { Done, State } from '../src/page/api.ts';
 import { commit, prepare, sign, state, words, world, type World } from './setup.ts';
 
@@ -61,11 +61,15 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(f.reading.title, /Found the collective “Makers”/);
   assert.match(fw, /3 parties: Ada \(you\).*, Sim One.* and Sim Two/);
   assert.match(fw, /exists only once every one of them has signed it: nobody is founded into a collective without signing/);
-  assert.match(fw, /Ada \(you\) \[[^\]]+\] holds the collective's signing key/);
+  // A collective has no signing key (Agreements rule 56; was: "Ada holds the collective's signing key"):
+  // each member acts for it with their own key; the five layers' rules are shown, Money first (rule 60).
+  assert.match(fw, /It has no signing key of its own: a member acts for the collective with their own identity's key/);
+  assert.doesNotMatch(fw, /holds the collective's signing key|Envelopes and Text/);
+  assert.match(fw, /Money \(layer 3\): any 2 of the 3 members together can set its payee pointer[^]*Text \(layer 1\)[^]*Envelopes \(layer 2\)[^]*Agreements \(layer 4\)[^]*Development \(layer 5\)/);
   assert.match(fw, /cut into 3 shares.*Any 2 of them together rebuild it/);
   assert.match(fw, /If one member is lost, the other 2 can still rotate/);
   assert.match(fw, /“Releases” \(area 1\): held by Ada \(you\).*, Sim One.* and Sim Two.*; any 2 of them decide together/);
-  assert.match(fw, /It reaches every publication of the collective \(a release is one\)/);
+  assert.match(fw, /It reaches every bake the collective uploads \(a release is one\)/);
   assert.match(fw, /Constitutional: the members, the change rules.*every member whose voice remains/);
   assert.match(fw, /Any member can leave alone, at any time/);
   assert.match(fw, /any 2 of the other parties together may declare them absent/);
@@ -127,12 +131,19 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(former.reading.blocking.join(' '), /Sim One .* is not a member under the agreement in force/);
   const refused = await c.ask('confirm', { plan: former.plan, digest: former.digest }).catch((e) => e as Error);
   assert.match(String(refused), /cannot be signed/);
-  const s1 = await sign(c, { kind: 'sign', member: ada, release: relId });
-  assert.match(words(s1.review.reading), /No member has signed it yet/);
-  assert.match(words(s1.review.reading), /all 3 files are the same/);
-  assert.match(s1.done.lines.map((l) => l.text).join(' '), /Not a release yet/);
+  // A collective has no signing key: Ada uploaded the release with her own key, naming the collective,
+  // and that upload is her act for the Releases area (Agreements rules 58, 60), one of the two it needs.
+  // (Was: the collective's signature uploaded it, and Ada signed it first.)
+  assert.match(rw, /It is uploaded for the collective “Makers” .* by Ada \(you\) .*, with their own key, naming the collective/);
+  assert.match(rw, /The upload is Ada \(you\) .*'s own act for the collective: it counts as their signature, the first of those it needs/);
+  const half1 = await verifyRelease(relId, [w.relay.base]);
+  assert.equal(half1.ok, false, 'not a release yet: one of two');
+  const s1 = await prepare(c, { kind: 'sign', member: ada, release: relId });
+  assert.match(s1.reading.blocking.join(' '), /Ada \(you\) .* has already signed it/);
+  await c.ask('cancel', { plan: s1.plan });
   const s2 = await sign(c, { kind: 'sign', member: three, release: relId });
   assert.match(words(s2.review.reading), /Signed so far by Ada \(you\)/);
+  assert.match(words(s2.review.reading), /all 3 files are the same/);
   assert.match(s2.done.lines.map((l) => l.text).join(' '), /VERIFIED/);
   const v1 = await verifyRelease(relId, [w.relay.base]);
   assert.equal(v1.ok, true, v1.problems.join('; '));
@@ -163,7 +174,7 @@ test('the author, without a terminal: identities, a release, a collective founde
   const midId = mid.done.acts[0];
   const left = await prepare(c, { kind: 'sign', member: ada, release: midId });
   assert.match(left.reading.blocking.join(' '), /Ada \(you\) .* left the collective: from the collective's line \(record [0-9a-f]{8}…[0-9a-f]{4}\) their signature counts for nothing/);
-  await sign(c, { kind: 'sign', member: two, release: midId });
+  // Sim Two uploaded it (the member acting for the collective here now): Sim Three's signature makes two.
   await sign(c, { kind: 'sign', member: three, release: midId });
   const vm = await verifyRelease(midId, [w.relay.base]);
   assert.equal(vm.ok, true, vm.problems.join('; '));
@@ -179,7 +190,8 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(fw2, /Ada \(you\) .* already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them/);
   assert.doesNotMatch(fw2, /signs a resignation, alone/);
   assert.match(fw2, /Ada \(you\) \[[^\]]+\] leaves\. They hand over nothing/);
-  assert.match(fw2, /The signing key passes to Sim Two/);
+  // No signing key passes to anyone: a collective has none (was: "The signing key passes to Sim Two").
+  assert.doesNotMatch(fw2, /signing key passes/);
   assert.match(fw2, /2 shares, any 1 rebuild it \(was 3 shares, any 2\)/);
   assert.match(fw2, /Any one member alone can rebuild the chain key/);
   assert.match(fw2, /Absence is now judged by any 1 of the other parties \(was any 2 of the other parties\)\. A protected clause/);
@@ -196,7 +208,6 @@ test('the author, without a terminal: identities, a release, a collective founde
   const nextId = next.done.acts[0];
   const gone = await prepare(c, { kind: 'sign', member: ada, release: nextId });
   assert.match(gone.reading.blocking.join(' '), /Ada \(you\) .* is not a member/);
-  await sign(c, { kind: 'sign', member: two, release: nextId });
   await sign(c, { kind: 'sign', member: three, release: nextId });
   const v2 = await verifyRelease(nextId, [w.homes[0].base]);
   assert.equal(v2.ok, true, v2.problems.join('; '));
@@ -214,7 +225,8 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(ww.review.reading.title, /New words for the Releases area of “Makers”/);
   assert.match(www, /An ordinary change: it changes only the Releases area's own words, an operational matter in that area/);
   assert.match(www, /marked with the Releases area's power and signed by Sim Two .* and Sim Three/);
-  assert.match(www, /The collective writes it on its record at once, signed with its signing key: no rotation, no new keys \(Agreements rule 37c, Q8\)/);
+  // The record is drawn by a member with their own key (Agreements rule 60; was: "signed with its signing key").
+  assert.match(www, /The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective \(Agreements rule 60\): no rotation, no new keys \(Agreements rule 37c, Q8\)/);
   assert.match(www, /A change to the “Releases” area's own words: operational, in the “Releases” area/);
   assert.match(www, /Its mark names exactly that/);
   assert.equal(ww.review.reading.plain[0].text, 'We release only what we both checked.');
@@ -226,7 +238,6 @@ test('the author, without a terminal: identities, a release, a collective founde
   // A release under the recorded clone counts as before.
   commit(w.checkout, 'src/lib.rs', 'pub fn five() -> u8 { 5 }\n');
   const after8 = await sign(c, { kind: 'release', publisher: col.id, version: '11b.4' });
-  await sign(c, { kind: 'sign', member: two, release: after8.done.acts[0] });
   await sign(c, { kind: 'sign', member: three, release: after8.done.acts[0] });
   const v4 = await verifyRelease(after8.done.acts[0], [w.relay.base]);
   assert.equal(v4.ok, true, v4.problems.join('; '));
@@ -287,7 +298,12 @@ test('what you sign is what you saw: a wrong digest, a used review, a changed st
   assert.equal(s.history.length, before + 2, 'only the two confirmed releases were signed');
 });
 
-test('before drawing a record, a warning when the relays hold acts of the collective this device never made', async () => {
+// Was: "a warning when the relays hold acts of the collective this device never made", made by another
+// device holding the collective's own signing key. A collective has no signing key now (Agreements rule
+// 56): an act for it is a member's own act naming it (rule 58). The new equivalent: a member acting for
+// the collective from another device, its own line started afresh, and this device warned before it
+// draws a record that would leave that act outside its line, and refusing an ending until it catches up.
+test('before drawing a record, a warning when the relays hold acts made for the collective that this device never made or saw', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
@@ -295,34 +311,37 @@ test('before drawing a record, a warning when the relays hold acts of the collec
   s = await state(c);
   const col = s.collectives.find((x) => x.name === 'Devices')!;
   const quiet = await prepare(c, { kind: 'leave', collective: col.id, member: three });
-  assert.doesNotMatch(words(quiet.reading), /not in this device's sequence/);
+  assert.doesNotMatch(words(quiet.reading), /not among what this device made or saw/);
   await c.ask('cancel', { plan: quiet.plan });
 
-  // Another device of the collective: the same keys, its own sequence, started afresh.
+  // Sim Two on another device: its own key, a line of its own started afresh, acting for the
+  // collective: a payee pointer naming it and citing its latest decision (rule 58).
   const file = w.app.store.collective(col.id).f;
-  const other = new TestIdentity({ ...structuredClone(file.identity), sequence: [] });
-  const stray = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), {
+  const other = new TestIdentity({ ...structuredClone(w.app.store.identity(two).f), sequence: [] });
+  const stray = await other.publish(MIRS.money, MONEY_TYPES.pointer, pointerPayload({ payee: col.id, version: 1, rails: [[TEST_RAIL, new TextEncoder().encode('elsewhere')]] }), {
     public: true,
     relays: file.relays,
-    objects: [[file.agreement, file.agreement]],
+    objects: [[col.id, file.identity.cites![0]]],
   });
 
   const warned = await prepare(c, { kind: 'leave', collective: col.id, member: three });
-  const line = warned.reading.sections.flatMap((x) => x.lines).find((l) => /not in this device's sequence/.test(l.text));
+  const line = warned.reading.sections.flatMap((x) => x.lines).find((l) => /not among what this device made or saw/.test(l.text));
   assert.ok(line, words(warned.reading));
   assert.equal(line!.tone, 'warn');
-  assert.match(line!.text, new RegExp(`^1 act signed by the collective is at its relays but not in this device's sequence \\(latest ${stray.id.slice(0, 8)}…${stray.id.slice(-4)}\\)`));
-  assert.match(line!.text, /will count as made after its line \(Agreements, “Made before, made after”\)\. Client conformance: the collective's devices share their tips before a line is drawn\./);
+  assert.match(line!.text, new RegExp(`^1 act made for the collective is at its relays but not among what this device made or saw for it \\(latest ${stray.id.slice(0, 8)}…${stray.id.slice(-4)}\\)`));
+  assert.match(line!.text, /stays outside its line \(Agreements rule 58, “Made before, made after”\)\. Client conformance: the collective's devices share their heads before a line is drawn\./);
   assert.deepEqual(warned.reading.blocking, [], 'a warning, not a refusal');
+  await c.ask('cancel', { plan: warned.plan });
   // The same warning before a member change that draws a record.
   const rm = await prepare(c, { kind: 'change', collective: col.id, leave: [three] });
-  assert.match(words(rm.reading), /not in this device's sequence/);
-  // Identity rule 35 (was 17): its rotation keeps that device's line, shown first.
-  const rmLines = rm.reading.sections.find((x) => /Lines of acts the rotation keeps/.test(x.heading));
-  assert.ok(rmLines?.lines.some((l) => l.text.includes(stray.id) && /A line made elsewhere: 1 act, the latest .*its signature on an agreement.*Kept\./.test(l.text)), words(rm.reading));
+  assert.match(words(rm.reading), /not among what this device made or saw/);
+  // Identity rotation check 4 (was rule 35, the rotation keeping that device's line): a collective's
+  // rotation keeps no tip; the act made elsewhere is a member's, in that member's own sequence.
+  const kept = rm.reading.sections.find((x) => /What the rotation keeps/.test(x.heading));
+  assert.ok(kept?.lines.some((l) => /installs no signing key and keeps no tip/.test(l.text)), words(rm.reading));
   await c.ask('cancel', { plan: rm.plan });
   const plainChange = await prepare(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } });
-  assert.doesNotMatch(words(plainChange.reading), /not in this device's sequence/, 'no record, no warning');
+  assert.doesNotMatch(words(plainChange.reading), /not among what this device made or saw/, 'no record, no warning');
   await c.ask('cancel', { plan: plainChange.plan });
   // A fork or closing is refused, not warned (F131 IT2b, client
   // conformance): this device has not caught up with the other one.
@@ -332,6 +351,7 @@ test('before drawing a record, a warning when the relays hold acts of the collec
     assert.ok(gate, `${ask.kind}: ${ending.reading.blocking.join(' | ')}`);
     assert.match(gate!, new RegExp(`latest ${stray.id.slice(0, 8)}…${stray.id.slice(-4)}`));
     assert.match(gate!, /F131 IT2b, client conformance/);
+    await c.ask('cancel', { plan: ending.plan });
   }
 });
 
@@ -411,7 +431,10 @@ test("declaring absence under the collective's own rule: one signs, the others a
 
   // Judged by a fresh verifier: from the line, the absent member's signature counts for nothing.
   commit(w.checkout, 'src/lib.rs', 'pub fn absent() -> u8 { 13 }\n');
-  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'a.1' });
+  // A collective has no signing key: a member uploads the release with their own key, and that upload
+  // counts as their act for the Releases area (Agreements rules 58, 60). Sim One uploads it here, so
+  // Sim One and the absent Sim Three are the two this check needs (was: the collective's own signature).
+  const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'a.1', uploader: one });
   const relId = rel.done.acts[0];
   const absent = await prepare(c, { kind: 'sign', member: three, release: relId });
   assert.match(absent.reading.blocking.join(' '), /Sim Three .* was declared absent: from the collective's line .* their signature counts for nothing there/);
@@ -419,7 +442,6 @@ test("declaring absence under the collective's own rule: one signs, the others a
   // Signed with the core's own act, bypassing the client: it still counts for nothing.
   const t3 = w.app.store.identity(three);
   await agreementsSign(t3, relId, w.app.store.collective(col.id).f.relays);
-  await sign(c, { kind: 'sign', member: one, release: relId });
   const half = await verifyRelease(relId, [w.relay.base]);
   assert.equal(half.ok, false, 'Sim One and the absent Sim Three do not make two');
   await sign(c, { kind: 'sign', member: two, release: relId });
@@ -433,11 +455,16 @@ test("declaring absence under the collective's own rule: one signs, the others a
   await c.ask('cancel', { plan: refit.plan });
 });
 
-test("declaring the signing key's holder absent: no record, and the recovery rotation names the others' signatures (Agreements draft 9, C7, B16, B18)", async () => {
+// Was: "declaring the signing key's holder absent: no record, and the recovery rotation names the
+// others' signatures" (C7, B16, B18). A collective has no signing key now (Agreements rule 56), so no
+// member holds anything the collective needs to draw its line. The new equivalent: the first founder
+// declared absent is registered at once by a record the declaring member draws (rule 60), nothing
+// waits for a recovery rotation, and the refit is an ordinary member change.
+test("declaring absent the member who proposed the founding: the record is drawn at once by the declaring member, nothing waits for a recovery rotation (Agreements rules 56, 60)", async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, three] = ['Ada', 'Sim One', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
-  // Four members; Ada, the first founder, holds the signing key; absence is judged by any 3 of the others.
+  // Four members; absence is judged by any 3 of the others.
   await sign(c, { kind: 'found', name: 'Recovery', members: [ada, one, two, three], rules: {} });
   s = await state(c);
   const col = s.collectives.find((x) => x.name === 'Recovery')!;
@@ -445,42 +472,40 @@ test("declaring the signing key's holder absent: no record, and the recovery rot
   const d = await sign(c, { kind: 'declare', collective: col.id, member: ada });
   const dw = words(d.review.reading);
   assert.match(d.review.reading.title, /Ada .* is declared absent from “Recovery”/);
-  assert.match(dw, /Ada .* holds the collective's signing key, so the collective cannot draw its line without them: no record is made now/);
-  assert.match(dw, /takes effect at the recovery rotation, the member change that removes Ada .*names those signature acts beside the clone’s, so that they count there/);
-  assert.match(dw, /the collective's signing key signs nothing now/);
-  assert.equal(d.done.acts.length, 3, 'the declaration and two signature acts; no record');
+  assert.match(dw, /registers it at once by a record, its line, drawn by Sim One .* with their own key, naming the collective/);
+  assert.match(dw, /no member's absence keeps it from drawing its line \(Agreements rules 56, 60\)/);
+  assert.doesNotMatch(dw, /signing key signs|recovery rotation/);
+  assert.equal(d.done.acts.length, 4, 'the declaration, two signature acts, the record');
   s = await state(c);
   let now = s.collectives.find((x) => x.name === 'Recovery')!;
-  assert.equal(now.records, col.records, 'no line drawn with the declared holder’s key');
+  assert.equal(now.records, col.records + 1, 'the line, drawn at once');
   assert.deepEqual(now.members.map((m) => [m.id, m.left]), [[ada, true], [one, false], [two, false], [three, false]]);
 
-  // Meanwhile nothing draws a line with Ada's key.
+  // Nothing waits on Ada: another member may leave or be declared absent at once.
   for (const x of [
     { kind: 'leave', collective: col.id, member: three },
     { kind: 'declare', collective: col.id, member: three },
   ]) {
     const p = await prepare(c, x);
-    assert.match(p.reading.blocking.join(' '), /who holds the collective's signing key, was declared absent: the collective draws no line with their key\. Refit it first/, x.kind);
+    assert.deepEqual(p.reading.blocking, [], x.kind);
     await c.ask('cancel', { plan: p.plan });
   }
 
-  // The refit removing Ada is the recovery rotation: it names the two others' signature acts on the declaration.
-  // Three remain: absence then judged by any 2 of the other members.
+  // The refit removing Ada: an ordinary member change, nothing more asked of Ada.
   const r = await sign(c, { kind: 'change', collective: col.id, leave: [ada], rules: { safety: 2, release: 2, clone: 2, others: 2 } });
-  assert.match(words(r.review.reading), /Ada .* was declared absent while holding the signing key: this rotation is where the declaration takes effect .* It names the 2 other members’ signature acts on the declaration beside the clone’s, so that they count there \(Agreements draft 9, B18\)\. The clone is counted without Ada/);
+  assert.match(words(r.review.reading), /Ada .* already left: their resignation, or the declaration of their absence, is on the collective's record, so nothing more is asked of them/);
   s = await state(c);
   now = s.collectives.find((x) => x.name === 'Recovery')!;
   assert.equal(now.pending, false, 'the rotation counts');
   assert.deepEqual(now.members.map((m) => m.id), [one, two, three]);
 
-  // Judged by a fresh verifier: the clone the recovery rotation declared is in force, without Ada.
+  // Judged by a fresh verifier: the clone the rotation declared is in force, without Ada.
   commit(w.checkout, 'src/lib.rs', 'pub fn recovered() -> u8 { 17 }\n');
   const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'r.1' });
-  await sign(c, { kind: 'sign', member: one, release: rel.done.acts[0] });
   await sign(c, { kind: 'sign', member: two, release: rel.done.acts[0] });
   const v = await verifyRelease(rel.done.acts[0], [w.relay.base]);
   assert.equal(v.ok, true, v.problems.join('; '));
-  assert.equal(v.agreement, now.agreement, 'judged under the clone the recovery rotation put in force');
+  assert.equal(v.agreement, now.agreement, 'judged under the clone the rotation put in force');
 });
 
 test('money and endings (Agreements draft 10, F121 to F124): stakes at founding, a member leaving as a departed holder, a split service, the pointer check, every payout matching its stake, a debt sealed to every member, a release by the collective, a fork founding its successors first, a closing refused while a debt is open, a creditor\'s release, a closing', async () => {
@@ -502,7 +527,9 @@ test('money and endings (Agreements draft 10, F121 to F124): stakes at founding,
   // The stakes again, now with the release the collective owns.
   const st = await sign(c, { kind: 'stakes', collective: col.id, shares });
   assert.match(words(st.review.reading), /a share of all its income/);
-  assert.match(words(st.review.reading), /owns 1 release/);
+  // A work is owned by its own ownership agreement, on its claim: never a stake in the collective's
+  // terms, which carry one stake, on the collective itself (Agreements rules 7, 56; was: "owns 1 release").
+  assert.match(words(st.review.reading), /Its works are not in these terms: each work is owned by its own ownership agreement, on its claim.*It has uploaded 1 release/);
 
   // Shape A: Lou leaves by a member change, keeping their 15% as a departed holder.
   const out = await sign(c, { kind: 'change', collective: col.id, leave: [three], rules: { safety: 2, release: 2, clone: 2, others: 1 } });
@@ -650,55 +677,43 @@ test('money and endings (Agreements draft 10, F121 to F124): stakes at founding,
   assert.ok(s.collectives.find((x) => x.id === side.id)!.closed);
 });
 
-test('Identity rule 35 (was 17): a rotation keeps the other devices’ lines; a private one is shown, its card asked for and accepted; one left out on purpose is warned about, then void', async () => {
+// Was: "Identity rule 35 (was 17): a rotation keeps the other devices' lines; a private one is shown,
+// its card asked for and accepted; one left out on purpose is warned about, then void". A collective
+// has no signing key now, so it has no line of acts of its own for a rotation to keep or leave out:
+// its rotation installs no key and keeps no tip (Identity rotation check 4), and an act made for it
+// is a member's own, in the member's own sequence (Agreements rule 58). The new equivalent: the
+// review says so, lines named to leave out are said not to be read, and acts made for the
+// collective from another device stay valid through two member changes.
+test('Identity rotation check 4: a collective\'s rotation keeps no tip; acts made for it from another device stay valid through its rotations; lines named to leave out are not read', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, two, three] = ['Ada', 'Sim Two', 'Sim Three'].map((n) => idOf(s, n));
   await sign(c, { kind: 'found', name: 'Lines', members: [ada, two, three], rules: {} });
   s = await state(c);
   const col = s.collectives.find((x) => x.name === 'Lines')!;
-  const device = () => {
-    const file = w.app.store.collective(col.id).f;
-    return { file, other: new TestIdentity({ ...structuredClone(file.identity), sequence: [] }) };
-  };
-  const signature = (file: { agreement: string; relays: string[] }, pub: boolean) => ({ public: pub, relays: file.relays, objects: [[file.agreement, file.agreement]] as [string, string][] });
-
-  // Another device: a public act, then a private one.
-  let { file, other } = device();
-  const p1 = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, true));
-  const x = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, false));
+  const file = w.app.store.collective(col.id).f;
+  // Sim Two on another device: an act for the collective, naming it and citing its latest decision.
+  const other = new TestIdentity({ ...structuredClone(w.app.store.identity(two).f), sequence: [] });
+  const x = await other.publish(MIRS.money, MONEY_TYPES.pointer, pointerPayload({ payee: col.id, version: 1, rails: [[TEST_RAIL, new TextEncoder().encode('elsewhere')]] }), {
+    public: true,
+    relays: file.relays,
+    objects: [[col.id, file.identity.cites![0]]],
+  });
   const change = { kind: 'change', collective: col.id, rules: { safety: 2, release: 1, clone: 2, others: 2 } };
-  const asked = await prepare(c, change);
-  const shown = asked.reading.sections.find((y) => /Lines of acts the rotation keeps/.test(y.heading))!;
-  const unread = shown.lines.find((l) => l.text.includes(x.id))!;
-  assert.match(unread.text, /A line made elsewhere that this device cannot read, ending at .*private act made elsewhere.*Give its card/s);
-  assert.match(unread.text, /No card was given, so it is left out/);
-  assert.ok(shown.lines.some((l) => l.tone === 'bad' && new RegExp(`${x.id}.*becomes void`, 's').test(l.text)), 'the warning, before signing');
-  assert.deepEqual(asked.reading.blocking, [], 'asked, never refused');
-  await c.ask('cancel', { plan: asked.plan });
-  // A card that names no number: refused, with why.
-  const typo = await prepare(c, { ...change, cards: `${x.id} two` });
-  assert.ok(typo.reading.blocking.some((b: string) => /a card is a latest act, a position and a summary/.test(b)), typo.reading.blocking.join(' | '));
-  await c.ask('cancel', { plan: typo.plan });
-  // Its card, as that device shows it: kept.
-  const card = ownLine(other.f.sequence).card!;
-  const kept = await sign(c, { ...change, cards: `${card.act} ${card.position} ${card.summary}` });
-  assert.ok(words(kept.review.reading).includes(`Kept by the card given: position 2, summary ${card.summary}`));
+  const kept = await sign(c, change);
+  const shown = kept.review.reading.sections.find((y) => /What the rotation keeps/.test(y.heading))!;
+  assert.ok(shown.lines.some((l) => /installs no signing key and keeps no tip/.test(l.text)), words(kept.review.reading));
   assert.doesNotMatch(words(kept.review.reading), /becomes void/);
+  assert.deepEqual(kept.review.reading.blocking, []);
   assert.match(kept.done.title, /done$/, JSON.stringify(kept.done));
-  assert.equal(await standingOf(col.id, x.id, x.key), 'valid', 'the private act, kept by its card');
-  assert.equal(await standingOf(col.id, p1.id), 'valid');
+  assert.equal(await standingOf(two, x.id), 'valid', 'the act made elsewhere, after the rotation');
 
-  // A line the members do not recognise, left out by name: warned, then void.
-  ({ file, other } = device());
-  const y = await other.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(file.agreement), signature(file, true));
-  const out = await sign(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 2 }, leaveLines: [y.id] });
-  const ow = out.review.reading.sections.find((z) => /Lines of acts the rotation keeps/.test(z.heading))!.lines;
-  assert.ok(ow.some((l) => l.tone === 'bad' && l.text.includes(y.id) && /Left out by name: its acts become void/.test(l.text)));
-  assert.ok(ow.some((l) => l.tone === 'bad' && /becomes void, unless someone relied on it/.test(l.text)), 'the warning, shown in the review the owner confirms');
+  // Lines named to leave out: said not to be read, never a refusal, nothing made void.
+  const out = await sign(c, { kind: 'change', collective: col.id, rules: { safety: 2, release: 2, clone: 2, others: 2 }, leaveLines: [x.id] });
+  const ow = out.review.reading.sections.find((z) => /What the rotation keeps/.test(z.heading))!.lines;
+  assert.ok(ow.some((l) => l.tone === 'warn' && /are not read: a collective has no line of its own acts/.test(l.text)), JSON.stringify(ow));
   assert.match(out.done.title, /done$/, JSON.stringify(out.done));
-  assert.notEqual(await standingOf(col.id, y.id), 'valid', 'left out: void');
-  assert.equal(await standingOf(col.id, x.id, x.key), 'valid', 'the line kept before stays valid');
+  assert.equal(await standingOf(two, x.id), 'valid', 'still valid: nothing of the collective\'s own was left out');
 });
 
 /** An act's standing, as a reader holding every act of the collective at its homes and relays judges it. */

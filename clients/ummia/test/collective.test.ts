@@ -1,5 +1,7 @@
-// Ummia's round 2 (F339, F353): a collective's releases, moved here from
-// Edubba, signed with the member's own key. A collective founded from
+// Ummia's round 2 (F339, F353; round 8: the keyless collective, rule 58, no
+// member keys; the layers renumbered, so the grid's "Publishing" is a finer
+// area of the Envelopes layer reaching bakes): a collective's releases,
+// moved here from Edubba, signed with the member's own key. A collective founded from
 // Edubba's grid: Publishing held by A and iPa, two keys; Development by iPh.
 // A adds it in Ummia, acts for it, and releases a folder: the release is the
 // collective's act, signed with A's key, counting once iPa signs it in Dub's
@@ -8,7 +10,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { closeAll, dub, edubba, folder, refused, start, ummia, type Relay } from './world.ts';
+import { closeAll, dub, edubba, folder, publishingGrid, refused, start, ummia, type Relay } from './world.ts';
 import type { Done, Review, State } from '../src/shapes.ts';
 
 let homes: Relay[];
@@ -19,9 +21,13 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 test('a collective’s release from Ummia, signed with a member’s own key; a second key from Dub', async () => {
@@ -32,17 +38,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   const iPa = await dub(H, R);
   const iPh = await dub(H, R);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
-  const grid = {
-    members: [A.id, iPa.id, iPh.id],
-    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
-    chainKey: 2,
-    absence: 2,
-    areas: [
-      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id], number: 2 },
-      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
-    ],
-    clone: 2,
-  };
+  const grid = publishingGrid(A.id, iPa.id, iPh.id);
   const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
   assert.deepEqual(rv.reading.blocking, []);
   const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
@@ -59,7 +55,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   await u.c.ask('bring', { id: A.id, words: A.words, address: H[0] });
   await u.c.ask('settings', { relays: R, track: R });
   const added = await u.c.ask<{ lines: { text: string }[] }>('collective add', { id: col });
-  assert.match(added.lines[0].text, /its releases go through its area “Publishing”, 2 keys of 2/);
+  assert.match(added.lines[0].text, /its releases go through “Publishing”, 2 signatures of 2/);
   let st = await u.c.ask<State>('state');
   assert.ok(st.actors.some((a) => a.id === col && a.kind === 'collective' && a.available));
   await u.c.ask('acting', { id: col });
@@ -71,7 +67,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   const dir = folder();
   const r = await u.c.ask<Review>('release prepare', { folder: dir, name: 'tablets', version: '1', previous: '' });
   assert.match(r.title, /^Publish tablets 1 for the collective/);
-  assert.ok(r.sections.some((s) => s.lines.some((l) => /signed with your own key for it \(F353\).*“Publishing” is met, 2 keys of 2/.test(l.text))), JSON.stringify(r.sections.map((s) => s.lines)));
+  assert.ok(r.sections.some((s) => s.lines.some((l) => /uploaded with your own identity’s key, naming the collective \(rule 58\).*“Publishing” is met, 2 signatures of 2/.test(l.text))), JSON.stringify(r.sections.map((s) => s.lines)));
   const d = await u.c.ask<Done>('release confirm', { plan: r.plan, digest: r.digest });
   const rel = d.acts[0];
   assert.match(d.title, /is published for the collective/);
@@ -92,7 +88,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   assert.match(signed.lines[0].text, /Signed for the collective with your own key/);
   const standing = await u.c.ask<{ met: boolean; lines: { text: string }[] }>('collective release standing', { id: rel });
   assert.equal(standing.met, true, JSON.stringify(standing.lines));
-  assert.match(standing.lines[0].text, /2 of 2 keys, 2 with their own key/);
+  assert.match(standing.lines[0].text, /2 of 2 signatures, each with its member’s own key/);
   const checked = await u.c.ask<{ ok: boolean }>('release check', { id: rel });
   assert.equal(checked.ok, true, JSON.stringify(checked));
 

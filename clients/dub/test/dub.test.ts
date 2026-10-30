@@ -28,6 +28,10 @@ import { namesOf } from '../src/names.ts';
 import { OPS } from '../src/ops.ts';
 import { PUBLISH_WARNING, TEST_ONLY as SHOWN_TEST_ONLY } from '../src/page/view.ts';
 import type { Item, Message, State } from '../src/shapes.ts';
+import { UNITS_MODULES } from '../../damgar/src/units.ts';
+
+/** Regtest satoshis: the unit a test price names. */
+const SATS = UNITS_MODULES[0].units.find((u) => u.network === 3)!.hash;
 
 const PHONE = new Uint8Array(readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url)));
 
@@ -134,7 +138,7 @@ test('a new identity: the chain key’s words shown once and kept nowhere, three
   assert.match(carried.say[0], /These are the signing key’s words/);
   assert.match(carried.say.join(' '), /post as this identity and read its private messages/);
 
-  // A post, read back verified; with a phone photo, stripped; in the feed, newest first; a picture withdrawn.
+  // A post, read back verified; with a phone photo, stripped; in the feed, newest first. The picture is never withdrawn (a bake); a price tag is.
   const p1 = await c.ask<{ post: Item }>('post', { text: 'Hello from Dub.' });
   assert.equal(p1.post.standing, 'valid');
   assert.equal(p1.post.text, 'Hello from Dub.');
@@ -143,21 +147,43 @@ test('a new identity: the chain key’s words shown once and kept nowhere, three
   const p2 = await c.ask<{ post: Item } & Lines>('post', { text: 'With a picture.', jpeg: Buffer.from(PHONE).toString('base64') });
   assert.ok(p2.lines.some((l) => /the place the picture was taken \(GPS\)/.test(l.text)));
   assert.match(p2.post.pictures[0].src!, /^data:image\/jpeg;base64,/);
-  assert.equal(p2.post.pictures[0].withdrawable, true);
+  assert.equal(p2.post.pictures[0].own, true);
+  assert.equal(p2.post.pictures[0].bake, p2.post.pictures[0].publication, 'its bake, under its name from before too');
   const pic = (await reader(p2.post.id)).refs[0] as ShownPicture;
   assert.deepEqual(pic.picture!.carries, [], 'no location, camera data or preview left');
   assert.deepEqual(
     (await feed(c)).map((p) => p.id),
     [p2.post.id, p1.post.id],
   );
-  await c.ask('withdraw', { publication: p2.post.pictures[0].publication });
+  // The premise changed (decided 28 October 2026, one withdrawal per layer;
+  // Envelopes rule 24, the withdrawal retired): this used to withdraw the
+  // picture and see it hidden. A bake is never withdrawn by the protocol: a
+  // picture with no price tag and no publication has nothing to withdraw,
+  // said so, nothing signed, and it stays shown. (A profile's picture is the
+  // same: a later profile names another picture.)
+  const signedBefore = (await relayAt(relay.base).feed({ signer: id })).items.length;
+  await refused(c.ask('withdraw', { bake: p2.post.pictures[0].bake }), /nothing to withdraw at the protocol level: a bake is never withdrawn, its bytes staying where they were uploaded unless homes and relays drop them.*A profile’s picture is changed by a later profile simply naming another picture\. Nothing was signed\./);
+  assert.equal((await relayAt(relay.base).feed({ signer: id })).items.length, signedBefore, 'nothing signed');
   const after = (await feed(c))[0];
-  assert.equal(after.pictures[0].src, null);
-  assert.match(after.pictures[0].problem!, /withdrawn by its signer/);
+  assert.match(after.pictures[0].src!, /^data:image\/jpeg;base64,/, 'still shown');
+  assert.equal(after.pictures[0].problem, null);
   const other = TestIdentity.create({ homes: [homes[0].home] });
   await other.publishGenesis();
   const theirs = await barebonePost(other, { text: 'Not yours.', jpeg: PHONE, relays: [relay.base] });
   await refused(c.ask('withdraw', { publication: theirs.picture!.id }), /another identity/);
+  // What does end, named by its layer: a sealed post's price tag on its bare bake, withdrawn by its uploader (a version with no price, Money rule 18).
+  const sold = await c.ask<{ post: string }>('sell', { text: 'Only for buyers.', teaser: 'A sealed note.', value: '500', unit: SATS });
+  const priced = (await feed(c)).find((x) => x.id === sold.post)!;
+  assert.equal(priced.sealed?.state, 'yours');
+  assert.equal(priced.sealed?.ends, 'tag', 'its own price tag is what ends');
+  assert.match(priced.sealed!.price, /500/);
+  const w = await c.ask<{ id: string; ended: string; lines: { text: string }[] }>('withdraw', { bake: priced.sealed!.bake });
+  assert.equal(w.ended, 'tag');
+  assert.match(w.lines.map((l) => l.text).join(' '), /Price tag withdrawn: version 2 carries no price.*The bytes stay where they were uploaded unless homes and relays drop them/);
+  const unpriced = (await feed(c)).find((x) => x.id === sold.post)!;
+  assert.equal(unpriced.sealed?.ends, null, 'nothing left to withdraw');
+  assert.match(unpriced.sealed!.problem!, /withdrew its price tag/);
+  await refused(c.ask('withdraw', { bake: priced.sealed!.bake }), /nothing to withdraw at the protocol level/);
 
   // Starting again before confirming forgets an identity never published; the one in use stays.
   await c.ask('begin', { homes: [homes[0].base], relays: [] });

@@ -34,7 +34,7 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright-core';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
-import { closeAll, damgar, dub, edubba, founded, kishib, moneyCollective, start, type Relay } from './world.ts';
+import { closeAll, damgar, dub, edubba, founded, kishib, moneyCollective, start, type Relay, shows } from './world.ts';
 import { FakeChain, addressScript } from './chain.ts';
 import { StubLnd, TestNode } from './node.ts';
 import { Service } from '../../anchoring-service/src/service.ts';
@@ -104,11 +104,15 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const s of sites) await new Promise((r) => s.close(r));
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  try {
+    await browser?.close().catch(() => undefined);
+    await closeAll();
+  } finally {
+    for (const s of sites) await new Promise((r) => s.close(r));
+    for (const r of [...(homes ?? []), relay]) await r?.stop().catch(() => undefined);
+  }
 });
 
 async function open(url: string, size = MAC): Promise<{ context: BrowserContext; page: Page }> {
@@ -256,14 +260,14 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await shot(gp, 'mac-02-accept');
   await acceptAll(gp);
   await tilesAre(gp);
-  assert.match(await gp.locator('.k-me').innerText(), /Alice/);
+  await shows(gp.locator('.k-me'), /Alice/);
   await shot(gp, 'mac-03-home');
   await columns(gp, 'mac');
 
   // The identity panel: Alice in use; + Add's three ways; her menu.
   await gp.locator('[data-k-open="identity"]').click();
   await sees(gp, '.k-panel [data-k-use]', 'panel');
-  assert.match(await gp.locator('.k-panel').innerText(), /Alice/);
+  await shows(gp.locator('.k-panel'), /Alice/);
   await gp.locator('[data-k-add="toggle"]').click();
   assert.deepEqual((await gp.locator('.k-panel [data-k-add]:not([data-k-add="toggle"]) .k-n').allInnerTexts()), ['Make one', 'Bring one', 'Use one from Kišib']);
   await shot(gp, 'mac-04-identity-panel');
@@ -271,7 +275,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   assert.deepEqual((await gp.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Words', 'Line and homes', 'New words from Kišib', 'A collective under it', 'Remove from Damgar…']);
   await gp.getByRole('menuitem', { name: 'Remove from Damgar…' }).click();
   await sees(gp, '[data-k-remove]', 'remove said');
-  assert.match(await gp.locator('[data-k-remove]').innerText(), /Damgar forgets .*signing words/);
+  await shows(gp.locator('[data-k-remove]'), /Damgar forgets .*signing words/);
   await shot(gp, 'mac-05-remove-said');
   await gp.locator('[data-k-remove-no]').click();
   await gp.keyboard.press('Escape');
@@ -290,7 +294,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await modal.locator('input[value=hand]').check();
   await modal.getByRole('button', { name: 'Tip' }).click();
   await modal.locator('textarea.dub-hand').waitFor({ timeout: 60_000 });
-  assert.match(await modal.innerText(), /In Damgar: Waiting, \+ Paste an act to sign/);
+  await shows(modal, /In Damgar: Waiting, \+ Paste an act to sign/);
   await shot(dp, 'dub-01-by-hand');
   const copied = await modal.locator('textarea.dub-hand').inputValue();
   await modal.locator('[data-k-popup="close"]').click();
@@ -301,7 +305,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await sees(gp, '#status .k-note.k-done', 'pasted');
   const pasted = gp.locator('#pane .k-act', { hasText: 'pasted by hand' });
   await pasted.waitFor();
-  assert.match(await pasted.innerText(), /700 regtest satoshis[\s\S]*for “by hand”[\s\S]*On Lightning, to their flow/);
+  await shows(pasted, /700 regtest satoshis[\s\S]*for “by hand”[\s\S]*On Lightning, to their flow/);
   await shot(gp, 'mac-11-pasted');
   await done(gp, pasted.getByRole('button', { name: 'Sign it' }), 'pasted signed');
   // Bob's Damgar makes the invoice (its own page is tested elsewhere); Alice's Waiting shows it to pay, the proof pasted back.
@@ -323,7 +327,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await prof.waitFor({ timeout: 60_000 });
   await prof.getByRole('button', { name: 'Pay' }).click();
   await modal.locator('form#pay[data-kind="pay"]').waitFor({ timeout: 60_000 });
-  assert.match(await modal.innerText(), /Damgar pops up here/);
+  await shows(modal, /Damgar pops up here/);
   await modal.locator('input[name=value]').fill('900');
   await modal.locator('input[name=whatFor]').fill('asked');
   await modal.locator('input[value=damgar]').check();
@@ -349,7 +353,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await shot(dp, 'dub-02-damgar-panel');
   // It waits in Damgar's Waiting too, until authorised.
   await go(gp, 'waiting', 'to-pay');
-  assert.match(await gp.locator('#pane').innerText(), /900 regtest satoshis/);
+  await shows(gp.locator('#pane'), /900 regtest satoshis/);
   await fl.locator('button:has-text("Authorise and sign")').click();
   await dp.waitForSelector('.k-frame', { state: 'detached', timeout: 60_000 });
   await dp.locator('#status .k-note', { hasText: 'Damgar signed it' }).waitFor({ timeout: 60_000 });
@@ -372,7 +376,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await gp.locator('#pane .k-act').waitFor({ timeout: 60_000 }).catch(async () => {
     await gp.locator('[data-k-col="asked"]').click();
   });
-  assert.match(await gp.locator('#pane').innerText(), /In all: at most 3 000 regtest satoshis for the whole lane/);
+  await shows(gp.locator('#pane'), /In all: at most 3 000 regtest satoshis for the whole lane/);
   await shot(gp, 'mac-20-lane-asked');
   await done(gp, gp.getByRole('button', { name: 'Grant this lane' }), 'granted');
   // Dub: past the cap per act, refused; within it, 1 800 from the post and 1 000 from the profile; then the cap in all.
@@ -401,7 +405,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   assert.match(second, /In all: 1 200 regtest satoshis left/);
   await actMenu(theirs, 'Tip');
   await modal.locator('form#pay').waitFor({ timeout: 60_000 });
-  assert.match(await modal.innerText(), /In all: 200 regtest satoshis left of 3 000/);
+  await shows(modal, /In all: 200 regtest satoshis left of 3 000/);
   await shot(dp, 'dub-04-chooser-in-all');
   await modal.locator('[data-k-popup="close"]').click();
   await payLane('profile', '500', /would go past the lane’s cap in all of 3000: 200 left/);
@@ -409,7 +413,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   // Damgar: what is left, and the record of Dub's payments under the lane.
   await go(gp, 'lanes', 'in-force');
   await gp.locator('#pane .damgar-lane', { hasText: 'In all' }).waitFor({ timeout: 60_000 });
-  assert.match(await gp.locator('#pane .damgar-lane').first().innerText(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent \(2 800 regtest satoshis asked, not paid yet\), 200 regtest satoshis left/);
+  await shows(gp.locator('#pane .damgar-lane').first(), /In all\s*3 000 regtest satoshis · 2 800 regtest satoshis spent \(2 800 regtest satoshis asked, not paid yet\), 200 regtest satoshis left/);
   await shot(gp, 'mac-21-lane-in-all');
   await go(gp, 'account', 'under');
   assert.equal(await gp.locator('#pane .k-act').count(), 2);
@@ -422,7 +426,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await alice.c.ask('pay', { how: 'lane', kind: 'pay', signer: bob.id, value: '1000', unit: R_UNIT });
   await go(gp, 'lanes', 'in-force');
   await gp.locator('#pane .damgar-over').waitFor({ timeout: 60_000 });
-  assert.match(await gp.locator('#pane .damgar-over').innerText(), /overspent by 800 regtest satoshis/);
+  await shows(gp.locator('#pane .damgar-over'), /overspent by 800 regtest satoshis/);
   await shot(gp, 'mac-23-overspent');
   // Account: the payments, each a card with its two menus.
   await go(gp, 'account', 'payments');
@@ -438,7 +442,7 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await shot(gp, 'mac-25-signer-menu');
   await gp.keyboard.press('Escape');
   await go(gp, 'account', 'summary');
-  assert.match(await gp.locator('#pane').innerText(), /Went out \(verified\)/);
+  await shows(gp.locator('#pane'), /Went out \(verified\)/);
   await shot(gp, 'mac-26-summary');
 
   // The same page at a phone's size: the tiles stacked, each column first, a part with its back arrow.
@@ -458,9 +462,9 @@ test('the web client by clicks, at a phone’s size and a Mac’s: Make an ident
   const { context: wc, page: wp } = await open(`${damgarWeb}/`, PHONE);
   await sees(wp, '[data-add="make"]', 'web first screen');
   // The banner in one line, its "?" opening the risks.
-  assert.match(await wp.locator('#for-testing-only summary').innerText(), /^For testing only\. Test identities and test networks only, until MOR is frozen\. No real money\. Damgar holds no wallet\./);
+  await shows(wp.locator('#for-testing-only summary'), /^For testing only\. Test identities and test networks only, until MOR is frozen\. No real money\. Damgar holds no wallet\./);
   await wp.locator('#for-testing-only summary').click();
-  assert.match(await wp.locator('#for-testing-only').innerText(), /could copy its signing key, and the on-chain request key Damgar makes/);
+  await shows(wp.locator('#for-testing-only'), /could copy its signing key, and the on-chain request key Damgar makes/);
   await wp.locator('#for-testing-only summary').click();
   assert.ok(await wp.locator('[data-add="kishib"]').isDisabled(), 'never in the web client');
   // Make an identity: its chain key's words shown once, three typed back.
@@ -519,7 +523,7 @@ test('the web client by clicks, at a phone’s size and a Mac’s: Make an ident
   await under.waitFor({ timeout: 60_000 });
   // Named by its display name where it has one; this one has none, so by its short ID.
   const colShort = (await under.innerText()).match(/mid1\w{3}…\w{3}/)![0];
-  assert.match(await under.innerText(), /collective/);
+  await shows(under, /collective/);
   await shot(mp, 'mac-web-02-panel-collective');
   await under.click();
   // Acting as it: shown top right beside its member; Waiting gains its part.
@@ -530,7 +534,7 @@ test('the web client by clicks, at a phone’s size and a Mac’s: Make an ident
   assert.ok((await mp.locator('.k-col').innerText()).includes('For the collective'));
   assert.equal(await mp.locator(`#pane h2 [data-k-who="${col}"] .k-idbtn`).count(), 1);
   // Its promise to pay is read back and signed there (`collective.test.ts` signs them through the program).
-  assert.match(await mp.locator('#pane').innerText(), /Its Money area, “Money”: 2 holders, 1 key; above 10,000 an act, one more/);
+  await shows(mp.locator('#pane'), /Its Money area, “Money”: 2 holders, 1 key; above 10,000 an act, one more/);
   await shot(mp, 'mac-web-03-for-the-collective');
   // The same gesture again: back to A alone.
   await mp.locator('[data-k-open="identity"]').click();
@@ -580,7 +584,7 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
   await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
   await sees(gp, '.k-tile', 'tiles through Kišib');
-  assert.match(await gp.locator('.k-me').innerText(), /Max/);
+  await shows(gp.locator('.k-me'), /Max/);
   // A tip prepared in Max's Dub (which holds the key there), found here through Kišib's opening.
   const post = (await bob.c.ask<{ post: { id: string } }>('post', { text: 'For Max to tip.' })).post.id;
   await max.c.ask('tip', { post, signer: bob.id, value: '400', unit: R_UNIT });
@@ -666,12 +670,12 @@ test('H112: through Kišib’s runner with the opening unticked, the first use n
   // Ticked in Kišib: the rules saved again in Settings are sealed, through Kišib's panel.
   await k.c.ask('runner opening', { pairing: app.id, identity: max.id, on: true });
   await go(gp, 'settings', 'accept');
-  assert.match(await gp.locator('#pane').innerText(), /Kept in Damgar only/);
+  await shows(gp.locator('#pane'), /Kept in Damgar only/);
   await gp.locator('#pane').getByRole('button', { name: 'Save to my list' }).click();
   await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
   await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
   await sees(gp, '#status .k-note.k-done', 'sealed');
-  assert.match(await gp.locator('#status').innerText(), /sealed to this identity and kept at its homes/);
+  await shows(gp.locator('#status'), /sealed to this identity and kept at its homes/);
   assert.deepEqual(problems, []);
 });
 
@@ -699,7 +703,7 @@ test('Edubba’s pieces by clicks: a payment prepared for Damgar; a collective�
   await shot(ep, 'edubba-pay-member');
   await ep.locator('form#pay-member').getByRole('button', { name: 'Prepare it for Damgar' }).click();
   await sees(ep, 'form#pay-member .k-note.k-done', 'edubba-paid');
-  assert.match(await ep.locator('form#pay-member .k-note.k-done').innerText(), /Prepared, not signed/);
+  await shows(ep.locator('form#pay-member .k-note.k-done'), /Prepared, not signed/);
   // The anchor of one of its acts, the service's offer read, a tier chosen.
   await ep.locator('#e-real-anchor > summary').click();
   await ep.locator('form#anchor-offers [name=service]').fill(svc.id);

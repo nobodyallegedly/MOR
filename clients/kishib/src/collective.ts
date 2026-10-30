@@ -46,7 +46,6 @@ import {
   lockMedia,
   makeRotation,
   newEncryptionSecret,
-  newSigningSecret,
   openMedia,
   openSealed,
   pickupTag,
@@ -55,7 +54,6 @@ import {
   rebuildChainKeyFromPaper,
   sha256,
   shareOnPaper,
-  signingPublic,
   unhex,
   verifyShare,
   workHash,
@@ -64,8 +62,8 @@ import {
 import { TestIdentity, sealFor } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { actsBy, checkWarned, planLines, type LinePlan } from '../../genesis/src/lines.ts';
-import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { actsBy } from '../../genesis/src/lines.ts';
+import { toWords } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, carriedKey, servedChain } from '../../dub/src/carryin.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -75,7 +73,7 @@ import { readChanges } from '../../collective/src/explain.ts';
 import { readIdentity, recordWords, type Read } from './read.ts';
 import { paperOf, seedOf, wipe, Refused, type Paper } from './words.ts';
 import { grouped, type Line, type Review, type Section, type Sitting } from './shapes.ts';
-import { addresses, holding, put, FORGOTTEN_SAY, NEW_WORDS_SAY } from './common.ts';
+import { addresses, holding, put, FORGOTTEN_SAY } from './common.ts';
 
 /** Said where a collective's signing key's words are asked for: there are none. */
 export const NO_WORDS_SAY = 'A collective has no signing key (Identity rule 1): its rotation installs none, so there are no words to show. Its members act for it with their own keys, naming it.';

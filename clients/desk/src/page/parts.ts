@@ -778,7 +778,7 @@ ${next}<div class="here" data-here-proposal="${e(p.act)}" role="status" aria-liv
 
 /** Said under a member change waiting for Kišib (`src/kishib.ts`, COLLECTIVE_RENEW_SAY), word for word. */
 export const COLLECTIVE_RENEW_SAY =
-  'When Kišib’s rotation counts, it shows the collective’s new signing key’s words once, for the member who holds that key (here). Give them below: Edubba then follows the change, and signs for the collective with the new key.';
+  'When Kišib’s rotation counts, Edubba takes it from the collective’s homes: the members it names and the agreement it declares. A collective has no signing key (Identity rule 1): there are no words to give, and its members go on acting for it each with their own key.';
 
 /** Said where Edubba's signing key for an identity no longer counts (`src/kishib.ts`, RENEW_SAY), word for word. */
 export const RENEW_SAY =
@@ -794,7 +794,7 @@ export function renewIdentityForm(id: string, name?: string): string {
 
 /** The box for a collective's new signing key's words, after Kišib. */
 export function renewCollectiveForm(collective: string): string {
-  return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><label>The collective’s new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit">Take the new words</button></div></form>`;
+  return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><div class="row"><button type="submit">Take Kišib’s rotation</button></div></form>`;
 }
 
 /** Said where a member change waits for its rotation (`src/real.ts`, WAIT_FOR_KISIB). */

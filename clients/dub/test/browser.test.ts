@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Locator, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { post as barebonePost, readPost, soundBytes, type ShownPicture, type ShownRecording } from '../../barebone/src/post.ts';
-import { POST_SPECS, PUBLICATION } from '../../barebone/src/specs.ts';
+import { BAKE, POST_SPECS } from '../../barebone/src/specs.ts';
 import { strip as stripSound } from '../../../modules/audio/src/audio.ts';
 import { serve, type Running } from '../src/server.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
@@ -207,9 +207,16 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await audio.waitFor({ timeout: 60_000 });
   assert.match((await audio.getAttribute('src'))!, /^blob:/, 'played from bytes the Module checked');
   assert.equal(await audio.evaluate((x) => (x as HTMLAudioElement).controls && !(x as HTMLAudioElement).autoplay), true, 'played on the listener’s action, with its controls');
+  // The premise changed (decided 28 October 2026, one withdrawal per layer): a recording is a bake, never withdrawn.
+  // Its menu no longer offers "Withdraw the recording"; it says why, and what could end instead.
   await cardOf(page, withRecording).locator('.k-actid').click();
-  await page.getByRole('menuitem', { name: 'Withdraw the recording', exact: true }).waitFor();
+  assert.equal(await page.getByRole('menuitem', { name: 'Withdraw the recording', exact: true }).count(), 0, 'no withdrawal of a bake');
+  await page.getByRole('menuitem', { name: 'Why the recording can’t be withdrawn', exact: true }).click();
+  const kept = page.locator('.k-pop .dub-kept, .dub-kept').first();
+  await kept.waitFor();
+  assert.match(await kept.innerText(), /nothing to withdraw at the protocol level[\s\S]*bytes stay where they were uploaded unless homes and relays drop them[\s\S]*a price tag \(withdrawn by its signer\) or a publication \(ended by a later version selling nothing\)[\s\S]*a later profile simply names another picture/);
   await page.keyboard.press('Escape');
+  await kept.waitFor({ state: 'detached' });
   // One the Module refuses: refused in plain words, nothing published.
   const postsBefore = (await app.dub.feed()).items.length;
   await ta.fill('Not a recording.');
@@ -234,7 +241,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   // A damaged recording, published by a client that did not check it: not played, said so.
   const damagedBytes = new Uint8Array(readFileSync(SOUND('truncated.m4a')));
   const l = lockMedia(damagedBytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
-  const damaged = await writer.publish(POST_SPECS.envelopes, PUBLICATION, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.audio)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, damagedBytes.length], [4, l.nonce], [5, l.key], [6, [relay.base]]])), { public: true, relays: [relay.base] });
+  const damaged = await writer.publish(POST_SPECS.envelopes, BAKE, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.audio)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, damagedBytes.length], [4, l.nonce], [5, l.key], [6, [relay.base]]])), { public: true, relays: [relay.base] });
   await relayAt(relay.base).putMedia(l.locked);
   const damagedPost = await barebonePost(writer, { text: 'A recording cut short.', relays: [relay.base], refs: [[damaged.id, writer.id]] });
 
