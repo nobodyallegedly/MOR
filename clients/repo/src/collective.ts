@@ -389,12 +389,13 @@ export class TestCollective {
 
   /**
    * Where its agreements, records and the signatures on them are left: its
-   * relays, and its homes. A collective publishes no routes (it signs no
-   * everyday act, Identity rule 1), so a reader who knows only where it lives
-   * (Kišib, from its homes) finds its agreement there.
+   * relays. A collective publishes no routes (it signs no everyday act,
+   * Identity rule 1), so a reader finds them through its members' routes
+   * (Kišib reads them so, `clients/kishib/src/collective.ts`). Not its homes
+   * too: the tests of a record lost on the way to the relay need it lost.
    */
   get places(): string[] {
-    return [...new Set([...this.f.relays, ...this.f.identity.homes.map((h) => h.hint)])];
+    return [...this.f.relays];
   }
 
   /** The collective's chain as its next act cites it (rule 58): its latest decision and the head this device made since. */
