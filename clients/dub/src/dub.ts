@@ -2491,7 +2491,7 @@ export class Dub {
    * default, everything has to be done in Damgar… now we're looking at
    * using more to do something closer to a prototype"): under Dub's lane,
    * with what is left of it; Ask Damgar, a money message it queues; by
-   * hand, the draft shown to copy for Damgar. A purchase names its offer,
+   * hand, the draft shown to copy for Damgar. A purchase follows its price tag,
    * which a money message cannot carry yet: only the lane buys.
    */
   payWays(a: { kind: 'tip' | 'buy' | 'vow' | 'pay'; post?: string; signer?: string; bake?: string; seller?: string }): Promise<PayWays> {
@@ -2512,7 +2512,7 @@ export class Dub {
       const lanes = await this.money.lanes(me, s, hints).catch(() => []);
       const lane = lanes.find((l) => l.state === 'in force');
       const purchase = a.kind === 'buy' || a.kind === 'vow';
-      const noDraft = 'A purchase names the seller’s offer, which a money message to Damgar cannot carry yet: buy it under Dub’s lane.';
+      const noDraft = 'A purchase follows the seller’s price tag, which a money message to Damgar cannot carry yet: buy it under Dub’s lane.';
       let spent: string | null = null;
       let left: string | null = null;
       let total: string | null = null;
@@ -2776,7 +2776,7 @@ export class Dub {
     });
   }
 
-  /** A post sealed with a price (pay-per-view), its offer, its key kept here for each buyer. */
+  /** A post sealed for sale (pay-per-view): its bake, its uploader's price tag, its key kept here for each buyer. */
   sell(a: { text: string; teaser?: string; value: string; unit: string; referral?: string }): Promise<{ post: string; lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();

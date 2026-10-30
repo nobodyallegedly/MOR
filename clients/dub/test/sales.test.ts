@@ -135,7 +135,7 @@ async function sales(): Promise<{ owners: Item; theirs: Item }> {
   throw new Error(`the sales never showed: ${JSON.stringify(last.map((x) => [x.id.slice(0, 8), !!x.sealed]))}`);
 }
 
-test('buying by price tag: under the owners’ publication, its split service’s tag counts; the purchase pays the service, naming the publication', async () => {
+test('buying by price tag: under the owners’ publication, its split service’s tag counts; the purchase pays the service, naming the owners’ ownership agreement', async () => {
   const { owners } = await sales();
   const s = owners.sealed!;
   assert.equal(s.bake, w.bake);
@@ -151,7 +151,7 @@ test('buying by price tag: under the owners’ publication, its split service’
   assert.equal(x.payee, svc.id, 'paid to the tag’s payee, the split service');
   assert.equal(x.fulfils, w.tag, 'following the tag (its version)');
   assert.deepEqual(x.amount, { unit: SATS, value: 2000 });
-  assert.deepEqual(x.purchase, [w.publication, w.publication], 'a purchase under the publication, at the version read');
+  assert.deepEqual(x.purchase, [w.agreement, w.agreement], 'the purchase names the ownership agreement the publication names, at the version read (claim field 9, Agreements rule 12)');
 });
 
 test('buying by price tag on a bare bake: only its uploader’s tag counts, paid to the uploader alone; a re-uploader is said plainly to be no owner, and the owners’ own publication offered', async () => {

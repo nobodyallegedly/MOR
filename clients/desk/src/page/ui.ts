@@ -860,7 +860,7 @@ async function readSign(collective: string | null, deals = false): Promise<strin
   dealsToSignCount = r.proposals.filter((p) => !p.answer && isDeal(p)).length;
   const mine = deals ? r.proposals.filter(isDeal) : collective ? r.proposals.filter((p) => p.collective === collective) : r.proposals.filter((p) => !isDeal(p));
   const html = v.memberSigning(state, { proposals: mine, problems: r.problems });
-  return deals ? html.replace('by a collective’s founder', 'by the person who set up a shared deal').replace('agreements for real collectives: founding one, changing its members, its releases', 'shared deals with other people: a work, a vow or a post whose payments a split service divides') : html;
+  return deals ? html.replace('by a collective’s founder', 'by the person who asks you to sign').replace('agreements for real collectives: founding one, changing its members, its releases', 'what others ask you to sign from their Publishing tab: a claim of a work you made with them, an ownership agreement naming you, a publication you are a party of, or its ending') : html;
 }
 
 async function collectivesPart(): Promise<string> {
@@ -923,7 +923,7 @@ async function collectivesPart(): Promise<string> {
       await syncGrid('real-change');
     };
     const resigned = rc.resigned ?? [];
-    return `${head}${v.inside(`<h3>Its members (${rc.members.length})</h3><ul class="plain">${rc.members.map((m) => `<li>${v.person(state, m)}${m === rc.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
+    return `${head}${v.inside(`<h3>Its members (${rc.members.length})</h3><ul class="plain">${rc.members.map((m) => `<li>${v.person(state, m)}</li>`).join('')}</ul>
 <p class="small">Its chain key: one share per member, kept on paper, any ${rc.threshold} rebuilding it. ${rc.fingerprint ? `Dealing fingerprint ${hashButton(rc.fingerprint)}.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s app.'} No app holds a share.</p>
 ${rc.pending ? v.note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}
 ${resigned.length ? `<section class="card" id="e-resigned"><h3>Leaving alone (rule 70)</h3><ul class="plain">${resigned.map((r) => `<li>${v.person(state, r.member)} resigned, act ${v.fp(r.act)}. ${r.registered ? `Registered at the collective’s line ${v.fp(r.registered)}: now change its members without them, below.` : `<button data-action="real-register-resignation" data-collective="${v.e(id)}" data-act="${v.e(r.act)}">Register a resignation: at the collective’s line</button>`}</li>`).join('')}</ul><p class="small">A member can always leave alone: nobody else signs a resignation. It takes effect at the collective’s line registering it.</p></section>` : ''}

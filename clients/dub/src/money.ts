@@ -709,10 +709,11 @@ export class DubMoney {
   /**
    * What a purchase pays, before anything is signed (Money rule 18): the
    * price tag that counts, followed (`fulfils`), its price, to its payee; under
-   * a publication, the purchase names the publication and the version read
-   * (`[first, version]`), and the split service, the tag's payee, pays its
-   * partners first, then the owners. Throws, saying why, where nothing can
-   * be bought.
+   * a publication naming an ownership agreement, the purchase names that
+   * agreement and the version of it read (`[agreement, version]`, claim field
+   * 9, Agreements rule 12), and the split service, the tag's payee, pays its
+   * partners first, then the owners. A lone seller's publication, or a bare
+   * bake, names none. Throws, saying why, where nothing can be bought.
    */
   async purchaseOf(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; post?: string | null; repost?: { id: string; by: string } | null; names?: (id: string) => string }): Promise<{ payee: string; amount: { unit: string; value: number }; fulfils: string; purchase: [string, string] | null; said: string[]; read: PriceRead }> {
     const from = a.repost ? [a.repost.id, a.repost.by] : a.post ? [a.post, a.seller] : null;

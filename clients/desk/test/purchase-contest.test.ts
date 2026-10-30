@@ -67,10 +67,10 @@ test('a file bought from Dub, contested there: shown beside the purchase in Dub 
   const lane = (await buyer.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'lane')!;
   await buyer.damgar.c.ask('grant lane', { id: lane.id });
 
-  // A protected text, published from Edubba as the seller.
+  // A text uploaded from Edubba as the seller, with a price tag on the bare bake (round 8: was a protected file with an offer).
   const e = await edubba(H, [relay.base]);
   await e.c.ask('bring', { name: 'Seller', id: seller.id, words: seller.dub.words, address: H[0] });
-  const read = await e.c.ask<{ plan: string; digest: string }>('publishing work read', { media: 'text', data: b64(new TextEncoder().encode('The full concert, in words.')), title: 'The concert', price: '1000' });
+  const read = await e.c.ask<{ plan: string; digest: string }>('publishing upload read', { then: 'price', media: 'text', data: b64(new TextEncoder().encode('The full concert, in words.')), title: 'The concert', price: '1000' });
   const [publication, , post] = (await e.c.ask<Done>('publishing confirm', { plan: read.plan, digest: read.digest })).acts;
 
   // Bought from Dub, paid, receipted, its key delivered by Edubba.

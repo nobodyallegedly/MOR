@@ -468,7 +468,7 @@ export function uploadPane(o: { who: string; media: string; unit: string; say: s
     o.media === 'text'
       ? '<label>The text to upload (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>'
       : `<label>${o.media === 'picture' ? 'The picture: a JPEG file' : o.media === 'video' ? 'The film: an MP4 file (the video Module)' : 'The recording: an M4A file (the audio Module)'}</label><input type="file" name="file" accept="${o.media === 'picture' ? 'image/jpeg' : o.media === 'video' ? '.mp4,video/mp4' : '.m4a,audio/mp4'}">${o.media === 'picture' ? '' : `<p class="k-small k-soft">Checked by the ${o.media === 'video' ? 'video' : 'audio'} Module, then stripped to the ${o.media === 'video' ? 'film' : 'sound'} alone before anything is locked: every ${o.media === 'video' ? 'frame' : 'sample'} byte for byte; titles, dates, places and covers removed.</p>`}`;
-  return `<h2>Upload</h2>${say('Locked, uploaded; then, if you want, a price tag or a claim', [...o.say, o.bakeStays])}${o.who}${what}
+  return `<h2>Upload</h2>${say('Locked, uploaded; then, if you want, a price tag or a claim', o.say)}${o.who}${what}
 <form id="pub-upload" data-media="${e(o.media)}">${input}
 <label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="The public words of the post that shows it">
 <fieldset class="e-then"><legend class="k-lbl">Then</legend>
@@ -478,6 +478,7 @@ export function uploadPane(o: { who: string; media: string; unit: string; say: s
 <label class="k-check"><input type="radio" name="then" value="claim"> A claim: you made it (with others, if so); then an ownership agreement and a publication, if you want</label>
 <div class="e-then-claim"><p class="k-small k-soft">Made with (optional): each signs the claim in their own Edubba.</p>${peopleRows({ id: 'upload-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}</div>
 </fieldset>
+<p class="k-small k-soft">${e(o.bakeStays)}</p>
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 

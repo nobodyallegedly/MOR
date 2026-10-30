@@ -362,14 +362,14 @@ test('the banner on every screen; three tiles, no Agents and nothing of Claude�
   assert.ok(stored.includes(ada.f.signingSecret), 'the signing key is kept in this browser’s storage, as the banner says');
   assert.ok(!stored.includes(ada.f.safety.seeds), 'never its chain key');
 
-  // Collectives: no test collective; Publishing: a protected file.
+  // Collectives: no test collective; Publishing: its first way in, Upload (round 8).
   await tile(ed, 'collectives');
   await ed.locator('.k-col button', { hasText: '+ Found a collective' }).waitFor();
   assert.equal(await ed.locator('.k-col button', { hasText: '+ Found a test collective' }).count(), 0, 'no test collective on the web');
   await ed.locator('.k-col button', { hasText: '+ Bring a collective' }).waitFor();
   await tile(ed, 'publishing');
   await banner(ed, 'Publishing');
-  await ed.locator('#pane h2', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
+  await ed.locator('#pane h2', { hasText: 'Upload' }).waitFor({ timeout: 60_000 });
 
   // At an iPhone's width, nothing scrolls sideways, on every tile.
   await ed.setViewportSize({ width: 390, height: 844 });
@@ -576,7 +576,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   assert.deepEqual(problems, []);
 });
 
-test('Publishing and Vows in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; Track; both seen sealed and for sale in Dub on the web', async () => {
+test('Publishing and Vows in the web client by clicks: who acts; a text and a picture uploaded with a price tag (way 1, round 8), read back and signed; a vow; Track; both seen sealed and for sale in Dub on the web', async () => {
   const ed = await pageOf(edubbaBase);
   await ed.locator('.edubba-first').waitFor({ timeout: 60_000 });
   const seller = await elsewhere();
@@ -588,29 +588,31 @@ test('Publishing and Vows in the web client by clicks: who acts; a protected tex
   assert.match((await ed.locator('#pane .k-say').first().textContent()) ?? '', /A text, a JPEG picture, an MP4 film or an M4A recording/);
   await shot(ed, 'publishing');
 
-  // A text, read back, then signed.
-  await ed.fill('#pub-work textarea[name=text]', 'Three verses, sealed.');
-  await ed.fill('#pub-work input[name=title]', 'Verses, sealed');
-  await ed.fill('#pub-work input[name=price]', '1500');
-  await ed.click('#pub-work button[type=submit]');
+  // A text with a price tag on the bare bake, read back, then signed.
+  await ed.fill('#pub-upload textarea[name=text]', 'Three verses, sealed.');
+  await ed.fill('#pub-upload input[name=title]', 'Verses, sealed');
+  await ed.check('#pub-upload input[name=then][value=price]');
+  await ed.fill('#pub-upload input[name=price]', '1500');
+  await ed.click('#pub-upload button[type=submit]');
   await ed.locator('#e-pub-review #reading').waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-pub-review').innerText(), /lone seller’s: itself the agreement between you and each buyer/);
+  assert.match(await ed.locator('#e-pub-review').innerText(), /paid to you, the uploader, unsplit/);
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
+  await done(ed, '#e-status .k-note.k-done', 'Uploaded');
   await ed.locator('#here-feed .k-act', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
 
   // A picture, chosen as a file: stripped to the picture alone, read back, signed.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
-  await part(ed, 'A protected file');
+  await part(ed, '1 · Upload');
   await ed.click('button[data-media=picture]');
-  await ed.locator('#pub-work[data-media=picture]').waitFor();
-  await ed.setInputFiles('#pub-work input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
-  await ed.fill('#pub-work input[name=title]', 'A tablet, photographed');
-  await ed.fill('#pub-work input[name=price]', '2000');
-  await ed.click('#pub-work button[type=submit]');
+  await ed.locator('#pub-upload[data-media=picture]').waitFor();
+  await ed.setInputFiles('#pub-upload input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await ed.fill('#pub-upload input[name=title]', 'A tablet, photographed');
+  await ed.check('#pub-upload input[name=then][value=price]');
+  await ed.fill('#pub-upload input[name=price]', '2000');
+  await ed.click('#pub-upload button[type=submit]');
   await done(ed, '#e-pub-review #reading', /stripped to the picture alone/);
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
+  await done(ed, '#e-status .k-note.k-done', 'Uploaded');
 
   // A vow, read back, signed; Track points at the seller by default, at Edubba's own relays.
   await tile(ed, 'vows');

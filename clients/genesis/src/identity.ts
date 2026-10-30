@@ -414,7 +414,9 @@ export class TestIdentity {
       throw new Error('only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act');
     }
     if (this.f.cites && spec !== SPECS.identity && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
+      // A text act carries one object (Text rule 14): the decision it acts under, no head beside it.
+      const cited = spec === MIRS.text ? this.f.cites.slice(0, 1) : this.f.cites;
+      objects = [...(objects ?? []), ...cited.map((d): [string, string] => [this.f.identity, d])];
     }
     return objects;
   }

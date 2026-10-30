@@ -234,7 +234,7 @@ export class Collectives {
     const out = { collective: b.id, name: b.name, agreement: null as string | null, you: [b.member], items: [] as { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[]; needs: never[] }[], notes: [] as Line[] };
     out.notes.push(
       real
-        ? { text: 'A real collective, founded here: its members sign in their own apps. Its signing key is held here; its chain key only on its members’ paper. Releases and member changes are proposed under Constitution; posting for it from the Act tab comes later. This is what its agreement in force says.' }
+        ? { text: 'A real collective, founded here: its members sign in their own apps. It has no signing key: each member acts for it with their own; its chain key is only on its members’ paper. Releases and member changes are proposed under Constitution; posting for it from the Act tab comes later. This is what its agreement in force says.' }
         : { text: 'Brought here by its ID: Edubba holds none of its keys, so nothing can be signed for it from here. This is what its agreement in force says.', tone: 'warn' },
     );
     let r;
@@ -248,26 +248,26 @@ export class Collectives {
     const t = r.terms.t;
     const you = t.parties.filter((p) => p === b.member);
     out.notes.push({ text: you.length ? `${names(b.member)} is a party of it.` : `${names(b.member)} is no longer a party of its agreement in force.`, tone: you.length ? undefined : 'bad' });
-    const signing = t.grammar?.signing as { form?: string; holder?: string | null; custodian?: string | null; threshold?: number; members?: string[] } | undefined;
-    const keyWords = !signing
-      ? 'Its key grammar could not be read.'
-      : signing.form === 'one'
-        ? `Its signing key is held by ${names(signing.holder!)} (Agreements rule 59, key grammar).`
-        : signing.form === 'custodian'
-          ? `Its signing key is held by ${names(signing.custodian!)}, as custodian (Agreements rule 59).`
-          : `Its signing key is held as a threshold: any ${signing.threshold} of ${(signing.members ?? []).map(names).join(', ')} (Agreements rule 59).`;
+    // A collective has no signing key (Agreements rule 56): each member acts for it with their own key, under the rule of the layer the act falls in.
+    const keyWords = 'It has no signing key: each member acts for it with their own key, naming it (Agreements rules 56 and 58).';
     for (const [what, kinds] of [
       ['Post a text for it', [[SPECS.text, 0, 'a text']]],
       ['Post a picture for it', [[SPECS.envelopes, 0, 'a picture’s publication'], [SPECS.text, 0, 'the text showing it']]],
     ] as [string, [string, number, string][]][]) {
       const lines: Line[] = [{ text: real ? keyWords : `${keyWords} It is not held here: Edubba cannot sign for it.` }];
       for (const [spec, type, label] of kinds) {
-        const areas = t.areas.filter((x) => x.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.form === 'type' && k.spec === spec && k.type === type)));
-        if (!areas.length) lines.push({ text: `No area reaches ${label}: it counts on the collective’s own signature (Agreements rule 60).` });
+        const areas = t.areas.filter((x) => x.kinds.some((k) => k.form === 'type' && k.spec === spec && k.type === type));
         for (const x of areas)
           lines.push({
-            text: `The “${x.name}” area reaches ${label}: any ${x.threshold} of ${x.holders.map(names).join(', ')} must sign (Agreements rule 60).${x.holders.includes(b.member) ? ' You hold this area.' : ''}${r.frozen.includes(x.id) ? ' It stands frozen (rule 71).' : ''}`,
+            text: `The finer area “${x.name}” reaches ${label}: any ${x.threshold} of ${x.holders.map(names).join(', ')} (Agreements rule 60).${x.holders.includes(b.member) ? ' You hold this area.' : ''}${r.frozen.includes(x.id) ? ' It stands frozen (rule 71).' : ''}`,
           });
+        if (!areas.length) {
+          // The layer's own rule (field 19): Text 1, Envelopes 2.
+          const layer = spec === SPECS.text ? 1 : 2;
+          const rule = ((t as unknown as { layers?: [number, { form: string; threshold?: number | null; named?: string[] | null }][] }).layers ?? []).find(([l]) => l === layer)?.[1];
+          const who = !rule ? 'not named: it founds nothing' : rule.form === 'threshold' ? (rule.threshold === 1 ? 'any one member alone' : `any ${rule.threshold} members`) : rule.form === 'named' ? `${(rule.named ?? []).map(names).join(' and ')} together` : 'every member';
+          lines.push({ text: `The ${layer === 1 ? 'Text' : 'Envelopes'} layer reaches ${label}: ${who} (Agreements rule 60).` });
+        }
       }
       out.items.push({ what, state: 'no', lines, needs: [] });
     }

@@ -112,7 +112,7 @@ test('paying from Dub three ways, Purchases, a vow confirmed and another contest
   // Edubba publishes a sealed picture and two vows, as the seller.
   const e = await edubba(H, [relay.base]);
   await e.c.ask('bring', { name: 'Seller', id: seller.id, words: seller.dub.words, address: H[0] });
-  const p = await e.c.ask<any>('publishing work read', { media: 'picture', data: b64(JPEG), title: 'A tablet, photographed', price: '2000' });
+  const p = await e.c.ask<any>('publishing upload read', { media: 'picture', data: b64(JPEG), title: 'A tablet, photographed', then: 'price', price: '2000' }); // Round 8: an upload with a price tag on the bare bake (was a protected file with an offer).
   const [publication, , picturePost] = (await e.c.ask<Done>('publishing confirm', { plan: p.plan, digest: p.digest })).acts;
   const vows: string[] = [];
   for (const words of ['A seat at the reading of the tablets.', 'A walk to the clay pits.']) {
