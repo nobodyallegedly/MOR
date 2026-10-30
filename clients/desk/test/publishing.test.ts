@@ -250,7 +250,8 @@ test('a vow published from Edubba, sold by a lone seller’s publication (you it
   assert.match(r.reading.summary.join(' '), /pending until its buyer confirms it \(kept\) or contests it \(not kept\)/);
   // Round 8: the standing offer is gone; a vow is sold by a publication naming it, its price a price tag (Agreements rule 11, Money rule 18).
   assert.match(r.reading.summary.join(' '), /by a publication of your own \(you its lone seller and its split service: paid to you\)/);
-  const [vow, offer, post] = (await e.c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest })).acts;
+  // Acts: the vow, its price tag, the post, the publication selling it (Dub reads the publication as the vow's offer).
+  const [vow, , post, offer] = (await e.c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest })).acts;
   assert.deepEqual((await e.c.ask<any>('publishing')).vows.map((v: any) => v.title), ['A seat, vowed']);
 
   // Three buyers, each in Dub with a lane, find it in their feed and buy it.

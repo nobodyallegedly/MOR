@@ -693,7 +693,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(card(hash.rail).layer, 'Money');
   assert.equal(card(hash.notes2).other, true, 'a draft by another creator, said');
   assert.match(card(hash.notes2).role!, /an xtype/);
-  assert.match(card(hash.checker).role!, /checks proofs of delivery of proven offers \(field 12\)/);
+  assert.match(card(hash.checker).role!, /checks proofs of proven deliveries \(field 12\)/);
   assert.equal(card(hash.unclaimed).claimed, 'no');
   assert.match(card(hash.unclaimed).text, /Unclaimed by its named creator/);
   assert.equal(card(hash.unclaimed).code, 'unverified', 'a release under draft 3’s “implements”, not verified');
