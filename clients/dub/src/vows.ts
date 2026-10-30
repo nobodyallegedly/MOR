@@ -44,6 +44,7 @@ import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS, SPLIT_CMIP, planIn } from '../../repo/src/agreements.ts';
+import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import { readPublication, type Amount, type PublicationRead } from '../../barebone/src/sealed.ts';
 import { putTag, readTag, tagsOf, type TagRead } from '../../barebone/src/tag.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
@@ -361,6 +362,13 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
   for (const id of a.parties) await r.hold(id);
   const ids: string[] = [];
   for (const p of a.purchases) ids.push(r.add(p.act, p.key ?? undefined));
+  // A collective's publication is drafted by a member naming the collective in its objects (Agreements rule 58): the
+  // collective's own chain is read too, or the core cannot tell it is a collective, nor count its consent.
+  for (const x of [...r.held.values()]) {
+    const d = describeAct(x) as { spec?: string; type?: number; objects?: [string, string][] };
+    if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.publication) continue;
+    for (const [named] of d.objects ?? []) if (!a.parties.includes(named)) await r.hold(named);
+  }
   const contests = (await r.byKind(MIRS.agreements, CONTEST)).filter((x) => {
     const d = describeAct(x) as { objects?: [string, string][] };
     return (d.objects ?? []).some(([c]) => ids.includes(c));

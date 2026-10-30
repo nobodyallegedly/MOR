@@ -149,10 +149,13 @@ test('the collective’s money on the new Money tab: its split agreement made by
   const made = await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest });
   const split = made.acts[0];
   await assert.rejects(e.c.ask('real money record', { act: split }), /Its rule asks more members first/);
-  // The Agreements layer asks A and iPa: iPa signs it in Dub's Signing tab, with iPa's own key.
-  const sp = (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === split);
-  assert.ok(sp, 'the split agreement reached iPa’s Signing tab');
-  assert.match((await iPa.dub.c.ask<any>('accept', { thread: sp.thread })).lines[0].text, /Signed for the collective with your own key/);
+  // A split agreement of the collective is judged in its judicial tier (S7h-4): every member signs it, iPa and iPh
+  // each in Dub's Signing tab, with their own key.
+  for (const m of [iPa, iPh]) {
+    const sp = (await m.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === split);
+    assert.ok(sp, 'the split agreement reached the member’s Signing tab');
+    assert.match((await m.dub.c.ask<any>('accept', { thread: sp.thread })).lines[0].text, /Signed for the collective with your own key/);
+  }
   assert.equal((await e.c.ask<any>('real gather', { act: split })).standing.enough, true);
   await assert.rejects(e.c.ask('real money record', { act: split }), /does not count yet/);
   assert.match(await svc.accept(split), /signed/);
@@ -188,9 +191,17 @@ test('the collective’s money on the new Money tab: its split agreement made by
   const [bake] = (await e.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
   const pr = await e.c.ask<any>('publishing publication read', { sold: [bake], service: svc.id, referral: '10', price: '3000', tagBy: 'service' });
   assert.deepEqual(pr.reading.blocking, []);
-  assert.match(pr.reading.summary.join(' '), /Sold by the collective .*, made by you \(A .*\) with your own key for it, under its area “Publications”/);
+  assert.match(pr.reading.summary.join(' '), /Sold by the collective .*, made by you \(A .*\) with your own key for it, under the Agreements layer/);
   const [publication] = (await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest })).acts;
   assert.match(await svc.accept(publication), /signed, as its split service/);
+  // The Agreements layer asks two (A and iPa): iPa signs the collective's publication in Dub's Signing tab, with iPa's own key.
+  let pp: any;
+  for (let i = 0; i < 20 && !pp; i++) {
+    pp = (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === publication);
+    if (!pp) await new Promise((r) => setTimeout(r, 250));
+  }
+  assert.ok(pp, 'the publication in iPa’s Signing tab');
+  assert.match((await iPa.dub.c.ask<any>('accept', { thread: pp.thread })).lines[0].text, /Signed for the collective with your own key/);
   const g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
   assert.ok(g.lines.some((l) => /is published by the collective .*: every party signed it/.test(l.text)), JSON.stringify(g.lines));
   assert.match(await svc.tag(publication, { unit: R, value: 3000 }), /./);
