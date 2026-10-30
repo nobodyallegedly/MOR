@@ -19,6 +19,7 @@ import { parse, title } from '../../longform/src/format.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { TestCollective } from '../../repo/src/collective.ts';
+import { signRelease } from '../../repo/src/release.ts';
 import { Gateway } from '../src/gateway.ts';
 import { findLater } from '../src/latest.ts';
 import { addressOf, decodeSite, encodeSite, kindOf, pathFor, resolveRef, type SiteManifest } from '../src/manifest.ts';
@@ -173,20 +174,31 @@ test('what is not a version of the expected site is refused, with the reason', a
   assert.equal(byOther.ok, false);
   assert.equal(byOther.signer, other.id, 'the real signer is named');
   assert.match(byOther.problems.join(), /not by the identity expected/);
-  assert.match((await openVersion(w.firstAct, w.owner.id, [w.relay.base])).problems.join(), /not a publication/);
+  assert.match((await openVersion(w.firstAct, w.owner.id, [w.relay.base])).problems.join(), /not a bake/);
   assert.match((await openVersion('00'.repeat(32), w.owner.id, [w.relay.base])).problems.join(), /not found/);
   assert.match((await openVersion('nonsense', w.owner.id, [w.relay.base])).problems.join(), /not an act id/);
 
-  // Withdrawn by its signer: no longer a version.
-  const gone = await publishSite(other, { name: 'gone', files: readFolder(w.dir), relays: [w.relay.base] });
-  assert.ok((await openVersion(gone.id, other.id, [w.relay.base])).ok);
-  const wd = await withdraw(other, gone.id, [w.relay.base]);
-  const after = await openVersion(gone.id, other.id, [w.relay.base]);
-  assert.equal(after.ok, false);
-  assert.equal(after.withdrawn, wd.id);
+  // Was: "withdrawn by its signer: no longer a version". The withdrawal is
+  // retired (F407; website cMIP draft 12, rule 4 retired): a bake is never
+  // withdrawn, so nothing withdraws a version. An owner who wants a version
+  // gone uploads a later one; the old one stays on record and still verifies.
+  const kept = await publishSite(other, { name: 'kept', files: readFolder(w.dir), relays: [w.relay.base] });
+  assert.ok((await openVersion(kept.id, other.id, [w.relay.base])).ok);
+  await assert.rejects(withdraw(other, kept.id, [w.relay.base]), 'no withdrawal is signed');
+  const later = await publishSite(other, { name: 'kept', files: readFolder(w.dir), relays: [w.relay.base], previous: kept.id });
+  const first = await openVersion(kept.id, other.id, [w.relay.base]);
+  assert.ok(first.ok, 'the old version still verifies');
+  assert.equal((await findLater(first)).latest.version, later.id, 'the later one is the latest');
 });
 
-test("a collective's site is refused until Agreements draft 7 is approved, rather than accepted unjudged", async () => {
+// Was: "a collective's site is refused until Agreements draft 7 is approved,
+// rather than accepted unjudged" (draft 2's rule 3, which waited for
+// Agreements draft 7 and refused any signer declaring an agreement). Website
+// cMIP draft 12 (F407) retires that wait: a collective has no key, a member
+// uploads its site naming it, and the version counts for the collective as
+// Agreements judge an act done for it, as a release does. The new rule: not
+// accepted unjudged; refused until the rule reaching it is met, then a version.
+test("a collective's site is uploaded by a member naming it, and counts only once Agreements' rule for it is met, never unjudged", async () => {
   const members: TestIdentity[] = [];
   for (let i = 0; i < 3; i++) {
     const t = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
@@ -199,11 +211,21 @@ test("a collective's site is refused until Agreements draft 7 is approved, rathe
     relays: [w.relay.base],
     governance: { safetyThreshold: 2, releaseThreshold: 2, cloneThreshold: 2, abandonmentOthers: 2, text: 'A test collective.' },
   });
-  const s = await publishSite(collective.id, { name: 'a collective', files: readFolder(w.dir), relays: [w.relay.base] });
+  // Uploaded by its first member, with their own key, naming the collective (Agreements rule 58).
+  const s = await publishSite(collective.by(members[0]).id, { name: 'a collective', files: readFolder(w.dir), relays: [w.relay.base] });
   const v = await openVersion(s.id, collective.identity, [w.relay.base]);
+  assert.equal(v.signer, members[0].id, 'its uploader is a member');
+  assert.equal(v.collective, collective.identity, 'the collective is read from its objects, not from its signer');
   assert.equal(v.ok, false);
-  assert.equal(v.standing, 'valid', 'validly signed, and still not a version');
-  assert.match(v.problems.join(), /collective.*Agreements draft 7/);
+  assert.equal(v.standing, 'valid', 'validly uploaded, and still not a version');
+  assert.match(v.problems.join(), /does not count for the collective yet/);
+  // The collective's own key signs nothing: no member's own upload counts as the member's site either.
+  assert.match((await openVersion(s.id, members[0].id, [w.relay.base])).problems.join(), /uploaded for .*not a version of its uploader's own site/);
+  // A second member signs it: the Releases area (any 2 of 3, reaching bakes) is met.
+  await signRelease(members[1], s.id, [w.relay.base]);
+  const counted = await openVersion(s.id, collective.identity, [w.relay.base]);
+  assert.ok(counted.ok, counted.problems.join('; '));
+  assert.deepEqual([...counted.signers!].sort(), [members[0].id, members[1].id].sort());
 });
 
 test('the gateway checks before it serves, serves its display client at every address, and the files only as bytes', async () => {
@@ -355,24 +377,26 @@ test("following: a gateway serves the publisher's latest version; pinned, the on
     pinned.close();
   }
 
-  // Withdrawn: v3 is no longer a version, and the latest is v2.
-  await withdraw(pub, v3.id, relays);
-  assert.equal((await findLater(first)).latest.version, v2.id);
+  // Was: "withdrawn: v3 is no longer a version, and the latest is v2". The
+  // withdrawal is retired (F407; website cMIP draft 12, rule 4 retired): a
+  // bake is never withdrawn, so v3 stays the latest and is still served.
+  await assert.rejects(withdraw(pub, v3.id, relays), 'no withdrawal is signed');
+  assert.equal((await findLater(first)).latest.version, v3.id);
   await following.load();
-  assert.equal(at(following).served, v2.id);
+  assert.equal(at(following).served, v3.id);
 
-  // Two versions naming v2: a fork. Following stops before it, and says so.
-  edit('Run 3a');
-  const a = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
-  edit('Run 3b');
-  const b = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v2.id });
+  // Two versions naming v3: a fork. Following stops before it, and says so.
+  edit('Run 4a');
+  const a = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v3.id });
+  edit('Run 4b');
+  const b = await publishSite(pub, { name: 'theirs', files: readFolder(dir), relays, previous: v3.id });
   const forked = await findLater(first);
-  assert.equal(forked.latest.version, v2.id);
+  assert.equal(forked.latest.version, v3.id);
   assert.deepEqual(forked.fork, [a.id, b.id].sort());
   const [{ loaded: l }] = await following.load();
   assert.ok(l.ok);
   assert.deepEqual(l.fork, [a.id, b.id].sort());
-  assert.equal(at(following).served, v2.id);
+  assert.equal(at(following).served, v3.id);
 });
 
 test('following: when the newest version does not arrive whole, the gateway serves the one before it and logs why, once', async () => {

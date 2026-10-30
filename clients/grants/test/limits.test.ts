@@ -47,10 +47,11 @@ test('the expiry on a timestamp clock: within, past it, unknown without the name
 });
 
 test('a person’s grant: scope 2, its kinds, its limits under this cMIP, its key; read back', () => {
-  const p = personGrantPayload({ grantee: CLOCK, kinds: [{ spec: MIRS.text, type: 0 }, { layer: 2 }], limits: { cap: { unit: UNIT, value: 7 } }, key: [1, new Uint8Array(32)] });
+  const p = personGrantPayload({ grantee: CLOCK, kinds: [{ spec: MIRS.text, type: 0 }, { layer: 3 }], limits: { cap: { unit: UNIT, value: 7 } }, key: [1, new Uint8Array(32)] });
   const g = readGrant(p);
   assert.equal(g.scope, 2);
-  assert.deepEqual(g.kinds, [{ spec: MIRS.text, type: 0 }, { layer: 2 }]);
+  // The Money layer is 3 since F407 split Text and Envelopes into two layers (was 2).
+  assert.deepEqual(g.kinds, [{ spec: MIRS.text, type: 0 }, { layer: 3 }]);
   assert.deepEqual(g.limits, { cap: { unit: UNIT, value: 7 } });
   assert.equal(g.limitsProblem, null);
 });

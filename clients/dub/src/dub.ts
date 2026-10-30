@@ -60,8 +60,7 @@ import { sendDraft } from '../../damgar/src/messages.ts';
 import { anchoringLeaf, randomBytes } from '../../genesis/src/core.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
-import { areaReaching, chainFor, collectiveNow, collectivePlaces, cosignAsMember, makeMemberKey, memberKeyFor, publishAt, readMemberKeys, resealMemberKeys, sealMemberKey, signAsMember, type MemberKey } from '../../grants/src/member.ts';
-import { holdsAnArea } from './signing.ts';
+import { areaReaching, chainFor, collectiveNow, collectivePlaces, cosignAsMember, publishAt, signAsMember } from '../../grants/src/member.ts';
 import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
@@ -112,7 +111,6 @@ export const RUNNER_NO_OPEN_SAY =
   'Kišib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Kišib: Runner, Apps, Dub, “may open what is sealed to” this identity.';
 
 /** Said where Dub asked Kišib to hold an identity's key for a collective (the Dubsar runner cMIP, draft 3, 9.1). */
-export const RUNNER_MEMBER_ASKED_SAY = 'Kišib holds this identity’s keys, so it holds its key for this collective too: Dub asked Kišib to add it. Approve it in Kišib (Identities, Held here, or Runner, Waiting), then choose the collective here again. The key never comes to Dub.';
 
 /** Said where Kišib opens for Dub what is sealed to an identity used through it (draft 2, section 8). */
 export const RUNNER_OPENS_SAY = 'Kišib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Kišib (Runner, Signed).';
@@ -134,7 +132,7 @@ export interface Settings {
   signing?: boolean;
   /** The timestamp clock this identity's feeds are ordered by (H54): its ID and the name given it here; none until one is named. */
   clock?: { id: string; name: string } | null;
-  /** The collectives this identity can act as from here, added by ID (its member key read from its homes). */
+  /** The collectives this identity can act as from here, added by ID (whether their agreement counts it, read from their places). */
   collectives?: { id: string; available: boolean; why: string | null }[];
   /** The collective acted as now, or none: the identity itself. */
   acting?: string | null;
@@ -742,10 +740,7 @@ export class Dub {
       await this.store.saveIdentity(me);
       // This app wrote the version that counts: it renews it from the new words (2a.4); the old secrets stay, to open older messages.
       await me.publishEncryptionKey(encryptionSecret(seed));
-      // F353: the member keys sealed to this identity, sealed again to its new encryption key (the member keys cMIP, 4.1).
-      const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e) => unhex(e.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
-      if (resealed) lines.push({ text: `Its ${resealed} member key${resealed === 1 ? '' : 's'} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: 'ok' });
-      await this.store.saveIdentity(me);
+      // No member keys to seal again: a member acts for a collective with its own key (Agreements rule 58).
       lines.push({ text: 'Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.', tone: 'ok' });
     } else {
       await this.store.saveIdentity(me);
@@ -1080,28 +1075,27 @@ export class Dub {
   }
 
   /**
-   * A public post signed as the collective acted as, with this identity's
-   * own member key (F353), in the area reaching public posts: text, and a
-   * reply's reference. Where the area asks more keys than one, it counts
-   * once its other holders sign it (in Edubba's To sign), said.
+   * A public post for the collective acted as (Agreements rule 58, the
+   * keyless collective): signed with this identity's own key, naming the
+   * collective and its latest decision as its one object (Text rule 14), in
+   * the area (or the Text layer's rule) reaching public posts: text, and a
+   * reply's reference. Where it asks more signers than one, it counts once
+   * its other holders sign it (in Edubba's To sign), said.
    */
   private async postAsCollective(me: TestIdentity, s: Settings, p: People, hints: string[], text: string, a: { jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
     const collective = s.acting!;
     if (a.jpeg || a.mp4 || a.m4a || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error('As a collective, Dub posts text and replies only: no picture, film, recording or address. Nothing was posted.');
-    const k = await this.memberKeyHere(me, s, collective, hints);
-    if (!k.key || k.why) throw new Error(`Dub cannot post as this collective: ${k.why ?? 'no member key'} Nothing was posted.`);
+    const k = await this.memberHere(me, s, collective, hints);
+    if (k.why) throw new Error(`Dub cannot post as this collective: ${k.why} Nothing was posted.`);
     await this.current(me);
     const refs: [string, string][] = a.reply ? [[readId(a.reply.id), readId(a.reply.signer)]] : [];
-    const at = await chainFor(collective, k.key, k.places, s.via);
-    const made =
-      !me.f.signingSecret && this.opts.runner
-        ? // Through Kišib (draft 3, 9.2): the act asked of Kišib, its panel shown here, signed there with the member key it holds.
-          await this.opts.runner.request({ identity: me.id, as: collective, line: 'member', binding: k.key.signature, sequence: at.strand, spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, objects: [[collective, k.key.terms]], ...(refs.length ? { refs } : {}) })
-        : signAsMember(collective, k.key, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, ...(refs.length ? { refs } : {}) });
+    const at = await chainFor(collective, k.places, s.via);
+    // Signed with this identity's own key (through Kišib's panel where Kišib holds it: `me.signNow` goes through its runner).
+    const made = await this.signed(me, () => signAsMember(collective, me, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, ...(refs.length ? { refs } : {}) }));
     const took = await publishAt([made.act], [...new Set([...s.relays, ...k.places])], s.via);
     if (!took.length) throw new Error('No relay took the post. Nothing counts yet: try again.');
-    const lines: Line[] = [{ text: `Posted as the collective, with your own member key, at ${took.join(', ')}.`, tone: 'ok' }];
-    if (k.number > 1) lines.push({ text: `Its area asks ${k.number} keys: it counts once another holder signs it too (Edubba, Collectives › To sign).`, tone: 'warn' });
+    const lines: Line[] = [{ text: `Posted for the collective, signed with your own key and naming the collective, at ${took.join(', ')}.`, tone: 'ok' }];
+    if (k.number > 1) lines.push({ text: `${k.area} asks ${k.number} signers: it counts once another holder signs it too (Edubba, Collectives › To sign).`, tone: 'warn' });
     let item: Item;
     try {
       item = this.item(await readPost(made.id, [...s.relays, ...k.places], s.via), me.id, p, s, 'feed', [], false);
@@ -1119,16 +1113,17 @@ export class Dub {
         src: r.bytes && r.picture ? `data:image/jpeg;base64,${base64(r.bytes)}` : null,
         width: r.picture?.shownWidth ?? 0,
         height: r.picture?.shownHeight ?? 0,
-        publication: r.publication,
+        bake: r.bake,
+        publication: r.bake,
         problem: r.problem,
-        withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid',
+        own: r.signer === me && sp.signer === me && r.standing === 'valid',
       }));
     const films: FilmShown[] = sp.refs
       .filter((r): r is ShownFilm => r.kind === 'film')
-      .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
+      .map((r) => ({ bake: r.bake, publication: r.bake, signer: r.signer, size: r.size, problem: r.problem, own: r.signer === me && sp.signer === me && r.standing === 'valid' }));
     const recordings: RecordingShown[] = sp.refs
       .filter((r): r is ShownRecording => r.kind === 'recording')
-      .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
+      .map((r) => ({ bake: r.bake, publication: r.bake, signer: r.signer, size: r.size, problem: r.problem, own: r.signer === me && sp.signer === me && r.standing === 'valid' }));
     const doc =
       isLongForm(sp.format)
         ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) }
@@ -1781,44 +1776,24 @@ export class Dub {
       if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(' ')} Nothing was signed.`);
       await this.current(me);
       const where = [...new Set([...s.relays, ...places, ...(collective ? await this.placesOf(collective, hints, s.via) : [])])];
-      // F353 (Agreements draft 16): a holder of an area in a founding or a
-      // member change names a key of their own in their signature, made now;
-      // its private half is sealed to themself at their homes (the member
-      // keys cMIP), so any of their apps can act with it.
-      const holds = reading.kind === 'founding' || reading.kind === 'clone' ? await holdsAnArea(act, places, me.id, s.via) : false;
-      const key = holds ? makeMemberKey() : null;
-      // A collective's act or release waiting for a second key: signed as
-      // the collective with your own member key where your apps hold one
-      // (F353: "it needs two keys that have grant active on that lane");
-      // otherwise with your own identity's key, which counts as before.
-      let own: MemberKey | null = null;
-      if ((reading.kind === 'act' || reading.kind === 'release') && collective) {
-        const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-        own = keys.length ? await memberKeyFor(keys, collective, where, s.via).catch(() => null) : null;
-      }
+      // No member keys (Agreements rule 58, the keyless collective): a
+      // collective's act or release waiting for a second signer is signed
+      // with your own identity's key, a plain signature act naming it.
+      const forCollective = (reading.kind === 'act' || reading.kind === 'release') && !!collective;
       let made: { id: string };
-      if (own) {
-        const at = await chainFor(collective!, own, where, s.via);
-        const x = cosignAsMember(collective!, own, at, act);
+      if (forCollective) {
+        const x = await this.signed(me, () => cosignAsMember(me, act));
         const took = await publishAt([x.act], where, s.via);
         if (!took.length) throw new Error('No relay took your signature. Nothing counts yet: try again.');
         made = { id: x.id };
-      } else made = await this.signed(me, () => signAct(me, act, where, key?.public));
-      const lines: Line[] = [{ text: own ? `Signed for the collective with your own key (F353): the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+      } else made = await this.signed(me, () => signAct(me, act, where));
+      const lines: Line[] = [{ text: forCollective ? `Signed for the collective with your own key: the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
       // A deal between separate people: every act it names is signed too, each its own signature act (Agreements rule 47; Standing offer: every party).
       const more: string[] = [];
       for (const x of also) {
         const sx = await this.signed(me, () => signAct(me, x, where));
         more.push(sx.id);
         lines.push({ text: `Signed too: ${x.slice(0, 12)}…, your signature act ${sx.id}.`, tone: 'ok' });
-      }
-      if (key) {
-        try {
-          await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => undefined));
-          lines.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the areas you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: 'ok' });
-        } catch (e) {
-          lines.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message(e)}`, tone: 'bad' });
-        }
       }
       let oneTime: Uint8Array | undefined;
       if (reading.kind === 'founding' || reading.kind === 'clone') {
@@ -2382,9 +2357,9 @@ export class Dub {
   // ------------------------------------------------------------ collectives under the identity (acting as one: the same gesture as switching)
 
   /**
-   * Add a collective this identity can act as from here, by its ID: its
-   * member key (F353) read from this identity's homes, and the area of its
-   * agreement in force that reaches public posts. Added even where it cannot
+   * Add a collective this identity can act as from here, by its ID: the
+   * area of its agreement in force (or its Text layer's rule) that reaches
+   * public posts, and whether it counts this identity (no member keys). Added even where it cannot
    * act yet, saying why.
    */
   collectiveAdd(a: { id: string }): Promise<{ lines: Line[] }> {
@@ -2392,7 +2367,7 @@ export class Dub {
       const { me, s, hints } = await this.ctx();
       const { id, hints: where } = readIdWhere(a.id);
       if (id === me.id) throw new Error('That is this identity itself.');
-      const r = await this.memberKeyHere(me, s, id, [...where, ...hints]);
+      const r = await this.memberHere(me, s, id, [...where, ...hints]);
       const rest = (s.collectives ?? []).filter((c) => c.id !== id);
       await this.store.saveSettings(me.id, { ...s, collectives: [...rest, { id, available: !r.why, why: r.why }] });
       await this.warm([id], [...where, ...hints], s.via);
@@ -2416,14 +2391,14 @@ export class Dub {
       if (a.id) {
         let c = (s.collectives ?? []).find((x) => x.id === a.id);
         if (!c) throw new Error('That collective is not under this identity here.');
-        // Used through Kišib: the key may have been added there since (draft 3, 9.1).
-        if (!c.available && !me.f.signingSecret && this.opts.runner) {
-          const r = await this.memberKeyHere(me, s, c.id, me.f.homes.map((h) => h.hint));
+        // Read again where it could not act: its agreement may have changed since.
+        if (!c.available) {
+          const r = await this.memberHere(me, s, c.id, me.f.homes.map((h) => h.hint));
           c = { id: c.id, available: !r.why, why: r.why };
           s.collectives = [...(s.collectives ?? []).filter((x) => x.id !== c!.id), c];
           await this.store.saveSettings(me.id, s);
         }
-        if (!c.available) throw new Error(`Dub cannot act as it: ${c.why ?? 'its member key is not here'}`);
+        if (!c.available) throw new Error(`Dub cannot act as it: ${c.why ?? 'it does not count this identity among those acting for it'}`);
       }
       await this.store.saveSettings(me.id, { ...s, acting: a.id });
       return { lines: [] };
@@ -2431,37 +2406,21 @@ export class Dub {
   }
 
   /**
-   * The member key this identity holds for a collective, and the area
-   * reaching public posts; `why` where it cannot act. For an identity used
-   * through Kišib (the Dubsar runner cMIP, draft 3, section 9), Kišib holds
-   * the key: Dub reads its public parts from Kišib, and, where Kišib holds
-   * none yet, asks Kišib to add it, approved there. Its secret never comes
-   * here (`secret` empty).
+   * Whether this identity can act for a collective from here (Agreements
+   * rules 58 and 60, the keyless collective): there are no member keys; a
+   * member signs with its own key, naming the collective. It needs the area
+   * of the agreement in force reaching public posts, or else the Text
+   * layer's rule, to count this identity among its holders. `why` where it
+   * cannot act; `area` names what reaches posts, in words.
    */
-  private async memberKeyHere(me: TestIdentity, s: Settings, collective: string, hints: string[]): Promise<{ key: MemberKey | null; places: string[]; why: string | null; number: number }> {
+  private async memberHere(me: TestIdentity, s: Settings, collective: string, hints: string[]): Promise<{ places: string[]; why: string | null; number: number; area: string }> {
     const places = [...new Set([...(await collectivePlaces(collective, hints, s.via).catch(() => [] as string[])), ...hints])];
-    let key: MemberKey | null;
-    if (!me.f.signingSecret && this.opts.runner) {
-      const r = this.opts.runner;
-      const p = await r.paired().catch((e) => {
-        throw new Error(message(e).replace(/ Nothing was signed\.$/, ''));
-      });
-      const held = p?.identities.find((x) => x.id === me.id)?.members?.find((m) => m.collective === collective);
-      if (!held) {
-        if (p?.state !== 'approved') return { key: null, places, why: 'Dub is not paired with Kišib for this identity any more.', number: 0 };
-        await r.memberAsk(me.id, collective, places);
-        return { key: null, places, why: RUNNER_MEMBER_ASKED_SAY, number: 0 };
-      }
-      key = { act: '', terms: held.terms, signature: held.signature, public: [0, new Uint8Array()], secret: new Uint8Array(), position: held.position };
-    } else {
-      const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => [] as MemberKey[]);
-      key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
-    }
-    if (!key) return { key: null, places, why: 'no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).', number: 0 };
     const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
-    if (!reach.area) return { key, places, why: 'its agreement in force gives no area reaching public posts.', number: 0 };
-    if (!reach.area.holders.includes(me.id)) return { key, places, why: `this identity holds no box in its area “${reach.area.name}”, which reaches public posts.`, number: 0 };
-    return { key, places, why: null, number: reach.area.number };
+    if (!reach.agreement) return { places, why: 'its agreement in force was not found at its places.', number: 0, area: '' };
+    if (!reach.area) return { places, why: 'its agreement in force gives no area or layer rule reaching public posts.', number: 0, area: '' };
+    const said = reach.area.layer ? `Its Text layer’s rule` : `Its area “${reach.area.name}”`;
+    if (!reach.area.holders.includes(me.id)) return { places, why: `this identity is not among those ${reach.area.layer ? 'its Text layer’s rule counts' : `holding its area “${reach.area.name}”`}, which reaches public posts.`, number: 0, area: said };
+    return { places, why: null, number: reach.area.number, area: said };
   }
 
   // ------------------------------------------------------------ Purchases (decided, 21 October 2026)

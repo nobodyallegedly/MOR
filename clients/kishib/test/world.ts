@@ -9,18 +9,63 @@ import { join } from 'node:path';
 import { hex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { start, type Running as Relay } from '../../genesis/test/world.ts';
+import { start as startServer, type Running as Relay } from '../../genesis/test/world.ts';
 import { Client, newKey } from '../../desk/src/page/api.ts';
-import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
-import { serve as serveEdubba, type Running as EdubbaRunning } from '../../desk/src/server.ts';
+import type { Running as DubRunning } from '../../dub/src/server.ts';
+import type { Running as EdubbaRunning } from '../../desk/src/server.ts';
 import { serve, DOMAIN, type Running } from '../src/server.ts';
 
-export { start, type Relay };
+export type { Relay };
+
+/** Every home and relay a test file started: stopped by `stopAll`, whatever the outcome. */
+const servers: Relay[] = [];
+
+/** A home or relay on a local port, kept to be stopped by `stopAll`. */
+export async function start(role: 'home' | 'relay', opts: { allowlist?: boolean } = {}): Promise<Relay> {
+  const r = await startServer(role, opts);
+  servers.push(r);
+  return r;
+}
+
+/**
+ * Part 4 (a test once hung in CI): every program and server a test file
+ * started stopped, each on its own, whatever happened before (a test that
+ * failed, a `before` that stopped half way, a server already stopped). Run in
+ * each file's `after`, which runs whatever the outcome.
+ */
+export async function stopAll(...more: (() => Promise<unknown> | unknown)[]): Promise<void> {
+  for (const f of more) {
+    try {
+      await f();
+    } catch {
+      // the next one all the same
+    }
+  }
+  await closeAll();
+  for (const r of servers.splice(0)) {
+    try {
+      await r.stop();
+    } catch {
+      // the next one all the same
+    }
+  }
+}
+
+// Dub's and Edubba's programs, loaded only by the tests that start them: a
+// test of Kišib alone never waits on, or breaks with, another app's code.
+const dubServer = () => import('../../dub/src/server.ts');
+const edubbaServer = () => import('../../desk/src/server.ts');
 
 export const apps: { close(): Promise<void> }[] = [];
 
 export async function closeAll() {
-  for (const a of apps.splice(0)) await a.close();
+  for (const a of apps.splice(0)) {
+    try {
+      await a.close();
+    } catch {
+      // closed already, or failing: the next one all the same
+    }
+  }
 }
 
 export async function kishib(now?: () => number): Promise<{ app: Running; c: Client; dir: string }> {
@@ -54,6 +99,7 @@ export async function kishibAgain(k: { app: Running; dir: string }): Promise<{ a
 /** A Dub with a new identity made in it: its chain key's words written, three typed back. */
 export async function dub(homes: string[], relays: string[]): Promise<{ app: DubRunning; c: Client; dir: string; id: string; chainWords: string[] }> {
   const dir = mkdtempSync(join(tmpdir(), 'kishib-dub-'));
+  const { serve: serveDub, DOMAIN: DUB_DOMAIN } = await dubServer();
   const app = await serveDub({ dir, port: 0 });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DUB_DOMAIN);
@@ -67,6 +113,7 @@ export async function dub(homes: string[], relays: string[]): Promise<{ app: Dub
 /** A Dub with an identity brought in by its signing key's words. */
 export async function dubBringing(id: string, words: string, address: string): Promise<{ app: DubRunning; c: Client; dir: string }> {
   const dir = mkdtempSync(join(tmpdir(), 'kishib-dub-'));
+  const { serve: serveDub, DOMAIN: DUB_DOMAIN } = await dubServer();
   const app = await serveDub({ dir, port: 0 });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DUB_DOMAIN);
@@ -77,6 +124,7 @@ export async function dubBringing(id: string, words: string, address: string): P
 
 export async function edubba(homes: string[], relays: string[]): Promise<{ app: EdubbaRunning; c: Client; dir: string }> {
   const dir = join(mkdtempSync(join(tmpdir(), 'kishib-edubba-')), 'edubba');
+  const { serve: serveEdubba } = await edubbaServer();
   const app = await serveEdubba({ dir, port: 0, machineEvery: 0, drafts: join(dir, '..', 'drafts') });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base);
@@ -241,6 +289,7 @@ export async function founded(homes: Relay[], relay: Relay) {
 /** A Dub on this computer that knows where Kišib's folder is. */
 export async function dubBeside(kishibDir: string) {
   const dir = mkdtempSync(join(tmpdir(), 'kishib-runner-dub-'));
+  const { serve: serveDub, DOMAIN: DUB_DOMAIN } = await dubServer();
   const app = await serveDub({ dir, port: 0, kishib: kishibDir });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DUB_DOMAIN);
@@ -267,3 +316,20 @@ export async function asking(c: Client): Promise<{ request: string; panel: strin
   throw new Error('no panel was asked for');
 }
 
+
+/**
+ * Part 4: a part of a page that fills later (the runner's state read after
+ * the page loads, a request's count after it is announced), waited for until
+ * its text says `words`, then checked; never read once. Returns its text.
+ */
+export async function shows(l: { innerText(o?: { timeout?: number }): Promise<string> }, words: RegExp, timeout = 60_000): Promise<string> {
+  const end = Date.now() + timeout;
+  let t = '';
+  for (;;) {
+    t = await l.innerText({ timeout: Math.max(1, end - Date.now()) }).catch(() => '');
+    if (words.test(t) || Date.now() > end) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.match(t, words);
+  return t;
+}

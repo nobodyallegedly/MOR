@@ -759,8 +759,12 @@ export function proposalStatus(s: State, p: RealProposal): string {
         : `<div class="card"><h4>Before you found: what this device will hold</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
       : p.kind === 'money'
         ? p.rotated
-          ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}; its payments go to its split service.`)
-          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it</button></div>`
+          ? note('done', 'In force: the split agreement counts; its payments go to its split service.')
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it once the service signed</button></div>`
+      : p.kind === 'keepers'
+        ? p.rotated
+          ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}.`)
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-keepers-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it</button></div>`
       : p.kind === 'clone'
         ? p.rotated
           ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)
@@ -864,7 +868,7 @@ export function keepersShown(s: State, id: string, k: KeepersShown): string {
             `<li>${person(s, x.id)}${x.agent ? ' <span class="tag">agent here</span>' : x.here ? ' <span class="tag">here</span>' : ''}: ${x.ofThis} record${x.ofThis === 1 ? '' : 's'} of this collective’s acts.${x.here ? ` <button data-action="real-keep" data-collective="${e(id)}" data-keeper="${e(x.id)}">Record what arrived</button>` : ''}</li>`,
         )
         .join('')}</ul><p class="small">An act counts as recorded once ${k.rule === 'all' ? 'every keeper' : k.rule === 1 ? 'any one keeper' : `${k.rule} keepers`} recorded it.</p>`
-    : '<p class="small">Its agreement in force names no keepers: set them with its money terms, above.</p>';
+    : '<p class="small">Its agreement in force names no keepers: set them under its Money tab.</p>';
   const disputes = k.disputes.length
     ? `<h4>Disputes, not voids</h4><ul class="plain">${k.disputes
         .map(
@@ -882,28 +886,30 @@ export function keepersShown(s: State, id: string, k: KeepersShown): string {
 
 /** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
 export const COLLECTIVE_MONEY_SAY = [
-  'Who owns its income: each member’s share, adding up to 100%. Every holder signs the stakes their share sets.',
-  'A referral share, off the top of each payment, goes to whoever reposted the work where the buyer found it (optional).',
-  'Its split service answers buyers for the collective, signs their receipts with a grant key of the collective, and pays each member their part. It is a separate identity, a judge: it signs to accept.',
-  'Keepers record its acts (optional); one may be an Edubba agent.',
+  'Who owns the collective is its shares, set in its constitution (its grid’s Shares band, changed with its members). This card never changes them: it chooses only where its payments land.',
+  'A split service: an agreement of the collective naming its split service, which reads the shares from the constitution in force at each payment, never a copy. The service receives each payment in its own name, pays each member their share and publishes the split. A referral share may come off the top.',
+  'One trusted pointer: one member’s own wallet receives everything and divides it by the shares; the others rely on them. Their choice: nothing in MOR checks the division.',
 ];
 
-/** The card setting a real collective's money: stakes per member, a referral share, its split service and its keepers, one clone every member signs. */
+/** The card choosing where a real collective's payments land (H101): a split service, by a split agreement reading its shares by reference, or one trusted pointer; and, apart, its keepers (a clone every member signs). */
 export function moneyCard(s: State, id: string, c: RealCollective): string {
   const members = c.members.filter((m) => !(c.resigned ?? []).some((r) => r.member === m && r.registered));
-  const even = Math.floor((100 / members.length) * 10_000) / 10_000;
   return foldCard(
     'e-real-money',
     'collective-money',
-    'Its money: who owns its income, who divides it',
+    'Its money: where its payments land',
     `<ul class="say">${COLLECTIVE_MONEY_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
 <form id="real-money" data-collective="${e(id)}">
-<span class="label">Each member’s share, in %</span>
-${members.map((m, i) => `<label class="share">${person(s, m)} <input name="share" data-member="${e(m)}" type="number" min="0" max="100" step="0.0001" value="${i === members.length - 1 ? +(100 - even * (members.length - 1)).toFixed(4) : even}" required></label>`).join('')}
-<label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0" required>
-<label>Its split service: its ID</label><div class="row tight"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('service')}</div>
-<label>The key the service made for this collective (64 hexadecimal characters, as it gives it)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false" required>
-<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('keepers')}</div>
+<span class="label">Where its payments land</span>
+<label class="check"><input type="radio" name="way" value="service" checked> A split service, dividing each payment by the shares</label>
+<label class="check"><input type="radio" name="way" value="pointer"> One trusted pointer: one member’s own wallet</label>
+<label>Its split service: its ID</label><div class="row tight"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false">${contactsButtonFor('service')}</div>
+<label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0">
+<span class="label">Or whose wallet (one trusted pointer)</span>${members.map((m, i) => `<label class="check"><input type="radio" name="wallet" value="${e(m)}"${i === 0 ? ' checked' : ''}> ${person(s, m)}</label>`).join('')}
+<div class="row"><button type="submit">Review it</button></div></form>
+<h4>Its keepers</h4>
+<form id="real-keepers" data-collective="${e(id)}">
+<label>Keepers: their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea><div class="row tight">${contactsButtonFor('keepers')}</div>
 <label>How many keepers must record an act</label><input name="keepersNeeded" type="number" min="1" step="1" value="1">
 <div class="row"><button type="submit">Review it</button></div></form>`,
     false,

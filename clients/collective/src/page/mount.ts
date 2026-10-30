@@ -108,6 +108,8 @@ export function mount(root: HTMLElement, o: MountOptions): Mounted {
     clone: numberOf(d.get('clone')),
     others: numberOf(d.get('others')),
     constitution: numberOf(d.get('constitution')),
+    // Who acts for it in each layer (Agreements rule 60), where the form asks it.
+    layers: Object.fromEntries([1, 2, 3, 4, 5].map((l) => [l, numberOf(d.get(`layer-${l}`))]).filter(([, n]) => n !== undefined)),
   });
 
   // ---------------------------------------------------------------- clicks

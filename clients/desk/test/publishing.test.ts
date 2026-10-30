@@ -171,8 +171,8 @@ test('a protected text published by a collective from Edubba, each act signed wi
   const iPa = await dubOf(H, [relay.base]);
   const iPh = await dubOf(H, [relay.base]);
   const { collective } = await foundCollective(e, A, [iPa, iPh], [
-    { name: 'Publishing', layer: 1, holders: [A, iPa.id, iPh.id], number: 1 },
-    { name: 'Offers and deals', layer: 3, holders: [A, iPa.id], number: 1 },
+    { name: 'Publishing', layer: [1, 2], holders: [A, iPa.id, iPh.id], number: 1 },
+    { name: 'Publications', layer: 4, holders: [A, iPa.id], number: 1 },
   ]);
   const hints = [relay.base, ...H];
 

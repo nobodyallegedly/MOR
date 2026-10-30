@@ -1,7 +1,7 @@
 // After Kišib (F335, F337): Edubba takes the new signing key's words Kišib
-// showed once, for an identity it holds or for a real collective whose
-// signing key it holds. Nothing else of Kišib's work comes here: the chain
-// key, the paper shares and the members' new shares never do.
+// showed once, for an identity it holds; and, for a real collective, Kišib's
+// rotation completing its member change. Nothing else of Kišib's work comes
+// here: the chain key, the paper shares and the members' new shares never do.
 //
 // - **An identity** whose signing key was changed in Kišib: its record says
 //   "changed elsewhere"; the new words are checked as brought words are (the
@@ -12,14 +12,14 @@
 // - **A real collective** whose member change waited for Kišib: Edubba reads
 //   the collective's chain from its homes and checks that its latest
 //   rotation counts, declares the member change waiting here (its clone and
-//   the signature acts), and installs the signing key the words give. Then
-//   its copy of the collective follows: the members, the agreement in force,
-//   the key's dealing, the key Edubba signs with. The change is in force.
+//   the signature acts). A collective has no signing key (Identity rule 1,
+//   rotation check 4): there are no words to take, and nothing is installed.
+//   Then its copy of the collective follows: the members, the agreement in
+//   force, the key's dealing. The change is in force.
 //
 // TEST IDENTITIES ONLY.
 
 import { cborDecode, describeAct, hex, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
-import { resealMemberKeys } from '../../grants/src/member.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { freshLines } from '../../genesis/src/identity.ts';
 import { Refused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
@@ -95,9 +95,6 @@ export class AfterKishib {
       } else if (last && look.encryptionKeyAct === last.act) {
         this.store.saveIdentity(me);
         await me.publishEncryptionKey(encryptionSecret(seed));
-        // F353: the member keys sealed to this identity, sealed again to its new encryption key (the member keys cMIP, 4.1).
-        const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e) => unhex(e.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
-        if (resealed) lines.push({ text: `Its ${resealed} member key${resealed === 1 ? '' : 's'} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: 'ok' });
         this.store.saveIdentity(me);
         lines.push({ text: 'Its encryption key was renewed from the new words (Edubba published the last one): messages sealed from now on open only with them.', tone: 'ok' });
       } else {
@@ -108,18 +105,21 @@ export class AfterKishib {
     });
   }
 
-  /** A real collective takes its new signing key's words, once Kišib's rotation completing a member change counts. */
-  renewCollective(collective: string, words: string): Promise<Done> {
+  /**
+   * A real collective takes Kišib's rotation completing a member change, once
+   * it counts. It carries no signing key (rotation check 4): `words` are no
+   * longer asked, and ignored where an older page still sends them.
+   */
+  renewCollective(collective: string, _words?: string): Promise<Done> {
     return this.desk.serial(async () => {
       const c = this.real.collective(collective);
-      const seed = seedOf(words);
       const look = await lookUp(collective, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), this.via);
       const r = look.resolution;
       if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing can be taken until they agree.');
       if (r.stop === 'pending' || r.waiting.length) throw new Error('Kišib’s rotation waits for its homes: give the words once it counts.');
       const latest = r.links[r.links.length - 1];
       if (latest.act === c.f.identity.binding || latest.position <= c.f.identity.position) throw new Error('The collective’s keys have not changed since Edubba’s copy: the rotation was not made, or does not count yet.');
-      if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(seed))) throw new Error(NOT_CURRENT);
+      if (r.signingKey) throw new Error('Its latest rotation installs a signing key: a collective has none (Identity rule 1). Nothing was taken.');
       // What the rotation declares: the member change waiting here.
       const bytes = (await servedChain(collective, r.homes, this.via)).find((b) => (describeAct(b) as { id: string }).id === latest.act);
       if (!bytes) throw new Error('Its latest rotation was not served by its homes.');
@@ -135,20 +135,20 @@ export class AfterKishib {
       f.chain = chain.map(b64);
       f.position = latest.position;
       f.binding = latest.act;
-      f.signingSecret = hex(seed);
+      f.signingSecret = '';
       f.homes = r.homes;
       f.rule = r.rule ?? null;
       f.pending = null;
       f.sequence = [];
-      // A rotation is a decision: the collective's next actions cite it (F127).
-      if (f.cites) f.cites = [latest.act];
+      // A rotation is a decision: the collective's next acts cite it (rule 58).
+      f.cites = [latest.act];
       const governance = p.governance ?? c.f.governance;
-      c.f.safety = { scheme: r.chainKeyScheme ?? c.f.safety.scheme, index: latest.position, threshold: governance.safetyThreshold, commit: r.chainKeyCommit ?? '', fingerprint: '', shares: [] };
+      // Key 0 signed the genesis: the key a link at position n commits is key n + 1.
+      c.f.safety = { scheme: r.chainKeyScheme ?? c.f.safety.scheme, index: latest.position + 1, threshold: governance.safetyThreshold, commit: r.chainKeyCommit ?? '', fingerprint: '', shares: [] };
       c.f.agreement = clone;
       c.f.agreements.push(clone);
       c.f.members = p.members;
       c.f.governance = governance;
-      c.f.signingHolder = p.holder ?? c.f.signingHolder;
       c.f.pending = null;
       this.real.afterRotation(c, p.act, latest.act);
       const names = this.real.names();
@@ -157,7 +157,7 @@ export class AfterKishib {
         lines: [
           { text: `Kišib’s rotation ${short(latest.act)} counts, declaring the change ${short(clone)}.`, tone: 'ok' },
           { text: `Its members now: ${p.members.map(names).join(', ')}. Its chain key: one share per member, on paper, any ${governance.safetyThreshold} rebuilding it (the new dealing’s fingerprint was shown in Kišib and in each member’s Dub).` },
-          { text: 'Edubba signs for the collective with the new key, in a new line.', tone: 'ok' },
+          { text: 'The collective has no signing key: each member goes on acting for it with their own.', tone: 'ok' },
         ],
         acts: [],
       };

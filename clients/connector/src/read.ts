@@ -29,7 +29,7 @@ import { LONG_FORM_CORRECTION, correctionOf, isCorrectionFormat } from '../../ba
 /** What the connector says about one act. */
 export interface Told {
   id: string;
-  kind: 'release' | 'agreement' | 'signature' | 'text' | 'publication' | 'identity' | 'private' | 'other';
+  kind: 'release' | 'agreement' | 'signature' | 'text' | 'bake' | 'identity' | 'private' | 'other';
   /** A few words naming it. */
   title: string;
   /**
@@ -215,7 +215,7 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
     const media = cborDecode(d.payload!) as Map<number, unknown>;
     const spec = media.get(0);
     if (spec instanceof Uint8Array && hex(spec) === REPO_SPECS.manifest) return release(id, hints, via);
-    return publication(act, d, judge, spec instanceof Uint8Array ? hex(spec) : null);
+    return bake(act, d, judge, spec instanceof Uint8Array ? hex(spec) : null);
   }
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) return agreement(act, d, judge);
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.signature) return signature(act, d, judge, depth);
@@ -356,19 +356,30 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   });
 }
 
-// ---------------------------------------------------------------- a publication
+// ---------------------------------------------------------------- a bake
 
-async function publication(act: Uint8Array, d: Described, judge: Judge, media: string | null): Promise<Told> {
+/**
+ * A bake (Envelopes type 0, called a publication before F407): "I uploaded
+ * this". Its signer is its uploader. A member uploading for a keyless
+ * collective names the collective in its objects (Agreements rules 56-60):
+ * the collective is read from there, never from the signer. A bake carries
+ * no price (a price is a price tag, Money) and is never withdrawn.
+ */
+async function bake(act: Uint8Array, d: Described, judge: Judge, media: string | null): Promise<Told> {
   const standing = await judge.standing(act, d);
   const what = media === POST_SPECS.jpeg ? 'a picture (a JPEG)' : `media of a kind this connector does not implement (${media ? short(media) : 'none named'})`;
+  const collective = d.objects?.[0]?.[0] ?? null;
+  const lines: Line[] = [{ text: `Uploaded by the identity ${d.signer}: its uploader.` }, standingLine(standing)];
+  if (collective) lines.push({ text: `It names the collective ${collective} in its objects: a member uploading for the collective, with the member's own key (Agreements rules 56-60).` });
+  lines.push({ text: 'A bake states no price: a price is a price tag (Money), and a bake is never withdrawn by the protocol (F407).' });
   return told(d.id, {
-    kind: 'publication',
-    title: `A publication of ${what}`,
+    kind: 'bake',
+    title: `A bake of ${what}`,
     signer: d.signer ?? null,
     standing,
     counts: standing === 'valid',
-    verdict: `A publication of ${what}. ${standingWords(standing).words}`,
-    sections: [{ heading: 'Who signed', lines: [{ text: `Signed by the identity ${d.signer}.` }, standingLine(standing)] }],
+    verdict: `A bake (an upload) of ${what}${collective ? `, for the collective ${short(collective)}` : ''}. ${standingWords(standing).words}`,
+    sections: [{ heading: 'Who uploaded it', lines }],
   });
 }
 
@@ -381,7 +392,8 @@ export async function release(id: string, hints: string[], via: Via): Promise<To
   const quoted: Told['quoted'] = [];
   const who: Line[] = [];
   const t = v.agreement ? await termsAt(v.agreement, hints, via) : null;
-  if (v.collective) who.push({ text: `Published by the identity ${v.collective}.` });
+  // A keyless collective's release: uploaded by a member naming the collective in its objects (Agreements rules 56-60).
+  if (v.collective) who.push({ text: `Published by the identity ${v.collective}, the collective it names; uploaded by one of its members with their own key.` });
   const st = releaseStanding(v);
   if (st) who.push(standingLine(st));
   if (v.agreement) {
@@ -440,7 +452,7 @@ export async function release(id: string, hints: string[], via: Via): Promise<To
 
 /** The publication's standing, as the release verifier found it: it stops at the first check that fails. */
 function releaseStanding(v: { collective?: string; problems: string[] }): string | null {
-  const m = v.problems.map((p) => /^the publication is (\w+), not valid/.exec(p)).find(Boolean);
+  const m = v.problems.map((p) => /^the (?:publication|bake) is (\w+), not valid/.exec(p)).find(Boolean);
   if (m) return m[1];
   if (!v.collective || v.problems.some((p) => /not found|not a public act|not a publication|not a release manifest|has no signer/.test(p))) return null;
   return 'valid';

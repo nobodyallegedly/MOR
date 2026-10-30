@@ -67,12 +67,12 @@ export interface Kind {
   name: string;
 }
 
-/** The layers the grid offers, one choice each (H120), in the core's numbering of areas (Agreements, "Layer": Envelopes and Text together are layer 1). */
+/** The layers the grid offers, one choice each (H120), in the core's numbering (MICS, "Structure": six layers, one per MIR; 0 Identity, a collective's chain acts, is not offered). */
 export const GRID_LAYERS: { key: keyof typeof CORE_TYPES | 'development'; layer: number; name: string; say: string; kinds: Kind[] }[] = [
   { key: 'text', layer: 1, name: 'Text', say: 'posts and messages (the Text layer)', kinds: CORE_TYPES.text.map((t) => ({ spec: MIRS.text, type: t.type, name: KIND_WORDS.text[t.constant] ?? plain(t.constant) })) },
-  { key: 'envelopes', layer: 1, name: 'Envelopes', say: 'media, their keys, vows (the Envelopes layer)', kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
-  { key: 'money', layer: 2, name: 'Money', say: 'money (the Money layer)', kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
-  { key: 'agreements', layer: 3, name: 'Agreements', say: 'collective, publishing and service agreements, claims of works (the Agreements layer)', kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
+  { key: 'envelopes', layer: 2, name: 'Envelopes', say: 'bakes, their keys, vows (the Envelopes layer)', kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
+  { key: 'money', layer: 3, name: 'Money', say: 'money (the Money layer)', kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
+  { key: 'agreements', layer: 4, name: 'Agreements', say: 'collectives, ownership agreements, publications, claims of works (the Agreements layer)', kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
   // The Development MIR defines no act type of its own: a specification is published as a publication. Chosen whole.
-  { key: 'development', layer: 4, name: 'Development', say: 'specifications (the Development layer)', kinds: [] },
+  { key: 'development', layer: 5, name: 'Development', say: 'specifications (the Development layer)', kinds: [] },
 ];

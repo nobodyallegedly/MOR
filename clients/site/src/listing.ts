@@ -12,7 +12,7 @@
 //
 // How it reads: each relay named is asked for everything it serves (relay
 // transport cMIP, "Following: the feed", with no filter). A specification
-// is a public publication (Envelopes type 0) whose media spec is the
+// is a public bake (Envelopes type 0, called a publication before F407) whose media spec is the
 // Development MIR's (Development, Part three: "a public act ... whose media
 // is the specification's content"; draft 9, F290: "Its publication names
 // the Development MIR's spec hash as its media spec"). Each one found is checked in full: its
@@ -64,7 +64,7 @@ import { holdSequence, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { relayAddress } from './settings.ts';
-import { PAYMENT_CMIP, PUBLICATION, RELEASE_MANIFEST } from './specs.ts';
+import { PAYMENT_CMIP, BAKE, RELEASE_MANIFEST } from './specs.ts';
 
 /** Agreements act types a listing reads: terms and signatures. */
 const AGREEMENTS_TERMS = 0;
@@ -114,8 +114,8 @@ export const LAYERS: Record<string, string> = {
   [MIRS.development]: 'Development',
 };
 
-/** Field 10's layer numbers (Development, "Layers an extension acts on"). */
-export const EXTENSION_LAYERS = ['Identity', 'Envelopes and Text', 'Money', 'Agreements'];
+/** Field 10's layer numbers (Development draft 11, "Layers an extension acts on"): the core's layers, Text and Envelopes two of them (F407). */
+export const EXTENSION_LAYERS = ['Identity', 'Text', 'Envelopes', 'Money', 'Agreements'];
 
 /** The tasks the core defines (Development, "The tasks the core defines"): number, MIR, name. */
 export const TASKS: Record<number, [layer: string, name: string]> = {
@@ -165,10 +165,13 @@ export interface Spec {
   checker: boolean;
 }
 
-/** A release naming a specification's publication (release manifest cMIP). */
+/** A release naming a specification's bake (release manifest cMIP). */
 export interface Release {
   id: string;
+  /** Its uploader: the bake's signer. */
   signer: string;
+  /** For a collective's release, the collective its bake names in its objects (a keyless collective's release is uploaded by a member naming it, Agreements rule 58); null otherwise. */
+  collective: string | null;
   /** The release's name and version label, from its manifest, when it could be read. */
   name: string | null;
   version: string | null;
@@ -351,7 +354,7 @@ export function specHash(content: Uint8Array): string {
  * it defines, each of its kind; field 9 canonical text; a creator for every
  * kind but a MIR, the MICS document and a test suite; what each kind
  * requires (a Module's field 5; fields 11 and 13 on a Module under the
- * payment cMIP; a MIP's predecessor); field 10 ascending, from 0 to 3; in
+ * payment cMIP; a MIP's predecessor); field 10 ascending, from 0 to 4 (Development draft 11: Text and Envelopes two layers); in
  * canonical encoding. A content that does not decode so is no specification
  * (F323). Throws saying why.
  */
@@ -428,9 +431,9 @@ interface Media {
   places: string[];
 }
 
-/** A publication's media fields (Envelopes, "Media"), or null when it describes none. */
+/** A bake's media fields (Envelopes, "Media"), or null when it describes none. */
 function mediaOf(d: Described): Media | null {
-  if (!d.public || !d.payload || d.type !== PUBLICATION || d.spec !== SPECS.envelopes) return null;
+  if (!d.public || !d.payload || d.type !== BAKE || d.spec !== SPECS.envelopes) return null;
   let m: Map<number, unknown>;
   try {
     m = cborDecode(d.payload) as Map<number, unknown>;
@@ -511,7 +514,7 @@ type Query = { signer?: string; spec?: string; type?: number };
 
 /** What a filtered read asks each relay: publications (specifications and releases), Agreements' terms and signatures. */
 function queriesOf(f: Filtered): Query[] {
-  return [{ spec: SPECS.envelopes, type: PUBLICATION, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+  return [{ spec: SPECS.envelopes, type: BAKE, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
 }
 
 /** Everything a relay serves for each query (with none, everything), up to `LISTING_READ` acts, described. */
@@ -652,7 +655,7 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
         problem ??= field6.problem;
       }
       if (!named.length) return;
-      const r: Release = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? 'implements' : 'reference' };
+      const r: Release = { id: d.id, signer: d.signer, collective: d.objects?.[0]?.[0] ?? null, name: null, version: null, problem, by: field6 ? 'implements' : 'reference' };
       if (!r.problem) {
         if (man) {
           r.name = man.get(0) as string;
@@ -890,7 +893,7 @@ export function roleWords(l: Listed, all: Map<string, Listed>): { kind: string; 
   }
   if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(', ')}`);
   if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(', ') : 'nothing'}`);
-  if (s.checker) role.push('checks proofs of delivery of proven offers (field 12)');
+  if (s.checker) role.push('checks proofs of proven deliveries (field 12)');
   if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor!) ? `“${all.get(s.predecessor!)!.name}”` : `a specification not found here (${s.predecessor!.slice(0, 12)}…)`}`);
   if (!role.length) role.push(s.kind === 0 ? 'names no task, defines no act type' : 'declares nothing more');
   // An xtype's or an extension's own acts belong to Development (F106).

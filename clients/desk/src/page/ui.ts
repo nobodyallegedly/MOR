@@ -24,7 +24,7 @@ import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { leaveRead as dubLeaveRead, shareTypeBack } from '../../../dub/src/page/view.ts';
 import type { Listing } from '../folders.ts';
-import { defaultGrid, type Grid, type AreaRow } from '../grid.ts';
+import { defaultGrid, evenPercent, type Grid, type AreaRow } from '../grid.ts';
 import { gridTable } from './grid-view.ts';
 
 const app = document.getElementById('app')!;
@@ -135,12 +135,17 @@ async function memberRowsChanged(fid: string, add: boolean, row?: HTMLElement) {
   await syncGrid(fid);
 }
 
+/** For a member change: the members in force when its grid was read. */
+const gridOrigin = new Map<string, string[]>();
+
 function drawGrid(fid: string): void {
   const g = grids.get(fid);
   const box = $(`e-grid-${fid}`);
   if (!g || !box) return;
   // H106, H121: each member's column shows its names and its short ID, a button; the sentences name it in words (its column's number where no name is known).
-  box.innerHTML = gridTable(fid, g, (id) => nameOf(id) ?? `member ${g.members.indexOf(id) + 1}`, (id) => whoHtml({ id, named: namesKnown[id] ?? null }));
+  const before = gridOrigin.get(fid);
+  const joining = before ? g.members.filter((m) => !before.includes(m)) : [];
+  box.innerHTML = gridTable(fid, g, (id) => nameOf(id) ?? `member ${g.members.indexOf(id) + 1}`, (id) => whoHtml({ id, named: namesKnown[id] ?? null }), joining);
 }
 
 /** The grid follows the members chosen: new columns empty (the constitution's box filled where every member had one), removed ones gone. */
@@ -155,16 +160,26 @@ async function syncGrid(fid: string): Promise<void> {
       const form = $<HTMLFormElement>(fid);
       const r = await c.ask<{ grid: Grid }>('real grid', { collective: form?.dataset.collective, members }).catch(() => null);
       g = r?.grid ?? defaultGrid(members);
+      // The members in force: a member added after them is joining, their share required (H101).
+      if (r?.grid && !gridOrigin.has(fid)) gridOrigin.set(fid, [...r.grid.members]);
     } else g = defaultGrid(members);
   }
   const all = g.members.every((m) => g!.constitution.holders.includes(m));
   const keep = (xs: string[]) => xs.filter((x) => members.includes(x));
   const added = members.filter((m) => !g!.members.includes(m));
+  // A layer every member held stays every member's; the shares stay as written, a new member's left empty to write (H101), even again at a founding not yet touched.
+  const layers = Object.fromEntries(Object.entries(g.layers).map(([k, r]) => {
+    const was = g!.members.every((m) => r.holders.includes(m));
+    return [k, { holders: [...keep(r.holders), ...(was ? added : [])], number: was && r.number >= g!.members.length ? members.length : Math.min(r.number, Math.max(1, members.length)) }];
+  })) as Grid['layers'];
+  const shares = fid === 'real-found' && !touched.has(`${fid}:shares`) ? evenPercent(members) : Object.fromEntries([...members, ...(g.departed ?? [])].map((m) => [m, g!.shares[m] ?? 0]));
   g = {
     ...g,
     members,
     constitution: { holders: [...keep(g.constitution.holders), ...(all ? added : [])], number: all && g.constitution.number >= g.members.length ? members.length : g.constitution.number },
+    layers,
     areas: g.areas.map((l) => ({ ...l, holders: keep(l.holders) })),
+    shares,
   };
   grids.set(fid, g);
   drawGrid(fid);
@@ -184,13 +199,18 @@ function gridEvent(el: HTMLElement): boolean {
   if (d.gridCell !== undefined) {
     const m = d.m!;
     if (d.gridCell === 'const') g.constitution = { ...g.constitution, holders: toggle(g.constitution.holders, m) };
-    else {
+    else if (d.gridCell.startsWith('layer:')) {
+      const r = g.layers[Number(d.gridCell.split(':')[1]) as keyof Grid['layers']];
+      r.holders = toggle(r.holders, m);
+      const all = g.members.every((x) => r.holders.includes(x));
+      r.number = all ? Math.max(1, Math.min(r.number, g.members.length)) : r.holders.length;
+    } else {
       const l = row(d.gridCell.split(':')[1])!;
       l.holders = toggle(l.holders, m);
       l.number = Math.max(1, Math.min(l.number, l.holders.length || 1));
     }
   } else if (d.gridAdd !== undefined) {
-    g.areas.push({ name: '', layer: 2, holders: [], number: 1 });
+    g.areas.push({ name: '', layer: 2, kinds: [], holders: [], number: 1 });
   } else if (d.gridRemove !== undefined) {
     g.areas.splice(Number(d.gridRemove), 1);
   } else if (d.gridNum !== undefined) {
@@ -199,20 +219,18 @@ function gridEvent(el: HTMLElement): boolean {
     else if (d.gridNum === 'chain') g.chainKey = n;
     else if (d.gridNum === 'absence') g.absence = n;
     else if (d.gridNum === 'clone') g.clone = n;
+    else if (d.gridNum.startsWith('layer:')) g.layers[Number(d.gridNum.split(':')[1]) as keyof Grid['layers']].number = n;
     else row(d.gridNum.split(':')[1])!.number = n;
+  } else if (d.gridShare !== undefined) {
+    // H101: the shares as written; drawn again only on leaving the box, so typing is never lost.
+    const x = (el as HTMLInputElement).value.trim();
+    g.shares = { ...g.shares, [d.gridShare]: x === '' ? NaN : Number(x) };
+    touched.add(`${fid}:shares`);
   } else if (d.gridLayer !== undefined) {
     const l = row(d.gridLayer)!;
-    // H120: the core's layer, and within Text and Envelopes' one of them only.
-    const [layer, part] = (el as HTMLSelectElement).value.split(':');
-    l.layer = Number(layer);
-    if (part === 'text' || part === 'envelopes') l.part = part;
-    else delete l.part;
-    if (l.kinds) l.kinds = [];
-    if (l.layer !== 2) delete l.cap;
-  } else if (d.gridSome !== undefined) {
-    const l = row(d.gridSome)!;
-    if ((el as HTMLInputElement).checked) l.kinds = [];
-    else delete l.kinds;
+    l.layer = Number((el as HTMLSelectElement).value);
+    l.kinds = [];
+    if (l.layer !== 3) delete l.cap;
   } else if (d.gridKind !== undefined) {
     const l = row(d.gridKind)!;
     l.kinds = toggle(l.kinds ?? [], (el as HTMLInputElement).value);
@@ -1687,6 +1705,14 @@ app.addEventListener('click', async (ev) => {
       }
       return;
     }
+    case 'real-keepers-record': {
+      const r = await busy('Recording it on the collective’s line…', () => c.ask<Done>('real keepers record', { act: d.act }));
+      if (r) {
+        await refresh();
+        say('done', v.lines(r.lines));
+      }
+      return;
+    }
     case 'real-gather': {
       const r = await busy('Reading the answers in your inbox…', () => c.ask<{ problems: string[] }>('real gather', { act: d.act }));
       if (r) {
@@ -2034,9 +2060,19 @@ app.addEventListener('submit', async (ev) => {
       return;
     }
     case 'real-money': {
-      const shares = Object.fromEntries([...form.querySelectorAll<HTMLInputElement>('input[name=share]')].map((x) => [x.dataset.member!, Number(x.value)]));
+      const way = d.get('way') === 'pointer' ? 'pointer' : 'service';
+      const r = await busy('Making it, and reading it back…', () =>
+        c.ask<Review>('real money prepare', way === 'service' ? { collective: form.dataset.collective, way, referral: Number(d.get('referral') ?? 0), service: words(d.get('service')) } : { collective: form.dataset.collective, way, wallet: words(d.get('wallet')) }),
+      );
+      if (r) {
+        realReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-real-review', r);
+      }
+      return;
+    }
+    case 'real-keepers': {
       const keepers = words(d.get('keepers')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
-      const r = await busy('Making it, and reading it back…', () => c.ask<Review>('real money prepare', { collective: form.dataset.collective, shares, referral: Number(d.get('referral') ?? 0), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')), keepers, keepersNeeded: Number(d.get('keepersNeeded') ?? 1) }));
+      const r = await busy('Making it, and reading it back…', () => c.ask<Review>('real keepers prepare', { collective: form.dataset.collective, keepers, keepersNeeded: Number(d.get('keepersNeeded') ?? 1) }));
       if (r) {
         realReview = { plan: r.plan, digest: r.digest };
         reviewIn('e-real-review', r);

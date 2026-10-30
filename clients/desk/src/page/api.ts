@@ -290,7 +290,7 @@ export interface ActRead {
 /** A proposal sent from here for a real collective (H18). */
 export interface RealProposal {
   act: string;
-  kind: 'founding' | 'clone' | 'release' | 'money';
+  kind: 'founding' | 'clone' | 'release' | 'money' | 'keepers';
   name: string;
   collective: string | null;
   founder: string;

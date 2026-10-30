@@ -1,7 +1,7 @@
 // The gateway's display client, in the visitor's browser (website cMIP,
 // "Showing a site"). The gateway serves this same page at every address of
 // the site. It reads the gateway's settings, checks the version with the
-// core library (the publication, its signer's chain, the manifest), fetches
+// core library (the bake, its uploader's chain, the manifest), fetches
 // the file this address names, checks its bytes against the manifest, and
 // only then shows it, under a bar that says who signed it and whether it
 // verified. A file that does not match is not shown. A film is fetched and

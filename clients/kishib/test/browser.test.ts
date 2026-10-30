@@ -39,7 +39,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
-import { changeKeys, closeAll, dub, dubBringing, edubba, everything, forms, founded, kishib, receiveShare, standing, start, type Relay } from './world.ts';
+import { changeKeys, closeAll, dub, dubBringing, edubba, everything, forms, founded, kishib, receiveShare, standing, start, type Relay, stopAll, shows } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -115,10 +115,8 @@ before(async () => {
 });
 
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const s of sites) await new Promise((r) => s.close(r));
-  for (const r of [...(homes ?? []), relay, spare]) await r?.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => browser?.close(), async () => { for (const s of sites) { s.closeAllConnections(); await new Promise((r) => s.close(r)); } });
 });
 
 async function open(url: string): Promise<{ context: BrowserContext; page: Page }> {
@@ -283,7 +281,7 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
     ['paper', 'k-dm k-l3'],
     ['collectives', 'k-dm k-l3'],
   ]);
-  assert.match((await page.locator('.kishib-holds').textContent()) ?? '', /Holds nothing/);
+  await shows(page.locator('.kishib-holds'), /Holds nothing/);
   // Each tile's column; Paper behind the quiet door.
   await page.click('[data-k-tile="identities"]');
   assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'make-nakisib', 'record', 'confirm']);
@@ -509,7 +507,7 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   await page.getByRole('button', { name: 'Sign it' }).click();
   await page.locator('#request-state').waitFor({ timeout: 60_000 });
   const full = await page.locator('#request-state .kishib-full').innerText();
-  assert.match(await page.locator('#request-state').innerText(), /1 of 2 shares are in/);
+  await shows(page.locator('#request-state'), /1 of 2 shares are in/);
   await shot(page, '33-collective-waiting');
 
   // Ana, in the web client: the rotation read first, then her paper and words.
@@ -536,22 +534,24 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   await page.getByRole('button', { name: 'Rebuild, rotate and deal now' }).waitFor({ timeout: 60_000 });
   await shot(page, '37-two-of-two');
   await page.getByRole('button', { name: 'Rebuild, rotate and deal now' }).click();
-  await page.getByRole('button', { name: 'Show the collective’s new signing key’s words' }).waitFor({ timeout: 60_000 });
+  // Replaced premise (the redesign, Identity rule 1 and rotation check 4): a collective has no signing
+  // key, so Kišib shows no "collective's new signing key's words" after its rotation. Asserted instead:
+  // once it counts, only the new share waits to be shown, and no button offers signing-key words.
+  await page.locator('[data-action="show share"]').waitFor({ timeout: 60_000 });
+  await page.locator('.kishib-review', { hasText: 'It counts' }).waitFor({ timeout: 60_000 });
+  assert.equal(await page.getByRole('button', { name: /signing key’s words/ }).count(), 0, 'no signing-key words for a collective');
   await shot(page, '38-rotated');
   await page.locator('[data-action="show share"]').click();
   await page.locator('#words').waitFor();
   await shot(page, '39-new-share');
   await page.getByRole('button', { name: 'I have written them down' }).click();
-  await page.getByRole('button', { name: 'Show the collective’s new signing key’s words' }).click();
-  const cw = await shownWords(page);
-  await shot(page, '40-collective-words');
-  await page.getByRole('button', { name: 'I have written them down' }).click();
-  await typeBack(page, cw);
   await button(page, 'Done');
   await shot(page, '41-collective-done');
   for (const m of [ana, cy]) await receiveShare(m.c, clone);
 
-  // Edubba, by clicks: the change waits for Kišib, with the box for the collective's new words; given them, it is in force.
+  // Edubba, by clicks: the change waits for Kišib; once Kišib's rotation counts, Edubba follows it from the
+  // collective's homes. Replaced premise: no words are given (a collective has no signing key), so the
+  // box asks none; it only takes the rotation.
   const ep = await context.newPage();
   ep.on('pageerror', (x) => problems.push(x.message));
   await ep.goto(`${e.app.base}/#pair=${e.app.access.newCode()}`);
@@ -563,7 +563,7 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   await box.waitFor({ timeout: 60_000 });
   assert.match(await ep.locator('.proposal-status').last().innerText(), /Open Kišib and choose “Rotate a collective”/);
   await shot(ep, '42-edubba-waits-for-kishib');
-  await box.locator('textarea[name=words]').fill(cw.join(' '));
+  assert.equal(await box.locator('textarea[name=words]').count(), 0, 'no signing-key words asked for a collective');
   await box.locator('button[type=submit]').click();
   await ep.locator('#e-status .k-note.k-done', { hasText: 'The member change is in force' }).waitFor({ timeout: 60_000 }).catch(async (e) => {
     throw new Error(`${e}\nEdubba said: ${await ep.locator('#e-status').innerText()}`);
@@ -576,7 +576,7 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   assert.doesNotMatch(await ep.locator('#e-perms').innerText(), /cannot read/);
   // The program's folder holds no word.
   const folder = everything(k.dir);
-  for (const ws of [papers[f.id].words, fWords.split(' '), cw]) for (const x of forms(ws, fromWords(ws))) assert.ok(!folder.includes(x));
+  for (const ws of [papers[f.id].words, fWords.split(' ')]) for (const x of forms(ws, fromWords(ws))) assert.ok(!folder.includes(x));
   await context.close();
   assert.deepEqual(problems, []);
 });
@@ -593,7 +593,7 @@ test('the program’s page: Make an identity (H48), its chain key’s words once
     ['paper', 'k-dm k-l3'],
     ['collectives', 'k-dm k-l3'],
   ]);
-  assert.match((await page.locator('.kishib-holds').textContent()) ?? '', /Holds nothing\s*runner off/);
+  await shows(page.locator('.kishib-holds'), /Holds nothing\s*runner off/);
   await go(page, 'identities', 'make');
   assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'make-nakisib', 'record', 'confirm', 'held']);
   await fill(page, '#form-make', { homes: H.join('\n'), relays: relay.base });

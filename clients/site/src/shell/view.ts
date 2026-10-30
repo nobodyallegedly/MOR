@@ -150,7 +150,7 @@ export interface ListingLine {
   relays: ListedRelay[];
   /** Null while reading and checking. */
   read: RelayLine[] | null;
-  /** Specifications shown (verified, by spec hash), and publications that could not be verified. */
+  /** Specifications shown (verified, by spec hash), and bakes that could not be verified. */
   verified: number;
   unverified: number;
   /** What was read of agreements, once read (F288). */
@@ -227,7 +227,7 @@ function listingItem(l: ListingLine): string {
     const name = r.name ? `${e(r.name)}, ` : '';
     if (!r.asked) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">not reachable from a browser</span>, not asked</li>`;
     if (r.problem) return `<li>${name}<code>${e(r.address)}</code>: <span class="bad-word">could not be read</span>, ${e(r.problem)}${r.read ? ` (after ${r.read} acts)` : ''}</li>`;
-    return `<li>${name}<code>${e(r.address)}</code>: ${r.read} ${r.read === 1 ? 'act' : 'acts'} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? 'publication' : 'publications'} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ''}</li>`;
+    return `<li>${name}<code>${e(r.address)}</code>: ${r.read} ${r.read === 1 ? 'act' : 'acts'} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? 'bake' : 'bakes'} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ''}</li>`;
   });
   const a = l.agreements;
   const ag = a
@@ -235,7 +235,7 @@ function listingItem(l: ListingLine): string {
     : '';
   const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? 'xtype' : 'xtypes'} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? 'act' : 'acts'} of their types counted; private acts are not counted. ` : '';
   const mp = l.mips ? `${l.mips.listed} ${l.mips.listed === 1 ? 'MIP' : 'MIPs'} listed, under ${l.mips.under} ${l.mips.under === 1 ? 'MIR' : 'MIRs'}${l.mips.versions ? `; ${l.mips.versions} ${l.mips.versions === 1 ? 'text' : 'texts'} found in versions` : ''}. ` : '';
-  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
+  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'bake' : 'bakes'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {
@@ -256,9 +256,11 @@ export function bar(s: BarState): string {
   const rows: string[] = [];
   if (v?.signer) {
     rows.push(`<dt>Signed by</dt><dd><span class="fp" id="mor-signer">${fingerprint(v.signer)}</span></dd>`);
+    // A keyless collective's site is uploaded by a member naming the collective (website cMIP draft 12, rule 2).
+    if (v.collective) rows.push(`<dt>For</dt><dd>The collective <span class="fp">${fingerprint(v.collective)}</span>, which has no key of its own: a member uploaded it, naming the collective${v.rule ? `, and it counts under ${e(v.rule)}` : ''}.</dd>`);
     if (set) {
       rows.push(
-        v.signer === set.identity
+        (v.collective ?? v.signer) === set.identity
           ? `<dt>Whose</dt><dd>The identity this gateway names as ${e(set.name)}. The name is the gateway's setting; the identity is what was checked.</dd>`
           : `<dt>Whose</dt><dd><strong>Not the identity this gateway names as ${e(set.name)}</strong>, which is <span class="fp">${fingerprint(set.identity)}</span>.</dd>`,
       );

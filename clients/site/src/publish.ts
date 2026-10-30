@@ -13,7 +13,7 @@ import { NotJpeg, strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { CARRIED_WORDS as FILM_CARRIED, NotFilm, strip as stripFilm } from '../../../modules/video/src/video.ts';
 import { decodeSite, encodeSite, FRONT, kindOf, type FileEntry, type SiteManifest } from './manifest.ts';
-import { PUBLICATION, SITE_SPECS } from './specs.ts';
+import { BAKE, SITE_SPECS } from './specs.ts';
 import { openVersion } from './verify.ts';
 
 export interface FileIn {
@@ -82,8 +82,10 @@ export function checkFiles(files: FileIn[]): void {
 }
 
 async function carryChain(by: TestIdentity, relays: string[]): Promise<void> {
+  // A collective's site: the uploading member's chain too, beside the collective's (website cMIP draft 12, "Publishing", rule 3).
+  const acts = [...by.chainActs(), ...(by.actor ? by.actor.chainActs() : [])];
   for (const hint of relays) {
-    for (const a of by.chainActs()) {
+    for (const a of acts) {
       try {
         await relayAt(hint, by.via).putAct(a);
       } catch {
@@ -94,7 +96,7 @@ async function carryChain(by: TestIdentity, relays: string[]): Promise<void> {
 }
 
 export interface Published {
-  /** The version: its publication's act id. */
+  /** The version: its bake's act id. */
   id: string;
   manifest: SiteManifest;
   /** Files uploaded new; the rest are the same locked objects as in the previous version. */
@@ -102,7 +104,10 @@ export interface Published {
 }
 
 /**
- * Publish a version of a site, signed by `by`. With `previous` (a version's
+ * Publish a version of a site, uploaded by `by` as a bake (Envelopes type 0).
+ * For a keyless collective's file, the bake is made by its acting member with
+ * their own key, naming the collective (website cMIP draft 12, "Publishing",
+ * rule 1); the members its rule needs beyond the uploader add signature acts. With `previous` (a version's
  * act id), the new version names it, and files unchanged since then reuse
  * its objects, fetched and checked from the relays first. Save the
  * identity's file after: its sequence has grown.
@@ -148,8 +153,8 @@ export async function publishSite(
     ]),
   );
   await carryChain(by, opts.relays);
-  // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await by.publish(SITE_SPECS.envelopes, PUBLICATION, payload, { public: true, relays: opts.relays });
+  // The bake first: a relay that keeps media only for bakes it holds then takes the manifest.
+  const made = await by.publish(SITE_SPECS.envelopes, BAKE, payload, { public: true, relays: opts.relays });
   let kept = 0;
   const errors: string[] = [];
   for (const hint of opts.relays) {

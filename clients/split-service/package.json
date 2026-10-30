@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && echo 'The service is tested where it is used: clients/desk (split.test.ts, round-3.test.ts).'",
+    "test": "tsc --noEmit && node --import tsx --test test/*.test.ts",
     "start": "node --import tsx src/cli.ts run"
   },
   "engines": {

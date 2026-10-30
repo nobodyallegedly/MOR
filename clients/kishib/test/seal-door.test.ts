@@ -87,10 +87,14 @@ test('Quit Kišib ends the program by its own hand where it runs as one (the qui
   const dir = join((await kishib()).dir, '..', 'own');
   let quit = 0;
   const app: Running = await serve({ dir, port: 0, quit: () => void quit++ });
-  const c = await Client.open(await newKey(), app.base, DOMAIN);
-  await c.ask('pair', { code: app.access.newCode(), label: 'test' });
-  await c.ask('quit');
-  for (let i = 0; i < 50 && !quit; i++) await new Promise((r) => setTimeout(r, 20));
-  assert.equal(quit, 1);
-  await app.close();
+  // Part 4: closed whatever the outcome.
+  try {
+    const c = await Client.open(await newKey(), app.base, DOMAIN);
+    await c.ask('pair', { code: app.access.newCode(), label: 'test' });
+    await c.ask('quit');
+    for (let i = 0; i < 50 && !quit; i++) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(quit, 1);
+  } finally {
+    await app.close().catch(() => undefined);
+  }
 });

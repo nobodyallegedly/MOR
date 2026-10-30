@@ -20,7 +20,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { chainKeyAt } from '../src/words.ts';
-import { changeKeys, closeAll, dub, kishib, reader, refused, standing, start, type Relay } from './world.ts';
+import { changeKeys, closeAll, dub, kishib, reader, refused, standing, start, type Relay, stopAll } from './world.ts';
 import { LAST_OF_OLD_PAPER_SAY } from '../src/kishib.ts';
 import type { Review, State } from '../src/shapes.ts';
 
@@ -33,8 +33,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 /** Rotate in a Kišib to the end: reviewed, signed, counting, the new words shown and typed back. Returns the new signing words. */

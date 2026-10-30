@@ -23,7 +23,7 @@ import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { hex } from '../../genesis/src/core.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { closeAll, dub, dubBeside, everything, kishib, kishibAgain, PASS, standing, start, type Relay } from './world.ts';
+import { closeAll, dub, dubBeside, everything, kishib, kishibAgain, PASS, standing, start, type Relay, stopAll, shows } from './world.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -38,9 +38,8 @@ before(async () => {
 });
 
 after(async () => {
-  await browser.close();
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => browser?.close());
 });
 
 async function shot(page: Page, name: string) {
@@ -258,13 +257,21 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
     s.end(`<!doctype html><iframe src="${panel}" sandbox="allow-scripts allow-forms"></iframe>`);
   });
   await new Promise<void>((r) => evil.listen(0, '127.0.0.1', r));
-  const E = await open(`http://127.0.0.1:${(evil.address() as { port: number }).port}/`);
-  await E.page.waitForTimeout(800);
-  const inner = E.page.frames().find((f) => f !== E.page.mainFrame());
-  const text = inner ? await inner.evaluate(() => document.body?.innerText ?? '').catch(() => '') : '';
-  assert.doesNotMatch(text, /Sign it/, 'the panel is not shown in another page’s frame');
-  await E.context.close();
-  evil.close();
+  // Part 4: the other page's server stopped whatever the outcome, its open connections with it.
+  try {
+    const E = await open(`http://127.0.0.1:${(evil.address() as { port: number }).port}/`);
+    try {
+      await E.page.waitForTimeout(800);
+      const inner = E.page.frames().find((f) => f !== E.page.mainFrame());
+      const text = inner ? await inner.evaluate(() => document.body?.innerText ?? '').catch(() => '') : '';
+      assert.doesNotMatch(text, /Sign it/, 'the panel is not shown in another page’s frame');
+    } finally {
+      await E.context.close();
+    }
+  } finally {
+    evil.closeAllConnections();
+    evil.close();
+  }
   for (const w of (await k.c.ask<{ waiting: { request: string }[] }>('runner state')).waiting) await k.c.ask('runner answer', { request: w.request, yes: false });
   await asking;
 
@@ -444,7 +451,7 @@ test('H90: Off on Kišib’s page turns the runner off (asked in the page), runn
     return (await (await fetch(`http://127.0.0.1:${run.port}${p}`, { method, headers: { 'mor-seal': token } })).json()) as { state: string };
   };
   assert.equal((await seal('/seal/state')).state, 'off', 'the seal hollow');
-  assert.match(await kp.textContent('.kishib-holds') ?? '', /runner off/);
+  await shows(kp.locator('.kishib-holds'), /runner off/);
 
   // On again, then locked from the seal: the page follows without a refresh, on whatever screen it shows.
   await k.c.ask('runner on', { read: true, passphrase: PASS, again: PASS });
@@ -453,10 +460,8 @@ test('H90: Off on Kišib’s page turns the runner off (asked in the page), runn
   // H111: the Runner tile shows the menu bar's seal, filled while on.
   await kp.locator('[data-k-tile="runner"] svg path[fill="currentColor"]').waitFor({ timeout: 15_000 });
   await seal('/seal/lock', 'POST');
-  await kp.locator('#unlock, form#unlock, [data-runner-state="locked"], .kishib-holds:has-text("locked")').first().waitFor({ timeout: 15_000 }).catch(async () => {
-    assert.match(await kp.locator('body').innerText(), /[Ll]ocked/);
-  });
-  assert.match(await kp.locator('body').innerText(), /[Ll]ocked/);
+  // Part 4: the page follows the seal later; waited for, never read once.
+  await shows(kp.locator('body'), /[Ll]ocked/, 15_000);
   await kp.click('[data-action="home-tiles"]').catch(() => undefined);
   // H111: a padlock while locked.
   await kp.locator('[data-k-tile="runner"] svg rect').waitFor({ timeout: 15_000 });

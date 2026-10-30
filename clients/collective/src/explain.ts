@@ -74,15 +74,16 @@ type HoldingOut = {
   grant?: string | null;
 };
 
-/** A power a clone's mark claims, or a plan needs (Agreements rule 44c). */
-export type PowerOut = { form: 'constitutional' | 'clone' | 'area' | 'plan' | 'judicial'; area?: number | null; party?: string | null };
+/** A power a clone's mark claims, or a plan needs (Agreements rule 44c). `layer`: a layer's rule (terms field 19), its number in `area`. */
+export type PowerOut = { form: 'constitutional' | 'clone' | 'area' | 'plan' | 'judicial' | 'layer' | 'holders'; area?: number | null; party?: string | null };
 
-/** An area (terms field 19): who holds it, how many decide, what it reaches (Agreements rule 36a). */
+/** A finer area (terms field 34): who holds it, how many decide, which act types it reaches (Agreements rule 60). */
 export interface AreaRead {
   id: number;
   name: string;
   holders: string[];
   threshold: number;
+  /** Act types, `[1, spec, type]`; a whole layer is no area now, but the layer's rule (field 19). */
   kinds: { form: 'layer' | 'type'; layer?: number | null; spec?: string | null; type?: number | null }[];
   fields: { form: 'field' | 'task'; number: number }[];
   /** Key 6 (F353, Agreements draft 16): the cMIP judging limits on its holders' keys, and its parameters as CBOR hex. */
@@ -124,6 +125,9 @@ export interface TermsRead {
   clone: RuleOut;
   /** The constitutional change rule (field 18); null: every party whose voice remains (F103). */
   constitutional: RuleOut | null;
+  /** Who acts for the collective in each of the five layers (field 19, Agreements rule 60): `[layer, rule]`, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development. */
+  layers: [number, RuleOut][];
+  /** The finer areas (field 34), each reaching act types within one layer. */
   areas: AreaRead[];
   /** Each area's own words, by area id (field 20). */
   areaWords: [number, string][];
@@ -137,14 +141,19 @@ export interface TermsRead {
     proof?: string | null;
   } | null;
   parent: string | null;
+  /** The key grammar: the chain key's alone, and its recovery path (Agreements rule 59). A collective has no signing key (rule 56). */
   grammar: {
-    signing: HoldingOut;
+    /** Withdrawn (keys 0 and 2): never set by the core now. */
+    signing?: HoldingOut | null;
     chainKey: HoldingOut;
     recovery: { form: 'custodian' | 'escrow'; custodian?: string | null; grant?: string | null; authority?: string | null } | null;
   } | null;
   arbitrators: string[] | null;
-  splitGrant: string | null;
-  /** Field 14 in a deal: each payee's grant to the split service (F129, H4). */
+  /** What the terms own (field 33): `["claim", hash]`, an ownership agreement of a work; `["collective", null]`, the collective's own; null for terms that own nothing. */
+  target?: [string, string | null] | null;
+  /** Withdrawn (field 14): a publication names the split service. Never set by the core now. */
+  splitGrant?: string | null;
+  /** Withdrawn (field 14 in a deal). Never set by the core now. */
   payeeGrants?: string[] | null;
   extensions: string[] | null;
   /** Seat successors carry no voting weight (Agreements draft 14, F328 Q15). */
@@ -155,7 +164,7 @@ export interface TermsRead {
   departed: string[];
   /** The chain of judgment (field 21): each judge, and those that take over with their periods (F121, Q7); each one hash, in a one-element list. The split service left the chain (F249, F250): its backups are the split cMIP's, terms field 29. */
   chain: [string, [string[], number][]][];
-  /** The split service's backups (field 29, F249, F250): each after field 14's, in order, by its grants (one in a collective, one per payee in a deal); the split cMIP whose fields they are; whether the terms carry its failure condition. */
+  /** Withdrawn (field 29): a publication names its backups (field 11). Never set by the core now. */
   backups?: { services: string[][]; splitCmip: string | null; failure: boolean } | null;
   /** Forked from (field 23): the original collective, a back-link (F121, F124 N4). */
   forkedFrom: string | null;
@@ -165,11 +174,11 @@ export interface TermsRead {
   settles?: string[] | null;
   /** In a deal, the judge of its forks, one of field 13 (field 27); absent: none. */
   forkJudge?: string | null;
-  /** The split plan (field 8), as the core decodes it. */
+  /** Withdrawn (field 8): a publication carries the split plan. Never set by the core now. */
   plan?: PlanRead | null;
   /** The refund terms (field 17): the point on the time reference past which a refund owed is ended; null where it is no number. */
   refund?: { until?: number | null } | null;
-  /** The fees (field 28): each Module owed, its part, and when it applies. */
+  /** Withdrawn (field 28): a publication's plan carries the fees. Never set by the core now. */
   fees?: { module: string; part: number; scope: 'every' | 'publication' | 'rail'; of?: string | null }[] | null;
   /** Why the terms fail Agreements' own checks, if they do: Agreements' code and its own words. */
   problem?: Problem | null;
@@ -278,15 +287,31 @@ export function powerWords(p: PowerOut, areas: AreaRead[], names: Names): string
       return `the succession plan of ${names(p.party ?? '')}`;
     case 'judicial':
       return "the judicial tier's rule, every member whose voice remains";
+    case 'layer':
+      return `the rule of the ${LAYERS[p.area ?? -1] ?? `layer ${p.area}`} layer`;
+    case 'holders':
+      return `the holders' rule of stake ${p.area}`;
   }
 }
 
-/** The layers, as Agreements numbers them in an area's kinds ("Layer", F106). */
-const LAYERS = ['Identity', 'Envelopes and Text', 'Money', 'Agreements', 'Development'];
+/** The six layers, as Agreements numbers them in an area's kinds and field 19 ("Layer", F106; Text and Envelopes are two layers, F407). */
+export const LAYERS = ['Identity', 'Text', 'Envelopes', 'Money', 'Agreements', 'Development'];
+
+/** The order a founding's layers are shown in before signing: Money first (Agreements rule 60, client conformance). */
+const LAYER_ORDER = [3, 1, 2, 4, 5];
+
+/** What a member acting in a layer does for the collective, in plain words: what a signer should weigh. */
+const LAYER_DOES: Record<number, string> = {
+  1: 'post texts',
+  2: 'upload bakes (a release is one) and deliver its keys',
+  3: 'set its payee pointer (where its income goes), sign its receipts and price tags, and take on debts',
+  4: 'sign its publications (its split agreement among them), grants and other agreements',
+  5: 'adopt extensions for it',
+};
 
 const TYPE_NAMES: Record<string, Record<number, string>> = {
-  [SPECS.envelopes]: { 0: 'every publication of the collective (a release is one)', 1: 'every key delivery of the collective', 4: 'every encryption key of the collective' },
-  [REPO_SPECS.agreements]: { 0: 'every terms act of the collective', 1: 'every signature of the collective' },
+  [SPECS.envelopes]: { 0: 'every bake the collective uploads (a release is one)', 1: 'every key delivery of the collective', 4: 'every encryption key of the collective' },
+  [REPO_SPECS.agreements]: { 0: 'every terms act of the collective', 1: 'every signature of the collective', 6: 'every publication of the collective' },
   [SPECS.text]: { 0: 'every text of the collective' },
 };
 
@@ -294,12 +319,12 @@ const TYPE_NAMES: Record<string, Record<number, string>> = {
 export function kindWords(k: AreaRead['kinds'][number]): string {
   if (k.form === 'layer') {
     const layer = LAYERS[k.layer ?? -1] ?? `layer ${k.layer}`;
-    return `every act of the ${layer} layer: its area, which also adopts the cMIPs for that layer's tasks`;
+    return `every act of the ${layer} layer (a whole layer is now the layer's rule, terms field 19)`;
   }
   return TYPE_NAMES[k.spec ?? '']?.[k.type ?? -1] ?? `every act of type ${k.type} of ${specName(k.spec ?? '')} made by the collective`;
 }
 
-const OPERATIONAL_FIELDS: Record<number, string> = { 7: 'the stakes', 8: 'the split plan', 17: 'the refund terms', 28: 'the fees' };
+const OPERATIONAL_FIELDS: Record<number, string> = { 7: 'the stake', 17: 'the refund terms' };
 
 function fieldRefWords(f: AreaRead['fields'][number]): string {
   return f.form === 'field' ? (OPERATIONAL_FIELDS[f.number] ?? `field ${f.number}`) : `the cMIP for task ${f.number}`;
@@ -437,6 +462,52 @@ export function absenceSection(t: Pick<TermsRead, 'abandonment'>, names: Names, 
  * comes into force, who decides what. From the core's own reading of the
  * exact payload. `parent`: the agreement a clone replaces, if fetched.
  */
+/**
+ * The five layers' rules in words, layer by layer, Money first (Agreements
+ * rule 60, client conformance): who acts for the collective in each, and
+ * what that lets one member do alone. Text and Envelopes are two layers.
+ */
+export function layerLines(t: Pick<TermsRead, 'layers' | 'parties'>, names: Names): Line[] {
+  const n = t.parties.length;
+  const out: Line[] = [
+    {
+      text: 'For each layer it acts in, the founding names who acts for the collective there. An act in a layer counts once that rule is met: the member who makes it, with their own key, naming the collective, and the others each by a signature act of their own (Agreements rule 60). Shown layer by layer, Money first.',
+    },
+  ];
+  for (const l of LAYER_ORDER) {
+    const name = LAYERS[l];
+    const r = (t.layers ?? []).find(([x]) => x === l)?.[1];
+    if (!r) {
+      out.push({ text: `${name} (layer ${l}): no rule named. A founding that leaves a layer unnamed founds nothing (Agreements rule 60).`, tone: 'bad' });
+      continue;
+    }
+    const k = r.form === 'threshold' ? (r.threshold ?? 0) : r.form === 'named' ? (r.named ?? []).length : r.form === 'all' ? n : 0;
+    const who =
+      r.form === 'all'
+        ? 'every member whose voice remains, all together,'
+        : r.form === 'threshold'
+          ? k === 1
+            ? 'any one member alone'
+            : `any ${k} of the ${n} members together`
+          : r.form === 'named'
+            ? `${list((r.named ?? []).map(names))}${k > 1 ? ' together' : ' alone'}`
+            : ruleWords(r, t.parties, names);
+    const alone = k === 1 && r.form !== 'share' && r.form !== 'holders' && r.form !== 'allOf';
+    out.push({
+      text: `${name} (layer ${l}): ${who} can ${LAYER_DOES[l]} for the collective. ${
+        alone
+          ? `One member alone can do that, without asking the others${l === 3 ? ': for example point its income at an address of their choosing' : ''}.`
+          : k > 1
+            ? `No member can do it alone: an act counts once ${k - 1} other member${k - 1 === 1 ? '' : 's'} sign${k - 1 === 1 ? 's' : ''} it too.`
+            : ''
+      }`.trim(),
+      tone: alone ? 'warn' : undefined,
+    });
+  }
+  out.push({ text: 'Identity is no layer it acts in: its genesis and rotations are its chain, signed by its chain key under the key grammar (Agreements rule 60).' });
+  return out;
+}
+
 /** The cap a grant limits cMIP's parameters name (key 0, `[unit, value]`), from their CBOR hex, or null. */
 function capOf(hexed: string | null | undefined): number | null {
   if (!hexed) return null;
@@ -494,29 +565,24 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     lines.push({ text: 'It is complete once everyone its mark names, and everyone it adds, has signed it (Agreements rule 45).' });
     if (g) {
       lines.push({
-        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its signing key (Agreements rules 37, 37c).",
+        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, which any member draws with their own key, naming the collective (Agreements rules 37, 37c, 60).",
       });
     }
     sections.push({ heading: 'How it comes into force: its mark', lines });
   }
 
   if (g) {
-    const lines: Line[] = [{ text: 'It founds a collective: an identity of its own, whose keys its members hold as follows (Agreements rule 36).' }];
-    const s = g.signing;
-    if (s.form === 'one') {
-      lines.push({
-        text: `${names(s.holder!)} holds the collective's signing key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`,
-      });
-    } else if (s.form === 'shares') {
-      lines.push({ text: `The signing key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
-    } else {
-      lines.push({ text: `${names(s.custodian!)} holds the signing key as custodian, under grant ${short(s.grant!)}.` });
-    }
+    const lines: Line[] = [{ text: 'It founds a collective: an identity of its own, with its own homes and chain key (Agreements rule 56).' }];
+    // A keyless collective (Agreements rules 56 to 60; Identity rule 1): no signing key, no member keys.
+    lines.push({
+      text: "It has no signing key of its own: a member acts for the collective with their own identity's key, naming the collective in the act, and the act counts under the rule of the layer it falls in, or of a finer area reaching it (Agreements rules 56, 58, 60). There are no member keys: each member signs only with their own identity.",
+    });
+    if (g.signing) lines.push({ text: 'It still names a signing key (key grammar key 0): withdrawn, a collective has none (Agreements rule 59).', tone: 'bad' });
     const k = g.chainKey;
     if (k.form === 'shares') {
       const m = k.members ?? [];
       lines.push({
-        text: `The chain key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
+        text: `The chain key, the one that rotates the collective (new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`,
       });
       if (k.threshold === 1) {
         lines.push({ text: 'Any one member alone can rebuild the chain key and rotate the collective, without the others.', tone: 'warn' });
@@ -539,9 +605,11 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     }
     sections.push({ heading: "The collective's keys", lines });
 
+    sections.push({ heading: 'The five layers: who acts for it', lines: layerLines(t, names) });
+
     const words = new Map(t.areaWords);
     const al: Line[] = [];
-    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its signing key alone speaks for it.", tone: 'warn' });
+    if (!t.areas.length) al.push({ text: "No finer area: every act of the collective counts under the rule of its layer, above." });
     for (const a of t.areas) {
       al.push(
         a.holders.length
@@ -555,7 +623,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
         al.push({
           text: cap !== null
             ? `Above ${cap.toLocaleString('en')} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.`
-            : `Its holders' keys are judged under limits of cMIP ${short(a.limitsCmip)}, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353); an app that does not read it shows its acts as unknown.`,
+            : `Its holders' acts are judged under limits of cMIP ${short(a.limitsCmip)}, a cMIP's rule beside the core's count (Agreements rule 60); an app that does not read it shows its acts as unknown.`,
           tone: 'warn',
         });
       }
@@ -570,27 +638,27 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       }
     }
     if (t.areas.length) {
-      al.push({ text: "Each holder may name a key of their own in their signature of these terms (at founding, and at each member change): an act made with it counts as that member's signature in the areas they hold, and shows which member signed (Agreements draft 16, F353). An area of one takes one member's act; an area of two takes one member's act and another member's signature." });
+      al.push({ text: "A holder acts in an area with their own key, naming the collective: that act counts as that member's signature. An area of one takes one member's act; an area of two takes one member's act and another member's signature. There are no member keys (Agreements rules 56, 58)." });
       al.push({ text: 'In an area, its holders alone decide, and may grant within it (Q5). Its holders, and how many of them decide, change only by the constitutional change rule.' });
       al.push({
         text: 'A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Agreements rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Agreements rule 37b).',
       });
-      al.push({ text: "An act no area reaches counts on the collective's own signature; an act of a specification this agreement names nowhere counts for nothing (Q16)." });
+      al.push({ text: "A finer area takes the act types it reaches out of their layer's rule; an act no area reaches counts under its layer's rule; an act of a specification this agreement names nowhere counts for nothing (Agreements rule 60, Q16)." });
     }
-    sections.push({ heading: 'Areas: who decides which acts', lines: al });
+    sections.push({ heading: 'Finer areas: who decides which act types', lines: al });
 
     const clone = ruleWords(t.clone, t.parties, names);
     sections.push({
       heading: 'Who decides what',
       lines: [
         {
-          text: `Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective to new keys; whatever its old key signs afterwards is void (Agreements rule 37, F100).`,
+          text: `Constitutional: the members, the change rules, the key grammar, the five layers' rules, the finer areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective, which deals a new chain key to the members after it (Agreements rule 37).`,
         },
         {
           text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Agreements rule 46a, F121).`,
         },
         {
-          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Agreements rule 37c); matters inside an area, by its holders.`,
+          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Agreements rule 37c); matters inside an area, by its holders; everyday acts in a layer, by that layer's rule (Agreements rule 60).`,
         },
         { text: 'A change touching the constitution needs the constitutional change rule alone, which may change every tier; any other needs the power of each area and tier it touches, all at once (Agreements rule 44c, Q7).' },
         ...ownersWithoutKeys(t, names),
@@ -615,7 +683,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       lines: [
         { text: 'Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Agreements rule 37a).' },
         {
-          text: "It takes effect for the collective at the collective's next record, its line, drawn with its signing key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Agreements rule 37).",
+          text: "It takes effect for the collective at the collective's next record, its line, which any member draws with their own key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to a chain key the one who left holds no share of (Agreements rule 37).",
           tone: 'warn',
         },
       ],
@@ -671,30 +739,14 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
     blocking.push('It names a time reference, which this client does not read: it cannot show what its deadlines mean.');
   }
   if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list(t.arbitrators.map(names))}.` });
-  if (t.splitGrant) {
-    more.push({
-      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Agreements only if every address in it is also in the service's own signed pointer (Agreements rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9). The service's grant key signs only receipts for money coming in under the collective's own claims and offers: never one whose payer is the service, nor a payout the collective is owed (F130, H7).`,
-    });
-  }
-  if (t.payeeGrants?.length) {
-    more.push({
-      text: `Incoming payments go to a split service, under ${t.payeeGrants.length === 1 ? 'one payee grant' : `${t.payeeGrants.length} payee grants`}: ${list(t.payeeGrants.map(short))}. Each payee's own grant, signed by signing this deal; the service holds one grant key per payee, which signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout; each payee can revoke its own grant (F129, H4, H5; F130, H7).`,
-    });
-  }
   const holderName = (h: string | null) => (h == null ? 'this collective' : names(h));
   for (const [object, holders] of t.stakes ?? []) {
     more.push({
-      text: `Stake in ${object == null ? 'this collective itself, a share of all its income (F121 Q8, F124 S1)' : names(object)}: ${list(holders.map(([h, n]) => `${holderName(h)} ${n / 10_000}%`))}. Every payout matches its stake exactly, every fee alike for every stake (F124 N10); no share is lowered without its holder's signature (Agreements rule 46).`,
+      text: `${t.target?.[0] === 'collective' || (g && object == null) ? "The one stake, in this collective itself, a share of all its income (its target, field 33)" : t.target?.[0] === 'claim' ? `The one stake, in the work its claim binds (${short(t.target[1] ?? '')})` : `Stake in ${object == null ? 'this collective itself' : names(object)}`}: ${list(holders.map(([h, n]) => `${holderName(h)} ${n / 10_000}%`))}. Every payout of a split matches its share exactly, every fee alike (Agreements rule 22); no share is lowered without its holder's signature (Agreements rule 48).`,
     });
   }
   if (t.departed?.length) {
     more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Agreements rule 46b, F124 N5).` });
-  }
-  if (t.backups?.services.length) {
-    const service = (hs: string[]) => (hs.length === 1 ? `the service granted by ${short(hs[0])}` : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal)`);
-    more.push({
-      text: `Backup split services, in order: ${list(t.backups.services.map(service))}. Each payment is tried at the split service first; only if that attempt fails, as the split cMIP ${t.backups.splitCmip ? short(t.backups.splitCmip) : ''} defines failure${t.backups.failure ? ' (its terms for it are signed with this agreement)' : ' (its defaults)'}, does it go to the next, and the next payment starts again from the first. Money only ever goes to a service named here (Agreements rule 18a, F249, F250).`,
-    });
   }
   for (const [judge, next] of t.chain ?? []) {
     more.push({ text: `If ${judge.startsWith('task ') ? `the judge for ${judge}` : names(judge)} answers “unknown”, or does not act within its period, ${list(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? 's' : ''} over, in that order (Agreements rule 34a, F121).` });
@@ -736,17 +788,17 @@ const FIELD_NAMES: Record<number, string> = {
   3: 'the keepers',
   5: 'the clone rule',
   6: 'the time reference',
-  7: 'the stakes',
-  8: 'the split plan',
+  7: 'the stake',
   9: 'the abandonment clause',
   12: 'the key grammar',
   13: 'the arbitrators',
-  14: "the split service's grant",
   16: 'the succession plans',
   17: 'the refund terms',
   18: 'the constitutional change rule',
-  19: 'the areas',
-  28: 'the fees',
+  19: "who acts for it in each layer, the five layers' rules",
+  22: 'the departed holders',
+  33: 'what it owns, its target',
+  34: 'the finer areas',
 };
 
 type Change = { form: 'field' | 'task' | 'extension' | 'words'; field?: number | null; task?: number | null; extension?: string | null; area?: number | null; tier: 'constitutional' | 'judicial' | 'operational' };
@@ -756,7 +808,7 @@ export function planOf(before: Uint8Array, after: Uint8Array): { changes: Change
   return agreementsClonePlan(before, after, AGREEMENTS_SPECS) as { changes: Change[]; needs: PowerOut[] };
 }
 
-const powerKey = (p: PowerOut) => (p.form === 'area' ? `area ${p.area}` : p.form === 'plan' ? `plan ${p.party}` : p.form);
+const powerKey = (p: PowerOut) => (p.form === 'area' ? `area ${p.area}` : p.form === 'layer' ? `layer ${p.area}` : p.form === 'plan' ? `plan ${p.party}` : p.form);
 
 /**
  * What a clone changes, compared with the agreement in force, from the two
@@ -775,9 +827,15 @@ export function readChanges(beforePayload: Uint8Array, afterPayload: Uint8Array,
     out.push({
       text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`,
     });
-  const holder = (t: TermsRead) => (t.grammar?.signing.form === 'one' ? t.grammar.signing.holder! : null);
-  if (holder(before) !== holder(after) && holder(after)) {
-    out.push({ text: `The signing key passes to ${names(holder(after)!)}${holder(before) ? ` (was ${names(holder(before)!)})` : ''}.` });
+  // A collective has no signing key (Agreements rule 56): nothing passes from member to member.
+  const lw = (t: TermsRead, l: number) => {
+    const x = (t.layers ?? []).find(([y]) => y === l)?.[1];
+    return x ? ruleWords(x, t.parties, names) : 'nobody named';
+  };
+  for (const l of LAYER_ORDER) {
+    const b = JSON.stringify((before.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    const a = JSON.stringify((after.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    if (a !== b) out.push({ text: `Who acts for it in ${LAYERS[l]}: now ${lw(after, l)} (was ${lw(before, l)}).`, tone: 'warn' });
   }
   const sb = before.grammar?.chainKey;
   const sa = after.grammar?.chainKey;

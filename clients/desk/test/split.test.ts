@@ -112,9 +112,9 @@ test('the split service: defined in Edubba, signed by every member in Dub; a buy
   const e = await edubba(H, RL);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.dub.words, address: H[0] });
   const { collective } = await foundCollective(e, A.id, [iPa.dub, iPh.dub], [
-    { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-    { name: 'Offers and deals', layer: 3, holders: [A.id, iPa.id], number: 1 },
-    { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 2 },
+    { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
+    { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 1 },
+    { name: 'Money', layer: 3, holders: [A.id, iPa.id], number: 2 },
   ]);
 
   // The split service, its own identity and node; its grant key for this collective.

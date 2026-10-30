@@ -36,6 +36,11 @@ let browser: Browser;
 let gateway: Gateway;
 let base: string;
 const running: Running[] = [];
+/** Start a home or relay, kept for `after` at once: stopped whatever happens next (CI). */
+const up = async (role: 'home' | 'relay') => {
+  const r = await start(role);
+  return r;
+};
 let nobody: TestIdentity;
 let machine: TestIdentity;
 let third: TestIdentity;
@@ -55,9 +60,8 @@ ${extra}
 
 before(async () => {
   execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
-  const [home1, home2, home3] = [await start('home'), await start('home'), await start('home')];
-  const [site, out1, out2] = [await start('relay'), await start('relay'), await start('relay')];
-  running.push(home1, home2, home3, site, out1, out2);
+  const [home1, home2, home3] = [await up('home'), await up('home'), await up('home')];
+  const [site, out1, out2] = [await up('relay'), await up('relay'), await up('relay')];
 
   // Nobody, allegedly on home1, posting to its relay; Machine, allegedly on
   // home2, posting to another, and naming an onion address too; a third on

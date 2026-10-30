@@ -14,7 +14,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { apps, changeKeys, closeAll, dub, dubBringing, edubba, everything, forms, kishib, refused, standing, start, type Relay } from './world.ts';
+import { apps, changeKeys, closeAll, dub, dubBringing, edubba, everything, forms, kishib, refused, standing, start, type Relay, stopAll } from './world.ts';
 import { chainKeyAt } from '../src/words.ts';
 import type { Review, State } from '../src/shapes.ts';
 
@@ -27,8 +27,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 test('a personal rotation from the chain key’s paper words keeps the lines of Dub, the web client’s code and Edubba; stalled, it is sent again with the same bytes; every earlier act stays valid', async () => {
