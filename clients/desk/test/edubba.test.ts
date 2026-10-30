@@ -248,9 +248,10 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   assert.equal(app.collectives.store.collective(col.id).id.f.sequence.length, before);
   await assert.rejects(c.ask('collective confirm', { plan: r.plan, digest: '00'.repeat(32) }), /does not match/);
   const done = await c.ask<Done>('collective confirm', { plan: r.plan, digest: r.digest });
-  assert.ok(done.lines.some((l) => /The text: counts for the collective, on its own signature/.test(l.text)), JSON.stringify(done.lines));
+  assert.ok(done.lines.some((l) => /The text: counts for the collective, its area’s signatures met/.test(l.text)), JSON.stringify(done.lines));
   const posted = describeAct((await relayAt(relay.base).getAct(done.acts[0]))!) as { signer: string; public: boolean; objects: [string, string][] };
-  assert.equal(posted.signer, col.id);
+  // Signed by a member with their own key (no key of the collective's: Agreements rules 56 to 60), naming the collective.
+  assert.notEqual(posted.signer, col.id);
   assert.ok(posted.public);
   // F334: one object, the collective's pointer to its own decision (Text rule 14, Agreements rule 58).
   assert.equal(posted.objects.length, 1);
