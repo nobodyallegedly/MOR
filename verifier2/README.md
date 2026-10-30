@@ -50,6 +50,19 @@ and its clones (an input flag), successors' founding terms (an input flag), stak
   words; `group.py` groups a comparison's disagreements by their reasons; `classify.py`
   sorts disagreeing stories into the report's findings.
 
+  Since the keyless collective (Agreements draft 17), the exporter maps the library's
+  histories onto this verifier's terms unchanged: the collective has no key of its own, so
+  its "devices" (`C/d0`, `C/d1`, ...) are devices of member 0 acting for it with their own
+  key, naming it in their objects (rule 58), and a grantee's strand (`<grant>/key`) is the
+  grantee acting with its own key under the grant. An act for the collective carries no
+  `prev` (a signer's own previous act is never followed for the collective): its history is
+  what it `cites`, each device citing its own previous act there. A device's act lists its
+  drafter in `sigs` (the drafter's act is their signature). A record keeps no tips (it cites
+  the line); an ending's `tips` are what it cites on the collective's chain (its line). The
+  collective's publication (Agreements type 6) is exported as any action. The input flags
+  stay the library's: `holds_nothing` is read at the closing's line, and a side's `keeps`
+  lists only the departed holders the successor keeps at their share (N4).
+
   To reproduce the comparison (`docs/verifier2-report.md`):
 
   ```

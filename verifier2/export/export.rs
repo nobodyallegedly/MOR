@@ -12,7 +12,10 @@
 // separated>" exports instead the story of that case (drawn with the same
 // seed) with only those steps applied: how verifier2 shrinks a disagreement.
 //
-// Nothing here changes the generator or the library.
+// Nothing here changes the generator or the library. The collective is keyless
+// (Agreements draft 17): its acts are drafted by member 0's devices and its
+// grantees, each with their own key, naming it in their objects; how they map
+// onto verifier2's terms is in verifier2/README.md.
 
 use super::*;
 use serde_json::{json, Map, Value as J};
@@ -165,12 +168,20 @@ fn story_json(cw: &ColWorld) -> J {
                 m.insert("tips".into(), json!(cites));
                 // Each side's successor: its founding terms' parties and departed
                 // holders (N4), read from the terms its genesis declares.
+                // A departed holder is kept only at their share of the
+                // successor's own stake (N4), as the library reads it: an input
+                // to verifier2, which does not read stakes.
                 let lv = cw.view();
+                let kept: Vec<(Hash, u64)> = lv.fork(&id).map(|e| e.kept).unwrap_or_default();
                 m.insert("sides".into(), json!(f.sides.iter().map(|s| {
                     let terms = founding_of(v, &s.successor).and_then(|ag| lv.terms(&ag).ok());
+                    let keeps = |t: &agreements::Terms| -> Vec<String> {
+                        let own = t.own_stake().map(|(_, st)| st);
+                        t.departed.iter().flatten().filter(|d| kept.iter().filter(|(h, _)| h == *d).all(|(_, n)| own.is_some_and(|st| st.share_of(&agreements::Who::Id(**d)) == *n))).map(hx).collect()
+                    };
                     json!({"successor": hx(&s.successor), "members": hxs(&s.members),
                            "parties": terms.as_ref().map(|t| hxs(&t.parties)),
-                           "keeps": terms.as_ref().map(|t| t.departed.as_ref().map(|d| hxs(d)).unwrap_or_default())})
+                           "keeps": terms.as_ref().map(keeps)})
                 }).collect::<Vec<_>>()));
                 m.insert("assigned".into(), json!(f.debts.iter().map(|(d, s)| json!({"obligation": hx(d), "sides": s})).collect::<Vec<_>>()));
                 m.insert("objects".into(), json!(objects));
