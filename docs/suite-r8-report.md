@@ -36,7 +36,7 @@
 
 **The display client** (dubsar.org). A site's version is a bake, never withdrawn; the listing shows the six layers; a collective's site is uploaded by a member and counts once its rule is met. "Uploaded by" is shown.
 
-Screenshots of Edubba's founding grid, Money tab and member change are in `docs/suite-r8/` (taken by the browser tests).
+Screenshots of Edubba's founding, its five layers, the Money tab's read-back and Publishing are in `docs/suite-r8/` (listed under Tests).
 
 ## 2. The cMIPs reassessed
 
@@ -66,11 +66,44 @@ Each kept unless said. In plain words first, then what moved.
 - `test.yml`: each app's step has its own time limit (Edubba 40 minutes; Ummia, Damgar, the site, Dub, Kišib and the collective 30; the others 20), so one hang names its app; the "all" job's limit is 180.
 - A product bug found on the way: Dub's Private redraw wiped the draft. Fixed.
 
-**Part 5, releases and tests.** Pulled and rebased on S7h-4's last commit; its binding change taken in (an area count's `area` is now a JavaScript number, minus the layer for a layer's rule, the suite's own report). All six web releases rebuilt: display client, Dub, Kišib, Damgar, Ummia, Edubba. The results: see "Tests" below.
+**Part 5, releases and tests.** Pulled and rebased on S7h-4's last commit, once `docs/s7h-4-report.md` said in its first line that it was done; its binding change taken in (an area count's `area` is now a JavaScript number, minus the layer for a layer's rule: the suite's own report). All six web releases rebuilt against its WebAssembly (`3974a18b…`, the same in all six): display client, Dub, Kišib, Damgar, Ummia, Edubba; Edubba's and Dub's rebuilt again after the last fixes below.
+
+What S7h-4's core changed for the apps, and what the suite did:
+- **A collective's split agreement is judged in its judicial tier:** every member signs it, whatever the Agreements layer's rule. Edubba's Money tab now asks every member whose voice remains (it asked the layer's members), and says so in its read-back.
+- **The apps' readers of a sale now hold the collective a publication names** (its own chain, and its members), so the core can count the collective's consent: without it, the core read the collective as no collective and the publication as unsigned (`dub/src/vows.ts`, `dub/src/money.ts`). A collective's posts are judged with its chain held too (`desk/src/collectives.ts`).
+- **A bug found:** a correction of a collective's post named the collective as the corrected act's signer; a member signs it now. Fixed in the collective app.
+- **A regression of this round, undone:** leaving a collective's agreements at its homes as well as its relays meant a record "lost on the way to the relay" was never lost, and 13 of the collective app's tests no longer built their broken stretch. The agreements go to its relays again; Kišib finds them through the members' places.
+- **Premises replaced in Edubba's tests** (said in each): a collective's rotation in Kišib ends at "done", with no words to show; a release counts by "signatures, each with its member's own key"; the shared sale of S7e is now a verified purchase with the buyer's contest beside it (question 2); round 3's sale goes through the collective's own publication.
+- **Words fixed:** Edubba's founding form no longer says the founder "holds its signing key"; the retired Member keys rule is off Edubba's list of rules to approve.
+- The disk filled during one full run (test folders left in the system's temporary folder by earlier runs); the Rust build folder was cleared and rebuilt, and the last run kept its temporary files in a folder of its own.
 
 ### Tests
 
-RESULTS
+Run on this machine after the last fixes (Linux x86-64; Chromium for the browser tests), every app's `npm test`, then `cargo test --workspace --locked`:
+
+| App | Passed | Failed | Why it fails |
+| --- | --- | --- | --- |
+| collective | 44 | 0 | |
+| Kišib | 43 | 0 | |
+| repo, grants, kit, barebone, manage, testwallet | 21, 8, 18, 15, 7, 4 | 0 | |
+| reader, reports, longform, connector | 22, 9, 26, 13 | 0 | |
+| genesis | 41 | 0 | |
+| split service | 2 | 0 | |
+| display client (site) | 86 | 0 | |
+| Dub | 46 | 0 | |
+| **Damgar** | 37 | **4** | the anchoring binding (For the MOR lead, 1): the act menu's anchor, a collective's act anchored, a missed deadline, Edubba's pieces by clicks |
+| **Ummia** | 34 | **1** | the anchoring binding: a release anchored on Bitcoin |
+| **Edubba** | 116 | **1** | the anchoring binding: Dub's "an act anchored, by clicks" |
+| Nakišib | 10 | 0 | (and its 3 Rust tests) |
+| Modules: audio, carry, jpeg, timestamp, video | 8, 7, 14, 5, 6 | 0 | |
+| anchoring service | typechecks | | tested where it is used (Damgar) |
+| Rust workspace | 782 | 0 | 1 ignored, as before |
+
+Every one of the six reds throws the binding's own words: "the anchoring cMIP still makes a standing offer, which the core no longer reads…". They turn green once the binding follows anchoring draft 6; nothing in the suite can do that (`wasm/` is the MOR lead's). **Assess** (`clients/assess`, not in CI) was not moved: 12 of 39 fail (reading 6, question 1).
+
+On GitHub: see the pull request's checks; the summary comment there says which were green.
+
+**Screenshots** (`docs/suite-r8/`): `edubba-founding.png` (two members, + Add a member, what one member may do alone); `edubba-founding-layers-finer-areas.png` (the five layers and a finer area's kinds); `edubba-web-money-review.png` (the Money tab's read-back: the shares by reference, the referral); `edubba-publishing-upload.png`, `edubba-publishing-ownership-two-rows.png`, `edubba-publishing-publication.png` (Publishing's ways in); `edubba-sales-contest.png` and `dub-purchases-contest.png` (a collective's sale, the buyer's contest beside it); `dub-sales-feed.png`, `dub-sales-owners.png`, `dub-sales-withdrawn.png` (Dub's buying by price tag, the owners' publication, a withdrawn tag).
 
 ## 4. For the MOR lead
 
@@ -87,6 +120,7 @@ None of these was changed by the suite.
 9. **Field 9 naming task 11** (anchoring, judicial) has no stated meaning.
 10. **Words:** genesis' `ENVELOPES_TYPES.publication` (an Envelopes type 0 is a bake); `clients/repo/src/release.ts` problem strings say "publication"; the relay's manage view calls Envelopes 0 "publication" (needs a relay/manage rebuild, outside the suite); the core's Contest line, "the payee of a purchase is a collective", now the split service.
 11. **Fixed by S7h-4:** the `agreementsConsent` lane-id overflow the suite reported.
+12. **Worth a word in the texts:** a member's act for a collective is judged only where a reader holds the collective's own chain; a collective publishes no routes, so every reader must find it through the act's objects. The suite's readers now do; a line in Agreements rule 58 or the runner cMIP saying where to look would help other apps.
 
 ## 5. Questions, one at a time
 

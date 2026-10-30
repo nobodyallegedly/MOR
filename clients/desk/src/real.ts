@@ -896,7 +896,7 @@ export class Real {
       summary:
         way === 'service'
           ? [
-              `A split agreement of the collective, made by ${names(founder)} with their own key for it, naming its ownership: its shares are read from its constitution in force at each payment, never copied here. The split service ${service ? names(service) : '…'} signs it too.`,
+              `A split agreement of the collective, made by ${names(founder)} with their own key for it, naming its ownership: its shares are read from its constitution in force at each payment, never copied here. Every member signs it (its judicial tier: it decides how the money of all is divided), and the split service ${service ? names(service) : '…'} too.`,
               'Once it counts, the collective’s payee pointer names the service’s own rails: a buyer’s payment goes to the service, which receives it in its own name, pays each holder their share and publishes the split (Agreements rules 12, 15 to 23).',
             ]
           : [
