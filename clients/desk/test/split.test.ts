@@ -153,6 +153,7 @@ test('the collective’s money on the new Money tab: its split agreement made by
   const sp = (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === split);
   assert.ok(sp, 'the split agreement reached iPa’s Signing tab');
   assert.match((await iPa.dub.c.ask<any>('accept', { thread: sp.thread })).lines[0].text, /Signed for the collective with your own key/);
+  assert.equal((await e.c.ask<any>('real gather', { act: split })).standing.enough, true);
   await assert.rejects(e.c.ask('real money record', { act: split }), /does not count yet/);
   assert.match(await svc.accept(split), /signed/);
   const rec = await e.c.ask<Done>('real money record', { act: split });

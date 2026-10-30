@@ -1633,7 +1633,9 @@ export class Publishing {
         const pub = pubAct ? readPublication(pubAct) : null;
         if (!pub) continue;
         const deal = pub.owners ? await readDeal(pub.owners, places, s.via, pub.id).catch(() => null) : null;
-        const owners = deal ? deal.owners.map(([x]) => x) : [pub.drafter];
+        // A collective's publication: its owners its members (its founding agreement's parties, rule 15).
+        const col = pub.owners && !deal ? ((await termsAt(pub.owners, places, s.via).catch(() => null)) as { parties?: string[]; grammar?: unknown } | null) : null;
+        const owners = deal ? deal.owners.map(([x]) => x) : col?.grammar && col.parties ? col.parties : [pub.drafter];
         const parties = list([...owners, pub.service, ...pub.partners.map((x) => x.identity)]);
         if (!parties.includes(me.id)) continue;
         const kept = b.publications.find((x) => x.id === pub.first);
@@ -1647,7 +1649,7 @@ export class Publishing {
           const read = mine.map((c) => r.by[c.id]).filter(Boolean);
           beside = read.some((x) => x.state === 'shown') ? { state: 'shown', contests: read.flatMap((x) => x.contests), noPurchase: read.every((x) => x.noPurchase) ? read[0].noPurchase : null } : (read[0] ?? { state: 'unknown', contests: [] });
         }
-        sales.push({ kind: 'publication', title, version: pub.first, offer: sale.offer, publication: sale.publication, buyer: sale.buyer, receipt: sale.receipt, claim: mine[0]?.id ?? null, beside });
+        sales.push({ kind: col?.grammar ? 'collective' : 'publication', title, version: pub.first, offer: sale.offer, publication: sale.publication, buyer: sale.buyer, receipt: sale.receipt, claim: mine[0]?.id ?? null, beside });
       }
       return { sales, problems };
     });

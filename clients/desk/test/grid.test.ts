@@ -67,7 +67,9 @@ test('F402: the cast’s grid becomes founding terms naming all five layers, its
   assert.ok(t.constitutional == null, 'every member: the default');
   const read = readAgreement(termsOf(payload), names);
   const all = read.sections.flatMap((s) => s.lines.map((l) => l.text)).join('\n');
-  assert.doesNotMatch(all, /signing key is held|member key/i, 'no signing key, no member keys (rule 56)');
+  assert.match(all, /no signing key of its own/, 'no signing key (rule 56)');
+  assert.match(all, /There are no member keys/, 'no member keys (rule 58)');
+  assert.doesNotMatch(all, /signing key is held|holds its signing key|named in the signature/i);
   // Read back for a member change: the same grid, shares included.
   const back = gridOf(governance, [A, iPa, iPh]);
   assert.deepEqual(back.layers, cast().layers);

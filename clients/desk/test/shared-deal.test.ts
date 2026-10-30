@@ -338,33 +338,52 @@ test('a collective’s work bought, a sale whose payment is not verified (S7e): 
   const { foundCollective } = await import('./cast.ts');
   const [A, iPa, iPh] = [await sharer(H, RL, 'A'), await sharer(H, RL, 'iPa'), await sharer(H, RL, 'iPh')];
   const e = A.edubba;
-  const { collective } = await foundCollective(e, A.id, [iPa.dub, iPh.dub], [
-    { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
-    { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 1 },
-    { name: 'Money', layer: 3, holders: [A.id], number: 1 },
-  ]);
+  // Round 8 (F407), moved to the new Money tab (premises replaced, said here as the brief asks): the shares are set at the
+  // founding; the collective's money is a split agreement (owners its founding agreement) the service signs, its payee pointer
+  // then naming the service (no grant key: the service receives in its own name, rule 16); the collective's work is sold by the
+  // collective's own publication, its price tag the service's. What follows the purchase is kept as it was asserted.
+  const { collective } = await foundCollective(
+    e,
+    A.id,
+    [iPa.dub, iPh.dub],
+    [
+      { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
+      { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 2 },
+      { name: 'Money', layer: 3, holders: [A.id], number: 1 },
+    ],
+    { shares: { [A.id]: 50, [iPa.id]: 30, [iPh.id]: 20 } },
+  );
   const node = serviceNode();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });
   await svc.start();
-  const key = svc.grantKey(collective);
-  const review = await e.c.ask<any>('real money prepare', { collective, shares: { [A.id]: 50, [iPa.id]: 30, [iPh.id]: 20 }, referral: 0, service: svc.id, serviceKey: key, keepers: [], keepersNeeded: 1 });
-  const money = await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest });
-  for (const m of [iPa, iPh]) {
-    const pp = (await m.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === money.acts[0]);
-    await m.dub.c.ask('accept', { thread: pp.thread });
-  }
-  assert.equal((await e.c.ask<any>('real gather', { act: money.acts[0] })).standing.enough, true);
-  await e.c.ask('real money record', { act: money.acts[0] });
-  await svc.tick();
+  const review = await e.c.ask<any>('real money prepare', { collective, way: 'service', referral: 0, service: svc.id });
+  assert.deepEqual(review.reading.blocking, []);
+  const split = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
+  const sp = await waitFor(async () => (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === split), 'the split agreement in iPa’s Signing tab');
+  await iPa.dub.c.ask('accept', { thread: sp.thread });
+  assert.equal((await e.c.ask<any>('real gather', { act: split })).standing.enough, true);
+  assert.match(await svc.accept(split), /signed/);
+  const rec = await e.c.ask<Done>('real money record', { act: split });
+  assert.ok(rec.lines.some((l) => /payee pointer now names the split service/.test(l.text)), JSON.stringify(rec.lines));
   await e.c.ask('publishing act as', { id: collective });
-  const w = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('The collective’s story.')), title: 'A story', then: 'price', price: '1000' });
-  assert.deepEqual(w.reading.blocking, []);
-  const [publication, , postId] = (await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest })).acts;
+  const up = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('The collective’s story.')), title: 'A story', then: 'none' });
+  assert.deepEqual(up.reading.blocking, []);
+  const [publication] = (await e.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
+  const pr = await e.c.ask<any>('publishing publication read', { sold: [publication], service: svc.id, price: '1000', tagBy: 'service' });
+  assert.deepEqual(pr.reading.blocking, []);
+  const [pub] = (await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest })).acts;
+  const pp = await waitFor(async () => (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === pub), 'the publication in iPa’s Signing tab');
+  await iPa.dub.c.ask('accept', { thread: pp.thread });
+  assert.match(await svc.accept(pub), /signed, as its split service/);
+  const g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is published by the collective/.test(l.text)), JSON.stringify(g.lines));
+  assert.match(await svc.tag(pub, { unit: R, value: 1000 }), /./);
+  const postId = (await e.c.ask<any>('publishing')).publications.find((x: any) => x.id === pub).post;
 
   const b = await buyer(H, RL);
-  await b.dub.c.ask('follow', { id: collective, name: 'The collective' });
-  await b.dub.c.ask('feed', { fresh: true });
-  await b.dub.c.ask('buy', { publication, seller: collective, post: postId });
+  await b.dub.c.ask('follow', { id: A.id, name: 'A' });
+  await waitFor(async () => (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === postId && i.sealed?.tag), 'the post, its price tag counting');
+  await b.dub.c.ask('buy', { publication, seller: A.id, post: postId });
   await svc.tick();
   await payFromDub(b, node);
   await settle(svc, [A, iPa, iPh]);

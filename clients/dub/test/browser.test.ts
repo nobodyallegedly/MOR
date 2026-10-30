@@ -83,17 +83,17 @@ const cardOf = (page: Page, id: string, where = '#feed') => page.locator(`${wher
  */
 const choose = async (opener: Locator, item: string | RegExp) => {
   const it = opener.page().getByRole('menuitem', { name: item, exact: typeof item === 'string' });
+  // The menu can also close under the click (the feed redrawn as it opens): opening and choosing are tried again together.
   for (let i = 0; ; i++) {
-    await opener.click();
     try {
-      await it.waitFor({ timeout: 5_000 });
-      break;
+      await opener.click({ timeout: 10_000 });
+      await it.click({ timeout: 5_000 });
+      return;
     } catch (e) {
       if (i >= 5) throw e;
       await opener.page().keyboard.press('Escape');
     }
   }
-  await it.click();
 };
 const actMenu = (c: Locator, item: string | RegExp) => choose(c.locator('.k-actid'), item);
 const signerMenu = (c: Locator, item: string | RegExp) => choose(c.locator('.k-signer'), item);
