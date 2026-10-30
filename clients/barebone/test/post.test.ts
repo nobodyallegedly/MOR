@@ -43,8 +43,9 @@ before(async () => {
   for (const a of other.chainActs()) await relayAt(relay.base).putAct(a);
 });
 
+// Every server stopped whatever the outcome: one that fails to stop does not keep the others running.
 after(async () => {
-  for (const r of [...homes, relay]) await r.stop();
+  for (const r of [...homes, relay]) await r?.stop().catch(() => undefined);
 });
 
 const pictureOf = (refs: unknown[]) => refs.find((r) => (r as ShownPicture).kind === 'picture') as ShownPicture;

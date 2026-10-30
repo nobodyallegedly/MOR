@@ -1,20 +1,34 @@
-// Splits between separate people (this round; decided by Nobody, allegedly,
-// 22 October 2026: "Edubba is the place"; "with a tip IF there is a split
-// the target is the agreement not the act"; the reading,
-// `docs/splits-reading.md`).
+// Edubba's Publishing tab, ways 2 to 4 (round 8, F407; decided by Nobody,
+// allegedly, 24 October 2026: "Claim. Setup an ownership agreement. Build a
+// publishing envelope from an ownership agreement").
 //
 // Three test identities, each with their own Dub, Damgar and Edubba, and a
-// test split service. River sets up a deal in Edubba (River 50%, Pa 30%,
-// Ana 20%, 10% off the top to a reposter) for a protected recording; Pa and
-// Ana sign it in their own Edubba's To sign; nothing is announced until both
-// have. A fourth identity buys it from Dub: the service answers, receipts in
-// the deal's own payee's name, publishes the split, pays each one by their
-// share, tells each of the sale; River's Edubba delivers the key; the file
-// opens in the buyer's Dub. Then a vow under a deal, bought and confirmed; a
-// plain post under a deal, tipped from Dub, the tip split; a tip to River's
-// own post, paid to River alone; the buyer's contest shown to every party;
-// and the refusals in plain words. Real homes and relay, test Lightning
-// nodes; regtest satoshis, worth nothing. Test identities only.
+// test split service. River uploads a work (way 1, stopping at the upload),
+// then claims it alone with Ana (way 2), who signs the claim in her own
+// Edubba; sets up its ownership agreement (way 3: River, Pa and Ana; H98,
+// the shares even until touched), which Pa and Ana sign; and builds a
+// publication from it (way 4): Ana a partner labelled "client", 5% off the
+// top, a referral role of 10%, the split service receiving every payment.
+// Pa, Ana and the service sign it; it counts; the service puts its price
+// tag on it; a fourth identity buys it from Dub; the service splits and
+// pays; River's Edubba, told of the sale by the service, delivers the key;
+// the file opens in the buyer's Dub. Then the publication is withdrawn (a
+// later version selling nothing). A vow's ownership, in two versions (rule
+// 14), and its publication. Real homes and relay, test Lightning nodes;
+// regtest satoshis, worth nothing. Test identities only.
+//
+// Premises replaced in round 8 (said here, as the brief asks): "a deal
+// between separate people" with its own payee (an identity made for each
+// deal, its grant to the split service and the key the service made for it,
+// terms carrying the split plan, the service and the payee grant, fields 8,
+// 14, 28, 29) is gone. Its equivalent is three acts, each signed by the
+// people it names: a claim, an ownership agreement (ownership only), and a
+// publication naming the split service, which receives in its own name. The
+// assertions on "the deal's own payee", the service's grant and "the work
+// then belongs to the deal" now assert the claim, the ownership agreement's
+// shares and the publication's parties, partners and price tag. A tip to a
+// shared post (the old second test) is now a tip through a publication,
+// Dub's to show; this file keeps the vow's ownership in two versions.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -149,208 +163,143 @@ async function settle(svc: SplitService, holders: Awaited<ReturnType<typeof shar
   return said.join(' | ');
 }
 
-/** Each other person signs the deal waiting in their Edubba's To sign. */
-async function signIn(people: Awaited<ReturnType<typeof sharer>>[], acts: string[]) {
+/** Each other person signs, in their Edubba's To sign, what waits for them: the first act `acts` names, and the others with it. */
+async function signIn(people: Awaited<ReturnType<typeof sharer>>[], acts: string[], title: RegExp, said: RegExp) {
   for (const p of people) {
-    const ps = (await p.edubba.c.ask<{ proposals: any[] }>('member proposals')).proposals;
-    const deal = ps.find((x) => x.act === acts[0]);
-    assert.ok(deal, `${p.name} has the deal in To sign: ${JSON.stringify(ps.map((x) => x.reading?.title))}`);
-    assert.equal(deal.reading.kind, 'deal');
-    assert.deepEqual(deal.reading.blocking, []);
-    const said = JSON.stringify(deal.reading);
-    assert.match(said, /the work then belongs to the deal, and every payment for it, a tip included, goes to its split service/);
-    const r = await p.edubba.c.ask<{ lines: { text: string }[] }>('member accept', { thread: deal.thread });
+    const ps = await waitFor(async () => (await p.edubba.c.ask<{ proposals: any[] }>('member proposals')).proposals.find((x) => x.act === acts[0] && !x.answer), `${p.name} has it in To sign`);
+    assert.equal(ps.reading.kind, 'deal');
+    assert.deepEqual(ps.reading.blocking, []);
+    assert.match(ps.reading.title, title);
+    assert.match(JSON.stringify(ps.reading), said);
+    const r = await p.edubba.c.ask<{ lines: { text: string }[] }>('member accept', { thread: ps.thread });
     assert.equal(r.lines.filter((l) => /Signed/.test(l.text)).length, acts.length, JSON.stringify(r.lines));
   }
 }
 
-test('a deal between three separate people, set up in Edubba and signed in each one’s own; a protected recording bought from Dub, the service paid, the split published, each paid by their share and told of the sale, the key delivered, the file opened; the buyer’s contest shown to every party; a tip to one of them alone', async () => {
+/** A wait for a condition, not a read once: asked again until it holds (CI robustness, Part 4). */
+async function waitFor<T>(f: () => Promise<T | undefined | null | false>, what: string, tries = 20): Promise<T> {
+  for (let i = 0; i < tries; i++) {
+    const x = await f();
+    if (x) return x;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`Never: ${what}`);
+}
+
+test('ways 2 to 4: a work claimed with Ana, its ownership agreement (River, Pa, Ana), a publication with a partner labelled “client”, a referral and a split service; each signed in each one’s own Edubba; bought from Dub, split, the key delivered, the file opened; then the publication withdrawn', async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const [river, pa, ana] = [await sharer(H, RL, 'River'), await sharer(H, RL, 'Pa'), await sharer(H, RL, 'Ana')];
   const e = river.edubba;
   await e.c.ask('real contact add', { id: pa.id, name: 'Pa' });
   await e.c.ask('real contact add', { id: ana.id, name: 'Ana' });
-
-  // The split service, its own identity and node; its key for the deal's own payee, whose ID Edubba shows.
   const node = serviceNode();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });
   await svc.start();
-  const st = await e.c.ask<{ dealPayee: string; sharesSay: string[] }>('publishing');
-  assert.match(st.dealPayee, /^[0-9a-f]{64}$/);
-  assert.ok(st.sharesSay.some((t) => /The work then belongs to the deal/.test(t)));
-  const key = svc.grantKey(st.dealPayee);
 
-  // By clicks, in River's Edubba: Publishing › A protected file › Details, “Who shares in it”, the deal's own payee shown to give the service.
-  const problems: string[] = [];
-  const pe = await openPage(e.app.base, e.app.access.newCode(), problems);
-  await pe.locator('[data-k-tile=publishing]').click({ timeout: 60_000 });
-  await pe.locator('details[data-shares] summary').click();
-  await pe.locator('details[data-shares] code.k-mono', { hasText: st.dealPayee }).waitFor({ timeout: 60_000 });
-  await pe.locator('input[name=with0]').fill('Pa');
-  await pe.locator('input[name=share0]').fill('30');
-  await pe.locator('input[name=with1]').fill('Ana');
-  await pe.locator('input[name=share1]').fill('20');
-  await pe.locator('input[name=mine]').fill('50');
-  await pe.locator('input[name=dealReferral]').fill('10');
-  await pe.locator('input[name=dealService]').fill(svc.id);
-  await pe.locator('input[name=dealKey]').fill(key);
-  await pe.locator('#pub-work textarea[name=text]').fill('A recording, shared three ways.');
-  await pe.locator('#pub-work input[name=title]').fill('Three ways');
-  await pe.locator('#pub-work input[name=price]').fill('1000');
-  await shot(pe, 'edubba-who-shares-in-it.png');
-  await pe.locator('#pub-work button[type=submit]').click();
-  await pe.locator('#e-pub-review', { hasText: 'Who shares in it' }).waitFor({ timeout: 60_000 });
-  await pe.locator('#e-pub-review', { hasText: 'the work then belongs to the deal' }).waitFor();
-  await shot(pe, 'edubba-shared-read-back.png');
+  // Way 1, stopping at the upload: nothing for sale yet.
+  const text = 'A recording, shared three ways.';
+  const up = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode(text)), title: 'Three ways', then: 'none' });
+  assert.deepEqual(up.reading.blocking, []);
+  const [bake] = (await e.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
 
-  const text = new TextEncoder().encode('A recording, shared three ways.');
-  const shares = (o: Partial<{ pa: string; ana: string; mine: string; service: string; key: string; who: string }> = {}) => ({
-    with: [
-      { who: o.who ?? 'Pa', share: o.pa ?? '30' },
-      { who: 'Ana', share: o.ana ?? '20' },
-    ],
-    mine: o.mine ?? '50',
-    referral: '10',
-    service: o.service ?? svc.id,
-    serviceKey: o.key ?? key,
-  });
-  const read = (s: ReturnType<typeof shares>) => e.c.ask<any>('publishing work read', { media: 'text', data: b64(text), title: 'Three ways', price: '1000', shares: s });
+  // Way 2, a claim alone, by the bake's ID, made with Ana: a person by an ID alone is refused (H119).
+  assert.ok((await e.c.ask<any>('publishing claim read', { work: bake, title: 'Three ways', creators: [{ who: ana.id }] })).reading.blocking.some((b: string) => /never by an ID alone/.test(b)));
+  const cl = await e.c.ask<any>('publishing claim read', { work: bake, title: 'Three ways', creators: [{ who: 'Ana' }] });
+  assert.deepEqual(cl.reading.blocking, []);
+  assert.match(cl.reading.summary.join(' '), /binding the work’s fingerprint to its creators: River .*, Ana/);
+  assert.match(JSON.stringify(cl.reading), /MOR is not a court|never who truly made it/);
+  const claimed = await e.c.ask<Done>('publishing confirm', { plan: cl.plan, digest: cl.digest });
+  const [claim] = claimed.acts;
+  assert.ok(claimed.lines.some((l) => /Sent to Ana/.test(l.text)), JSON.stringify(claimed.lines));
+  await signIn([ana], [claim], /A claim to sign/, /“we made this”/);
+  let g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /The claim is bound/.test(l.text)), JSON.stringify(g.lines));
 
-  // Refused in plain words: shares not adding to 100; the service as a party; a person by an ID alone; the service's key missing.
-  assert.ok((await read(shares({ ana: '25' }))).reading.blocking.some((b: string) => /add up to 105%, not 100%/.test(b)));
-  assert.ok((await read(shares({ service: pa.id }))).reading.blocking.some((b: string) => /cannot be one of the people sharing in it/.test(b)));
-  assert.ok((await read(shares({ who: pa.id }))).reading.blocking.some((b: string) => /never by an ID alone/.test(b)));
-  assert.ok((await read(shares({ key: '' }))).reading.blocking.some((b: string) => /mor-split-service key/.test(b)));
+  // Way 3, the ownership agreement (H98): you and one other, shares even until touched; then three, the shares typed.
+  const even = await e.c.ask<any>('publishing ownership read', { claim, people: [{ who: 'River' }, { who: 'Ana' }] });
+  assert.deepEqual(even.reading.blocking, []);
+  assert.match(even.reading.summary.join(' '), /River .* 50%, Ana .* 50%/);
+  const alone = await e.c.ask<any>('publishing ownership read', { claim, people: [{ who: 'River' }, { who: '' }] });
+  assert.ok(alone.reading.blocking.some((b: string) => /Name at least one other person/.test(b)), JSON.stringify(alone.reading.blocking));
+  const owners = (o: { ana?: string } = {}) => [{ who: 'River', share: '50' }, { who: 'Pa', share: '30' }, { who: 'Ana', share: o.ana ?? '20' }];
+  assert.ok((await e.c.ask<any>('publishing ownership read', { claim, people: owners({ ana: '25' }) })).reading.blocking.some((b: string) => /add up to 105%, not 100%/.test(b)));
+  const ow = await e.c.ask<any>('publishing ownership read', { claim, people: owners() });
+  assert.deepEqual(ow.reading.blocking, []);
+  assert.match(JSON.stringify(ow.reading), /Ownership only: no split, no fees, no split service/);
+  assert.match(JSON.stringify(ow.reading), /Pa \[[0-9a-f]{8}…[0-9a-f]{4}\]: 30%/);
+  assert.match(JSON.stringify(ow.reading), /(is|are) not among the claim’s creators/, 'Pa is an owner, not a creator: said');
+  const agreed = await e.c.ask<Done>('publishing confirm', { plan: ow.plan, digest: ow.digest });
+  const [agreement] = agreed.acts;
+  assert.equal(agreed.lines.filter((l) => /Sent to/.test(l.text)).length, 2, JSON.stringify(agreed.lines));
+  // A publication naming it before every owner signed is refused in plain words.
+  assert.ok((await e.c.ask<any>('publishing publication read', { owners: agreement, sold: [bake], service: svc.id, price: '1000' })).reading.blocking.some((b: string) => /waits for .* to sign/.test(b)));
+  await signIn([pa, ana], [agreement], /An ownership agreement to sign/, /Who owns it.*: 50%.*: 30%.*: 20%/);
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /The ownership agreement counts/.test(l.text)), JSON.stringify(g.lines));
 
-  const w = await read(shares());
-  assert.deepEqual(w.reading.blocking, []);
-  const said = JSON.stringify(w.reading);
-  assert.match(said, /the work then belongs to the deal, and every payment for it, a tip included, goes to the split service/);
-  assert.match(said, /Pa \[[0-9a-f]{8}…[0-9a-f]{4}\]: 30%/);
-  assert.match(said, /The deal-assessment tool’s reading/);
-  const started = await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest });
-  assert.match(started.title, /sent to each person/);
-  assert.equal(started.acts.length, 2, 'the terms and the offer, each to sign');
-  assert.equal(started.lines.filter((l) => /Sent to/.test(l.text)).length, 2, JSON.stringify(started.lines));
-  assert.ok((await svc.tick()).some((t) => /grant .* accepted/.test(t)), 'the service accepts the deal’s payee’s grant');
+  // Way 4, a publication from it: Ana a partner labelled “client”, 5% off the top; a referral of 10%; the split service by its ID.
+  const pub = (o: Record<string, unknown> = {}) => e.c.ask<any>('publishing publication read', { owners: agreement, sold: [bake], partners: [{ who: 'Ana', share: '5', label: 'client' }], service: svc.id, referral: '10', price: '1000', tagBy: 'service', ...o });
+  assert.ok((await pub({ tagBy: 'me' })).reading.blocking.some((b: string) => /You sign its price tag only as one of its parties/.test(b)));
+  assert.ok((await pub({ service: '' })).reading.blocking.some((b: string) => /Name the split service/.test(b)));
+  const pr = await pub();
+  assert.deepEqual(pr.reading.blocking, []);
+  const said = JSON.stringify(pr.reading);
+  assert.match(said, /Ana .*\(“client”\): 5% off the top, a partner/);
+  assert.match(said, /Off the top: 10% of each payment to whoever reposted it/);
+  assert.match(said, /The rest, to the owners: River .* 50%, Pa .* 30%, Ana .* 20%/);
+  assert.match(said, /signed by its split service, in its own app/);
+  const drafted = await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest });
+  const [publication] = drafted.acts;
+  assert.match(drafted.title, /sent to each party/);
+  assert.ok(drafted.lines.some((l) => /signs it in its own app: give its operator the ID/.test(l.text)), JSON.stringify(drafted.lines));
 
-  // Nothing is announced while a party has not signed.
-  let g = await e.c.ask<{ lines: { text: string }[] }>('publishing deals gather');
-  assert.ok(g.lines.some((l) => /waiting for Pa .*, Ana .* to sign. Nothing is announced yet/.test(l.text)), JSON.stringify(g.lines));
-  assert.equal((await e.c.ask<any>('publishing')).works.length, 0);
-  // In Pa's own Edubba: Publishing › To sign, the deal read from its exact bytes.
-  const pp = await openPage(pa.edubba.app.base, pa.edubba.app.access.newCode(), problems);
-  await pp.locator('[data-k-tile=publishing]').click({ timeout: 60_000 });
-  await pp.locator('.k-col button', { hasText: 'To sign' }).click();
-  await pp.locator('#e-signing-wrap', { hasText: 'A shared deal' }).waitFor({ timeout: 60_000 });
-  await shot(pp, 'edubba-to-sign-a-shared-deal.png');
-  await signIn([pa], started.acts);
-  g = await e.c.ask<{ lines: { text: string }[] }>('publishing deals gather');
-  assert.ok(g.lines.some((l) => /waiting for Ana/.test(l.text)), JSON.stringify(g.lines));
-  const pe2 = await openPage(e.app.base, e.app.access.newCode(), problems);
-  await pe2.locator('[data-k-tile=publishing]').click({ timeout: 60_000 });
-  await pe2.locator('.k-col button', { hasText: 'Shared deals' }).click();
-  await pe2.locator('#deals-feed', { hasText: 'Waiting' }).waitFor({ timeout: 60_000 });
-  await shot(pe2, 'edubba-shared-deals-waiting.png');
-  await signIn([ana], started.acts);
-  g = await e.c.ask<{ lines: { text: string }[] }>('publishing deals gather');
-  assert.ok(g.lines.some((l) => /is announced: every person signed/.test(l.text)), JSON.stringify(g.lines));
-  const work = (await e.c.ask<any>('publishing')).works[0];
-  assert.ok(work?.deal && work.payee === st.dealPayee, JSON.stringify(work));
+  // The service signs it in its own app, its operator given the ID; nothing sells until every party has signed.
+  assert.match(await svc.accept(publication), /signed, as its split service/);
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /waiting for Pa .*, Ana .* to sign/.test(l.text)), JSON.stringify(g.lines));
+  await signIn([pa, ana], [publication], /A publication to sign/, /Its split service, .* receives every payment and pays everyone/);
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is published: every party signed it/.test(l.text)), JSON.stringify(g.lines));
+  assert.ok(g.lines.some((l) => /sealed to Pa/.test(l.text)), 'the key to each other owner');
+  const st = await e.c.ask<any>('publishing');
+  const p = st.publications.find((x: any) => x.id === publication);
+  assert.equal(p.state, 'counts');
+  assert.match(await svc.tag(publication, { unit: R, value: 1000 }), /./);
 
-  // A fourth identity buys it from Dub: one line says it is shared, before paying.
+  // A fourth identity buys it from Dub: the service answers, receipts in its own name, splits, pays each one.
   const b = await buyer(H, RL);
   await b.dub.c.ask('follow', { id: river.id, name: 'River' });
-  await b.dub.c.ask('follow', { id: pa.id, name: 'Pa' });
-  await b.dub.c.ask('follow', { id: ana.id, name: 'Ana' });
-  const item = (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === work.post);
-  assert.ok(item?.sealed, 'the post is in the buyer’s feed');
-  const ways = await b.dub.c.ask<{ shared: string | null }>('pay ways', { kind: 'buy', post: work.post, signer: river.id });
-  assert.match(ways.shared ?? '', /^This work is shared: River \(50%\), Pa \(30%\), Ana \(20%\)\. The split service, .*, answers for it\.$/);
-  // By clicks, in the buyer's Dub: the card's act menu, Buy: the one line before paying.
-  const pd = await openPage(b.dub.app.base, b.dub.app.access.newCode(), problems);
-  const card = pd.locator('.k-act', { hasText: 'Three ways' }).first();
-  await card.waitFor({ timeout: 60_000 });
-  await card.locator('.k-actid').click();
-  await pd.locator('.k-pop button', { hasText: 'Buy' }).first().click();
-  await pd.locator('.dub-shared', { hasText: 'This work is shared: River (50%), Pa (30%), Ana (20%).' }).waitFor({ timeout: 60_000 });
-  await shot(pd, 'dub-buy-a-shared-work.png');
-  await pd.keyboard.press('Escape');
-  const bought = await b.dub.c.ask<{ lines: { text: string }[] }>('buy', { publication: work.publication, seller: river.id, post: work.post });
-  assert.match(bought.lines[0].text, /^This work is shared/);
-  assert.ok((await svc.tick()).some((t) => /An invoice of its node sent/.test(t)));
+  const seen = await waitFor(async () => (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === p.post && i.sealed?.tag), 'the post, its price tag counting');
+  assert.equal(seen.sealed.through?.publication, publication, JSON.stringify(seen.sealed));
+  const bought = await b.dub.c.ask<{ lines: { text: string }[] }>('buy', { publication: bake, seller: river.id, post: p.post });
+  const asked = await svc.tick();
+  assert.ok(asked.some((t) => /An invoice of its node sent/.test(t)), JSON.stringify([bought, asked]));
   await payFromDub(b, node);
+  const told = await settle(svc, [river, pa, ana]);
+  assert.match(told, /Split .*: 50 to .* \(partner\)/, told);
 
-  // The service: the receipt in the deal's payee's name, the split, the sale told, each paid by their share.
-  const t = await settle(svc, [river, pa, ana]);
-  assert.match(t, /its receipt signed with .* grant key/);
-  // Found directly, through no repost: the referral share is filled by nobody and goes to the owners (Agreements rule 22: absent a choice, to the stakes).
-  assert.match(t, /Split .*: 500 to .*, 300 to .*, 200 to/, t);
-  assert.match(t, /The sale told to 4 parties/, t);
-  assert.equal((t.match(/Paid \d+ to/g) ?? []).length, 3, t);
-  for (const [m, value] of [[river, 500], [pa, 300], [ana, 200]] as const) {
-    await m.damgar.c.ask('look');
-    const a = await m.damgar.c.ask<Account>('account');
-    const deal = a.shared?.find((x) => x.name === 'Three ways');
-    assert.ok(deal, `${m.name}’s Damgar shows the deal: ${JSON.stringify(a.shared)}`);
-    assert.ok(deal.payments.some((x) => x.kind === 'a sale' && x.amount.value === 1000), JSON.stringify(deal.payments));
-    assert.ok(deal.payouts.some((x) => x.amount.value === value && x.paid), `${m.name}’s payout: ${JSON.stringify(deal.payouts)}`);
-  }
-
-  // River's Edubba, told of the sale, delivers the key; the recording's text opens in the buyer's Dub.
+  // River's Edubba, told of the sale by the service, delivers the key; the text opens in the buyer's Dub.
   const d = await e.c.ask<{ lines: { text: string }[] }>('publishing deliver');
-  assert.ok(d.lines.some((l) => /a sale your deal’s split service receipted, told to every person sharing in it/.test(l.text)), JSON.stringify(d.lines));
+  assert.ok(d.lines.some((l) => /a sale its publication’s split service receipted/.test(l.text)), JSON.stringify(d.lines));
   await b.dub.c.ask('money look');
-  const opened = (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === work.post)!;
+  const opened = (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === p.post)!;
   assert.equal(opened.sealed.state, 'opened');
-  assert.equal(opened.sealed.text, 'A recording, shared three ways.');
-  // The buyer's own payment, shown with the deal's name in its Damgar.
-  await b.damgar.c.ask('look');
+  assert.equal(opened.sealed.text, text);
 
-  // The buyer contests the purchase; every party's Edubba shows it beside the sale (the claim sealed to each).
-  await b.dub.c.ask('purchase contest', { publication: work.publication, promise: 'Not three ways at all.' });
-  for (const m of [river, pa, ana]) {
-    const s = await m.edubba.c.ask<{ sales: any[]; problems: string[] }>('publishing shared sales');
-    const sale = s.sales.find((x) => x.buyer === b.id);
-    assert.ok(sale, `${m.name}’s Edubba lists the sale: ${JSON.stringify(s)}`);
-    assert.equal(sale.kind, 'deal');
-    assert.ok(sale.claim, `${m.name} holds the buyer’s claim`);
-    assert.equal(sale.beside.state, 'shown', `${m.name}: ${JSON.stringify(sale.beside)} ${JSON.stringify(s.problems)}`);
-    assert.equal(sale.beside.contests[0]?.promise, 'Not three ways at all.');
-  }
-
-  // By clicks: Pa's Damgar, Account › Shared deals; Pa's Edubba, Publishing › Sales, the contest beside the shared sale.
-  const pg = await openPage(pa.damgar.app.base, pa.damgar.app.access.newCode(), problems);
-  await pg.locator('[data-k-tile=account]').click({ timeout: 60_000 });
-  await pg.locator('.k-col button', { hasText: 'Shared deals' }).click();
-  await pg.locator('.k-act', { hasText: 'Its split pays you 300' }).first().waitFor({ timeout: 60_000 });
-  await shot(pg, 'damgar-shared-deals.png');
-  const pp2 = await openPage(pa.edubba.app.base, pa.edubba.app.access.newCode(), problems);
-  await pp2.locator('[data-k-tile=publishing]').click({ timeout: 60_000 });
-  await pp2.locator('.k-col button', { hasText: 'Sales' }).click();
-  await pp2.locator('.k-label.k-bad.edubba-beside', { hasText: 'Contested by its buyer: “Not three ways at all.”' }).waitFor({ timeout: 60_000 });
-  await shot(pp2, 'edubba-sales-shared-contested.png');
-  assert.deepEqual(problems, []);
-
-  // And in the buyer's own Purchases, in Dub.
-  const mine = (await b.dub.c.ask<{ items: any[] }>('purchases')).items.find((x) => x.id === work.publication);
-  assert.equal(mine?.contests?.contests[0]?.promise, 'Not three ways at all.', JSON.stringify(mine?.contests));
-
-  // A tip to River's own post, not under the deal: paid to River alone, the service sees nothing.
-  const own = (await river.dub.c.ask<{ post: { id: string } }>('post', { text: 'Just me, today.' })).post;
-  await b.dub.c.ask('feed', { fresh: true });
-  const ownWays = await b.dub.c.ask<{ shared: string | null }>('pay ways', { kind: 'tip', post: own.id, signer: river.id });
-  assert.equal(ownWays.shared, null);
-  const tipped = await b.dub.c.ask<{ lines: { text: string }[] }>('tip now', { post: own.id, signer: river.id, value: '77', unit: R });
-  assert.ok(!tipped.lines.some((l) => /shared/.test(l.text)));
-  assert.ok(!(await svc.tick()).some((t) => /77|invoice/i.test(t)), 'the service is asked nothing');
-  await river.damgar.c.ask('look');
-  const tip = (await b.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments.find((x) => x.amount.value === 77);
-  assert.ok(tip?.pay?.invoice, 'River’s own Damgar answered the tip');
+  // Withdraw the publication: a later version selling nothing, every party signing it; the bake stays, said plainly.
+  const end = await e.c.ask<any>('publishing publication end read', { publication });
+  assert.deepEqual(end.reading.blocking, []);
+  assert.match(JSON.stringify(end.reading), /A bake is never withdrawn by the protocol/);
+  const ended = await e.c.ask<Done>('publishing confirm', { plan: end.plan, digest: end.digest });
+  assert.equal((await e.c.ask<any>('publishing')).publications.find((x: any) => x.id === publication).state, 'ending');
+  await signIn([pa, ana], [ended.acts[0]], /The end of a publication to sign/, /sells nothing/);
+  assert.match(await svc.accept(ended.acts[0]), /signed/);
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is ended: every party signed its ending/.test(l.text)), JSON.stringify(g.lines));
 });
 
-test('a vow under a deal between separate people, bought from Dub and confirmed; a plain post under a deal, tipped from Dub: the tip goes to the deal, through its split service, and is split', async () => {
+test('a vow claimed by its name; its ownership agreement in two versions (rule 14: the founding writes the stake to the vow’s signer, the second shares it); a publication selling it', async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const [river, pa] = [await sharer(H, RL, 'River'), await sharer(H, RL, 'Pa')];
@@ -359,78 +308,28 @@ test('a vow under a deal between separate people, bought from Dub and confirmed;
   const node = serviceNode();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });
   await svc.start();
-  const shares = (key: string) => ({ with: [{ who: 'Pa', share: '40' }], mine: '60', referral: '', service: svc.id, serviceKey: key });
-
-  // A vow, shared: its stake first wholly River's (Agreements rule 14), then shared by a second version both sign.
-  const k1 = svc.grantKey((await e.c.ask<{ dealPayee: string }>('publishing')).dealPayee);
-  const v = await e.c.ask<any>('publishing vow read', { words: 'A song written for you, by the two of us.', title: 'A song for you', price: '1000', shares: shares(k1) });
-  assert.deepEqual(v.reading.blocking, []);
-  assert.match(JSON.stringify(v.reading), /A vow’s stake is first written to its signer, you \(Agreements rule 14\)/);
-  const vs = await e.c.ask<Done>('publishing confirm', { plan: v.plan, digest: v.digest });
-  assert.equal(vs.acts.length, 3, 'the founding, its second version, the offer');
-  await signIn([pa], vs.acts);
-  const pr = (await pa.edubba.c.ask<{ proposals: any[] }>('member proposals')).proposals.find((x) => x.act === vs.acts[0]);
-  assert.match(JSON.stringify(pr.reading), /Its second version: the stake shared/);
-  assert.ok((await e.c.ask<{ lines: { text: string }[] }>('publishing deals gather')).lines.some((l) => /is announced/.test(l.text)));
-  await svc.tick();
-  const vow = (await e.c.ask<any>('publishing')).vows[0];
-  assert.ok(vow?.deal, JSON.stringify(vow));
-
-  const b = await buyer(H, RL);
-  for (const [id, name] of [[river.id, 'River'], [pa.id, 'Pa']]) await b.dub.c.ask('follow', { id, name });
-  await b.dub.c.ask('feed', { fresh: true });
-  const bought = await b.dub.c.ask<{ lines: { text: string }[] }>('vow buy', { vow: vow.vow, seller: river.id, post: vow.post });
-  assert.match(bought.lines[0].text, /^This work is shared: River \(60%\), Pa \(40%\)/);
-  await svc.tick();
-  await payFromDub(b, node);
-  const t = await settle(svc, [river, pa]);
-  assert.match(t, /Split .*: 600 to .*, 400 to/, t);
-  assert.match(t, /The sale told to 3 parties/, t);
-  // Confirmed by its buyer, from Dub's Purchases: its claim again, in public, acknowledging the vow; the sale reads confirmed.
-  assert.match((await b.dub.c.ask<any>('vow confirm', { vow: vow.vow })).lines[0].text, /reads confirmed/);
-  const sales = (await b.dub.c.ask<{ vows: any[] }>('vows bought')).vows.find((x) => x.vow === vow.vow);
-  assert.equal(sales?.sale, 'confirmed', JSON.stringify(sales));
-
-  // A plain post, shared: a tip on it goes to the deal, not to River alone.
-  const k2 = svc.grantKey((await e.c.ask<{ dealPayee: string }>('publishing')).dealPayee);
-  const p = await e.c.ask<any>('publishing post read', { text: 'Our first song is out. Tips are shared.', shares: shares(k2) });
-  assert.deepEqual(p.reading.blocking, []);
-  assert.match(JSON.stringify(p.reading), /Nothing is sold: a tip is a tip/);
-  const ps = await e.c.ask<Done>('publishing confirm', { plan: p.plan, digest: p.digest });
-  await signIn([pa], ps.acts);
-  await e.c.ask('publishing deals gather');
-  await svc.tick();
-  const post = (await e.c.ask<any>('publishing')).posts[0];
-  assert.ok(post?.post, 'the shared post is announced');
-  await b.dub.c.ask('feed', { fresh: true });
-  const ways = await b.dub.c.ask<{ shared: string | null }>('pay ways', { kind: 'tip', post: post.post, signer: river.id });
-  assert.match(ways.shared ?? '', /^This work is shared: River \(60%\), Pa \(40%\)/);
-  const tipped = await b.dub.c.ask<{ lines: { text: string }[] }>('tip now', { post: post.post, signer: river.id, value: '500', unit: R });
-  assert.ok(tipped.lines.some((l) => /The tip goes to the deal, not to the one who posted it/.test(l.text)), JSON.stringify(tipped.lines));
-  assert.ok((await svc.tick()).some((x) => /An invoice of its node sent/.test(x)), 'the service answers the tip');
-  await payFromDub(b, node);
-  const tt = await settle(svc, [river, pa]);
-  assert.match(tt, /Split .*: 300 to .*, 200 to/, tt);
-  assert.doesNotMatch(tt, /The sale told/, 'a tip sells nothing');
-  for (const [m, value] of [[river, 300], [pa, 200]] as const) {
-    await m.damgar.c.ask('look');
-    const a = await m.damgar.c.ask<Account>('account');
-    const d = a.shared?.find((x) => x.payments.some((y) => y.kind === 'a tip'));
-    assert.ok(d?.payouts.some((x) => x.amount.value === value && x.paid), `${m.name}: ${JSON.stringify(a.shared)}`);
-  }
-  // The second way, Ask Damgar: the draft names the post; Damgar reads the deal from it and pays the deal, through its service.
-  const asked = await b.dub.c.ask<{ lines: { text: string }[] }>('pay', { how: 'damgar', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R });
-  assert.ok(asked.lines.some((l) => /Prepared, not signed/.test(l.text)), JSON.stringify(asked.lines));
-  await b.damgar.c.ask('look');
-  const item = (await b.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'draft' && i.amount?.value === 100)!;
-  assert.ok(item.lines.some((l) => /^This work is shared: .*The payment follows the deal/.test(l.text)), JSON.stringify(item.lines));
-  await b.damgar.c.ask('sign draft', { id: item.id });
-  assert.ok((await svc.tick()).some((x) => /An invoice of its node sent/.test(x)), 'the service answers the tip asked of Damgar');
-  await b.damgar.c.ask('look');
-  const named = (await b.damgar.c.ask<Account>('account')).payments.find((x) => x.amount.value === 100);
-  assert.equal(named?.deal, 'Our first song is out. Tips are shared.', 'Damgar shows the payment with the deal’s name');
-  // By hand, a draft carries no post: refused for a shared work, saying so.
-  await assert.rejects(b.dub.c.ask('pay', { how: 'hand', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R }), /a draft copied by hand carries no post/);
+  const r = await e.c.ask<any>('publishing vow read', { words: 'A lesson on reading tablets, given by two.', title: 'A lesson', price: '700' });
+  const [vow] = (await e.c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest })).acts;
+  const cl = await e.c.ask<any>('publishing claim read', { work: vow, title: 'A lesson', creators: [{ who: 'Pa' }] });
+  assert.deepEqual(cl.reading.blocking, []);
+  assert.match(cl.reading.summary.join(' '), /binding the vow’s name/);
+  const [claim] = (await e.c.ask<Done>('publishing confirm', { plan: cl.plan, digest: cl.digest })).acts;
+  await signIn([pa], [claim], /A claim to sign/, /“we made this”/);
+  const ow = await e.c.ask<any>('publishing ownership read', { claim, people: [{ who: 'River', share: '60' }, { who: 'Pa', share: '40' }] });
+  assert.deepEqual(ow.reading.blocking, []);
+  assert.match(JSON.stringify(ow.reading), /its first version writes the whole stake to you, the vow’s signer \(rule 14\)/);
+  const agreed = await e.c.ask<Done>('publishing confirm', { plan: ow.plan, digest: ow.digest });
+  assert.equal(agreed.acts.length, 2, 'the founding and its second version, each to sign');
+  await signIn([pa], agreed.acts, /An ownership agreement to sign/, /Its second version: the stake shared/);
+  await e.c.ask('publishing gather');
+  const pr = await e.c.ask<any>('publishing publication read', { owners: agreed.acts[0], sold: [vow], service: svc.id, price: '700' });
+  assert.deepEqual(pr.reading.blocking, []);
+  assert.match(JSON.stringify(pr.reading), /The vow .*, by its name/);
+  const [publication] = (await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest })).acts;
+  assert.match(await svc.accept(publication), /signed, as its split service/);
+  await signIn([pa], [publication], /A publication to sign/, /A vow, by its name/);
+  const g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is published: every party signed it/.test(l.text)), JSON.stringify(g.lines));
 });
 
 test('a collective’s work bought, a sale whose payment is not verified (S7e): its claim opened by every member’s Edubba from MOR; “unknown”, with its reason, in each member’s Sales and Damgar’s Shared deals, and in the buyer’s Dub Purchases and Payments', async () => {
@@ -458,7 +357,7 @@ test('a collective’s work bought, a sale whose payment is not verified (S7e): 
   await e.c.ask('real money record', { act: money.acts[0] });
   await svc.tick();
   await e.c.ask('publishing act as', { id: collective });
-  const w = await e.c.ask<any>('publishing work read', { media: 'text', data: b64(new TextEncoder().encode('The collective’s story.')), title: 'A story', price: '1000' });
+  const w = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('The collective’s story.')), title: 'A story', then: 'price', price: '1000' });
   assert.deepEqual(w.reading.blocking, []);
   const [publication, , postId] = (await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest })).acts;
 

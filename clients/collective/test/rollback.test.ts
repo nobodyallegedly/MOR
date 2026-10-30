@@ -123,7 +123,8 @@ test('3.7w: a broken collective, a resignation during the broken stretch, and th
     commit(w.checkout, 'src/lib.rs', 'pub fn back() -> u8 { 8 }\n');
     const rel = await sign(c, { kind: 'release', publisher: id, version: 'back' });
     const relId = rel.done.acts[0];
-    await sign(c, { kind: 'sign', member: ada, release: relId });
+    // Ada uploaded it with her own key, naming the collective: her act for the Releases area (Agreements
+    // rules 58, 60). Sim One's signature makes the two (was: Ada and Sim One each signed it).
     await sign(c, { kind: 'sign', member: one, release: relId });
     const v2 = await verifyRelease(relId, [relay.base]);
     assert.equal(v2.ok, true, v2.problems.join('; '));

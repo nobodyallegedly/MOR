@@ -570,7 +570,7 @@ new MutationObserver((ms) => {
 // H119: a contact chosen for "Shared with" is written by its nickname: a person is named there by your name for them, never by an ID alone.
 app.addEventListener('input', (ev) => {
   const el = ev.target as HTMLInputElement;
-  if (!/^with\d$/.test(el.name) || !/^mid1/.test(el.value.trim())) return;
+  if (!/^(with\d|who-\d+)$/.test(el.name) || !/^mid1/.test(el.value.trim())) return;
   const nick = contactsUi.list().find((x) => x.form === el.value.trim())?.name;
   if (nick) el.value = nick;
 });
@@ -672,7 +672,7 @@ async function draw() {
   if (tab === 'publishing' || tab === 'vows') await readPublishing().catch(() => null);
   // Two redraws can overlap: what the first saw typed is kept until a pane is drawn.
   typed = (pane() ? typingNow(pane()!) : null) ?? typed;
-  const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount, deals: pubCache?.deals?.filter((d) => d.state === 'waiting').length || undefined, dealsToSign: dealsToSignCount };
+  const k = { here: pubCache ? pubCache.bakes.length + pubCache.claims.length + pubCache.ownerships.length + pubCache.publications.length || undefined : undefined, mine: pubCache?.vows.length, sales: pubCache ? pubCache.bakes.reduce((n, w) => n + Object.keys(w.delivered).length, 0) || undefined : undefined, toSign: toSignCount, dealsToSign: dealsToSignCount };
   app.innerHTML = v.tabPage(state, tab, part, k, as, alarms(), counts());
   syncKey();
   void syncHeld();
@@ -723,6 +723,8 @@ async function fill() {
     const kept = typed ?? typingNow(p);
     typed = null;
     p.innerHTML = html;
+    // H98: shares drawn even until one is touched.
+    p.querySelectorAll<HTMLElement>('[data-people][data-even]').forEach(evenShares);
     if (kept) {
       const again = p.querySelector<HTMLTextAreaElement | HTMLInputElement>(`form#${CSS.escape(kept.form)} [name="${CSS.escape(kept.name)}"]`);
       if (again && !again.value) {
@@ -970,11 +972,30 @@ async function drawMoney(collective: string) {
 
 // ---------------------------------------------------------------- publishing and vows
 
-/** "Who shares in it" (this round): the contacts' names offered, the deal's own payee to give the split service. */
-const sharesHtml = (p: v.PublishingShown, kind: string) => v.sharesFields({ names: [...state.contacts.map((x) => x.name), ...state.identities.filter((i) => i.id !== state.acting).map((i) => i.name)], payee: p.dealPayee ?? null, say: p.sharesSay ?? [], kind });
-const MEDIA_KIND: Record<string, string> = { text: 'text', picture: 'picture', video: 'film', audio: 'recording' };
-/** What "Who shares in it" holds, as the program takes it. */
-const sharesOf = (d: FormData) => ({ with: [0, 1].map((i) => ({ who: words(d.get(`with${i}`)), share: words(d.get(`share${i}`)) })), mine: words(d.get('mine')), referral: words(d.get('dealReferral')), service: words(d.get('dealService')), serviceKey: words(d.get('dealKey')) });
+/** The names offered for people (H119: a person is named by your name for them): contacts, then the other identities held here. */
+const namesOffered = () => [...state.contacts.map((x) => x.name), ...state.identities.filter((i) => i.id !== state.acting).map((i) => i.name)];
+const meName = () => state.identities.find((i) => i.id === state.acting)?.name ?? (state.acting ? shown(state.acting) : '');
+/** Rows of people as a form holds them (H98): each row's name, share and label, in order. */
+const rowsOf = (form: HTMLFormElement, id: string) =>
+  [...form.querySelectorAll<HTMLElement>(`[data-people="${CSS.escape(id)}"] [data-person]`)].map((r) => {
+    const n = r.dataset.person!;
+    const val = (k: string) => (r.querySelector<HTMLInputElement>(`[name="${k}-${n}"]`)?.value ?? '').trim();
+    return { who: val('who'), share: val('share'), label: val('label') };
+  });
+/** H98: shares even until one is touched, the rows filled again as people are added or removed. */
+function evenShares(box: HTMLElement) {
+  if (!box.hasAttribute('data-even') || box.hasAttribute('data-touched')) return;
+  const inputs = [...box.querySelectorAll<HTMLInputElement>('input[name^="share-"]')];
+  const n = inputs.length;
+  inputs.forEach((x, i) => {
+    const each = Math.floor(1_000_000 / n) + (i < 1_000_000 % n ? 1 : 0);
+    x.value = String(each / 10_000);
+  });
+}
+app.addEventListener('input', (ev) => {
+  const el = ev.target as HTMLInputElement;
+  if (/^share-\d+$/.test(el.name)) el.closest<HTMLElement>('[data-people]')?.setAttribute('data-touched', '');
+});
 const actorsHtml = (p: v.PublishingShown) => v.whoActs(p.actors.filter((x) => x.kind === 'collective' || x.id === state.acting), p.as, (id) => shown(id));
 
 async function readPublishing(): Promise<v.PublishingShown> {
@@ -982,64 +1003,77 @@ async function readPublishing(): Promise<v.PublishingShown> {
   return pubCache;
 }
 
+const MEDIA_SAID: Record<string, string> = { text: 'text', picture: 'picture', video: 'film', audio: 'recording' };
+/** Where something waits for others' signatures, said beside it. */
+const waitingHtml = (w: { state: string; signed: string } | null) => (w ? `<br>${w.state === 'complete' ? 'Every person signed.' : `Waiting: ${v.e(w.signed)}.`}` : '');
+
 async function publishingPart(): Promise<string> {
   const p = await readPublishing();
+  const bakes = p.bakes.filter((b) => !b.collective).map((b) => ({ id: b.bake, title: b.title }));
   if (part === 'here') {
-    const cards = p.works
-      .map((w) =>
+    const priced = (t: { price: number | null } | null) => (t ? (t.price ? `price tag ${t.price.toLocaleString('en')} ${v.e(p.unit)}` : 'price tag withdrawn') : 'no price tag');
+    const cards = [
+      ...p.publications.map((x) =>
         cardOf({
-          id: w.publication,
+          id: x.id,
+          signer: who(x.by),
+          kind: 'publication',
+          text: x.title,
+          html: `<div class="k-small k-soft">${x.owners ? `Owners: ${x.holders.map(([id, n]) => `${whoHtml({ id, inline: true })} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')}` : 'You alone, its lone seller'} · its split service ${whoHtml({ id: x.service, inline: true })}${x.partners.map((q) => ` · ${whoHtml({ id: q.identity, inline: true })}${q.label ? ` (${v.e(q.label)})` : ''} ${(q.share / 10_000).toLocaleString('en')}% off the top`).join('')}${x.referral ? ` · ${(x.referral / 10_000).toLocaleString('en')}% to a reposter` : ''}<br>${x.price.toLocaleString('en')} ${v.e(p.unit)} · ${x.tag ? priced(x.tag) : x.state === 'counts' ? 'its price tag is its split service’s' : 'no price tag yet'}${waitingHtml(x.waiting)}</div>
+<div class="k-row">${x.tag?.price && x.tag.signer === state.acting ? `<button type="button" class="k-btn k-q" data-action="pub-tag-withdraw" data-on="${v.e(x.id)}">Withdraw the price tag</button>` : ''}${x.state === 'counts' || x.state === 'waiting' ? `<button type="button" class="k-btn k-q" data-action="pub-end" data-publication="${v.e(x.id)}">Withdraw the publication</button>` : ''}</div>`,
+          labels: [{ text: x.state === 'counts' ? 'selling' : x.state === 'waiting' ? 'waiting for signatures' : x.state === 'ending' ? 'its ending waits for signatures' : 'ended', tone: x.state === 'counts' ? undefined : ('warn' as const) }],
+          verified: x.state === 'counts',
+        }),
+      ),
+      ...p.ownerships.map((x) =>
+        cardOf({ id: x.id, signer: who(x.by), kind: 'ownership agreement', text: x.title, html: `<div class="k-small k-soft">${x.holders.map(([id, n]) => `${whoHtml({ id, inline: true })} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')} · from the claim ${actId(x.claim)}${waitingHtml(x.waiting)}</div>`, labels: x.waiting?.state === 'waiting' ? [{ text: 'waiting for signatures', tone: 'warn' as const }] : [], verified: x.waiting?.state !== 'waiting' }),
+      ),
+      ...p.claims.map((x) =>
+        cardOf({ id: x.claim, signer: who(x.by), kind: 'claim', text: x.title, html: `<div class="k-small k-soft">Made by ${x.creators.map((id) => whoHtml({ id, inline: true })).join(', ')} · ${x.vow ? `the vow ${actId(x.vow)}` : x.bake ? `the work of ${actId(x.bake)}` : `fingerprint ${v.e(x.work.slice(0, 16))}…`}${waitingHtml(x.waiting)}</div>`, labels: x.waiting?.state === 'waiting' ? [{ text: 'waiting for signatures', tone: 'warn' as const }] : [], verified: x.waiting?.state !== 'waiting' }),
+      ),
+      ...p.bakes.map((w) =>
+        cardOf({
+          id: w.bake,
           signer: who(w.as, { collective: w.collective }),
-          kind: `protected ${w.media === 'picture' ? 'picture' : w.media === 'video' ? 'film' : w.media === 'audio' ? 'recording' : 'text'}`,
+          kind: `upload · ${MEDIA_SAID[w.media] ?? 'text'}`,
           text: w.title,
-          html: `<div class="k-small k-soft">${w.price.toLocaleString('en')} ${v.e(p.unit)} · ${v.e(w.words)}<br>${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${actId(w.offer)}.</div>`,
+          html: `<div class="k-small k-soft">${priced(w.tag)}${w.tag?.price ? ', paid to the uploader, unsplit' : ''} · ${w.collective ? (w.toMembers ? 'its key sealed to every member' : 'its key not yet sealed to the members') : `its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}`}${w.claim ? ` · claimed ${actId(w.claim)}` : ''}<br>${v.e(p.bakeStays)}</div>
+<div class="k-row">${w.tag?.price && w.tag.signer === state.acting ? `<button type="button" class="k-btn k-q" data-action="pub-tag-withdraw" data-on="${v.e(w.bake)}">Withdraw the price tag</button>` : ''}${!w.collective && !w.tag?.price ? `<form class="pub-tag k-row" data-bake="${v.e(w.bake)}"><input name="price" inputmode="numeric" placeholder="A price (${v.e(p.unit)})" autocomplete="off"><button type="submit" class="k-btn k-q">Read a price tag back</button></form>` : ''}</div>`,
           verified: true,
         }),
-      )
-      .join('');
-    return v.herePane(cards);
+      ),
+    ].join('');
+    const waiting = [...p.claims, ...p.ownerships, ...p.publications].filter((x) => x.waiting?.state === 'waiting').length;
+    return v.herePane(cards, waiting);
   }
   if (part === 'sales') {
     // F386: each buyer's contests, shown beside the sale; "unknown" where the core cannot say, never "none".
-    const sold = p.works.filter((w) => Object.keys(w.delivered).length);
+    const sold = p.bakes.filter((w) => Object.keys(w.delivered).length);
     type Contested = { by: Record<string, Record<string, v.ContestsBeside>>; problems: string[] };
     const contested: Contested = sold.length ? await c.ask<Contested>('publishing sales contests').catch((e) => ({ by: {}, problems: [errorOf(e)] })) : { by: {}, problems: [] };
     const rows = sold
-      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${whoHtml({ id: buyer, inline: true })}</span><span class="k-r">key delivered · ${actId(act)}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.publication]?.[buyer])}`).join('')}</div></div>`)
+      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${whoHtml({ id: buyer, inline: true })}</span><span class="k-r">key delivered · ${actId(act)}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.bake]?.[buyer])}`).join('')}</div></div>`)
       .join('');
-    // Shared works (this round): the sales told to you as a party of a deal or a member of a collective, the buyer's contest beside each (decided with the MOR lead, 23 October 2026).
-    type SharedSales = { sales: { kind: 'deal' | 'collective'; title: string; buyer: string; receipt: string; claim: string | null; beside: v.ContestsBeside }[]; problems: string[] };
+    // Works sold through a publication: the sales its split service told you of, the buyer's contest beside each (decided with the MOR lead, 23 October 2026).
+    type SharedSales = { sales: { kind: 'publication' | 'collective'; title: string; buyer: string; receipt: string; claim: string | null; beside: v.ContestsBeside }[]; problems: string[] };
     const sh = await c.ask<SharedSales>('publishing shared sales').catch((e) => ({ sales: [], problems: [errorOf(e)] }) as SharedSales);
     const shared = sh.sales
-      .map((x) => `<div class="k-box"><h4>${v.e(x.title)} <span class="k-small k-soft">${x.kind === 'deal' ? 'a shared deal' : 'a collective'}</span></h4><div class="k-list"><div><span>Bought by ${whoHtml({ id: x.buyer, inline: true })}</span><span class="k-r">receipt ${actId(x.receipt)}${x.claim ? ` · their claim ${actId(x.claim)}` : ''}</span></div>${v.contestsBeside(x.beside)}</div></div>`)
+      .map((x) => `<div class="k-box"><h4>${v.e(x.title)} <span class="k-small k-soft">${x.kind === 'publication' ? 'through a publication' : 'a collective'}</span></h4><div class="k-list"><div><span>Bought by ${whoHtml({ id: x.buyer, inline: true })}</span><span class="k-r">receipt ${actId(x.receipt)}${x.claim ? ` · their claim ${actId(x.claim)}` : ''}</span></div>${v.contestsBeside(x.beside)}</div></div>`)
       .join('');
     return v.salesPane(rows, [...contested.problems, ...sh.problems], shared);
   }
-  if (part === 'post') return v.sharedPostPane({ who: actorsHtml(p), shares: sharesHtml(p, 'post') });
   if (part === 'sign') return v.inside(`<div id="e-signing-wrap">${await readSign(null, true)}</div>`);
-  if (part === 'deals') {
-    const cards = (p.deals ?? [])
-      .map((d) =>
-        cardOf({
-          id: d.id,
-          signer: who(state.acting ?? ''),
-          kind: `a shared ${d.kind === 'work' ? 'file' : d.kind}`,
-          text: d.title,
-          html: `<div class="k-small k-soft">${d.shares.map(([id, n]) => `${whoHtml({ id, inline: true })} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')}${d.referral ? ` · ${(d.referral / 10_000).toLocaleString('en')}% off the top to a reposter` : ''}<br>Its own payee ${idButton(v.idForm(d.payee), { person: d.payee })} · its split service ${whoHtml({ id: d.service, inline: true })}<br>${d.state === 'announced' ? 'Every person signed: announced.' : `Waiting: ${v.e(d.signed)}. Nothing is announced yet.`}</div>`,
-          labels: d.state === 'waiting' ? [{ text: 'waiting for signatures', tone: 'warn' as const }] : [{ text: 'announced' }],
-          verified: d.state === 'announced',
-        }),
-      )
-      .join('');
-    return v.dealsPane(cards);
-  }
-  part = 'file';
+  if (part === 'claim') return v.claimPane({ who: actorsHtml(p), me: meName(), names: namesOffered(), bakes });
+  if (part === 'ownership') return v.ownershipPane({ who: actorsHtml(p), me: meName(), names: namesOffered(), claims: p.claims.map((x) => ({ id: x.claim, title: x.title })), say: p.sharesSay });
+  if (part === 'publication')
+    return v.publicationPane({ who: actorsHtml(p), me: meName(), names: namesOffered(), unit: p.unit, ownerships: p.ownerships.map((x) => ({ id: x.id, title: x.title, ready: x.waiting?.state !== 'waiting' })), bakes });
+  part = 'upload';
   // Keys of sales told of are delivered as the tile opens (as Dub does on its main screen).
-  if (p.works.length)
+  if (p.bakes.length)
     void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
       if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
     }).catch(() => undefined);
-  return v.filePane({ who: actorsHtml(p), media, unit: p.unit, say: p.say, judged: v.JUDGED_SAY, shares: sharesHtml(p, MEDIA_KIND[media] ?? 'work') });
+  return v.uploadPane({ who: actorsHtml(p), media, unit: p.unit, say: p.say, me: meName(), names: namesOffered(), bakeStays: p.bakeStays });
 }
 
 interface Point {
@@ -1067,7 +1101,7 @@ let showing = 'all';
 
 async function vowsPart(): Promise<string> {
   const p = await readPublishing();
-  if (part === 'new') return v.newVowPane({ who: actorsHtml(p), unit: p.unit, shares: sharesHtml(p, 'vow') });
+  if (part === 'new') return v.newVowPane({ who: actorsHtml(p), unit: p.unit });
   if (part === 'mine') {
     const cards = p.vows.map((x) => cardOf({ id: x.vow, signer: who(x.as, { collective: x.collective }), kind: 'vow', text: `${x.title}. ${x.price.toLocaleString('en')} ${p.unit}`, html: `<div class="k-small k-soft">${v.e(x.words)}</div>`, verified: true })).join('');
     return v.minePane(cards);
@@ -1749,8 +1783,8 @@ app.addEventListener('click', async (ev) => {
       if (r) say(r.ok ? 'done' : 'warn', r.ok ? `It counts as the collective’s release, signed by ${r.signers.length} members.` : `It does not count yet: ${r.problems.map(v.e).join(' ')}`);
       return;
     }
-    case 'pub-deals-gather': {
-      const r = await busy('Looking for each person’s signatures…', () => ask<{ lines: Line[] }>('publishing deals gather'));
+    case 'pub-gather': {
+      const r = await busy('Looking for each person’s signatures…', () => ask<{ lines: Line[] }>('publishing gather'));
       if (r) {
         await fill();
         say('done', v.lines(r.lines));
@@ -1767,9 +1801,8 @@ app.addEventListener('click', async (ev) => {
         const done = await busy('Sealing, signing and publishing…', () => ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest }));
         if (done) {
           pubReview = null;
-          // A shared deal waits for every person's signature: shown under Shared deals, in Publishing.
-          if (/sent to each person/.test(done.title)) [tab, part] = ['publishing', 'deals'];
-          else part = tab === 'vows' ? 'mine' : 'here';
+          // What was signed (and what waits for others' signatures) shows under Published here.
+          part = tab === 'vows' ? 'mine' : 'here';
           await afterDone(done);
         }
         return;
@@ -1802,6 +1835,39 @@ app.addEventListener('click', async (ev) => {
       realReview = postReview = pubReview = null;
       for (const id of ['e-real-review', 'e-post-review', 'e-pub-review', 'e-vow-review', 'e-correct-review']) if ($(id)) $(id)!.innerHTML = '';
       return say('', 'Nothing was signed.');
+    // H98: + Add a person, a row removed; the first two stay.
+    case 'people-add': {
+      const box = app.querySelector<HTMLElement>(`[data-people="${CSS.escape(d.peopleFor ?? '')}"]`);
+      if (!box) return;
+      const n = Math.max(0, ...[...box.querySelectorAll<HTMLElement>('[data-person]')].map((x) => Number(x.dataset.person))) + 1;
+      const id = d.peopleFor!;
+      box.insertAdjacentHTML('beforeend', v.personRow({ id, shares: box.hasAttribute('data-even') || id === 'partners', labels: id === 'partners' }, n, '', false));
+      evenShares(box);
+      box.querySelector<HTMLInputElement>(`[name="who-${n}"]`)?.focus();
+      return;
+    }
+    case 'people-remove': {
+      const box = b.closest<HTMLElement>('[data-people]');
+      b.closest('[data-person]')?.remove();
+      if (box) evenShares(box);
+      return;
+    }
+    case 'pub-tag-withdraw': {
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing tag withdraw read', { on: d.on }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-pub-review', r);
+      }
+      return;
+    }
+    case 'pub-end': {
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing publication end read', { publication: d.publication }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-pub-review', r);
+      }
+      return;
+    }
     case 'pub-deliver': {
       const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
       if (r) {
@@ -2109,13 +2175,40 @@ app.addEventListener('submit', async (ev) => {
       }
       return;
     }
-    case 'pub-work': {
+    // The four ways in (F407): each read back first; signed only by Sign, with the digest shown.
+    case 'pub-upload': {
       const m = form.dataset.media ?? 'text';
       const file = d.get('file');
       let data = '';
       if (m === 'text') data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
       else if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
-      const r = await busy(m === 'video' || m === 'audio' ? 'Checking it with its Module, stripping it, and reading it back…' : 'Reading it back…', () => c.ask<Review>('publishing work read', { media: m, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')), shares: sharesOf(d) }));
+      const r = await busy(m === 'video' || m === 'audio' ? 'Checking it with its Module, stripping it, and reading it back…' : 'Reading it back…', () => c.ask<Review>('publishing upload read', { media: m, data, title: words(d.get('title')), then: words(d.get('then')), price: words(d.get('price')), creators: rowsOf(form, 'upload-creators').slice(1) }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-pub-review', r);
+      }
+      return;
+    }
+    case 'pub-claim': {
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing claim read', { work: words(d.get('work')), title: words(d.get('title')), creators: rowsOf(form, 'claim-creators').slice(1) }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-pub-review', r);
+      }
+      return;
+    }
+    case 'pub-ownership': {
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing ownership read', { claim: words(d.get('claim')), title: words(d.get('title')), people: rowsOf(form, 'owners') }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-pub-review', r);
+      }
+      return;
+    }
+    case 'pub-publication': {
+      const sold = [...d.getAll('sold').map((x) => words(x)), words(d.get('soldTyped'))].filter(Boolean);
+      const partners = d.get('withPartners') ? rowsOf(form, 'partners') : [];
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing publication read', { owners: words(d.get('owners')), sold, partners, service: words(d.get('service')), referral: words(d.get('referral')), price: words(d.get('price')), tagBy: words(d.get('tagBy')), words: words(d.get('words')), title: words(d.get('title')) }));
       if (r) {
         pubReview = { plan: r.plan, digest: r.digest };
         reviewIn('e-pub-review', r);
@@ -2123,18 +2216,10 @@ app.addEventListener('submit', async (ev) => {
       return;
     }
     case 'pub-vow': {
-      const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')), shares: sharesOf(d) }));
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')) }));
       if (r) {
         pubReview = { plan: r.plan, digest: r.digest };
         reviewIn('e-vow-review', r);
-      }
-      return;
-    }
-    case 'pub-post': {
-      const r = await busy('Reading it back…', () => c.ask<Review>('publishing post read', { text: words(d.get('text')), shares: sharesOf(d) }));
-      if (r) {
-        pubReview = { plan: r.plan, digest: r.digest };
-        reviewIn('e-post-review', r);
       }
       return;
     }
@@ -2153,6 +2238,15 @@ app.addEventListener('submit', async (ev) => {
       keepPoints([...points().filter((x) => x.key !== key), { key, label, relay }]);
       return void (await fill());
     }
+  }
+  // A price tag on a bare bake uploaded here, added later (way 1): read back first.
+  if (form.classList.contains('pub-tag')) {
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing tag read', { bake: form.dataset.bake, price: words(d.get('price')) }), form);
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      reviewIn('e-pub-review', r);
+    }
+    return;
   }
   if (form.classList.contains('pub-contest')) {
     const r = await busy('Signing the contest…', () => ask<Done>('publishing contest', { vow: form.dataset.vow, sale: form.dataset.sale, buyer: form.dataset.buyer, promise: words(d.get('promise')) }), form);

@@ -662,7 +662,9 @@ export class Actions {
    */
   async agreementsOf(c: TestCollective, extra: string[] = []): Promise<AgreementsOf> {
     const hints = this.hintsOf(c);
-    const ids = new Set([c.identity, ...extra, ...c.f.members, ...departedOf(c).map((d) => d.member), ...(c.f.governance.departed ?? [])]);
+    // Its members, and the services and payers held here: a collective signs no act of its own, so what
+    // Money and Agreements judge for it (receipts, splits, price tags) is signed by others (Agreements rule 56).
+    const ids = new Set([c.identity, ...extra, ...c.f.members, ...departedOf(c).map((d) => d.member), ...(c.f.governance.departed ?? []), ...this.concerned(c)]);
     for (const a of c.f.agreements) for (const p of (await this.termsAct(a, hints))?.t.parties ?? []) ids.add(p);
     const { v } = await this.agreementsVerifier(c, [...ids]);
     const none = { v, broken: null, brokenAct: null, agreement: null, terms: null, departed: [], steppedDown: [], frozen: [], closed: null, fork: false };
@@ -1136,9 +1138,12 @@ export class Actions {
     }
     const changedGovernance = rulesChanged || text !== current.text;
     const g: Governance = c.departedAfter(
-      { ...rules, layers: rules.layers ?? current.layers, releaseWords: current.releaseWords, text, stakes: current.stakes, departed: current.departed },
+      // A departed holder named again as a member is a member, no longer departed (B10, F189 1):
+      // the departed members entry names no party (F121).
+      { ...rules, layers: rules.layers ?? current.layers, releaseWords: current.releaseWords, text, stakes: current.stakes, departed: current.departed?.filter((d) => !members.includes(d)) },
       members,
     );
+    if (!g.departed?.length) delete g.departed;
 
     // The mark as Agreements asks it (rules 44c, 44d, 45a): the powers from the
     // agreement in force as Agreements find it, each named with the voices Agreements
@@ -1262,7 +1267,8 @@ export class Actions {
           rebuilders: usedRebuilders,
           leaving,
           drafts,
-          governance: changedGovernance ? g : undefined,
+          // Always the rules shown: the shares and the departed holders a member change carries are in them.
+          governance: g,
           expect: payload,
           mark,
           // Agreements count again, from what the relays and homes now hold, once
@@ -3628,9 +3634,16 @@ export class Actions {
     const blocking: string[] = [...this.closedBlock(c)];
     const w = await this.workOf(c, a.release);
     if (!w) blocking.push("That release was not found at the collective's relays.");
-    const index = w ? this.stakeIndex(c, w.work) : -1;
-    if (w && index < 0) blocking.push("The collective's terms carry no stake in that release: set the stakes first.");
-    const payload = w ? releasePayload({ work: w.work, stakes: [[c.f.agreement, Math.max(index, 0)]], keys: [[a.release, w.key]] }) : new Uint8Array();
+    // A work is owned by its own ownership agreement, on its claim (Agreements rules 7, 17): the
+    // collective's terms carry one stake, on itself (rule 56, field 33), never one in a work. A
+    // release names the stake of the work's ownership agreement in force; this client does not yet
+    // make a claim and an ownership agreement for a collective's work, so it releases none.
+    if (w) {
+      blocking.push(
+        "This release has no ownership agreement of its own: a work is owned by an ownership agreement on its claim (Agreements rules 7, 17), and the collective's terms carry one stake only, in the collective itself (rule 56). A release to the public domain names the stake of that ownership agreement in force. This client does not yet make a claim and an ownership agreement for a collective's work, so nothing is signed.",
+      );
+    }
+    const payload = new Uint8Array();
     // Agreements draft 14, rule 95 (F310): a release of a work is an owners'
     // matter. The holders of the collective's stake in itself who are no
     // members consent, each by a signature act naming the release (or by the
@@ -3641,13 +3654,13 @@ export class Actions {
       title: `Release ${short(a.release)} to the public domain`,
       summary: [
         'The claim ends: nobody earns from this work as its owner any more. Its history (who made it, who owned it) stays named, and its content key is published: anyone may carry or sell copies (Agreements rule 17, F121).',
-        "The collective owns the work wholly, so it alone signs, by its own rules, meeting the lanes of every layer a release touches: Envelopes, Money and Agreements (F124 N7). This collective gives none of them to an area, so its own signature counts. Its members and departed holders own shares of its income, not the work.",
+        "Where the collective owns the work through the work's ownership agreement, it signs the release through a member, under its rule for Agreements (Agreements rules 15, 60): a collective has no signing key. Its members and departed holders own shares of its income, not the work.",
         ...(owners.length
           ? [`It ends what the collective earns from the work, so it is an owners' matter (Agreements draft 14, rule 95, F310): it counts only once ${list(owners.map(names0))}, holding part of the collective's stake in itself with no say, consent (or holders meeting the stake's holders' rule, where the terms carry one), each by a signature act naming it. Those whose keys this device holds sign it here (test only).`]
           : []),
         'A claim on this work that the release does not name is shown beside it, openly contested (F124 N12).',
       ],
-      sections: [{ heading: 'Signed on this device', lines: [{ text: "The collective's signing key signs it (test only).", tone: 'warn' }] }],
+      sections: [{ heading: 'Signed on this device', lines: [{ text: 'Nothing: see why above.', tone: 'warn' }] }],
       plain: [],
       blocking,
     };
@@ -3975,19 +3988,16 @@ export class Actions {
     out.agreement = ag.agreement;
     const t = ag.terms.t;
     if (!mine.length) out.notes.push({ text: 'No identity here is marked as you, so nothing is yours to do for it: mark yours under Members held here.', tone: 'warn' });
-    const signing = t.grammar?.signing;
-    const holder = signing?.form === 'one' ? (signing.holder ?? null) : signing?.form === 'custodian' ? (signing.custodian ?? null) : null;
-    const keyWords = !signing
-      ? 'Its key grammar could not be read.'
-      : signing.form === 'one'
-        ? `Its signing key is held by ${names(holder!)} (Agreements rule 59, key grammar).`
-        : signing.form === 'custodian'
-          ? `Its signing key is held by ${names(holder!)}, as custodian (Agreements rule 59).`
-          : `Its signing key is held as a threshold: any ${signing.threshold} of ${list((signing.members ?? []).map(names))} produce its signature together (Agreements rule 59).`;
-    const youHoldKey = !!holder && mine.includes(holder);
-    const keyHere = holder ? this.store.holds(holder) : (signing?.members ?? []).every((m) => this.store.holds(m));
-    const reaching = (spec: string, type: number) =>
-      t.areas.filter((a) => a.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.form === 'type' && k.spec === spec && k.type === type)));
+    // A collective has no signing key (Agreements rule 56): a member whose voice remains acts for it
+    // with their own key, naming it (rule 58), under the rule of the act's layer or of a finer area.
+    const voices = t.parties.filter((p) => !ag.departed.includes(p));
+    const youMember = mine.filter((m) => voices.includes(m));
+    const heldMember = voices.filter((m) => this.store.holds(m));
+    const keyWords = 'It has no signing key: a member acts for it with their own key, naming it (Agreements rules 56, 58).';
+    const youHoldKey = youMember.length > 0;
+    const keyHere = heldMember.length > 0;
+    const reaching = (spec: string, type: number) => t.areas.filter((a) => a.kinds.some((k) => k.form === 'type' && k.spec === spec && k.type === type));
+    const layerOf = (spec: string): LayerNumber => (spec === SPECS.text ? 1 : spec === SPECS.envelopes ? 2 : spec === MIRS.money ? 3 : 4);
     const kinds: { what: string; acts: { label: string; spec: string; type: number }[] }[] = [
       { what: 'Post a text for it', acts: [{ label: 'a text (Text, type 0)', spec: SPECS.text, type: 0 }] },
       {
@@ -4001,12 +4011,25 @@ export class Actions {
     for (const k of kinds) {
       const lines: Line[] = [];
       let state: 'yes' | 'with others' | 'no' = youHoldKey ? 'yes' : keyHere ? 'with others' : 'no';
-      lines.push({ text: `${keyWords} ${youHoldKey ? 'You hold it.' : keyHere ? 'It is held on this device by a simulated member: its consent is simulated, and said each time.' : 'It is not held on this device: Edubba cannot sign for it.'}` });
+      lines.push({ text: `${keyWords} ${youHoldKey ? 'You are a member whose voice remains.' : keyHere ? 'A member is held on this device as a simulated member: its consent is simulated, and said each time.' : 'No member whose voice remains is held on this device: Edubba cannot act for it.'}` });
       const needs: PostNeed[] = [];
       for (const a of k.acts) {
         const areas = reaching(a.spec, a.type);
         if (!areas.length) {
-          lines.push({ text: `No area reaches ${a.label}: it counts on the collective's own signature, as any identity's act does (Agreements rule 60).` });
+          // No finer area: the layer's rule (Agreements rule 60), read as an area of every voice.
+          const l = layerOf(a.spec);
+          const lc = this.layerCount(ag, l);
+          if (!lc || !lc.needed) {
+            lines.push({ text: `Nobody acts for it in the ${LAYER_NAMES[l]} layer now: ${a.label} counts for nothing (Agreements rules 60, 71).`, tone: 'bad' });
+            state = 'no';
+            continue;
+          }
+          const held = lc.voices.filter((m) => this.store.holds(m));
+          const you = lc.voices.filter((m) => mine.includes(m));
+          lines.push({ text: `No finer area reaches ${a.label}: it counts under the ${LAYER_NAMES[l]} layer's rule, ${anyOf(lc.needed, lc.voices, names)}, the member making it among them (Agreements rule 60).` });
+          needs.push({ spec: a.spec, type: a.type, area: -l, name: `the ${LAYER_NAMES[l]} layer`, needed: lc.needed, voices: lc.voices });
+          if (held.length < lc.needed) state = 'no';
+          else if (state === 'yes' && (lc.needed > you.length || !you.length)) state = 'with others';
           continue;
         }
         for (const area of areas) {
@@ -4022,7 +4045,7 @@ export class Actions {
             text: `The “${area.name}” area (area ${area.id}) reaches ${a.label}: it counts only with the signature acts of ${anyOf(nv.needed, nv.voices, names)} (Agreements rule 60).${you.length ? ` You hold this area.` : ' You do not hold this area.'}`,
           });
           if (a.spec === SPECS.envelopes)
-            lines.push({ text: 'An area drawn by act type cannot tell a release from a picture: both are Envelopes publications, so this area decides the collective’s pictures too (Agreements, field 19, a stated cost).', tone: 'warn' });
+            lines.push({ text: 'An area drawn by act type cannot tell a release from a picture: both are bakes, so this area decides the collective’s pictures too (Agreements, field 34, a stated cost).', tone: 'warn' });
           needs.push({ spec: a.spec, type: a.type, area: area.id, name: area.name, needed: nv.needed, voices: nv.voices });
           if (held.length < nv.needed) state = 'no';
           else if (state === 'yes' && (nv.needed > you.length || !you.length)) state = 'with others';
@@ -4049,9 +4072,10 @@ export class Actions {
    * A post for a collective, text and an optional JPEG, made and read back
    * before it is signed. The picture is stripped to the picture alone first
    * (the JPEG Module); the digest covers the text and the stripped picture.
-   * Signed with the collective's key, public, citing its latest decision;
-   * then, where an area reaches an act, the signature acts its threshold
-   * needs, by the holders held here, yours first (simulated consent, said).
+   * Made by a member with their own key, naming the collective and citing
+   * its latest decision (no signing key: Agreements rules 56, 58); then the
+   * signature acts its layer's or area's rule needs besides the maker's, by
+   * members held here, yours first (simulated consent, said).
    */
   async preparePost(a: { collective: string; text: string; jpeg?: string; corrects?: string }) {
     const c = this.store.collective(a.collective);
@@ -4074,10 +4098,13 @@ export class Actions {
     const item = perms.items[stripped ? 1 : 0];
     if (!item) blocking.push(...perms.notes.map((n) => n.text));
     else if (item.state === 'no') blocking.push(`${item.what} is not something you can do now: ${item.lines.filter((l) => l.tone === 'bad').map((l) => l.text).join(' ') || 'its key or the signatures it needs are not held here.'}`);
+    // The member who makes it, with their own key, naming the collective (Agreements rule 58): yours first.
+    const actor = c.id.actor?.id ?? null;
     const sign = (item?.needs ?? []).map((n) => {
-      const held = n.voices.filter((m) => this.store.holds(m));
+      const held = n.voices.filter((m) => this.store.holds(m) && m !== actor);
       const ordered = [...held.filter((m) => perms.you.includes(m)), ...held.filter((m) => !perms.you.includes(m))];
-      return { ...n, signers: ordered.slice(0, n.needed) };
+      // The maker's own act counts as theirs (rule 60): the others make up the rest.
+      return { ...n, signers: ordered.slice(0, Math.max(0, n.needed - (actor && n.voices.includes(actor) ? 1 : 0))) };
     });
     // A correction of one of the collective's own acts (the corrections cMIP, F344): its first reference.
     const corrects = a.corrects?.trim().toLowerCase() || null;
@@ -4086,7 +4113,7 @@ export class Actions {
       title: `${corrects ? 'A correction' : 'A post'} for the collective “${perms.name}”${stripped ? ', with a picture' : ''}`,
       summary: [
         ...(corrects ? [`Labelled “Correction”: it corrects the collective’s act ${short(corrects)}, which stays as signed; apps that know the corrections cMIP show “corrected by” on it.`] : []),
-        `Signed with ${names(c.identity)}'s own key, public: anyone can read it. It is an act of the collective, not of its members.`,
+        `Made by ${actor ? names(actor) : 'a member'} with their own key, naming ${names(c.identity)} and citing its latest decision: an act of the collective, public, anyone can read it. A collective has no signing key (Agreements rules 56, 58).`,
         ...(sign.length ? [`Then ${list(sign.flatMap((n) => n.signers).filter((x, i, xs) => xs.indexOf(x) === i).map(names))} sign it, each with a signature act of their own, as the agreement's areas ask.`] : []),
       ],
       sections: [
@@ -4107,6 +4134,8 @@ export class Actions {
       reading,
       depends: [a.collective, ...sign.flatMap((n) => n.signers)],
       run: async () => {
+        // Text rule 14: a text act carries one object, [collective, its latest decision].
+        if (!stripped && c.f.identity.cites?.length) c.f.identity.cites = [c.f.identity.cites[0]];
         const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays, corrects: corrects ? [corrects, c.identity] : undefined });
         this.store.saveCollective(c);
         const lines: Line[] = [{ text: `Posted for “${perms.name}”: ${short(made.id)}${made.picture ? `, with the picture ${short(made.picture.id)}` : ''}.`, tone: 'ok' }];
@@ -4128,7 +4157,7 @@ export class Actions {
           try {
             const k = ag.v.agreementsConsent(AGREEMENTS_SPECS, id) as { kind: string; reason?: string; met: boolean };
             lines.push({
-              text: `${id === made.id ? 'The text' : 'The picture'}: ${k.met ? (k.kind === 'areas' ? 'counts for the collective, its area’s signatures met' : 'counts for the collective, on its own signature') : `does not count yet (${k.kind}${k.reason ? `: ${k.reason}` : ''})`}.`,
+              text: `${id === made.id ? 'The text' : 'The picture'}: ${k.met ? (k.kind === 'areas' ? 'counts for the collective, its area’s signatures met' : 'counts for the collective, under its layer\'s rule') : `does not count yet (${k.kind}${k.reason ? `: ${k.reason}` : ''})`}.`,
               tone: k.met ? 'ok' : 'bad',
             });
           } catch (e) {

@@ -21,6 +21,7 @@ import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import { labelOf } from '../../damgar/src/specs.ts';
 import { dealName } from '../../grants/src/deal.ts';
+import { readPublishingProposal } from '../../grants/src/publishing-read.ts';
 
 /** Said at the top of the Signing tab, and where it is turned on, word for word. */
 export const SIGNING_SAY =
@@ -86,6 +87,9 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
   if (!d.public || !d.payload) {
     return { kind: 'other', title: 'A private act', summary: ['It cannot be read here, so it cannot be signed here.'], sections: [], plain: [], risks: [], blocking: ['It is private.'], collective: null };
   }
+  // Edubba's Publishing (F407): a claim, a work's ownership agreement, a publication or its ending, read with every act the proposal names.
+  const pub = await readPublishingProposal(act, names, hints, via, also);
+  if (pub) return pub;
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
     const a = assess(d.payload, names);
     const t = termsOf(d.payload);

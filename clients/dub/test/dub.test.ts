@@ -29,6 +29,7 @@ import { OPS } from '../src/ops.ts';
 import { PUBLISH_WARNING, TEST_ONLY as SHOWN_TEST_ONLY } from '../src/page/view.ts';
 import type { Item, Message, State } from '../src/shapes.ts';
 import { UNITS_MODULES } from '../../damgar/src/units.ts';
+import { stopAll } from './stop.ts';
 
 /** Regtest satoshis: the unit a test price names. */
 const SATS = UNITS_MODULES[0].units.find((u) => u.network === 3)!.hash;
@@ -44,10 +45,7 @@ before(async () => {
   relay = await start('relay');
 });
 
-after(async () => {
-  for (const a of apps) await a.close();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
-});
+after(() => stopAll(...apps.map((a) => () => a.close()), ...[...(homes ?? []), relay].map((r) => () => r?.stop())));
 
 type Lines = { lines: { text: string; tone?: string }[] };
 

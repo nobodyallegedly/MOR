@@ -581,20 +581,18 @@ export function grantShown(t: { lines: string[]; digest: string }): string {
 
 // ---------------------------------------------------------------- the Publishing tab
 
-/** What the Publishing tab shows (`../publishing.ts`). */
+/** What the Publishing tab shows (`../publishing.ts`, `PublishingState`): the four ways in (F407). */
 export interface PublishingShown {
   actors: Actor[];
   acting: string | null;
   as: string | null;
-  works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture' | 'video' | 'audio'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
-  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number; deal?: string | null; shares?: [string, number][] | null }[];
-  /** Plain posts shared under a deal (this round). */
-  posts?: { post: string; deal: string; as: string; text: string; shares: [string, number][]; at: number }[];
-  /** The deals set up here (this round): waiting for signatures, or announced. */
-  deals?: { id: string; version: string; kind: 'work' | 'vow' | 'post'; title: string; payee: string; service: string; shares: [string, number][]; referral: number; state: 'waiting' | 'announced'; signed: string; post: string | null; offer: string | null; at: number }[];
-  /** The deal's own payee the next deal will take: its ID, to give the split service (`mor-split-service key ID`). */
-  dealPayee?: string | null;
-  sharesSay?: string[];
+  bakes: { bake: string; post: string; as: string; member: string; collective: boolean; media: 'text' | 'picture' | 'video' | 'audio'; title: string; work: string; at: number; delivered: Record<string, string>; toMembers: string | null; tag: { first: string; latest: string; price: number | null; signer: string } | null; claim: string | null }[];
+  claims: { claim: string; work: string; title: string; bake: string | null; vow: string | null; by: string; creators: string[]; at: number; waiting: { state: string; signed: string } | null }[];
+  ownerships: { id: string; version: string; claim: string; title: string; by: string; holders: [string, number][]; at: number; waiting: { state: string; signed: string } | null }[];
+  publications: { id: string; latest: string; title: string; by: string; owners: string | null; holders: [string, number][]; bakes: string[]; vow: string | null; partners: { identity: string; share: number; label: string | null }[]; service: string; referral: number; designated: string | null; price: number; words: string; state: 'waiting' | 'counts' | 'ending' | 'ended'; tag: { first: string; latest: string; price: number | null; signer: string } | null; post: string | null; delivered: Record<string, string>; at: number; waiting: { state: string; signed: string } | null }[];
+  vows: { vow: string; publication: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
+  sharesSay: string[];
+  bakeStays: string;
   held: string[];
   say: string[];
   unit: string;
@@ -629,54 +627,6 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
         .join('')
     : '<p class="empty">No vow of that identity at the relays asked.</p>';
   return `<p class="small">Asked of ${e(r.asked.join(', '))}: only what they hold is seen; nothing is indexed.</p>${r.problems.length ? note('warn', lines(r.problems.map((t) => ({ text: t, tone: 'warn' as const })))) : ''}${vows}`;
-}
-
-/**
- * The Publishing tab (round 3, part B; decided by Nobody, allegedly, 17
- * October 2026): who acts (the chooser Ummia shares, yourself or a collective
- * you belong to), a protected file (a text or a JPEG picture) sealed with a
- * price and read back before it is signed, and what was published here.
- */
-export function publishingTab(p: PublishingShown): string {
-  const works = p.works.length
-    ? p.works
-        .map(
-          (w) => `<div class="item" data-work="${e(w.publication)}"><h3>${e(w.title)}</h3><div class="meta">${w.media === 'picture' ? 'a picture' : 'a text'} · ${w.price.toLocaleString('en')} ${e(p.unit)} · ${w.collective ? `by the collective ${who({ id: w.as, collective: true, inline: true })}` : 'by yourself'} · ${new Date(w.at * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
-<p class="small">${e(w.words)}</p>
-<p class="small">${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${fp(w.offer)}.</p></div>`,
-        )
-        .join('')
-    : '<p class="empty">Nothing published here yet.</p>';
-  return `<div class="card"><h2>Publishing</h2>${p.say.map((t) => `<p class="small">${e(t)}</p>`).join('')}<p class="small">Releases of code and specifications are made in Ummia.</p></div>
-${chooserHtml(p.actors, p.as)}
-<div class="card"><h2>A protected file</h2>
-<form id="pub-work" class="stack">
-<div class="row"><label class="check"><input type="radio" name="media" value="text" checked> A text</label><label class="check"><input type="radio" name="media" value="picture"> A picture (JPEG)</label></div>
-<label>The text to seal (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>
-<label>Or the picture: a JPEG file</label><input type="file" name="file" accept="image/jpeg">
-<label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
-<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
-<details class="judged"><summary>Judge the referral: paid by a split service (optional)</summary><p class="small">${e(JUDGED_SAY)}</p>
-<label>The split service: its ID</label><div class="row tight"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false">${contactsButtonFor('service')}</div>
-<label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></details>
-<div class="row"><button type="submit">Read it back</button></div></form>
-<div id="e-pub-review"></div></div>
-<div class="card"><h2>A vow</h2>
-<p class="small">Something MOR cannot hash, or not yet: a seat, a lesson, a thing to be made. Each purchase is a sale its buyer confirms (kept) or contests (not kept), in their own app.</p>
-<form id="pub-vow" class="stack">
-<label>What is vowed, in words: what the buyer gets</label><textarea name="words" rows="3"></textarea>
-<label>Its title: the public words of its post</label><input name="title" type="text" maxlength="200" autocomplete="off">
-<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label></div>
-<div class="row"><button type="submit">Read it back</button></div></form>
-<div id="e-vow-review"></div>
-${p.vows.length ? `<h3>Vows published here</h3>${p.vows.map((v) => `<div class="item"><h3>${e(v.title)}</h3><div class="meta">${v.price.toLocaleString('en')} ${e(p.unit)} · ${v.collective ? `by the collective ${who({ id: v.as, collective: true, inline: true })}` : 'by yourself'}</div><p class="small">${e(v.words)}</p></div>`).join('')}` : ''}</div>
-<div class="card"><h2>Look up an identity’s vow sales</h2>
-<p class="small">Asked of the relays you name, with the filters they already have: no index is kept. A sale shows where its buyer made it public.</p>
-<form id="pub-vow-sales" class="stack"><label>The identity (mid1… or hex)</label><div class="row tight"><input name="identity" type="text" class="grow" autocomplete="off" spellcheck="false" value="${e(p.as ?? '')}">${contactsButtonFor('identity')}</div>
-<label>Relays to ask, one per line</label><textarea name="relays" rows="2" spellcheck="false"></textarea>
-<div class="row"><button type="submit">Look it up</button></div></form>
-<div id="e-vow-sales"></div></div>
-<div class="card"><h2>Published here</h2><div class="row"><button data-action="pub-deliver">Deliver keys</button><span class="small grow">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${works}</div>`;
 }
 
 /** Its latest constitutional agreement, as a pop-up in plain words: the deal-assessment tool's reading. */
@@ -841,10 +791,6 @@ export const WEB_FOUNDING_SAY =
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
   'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective. A release proposed there is signed here, in “To sign”, and checked as anyone would.';
-
-/** Said where a lone seller's referral is judged (F215, F351): kept equal to the reading in `../publishing.ts`. */
-export const JUDGED_SAY =
-  'Without a service, the referral share is a promise in words, paid by your Damgar. With one, the work gets a deal of its own, you its one party holding its whole stake, its split plan carrying the referral share off the top: the service answers buyers, signs their receipts with a key you grant it, and pays you and the reposter, as Agreements judges.';
 
 /** Said where a collective's keepers are shown: kept to Agreements rules 36 to 44, C5 and F302. */
 export const KEEPERS_SAY = [
