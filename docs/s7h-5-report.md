@@ -58,7 +58,11 @@ The four changes, in `clients/`:
 
 Also for the suite: the anchoring cMIP's Rust (`Offer::from_publication`) and draft 6's text still say one tag at the top price. F409 decided one tag per tier. Until they move, the binding checks the publication against a stand-in tag at the top price and checks the real tier tags itself.
 
-CLIENTS_PLACEHOLDER
+**The apps against this WebAssembly**, run here, with the WebAssembly built locally:
+- **Pass:** barebone, connector, genesis, grants, longform, repo, reports, split-service.
+- **Only the anchoring tests fail outside the browser** (above): Damgar 3 and Ummia 1.
+- **Everything else that fails here is a browser test.** This container lacks Playwright's pinned Chromium: collective 1, Damgar 9, Edubba 35, Dub 6, Kišib 11, kit 16, manage 2, reader 6, site 63, testwallet 4, Ummia 8. GitHub runs those.
+- **No app's answer outside anchoring moved** because of this session's core changes.
 
 ## Questions
 
@@ -74,8 +78,11 @@ CLIENTS_PLACEHOLDER
 
 ## c-box
 
-C_BOX_PLACEHOLDER
+`scripts/c-box/make-c-box.sh` into a scratch folder assembled 8 texts and 12 vector files, refusing nothing.
 
 ## Checks
 
-CHECKS_PLACEHOLDER
+- **Rust:** `mor-core`, `mor-relay` and `mor-wasm` pass every test, the relay's new keyless-genesis test among them.
+- **Vectors:** they regenerate byte for byte, and the Python check passes.
+- **The six web releases are rebuilt** (e1a0fba1) with the pinned tools: rustc 1.97.0, wasm-bindgen 0.2.129, esbuild 0.25.12. The display client's and Kišib's rebuild checks pass here.
+- **GitHub:** GITHUB_PLACEHOLDER
