@@ -4136,7 +4136,18 @@ export class Actions {
       run: async () => {
         // Text rule 14: a text act carries one object, [collective, its latest decision].
         if (!stripped && c.f.identity.cites?.length) c.f.identity.cites = [c.f.identity.cites[0]];
-        const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays, corrects: corrects ? [corrects, c.identity] : undefined });
+        // The act corrected names its own signer: a member, who acted for the collective with their own key (rules 56 to 60).
+        let correctedBy = c.identity;
+        if (corrects) {
+          for (const h of c.f.relays) {
+            const was = await relayAt(h).getAct(corrects).catch(() => null);
+            if (was) {
+              correctedBy = (describeAct(was) as { signer?: string }).signer ?? c.identity;
+              break;
+            }
+          }
+        }
+        const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays, corrects: corrects ? [corrects, correctedBy] : undefined });
         this.store.saveCollective(c);
         const lines: Line[] = [{ text: `Posted for “${perms.name}”: ${short(made.id)}${made.picture ? `, with the picture ${short(made.picture.id)}` : ''}.`, tone: 'ok' }];
         const acts = [made.id, ...(made.picture ? [made.picture.id] : [])];

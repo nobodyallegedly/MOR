@@ -356,7 +356,8 @@ export class Collectives {
         // its agreement not read: no member's posts can be told apart
       }
       // Ordered by the Dubsar clock's stamps, each signer's own sequence kept (decided 23 October 2026).
-      const f = await readFeed(members.map((identity) => ({ identity, name: null })), places, via, undefined, dubsarClock());
+      // The collective itself read too (it signs nothing everyday): its chain is what a member's act for it is judged against.
+      const f = await readFeed([collective, ...members].map((identity) => ({ identity, name: null })), places, via, undefined, dubsarClock());
       const forIt = new Set<string>();
       for (const x of f.posts) {
         for (const h of places) {
