@@ -451,26 +451,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
-   * What a fork of `collective` must hand out (F127), its line drawn at
-   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
-   * `agreement` in force there: every obligation in the history it would
-   * cite, its own and those an earlier fork handed to it. Null where the
-   * line does not hold.
+   * What a fork of `collective` must hand out, its line the acts `line`
+   * it would cite on the collective's chain, with `agreement` in force
+   * there: every obligation in that history, its own and those an
+   * earlier fork handed to it. Null where the line does not hold.
    * @param {any} specs
    * @param {string} collective
    * @param {string} agreement
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[] | undefined}
    */
-  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+  agreementsHandOut(specs, collective, agreement, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr2 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -503,21 +501,20 @@ var Verifier = class {
     return v2;
   }
   /**
-   * The acts the history a line at `chain_act` and `tips` would cite
-   * that this verifier does not hold (F127): a member's client signs no
-   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * The acts the history of a line citing `line` on the collective's
+   * chain names that this verifier does not hold: a member's client signs
+   * no fork or closing while any is missing (client conformance).
    * @param {any} specs
    * @param {string} collective
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[]}
    */
-  agreementsLineUnheld(specs, collective, chain_act, tips) {
+  agreementsLineUnheld(specs, collective, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -624,30 +621,6 @@ var Verifier = class {
     return BigInt.asUintN(64, ret[0]);
   }
   /**
-   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-   * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot. Leftovers by largest
-   * remainder; a tied unit is the payer's to decide, at most one per tie
-   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-   * with the smallest identity hash, a choice, not a rule.
-   * @param {any} specs
-   * @param {string} agreement
-   * @param {string | null | undefined} object
-   * @param {bigint} amount
-   * @returns {any}
-   */
-  agreementsPayerSplit(specs, agreement, object, amount) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
    * The pointer check (rule 18, F123): whether the payee pointer of
    * `owners` counts for Agreements under `agreement`: "no-split-service",
    * "ordinary", "bypasses" (with the addresses no service's own pointer
@@ -700,6 +673,24 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A publication, judged (Agreements rule 11): its parties and who has
+   * not signed, whether it counts and why not, the latest versions of its
+   * line, whether this version ends it, and the ownership agreements
+   * claiming what it sells that it stands outside of (rule 14).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPublication(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublication(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -924,22 +915,21 @@ var Verifier = class {
    * stake, or carries no count.
    * @param {any} specs
    * @param {string} service
-   * @param {string} agreement
-   * @param {bigint} stake
+   * @param {string} owners
    * @param {string[]} holders
    * @param {string | null} [previous]
    * @returns {Float64Array | undefined}
    */
-  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
+  agreementsSplitTurns(specs, service, owners, holders, previous) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
     var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -963,6 +953,23 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether a price tag counts under its publication (Money rule 18;
+   * Agreements rule 12): "counts" (with the publication, and whether this
+   * version withdraws the tag), "nobody's offer" or "unknown", with why.
+   * @param {any} specs
+   * @param {string} tag
+   * @returns {any}
+   */
+  agreementsTagUnder(specs, tag) {
+    const ptr0 = passStringToWasm0(tag, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsTagUnder(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1029,6 +1036,29 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who uploaded a bake, as a verifier reading Money and Envelopes tells
+   * it (Money, "Only identities have payee pointers"): the signer's
+   * identity hash, or "unknown" where the bake names another chain, a
+   * collective's perhaps, which a Money-only wallet refuses to tip.
+   * `null` for no bake held.
+   * @param {string} bake
+   * @returns {string | undefined}
+   */
+  bakeUploader(bake) {
+    const ptr0 = passStringToWasm0(bake, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_bakeUploader(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
   }
   /**
    * The standing of an act for everything binding (keeper records,
@@ -1294,6 +1324,28 @@ var Verifier = class {
     }
     var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * Whose offer a price tag is (Money rule 18), as a verifier reading
+   * Money and Envelopes tells it: "counts" (on a bare bake, its
+   * uploader's), "nobody's offer", or "unknown" (not held, or under a
+   * publication, which Agreements judges). `null` for no price tag held.
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  priceTag(act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_priceTag(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
     return v2;
   }
   /**
@@ -5909,14 +5961,14 @@ function served(id, bytes, identitySpec) {
   const key = m.get(2);
   const commit = m.get(3);
   const succ = m.get(9);
-  const signingKey = hex(key[1]);
+  const signingKey = Array.isArray(key) ? hex(key[1]) : null;
   return {
     id: d.id,
     bytes,
     position: Number(m.get(1)),
     previous: hex(m.get(0)),
     signingKey,
-    signingFingerprint: fingerprint(1, key[1]),
+    signingFingerprint: Array.isArray(key) ? fingerprint(1, key[1]) : null,
     reveals: hex(commit[1]),
     homeless: m.get(11) === true,
     successor: succ === void 0 ? void 0 : succ === null ? null : hex(succ[1]),
@@ -6006,7 +6058,7 @@ function recordWords(rd) {
   if (r.stop === "pending" || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes\u2019 receipts: ${r.waiting.join(", ") || "one rotation"}.`, tone: "warn" });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
-    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, installing the signing key ${s.signingFingerprint}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, ${s.signingFingerprint ? `installing the signing key ${s.signingFingerprint}` : "installing no signing key (a collective\u2019s)"}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
   }
   out.push({ heading: "Its chain and receipts", lines: chain });
   const succ = rd.look.verifier.succession(rd.id);
@@ -6140,7 +6192,8 @@ function ownIds(f) {
   return ownLines(f).flat();
 }
 var HELD_ELSEWHERE_SAY = "This identity\u2019s signing key is not held by this app: it is signed for by Ki\u0161ib\u2019s runner, and this act cannot be signed that way here. Nothing was signed.";
-var AGREEMENTS_RECORD = 17;
+var AGREEMENTS_DECISIONS = [9, 10, 17];
+var NO_ACTOR_SAY = "A collective has no signing key (Agreements rule 56): a member acts for it with their own key, naming it. No member was given to act here, and nothing was signed.";
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var TestIdentity = class _TestIdentity {
@@ -6150,6 +6203,12 @@ var TestIdentity = class _TestIdentity {
   }
   /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
   signer;
+  /**
+   * For a collective (no signing key, Agreements rule 56): the member who
+   * makes its next acts, each with their own key, naming the collective in
+   * `objects` (rule 58). Never saved with the file.
+   */
+  actor;
   get id() {
     return this.f.identity;
   }
@@ -6249,9 +6308,9 @@ var TestIdentity = class _TestIdentity {
     if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
     }
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
+    if (this.f.cites && spec !== SPECS.identity && !objects?.some((o) => o[0] === this.f.identity)) {
+      const cited = spec === MIRS.text ? this.f.cites.slice(0, 1) : this.f.cites;
+      objects = [...objects ?? [], ...cited.map((d) => [this.f.identity, d])];
     }
     return objects;
   }
@@ -6259,11 +6318,26 @@ var TestIdentity = class _TestIdentity {
   everydayMade(spec, type, isPublic, line, made) {
     line.push(made.id);
     if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    if (this.f.cites) this.f.cites = spec === MIRS.agreements && AGREEMENTS_DECISIONS.includes(type) ? [made.id] : [this.f.cites[0], made.id];
     return made;
   }
+  /** Whether this file is a collective's, keyless: its acts are made by a member (`actor`). */
+  get keyless() {
+    return !!this.f.cites && !this.f.signingSecret;
+  }
+  /** An act for this keyless collective, made by its `actor` with their own key, naming the collective (rule 58). */
+  async byActor(spec, type, payload, opts) {
+    if (!this.actor) throw new Error(NO_ACTOR_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const made = await this.actor.everydayNow(spec, type, payload, { ...opts, objects });
+    return this.everydayMade(spec, type, true, this.f.sequence, made);
+  }
   everyday(spec, type, payload, opts) {
-    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    if (this.keyless && this.actor) {
+      const made2 = this.actor.everyday(spec, type, payload, { ...opts, objects: this.everydayObjects(spec, type, opts.objects, opts.acks) });
+      return this.everydayMade(spec, type, true, this.f.sequence, made2);
+    }
+    if (!this.f.signingSecret) throw new Error(this.f.cites ? NO_ACTOR_SAY : HELD_ELSEWHERE_SAY);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
@@ -6291,6 +6365,7 @@ var TestIdentity = class _TestIdentity {
    * signing serial, as every app does.
    */
   async everydayNow(spec, type, payload, opts) {
+    if (this.keyless) return this.byActor(spec, type, payload, opts);
     if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
@@ -6828,10 +6903,13 @@ var REPO_SPECS = {
 var AGREEMENTS_TYPES = {
   terms: 0,
   signature: 1,
+  claim: 3,
   release: 5,
-  offer: 6,
+  /** The publication (rules 11 to 17): the offer, with its partners, split service and plan; its price a price tag (Money type 5). */
+  publication: 6,
   split: 8,
   grant: 9,
+  revocation: 10,
   /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
   liveness: 12,
   declaration: 13,
@@ -6855,7 +6933,7 @@ var FOUNDING_AGREEMENT = 0;
 
 // ../repo/src/agreements.ts
 var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
-var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
+var SPLIT_CMIP = sha2562("split cMIP, draft 4, test value until publication");
 
 // ../genesis/src/private.ts
 function ownKey(me) {
@@ -7036,11 +7114,17 @@ function powerWords(p, areas, names) {
       return `the succession plan of ${names(p.party ?? "")}`;
     case "judicial":
       return "the judicial tier's rule, every member whose voice remains";
+    case "layer":
+      return `the rule of the ${LAYERS[p.area ?? -1] ?? `layer ${p.area}`} layer`;
+    case "holders":
+      return `the holders' rule of stake ${p.area}`;
   }
 }
+var LAYERS = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
+var LAYER_ORDER = [3, 1, 2, 4, 5];
 var TYPE_NAMES = {
-  [SPECS.envelopes]: { 0: "every publication of the collective (a release is one)", 1: "every key delivery of the collective", 4: "every encryption key of the collective" },
-  [REPO_SPECS.agreements]: { 0: "every terms act of the collective", 1: "every signature of the collective" },
+  [SPECS.envelopes]: { 0: "every bake the collective uploads (a release is one)", 1: "every key delivery of the collective", 4: "every encryption key of the collective" },
+  [REPO_SPECS.agreements]: { 0: "every terms act of the collective", 1: "every signature of the collective", 6: "every publication of the collective" },
   [SPECS.text]: { 0: "every text of the collective" }
 };
 var FIELD_NAMES = {
@@ -7049,22 +7133,22 @@ var FIELD_NAMES = {
   3: "the keepers",
   5: "the clone rule",
   6: "the time reference",
-  7: "the stakes",
-  8: "the split plan",
+  7: "the stake",
   9: "the abandonment clause",
   12: "the key grammar",
   13: "the arbitrators",
-  14: "the split service's grant",
   16: "the succession plans",
   17: "the refund terms",
   18: "the constitutional change rule",
-  19: "the areas",
-  28: "the fees"
+  19: "who acts for it in each layer, the five layers' rules",
+  22: "the departed holders",
+  33: "what it owns, its target",
+  34: "the finer areas"
 };
 function planOf(before, after) {
   return agreementsClonePlan(before, after, AGREEMENTS_SPECS);
 }
-var powerKey = (p) => p.form === "area" ? `area ${p.area}` : p.form === "plan" ? `plan ${p.party}` : p.form;
+var powerKey = (p) => p.form === "area" ? `area ${p.area}` : p.form === "layer" ? `layer ${p.area}` : p.form === "plan" ? `plan ${p.party}` : p.form;
 function readChanges(beforePayload, afterPayload, names) {
   const before = termsOf(beforePayload);
   const after = termsOf(afterPayload);
@@ -7076,9 +7160,14 @@ function readChanges(beforePayload, afterPayload, names) {
     out.push({
       text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`
     });
-  const holder = (t) => t.grammar?.signing.form === "one" ? t.grammar.signing.holder : null;
-  if (holder(before) !== holder(after) && holder(after)) {
-    out.push({ text: `The signing key passes to ${names(holder(after))}${holder(before) ? ` (was ${names(holder(before))})` : ""}.` });
+  const lw = (t, l) => {
+    const x = (t.layers ?? []).find(([y]) => y === l)?.[1];
+    return x ? ruleWords(x, t.parties, names) : "nobody named";
+  };
+  for (const l of LAYER_ORDER) {
+    const b = JSON.stringify((before.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    const a = JSON.stringify((after.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    if (a !== b) out.push({ text: `Who acts for it in ${LAYERS[l]}: now ${lw(after, l)} (was ${lw(before, l)}).`, tone: "warn" });
   }
   const sb = before.grammar?.chainKey;
   const sa = after.grammar?.chainKey;
@@ -7213,6 +7302,7 @@ function holding(id, binding, signingSeed, chain, homes) {
 }
 
 // src/collective.ts
+var NO_WORDS_SAY = "A collective has no signing key (Identity rule 1): its rotation installs none, so there are no words to show. Its members act for it with their own keys, naming it.";
 var EXPIRY = 60 * 60;
 var REQUEST_LABEL = "MOR Ki\u0161ib collective rotation request, version 1";
 var CONTRIBUTION_MEDIA = sha2562("Ki\u0161ib: a paper share given to a collective rotation, test value until publication");
@@ -7221,7 +7311,7 @@ var DEALER_SAY = [
   { text: "If this device were compromised, or the person holding it dishonest, they could keep the new key and later act alone, past the threshold the members agreed. Nothing can prove a device forgot a key (F97). Founding has the same moment, on the founder\u2019s device.", tone: "bad" },
   { text: "So choose the cleanest device available: the app rather than the web page; ideally a device used for nothing else. The air-gapped way (an offline device, the bytes carried by QR code) is the gold standard, and comes later.", tone: "warn" },
   { text: "The practices Ki\u0161ib follows: the key alive only in memory, the rotation signed at once, the new shares dealt, the key overwritten, never written anywhere; the signed bytes kept to send again, not the key; exactly the threshold of papers collected, no more; the waiting one-time key expiring after an hour, shares sealed to it unopenable after; rebuild, rotate and deal in one sitting." },
-  { text: "Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); the new signing key\u2019s words go to whoever holds that key (Edubba); every member\u2019s Dub and Edubba show the rotation." }
+  { text: "Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); every member\u2019s Dub and Edubba show the rotation. There are no signing-key words to carry: a collective has no signing key, and its members act for it with their own keys, naming it." }
 ];
 var ROTATION_NOTICE_FORMAT = sha2562("Rotation notice cMIP, draft 1, test value until publication");
 var NOTICE_HEAD = "-- Dubsar rotation notice, draft 1 --";
@@ -7371,8 +7461,17 @@ async function readCollective(id, address2, via) {
   const t = readTerms(agreementPayload, AGREEMENTS_SPECS);
   const ck = t.grammar?.chainKey;
   if (!ck || ck.form !== "shares" || !ck.threshold) throw new Error("Its agreement does not split the chain key into members\u2019 shares: Ki\u0161ib rotates only collectives whose key is on their members\u2019 paper.");
+  for (const p of t.parties) {
+    try {
+      const l = await lookUp(p, rd.places, via);
+      for (const h of [...l.resolution.homes.map((x) => x.hint), ...l.routes.routes.flatMap((x) => x.hints)]) if (!rd.places.includes(h)) rd.places.push(h);
+    } catch {
+    }
+  }
   const latest = r.links[r.links.length - 1];
-  return { rd, agreement, agreementPayload, holders: ck.members ?? t.parties, threshold: ck.threshold, scheme: r.chainKeyScheme, index: latest.position, commit: r.chainKeyCommit, latest };
+  const keyless = !r.signingKey;
+  if (!keyless) throw new Error(`${short2(id)} declares a signing key: it is not a collective as MOR now makes them (a collective has no signing key, Identity rule 1), and Ki\u0161ib rotates it no more from members\u2019 papers.`);
+  return { rd, agreement, agreementPayload, holders: ck.members ?? t.parties, threshold: ck.threshold, scheme: r.chainKeyScheme, index: latest.position + 1, commit: r.chainKeyCommit, latest };
 }
 function signs(a, signer, act) {
   try {
@@ -7422,7 +7521,6 @@ async function changesOf(c, via) {
         proposer: d.signer,
         members: t.parties,
         threshold: t.grammar?.chainKey.threshold ?? c.threshold,
-        holder: t.grammar?.signing.holder ?? t.parties[0],
         signers,
         signatures,
         missing: signers.filter((s) => !signatures[s])
@@ -7476,7 +7574,6 @@ var CollectiveSitting = class _CollectiveSitting {
   }
   c = null;
   change = null;
-  plan = null;
   room = false;
   request = null;
   fingerprint = "";
@@ -7488,12 +7585,10 @@ var CollectiveSitting = class _CollectiveSitting {
   lines = [];
   bytes = null;
   act = null;
-  signing = null;
-  positions;
   /** New shares to show here once, by holder (the starter's own, and members without a one-time key). */
   toShow = /* @__PURE__ */ new Map();
   sharePositions = /* @__PURE__ */ new Map();
-  /** Whether nothing is left to do: the shares shown, the words typed back, or the request expired. */
+  /** Whether nothing is left to do: it counts and every new share is shown, or the request expired. (No signing key's words: a collective has none.) */
   over() {
     return this.stage === "expired" || this.stage === "done" && [...this.toShow.values()].every((s) => s.shown);
   }
@@ -7518,8 +7613,7 @@ var CollectiveSitting = class _CollectiveSitting {
           from: this.papers.map((p) => p.from)
         }
       } : {},
-      ...this.toShow.size ? { shares: [...this.toShow.entries()].map(([holder, s]) => ({ holder, x: s.x, shown: s.shown })) } : {},
-      ...this.positions ? { positions: this.positions } : {}
+      ...this.toShow.size ? { shares: [...this.toShow.entries()].map(([holder, s]) => ({ holder, x: s.x, shown: s.shown })) } : {}
     };
   }
   expire() {
@@ -7531,9 +7625,8 @@ var CollectiveSitting = class _CollectiveSitting {
     if (this.founder) this.founder.f.signingSecret = "";
   }
   wipe() {
-    wipe(this.oneTime, this.signing, ...this.papers.map((p) => p.value), ...[...this.toShow.values()].map((s) => s.share));
+    wipe(this.oneTime, ...this.papers.map((p) => p.value), ...[...this.toShow.values()].map((s) => s.share));
     this.oneTime = null;
-    this.signing = null;
     this.papers = [];
     this.toShow.clear();
     if (this.founder) this.founder.f.signingSecret = "";
@@ -7560,7 +7653,7 @@ var CollectiveSitting = class _CollectiveSitting {
       this.change = ch;
       if (ch.missing.length) blocking.push(`The member change ${actForm(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short2).join(", ")}.`);
       if (changes.filter((x) => !x.missing.length).length > 1) blocking.push("Several member changes are fully signed under the same agreement: Ki\u0161ib cannot tell which one the members mean. Say which in Edubba.");
-      this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
+      void a.leaveOut;
       const names = (m) => m === id ? "the collective" : short2(m);
       const shown = [];
       if (!this.room) {
@@ -7593,7 +7686,8 @@ var CollectiveSitting = class _CollectiveSitting {
         collective: id,
         previous: c.latest.act,
         position: c.latest.position + 1,
-        kept: this.plan.kept.map((k) => [k.act, k.position, k.summary]),
+        // Identity rotation check 4: a collective's rotation keeps no tip.
+        kept: [],
         clone: ch.clone,
         signatures: ch.signers.map((s) => ch.signatures[s]).filter(Boolean),
         members: ch.members,
@@ -7610,12 +7704,12 @@ var CollectiveSitting = class _CollectiveSitting {
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith("Its lines")),
         { heading: "The member change it completes", lines: [{ text: `Clone ${actForm(ch.clone)}, proposed by ${short2(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short2(s)} ${ch.signatures[s] ? "\u2713" : "(not yet)"}`).join(", ")}.`, tone: ch.missing.length ? "warn" : "ok" }] },
         { heading: "The papers", lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members\u2019 paper shares rebuild the chain key (its agreement\u2019s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: "In the same room: the others type theirs into this Ki\u0161ib, one after another. Nothing is sent." } : { text: `Remote: each other member gives theirs in their own Ki\u0161ib, sealed to a one-time key made here, within an hour (until ${when(this.request.expires)} by this device\u2019s clock; MOR has no clock).` }] },
-        { heading: "Its lines of acts: what the rotation keeps (Identity rule 35)", lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Its acts: no line to keep (Identity rotation check 4)", lines: [{ text: "A collective signs no act of its own: each member acts for it with their own key, naming it, on their own lines. So its rotation keeps no line, and nothing it did is lost by this change of keys." }] },
         { heading: "The new shares", lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] }
       ];
       const signs2 = [
         `Ki\u0161ib signs one rotation of the collective ${short2(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
-        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective\u2019s lines, installs a new signing key (its words shown once, for ${short2(ch.holder)}, who holds it) and commits a new chain key.`,
+        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures and commits a new chain key. It installs no signing key and keeps no line: a collective has neither (Identity rule 1, rotation check 4).`,
         this.room ? "Nothing is signed with anyone\u2019s signing key." : `As ${short2(this.founder.id)}: one message in each member\u2019s thread announcing the rotation, and, after it, each new share sealed to its member\u2019s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`
       ];
       const s0 = founderSeed;
@@ -7627,7 +7721,7 @@ var CollectiveSitting = class _CollectiveSitting {
         summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped2(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
         sections: sections2,
         signs: signs2,
-        warning: this.plan.warning,
+        warning: null,
         blocking
       };
     } catch (e3) {
@@ -7766,7 +7860,6 @@ var CollectiveSitting = class _CollectiveSitting {
     if (this.stage === "waiting" && this.request && this.deps.now() > this.request.expires) this.expire();
     if (this.stage !== "waiting") throw new Error("No rotation waits here.");
     if (this.papers.length !== c.threshold) throw new Error(`${this.papers.length} of ${c.threshold} shares are in: exactly ${c.threshold} are needed.`);
-    checkWarned(this.plan, this.plan.warning ?? void 0);
     let rebuilt;
     try {
       rebuilt = rebuildChainKeyFromPaper({ seedModule: "words", scheme: c.scheme, index: c.index, commit: c.commit, papers: this.papers.map((p) => ({ x: p.x, value: p.value })) });
@@ -7782,7 +7875,6 @@ var CollectiveSitting = class _CollectiveSitting {
     for (const s of dealt.shares) if (verifyShare(s).fingerprint !== dealt.fingerprint) throw new Error("A new share does not lie on its dealing: nothing was signed.");
     const check = rebuildChainKey(dealt.shares.slice(0, ch.threshold));
     if (check.commit !== dealt.commit) throw new Error("The new shares do not rebuild the new key: nothing was signed.");
-    const signing = newSigningSecret();
     let bytes;
     try {
       bytes = makeRotation({
@@ -7792,10 +7884,9 @@ var CollectiveSitting = class _CollectiveSitting {
         position: c.latest.position + 1,
         chainKeyScheme: rebuilt.scheme,
         chainKeySeeds: rebuilt.seeds,
-        newSigningPublic: signingPublic(signing),
         nextChainKeyScheme: dealt.scheme,
         nextChainKeyCommit: dealt.commit,
-        kept: this.plan.kept,
+        kept: [],
         declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: ch.clone, signatures: ch.signers.map((s) => ch.signatures[s]) }]
       });
     } finally {
@@ -7806,7 +7897,6 @@ var CollectiveSitting = class _CollectiveSitting {
     this.oneTime = null;
     this.bytes = bytes;
     this.act = actId(bytes);
-    this.signing = signing;
     const lines2 = [{ text: `Signed: rotation ${this.act}. The chain key is overwritten; the papers are forgotten; the one-time key is destroyed.`, tone: "ok" }];
     const chain = orderedChain(c.rd);
     for (const h of c.rd.look.resolution.homes) lines2.push(await put(h.hint, bytes, chain));
@@ -7831,7 +7921,7 @@ var CollectiveSitting = class _CollectiveSitting {
     if (this.founder) this.founder.f.signingSecret = "";
     this.founder = null;
     lines2.push({ text: `The new dealing\u2019s fingerprint, for every member to compare: ${grouped2(dealt.fingerprint.slice(0, 32))}.` });
-    lines2.push({ text: "Keep Ki\u0161ib open until the new shares and the collective\u2019s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members\u2019 Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.", tone: "warn" });
+    lines2.push({ text: "Keep Ki\u0161ib open until the new shares are shown. Closed now, what is not yet shown is lost (the shares sealed to members\u2019 Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.", tone: "warn" });
     this.lines = lines2;
     this.stage = "sent";
     await this.refresh();
@@ -7855,30 +7945,12 @@ var CollectiveSitting = class _CollectiveSitting {
     } catch {
       counts = false;
     }
-    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text)), counts ? { text: "It counts: the homes\u2019 receipts are in. The member change is in force.", tone: "ok" } : { text: "It does not count yet: send it again (the same bytes).", tone: "warn" }];
-    if (counts) this.stage = "counts";
+    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text)), counts ? { text: "It counts: the homes\u2019 receipts are in. The member change is in force. No signing key\u2019s words follow: a collective has none.", tone: "ok" } : { text: "It does not count yet: send it again (the same bytes).", tone: "warn" }];
+    if (counts) this.stage = "done";
   }
+  /** A collective has no signing key (Identity rule 1): no words to show, write or type back. */
   showWords() {
-    if (!this.signing) throw new Error("No new signing key is held here.");
-    if (this.stage === "sent" || this.stage === "waiting") throw new Error("Not yet: the collective\u2019s new words are shown once the homes\u2019 receipts are in.");
-    this.stage = "counts";
-    this.positions = void 0;
-    return { words: toWords(this.signing), holder: this.change.holder, say: [`These are the collective\u2019s new signing key\u2019s words, for ${short2(this.change.holder)}, who holds that key under the agreement: carry them to Edubba (the collective\u2019s page, \u201Ctake the new words\u201D).`, ...NEW_WORDS_SAY.slice(1)] };
-  }
-  written() {
-    if (!this.signing || this.stage !== "counts") throw new Error("No words are shown.");
-    this.positions = threePositions((n) => crypto.getRandomValues(new Uint8Array(1))[0] % n);
-    this.stage = "shown";
-  }
-  typed(t) {
-    if (!this.signing || this.stage !== "shown" || !this.positions) throw new Error("No words are asked back.");
-    if (!typedBack(toWords(this.signing), this.positions, t)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
-    wipe(this.signing);
-    this.signing = null;
-    this.bytes = null;
-    this.positions = void 0;
-    this.stage = "done";
-    this.lines = [...this.lines, { text: "The collective\u2019s new signing key is forgotten here.", tone: "ok" }];
+    throw new Error(NO_WORDS_SAY);
   }
   shareShow(holder) {
     const s = this.toShow.get(holder);
@@ -7915,12 +7987,13 @@ var CollectiveSitting = class _CollectiveSitting {
     if (q.collective !== id) throw new Error("This request is for another collective.");
     if (now2 > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
     if (q.previous !== c.latest.act) throw new Error("The collective\u2019s keys changed since this request was made: it is stale, and its rotation could never count.");
+    if (q.kept.length) throw new Error("This request asks the rotation to keep a line of acts: a collective\u2019s rotation keeps none (Identity rotation check 4), so it could never count. Nothing is signed.");
     const change = (await changesOf(c, via)).find((x) => x.clone === q.clone) ?? null;
     const names = (m) => m === id ? "the collective" : short2(m);
     const sections2 = [
       { heading: "The rotation you are asked to give your share to", lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short2(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter\u2019s message, character by character.`, tone: "warn" }, { text: `It expires at ${when(q.expires)} (this device\u2019s clock).` }] },
       { heading: "The member change it completes", lines: change ? [{ text: `Clone ${actForm(q.clone)}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${actForm(q.clone)}, not found here: Ki\u0161ib cannot read it back to you. Do not give your share unless you know it.`, tone: "bad" }] },
-      { heading: "What it keeps and creates", lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? "" : "s"} of the collective\u2019s acts.` }, { text: `A new chain key, created on the starter\u2019s device and dealt to ${q.members.length} members (${q.members.map(short2).join(", ")}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
+      { heading: "What it creates", lines: [{ text: "No signing key and no line kept: a collective has neither (Identity rule 1, rotation check 4); its members act for it with their own keys." }, { text: `A new chain key, created on the starter\u2019s device and dealt to ${q.members.length} members (${q.members.map(short2).join(", ")}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
       { heading: "What the starter\u2019s device will hold (F337)", lines: DEALER_SAY.slice(0, 2) }
     ];
     return { q, c, sections: sections2, change };
@@ -8672,6 +8745,7 @@ var NAKISIB_WAIT_SAY = [
 var NAKISIB_LOST_SAY = "Ki\u0161ib was closed after it wrote this request, so the new signing key it made then is gone. Naki\u0161ib signed with your paper for this request alone and signs no other with it: this change is sent as it is, and installs a signing key nobody holds. Once the homes accept it, change the keys again, from the new paper Naki\u0161ib drew: that change installs a key you hold.";
 
 // src/kishib.ts
+var KEYLESS_SAY = "This identity has no signing key: it is a collective, whose rotation installs none and keeps no line. Change its keys from its members\u2019 paper shares, in Collectives (Start a rotation). Nothing was signed.";
 var SPENT_PAPER_SAY = (position) => `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key\u2019s words Ki\u0161ib showed at the last change. Nothing was signed, and the words are forgotten.`;
 var PAPER_COUNTS_SAY = "This new paper becomes the one that counts once the homes accept the change; until then the old paper still works, but only to send this same change again. If Ki\u0161ib is closed before the change is sent, nothing was signed: the next change starts over with another new paper, and the unused one is worthless.";
 var PAPER_LINES = [
@@ -8904,6 +8978,7 @@ var Kishib = class {
     let seed = seedOf(a.words);
     try {
       const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
       const r = rd.look.resolution;
       const latest = r.links[r.links.length - 1];
       const blocking = [];
@@ -9145,10 +9220,7 @@ var Kishib = class {
   }
   /** Hide the words; three positions to type back. */
   written() {
-    if (this.col) {
-      this.col.written();
-      return this.state();
-    }
+    if (this.col) this.col.showWords();
     const h = this.held;
     if (!h || !h.signing && !h.chain || h.stage !== "counts" && h.stage !== "paper") throw new Error("No words are shown.");
     h.positions = threePositions((n) => randomBytes(1)[0] % n);
@@ -9161,10 +9233,7 @@ var Kishib = class {
    * the sitting is done.
    */
   async typed(a) {
-    if (this.col) {
-      this.col.typed(a.typed);
-      return this.state();
-    }
+    if (this.col) this.col.showWords();
     const h = this.held;
     if (!h || !h.signing && !h.chain || h.stage !== "shown" || !h.positions) throw new Error("No words are asked back.");
     if (!typedBack(toWords(h.chain ?? h.signing), h.positions, a.typed)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
@@ -9206,6 +9275,7 @@ var Kishib = class {
     const via = a.via ?? {};
     const id = readId(a.id);
     const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+    if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
     const r = rd.look.resolution;
     const latest = r.links[r.links.length - 1];
     const blocking = [];
@@ -9513,6 +9583,7 @@ var Kishib = class {
     try {
       signingSeed = seedOf(a.signingWords);
       const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
       const r = rd.look.resolution;
       const pub = hex(signingPublic(signingSeed));
       const chain = orderedChain2(rd);
@@ -11517,7 +11588,7 @@ function column(tab, web, r) {
         // H89: an identity added where one works with the runner, in its own column entry.
         { key: "add", label: "Add an identity to the runner", k: r?.on ? r.held.length : void 0 },
         { key: "apps", label: "Apps", k: r?.apps.length ?? 0 },
-        { key: "waiting", label: "Waiting", k: (r?.waiting.length ?? 0) + (r?.memberAsks.length ?? 0) },
+        { key: "waiting", label: "Waiting", k: r?.waiting.length ?? 0 },
         { key: "signed", label: "Signed", k: r?.signed.length ?? 0 }
       ];
     case "paper":
@@ -11736,10 +11807,10 @@ function held(r) {
     (h) => `<div class="kishib-app" data-held="${e(h.id)}"><div class="k-row"><span class="k-dot">${e((h.name ?? "M")[0].toUpperCase())}</span><div class="k-grow"><h3>${who({ id: h.id, form: h.form })}</h3></div><button type="button" class="k-btn k-q" data-action="held-record" data-id="${e(h.id)}">Its record</button><button type="button" class="k-btn k-q" data-action="held-remove" data-id="${e(h.id)}">Remove</button></div>
 ${ownId({ form: h.form, link: h.link })}
 <p class="k-small k-soft">${h.apps.length ? `Used by ${e(h.apps.join(", "))}.` : "No app uses it yet."}</p>
-${h.members.length ? `<div class="kishib-members"><p class="k-small">Its own keys for its collectives, held here with it (encrypted):</p>${h.members.map((m) => `<div class="k-row" data-member="${e(m.collective)}"><span class="k-grow">${who({ id: m.collective, form: m.form, collective: true, inline: true })}</span><span class="k-small k-faint">added ${e(when2(m.added))}</span><button type="button" class="k-btn k-q" data-action="member-remove" data-id="${e(h.id)}" data-collective="${e(m.collective)}">Remove</button></div>`).join("")}</div>` : ""}
+
 ${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain key: the signing key the runner holds no longer counts, and it signs nothing for it. Give the new signing key\u2019s words.<form class="kishib-renew" data-renew="${e(h.id)}"><input type="hidden" name="id" value="${e(h.id)}"><label>One of its homes</label><input name="address" placeholder="https://" required><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Take the new words</button></div></form></div>` : ""}</div>`
   ).join("");
-  return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase, with their own keys for their collectives. Remove one, and Ki\u0161ib forgets its keys; the apps using it through Ki\u0161ib stop signing as it.</p>${memberAsks(r)}${rows || '<p class="k-soft">None yet.</p>'}
+  return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase. Each signs for its collectives with its own key, through the panel: there are no member keys. Remove one, and Ki\u0161ib forgets its key; the apps using it through Ki\u0161ib stop signing as it.</p>${r.notice ? `<div class="k-note">${e(r.notice)}</div>` : ""}${rows || '<p class="k-soft">None yet.</p>'}
 <div class="k-row"><button type="button" class="k-btn" data-action="runner-add">Add an identity to the runner</button><span class="k-small k-faint">in Runner, beside its apps</span></div>`;
 }
 function runnerAdd(r) {
@@ -11747,12 +11818,6 @@ function runnerAdd(r) {
   const list3 = r.held.length ? `<div class="k-small k-soft kishib-held-now">Held now (Identities, Held here, for each one\u2019s record and keys): ${r.held.map((h) => `<span data-held="${e(h.id)}">${who({ id: h.id, form: h.form, inline: true })}</span>`).join(", ")}</div>` : "";
   return `<h2>Add an identity to the runner</h2><p class="k-soft k-small">Ki\u0161ib keeps its signing key on this Mac, encrypted under the runner\u2019s passphrase, and signs with it for the apps you approve (Apps). Never the chain key.</p>${list3}
 <form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key\u2019s words, as Dub shows them (its identity\u2019s menu, Words): Ki\u0161ib checks they give the key its homes serve. Never the chain key\u2019s words.</p>${idField("id", "The identity")}${address}${words("words", "Its signing key\u2019s 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on, encrypted</span></div></form>`;
-}
-function memberAsks(r) {
-  return r.memberAsks.map(
-    (x) => `<div class="kishib-wait" data-member-ask="${e(x.id)}"><h3>${e(x.app)} asks Ki\u0161ib to hold ${who({ id: x.identity, inline: true })}\u2019s key for a collective</h3><p class="k-small k-soft">The collective ${who({ id: x.collective, form: x.form, collective: true, inline: true })} \xB7 asked ${e(when2(x.at))}. Ki\u0161ib opens the key sealed to ${e(x.name ?? "this identity")} at its homes and keeps it here, encrypted. Acting as the collective, ${e(x.app)} then asks, and Ki\u0161ib\u2019s panel shows each act before Ki\u0161ib signs it; the key never goes to ${e(x.app)}.</p>
-<div class="k-row"><button type="button" class="k-btn k-p" data-action="member-answer" data-ask="${e(x.id)}" data-yes="1">Add it</button><button type="button" class="k-btn k-q" data-action="member-answer" data-ask="${e(x.id)}" data-yes="0">Refuse</button></div></div>`
-  ).join("");
 }
 var OPEN_WORDS = "may open what is sealed to this identity";
 var openSay = (app2) => `Chosen for each identity (decided: \u201Cper identity, per app\u201D). ${app2} then reads the private messages sent to that identity, and its sealed contacts list, through Ki\u0161ib, without a panel each time (an opening signs nothing; Ki\u0161ib returns the act and the key of that one act, never the identity\u2019s keys). Each opening is listed in Signed. Revoke ${app2}, and it ends.`;
@@ -11785,7 +11850,7 @@ function runnerWaiting(r) {
 ${w.always ? '<p class="k-small k-faint">Money, agreements, relying on another\u2019s act, and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}\u2019s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="answer" data-yes="1" data-request="${e(w.request)}">Sign it</button><button type="button" class="k-btn k-q" data-action="answer" data-yes="0" data-request="${e(w.request)}">Decline</button></div></div>`
   ).join("");
-  return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${memberAsks(r)}${ws || (r.memberAsks.length ? "" : '<p class="k-soft">Nothing waits.</p>')}`;
+  return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${ws || '<p class="k-soft">Nothing waits.</p>'}`;
 }
 function runnerSigned(r) {
   if (!r?.on) return notOn(r, "Signed", "The runner is off: it keeps no record.");
@@ -11826,7 +11891,7 @@ function sitting(s) {
   if (s.stage === "request") acts.push(btn("nakisib write", "Write the request for Naki\u0161ib", true));
   const answer = s.stage === "request" ? `<form id="nakisib-answer" class="k-box k-fill" autocomplete="off"><label>Naki\u0161ib\u2019s answer (the file it wrote on the USB stick)</label><input name="answer" type="file" required><div class="k-row"><button type="submit" class="k-btn k-p">Read Naki\u0161ib\u2019s answer</button><span class="k-small k-faint">checked to be exactly this change before anything is sent</span></div></form>` : "";
   if (s.stage === "paper") acts.push(btn("show words", s.kind === "make" ? "Show the chain key\u2019s words (its paper)" : "Show the new chain key\u2019s words (a new paper)", true));
-  if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : s.kind === "make" ? "Show its signing key\u2019s words" : "Show the new signing key\u2019s words", true));
+  if (s.stage === "counts" && s.kind !== "confirm" && s.kind !== "collective") acts.push(btn("show words", s.kind === "make" ? "Show its signing key\u2019s words" : "Show the new signing key\u2019s words", true));
   if (s.stage === "shown") acts.push(btn("show words", "Show them again"));
   if (s.stage === "waiting" && q) {
     if (!q.room) acts.push(btn("gather", "Look for the members\u2019 shares", q.have < q.need));
@@ -11962,7 +12027,7 @@ function mount(app2, b) {
         kind: s.opened ? `${s.app} \xB7 opened \xB7 ${kind}` : `${s.app} \xB7 ${kind}`,
         // H121: the IDs in its words, each a tap showing it whole.
         html: `<div class="k-txt" dir="auto">${s.words.map(said).join(" ")}</div>`,
-        labels: [label(s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.lane ? "signed without asking: a lane\u2019s record, to the identity itself" : s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.as ? `as the collective ${actFormOf(s.as, "mid")}, with its member key` : s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}`)],
+        labels: [label(s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.lane ? "signed without asking: a lane\u2019s record, to the identity itself" : s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.as ? `for the collective ${actFormOf(s.as, "mid")}, with its own key` : s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}`)],
         verified: false
       };
       drawn.set(a.id, { act: a, s });
@@ -12230,7 +12295,7 @@ function mount(app2, b) {
         const w = await act(() => b.ask("words show"));
         if (!w) return;
         const st = state?.sitting;
-        const label2 = w.holder ? "The collective\u2019s new signing key\u2019s words" : st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
+        const label2 = st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
         const pane = $("pane");
         if (pane) pane.innerHTML = wordsShown(w.words, w.say, label2, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null);
         return;
@@ -12324,24 +12389,6 @@ function mount(app2, b) {
         }
         return;
       }
-      case "member-answer": {
-        const r = await act(() => b.ask("runner member answer", { ask: d.ask, yes: d.yes === "1" }));
-        if (r) {
-          runner = r;
-          draw();
-          if (d.yes === "1") done("Kept: Ki\u0161ib holds this identity\u2019s key for the collective, encrypted. The app acts as the collective through Ki\u0161ib\u2019s panel.");
-        }
-        return;
-      }
-      case "member-remove": {
-        if (!await ask(app2, { title: "Forget this collective\u2019s key here?", text: "The app using the identity through Ki\u0161ib can no longer act as the collective. The key itself stays sealed to the identity at its homes.", yes: "Forget it here" })) return;
-        const r = await act(() => b.ask("runner member remove", { identity: d.id, collective: d.collective }));
-        if (r) {
-          runner = r;
-          draw();
-        }
-        return;
-      }
       case "opening": {
         const r = await act(() => b.ask("runner opening", { pairing: d.pairing, identity: d.identity, on: d.on === "1" }));
         if (r) {
@@ -12407,7 +12454,7 @@ function mount(app2, b) {
         return;
       }
       if (!runner.on) return;
-      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
+      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held]);
       runner = r;
       if (!changed) return;
       if (tab === "runner" && part2 !== "onoff") draw();

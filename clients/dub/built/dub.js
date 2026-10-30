@@ -445,26 +445,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
-   * What a fork of `collective` must hand out (F127), its line drawn at
-   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
-   * `agreement` in force there: every obligation in the history it would
-   * cite, its own and those an earlier fork handed to it. Null where the
-   * line does not hold.
+   * What a fork of `collective` must hand out, its line the acts `line`
+   * it would cite on the collective's chain, with `agreement` in force
+   * there: every obligation in that history, its own and those an
+   * earlier fork handed to it. Null where the line does not hold.
    * @param {any} specs
    * @param {string} collective
    * @param {string} agreement
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[] | undefined}
    */
-  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+  agreementsHandOut(specs, collective, agreement, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr2 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -497,21 +495,20 @@ var Verifier = class {
     return v2;
   }
   /**
-   * The acts the history a line at `chain_act` and `tips` would cite
-   * that this verifier does not hold (F127): a member's client signs no
-   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * The acts the history of a line citing `line` on the collective's
+   * chain names that this verifier does not hold: a member's client signs
+   * no fork or closing while any is missing (client conformance).
    * @param {any} specs
    * @param {string} collective
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[]}
    */
-  agreementsLineUnheld(specs, collective, chain_act, tips) {
+  agreementsLineUnheld(specs, collective, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -618,30 +615,6 @@ var Verifier = class {
     return BigInt.asUintN(64, ret[0]);
   }
   /**
-   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-   * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot. Leftovers by largest
-   * remainder; a tied unit is the payer's to decide, at most one per tie
-   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-   * with the smallest identity hash, a choice, not a rule.
-   * @param {any} specs
-   * @param {string} agreement
-   * @param {string | null | undefined} object
-   * @param {bigint} amount
-   * @returns {any}
-   */
-  agreementsPayerSplit(specs, agreement, object, amount) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
    * The pointer check (rule 18, F123): whether the payee pointer of
    * `owners` counts for Agreements under `agreement`: "no-split-service",
    * "ordinary", "bypasses" (with the addresses no service's own pointer
@@ -694,6 +667,24 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A publication, judged (Agreements rule 11): its parties and who has
+   * not signed, whether it counts and why not, the latest versions of its
+   * line, whether this version ends it, and the ownership agreements
+   * claiming what it sells that it stands outside of (rule 14).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPublication(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublication(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -918,22 +909,21 @@ var Verifier = class {
    * stake, or carries no count.
    * @param {any} specs
    * @param {string} service
-   * @param {string} agreement
-   * @param {bigint} stake
+   * @param {string} owners
    * @param {string[]} holders
    * @param {string | null} [previous]
    * @returns {Float64Array | undefined}
    */
-  agreementsSplitTurns(specs, service, agreement, stake, holders2, previous) {
+  agreementsSplitTurns(specs, service, owners, holders2, previous) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passArrayJsValueToWasm0(holders2, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
     var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -957,6 +947,23 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether a price tag counts under its publication (Money rule 18;
+   * Agreements rule 12): "counts" (with the publication, and whether this
+   * version withdraws the tag), "nobody's offer" or "unknown", with why.
+   * @param {any} specs
+   * @param {string} tag
+   * @returns {any}
+   */
+  agreementsTagUnder(specs, tag) {
+    const ptr0 = passStringToWasm0(tag, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsTagUnder(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1023,6 +1030,29 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who uploaded a bake, as a verifier reading Money and Envelopes tells
+   * it (Money, "Only identities have payee pointers"): the signer's
+   * identity hash, or "unknown" where the bake names another chain, a
+   * collective's perhaps, which a Money-only wallet refuses to tip.
+   * `null` for no bake held.
+   * @param {string} bake
+   * @returns {string | undefined}
+   */
+  bakeUploader(bake) {
+    const ptr0 = passStringToWasm0(bake, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_bakeUploader(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
   }
   /**
    * The standing of an act for everything binding (keeper records,
@@ -1288,6 +1318,28 @@ var Verifier = class {
     }
     var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * Whose offer a price tag is (Money rule 18), as a verifier reading
+   * Money and Envelopes tells it: "counts" (on a bare bake, its
+   * uploader's), "nobody's offer", or "unknown" (not held, or under a
+   * publication, which Agreements judges). `null` for no price tag held.
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  priceTag(act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_priceTag(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
     return v2;
   }
   /**
@@ -3546,7 +3598,7 @@ function planLines(lines2, o = {}) {
   const found = (act) => held ? held.has(act) : lines2.some((l) => l.tip === act);
   const kept = [];
   const left = [];
-  const shown = [];
+  const shown2 = [];
   const unplacedSay = [];
   for (const c of cards2) {
     const whose = lineOf(c.app, c.line);
@@ -3568,10 +3620,10 @@ function planLines(lines2, o = {}) {
     const given = cards2.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
-      shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
+      shown2.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
     } else if (card2) {
       kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
-      shown.push({
+      shown2.push({
         text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
@@ -3579,27 +3631,27 @@ function planLines(lines2, o = {}) {
       unread.push(l);
     } else {
       left.push(l);
-      shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
+      shown2.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
     }
   }
   if (unread.length) {
-    shown.push({
+    shown2.push({
       text: `${unread.length === 1 ? "One more act Ki\u0161ib cannot read lies" : `${unread.length} more acts Ki\u0161ib cannot read (private, or behind a private act) lie`} on the lines kept by the cards given: those apps count ${counts} such act${counts === 1 ? "" : "s"}, and the homes hold ${counts}. Kept with them: ${unread.map((l) => l.tip).join(", ")}.`,
       tone: "ok"
     });
   }
   if (counts !== null && !covered && !unplacedSay.length && counts < o.unplaced.length) {
     const n = o.unplaced.length - counts;
-    shown.push({ text: `${n === 1 ? "One act" : `${n} acts`} at the homes, signed with this key, lie${n === 1 ? "s" : ""} on no line whose card was given (the cards count ${counts}, the homes hold ${o.unplaced.length}): an app whose card is missing, or someone else holding the signing key. Left out unless you give that app\u2019s card.`, tone: "bad" });
+    shown2.push({ text: `${n === 1 ? "One act" : `${n} acts`} at the homes, signed with this key, lie${n === 1 ? "s" : ""} on no line whose card was given (the cards count ${counts}, the homes hold ${o.unplaced.length}): an app whose card is missing, or someone else holding the signing key. Left out unless you give that app\u2019s card.`, tone: "bad" });
   }
   for (const c of cards2) {
     if (lines2.some((l) => l.tip === c.act)) continue;
     kept.push({ act: c.act, position: c.position, summary: c.summary });
-    shown.push({ text: `${capital(lineOf(c.app, c.line))}, ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
+    shown2.push({ text: `${capital(lineOf(c.app, c.line))}, ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
-  for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
+  for (const t of unplacedSay) shown2.push({ text: t, tone: "bad" });
   const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
-  return { kept, left, shown, warning };
+  return { kept, left, shown: shown2, warning };
 }
 function checkWarned(plan, warned) {
   if (plan.warning && warned !== plan.warning) {
@@ -3902,7 +3954,8 @@ function freshLines(f) {
   f.split = true;
 }
 var HELD_ELSEWHERE_SAY = "This identity\u2019s signing key is not held by this app: it is signed for by Ki\u0161ib\u2019s runner, and this act cannot be signed that way here. Nothing was signed.";
-var AGREEMENTS_RECORD = 17;
+var AGREEMENTS_DECISIONS = [9, 10, 17];
+var NO_ACTOR_SAY = "A collective has no signing key (Agreements rule 56): a member acts for it with their own key, naming it. No member was given to act here, and nothing was signed.";
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var TestIdentity = class _TestIdentity {
@@ -3912,6 +3965,12 @@ var TestIdentity = class _TestIdentity {
   }
   /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
   signer;
+  /**
+   * For a collective (no signing key, Agreements rule 56): the member who
+   * makes its next acts, each with their own key, naming the collective in
+   * `objects` (rule 58). Never saved with the file.
+   */
+  actor;
   get id() {
     return this.f.identity;
   }
@@ -4011,9 +4070,9 @@ var TestIdentity = class _TestIdentity {
     if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
     }
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
+    if (this.f.cites && spec !== SPECS.identity && !objects?.some((o) => o[0] === this.f.identity)) {
+      const cited = spec === MIRS.text ? this.f.cites.slice(0, 1) : this.f.cites;
+      objects = [...objects ?? [], ...cited.map((d) => [this.f.identity, d])];
     }
     return objects;
   }
@@ -4021,11 +4080,26 @@ var TestIdentity = class _TestIdentity {
   everydayMade(spec, type, isPublic, line, made) {
     line.push(made.id);
     if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    if (this.f.cites) this.f.cites = spec === MIRS.agreements && AGREEMENTS_DECISIONS.includes(type) ? [made.id] : [this.f.cites[0], made.id];
     return made;
   }
+  /** Whether this file is a collective's, keyless: its acts are made by a member (`actor`). */
+  get keyless() {
+    return !!this.f.cites && !this.f.signingSecret;
+  }
+  /** An act for this keyless collective, made by its `actor` with their own key, naming the collective (rule 58). */
+  async byActor(spec, type, payload, opts) {
+    if (!this.actor) throw new Error(NO_ACTOR_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const made = await this.actor.everydayNow(spec, type, payload, { ...opts, objects });
+    return this.everydayMade(spec, type, true, this.f.sequence, made);
+  }
   everyday(spec, type, payload, opts) {
-    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    if (this.keyless && this.actor) {
+      const made2 = this.actor.everyday(spec, type, payload, { ...opts, objects: this.everydayObjects(spec, type, opts.objects, opts.acks) });
+      return this.everydayMade(spec, type, true, this.f.sequence, made2);
+    }
+    if (!this.f.signingSecret) throw new Error(this.f.cites ? NO_ACTOR_SAY : HELD_ELSEWHERE_SAY);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
@@ -4053,6 +4127,7 @@ var TestIdentity = class _TestIdentity {
    * signing serial, as every app does.
    */
   async everydayNow(spec, type, payload, opts) {
+    if (this.keyless) return this.byActor(spec, type, payload, opts);
     if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
@@ -4620,9 +4695,9 @@ function linesHeld(f) {
 async function lineAtHomes(me, app2, via2 = me.via) {
   const lines2 = linesHeld(me.f).map((l) => ({ ...l, card: ownLine(l.ids).card }));
   const acts = lines2.reduce((n, l) => n + l.ids.length, 0);
-  const shown = (l) => ({ acts, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
+  const shown2 = (l) => ({ acts, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
   const first = lines2.find((l) => l.kind === "private") ?? lines2[0];
-  if (!lines2.length) return { ...shown(), atHomes: null, missing: 0, hidden: 0, card: null };
+  if (!lines2.length) return { ...shown2(), atHomes: null, missing: 0, hidden: 0, card: null };
   const homes = me.f.homes.map((h) => h.hint);
   let places = homes;
   try {
@@ -4631,7 +4706,7 @@ async function lineAtHomes(me, app2, via2 = me.via) {
   } catch {
   }
   const found = await actsBy(me.f.identity, places, via2);
-  if (!found.length) return { ...shown(first), atHomes: null, missing: 0, hidden: null, card: null };
+  if (!found.length) return { ...shown2(first), atHomes: null, missing: 0, hidden: null, card: null };
   const held = new Set(found.map((a) => describeAct(a).id));
   const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: found }));
   const cards2 = lines2.map((l) => {
@@ -4641,55 +4716,12 @@ async function lineAtHomes(me, app2, via2 = me.via) {
   });
   const away = cards2.find((c) => !c.atHomes);
   return {
-    ...shown(away?.l ?? first),
+    ...shown2(away?.l ?? first),
     atHomes: !away,
     missing: cards2.reduce((n, c) => n + c.missing, 0),
     hidden: cards2.reduce((n, c) => n + c.card.hidden, 0),
     card: away ? null : cards2.map((c) => cardText(c.card, app2)).join("; ")
   };
-}
-async function ownActs(identity, secrets, places, via2 = {}) {
-  const out = /* @__PURE__ */ new Map();
-  const locked = /* @__PURE__ */ new Map();
-  for (const a of await actsBy(identity, places, via2)) {
-    const d = describeAct(a);
-    if (d.public) out.set(d.id, { act: a });
-    else locked.set(d.id, a);
-  }
-  const delivered = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [...out.values()];
-  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
-  for (const h of places) {
-    for (const { q, me } of queries) {
-      let after;
-      try {
-        for (; ; ) {
-          const page = await relayAt(h, via2).feed({ ...q, after });
-          for (const it of page.items) {
-            if (it.kind !== "sealed") continue;
-            for (const s of secrets) {
-              try {
-                const o = openSealed(it.item, me, s);
-                const d = o.described;
-                if (d.signer !== identity) break;
-                if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
-                  const k = readKeyDelivery(d.payload);
-                  delivered.set(k.target, k.key);
-                } else if (!out.has(d.id)) out.set(d.id, { act: o.act, key: o.key });
-                break;
-              } catch {
-              }
-            }
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-      }
-    }
-  }
-  for (const [id, key] of delivered) if (!out.has(id) && locked.has(id)) out.set(id, { act: locked.get(id), key });
-  return [...out.values()];
 }
 function lineReader(app2) {
   const seen = /* @__PURE__ */ new Map();
@@ -5513,8 +5545,8 @@ function parse(bytes) {
   const turned = v.rotation === 90 || v.rotation === 270;
   const vv = v.video;
   const long = Math.max(vv.width, vv.height);
-  const short3 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short3 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  const short5 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short5 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
   if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
   const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
   if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
@@ -5811,6 +5843,8 @@ var POST_SPECS = {
   text: LONGFORM_SPECS.text,
   /** The Envelopes MIR (`ENVELOPES`). */
   envelopes: SPECS.envelopes,
+  /** The Money MIR (`MONEY`): its price tags. */
+  money: MIRS.money,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
@@ -5821,8 +5855,9 @@ var POST_SPECS = {
   audio: test2("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT = 0;
-var PUBLICATION = 0;
-var WITHDRAWAL = 3;
+var BAKE = 0;
+var RETIRED_WITHDRAWAL = 3;
+var PRICE_TAG = 5;
 
 // ../barebone/src/corrections.ts
 var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
@@ -5872,7 +5907,7 @@ async function publishPicture(by, jpeg, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
@@ -5905,7 +5940,7 @@ async function publishVideo(by, mp4, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
@@ -5933,7 +5968,7 @@ async function publishAudio(by, m4a, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
 }
@@ -5966,14 +6001,6 @@ async function leaveInInbox(by, act, inbox) {
     }
   }
   return out;
-}
-async function withdraw(by, publication, relays) {
-  const made = await by.publish(POST_SPECS.envelopes, WITHDRAWAL, cborEncode(/* @__PURE__ */ new Map()), {
-    public: true,
-    relays,
-    objects: [[publication, publication]]
-  });
-  return { id: made.id };
 }
 async function fetchAct(id, hints, via2) {
   return firstOf(hints.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getAct(id));
@@ -6051,7 +6078,7 @@ async function readRef(r, hints, via2, judge2) {
   }
   if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
   const media = cborDecode(d.payload).get(0);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via2, judge2);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.audio) return readRecordingRef(act, d, hints, via2, judge2);
@@ -6060,31 +6087,27 @@ async function readRef(r, hints, via2, judge2) {
 async function readFilmRef(act, d, hints, via2, judge2) {
   const m = cborDecode(d.payload);
   const size = m.get(3);
-  const out = { kind: "film", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const out = { kind: "film", bake: d.id, publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, size: typeof size === "number" ? size : 0 };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge2.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no("the film is locked: its key is not public");
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge2);
-  if (out.withdrawn) return no("withdrawn by its signer");
   return out;
 }
 async function readRecordingRef(act, d, hints, via2, judge2) {
   const m = cborDecode(d.payload);
   const size = m.get(3);
-  const out = { kind: "recording", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const out = { kind: "recording", bake: d.id, publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, size: typeof size === "number" ? size : 0 };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge2.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no("the recording is locked: its key is not public");
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge2);
-  if (out.withdrawn) return no("withdrawn by its signer");
   return out;
 }
-async function filmBytes(publication, signer, hints, via2 = {}) {
-  const plain = await mediaBytes(publication, signer, hints, via2, POST_SPECS.video, "film");
+async function filmBytes(bake, signer, hints, via2 = {}) {
+  const plain = await mediaBytes(bake, signer, hints, via2, POST_SPECS.video, "film");
   try {
     return { bytes: plain, film: read2(plain) };
   } catch (e3) {
@@ -6092,8 +6115,8 @@ async function filmBytes(publication, signer, hints, via2 = {}) {
     throw e3;
   }
 }
-async function soundBytes(publication, signer, hints, via2 = {}) {
-  const plain = await mediaBytes(publication, signer, hints, via2, POST_SPECS.audio, "recording");
+async function soundBytes(bake, signer, hints, via2 = {}) {
+  const plain = await mediaBytes(bake, signer, hints, via2, POST_SPECS.audio, "recording");
   try {
     return { bytes: plain, sound: read3(plain) };
   } catch (e3) {
@@ -6101,10 +6124,10 @@ async function soundBytes(publication, signer, hints, via2 = {}) {
     throw e3;
   }
 }
-async function mediaBytes(publication, signer, hints, via2, spec, what) {
-  const act = signer ? (await followRef([publication, signer], hints, via2)).act : await fetchAct(publication, hints, via2);
-  if (!act) throw new Error(`the ${what}\u2019s publication was not found`);
-  const d = describeChecked(act, publication);
+async function mediaBytes(bake, signer, hints, via2, spec, what) {
+  const act = signer ? (await followRef([bake, signer], hints, via2)).act : await fetchAct(bake, hints, via2);
+  if (!act) throw new Error(`the ${what}\u2019s bake was not found`);
+  const d = describeChecked(act, bake);
   const m = cborDecode(d.payload);
   const type = m.get(0);
   if (!(type instanceof Uint8Array) || hex(type) !== spec) throw new Error(`not a ${what}`);
@@ -6114,7 +6137,7 @@ async function mediaBytes(publication, signer, hints, via2, spec, what) {
   const nonce = m.get(4);
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) throw new Error(`the ${what} is locked: its key is not public`);
-  if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) throw new Error("the publication does not describe its media");
+  if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) throw new Error("the bake does not describe its media");
   const named2 = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getMedia(hex(lockedHash)));
   const locked = await media(hints) ?? await media(named2.filter((n) => !hints.includes(n)));
@@ -6125,24 +6148,24 @@ async function mediaBytes(publication, signer, hints, via2, spec, what) {
   } catch {
     throw new Error("its key does not open its bytes");
   }
-  if (workHash(plain) !== hex(work) || plain.length !== size) throw new Error("its bytes do not match the work hash and size it was published with");
+  if (workHash(plain) !== hex(work) || plain.length !== size) throw new Error("its bytes do not match the work hash and size it was uploaded with");
   return plain;
 }
 async function readPicture(act, d, hints, via2, judge2) {
   const out = {
     kind: "picture",
+    bake: d.id,
     publication: d.id,
     signer: d.signer ?? "",
     standing: "unknown",
     problem: null,
-    withdrawn: null,
     bytes: null,
     picture: null
   };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge2.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   const m = cborDecode(d.payload);
   const spec = m.get(0);
   if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) return no("media of a type this client does not implement");
@@ -6153,10 +6176,8 @@ async function readPicture(act, d, hints, via2, judge2) {
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) return no("the picture is locked: its key is not public");
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) {
-    return no("the publication does not describe its media");
+    return no("the bake does not describe its media");
   }
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge2);
-  if (out.withdrawn) return no("withdrawn by its signer");
   const named2 = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getMedia(hex(lockedHash)));
   const locked = await media(hints) ?? await media(named2.filter((n) => !hints.includes(n)));
@@ -6167,7 +6188,7 @@ async function readPicture(act, d, hints, via2, judge2) {
   } catch {
     return no("its key does not open its bytes");
   }
-  if (workHash(plain) !== hex(work) || plain.length !== size) return no("its bytes do not match the work hash and size it was published with");
+  if (workHash(plain) !== hex(work) || plain.length !== size) return no("its bytes do not match the work hash and size it was uploaded with");
   try {
     out.picture = read(plain);
   } catch (e3) {
@@ -6177,36 +6198,287 @@ async function readPicture(act, d, hints, via2, judge2) {
   out.bytes = plain;
   return out;
 }
-async function findWithdrawal(publication, signer, forId, hints, via2, judge2) {
-  const who2 = [signer];
-  if (forId instanceof Uint8Array) who2.push(hex(forId));
-  const search = async (h, s) => {
-    let after;
-    for (; ; ) {
-      let page;
-      try {
-        page = await relayAt(h, via2).feed({ signer: s, after });
-      } catch {
-        return null;
-      }
-      for (const it of page.items) {
-        if (it.kind !== "act") continue;
-        let d;
+
+// ../barebone/src/tag.ts
+function readTag(act) {
+  let d;
+  try {
+    d = describeAct(act);
+  } catch {
+    return null;
+  }
+  if (d.spec !== MIRS.money || d.type !== PRICE_TAG || !d.payload || !d.signer) return null;
+  try {
+    const m = cborDecode(d.payload);
+    const bake = m.get(0);
+    const publication = m.get(1);
+    const version2 = m.get(2);
+    const previous = m.get(3);
+    const price = m.get(4);
+    const payee = m.get(5);
+    if (!(payee instanceof Uint8Array) || typeof version2 !== "number" && typeof version2 !== "bigint") return null;
+    if (bake instanceof Uint8Array === publication instanceof Uint8Array) return null;
+    const v = Number(version2);
+    return {
+      id: d.id,
+      signer: d.signer,
+      bake: bake instanceof Uint8Array ? hex(bake) : null,
+      publication: publication instanceof Uint8Array ? hex(publication) : null,
+      version: v,
+      previous: previous instanceof Uint8Array ? hex(previous) : null,
+      first: v === 1 ? d.id : d.objects?.[0]?.[0] ?? d.id,
+      price: Array.isArray(price) && price[0] instanceof Uint8Array ? { unit: hex(price[0]), value: Number(price[1]) } : null,
+      payee: hex(payee)
+    };
+  } catch {
+    return null;
+  }
+}
+function tagPayload(a) {
+  return moneyPayload({
+    type: "priceTag",
+    ..."bake" in a ? { bake: a.bake } : { publication: a.publication },
+    version: a.version,
+    ...a.previous ? { previous: a.previous } : {},
+    ...a.price ? { price: a.price } : {},
+    payee: a.payee
+  });
+}
+async function putTag(by, on, a) {
+  if (a.price && (!Number.isSafeInteger(a.price.value) || a.price.value <= 0)) throw new Error("A price is a whole amount above zero. Nothing was signed.");
+  const after = a.after ?? null;
+  if (!after && !a.price) throw new Error("There is no price tag to withdraw. Nothing was signed.");
+  if (after && after.signer !== by.id) throw new Error("That price tag was signed by another identity: only its signer can change or withdraw it. Nothing was signed.");
+  const version2 = after ? after.version + 1 : 1;
+  const payee = a.payee ?? after?.payee ?? by.id;
+  const p = tagPayload({ ...on, version: version2, previous: after?.id ?? null, price: a.price, payee });
+  const made = await by.publish(MIRS.money, p.type, p.payload, { public: true, relays: a.relays, ...after ? { objects: [[after.first, after.id]] } : {} });
+  return { ...readTag(made.act), act: made.act };
+}
+async function withdrawTag(by, latest, relays) {
+  if (!latest.price) throw new Error("That price tag is withdrawn already. Nothing was signed.");
+  return putTag(by, latest.bake ? { bake: latest.bake } : { publication: latest.publication }, { price: null, relays, after: latest });
+}
+async function tagsOf(on, signer, hints, via2 = {}) {
+  const found = /* @__PURE__ */ new Map();
+  const target = "bake" in on ? on.bake : on.publication;
+  await Promise.all(
+    hints.filter((h) => !cannotReach(h, via2)).map(async (h) => {
+      let after;
+      for (let i = 0; i < 200; i++) {
+        let page;
         try {
-          d = describeAct(it.item);
+          page = await relayAt(h, via2).feed({ signer, after });
         } catch {
-          continue;
+          return;
         }
-        if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
-        if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-        if (await judge2.standing(it.item, d.id, d.signer) === "valid") return d.id;
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          const t = readTag(it.item);
+          if (!t || t.signer !== signer || (t.bake ?? t.publication) !== target) continue;
+          found.set(t.id, { t, act: it.item });
+        }
+        if (!page.items.length || page.next === after) return;
+        after = page.next;
       }
-      if (!page.items.length || page.next === after) return null;
-      after = page.next;
+    })
+  );
+  const all = [...found.values()];
+  const firsts = all.filter((x) => x.t.version === 1).sort((a, b) => a.t.id < b.t.id ? -1 : 1);
+  let latest = null;
+  for (const f of firsts) {
+    let at = f.t;
+    for (; ; ) {
+      const next = all.filter((x) => x.t.previous === at.id && x.t.version === at.version + 1 && x.t.first === f.t.id);
+      if (next.length !== 1) break;
+      at = next[0].t;
     }
+    latest = at;
+  }
+  return { latest, acts: all.map((x) => x.act) };
+}
+
+// ../barebone/src/sealed.ts
+var SEALED_TEXT = POST_SPECS.text;
+var SEALED_PICTURE = POST_SPECS.jpeg;
+var SEALED_VIDEO = POST_SPECS.video;
+var SEALED_AUDIO = POST_SPECS.audio;
+var MEDIA_SPEC = { text: SEALED_TEXT, picture: SEALED_PICTURE, video: SEALED_VIDEO, audio: SEALED_AUDIO };
+var mediaOf = (spec) => Object.entries(MEDIA_SPEC).find(([, x]) => x === spec)?.[0] ?? null;
+function checkPlayable(media, bytes) {
+  if (media === "video") read2(bytes);
+  else if (media === "audio") read3(bytes);
+}
+function lockWork(a) {
+  let bytes = a.bytes;
+  let removed = [];
+  if (a.media === "picture") {
+    const s = strip(a.bytes);
+    bytes = s.bytes;
+    removed = s.removed;
+  } else if (a.media === "video" || a.media === "audio") {
+    const max = a.media === "video" ? MAX_BYTES : MAX_BYTES2;
+    if (a.bytes.length > max) throw new Error(`the file is ${a.bytes.length.toLocaleString("en")} bytes; the ${a.media === "video" ? "video" : "audio"} Module takes at most ${max.toLocaleString("en")}`);
+    if (a.media === "video") {
+      const s = strip2(a.bytes);
+      bytes = s.bytes;
+      removed = s.removed.map((c) => CARRIED_WORDS2[c]);
+    } else {
+      const s = strip3(a.bytes);
+      bytes = s.bytes;
+      removed = s.removed.map((c) => CARRIED_WORDS3[c]);
+    }
+  } else {
+    bytes = new TextEncoder().encode(new TextDecoder("utf-8", { fatal: true }).decode(a.bytes));
+  }
+  const l = lockMedia(bytes);
+  const m = /* @__PURE__ */ new Map([
+    [0, unhex(MEDIA_SPEC[a.media])],
+    [1, unhex(l.workHash)],
+    [2, unhex(l.lockedHash)],
+    [3, bytes.length],
+    [4, l.nonce],
+    [6, a.relays]
+  ]);
+  return { payload: cborEncode(m), locked: l.locked, key: hex(l.key), work: l.workHash, size: bytes.length, removed };
+}
+var PUBLICATION_ACT = 6;
+var KEY_DELIVERY = 1;
+function offerWords(price, referral) {
+  return `A sealed post, opened once paid: ${price}.${referral ? ` Referral: ${referral}% of the price to the repost the buyer names.` : ""}`;
+}
+async function postSealed(by, a) {
+  const w = lockWork(a.picture ? { media: "picture", bytes: a.picture, relays: a.relays } : { media: "text", bytes: new TextEncoder().encode(a.text ?? ""), relays: a.relays });
+  for (const hint of a.relays) {
+    for (const x of by.chainActs()) {
+      try {
+        await relayAt(hint, by.via).putAct(x);
+      } catch {
+      }
+    }
+  }
+  const bake = await by.publish(POST_SPECS.envelopes, BAKE, w.payload, { public: true, relays: a.relays });
+  for (const hint of a.relays) await relayAt(hint, by.via).putMedia(w.locked);
+  const tag = await putTag(by, { bake: bake.id }, { price: a.price, payee: by.id, relays: a.relays });
+  const text3 = a.words ? `${a.teaser}
+
+${a.words}` : a.teaser;
+  const post3 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(text3), { public: true, relays: a.relays, refs: [referenceTo(bake.act), referenceTo(tag.act)] });
+  return { bake: bake.id, tag: tag.id, publication: bake.id, offer: tag.id, post: post3.id, key: w.key, acts: { bake: bake.act, tag: tag.act, publication: bake.act, offer: tag.act, post: post3.act }, removed: w.removed };
+}
+function readSealed(act) {
+  const d = describeAct(act);
+  if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE || !d.payload || !d.signer) return null;
+  const m = cborDecode(d.payload);
+  const media = m.get(0);
+  const kind = media instanceof Uint8Array ? mediaOf(hex(media)) : null;
+  if (!kind || m.has(5)) return null;
+  return {
+    bake: d.id,
+    publication: d.id,
+    media: kind,
+    seller: d.signer,
+    price: null,
+    work: hex(m.get(1)),
+    lockedHash: hex(m.get(2)),
+    nonce: m.get(4),
+    size: Number(m.get(3)),
+    places: Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : []
   };
-  const pairs = hints.filter((h) => !cannotReach(h, via2)).flatMap((h) => who2.map((s) => [h, s]));
-  return firstOf(pairs, ([h, s]) => search(h, s));
+}
+function readPublication(act) {
+  let d;
+  try {
+    d = describeAct(act);
+  } catch {
+    return null;
+  }
+  if (d.spec !== MIRS.agreements || d.type !== PUBLICATION_ACT || !d.payload || !d.signer) return null;
+  try {
+    const m = cborDecode(d.payload);
+    const service = m.get(3);
+    if (!(service instanceof Uint8Array)) return null;
+    const sold = (Array.isArray(m.get(0)) ? m.get(0) : []).filter((x) => Array.isArray(x));
+    const bakes = sold.filter((x) => x[0] === 0 && x[1] instanceof Uint8Array).map((x) => hex(x[1]));
+    const vows = sold.filter((x) => x[0] === 3 && x[1] instanceof Uint8Array).map((x) => hex(x[1]));
+    const owners = m.get(1);
+    const designated = m.get(10);
+    const partners = (Array.isArray(m.get(2)) ? m.get(2) : []).map((p) => p instanceof Map ? p : null).filter((p) => !!p && p.get(0) instanceof Uint8Array).map((p) => ({ identity: hex(p.get(0)), share: Number(p.get(1) ?? 0), label: typeof p.get(2) === "string" ? p.get(2) : null }));
+    const o0 = (d.objects ?? [])[0];
+    const later = !!o0 && !(owners instanceof Uint8Array && o0[0] === hex(owners) && o0[1] === hex(owners));
+    return {
+      id: d.id,
+      first: later ? o0[0] : d.id,
+      previous: later ? o0[1] : null,
+      drafter: d.signer,
+      bakes,
+      vows,
+      ends: Array.isArray(m.get(0)) && sold.length === 0,
+      owners: owners instanceof Uint8Array ? hex(owners) : null,
+      partners,
+      service: hex(service),
+      designated: designated instanceof Uint8Array ? hex(designated) : null,
+      words: typeof m.get(5) === "string" ? m.get(5) : null
+    };
+  } catch {
+    return null;
+  }
+}
+function keyDeliveryPayload2(publication, key) {
+  return cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(publication)],
+      [1, unhex(key)],
+      [2, true]
+    ])
+  );
+}
+function readKeyDelivery2(payload) {
+  try {
+    const m = cborDecode(payload);
+    const p = m.get(0);
+    const k = m.get(1);
+    if (!(p instanceof Uint8Array) || !(k instanceof Uint8Array) || k.length !== 32 || m.get(2) !== true) return null;
+    return { publication: hex(p), key: hex(k) };
+  } catch {
+    return null;
+  }
+}
+async function openSealedBytes(s, key, hints, via2 = {}) {
+  let locked = null;
+  for (const h of [.../* @__PURE__ */ new Set([...hints, ...s.places])]) {
+    try {
+      locked = await relayAt(h, via2).getMedia(s.lockedHash);
+      if (locked) break;
+    } catch {
+    }
+  }
+  if (!locked) throw new Error("its locked bytes were not found at the relays asked");
+  let plain;
+  try {
+    plain = openMedia(locked, unhex(key), s.nonce);
+  } catch {
+    throw new Error("the key delivered does not open its bytes");
+  }
+  if (workHash(plain) !== s.work || plain.length !== s.size) throw new Error("its bytes do not match the work hash and size it was uploaded with");
+  return plain;
+}
+async function repost(by, a) {
+  for (const hint of a.relays) {
+    for (const x of [...a.seller, ...by.chainActs(), a.publication, a.offer]) {
+      try {
+        await relayAt(hint, a.via ?? by.via).putAct(x);
+      } catch {
+      }
+    }
+    if (a.locked) {
+      try {
+        await relayAt(hint, a.via ?? by.via).putMedia(a.locked);
+      } catch {
+      }
+    }
+  }
+  return by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.text), { public: true, relays: a.relays, refs: [referenceTo(a.publication), referenceTo(a.offer)] });
 }
 
 // ../site/src/settings.ts
@@ -6228,9 +6500,9 @@ function relayAddress(s) {
 var test3 = (s) => sha2562(s);
 var SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
+  /** The Envelopes MIR (`ENVELOPES`): a version is a bake (an upload, Envelopes type 0; called a publication before F407). */
   envelopes: SPECS.envelopes,
-  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
+  /** The Agreements MIR (`AGREEMENTS`): to judge a collective's site (website cMIP draft 12, rule 3). */
   agreements: test3("LAW, test value until the freeze"),
   /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
    * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
@@ -6238,10 +6510,10 @@ var SITE_SPECS = {
    * published still verify. */
   site: test3("website cMIP, draft 2, test value until publication")
 };
-var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
 var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
 var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
 var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements, extLayers: { [RELEASE_MANIFEST]: [] } };
 var PAYMENT_CMIP = test3("payment cMIP, draft 2, test value until publication");
 
 // ../../modules/timestamp/src/stamp.ts
@@ -6550,9 +6822,9 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
   if (clockLine2) clockLine2.placed = placed;
   const byClock2 = placed > 0;
   const order = signedOrder(all, rank, byClock2 ? times : void 0);
-  const shown = order.slice(0, limit);
+  const shown2 = order.slice(0, limit);
   const posts = await Promise.all(
-    shown.map(async (id) => {
+    shown2.map(async (id) => {
       const { d } = found.get(id);
       const p = await readOne(id, d.signer, d.position ?? null, placesOf2.get(d.signer), via2, judge2, problems.get(d.signer) ?? null);
       if (byClock2) p.time = times.get(id) ?? null;
@@ -6635,7 +6907,7 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
     line.found = order.filter((id) => found.get(id).d.signer === line.identity).length;
     line.verified = mine.filter((p) => !p.problem).length;
   }
-  return { authors: lines2, posts, more: order.length - shown.length, answered, clock: clockLine2, order: byClock2 ? "clock" : "signed" };
+  return { authors: lines2, posts, more: order.length - shown2.length, answered, clock: clockLine2, order: byClock2 ? "clock" : "signed" };
 }
 
 // ../reader/src/link.ts
@@ -8814,10 +9086,13 @@ var REPO_SPECS = {
 var AGREEMENTS_TYPES = {
   terms: 0,
   signature: 1,
+  claim: 3,
   release: 5,
-  offer: 6,
+  /** The publication (rules 11 to 17): the offer, with its partners, split service and plan; its price a price tag (Money type 5). */
+  publication: 6,
   split: 8,
   grant: 9,
+  revocation: 10,
   /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
   liveness: 12,
   declaration: 13,
@@ -8841,7 +9116,7 @@ var FOUNDING_AGREEMENT = 0;
 
 // ../repo/src/agreements.ts
 var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
-var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
+var SPLIT_CMIP = sha2562("split cMIP, draft 4, test value until publication");
 function obligationPayload(o) {
   return cborEncode(
     /* @__PURE__ */ new Map([
@@ -8904,18 +9179,20 @@ async function latestPointerAct(by, relays) {
   }
 }
 var MONEY_POINTER = 0;
-async function sign(by, act, relays, key) {
+async function sign(by, act, relays, cites = []) {
   await carryChain2(by, relays);
   let refs;
   if (await canPaySigner(act, relays, by.via)) {
     const p = await latestPointerAct(by, relays);
     if (p) refs = [referenceTo(p.act)];
   }
-  const payload = key ? cborEncode(/* @__PURE__ */ new Map([[0, unhex(act)], [1, [key[0], key[1]]]])) : signaturePayload(act);
+  const payload = signaturePayload(act);
   return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, payload, {
     public: true,
     relays,
-    objects: [[act, act]],
+    // On a collective's clone: the collective's chain too, so that a rotation
+    // declaring it reads its history through these acts (rule 58).
+    objects: [[act, act], ...cites],
     refs
   });
 }
@@ -8925,7 +9202,7 @@ async function canPaySigner(act, relays, via2) {
       const a = await relayAt(h, via2).getAct(act);
       if (!a) continue;
       const d = describeAct(a);
-      return d.spec === REPO_SPECS.agreements && (d.type === AGREEMENTS_TYPES.terms || d.type === AGREEMENTS_TYPES.offer);
+      return d.spec === REPO_SPECS.agreements && (d.type === AGREEMENTS_TYPES.terms || d.type === AGREEMENTS_TYPES.publication);
     } catch {
     }
   }
@@ -9042,9 +9319,12 @@ function refuseBeforeSigning(l, act, moneySpec, nowSeconds) {
 // ../grants/src/grant.ts
 var GRANTABLE = [
   { key: "posts", kind: { spec: SPECS.text, type: 0 }, words: "posts and messages (Text acts)" },
-  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "publications, a picture among them (Envelopes)" },
-  { key: "money", kind: { layer: 2 }, words: "money acts: promises to pay, claims and receipts (the Money layer)" }
+  // Key 'publications' kept for the apps that store it; what it reaches is a bake (Envelopes type 0, F407).
+  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "bakes (uploads), a picture among them (Envelopes)" },
+  // The six layers (F407): 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development.
+  { key: "money", kind: { layer: 3 }, words: "money acts: promises to pay, claims, receipts and price tags (the Money layer)" }
 ];
+var LAYER_WORDS = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
 var kindValue = (k) => "layer" in k ? [0, k.layer] : [1, unhex(k.spec), k.type];
 function personGrantPayload(g) {
   const m = /* @__PURE__ */ new Map([
@@ -9087,7 +9367,7 @@ function readGrant(payload) {
 function kindWords(k) {
   const g = GRANTABLE.find((x) => JSON.stringify(x.kind) === JSON.stringify(k));
   if (g) return g.words;
-  if ("layer" in k) return `every act of layer ${k.layer}`;
+  if ("layer" in k) return `every act of ${LAYER_WORDS[k.layer] ? `the ${LAYER_WORDS[k.layer]} layer` : `layer ${k.layer}`}`;
   return `acts of type ${k.type} of the specification ${k.spec.slice(0, 8)}\u2026`;
 }
 function grantInWords(g, grantor, names, unitName = (u2) => `units ${u2.slice(0, 8)}\u2026`) {
@@ -9187,8 +9467,6 @@ async function authorityOf(act, hints, via2 = {}, opts = {}) {
     const x = describeAct(a);
     if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
   }
-  const grantMap = cborDecode(gd.payload);
-  if (grantMap.has(2) && grantMap.get(2) === null) await holdDeals(v, d.signer, d.binding, hints, via2);
   for (const a of await allBy(d.signer, hints, via2)) {
     const x = describeAct(a);
     if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
@@ -9215,48 +9493,6 @@ async function authorityOf(act, hints, via2 = {}, opts = {}) {
   const laneBy = `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}\u2026, its key held by an app; F351)`;
   const plain = b.kind === "backed" || b.kind === "binds" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : b.kind === "disputed" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).` : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
-}
-async function holdDeals(v, grantor, grant, hints, via2) {
-  const held = /* @__PURE__ */ new Set();
-  const hold = async (terms, depth) => {
-    if (held.has(terms) || depth > 8) return;
-    const bytes = await fetchAct2(terms, hints, via2);
-    if (!bytes) return;
-    const t = describeAct(bytes);
-    if (t.spec !== MIRS.agreements || t.type !== AGREEMENTS_TYPES.terms || !t.payload) return;
-    held.add(terms);
-    v.add(bytes);
-    const m = cborDecode(t.payload);
-    const parties = (m.get(0) ?? []).map((x) => hex(x));
-    for (const p of parties) {
-      try {
-        await lookUp(p, hints, via2, v);
-      } catch {
-      }
-      for (const a of await allBy(p, hints, via2)) {
-        const x = describeAct(a);
-        if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === terms)) {
-          try {
-            v.add(a);
-          } catch {
-          }
-        }
-      }
-    }
-    const parent = m.get(11);
-    if (parent instanceof Uint8Array) await hold(hex(parent), depth + 1);
-  };
-  for (const a of await allBy(grantor, hints, via2)) {
-    const x = describeAct(a);
-    if (x.spec !== MIRS.agreements || x.type !== AGREEMENTS_TYPES.signature || !x.objects?.length) continue;
-    const terms = x.objects[0][0];
-    const bytes = await fetchAct2(terms, hints, via2);
-    const t = bytes ? describeAct(bytes) : null;
-    if (!t?.payload || t.spec !== MIRS.agreements || t.type !== AGREEMENTS_TYPES.terms) continue;
-    const m = cborDecode(t.payload);
-    const lists = (f) => f instanceof Uint8Array ? hex(f) === grant : Array.isArray(f) ? f.some(lists) : f instanceof Map ? [...f.values()].some(lists) : false;
-    if (lists(m.get(14)) || lists(m.get(29))) await hold(terms, 0);
-  }
 }
 async function authorityOfId(id, hints, via2 = {}, opts = {}) {
   const act = await fetchAct2(id, hints, via2);
@@ -9363,138 +9599,7 @@ async function openedAct(sealed, secret) {
 }
 
 // ../grants/src/member.ts
-var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
-var MEMBER_KEY = 0;
-var makeMemberKey = makeGrantKey;
-function memberKeyPayload(k) {
-  return cborEncode(
-    /* @__PURE__ */ new Map([
-      [0, unhex(k.terms)],
-      [1, unhex(k.signature)],
-      [2, [k.public[0], k.public[1]]],
-      [3, k.secret]
-    ])
-  );
-}
-function readPayload(p) {
-  try {
-    const m = cborDecode(p);
-    if (!(m instanceof Map) || [...m.keys()].some((k) => ![0, 1, 2, 3].includes(k))) return null;
-    const [t, s, pub, sec] = [m.get(0), m.get(1), m.get(2), m.get(3)];
-    if (!(t instanceof Uint8Array) || t.length !== 32 || !(s instanceof Uint8Array) || s.length !== 32) return null;
-    if (!Array.isArray(pub) || typeof pub[0] !== "number" || !(pub[1] instanceof Uint8Array) || !(sec instanceof Uint8Array)) return null;
-    return { terms: hex(t), signature: hex(s), public: [pub[0], pub[1]], secret: sec };
-  } catch {
-    return null;
-  }
-}
-async function sealMemberKey(me, k, save) {
-  const homes = me.f.homes.map((h) => h.hint);
-  const look = await lookUp(me.id, homes, me.via);
-  if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
-    throw new Error("The encryption key this identity publishes is not one this app holds: your member key cannot be sealed to you. Your signature stands; the key stays in this app only.");
-  }
-  let made;
-  try {
-    made = await me.signNow(MEMBER_KEYS_SPEC, MEMBER_KEY, memberKeyPayload(k), { public: false, to: [me.id] });
-  } finally {
-    await save();
-  }
-  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
-  let left = 0;
-  for (const h of homes) {
-    try {
-      await relayAt(h, me.via).putSealed(sealed);
-      left++;
-    } catch {
-    }
-  }
-  await leaveAtHomes(me, made, { sealed: left > 0 });
-  if (!left) throw new Error("No home took your member key. Your signature stands; the key stays in this app only until it is sent again.");
-  return made.id;
-}
-async function readMemberKeys(identity, secrets, homes, via2 = {}) {
-  const out = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [];
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  let l;
-  try {
-    l = await lookUp(identity, homes, via2, v);
-  } catch {
-    return [];
-  }
-  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via2)) {
-    try {
-      if (x.key) l.verifier.addWithKey(x.act, x.key);
-      else l.verifier.add(x.act);
-    } catch {
-    }
-  }
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via2).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "sealed") continue;
-          let o = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s);
-              break;
-            } catch {
-            }
-          }
-          const d = o?.described;
-          if (!o || !d || out.has(d.id) || d.public || d.signer !== identity || d.spec !== MEMBER_KEYS_SPEC || d.type !== MEMBER_KEY || !d.payload) continue;
-          if (o.key) l.verifier.addWithKey(o.act, o.key);
-          else l.verifier.add(o.act);
-          const st = l.verifier.status(d.id);
-          if (st !== "valid" && st !== "disputed") continue;
-          const x = readPayload(d.payload);
-          if (x) out.set(d.id, { ...x, act: d.id, position: d.position ?? 0 });
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch {
-    }
-  }
-  return [...out.values()].sort((a, b) => a.position - b.position);
-}
-async function resealMemberKeys(identity, oldSecrets, newKey, homes, via2 = {}) {
-  let n = 0;
-  const queries = [{ q: { to: identity }, me: identity }, ...oldSecrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
-  for (const h of homes) {
-    for (const { q, me } of queries) {
-      let after;
-      try {
-        for (; ; ) {
-          const page = await relayAt(h, via2).feed({ ...q, after });
-          for (const it of page.items) {
-            if (it.kind !== "sealed") continue;
-            for (const s of oldSecrets) {
-              try {
-                const o = openSealed(it.item, me, s);
-                if (o.described.signer !== identity) break;
-                if (me) await relayAt(h, via2).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
-                else await relayAt(h, via2).putSealed(sealFor(o.act, o.key, [{ key: newKey }]), [pickupTag(newKey)]);
-                if (o.described.spec === MEMBER_KEYS_SPEC && o.described.type === MEMBER_KEY) n++;
-                break;
-              } catch {
-              }
-            }
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-      }
-    }
-  }
-  return n;
-}
+var DECISIONS = [AGREEMENTS_TYPES.grant, AGREEMENTS_TYPES.revocation, AGREEMENTS_TYPES.record];
 async function foundingOf(collective, hints, via2) {
   const l = await lookUp(collective, hints, via2);
   const links = l.resolution.links.map((x) => x.act);
@@ -9507,73 +9612,36 @@ async function foundingOf(collective, hints, via2) {
   }
   throw new Error("The collective\u2019s genesis declares no founding agreement.");
 }
-async function rootOf(terms, hints, via2) {
-  let cur = terms;
-  for (let i = 0; i < 64; i++) {
-    let a = null;
-    for (const h of hints) {
-      a = await relayAt(h, via2).getAct(cur).catch(() => null);
-      if (a) break;
-    }
-    if (!a) return null;
-    const d = describeAct(a);
-    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) return null;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS);
-    if (!t.parent) return cur;
-    cur = t.parent;
-  }
-  return null;
-}
-async function memberKeyFor(keys, collective, hints, via2 = {}) {
-  const { founding } = await foundingOf(collective, hints, via2);
-  for (const k of [...keys].reverse()) if (await rootOf(k.terms, hints, via2) === founding) return k;
-  return null;
-}
-async function chainFor(collective, k, hints, via2 = {}) {
+async function chainFor(collective, hints, via2 = {}) {
   const { links } = await foundingOf(collective, hints, via2);
-  const latest = links[links.length - 1];
-  let decision = latest;
-  let best = -1;
-  const strand = [];
-  for (const a of await allBy(collective, hints, via2)) {
+  const { acts } = await collectiveVerifier(collective, hints, via2);
+  const cites = /* @__PURE__ */ new Map();
+  for (const a of acts) {
     const d = describeAct(a);
-    if (d.binding === latest && d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.record && (d.position ?? 0) > best) {
-      best = d.position ?? 0;
-      decision = d.id;
-    }
-    if (d.binding === k.signature && !strand.some((x) => x.id === d.id)) strand.push({ id: d.id, position: d.position ?? 0 });
+    if (d.spec !== REPO_SPECS.agreements || !DECISIONS.includes(d.type ?? -1)) continue;
+    for (const [chain, cited] of d.objects ?? []) if (chain === collective) cites.set(cited, [...cites.get(cited) ?? [], d.id]);
   }
-  return { decision, strand: strand.sort((a, b) => a.position - b.position).map((x) => x.id) };
+  let decision = links[links.length - 1];
+  for (let i = 0; i < 1024; i++) {
+    const next = cites.get(decision);
+    if (!next?.length) break;
+    decision = next[next.length - 1];
+  }
+  return { decision, strand: [] };
 }
-function signAsMember(collective, k, at, a) {
-  const made = makeEveryday({
-    signingSecret: k.secret,
-    signer: collective,
-    binding: k.signature,
-    spec: a.spec,
-    type: a.type,
-    payload: a.payload,
-    sequence: at.strand,
+async function signAsMember(collective, me, at, a) {
+  const objects = a.spec === MIRS.text && a.type === 0 ? [[collective, at.decision]] : [...a.objects ?? [], [collective, at.decision]];
+  const made = await me.signNow(a.spec, a.type, a.payload, {
     public: a.public,
-    to: a.to?.length ? a.to : void 0,
-    // A text act carries exactly one object (Text rule 14): for a member
-    // key, the founding or clone that named the key, the version that is
-    // its grant, which Agreements reads as the decision it acts under
-    // (Agreements rules 58 and 73). Every other act cites the latest decision.
-    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...a.objects ?? [], [collective, at.decision]],
-    refs: a.refs?.length ? a.refs : void 0
+    ...a.to?.length ? { to: a.to } : {},
+    objects,
+    ...a.refs?.length ? { refs: a.refs } : {}
   });
   at.strand.push(made.id);
   return made;
 }
-function cosignAsMember(collective, k, at, act) {
-  return signAsMember(collective, k, at, {
-    spec: REPO_SPECS.agreements,
-    type: AGREEMENTS_TYPES.signature,
-    payload: cborEncode(/* @__PURE__ */ new Map([[0, unhex(act)]])),
-    public: true,
-    objects: [[act, act]]
-  });
+async function cosignAsMember(me, act) {
+  return me.signNow(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, cborEncode(/* @__PURE__ */ new Map([[0, unhex(act)]])), { public: true, objects: [[act, act]] });
 }
 async function publishAt(acts, places, via2 = {}) {
   const ok = [];
@@ -9588,9 +9656,11 @@ async function publishAt(acts, places, via2 = {}) {
 }
 async function collectiveVerifier(collective, hints, via2 = {}, acts = []) {
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const held = [];
   const add = (a) => {
     try {
       v.add(a);
+      held.push(a);
     } catch {
     }
   };
@@ -9640,7 +9710,7 @@ async function collectiveVerifier(collective, hints, via2 = {}, acts = []) {
       }
     }
   }
-  return { v, founding, parties: [...parties] };
+  return { v, founding, parties: [...parties], acts: held };
 }
 async function collectiveNow(collective, hints, via2 = {}) {
   const { v, parties } = await collectiveVerifier(collective, hints, via2);
@@ -9652,9 +9722,9 @@ async function collectiveNow(collective, hints, via2 = {}) {
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
 }
-async function signAndAsk(me, collective, key, act, ask3, text3, hints, via2 = {}) {
-  const at = await chainFor(collective, key, hints, via2);
-  const made = signAsMember(collective, key, at, { ...act, public: true });
+async function signAndAsk(me, collective, act, ask3, text3, hints, via2 = {}) {
+  const at = await chainFor(collective, hints, via2);
+  const made = await signAsMember(collective, me, at, { ...act, public: true });
   const places = await publishAt([made.act], hints, via2);
   if (!places.length) throw new Error("No relay took the act: nothing counts. Try again.");
   const asked = [];
@@ -9677,9 +9747,9 @@ async function collectivePointer(collective, hints, via2 = {}, pay) {
   const { v, founding } = await collectiveVerifier(collective, places, via2).catch(() => ({ v: null, founding: null }));
   if (!v || !founding) return null;
   const pointers = [];
-  for (const a of await allBy(collective, places, via2)) {
+  for (const a of (await collectiveVerifier(collective, places, via2)).acts) {
     const d = describeAct(a);
-    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+    if (d.spec === MIRS.money && d.type === 0 && d.objects?.some(([c]) => c === collective)) pointers.push([d.id, true]);
   }
   const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
   const p = v.agreementsPointer(specs, collective);
@@ -9706,7 +9776,8 @@ async function collectivePlaces(collective, hints, via2 = {}) {
     return [...new Set(hints)];
   }
 }
-var LAYER_OF = { [MIRS.text]: 1, [MIRS.envelopes]: 1, [MIRS.money]: 2, [MIRS.agreements]: 3, [MIRS.development]: 4 };
+var LAYER_OF = { [MIRS.text]: 1, [MIRS.envelopes]: 2, [MIRS.money]: 3, [MIRS.agreements]: 4, [MIRS.development]: 5 };
+var LAYER_NAME = { 1: "Text", 2: "Envelopes", 3: "Money", 4: "Agreements", 5: "Development" };
 async function areaReaching(collective, places, kind, via2 = {}) {
   const now6 = await collectiveNow(collective, places, via2);
   if (!now6.agreement) return { agreement: null, area: null };
@@ -9716,8 +9787,15 @@ async function areaReaching(collective, places, kind, via2 = {}) {
     const d = describeAct(a);
     if (!d.payload) break;
     const t = readTerms(d.payload, AGREEMENTS_SPECS);
-    const x = t.areas.find((r) => r.kinds.some((k) => k.form === "layer" && k.layer === LAYER_OF[kind.spec] || k.spec === kind.spec && k.type === kind.type));
-    return { agreement: now6.agreement, area: x ? { id: x.id, name: x.name, holders: x.holders, number: x.threshold } : null };
+    const x = t.areas.find((r2) => r2.kinds.some((k) => k.spec === kind.spec && k.type === kind.type));
+    if (x) return { agreement: now6.agreement, area: { id: x.id, name: x.name, holders: x.holders, number: x.threshold } };
+    const layer = LAYER_OF[kind.spec];
+    const r = t.layers.find(([l]) => l === layer)?.[1];
+    if (!r) return { agreement: now6.agreement, area: null };
+    const voices = t.parties.filter((p) => !now6.departed.includes(p));
+    const holders2 = r.form === "named" ? r.named ?? [] : voices;
+    const number = r.form === "threshold" ? r.threshold ?? 1 : holders2.length;
+    return { agreement: now6.agreement, area: { id: -layer, name: `the ${LAYER_NAME[layer]} layer`, holders: holders2, number, layer } };
   }
   return { agreement: now6.agreement, area: null };
 }
@@ -9735,24 +9813,6 @@ async function termsAt(agreement, places, via2 = {}) {
   }
   return null;
 }
-async function splitServiceOf(agreement, payee, places, via2 = {}) {
-  const t = await termsAt(agreement, places, via2);
-  if (!t) return null;
-  const grants = t.splitGrant ? [t.splitGrant] : t.payeeGrants ?? [];
-  for (const g of grants) {
-    for (const h of places) {
-      const a = await relayAt(h, via2).getAct(g).catch(() => null);
-      if (!a) continue;
-      const d = describeAct(a);
-      if (!d.payload) break;
-      if (!t.splitGrant && d.signer !== payee) break;
-      const grantee = cborDecode(d.payload).get(0);
-      if (grantee instanceof Uint8Array) return { service: hex(grantee), grant: g };
-      break;
-    }
-  }
-  return null;
-}
 
 // ../grants/src/deal.ts
 function pct(n) {
@@ -9763,35 +9823,48 @@ function dealName(text3) {
   const m = /^“([^”]{1,200})”/.exec(text3);
   return m ? m[1] : null;
 }
-async function readDeal(version2, places, via2 = {}) {
-  const t = await termsAt(version2, places, via2);
-  if (!t || t.grammar) return null;
-  const grant = t.payeeGrants?.[0] ?? null;
-  let payee = null;
-  let service = null;
-  if (grant) {
-    for (const h of places) {
-      const a = await relayAt(h, via2).getAct(grant).catch(() => null);
-      if (!a) continue;
-      const d = describeAct(a);
-      payee = d.signer ?? null;
-      const g = d.payload ? cborDecode(d.payload).get(0) : null;
-      service = g instanceof Uint8Array ? hex(g) : null;
-      break;
+function dealPublicationRead(payload) {
+  const m = cborDecode(payload);
+  const owners = m.get(1);
+  const service = m.get(3);
+  const plan = m.get(4);
+  let referral = 0;
+  const shares = plan instanceof Map ? plan.get(0) : null;
+  if (Array.isArray(shares)) {
+    for (const s of shares) {
+      if (Array.isArray(s) && s.includes("referral")) {
+        const n = s.at(-1);
+        if (typeof n === "number") referral = n;
+      }
     }
   }
+  return { owners: owners instanceof Uint8Array ? hex(owners) : null, service: service instanceof Uint8Array ? hex(service) : null, referral };
+}
+async function actAt(id, places, via2) {
+  for (const h of places) {
+    const a = await relayAt(h, via2).getAct(id).catch(() => null);
+    if (a) return a;
+  }
+  return null;
+}
+async function readDeal(version2, places, via2 = {}, publication = null) {
+  const t = await termsAt(version2, places, via2);
+  if (!t || t.grammar || t.target?.[0] !== "claim") return null;
+  let service = null;
+  let referral = 0;
+  if (publication) {
+    const a = await actAt(publication, places, via2);
+    const d = a ? describeAct(a) : null;
+    if (d?.payload && d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.publication) ({ service, referral } = dealPublicationRead(d.payload));
+  }
   const owners = (t.stakes?.[0]?.[1] ?? []).filter((x) => typeof x[0] === "string");
-  const referral = t.plan?.shares.find((s) => s.kind === "role" && s.role === "referral")?.part ?? 0;
-  return { version: version2, name: dealName(t.text), text: t.text, parties: t.parties, owners, payee, service, grant, referral };
+  return { version: version2, name: dealName(t.text), text: t.text, parties: t.parties, owners, claim: t.target?.[1] ?? null, publication, payee: service, service, referral };
 }
 async function dealOfPost(post3, places, via2 = {}) {
   const d = describeAct(post3);
-  for (const id of d.refs ?? []) {
-    let act = null;
-    for (const h of places) {
-      act = await relayAt(h, via2).getAct(id).catch(() => null);
-      if (act) break;
-    }
+  for (const ref of d.refs ?? []) {
+    const id = Array.isArray(ref) ? ref[0] : ref;
+    const act = await actAt(id, places, via2);
     if (!act) continue;
     const x = describeAct(act);
     if (x.spec !== REPO_SPECS.agreements || !x.payload) continue;
@@ -9799,10 +9872,10 @@ async function dealOfPost(post3, places, via2 = {}) {
       const r = await readDeal(id, places, via2);
       if (r) return r;
     }
-    if (x.type === AGREEMENTS_TYPES.offer) {
-      const under = cborDecode(x.payload).get(0);
-      if (under instanceof Uint8Array) {
-        const r = await readDeal(hex(under), places, via2);
+    if (x.type === AGREEMENTS_TYPES.publication) {
+      const { owners } = dealPublicationRead(x.payload);
+      if (owners) {
+        const r = await readDeal(owners, places, via2, id);
         if (r) return r;
       }
     }
@@ -9813,76 +9886,72 @@ function sharedLine(d, names) {
   return `This work is shared: ${d.owners.map(([id, n]) => `${names(id)} (${pct(n)})`).join(", ")}. The split service${d.service ? `, ${names(d.service)},` : ""} answers for it.`;
 }
 
-// ../nudge/src/specs.ts
-var NUDGE_SPECS = {
-  /** The Text MIR (`TEXT`): an action is a text act. */
-  text: SPECS.text,
-  /** The nudge cMIP, draft 2. */
-  nudge: sha2562("nudge cMIP, draft 2, test value until publication")
-};
-var NUDGE_TYPES2 = { terms: 0, nudge: 1, pick: 2 };
-
-// ../nudge/src/nudge.ts
-var Invalid = class extends Error {
-};
-function asMap(payload, what, fields) {
-  let m;
-  try {
-    m = cborDecode(payload);
-  } catch (e3) {
-    throw new Invalid(`${what}: not CBOR (${e3 instanceof Error ? e3.message : e3})`);
+// ../damgar/src/total.ts
+var GRANT_LIMITS_SPEC_3 = sha2562("Grant limits cMIP, draft 3, test value until publication");
+var TOTAL = 2;
+var TOTAL_SAY = "In all: kept by the apps, not judged by verifiers. Dub refuses to sign past it and Damgar counts it here; a reader of the lane\u2019s acts judges only the cap per payment and the expiry, since a total needs every act of the lane, some of them private.";
+function readAsked(v) {
+  if (!(v instanceof Map)) throw new Error("the limits are not a map");
+  const m = new Map(v);
+  let total = null;
+  if (m.has(TOTAL)) {
+    const t = m.get(TOTAL);
+    if (!Array.isArray(t) || t.length !== 2 || !(t[0] instanceof Uint8Array) || t[0].length !== 32 || typeof t[1] !== "number" || !Number.isSafeInteger(t[1]) || t[1] <= 0) throw new Error("the cap in all is not [unit, value], a whole amount above zero");
+    total = { unit: hex(t[0]), value: t[1] };
+    m.delete(TOTAL);
   }
-  if (!(m instanceof Map)) throw new Invalid(`${what}: not a map`);
-  for (const k of m.keys()) if (!fields.includes(k)) throw new Invalid(`${what}: ${String(k)} is not one of its fields`);
-  return m;
+  const limits = readLimits(m);
+  if (total && limits.cap && limits.cap.unit !== total.unit) throw new Error("the cap in all is in another unit than the cap per act");
+  return { limits, total };
 }
-function hash(v, what) {
-  if (!(v instanceof Uint8Array) || v.length !== 32) throw new Invalid(`${what} is not a hash`);
-  return hex(v);
+function askedValue(limits, total, encode) {
+  const m = cborDecode(encode(limits));
+  if (total) {
+    if (!Number.isSafeInteger(total.value) || total.value <= 0) throw new Error("The cap in all is a whole amount above zero.");
+    if (limits.cap && total.value < limits.cap.value) throw new Error("The cap in all is at least the cap per payment.");
+    m.set(TOTAL, [unhex(total.unit), total.value]);
+  }
+  return cborDecode(cborEncode(m));
 }
-var count = (v) => typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : typeof v === "bigint" ? Number.MAX_SAFE_INTEGER : null;
-function decodeNudge(payload) {
-  const m = asMap(payload, "the nudge", [0, 1, 2, 3]);
-  const n = { agent: hash(m.get(0), "the agent (field 0)"), terms: hash(m.get(1), "the terms (field 1)"), count: 0 };
-  const c = count(m.get(2));
-  if (c === null) throw new Invalid("the count (field 2) is not a whole number");
-  if (c < 1) throw new Invalid("the count (field 2) is 0: a nudge allows at least one action (item 5)");
-  n.count = c;
-  if (m.has(3)) {
-    const t = m.get(3);
-    if (typeof t !== "string") throw new Invalid("the context (field 3) is not text");
+function spent(payments, unit) {
+  return payments.filter((p) => !p.refused && p.amount.unit === unit).reduce((n, p) => n + p.amount.value, 0);
+}
+
+// ../grants/src/lanes.ts
+function reaches(kinds, spec, type, layerOf2) {
+  if (!kinds?.length) return true;
+  return kinds.some((k) => "layer" in k ? layerOf2(spec) === k.layer : k.spec === spec && k.type === type);
+}
+async function grantsForKey(person, key, hints, via2 = {}) {
+  const out = [];
+  for (const a of await allBy(person, hints, via2)) {
+    const d = describeAct(a);
+    if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.grant || !d.payload) continue;
     try {
-      checkText(t);
-    } catch (e3) {
-      throw new Invalid(`the context (field 3): ${e3 instanceof Error ? e3.message : e3}`);
+      const g = readGrant(d.payload);
+      if (g.grantee === person && g.key === key && !out.some((x) => x.id === d.id)) out.push({ id: d.id, grant: g });
+    } catch {
     }
-    n.context = t;
   }
-  return n;
+  return out;
 }
-function decodePick(payload) {
-  const m = asMap(payload, "the pick", [0, 1, 2]);
-  return { agent: hash(m.get(0), "the agent (field 0)"), terms: hash(m.get(1), "the terms (field 1)"), picked: hash(m.get(2), "the act picked (field 2)") };
-}
-
-// ../reader/src/read.ts
-function standingWords(s) {
-  switch (s) {
-    case "valid":
-      return { ok: true, words: "Verified: signed by this identity with a key its identity chain counts, checked in this browser." };
-    case "pending":
-      return { ok: false, words: "Not verified yet: the identity chain it rests on is waiting for its homes to confirm it." };
-    case "disputed":
-      return { ok: false, words: "Disputed: signed with a key the identity has since replaced; its owner did not keep it, but another identity acknowledged it or a keeper recorded it." };
-    case "void":
-      return { ok: false, words: "Void: signed with a key the identity has since replaced, and its owner did not keep it." };
-    case "invalid":
-      return { ok: false, words: "Invalid: the signature or the act does not check." };
-    case "scoped":
-      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
-    default:
-      return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
+async function revocationsOf(grantor, grant, hints, via2 = {}) {
+  const out = [];
+  for (const a of await allBy(grantor, hints, via2)) {
+    const d = describeAct(a);
+    if (d.spec !== MIRS.agreements || d.type !== REVOCATION || !d.payload) continue;
+    const named2 = cborDecode(d.payload).get(0);
+    if (named2 instanceof Uint8Array && hex(named2) === grant && !out.includes(d.id)) out.push(d.id);
   }
+  return out;
+}
+async function actsUnder(grantor, grant, hints, via2 = {}) {
+  const out = [];
+  for (const a of await allBy(grantor, hints, via2)) {
+    const d = describeAct(a);
+    if (d.binding === grant && !out.some((x) => x.id === d.id)) out.push({ id: d.id, public: d.public, spec: d.spec, type: d.type });
+  }
+  return out;
 }
 
 // ../barebone/src/clock.ts
@@ -9952,27 +10021,513 @@ function newestFirst(xs, times, o) {
   });
 }
 
-// src/appended.ts
-var APPENDED_FORMAT = sha2562("Appended collective cMIP, draft 1, test value until publication");
-function appendedOf(format, refs) {
-  if (format !== APPENDED_FORMAT) return null;
-  const first = refs[0]?.id;
-  return first && /^[0-9a-f]{64}$/.test(first) ? first : null;
-}
-var appendedRef = (collective) => collective;
-async function membership(member, collective, hints, via2 = {}) {
+// ../damgar/src/link-say.ts
+var LINK_SAY = [
+  "Damgar can answer a Lightning payment to you by itself, if you let it make invoices on your node. It needs a permission from your node that makes invoices and does nothing else: it cannot pay, cannot read your balance, cannot move money.",
+  "On lnd: bake it with \u201Clncli bakemacaroon invoices:write invoices:read\u201D, and give its file here with the node\u2019s address and certificate. Damgar asks the node for its balance with it first, and refuses a permission that can read it.",
+  "Its cost: whoever steals it can make invoices in your node\u2019s name, never take anything. Remove it here at any time; without it, you make each invoice in your wallet, as before.",
+  "An invoice is made by itself only below the cap of your receipts lane, and only while \u201CFollow every step by hand\u201D is off."
+];
+
+// ../damgar/src/collective.ts
+var OBLIGATION = { spec: MIRS.money, type: 1 };
+function capOf(hexed) {
+  if (!hexed) return null;
   try {
-    const places = await collectivePlaces(collective, hints, via2);
-    const now6 = await collectiveNow(collective, places, via2);
-    if (!now6.agreement) return { checked: false, why: "its agreement in force was not found at its places" };
-    const t = await termsAt(now6.agreement, places, via2);
-    if (!t?.parties) return { checked: false, why: "its agreement in force could not be read" };
-    if (now6.departed.includes(member)) return { checked: false, why: "the writer has left it" };
-    return t.parties.includes(member) ? { checked: true, why: null } : { checked: false, why: "the writer is not one of its members" };
-  } catch (e3) {
-    return { checked: false, why: `it could not be read (${e3 instanceof Error ? e3.message : String(e3)})` };
+    const m = cborDecode(unhex(hexed));
+    const c = m instanceof Map ? m.get(0) : null;
+    return Array.isArray(c) && c[0] instanceof Uint8Array && typeof c[1] === "number" ? { unit: hex(c[0]), value: c[1] } : null;
+  } catch {
+    return null;
   }
 }
+async function termsOf(id, hints, via2) {
+  for (const h of hints) {
+    const a = await relayAt(h, via2).getAct(id).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a);
+    if (d.spec !== REPO_SPECS.agreements || d.type !== 0 || !d.payload) return null;
+    return readTerms(d.payload, AGREEMENTS_SPECS);
+  }
+  return null;
+}
+async function readCollective(me, id, hints, via2) {
+  const now6 = await collectiveNow(id, hints, via2);
+  if (!now6.agreement) return { id, agreement: null, area: null, why: "Its agreement in force could not be read from its relays and homes." };
+  const t = await termsOf(now6.agreement, hints, via2);
+  const a = t?.areas.find((x) => x.kinds.some((k) => k.spec === OBLIGATION.spec && (k.type === OBLIGATION.type || k.type === null || k.type === void 0)));
+  let area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
+  if (!area) {
+    const layer = (await areaReaching(id, hints, OBLIGATION, via2).catch(() => null))?.area;
+    if (layer) area = { id: layer.id, name: layer.layer ? "Money" : layer.name, holders: layer.holders, number: layer.number, cap: null };
+  }
+  let why = null;
+  if (!area) why = "Its agreement names no rule for its Money layer: nobody acts for it in money.";
+  else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (\u201C${area.name}\u201D): you do not act for it in money.`;
+  return { id, agreement: now6.agreement, area, why };
+}
+var withinCap = (area, amount) => !area.cap || area.cap.unit === amount.unit && amount.value <= area.cap.value;
+function promiseSay(c, me, a, names) {
+  const area = c.area;
+  const above = !withinCap(area, a.amount);
+  const need = area.number + (above ? 1 : 0);
+  const others = area.holders.filter((h) => h !== me);
+  const lines2 = [
+    `A promise to pay, by the collective ${names(c.id)}: it owes ${names(a.to)} ${a.amount.value.toLocaleString("en")} (a Money obligation, public, signed with your own identity\u2019s key, naming the collective; rule 58: a collective has no key of its own, and its members no member keys).`,
+    `What for: ${a.whatFor || "nothing said"}.`,
+    `Its Money area, \u201C${area.name}\u201D: ${area.holders.map(names).join(", ")}; ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more (the grant limits cMIP, draft 2)` : ""}.`,
+    above ? `It is above the cap: it counts only with ${need} keys. Yours signs it now; ${others.map(names).join(", ")} ${others.length === 1 ? "is" : "are"} asked for theirs, in their own app.` : need === 1 ? "Within the area: your key alone makes it count." : `The area asks ${need} keys: yours signs it now; the others are asked for theirs.`,
+    "Damgar holds no wallet: paying the promise is a payment like any other."
+  ];
+  return { lines: lines2, above, others: need > 1 ? others : [] };
+}
+var promiseDigest = (c, payload) => sha2562(new Uint8Array([...new TextEncoder().encode(`MOR Damgar collective promise, version 1
+${c.id}
+`), ...payload]));
+var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
+async function signPromise(me, c, payload, ask3, text3, hints, via2) {
+  return signAndAsk(me, c.id, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask3, text3, hints, via2);
+}
+async function standing(c, act, amount, hints, via2) {
+  const area = c.area;
+  const verdicts = area?.cap ? [[act, withinCap(area, amount)]] : [];
+  return (await judgeCollective(c.id, [act], hints, via2, verdicts)).get(act);
+}
+
+// src/chainwords.ts
+var WORDS_KEY_TAG = "MOR/module/seed-words/key";
+var SCHEME = 3;
+var INDEX2 = 0n;
+var cat = (...xs) => {
+  const out = new Uint8Array(xs.reduce((n, x) => n + x.length, 0));
+  let at = 0;
+  for (const x of xs) {
+    out.set(x, at);
+    at += x.length;
+  }
+  return out;
+};
+function taggedHash(tag, data) {
+  const t = unhex(sha2562(tag));
+  return unhex(sha2562(cat(t, t, data)));
+}
+function keySeeds(seed, scheme, index) {
+  if (seed.length !== 32) throw new Error("a chain-key seed is 32 bytes");
+  const i = new Uint8Array(8);
+  new DataView(i.buffer).setBigUint64(0, index);
+  const a = taggedHash(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(0)));
+  const b = taggedHash(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(1)));
+  return cat(a, b.subarray(0, 16));
+}
+function newChainKey(seed) {
+  const key = chainKeyFromSeeds(SCHEME, keySeeds(seed, SCHEME, INDEX2));
+  return { words: toWords(seed), key };
+}
+
+// src/shapes.ts
+var PUBLISH_WARNING = "Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.";
+
+// src/people.ts
+var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
+var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
+var FOLLOW_LIST = 0;
+var SEALED_LIST = 1;
+var NO_PEOPLE = () => ({ follows: [], muted: [], list: "private", published: null, sealed: null, carried: false, seen: [], inbox: { after: {}, items: [] }, sent: [] });
+function followListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(2, a.withdrawn ? [] : a.ids.map(unhex));
+  if (a.withdrawn) m.set(3, true);
+  return cborEncode(m);
+}
+async function readFollowList(identity, places, via2 = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via2, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...routed, ...places, ...l.resolution.homes.map((h) => h.hint)])];
+  await holdSequence(v, identity, l, at, via2);
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC && d.spec !== PEOPLE_SPEC_1 || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const version2 = Number(m.get(0));
+            const prev = m.get(1);
+            const ids = m.get(2).filter((x) => x instanceof Uint8Array).map(hex);
+            acts.set(d.id, { version: version2, previous: prev instanceof Uint8Array ? hex(prev) : null, ids, withdrawn: m.get(3) === true });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  const out = { act: null, version: 0, ids: [], withdrawn: false, forked: null };
+  let at_ = null;
+  for (; ; ) {
+    const next = [...acts.entries()].filter(([, a2]) => a2.previous === at_ && a2.version === out.version + 1);
+    if (next.length !== 1) {
+      if (next.length > 1) out.forked = out.version;
+      return out;
+    }
+    const [id, a] = next[0];
+    Object.assign(out, { act: id, version: a.version, ids: a.ids, withdrawn: a.withdrawn });
+    at_ = id;
+  }
+}
+function sealedListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
+  );
+  return cborEncode(m);
+}
+function openerOf(identity, secrets) {
+  return async (sealed) => sealed.map((bytes) => {
+    for (const s of secrets) {
+      try {
+        return openSealed(bytes, identity, s);
+      } catch {
+      }
+    }
+    return null;
+  });
+}
+async function readSealedList(identity, keys, homes, via2 = {}) {
+  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via2, v);
+  } catch (e3) {
+    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
+    return out;
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ to: identity, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed");
+        const opened = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened) {
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const prev = m.get(1);
+            const follows = [];
+            for (const x of m.get(2)) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows.some((f) => f.id === id)) continue;
+              follows.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
+    }
+  }
+  const best = (from, version2) => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version2 + 1);
+    if (next.length > 1) out.forked = true;
+    let pick = null;
+    for (const [id] of next) {
+      const below = best(id, version2 + 1);
+      const depth = below ? below.depth : version2 + 1;
+      const tip2 = below ? below.id : id;
+      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts.get(tip.id);
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
+}
+
+// src/names.ts
+var NAMING_SPEC = sha2562("Naming cMIP, draft 1, test value until publication");
+var NAME = 4;
+var NAME_WITHDRAWAL = 5;
+var MAX_NAME = 48;
+var FORBIDDEN = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "u");
+function nameProblem(name) {
+  if (name !== name.normalize("NFC")) return "it is not canonical text (NFC)";
+  if (!name.trim()) return "it is empty";
+  if (/^\s|\s$/u.test(name)) return "it starts or ends with a space";
+  if (FORBIDDEN.test(name)) return "it holds a line break, a control character or a direction override";
+  if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
+  return null;
+}
+function readName(typed) {
+  const name = typed.normalize("NFC").trim();
+  const why = nameProblem(name);
+  if (why) throw new Error(`That name cannot be used: ${why}. Nothing was signed.`);
+  return name;
+}
+var namePayload = (name) => cborEncode(
+  /* @__PURE__ */ new Map([
+    [0, name],
+    [1, unhex(NAMING_SPEC)]
+  ])
+);
+async function namesOf(identity, places, via2 = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via2, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...routed, ...places])];
+  await holdSequence(v, identity, l, at, via2);
+  const names = /* @__PURE__ */ new Map();
+  const withdrawn = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (seen.has(d.id) || d.spec !== SPECS.identity || d.signer !== identity) continue;
+          if (d.type !== NAME && d.type !== NAME_WITHDRAWAL) continue;
+          seen.add(d.id);
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          if (d.type === NAME_WITHDRAWAL) {
+            for (const [chain, target] of d.objects ?? []) if (chain === target) withdrawn.add(target);
+            continue;
+          }
+          const m = cborDecode(d.payload);
+          const name = m.get(0);
+          const cmip = m.get(1);
+          if (typeof name !== "string" || !(cmip instanceof Uint8Array) || hex(cmip) !== NAMING_SPEC) continue;
+          if (nameProblem(name)) continue;
+          names.set(d.id, { act: d.id, name });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
+}
+
+// ../kit/src/engine/names.ts
+var now2 = () => Date.now();
+var NameReader = class {
+  /** `keep`: how long a name read (or none) is kept, in milliseconds; a name not reached is asked again after a tenth of it. */
+  constructor(o = {}) {
+    this.o = o;
+  }
+  kept = /* @__PURE__ */ new Map();
+  reading = /* @__PURE__ */ new Map();
+  /** Its published name, as its homes give it; `fresh` asks again whatever was kept. */
+  read(id, places, fresh = false) {
+    const keep2 = this.o.keep ?? 3e5;
+    const k = this.kept.get(id);
+    if (k && !fresh && now2() - k.at < (k.shown.state === "unreached" ? keep2 / 10 : keep2)) return Promise.resolve(k.shown);
+    const r = this.reading.get(id);
+    if (r && !fresh) return r;
+    const p = (async () => {
+      let shown2;
+      try {
+        const found = await namesOf(id, places, this.o.via ?? {});
+        const name = found.map((x) => x.name).pop();
+        shown2 = name ? { state: "name", name } : { state: "none" };
+      } catch {
+        shown2 = { state: "unreached" };
+      }
+      this.kept.set(id, { shown: shown2, at: now2() });
+      this.reading.delete(id);
+      return shown2;
+    })();
+    this.reading.set(id, p);
+    return p;
+  }
+  /** Several at once, by ID. */
+  async many(ids, places, fresh = false) {
+    const out = {};
+    await Promise.all([...new Set(ids)].filter((x) => /^[0-9a-f]{64}$/.test(x)).map(async (id) => out[id] = await this.read(id, places, fresh)));
+    return out;
+  }
+  /** What is kept of it now, without asking: "Loading…" where nothing is. */
+  now(id) {
+    return this.kept.get(id)?.shown ?? { state: "loading" };
+  }
+  /** Forget what was kept of one (its name was just changed here). */
+  forget(id) {
+    this.kept.delete(id);
+  }
+};
+
+// ../kit/src/engine/people.ts
+var heldSecrets = (me) => [...me.f.encryption].reverse().filter((x) => x.secret).map((x) => unhex(x.secret));
+async function readContacts(me, open, via2 = {}) {
+  if (!open || Array.isArray(open) && !open.length) return { contacts: [], version: 0, problem: "this app cannot open what is sealed to this identity, so its contacts cannot be read here" };
+  const l = await readSealedList(me.id, open, me.f.homes.map((h) => h.hint), via2);
+  return { contacts: l.follows, version: l.version, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
+}
+function readNick(typed) {
+  const n = (typed ?? "").normalize("NFC").trim();
+  if (!n) return null;
+  if ([...n].length > MAX_NAME) throw new Error(`A nickname is at most ${MAX_NAME} characters. Nothing was signed.`);
+  if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(n)) throw new Error("A nickname holds no line break, control character or direction override. Nothing was signed.");
+  return n;
+}
+async function changeContacts(me, change, o) {
+  const via2 = o.via ?? {};
+  if (!o.open || Array.isArray(o.open) && !o.open.length) throw new Error(`${o.app} cannot open what is sealed to this identity, so its contacts cannot be changed from here. Nothing was signed.`);
+  const homes = me.f.homes.map((h) => h.hint);
+  const found = await readSealedList(me.id, o.open, homes, via2);
+  if (!found.act && found.problems.length >= homes.length) throw new Error(`The contacts could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
+  const next = change(found.follows.map((f) => ({ ...f })));
+  if (!next) return [{ text: "Nothing changed.", tone: "ok" }];
+  const look = await lookUp(me.id, homes, via2);
+  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key: its contacts cannot be sealed to it. Nothing was signed.");
+  if (Array.isArray(o.open) && !me.f.encryption.some((x) => x.secret && hex(xwingPublic(unhex(x.secret))) === hex(look.encryptionKey))) throw new Error(`The encryption key this identity publishes is not one ${o.app} holds: its contacts cannot be sealed from here. Nothing was signed.`);
+  let made;
+  try {
+    made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: next }), { public: false, to: [me.id] });
+  } finally {
+    await o.save?.();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+  let left = 0;
+  for (const h of homes) {
+    try {
+      await relayAt(h, via2).putSealed(sealed);
+      left++;
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via: via2, sealed: left > 0 });
+  await o.save?.();
+  const said2 = [];
+  if (found.forked) said2.push({ text: "Your contacts were forked at your homes: two apps changed them at once. The longer branch was continued.", tone: "warn" });
+  said2.push(left ? { text: `Your contacts are sealed to you and kept at your homes (version ${found.version + 1}): every app holding this identity reads them.`, tone: "ok" } : { text: "No home took your contacts: nothing changed there. Try again.", tone: "warn" });
+  return said2;
+}
+var addContact = (me, who2, o) => changeContacts(
+  me,
+  (now6) => {
+    if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+    const nick = readNick(who2.nick);
+    const had = now6.find((f) => f.id === who2.id);
+    if (had && (!nick || had.name === nick)) return null;
+    if (had) had.name = nick;
+    else now6.push({ id: who2.id, name: nick });
+    return now6;
+  },
+  o
+);
+var setNick = (me, who2, o) => changeContacts(
+  me,
+  (now6) => {
+    const nick = readNick(who2.nick);
+    const had = now6.find((f) => f.id === who2.id);
+    if (!had) {
+      if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+      now6.push({ id: who2.id, name: nick });
+      return now6;
+    }
+    if ((had.name ?? null) === nick) return null;
+    had.name = nick;
+    return now6;
+  },
+  o
+);
+var removeContact = (me, id, o) => changeContacts(me, (now6) => now6.some((f) => f.id === id) ? now6.filter((f) => f.id !== id) : null, o);
+
+// ../kit/src/engine/known.ts
+var HEX2 = /^[0-9a-f]{64}$/;
+var Known = class {
+  /** `app`: this app's name, as said ("Damgar"). */
+  constructor(app2, o = {}) {
+    this.app = app2;
+    this.names = new NameReader({ via: o.via });
+  }
+  names;
+  lists = /* @__PURE__ */ new Map();
+  /** The contacts sealed to the identity, read again at most once a minute (or now, `fresh`). */
+  async followed(me, open, via2 = {}, fresh = false) {
+    const c = this.lists.get(me.id);
+    if (c && !fresh && c.at + 6e4 > Date.now()) return c;
+    let r;
+    try {
+      r = await readContacts(me, open, via2);
+    } catch (e3) {
+      r = { contacts: c?.contacts ?? [], problem: e3 instanceof Error ? e3.message : String(e3) };
+    }
+    this.lists.set(me.id, { ...r, at: Date.now() });
+    return r;
+  }
+  /** The names of these identities: the nickname given (none for oneself), and the name each published, read at `places` and its own homes. */
+  async named(me, open, ids, places, o = {}) {
+    const want = [...new Set(ids.filter((x) => HEX2.test(x)))].slice(0, 200);
+    const [{ contacts }, published] = await Promise.all([this.followed(me, open, o.via), this.names.many(want, places, !!o.fresh)]);
+    return Object.fromEntries(want.map((id) => [id, { nick: id === me.id ? null : contacts.find((f) => f.id === id)?.name ?? null, published: published[id] }]));
+  }
+  /** The list, each contact with its names (its published name read, or its state). */
+  async contacts(me, open, places, o = {}) {
+    const { contacts, problem } = await this.followed(me, open, o.via, o.fresh);
+    const published = await this.names.many(contacts.map((c) => c.id), places);
+    return { contacts: contacts.map((c) => ({ id: c.id, form: idForm(c.id), name: c.name, named: { nick: c.name, published: published[c.id] } })), problem };
+  }
+  /** Add a contact, with a nickname if given; set or take away a nickname; take a contact out. Each sealed as the people cMIP keeps the list. */
+  async change(me, a, o) {
+    const id = HEX2.test(a.id) ? a.id : readIdWhere(a.id.trim()).id;
+    a = { ...a, id };
+    const opts = { open: o.open, via: o.via, app: this.app, save: o.save };
+    const said2 = a.op === "add" ? await addContact(me, { id: a.id, nick: a.nick ?? null }, opts) : a.op === "nick" ? await setNick(me, { id: a.id, nick: a.nick ?? null }, opts) : await removeContact(me, a.id, opts);
+    this.lists.delete(me.id);
+    return said2;
+  }
+  /** Forget what was kept for an identity (it was removed, or its key changed). */
+  forget(id) {
+    this.lists.delete(id);
+    this.names.forget(id);
+  }
+};
 
 // ../damgar/src/units.ts
 var u = moneySpecs().units;
@@ -10177,7 +10732,7 @@ var text = (v, what) => {
 var closed = (m, keys, what) => {
   for (const k of m.keys()) if (!keys.includes(k)) throw new Error(`${what}: an unknown key ${k}`);
 };
-var asMap2 = (payload, what) => {
+var asMap = (payload, what) => {
   const m = cborDecode(payload);
   if (!(m instanceof Map)) throw new Error(`${what}: not a map`);
   return m;
@@ -10201,7 +10756,7 @@ function draftPayload(d) {
   return cborEncode(m);
 }
 function readDraft(payload) {
-  const m = asMap2(payload, "a draft");
+  const m = asMap(payload, "a draft");
   closed(m, [0, 1, 2, 3, 4, 5, 6], "a draft");
   const w = m.get(0);
   const what = w === 0 ? "pay" : w === 1 ? "ask" : w === 2 ? "anchor" : w === 3 ? "confirm" : null;
@@ -10265,7 +10820,7 @@ function requestPayload(r) {
   return cborEncode(m);
 }
 function readRequest(payload) {
-  const m = asMap2(payload, "a request");
+  const m = asMap(payload, "a request");
   closed(m, [0, 1, 2], "a request");
   return { amount: amountOf2(m.get(0)), whatFor: m.has(1) ? text(m.get(1), "what for") : null, pointer: h322(m.get(2), "the pointer") };
 }
@@ -10279,7 +10834,7 @@ function invoiceRequestPayload(r) {
   return out;
 }
 function readInvoiceRequest(payload) {
-  const m = asMap2(payload, "an invoice request");
+  const m = asMap(payload, "an invoice request");
   closed(m, [0, 1, 2, 3], "an invoice request");
   const commitment = cborEncode(m.get(0));
   const t = m.get(3);
@@ -10306,7 +10861,7 @@ function answerPayload(a) {
   return cborEncode(m);
 }
 function readAnswer(payload) {
-  const m = asMap2(payload, "an answer");
+  const m = asMap(payload, "an answer");
   closed(m, [0, 1, 2, 3, 4], "an answer");
   const b = m.get(2);
   if (!Array.isArray(b)) throw new Error("an answer: its bound");
@@ -10330,7 +10885,7 @@ function laneRequestPayload(r) {
   return cborEncode(m);
 }
 function readLaneRequest(payload) {
-  const m = asMap2(payload, "a lane request");
+  const m = asMap(payload, "a lane request");
   closed(m, [0, 1, 2, 3, 4], "a lane request");
   const k = m.get(0);
   if (!Array.isArray(k) || k.length !== 2 || k[0] !== 1 || !(k[1] instanceof Uint8Array) || k[1].length !== 32) throw new Error("a lane request: its key is not a signing key of scheme 1");
@@ -10358,7 +10913,7 @@ function salePayload(x) {
   );
 }
 function readSale(payload) {
-  const m = asMap2(payload, "a sale");
+  const m = asMap(payload, "a sale");
   closed(m, [0, 1, 2, 3], "a sale");
   return { offer: h322(m.get(0), "the offer"), buyer: h322(m.get(1), "the buyer"), receipt: h322(m.get(2), "the receipt"), publication: h322(m.get(3), "the publication") };
 }
@@ -10387,1300 +10942,6 @@ async function offers(service, hints, via2 = {}) {
     }
   }
   return [...out.values()];
-}
-
-// ../genesis/src/shown.ts
-var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-function polymod(values) {
-  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
-  let chk = 1;
-  for (const v of values) {
-    const b = chk >>> 25;
-    chk = (chk & 33554431) << 5 ^ v;
-    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
-  }
-  return chk >>> 0;
-}
-function shownForm(label, hex3) {
-  if (!/^([0-9a-f]{2})+$/i.test(hex3)) return hex3;
-  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
-  const five = [];
-  let acc = 0;
-  let bits = 0;
-  for (const b of bytes) {
-    acc = (acc << 8 | b) & 65535;
-    bits += 8;
-    while (bits >= 5) {
-      bits -= 5;
-      five.push(acc >> bits & 31);
-    }
-  }
-  if (bits > 0) five.push(acc << 5 - bits & 31);
-  const hrp = [...label].map((c) => c.charCodeAt(0));
-  const values = [...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...five, 0, 0, 0, 0, 0, 0];
-  const pm = polymod(values) ^ 734539939;
-  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >>> 5 * (5 - i) & 31);
-  return `${label}1${[...five, ...check].map((v) => CHARSET[v]).join("")}`;
-}
-var shownId = (hex3) => shownForm("mid", hex3);
-var shownAct = (hex3) => shownForm("mact", hex3);
-
-// src/chainwords.ts
-var WORDS_KEY_TAG = "MOR/module/seed-words/key";
-var SCHEME = 3;
-var INDEX2 = 0n;
-var cat = (...xs) => {
-  const out = new Uint8Array(xs.reduce((n, x) => n + x.length, 0));
-  let at = 0;
-  for (const x of xs) {
-    out.set(x, at);
-    at += x.length;
-  }
-  return out;
-};
-function taggedHash(tag, data) {
-  const t = unhex(sha2562(tag));
-  return unhex(sha2562(cat(t, t, data)));
-}
-function keySeeds(seed, scheme, index) {
-  if (seed.length !== 32) throw new Error("a chain-key seed is 32 bytes");
-  const i = new Uint8Array(8);
-  new DataView(i.buffer).setBigUint64(0, index);
-  const a = taggedHash(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(0)));
-  const b = taggedHash(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(1)));
-  return cat(a, b.subarray(0, 16));
-}
-function newChainKey(seed) {
-  const key = chainKeyFromSeeds(SCHEME, keySeeds(seed, SCHEME, INDEX2));
-  return { words: toWords(seed), key };
-}
-
-// ../collective/src/explain.ts
-var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var count2 = (n, one2, many = `${one2}s`) => `${n} ${n === 1 ? one2 : many}`;
-function termsOf(payload) {
-  return readTerms(payload, AGREEMENTS_SPECS);
-}
-var KNOWN = {
-  [SPECS.identity]: "the Identity MIR",
-  [SPECS.envelopes]: "the Envelopes MIR",
-  [SPECS.text]: "the Text MIR",
-  [MIRS.money]: "the Money MIR",
-  [MIRS.development]: "the Development MIR",
-  [REPO_SPECS.agreements]: "the Agreements MIR",
-  [REPO_SPECS.manifest]: "the release manifest cMIP (draft 1)"
-};
-var EXTENSIONS = /* @__PURE__ */ new Set([REPO_SPECS.manifest]);
-var ABSENCE_PROOFS = /* @__PURE__ */ new Set();
-var specName = (h) => KNOWN[h] ?? `an unknown specification (${short(h)})`;
-function list(xs) {
-  if (xs.length <= 1) return xs.join("");
-  return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
-}
-function ruleWords(r, parties, names) {
-  switch (r.form) {
-    case "all":
-      return parties.length === 1 ? "the one party" : `all ${parties.length} parties`;
-    case "threshold":
-      return `any ${r.threshold} of the ${parties.length} parties`;
-    case "named":
-      return list((r.named ?? []).map(names));
-    case "share":
-      return `parties holding together at least ${pct2(r.share)} of what the voices that remain hold of stake ${r.stake}`;
-    case "holders":
-      return `holders of stake ${r.stake} holding together at least ${pct2(r.share)} of it, members or not`;
-    case "allOf":
-      return `all of: ${(r.rules ?? []).map((x) => ruleWords(x, parties, names)).join("; ")}`;
-  }
-}
-function ownersWithoutKeys(t, names) {
-  const parts = (r) => !r ? [] : r.form === "allOf" ? (r.rules ?? []).flatMap(parts) : [r];
-  const among = parts(t.constitutional).filter((r) => r.form === "holders");
-  if (!among.length || !t.grammar) return [];
-  const k = t.grammar.chainKey;
-  const keyed = /* @__PURE__ */ new Set([...k.members ?? [], ...k.holder ? [k.holder] : [], ...k.custodian ? [k.custodian] : [], ...t.grammar.recovery?.custodian ? [t.grammar.recovery.custodian] : []]);
-  const out = [];
-  for (const r of among) {
-    const holders2 = (t.stakes[r.stake ?? 0]?.[1] ?? []).map(([h]) => h).filter((h) => !!h && !t.parties.includes(h));
-    if (holders2.some((h) => keyed.has(h))) continue;
-    out.push({
-      text: `The constitution counts members among the holders of stake ${r.stake}, but none of them who is no member${holders2.length ? ` (${list(holders2.map(names))})` : ""} holds a share of the chain key or is its custodian: if the owners vote the members out and the members refuse to rotate, the vote stands complete and unexecuted, and the collective runs on under the old members (Agreements draft 14, F317, a stated cost; client conformance).`,
-      tone: "warn"
-    });
-  }
-  return out;
-}
-function pct2(n) {
-  return `${(n ?? 0) / 1e4}%`;
-}
-function constitutionWords(t, names) {
-  const r = t.constitutional;
-  if (!r || r.form === "all") return "every member whose voice remains: nobody loses their say without signing (F103)";
-  if (r.form === "threshold") return `any ${r.threshold} of the ${t.parties.length} members (all of those whose voice remains, if fewer remain)`;
-  if (r.form === "named") return list((r.named ?? []).map(names));
-  return ruleWords(r, t.parties, names);
-}
-function powerWords(p, areas, names) {
-  switch (p.form) {
-    case "constitutional":
-      return "the constitutional change rule";
-    case "clone":
-      return "the clone rule";
-    case "area": {
-      const a = areas.find((x) => x.id === p.area);
-      return a ? `the power of the \u201C${a.name}\u201D area (area ${p.area})` : `the power of area ${p.area}`;
-    }
-    case "plan":
-      return `the succession plan of ${names(p.party ?? "")}`;
-    case "judicial":
-      return "the judicial tier's rule, every member whose voice remains";
-  }
-}
-var LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements", "Development"];
-var TYPE_NAMES = {
-  [SPECS.envelopes]: { 0: "every publication of the collective (a release is one)", 1: "every key delivery of the collective", 4: "every encryption key of the collective" },
-  [REPO_SPECS.agreements]: { 0: "every terms act of the collective", 1: "every signature of the collective" },
-  [SPECS.text]: { 0: "every text of the collective" }
-};
-function kindWords2(k) {
-  if (k.form === "layer") {
-    const layer = LAYERS[k.layer ?? -1] ?? `layer ${k.layer}`;
-    return `every act of the ${layer} layer: its area, which also adopts the cMIPs for that layer's tasks`;
-  }
-  return TYPE_NAMES[k.spec ?? ""]?.[k.type ?? -1] ?? `every act of type ${k.type} of ${specName(k.spec ?? "")} made by the collective`;
-}
-var OPERATIONAL_FIELDS = { 7: "the stakes", 8: "the split plan", 17: "the refund terms", 28: "the fees" };
-function fieldRefWords(f) {
-  return f.form === "field" ? OPERATIONAL_FIELDS[f.number] ?? `field ${f.number}` : `the cMIP for task ${f.number}`;
-}
-var OUTCOMES = [
-  "their voice is removed (they no longer count in any rule or area)",
-  "their stake is shared among the remaining holders",
-  "their stake is transferred to parties named or defined by role",
-  "their obligations are redirected or held",
-  "the agreement is closed"
-];
-var AGREEMENTS_SAYS = {
-  check: "Agreements refuse these terms",
-  shape: "These are not terms in Agreements' format",
-  unsupported: "Agreements do not support these terms yet",
-  missing: "Agreements lacks something it needs to judge these terms",
-  unsettled: "Agreements cannot settle these terms yet"
-};
-function problemWords(p) {
-  return `${AGREEMENTS_SAYS[p.code] ?? `Agreements refuse these terms (${p.code})`}. Agreements' own words: \u201C${p.text}\u201D.`;
-}
-var INVISIBLE = /[؜​‎‏‪-‮⁦-⁩]/g;
-function uncovered(t) {
-  const voices = t.constitutional?.form === "named" ? t.constitutional.named ?? [] : t.parties;
-  const a = t.abandonment;
-  if (!a || !a.outcomes.includes(0)) return voices;
-  if (a.authority === "named") return voices.filter((v) => v === a.identity);
-  return [];
-}
-function absenceWarning(t, names) {
-  const a = t.abandonment;
-  if (!a) return null;
-  const by = a.authority === "named" ? names(a.identity) : `any ${a.threshold} of the other parties together`;
-  const outcomes = list(a.outcomes.map((o) => OUTCOMES[o] ?? `outcome ${o}`));
-  const between = a.proof ? `An absence-proof cMIP stands between their word and your stake: ${specName(a.proof)}. A declaration counts only if it accepts it (Agreements rule 51).` : `No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity. Signing accepts that (Agreements rules 49 and 51, a stated cost); if they declare you absent wrongly, you can only contest it, in public (Agreements rule 52).`;
-  return {
-    text: `If a party stops acting on the agreement, ${by} may declare them absent. What may then follow: ${outcomes}. ${between}`,
-    tone: "warn"
-  };
-}
-function capOf(hexed) {
-  if (!hexed) return null;
-  try {
-    const v = cborDecode(unhex(hexed));
-    const c = v instanceof Map ? v.get(0) : null;
-    return Array.isArray(c) && typeof c[1] === "number" ? c[1] : null;
-  } catch {
-    return null;
-  }
-}
-function readAgreement(t, names, parent) {
-  const blocking = [];
-  const plain = [];
-  const who2 = t.parties.map(names);
-  const sections = [];
-  const g = t.grammar;
-  const bound = [
-    { text: `${t.parties.length} parties: ${list(who2)}.` },
-    { text: "Each is bound only by their own signature act. Until someone signs, nothing in it binds them (Agreements rule 1)." }
-  ];
-  if (!t.parent) {
-    if (t.signing?.form === "all") {
-      bound.push({
-        text: g ? "It exists only once every one of them has signed it: nobody is founded into a collective without signing (Agreements, \u201CFounding terms\u201D, Q11)." : "It exists only once every one of them has signed it (Agreements, \u201CFounding terms\u201D, F107)."
-      });
-    } else if (t.signing) {
-      bound.push({ text: `It says it exists once ${ruleWords(t.signing, t.parties, names)} have signed it; Agreements asks for every party.`, tone: "bad" });
-    }
-  } else {
-    bound.push({ text: `It is a clone of agreement ${short(t.parent)}: once in force, it replaces it, and that one closes (Agreements rule 45).` });
-  }
-  sections.push({ heading: "Who is bound", lines: bound });
-  if (t.parent) {
-    const areas = parent?.areas ?? t.areas;
-    const lines2 = [];
-    if (!t.mark?.length) lines2.push({ text: "It carries no mark: it does not say by which power it comes in.", tone: "bad" });
-    const order = (ids) => {
-      const at = (x) => t.parties.indexOf(x) + 1 || Infinity;
-      return [...ids].sort((x, y) => at(x) - at(y));
-    };
-    for (const e3 of t.mark ?? []) {
-      lines2.push({ text: `It says it comes in by ${powerWords(e3.power, areas, names)} of that agreement, signed by ${list(order(e3.signers).map(names))}.` });
-    }
-    lines2.push({
-      text: "Agreements check that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104)."
-    });
-    lines2.push({ text: "It is complete once everyone its mark names, and everyone it adds, has signed it (Agreements rule 45)." });
-    if (g) {
-      lines2.push({
-        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, with its signing key (Agreements rules 37, 37c)."
-      });
-    }
-    sections.push({ heading: "How it comes into force: its mark", lines: lines2 });
-  }
-  if (g) {
-    const lines2 = [{ text: "It founds a collective: an identity of its own, whose keys its members hold as follows (Agreements rule 36)." }];
-    const s = g.signing;
-    if (s.form === "one") {
-      lines2.push({
-        text: `${names(s.holder)} holds the collective's signing key, and signs the collective's acts with it. An act no area reaches needs nobody else's signature.`
-      });
-    } else if (s.form === "shares") {
-      lines2.push({ text: `The signing key is held jointly: any ${s.threshold} of ${list((s.members ?? []).map(names))} sign together.` });
-    } else {
-      lines2.push({ text: `${names(s.custodian)} holds the signing key as custodian, under grant ${short(s.grant)}.` });
-    }
-    const k = g.chainKey;
-    if (k.form === "shares") {
-      const m = k.members ?? [];
-      lines2.push({
-        text: `The chain key, the one that rotates the collective (new keys, new members, new homes), is cut into ${m.length} shares, one each for ${list(m.map(names))}. Any ${k.threshold} of them together rebuild it.`
-      });
-      if (k.threshold === 1) {
-        lines2.push({ text: "Any one member alone can rebuild the chain key and rotate the collective, without the others.", tone: "warn" });
-      } else if (k.threshold < m.length) {
-        lines2.push({ text: `If one member is lost, the other ${m.length - 1} can still rotate the collective (F96).`, tone: "ok" });
-      }
-    } else if (k.form === "one") {
-      lines2.push({ text: `${names(k.holder)} alone holds the chain key.`, tone: "warn" });
-    } else {
-      lines2.push({ text: `${names(k.custodian)} holds the chain key as custodian, under grant ${short(k.grant)}.`, tone: "warn" });
-    }
-    if (g.recovery) {
-      const r = g.recovery;
-      lines2.push({
-        text: r.form === "escrow" ? `A further share is held in escrow, released by ${names(r.authority)}, the authority on absence.` : `A further share is held by ${names(r.custodian)}, as custodian under grant ${short(r.grant)}.`
-      });
-    }
-    sections.push({ heading: "The collective's keys", lines: lines2 });
-    const words2 = new Map(t.areaWords);
-    const al = [];
-    if (!t.areas.length) al.push({ text: "No area: no act of the collective needs members' own signatures; its signing key alone speaks for it.", tone: "warn" });
-    for (const a2 of t.areas) {
-      al.push(
-        a2.holders.length ? { text: `\u201C${a2.name}\u201D (area ${a2.id}): held by ${list(a2.holders.map(names))}; any ${a2.threshold} of them decide together.` } : { text: `\u201C${a2.name}\u201D (area ${a2.id}): held by nobody. It stands frozen until the members refit it (Agreements rule 37b).`, tone: "warn" }
-      );
-      const reach = [...a2.kinds.map(kindWords2), ...a2.fields.map(fieldRefWords)];
-      al.push({ text: `It reaches ${list(reach) || "nothing"}.` });
-      if (a2.limitsCmip) {
-        const cap2 = capOf(a2.limits);
-        al.push({
-          text: cap2 !== null ? `Above ${cap2.toLocaleString("en")} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.` : `Its holders' keys are judged under limits of cMIP ${short(a2.limitsCmip)}, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353); an app that does not read it shows its acts as unknown.`,
-          tone: "warn"
-        });
-      }
-      const releases = a2.kinds.some((k2) => k2.form === "type" && k2.spec === MIRS.envelopes && k2.type === 0);
-      al.push({
-        text: `${releases ? "A release" : "An act it reaches"} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Agreements rule 36a, F100).`
-      });
-      const own = words2.get(a2.id);
-      if (own !== void 0) {
-        al.push({ text: "It has words of its own, shown below; its holders change them alone." });
-        plain.push({ heading: `The \u201C${a2.name}\u201D area's own words`, text: own });
-      }
-    }
-    if (t.areas.length) {
-      al.push({ text: "Each holder may name a key of their own in their signature of these terms (at founding, and at each member change): an act made with it counts as that member's signature in the areas they hold, and shows which member signed (Agreements draft 16, F353). An area of one takes one member's act; an area of two takes one member's act and another member's signature." });
-      al.push({ text: "In an area, its holders alone decide, and may grant within it (Q5). Its holders, and how many of them decide, change only by the constitutional change rule." });
-      al.push({
-        text: "A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Agreements rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Agreements rule 37b)."
-      });
-      al.push({ text: "An act no area reaches counts on the collective's own signature; an act of a specification this agreement names nowhere counts for nothing (Q16)." });
-    }
-    sections.push({ heading: "Areas: who decides which acts", lines: al });
-    const clone = ruleWords(t.clone, t.parties, names);
-    sections.push({
-      heading: "Who decides what",
-      lines: [
-        {
-          text: `Constitutional: the members, the change rules, the key grammar, the areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective to new keys; whatever its old key signs afterwards is void (Agreements rule 37, F100).`
-        },
-        {
-          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Agreements rule 46a, F121).`
-        },
-        {
-          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Agreements rule 37c); matters inside an area, by its holders.`
-        },
-        { text: "A change touching the constitution needs the constitutional change rule alone, which may change every tier; any other needs the power of each area and tier it touches, all at once (Agreements rule 44c, Q7)." },
-        ...ownersWithoutKeys(t, names)
-      ]
-    });
-  }
-  sections.push({
-    heading: "Changing it",
-    lines: [
-      {
-        text: g ? "It is never edited. It changes only by a clone, a new version naming this one, whose mark names the powers its changes need (Agreements rule 45). A member who joins is bound once they sign it too: nobody is added without signing (Agreements rule 1, Q11)." : "It is never edited. It changes only by a clone, a new version naming this one, that every party signs (Agreements rule 45b, F107)."
-      }
-    ]
-  });
-  if (g) {
-    sections.push({
-      heading: "Leaving",
-      lines: [
-        { text: "Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Agreements rule 37a)." },
-        {
-          text: "It takes effect for the collective at the collective's next record, its line, drawn with its signing key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to keys the one who left never held (Agreements rule 37).",
-          tone: "warn"
-        }
-      ]
-    });
-  }
-  const a = t.abandonment;
-  const absence = [];
-  const warning = absenceWarning(t, names);
-  if (warning) {
-    absence.push(warning);
-    if (a?.proof && !ABSENCE_PROOFS.has(a.proof)) {
-      absence.push({ text: `This client does not implement the absence-proof cMIP the clause names (${short(a.proof)}): it cannot show how absence would be judged.`, tone: "bad" });
-      blocking.push(`It names an absence-proof cMIP this client does not implement (${short(a.proof)}, task 14); a client MUST NOT sign terms naming one it does not implement, as for an unknown extension (Agreements, task "Absence proof", F182).`);
-    }
-    absence.push({ text: "Signing agrees to this in advance (Agreements rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Agreements rule 46a)." });
-    absence.push({ text: "A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Agreements rule 51)." });
-  } else {
-    absence.push({ text: "No abandonment clause: nobody can declare a party absent." });
-  }
-  if (g) {
-    const out = uncovered(t);
-    if (!out.length) {
-      absence.push({
-        text: "Every member with a say in the constitution is covered: if one disappears, their voice can be removed, so the constitution never freezes for want of them (F105).",
-        tone: "ok"
-      });
-    } else {
-      absence.push({ text: `Not covered by the abandonment clause, though they have a say in the constitution: ${list(out.map(names))} (Agreements rule 36b, F105).`, tone: "bad" });
-    }
-  }
-  sections.push({ heading: "If someone disappears", lines: absence });
-  const more = [];
-  if (!t.cmips.length) more.push({ text: "It uses no task cMIP." });
-  for (const [task, h] of t.cmips) {
-    const known = KNOWN[h];
-    more.push({ text: `For task ${task}: ${specName(h)}.`, tone: known ? void 0 : "bad" });
-    if (!known) blocking.push(`It names a cMIP this client does not implement (${short(h)}, task ${task}); a client that does not implement it cannot sign it (Agreements rule 2).`);
-  }
-  for (const h of t.extensions ?? []) {
-    if (EXTENSIONS.has(h)) more.push({ text: `It adds the rules of ${specName(h)}.` });
-    else {
-      more.push({ text: `It adds the rules of ${specName(h)}.`, tone: "bad" });
-      blocking.push(`It names an extension this client does not implement (${short(h)}); a client that does not implement all of them cannot sign it (Agreements rule 2).`);
-    }
-  }
-  if (t.keepers) {
-    more.push({ text: `Keepers record the deal as it happens: ${list(t.keepers[0].map(names))}; ${ruleWords(t.keepers[1], t.keepers[0], names)} count as recorded. A protected clause (Agreements rule 46a).` });
-  }
-  if (t.time) {
-    more.push({ text: `Time reference: ${specName(t.time)}. This client does not read time references.`, tone: "bad" });
-    blocking.push("It names a time reference, which this client does not read: it cannot show what its deadlines mean.");
-  }
-  if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list(t.arbitrators.map(names))}.` });
-  if (t.splitGrant) {
-    more.push({
-      text: `Incoming payments go to a split service, under grant ${short(t.splitGrant)}. A protected clause. The collective's payee pointer counts for Agreements only if every address in it is also in the service's own signed pointer (Agreements rule 18, F123); every split is delivered to every holder it pays, naming each fee and who received it (F121, Q9). The service's grant key signs only receipts for money coming in under the collective's own claims and offers: never one whose payer is the service, nor a payout the collective is owed (F130, H7).`
-    });
-  }
-  if (t.payeeGrants?.length) {
-    more.push({
-      text: `Incoming payments go to a split service, under ${t.payeeGrants.length === 1 ? "one payee grant" : `${t.payeeGrants.length} payee grants`}: ${list(t.payeeGrants.map(short))}. Each payee's own grant, signed by signing this deal; the service holds one grant key per payee, which signs only receipts for money coming into the deal, never one whose payer is the service, nor a split's payout; each payee can revoke its own grant (F129, H4, H5; F130, H7).`
-    });
-  }
-  const holderName = (h) => h == null ? "this collective" : names(h);
-  for (const [object, holders2] of t.stakes ?? []) {
-    more.push({
-      text: `Stake in ${object == null ? "this collective itself, a share of all its income (F121 Q8, F124 S1)" : names(object)}: ${list(holders2.map(([h, n]) => `${holderName(h)} ${n / 1e4}%`))}. Every payout matches its stake exactly, every fee alike for every stake (F124 N10); no share is lowered without its holder's signature (Agreements rule 46).`
-    });
-  }
-  if (t.departed?.length) {
-    more.push({ text: `Departed holders: ${list(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Agreements rule 46b, F124 N5).` });
-  }
-  if (t.backups?.services.length) {
-    const service = (hs) => hs.length === 1 ? `the service granted by ${short(hs[0])}` : `the service granted by ${list(hs.map(short))} (one grant per payee, signed with this deal)`;
-    more.push({
-      text: `Backup split services, in order: ${list(t.backups.services.map(service))}. Each payment is tried at the split service first; only if that attempt fails, as the split cMIP ${t.backups.splitCmip ? short(t.backups.splitCmip) : ""} defines failure${t.backups.failure ? " (its terms for it are signed with this agreement)" : " (its defaults)"}, does it go to the next, and the next payment starts again from the first. Money only ever goes to a service named here (Agreements rule 18a, F249, F250).`
-    });
-  }
-  for (const [judge2, next] of t.chain ?? []) {
-    more.push({ text: `If ${judge2.startsWith("task ") ? `the judge for ${judge2}` : names(judge2)} answers \u201Cunknown\u201D, or does not act within its period, ${list(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? "s" : ""} over, in that order (Agreements rule 34a, F121).` });
-  }
-  more.push({
-    text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Agreements rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first."
-  });
-  if (t.forkedFrom) {
-    more.push({ text: `Forked from ${names(t.forkedFrom)}: a back-link only, deciding nothing; the fork act names this collective as a successor (Agreements rule 47a, F124 N4).` });
-  }
-  for (const p of t.succession ?? []) {
-    const parts = [];
-    if (p.stakes) parts.push(`stakes to ${list(p.stakes.map(([h, n]) => `${names(h)} (${n / 1e4}%)`))}`);
-    if (p.seats) parts.push(`the seat to ${list(p.seats.map(names))}${p.entry === 1 ? ", with the members\u2019 approval" : ""}`);
-    more.push({ text: `If ${names(p.party)} leaves or is declared absent: ${parts.join("; ") || "nothing named"}. A protected clause.` });
-  }
-  if (more.length) sections.push({ heading: "Also", lines: more });
-  if (t.problem) blocking.push(problemWords(t.problem));
-  const controls = [t.text, ...t.areaWords.map(([, w]) => w)].join("").match(INVISIBLE)?.length ?? 0;
-  if (controls) {
-    sections.push({
-      heading: "Hidden characters",
-      lines: [
-        {
-          text: `The words contain ${controls} invisible character${controls > 1 ? "s" : ""} that can make text display in another order than it is written. ${controls > 1 ? "They are" : "It is"} shown below as U+\u2026 codes (Text rule 5a). Read the words as shown before signing.`,
-          tone: "warn"
-        }
-      ]
-    });
-  }
-  return { sections, blocking, plain };
-}
-var FIELD_NAMES = {
-  0: "who the members are",
-  1: "the constitution's words",
-  3: "the keepers",
-  5: "the clone rule",
-  6: "the time reference",
-  7: "the stakes",
-  8: "the split plan",
-  9: "the abandonment clause",
-  12: "the key grammar",
-  13: "the arbitrators",
-  14: "the split service's grant",
-  16: "the succession plans",
-  17: "the refund terms",
-  18: "the constitutional change rule",
-  19: "the areas",
-  28: "the fees"
-};
-function planOf(before, after) {
-  return agreementsClonePlan(before, after, AGREEMENTS_SPECS);
-}
-var powerKey = (p) => p.form === "area" ? `area ${p.area}` : p.form === "plan" ? `plan ${p.party}` : p.form;
-function readChanges(beforePayload, afterPayload, names) {
-  const before = termsOf(beforePayload);
-  const after = termsOf(afterPayload);
-  const out = [];
-  const joined = after.parties.filter((p) => !before.parties.includes(p));
-  const left = before.parties.filter((p) => !after.parties.includes(p));
-  for (const p of joined) out.push({ text: `${names(p)} joins, bound once they sign the clone.` });
-  for (const p of left)
-    out.push({
-      text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`
-    });
-  const holder = (t) => t.grammar?.signing.form === "one" ? t.grammar.signing.holder : null;
-  if (holder(before) !== holder(after) && holder(after)) {
-    out.push({ text: `The signing key passes to ${names(holder(after))}${holder(before) ? ` (was ${names(holder(before))})` : ""}.` });
-  }
-  const sb = before.grammar?.chainKey;
-  const sa = after.grammar?.chainKey;
-  if (sa?.form === "shares" && sb?.form === "shares" && JSON.stringify(sa) !== JSON.stringify(sb)) {
-    out.push({
-      text: `The chain key is dealt afresh: ${sa.members.length} shares, any ${sa.threshold} rebuild it (was ${sb.members.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
-      tone: sa.threshold === 1 && sb.threshold !== 1 ? "warn" : void 0
-    });
-  }
-  const ids = [...new Set([...before.areas, ...after.areas].map((a) => a.id))];
-  for (const id of ids) {
-    const b = before.areas.find((a2) => a2.id === id);
-    const a = after.areas.find((x) => x.id === id);
-    const held = (x) => x.holders.length ? `any ${x.threshold} of ${list(x.holders.map(names))}` : "nobody: frozen";
-    if (!b && a) out.push({ text: `A new area, \u201C${a.name}\u201D (area ${id}): ${held(a)}.` });
-    else if (b && !a) out.push({ text: `The \u201C${b.name}\u201D area (area ${id}) is dropped.`, tone: "warn" });
-    else if (a && b && JSON.stringify(a) !== JSON.stringify(b)) {
-      out.push({ text: `The \u201C${a.name}\u201D area (area ${id}) is now decided by ${held(a)} (was ${held(b)}).` });
-    }
-  }
-  const rule = (r, parties) => ruleWords(r, parties, names);
-  if (JSON.stringify(before.constitutional) !== JSON.stringify(after.constitutional)) {
-    out.push({ text: `The constitution now changes with ${constitutionWords(after, names)} (was ${constitutionWords(before, names)}).` });
-  }
-  if (JSON.stringify(before.clone) !== JSON.stringify(after.clone)) {
-    out.push({ text: `Other changes now need ${rule(after.clone, after.parties)} (was ${rule(before.clone, before.parties)}).` });
-  }
-  if (JSON.stringify(before.abandonment) !== JSON.stringify(after.abandonment)) {
-    const words2 = (a) => !a ? "no one" : a.authority === "named" ? names(a.identity) : `any ${a.threshold} of the other parties`;
-    out.push({
-      text: `Absence is now judged by ${words2(after.abandonment)} (was ${words2(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121).`,
-      tone: "warn"
-    });
-  }
-  if (before.text !== after.text) out.push({ text: "The constitution's words change: read the new words below, in full.", tone: "warn" });
-  else out.push({ text: "The constitution's words stay the same." });
-  const wb = new Map(before.areaWords);
-  for (const [id, w] of after.areaWords) {
-    if (wb.get(id) !== w) out.push({ text: `The \u201C${after.areas.find((a) => a.id === id)?.name ?? `area ${id}`}\u201D area's own words change: read them below.`, tone: "warn" });
-  }
-  let plan;
-  try {
-    plan = planOf(beforePayload, afterPayload);
-  } catch (e3) {
-    out.push({ text: `Agreements cannot say what this clone changes: ${e3 instanceof Error ? e3.message : e3}`, tone: "bad" });
-    return out;
-  }
-  const areaName = (id) => before.areas.find((a) => a.id === id)?.name ?? after.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
-  for (const ch of plan.changes) {
-    const what = ch.form === "field" ? FIELD_NAMES[ch.field] ?? `field ${ch.field}` : ch.form === "task" ? `the cMIP for task ${ch.task}` : ch.form === "extension" ? `the extension ${specName(ch.extension)}` : `the \u201C${areaName(ch.area)}\u201D area's own words`;
-    const tier = ch.tier === "constitutional" ? "constitutional" : ch.tier === "judicial" ? "judicial, a protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121)" : ch.form === "words" ? `operational, in the \u201C${areaName(ch.area)}\u201D area` : "operational";
-    out.push({ text: `A change to ${what}: ${tier}.` });
-  }
-  if (!plan.changes.length) out.push({ text: "Agreements find nothing changed in the terms." });
-  const areas = before.areas;
-  out.push({ text: `So its mark must name ${list(plan.needs.map((p) => powerWords(p, areas, names)))} (Agreements rule 44c).` });
-  const claimed = (after.mark ?? []).map((e3) => powerKey(e3.power));
-  if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
-    out.push({ text: "Its mark names exactly that.", tone: "ok" });
-  } else {
-    out.push({
-      text: `Its mark names ${list((after.mark ?? []).map((e3) => powerWords(e3.power, areas, names))) || "nothing"}: a false mark sinks the clone (F104).`,
-      tone: "bad"
-    });
-  }
-  return out;
-}
-function readRelease(m, before) {
-  const files = [
-    { text: `${m.name} ${m.version}: ${count2(m.files.length, "file")}, ${count2(m.dependencies.length, "library", "libraries")} it depends on.` },
-    { text: m.source ? `Made from ${m.source}.` : "It names no source." }
-  ];
-  if (!m.previous) files.push({ text: "It is the first release: it names no release before it." });
-  if (before) {
-    const old = new Map(before.files.map((f) => [f.path, f.work]));
-    const now6 = new Map(m.files.map((f) => [f.path, f.work]));
-    const added = m.files.filter((f) => !old.has(f.path)).map((f) => f.path);
-    const changed = m.files.filter((f) => old.has(f.path) && old.get(f.path) !== f.work).map((f) => f.path);
-    const removed = before.files.filter((f) => !now6.has(f.path)).map((f) => f.path);
-    files.push({
-      text: `Since ${before.name} ${before.version}: ${count2(added.length, "file")} added, ${changed.length} changed, ${removed.length} removed; ${count2(m.files.length - added.length - changed.length, "file")} the same.`
-    });
-    const some = (xs, what) => {
-      if (!xs.length) return;
-      const shown = xs.slice(0, 30);
-      files.push({ text: `${what}: ${shown.join(", ")}${xs.length > shown.length ? `, and ${xs.length - shown.length} more` : ""}.` });
-    };
-    some(added, "Added");
-    some(changed, "Changed");
-    some(removed, "Removed");
-    const key = (d) => `${d.registry} ${d.name}`;
-    const oldDeps = new Map(before.dependencies.map((d) => [key(d), d.version]));
-    const newDeps = new Map(m.dependencies.map((d) => [key(d), d.version]));
-    const depsAdded = [...newDeps.keys()].filter((k) => !oldDeps.has(k));
-    const depsRemoved = [...oldDeps.keys()].filter((k) => !newDeps.has(k));
-    const depsChanged = [...newDeps.keys()].filter((k) => oldDeps.has(k) && oldDeps.get(k) !== newDeps.get(k));
-    if (depsAdded.length + depsRemoved.length + depsChanged.length) {
-      files.push({ text: `Libraries: ${depsAdded.length} added, ${depsChanged.length} at another version, ${depsRemoved.length} removed.` });
-    } else files.push({ text: "The libraries are the same." });
-  } else if (m.previous) {
-    files.push({ text: `It follows release ${short(m.previous)}, which this client does not hold, so what changed is not shown.` });
-  }
-  return [{ heading: "What is released", lines: files }];
-}
-
-// ../assess/src/assess.ts
-var A = (...rules) => rules.map((rule) => ({ mir: "Agreements", rule }));
-var unique = (cites) => cites.filter((c, i) => cites.findIndex((d) => d.mir === c.mir && d.rule === c.rule) === i);
-var cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-var pct3 = (n) => `${Number((n / 1e4).toFixed(4))}%`;
-var SHARED = ["The collective's keys", "Areas: who decides which acts", "Who decides what", "If someone disappears", "Hidden characters"];
-function assess(payload, names, found) {
-  const t = termsOf(payload);
-  const collective = !!t.grammar;
-  const problem = t.problem ? problemWords(t.problem) : null;
-  const flags = problem ? [] : flagsOf(t, payload, names);
-  const shared = readAgreement(t, names);
-  const sections = [
-    signedSection(t, names, found),
-    boundSection(t, names),
-    sharesSection(t, names),
-    judgesSection(t, names),
-    endsSection(t, names),
-    owedSection(t, found),
-    ...shared.sections.filter((s) => SHARED.includes(s.heading)),
-    {
-      heading: "Risks",
-      lines: problem ? [{ text: `Not judged further: ${problem}`, tone: "bad" }] : flags.length ? flags.map((f) => ({ text: `${cap(f.text)} Rests on: ${f.rests}.`, tone: "warn" })) : [{ text: "None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, money divided with no owner, or a stated cost one of its clauses brings.", tone: "ok" }]
-    }
-  ];
-  const who2 = list(t.parties.map(names));
-  const kind = collective ? "collective" : "deal";
-  const summary = [
-    collective ? `${t.parent ? "A new version of a collective\u2019s agreement" : "The founding agreement of a collective"} of ${t.parties.length} members: ${who2}.` : `${t.parent ? "A new version of a deal" : "A deal"} between ${t.parties.length === 1 ? "one party" : `${t.parties.length} parties`}: ${who2}.`,
-    problem ? "Agreements refuse these terms: they bind nobody as they stand." : flags.length ? `${flags.length === 1 ? "One risk" : `${flags.length} risks`} flagged, each with the rule it rests on.` : "No risk flagged."
-  ];
-  return {
-    kind,
-    title: collective ? "A collective\u2019s agreement, assessed" : "A deal, assessed",
-    summary,
-    sections,
-    plain: [{ heading: "The words, as signed", text: t.text }, ...shared.plain],
-    flags,
-    problem
-  };
-}
-function signedSection(t, names, found) {
-  const lines2 = [];
-  if (!found) {
-    lines2.push({ text: `The relays were not asked: who has signed is not known here. Its parties: ${list(t.parties.map(names))}.` });
-  } else {
-    for (const p of t.parties) {
-      lines2.push(
-        found.signed.includes(p) ? { text: `${names(p)} has signed.`, tone: "ok" } : { text: `${names(p)} has not signed: nothing in it binds ${names(p)} yet.`, tone: "warn" }
-      );
-    }
-    if (found.invalid) lines2.push({ text: `Agreements count it invalid: ${found.invalid}`, tone: "bad" });
-    else if (found.exists === true) lines2.push({ text: "It exists: every signature its rule asks for is there, as far as the relays asked show.", tone: "ok" });
-    else if (found.exists === false) lines2.push({ text: "It is not in force: it exists only once every party has signed it.", tone: "warn" });
-    else lines2.push({ text: "Whether it exists cannot be said from what the relays hold.", tone: "warn" });
-    if (found.fork) {
-      lines2.push({
-        text: found.fork.tangled ? `The deal is tangled (${found.fork.tangled}): it stays on its reference ${found.fork.reference.slice(0, 8)}\u2026 until one version names every tip it drops (rule 47).` : `The deal stands forked: ${found.fork.branches.length} branches from its reference ${found.fork.reference.slice(0, 8)}\u2026; a payment under either branch counts (rule 47).`,
-        tone: "warn"
-      });
-    } else if (found.inForce) {
-      lines2.push({ text: `The version of this deal in force is ${found.inForce.slice(0, 8)}\u2026, as far as ${list(found.at)} show.` });
-    }
-  }
-  lines2.push({ text: "Each party is bound only through its own signature act (Agreements rule 1)." });
-  return { heading: "Who signed", lines: lines2 };
-}
-function roles(t, who2, names) {
-  const out = [];
-  for (const [object, holders2] of t.stakes ?? []) {
-    for (const [h, n] of holders2) if (h === who2) out.push(`holds ${pct3(n)} of ${object == null ? "all of this collective\u2019s income" : names(object)}`);
-  }
-  if (t.arbitrators?.includes(who2)) out.push("is named arbitrator or verifier");
-  if (t.forkJudge === who2) out.push("is the judge of the deal\u2019s forks");
-  if (t.keepers?.[0].includes(who2)) out.push("operates a keeper");
-  if (t.abandonment?.authority === "named" && t.abandonment.identity === who2) out.push("judges whether a party is absent");
-  for (const [, next] of t.chain ?? []) if (next.some(([hs]) => hs[0] === who2)) out.push("takes over as a judge in the chain of judgment");
-  for (const a of t.areas ?? []) if (a.holders.includes(who2)) out.push(`holds the \u201C${a.name}\u201D area`);
-  for (const p of t.succession ?? []) if (p.party === who2) out.push("has a succession plan in it");
-  if (t.plan?.shares.some((s) => s.kind === "receiver" && s.receiver === who2)) out.push("is a named receiver in the split plan");
-  return out;
-}
-function boundSection(t, names) {
-  const lines2 = [{ text: "Each party who signs is bound to the words below, as signed, and to every rule of these terms: a signature is consent to everything they define, pre-authorised changes included (Agreements rule 8)." }];
-  for (const p of t.parties) {
-    const r = roles(t, p, names);
-    lines2.push({ text: `${names(p)}: ${r.length ? list(r) : "a party, with no stake or role of its own in these terms"}.` });
-  }
-  const others = /* @__PURE__ */ new Set();
-  for (const [, holders2] of t.stakes ?? []) for (const [h] of holders2) if (h && !t.parties.includes(h)) others.add(h);
-  for (const h of others) lines2.push({ text: `${names(h)}, not a party: ${list(roles(t, h, names))}. Bound by nothing here; protected by it (Agreements rules 45, 48).` });
-  lines2.push({
-    text: t.grammar ? "A member\u2019s obligations change only as the constitution\u2019s rules allow; no share is lowered without its holder\u2019s signature (Agreements rules 45, 48)." : "No version of it changes without every party\u2019s signature (Agreements rule 47, was 45b)."
-  });
-  return { heading: "What each party is bound to", lines: lines2 };
-}
-function sharesSection(t, names) {
-  const lines2 = [];
-  const stakes = t.stakes ?? [];
-  stakes.forEach(([object, holders2], i) => {
-    lines2.push({
-      text: `Stake ${i}, in ${object == null ? "this collective itself, a share of all its income" : names(object)}: ${list(holders2.map(([h, n]) => `${h == null ? "this collective" : names(h)} ${pct3(n)}`))}, written in millionths summing to 100% (Agreements rule 9).`
-    });
-  });
-  const p = t.plan;
-  if (p) {
-    const share2 = (s) => s.kind === "stake" ? `stake ${s.stake}, paid to its holders as currently held` : s.kind === "role" ? `the role \u201C${s.role}\u201D, paid to whoever fills it, with evidence the payer acknowledges (rule 22)` : s.kind === "receiver" ? `${names(s.receiver ?? "")}, a named receiver holding no stake` : `metric ${s.metric}`;
-    lines2.push({
-      text: `Each payment in is divided by the split cMIP ${names(p.cmip)}, which computes the amounts from these parts: ${p.shares.map((s, i) => `${share2(s)}, part ${s.part}${p.top.includes(i) ? ", taken off the top first" : ""}`).join("; ")} (Agreements rules 17, 27).`
-    });
-    if (p.shares.some((s) => s.kind === "role")) {
-      lines2.push({
-        text: p.unfilled === "stakes" ? "A role nobody fills goes to the stakes, in proportion to their parts (F218)." : p.unfilled === "held-open" ? "A role nobody fills is held open, as an obligation." : `A role nobody fills goes to ${names(p.unfilledTo ?? "")}.`
-      });
-    }
-    const bearer = p.serviceBearsRailFees ? "The split service bears each payout\u2019s rail fee" : "Each receiver bears its payout\u2019s rail fee";
-    const m = p.maxRailFee;
-    lines2.push(
-      m ? { text: `${bearer}; no payout may lose more than ${m.form === "millionths" ? `${pct3(m.value)} of each payout` : `${m.value} of ${names(m.unit ?? "")}`} to it, and a shortfall beyond that is the service\u2019s open obligation (Agreements rule 25).` } : { text: `${bearer}; the plan states no maximum fee per payout (Agreements rule 25).`, tone: "warn" }
-    );
-  }
-  for (const f of t.fees ?? []) {
-    const when = f.scope === "every" ? "every payment" : f.scope === "publication" ? `payments for ${names(f.of ?? "")}` : `payments by the rail ${names(f.of ?? "")}`;
-    lines2.push({ text: `A fee entry: ${names(f.module)} is owed part ${f.part} of ${when}, taken off the top before the stakes divide, so it falls alike on every stake; a split leaving it out owes it (Agreements rule 28, F213, F214).` });
-  }
-  if (t.payeeGrants?.length || t.splitGrant) {
-    lines2.push({ text: `Payments go to a split service, by ${t.splitGrant ? "the collective\u2019s grant" : `${t.payeeGrants.length === 1 ? "one payee\u2019s grant" : `each payee\u2019s own grant (${t.payeeGrants.length})`}`}: it publishes each split, delivered to every holder it pays, naming each fee and who received it (Agreements rules 16, 20).` });
-    if (t.backups?.services.length) lines2.push({ text: `If an attempt at the service fails, ${t.backups.services.length === 1 ? "one backup" : `${t.backups.services.length} backups`} take${t.backups.services.length === 1 ? "s" : ""} that payment, in order (Agreements rule 17, field 29).` });
-  } else if (stakes.length) {
-    lines2.push({ text: "No split service: each payer\u2019s wallet pays each holder\u2019s own pointer by the stakes (payer-side splitting, Agreements rule 16)." });
-  }
-  if (!lines2.length) lines2.push({ text: "It divides no money: no stakes, no split plan, no fees." });
-  return { heading: "Shares and fees", lines: lines2 };
-}
-function judgesSection(t, names) {
-  const lines2 = [];
-  const then = (key) => {
-    const next = (t.chain ?? []).find(([j]) => j === key)?.[1] ?? [];
-    return next.length ? `, then ${list(next.map(([hs, p]) => `${names(hs[0])} after ${p} on the time reference`))}, in that order` : "";
-  };
-  const cmip = (task) => t.cmips.find(([n]) => n === task)?.[1];
-  const c9 = cmip(9);
-  if (c9) lines2.push({ text: `Conditions are judged by the condition cMIP ${names(c9)}${then("task 9")}.` });
-  const time = t.time ?? cmip(10);
-  if (time) lines2.push({ text: `Time is judged by the time reference ${names(time)}: for this agreement, only it says whether something is before, after or past its terms (Agreements rule 33)${then("task 10")}.` });
-  const c11 = cmip(11);
-  if (c11) lines2.push({ text: `Anchoring is judged by ${names(c11)}${then("task 11")}.` });
-  for (const a2 of t.arbitrators ?? []) lines2.push({ text: `Content is judged by ${names(a2)}, an arbitrator or verifier, who receives the keys it must judge${then(a2)}.` });
-  if (!t.grammar) {
-    lines2.push(
-      t.forkJudge ? { text: `The judge of forks is ${names(t.forkJudge)} (field 27): if two complete versions of the deal ever stand side by side, it settles them on a party\u2019s request${then(t.forkJudge)} (Agreements rule 47).` } : { text: "No judge of forks: if two complete versions of the deal ever stand side by side, only a version every party signs settles them (Agreements rule 47).", tone: "warn" }
-    );
-  }
-  if (t.keepers) {
-    const [ops, r] = t.keepers;
-    const need = ops.length === 1 ? "its record counts" : `${r.form === "all" ? `all ${ops.length}` : r.form === "threshold" ? `any ${r.threshold}` : list((r.named ?? []).map(names))} count as recorded`;
-    lines2.push({ text: `${ops.length === 1 ? "A keeper records" : "Keepers record"} what happens, sealed, without reading it: operated by ${list(ops.map((o) => `${names(o)}${then(o)}`))}; ${need} (Agreements rule 36).` });
-  }
-  const a = t.abandonment;
-  if (a) {
-    lines2.push({
-      text: a.authority === "named" ? `Whether a party is absent is judged by ${names(a.identity ?? "")}${a.proof ? `, checked by the absence-proof cMIP ${names(a.proof)}` : ""}${then(a.identity ?? "")} (Agreements rules 85, 87).` : `Whether a member is absent is judged by any ${a.threshold} of the other members${a.proof ? `, checked by the absence-proof cMIP ${names(a.proof)}` : ""} (Agreements rules 85, 87).`
-    });
-  }
-  if (lines2.length) lines2.push({ text: "A judge that answers \u201Cunknown\u201D, or does not act within its period, passes the question to the next in its chain, which every party signed; only the active link settles (Agreements rule 35)." });
-  else lines2.push({ text: "Nobody judges anything: no condition cMIP, no time reference, no arbitrator, keeper or absence authority." });
-  return { heading: "Who judges, and in what order", lines: lines2 };
-}
-function endsSection(t, names) {
-  const lines2 = [];
-  if (t.parent) lines2.push({ text: `It is a new version of ${names(t.parent)}: once complete, it replaces it (Agreements rule 45).` });
-  if (t.grammar) {
-    lines2.push({ text: "Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own (Agreements rule 70)." });
-    lines2.push({ text: "The collective ends by a fork, its members splitting into successors, or by a closing once it holds nothing and owes nothing (Agreements rule 91)." });
-  } else {
-    lines2.push({ text: "A deal has no closing act. It ends, or winds down, by a new version every party signs, stating where its stakes went, what is still owed, and, where it is a party of another agreement, to whom that one now pays (Agreements rule 47, F263)." });
-    lines2.push({ text: "A party leaves only as its terms provide." });
-  }
-  if (t.abandonment?.outcomes.includes(4)) lines2.push({ text: `A declaration of absence may close it (Agreements rule 89, outcome 4: ${OUTCOMES[4]}).` });
-  if ((t.stakes ?? []).length) {
-    const r = t.releaseRule;
-    lines2.push({ text: `A stake ends if released to the public domain, which ${!r || r.form === "all" ? "every holder of it signs" : r.form === "named" ? `${list((r.named ?? []).map(names))} sign` : `holders of it holding together at least ${(r.share ?? 0) / 1e4}% sign`} (Agreements rule 55, field 24; Agreements draft 14, F308: by share, never by head).` });
-  }
-  return { heading: "How it ends", lines: lines2 };
-}
-function owedSection(t, found) {
-  const lines2 = [];
-  const service = !!(t.payeeGrants?.length || t.splitGrant);
-  if (found) {
-    lines2.push(...found.owed.length ? found.owed : [{ text: `Nothing owed under it, as far as ${list(found.at)} show.` }]);
-  } else {
-    lines2.push({ text: "The relays were not asked: no payment made under it is known here." });
-    if (service) lines2.push({ text: "What its split service receives and does not split, or splits and does not pay out, is that service\u2019s open obligation, naming one receiver and this agreement (Agreements rule 30)." });
-  }
-  if (t.refund?.until != null) lines2.push({ text: `A refund owed on a payment under it is claimable until ${t.refund.until} on its time reference; past that point it is ended (field 17, F219).` });
-  else if (service || (t.stakes ?? []).length) lines2.push({ text: "No refund terms: a refund owed stays open until claimed (Agreements rule 11; the core sets no lapse, F80)." });
-  lines2.push({ text: "A party who has not signed owes nothing under it: its obligations are shown as unsigned, never as open (Agreements rule 1, F74)." });
-  return { heading: "What is still owed", lines: lines2 };
-}
-function mustSign(t, p) {
-  const rule = (r, among) => {
-    if (!r || r.form === "all") return among;
-    if (r.form === "named") return r.named ?? [];
-    return (r.threshold ?? 0) >= among.length ? among : [];
-  };
-  switch (p.form) {
-    case "clone":
-      return rule(t.clone, t.parties);
-    case "constitutional":
-      return rule(t.constitutional, t.parties);
-    case "judicial":
-      return t.parties;
-    case "area": {
-      const a = t.areas.find((x) => x.id === p.area);
-      return a && a.threshold >= a.holders.length ? a.holders : [];
-    }
-    default:
-      return [];
-  }
-}
-function signersFor(payload, t, field) {
-  const m = new Map(cborDecode(payload));
-  const mark = (x) => unhex(sha2562(`deal assessment: a version changing field ${field}, ${x}`));
-  m.set(11, mark("its parent"));
-  m.set(4, [[[1], [...t.parties].sort().map(unhex)]]);
-  if (field === 8) {
-    const plan = m.get(8);
-    if (plan instanceof Map) m.set(8, new Map([...plan, [7, "a changed parameter"]]));
-    else m.set(8, /* @__PURE__ */ new Map([[0, [[0, 0, 1]]], [1, mark("a split cMIP")]]));
-  } else {
-    m.set(28, [[mark("a fee Module"), 1]]);
-  }
-  try {
-    const plan = agreementsClonePlan(payload, cborEncode(m), AGREEMENTS_SPECS);
-    return /* @__PURE__ */ new Set([...plan.needs.flatMap((p) => mustSign(t, p)), ...plan.paySigners]);
-  } catch {
-    return null;
-  }
-}
-function holders(t) {
-  const out = [];
-  for (const [, hs] of t.stakes ?? []) for (const [h] of hs) if (h && !out.includes(h)) out.push(h);
-  return out;
-}
-function flagsOf(t, payload, names) {
-  const out = [];
-  const deal = !t.grammar;
-  const who2 = (xs) => list(xs.map(names));
-  const owners = holders(t);
-  const a = t.abandonment;
-  if (deal && t.parties.length > 1) {
-    const stuck = uncovered(t);
-    if (stuck.length) {
-      out.push({
-        code: "no-exit",
-        family: "listed",
-        who: stuck,
-        text: `${who2(stuck)} cannot be declared absent: if ${stuck.length === 1 ? "that party goes" : "any of them goes"} silent, nobody can change or end the deal, and no party can leave it.`,
-        rests: "Agreements rule 47 (was 45b), stated cost: \u201Cone silent party blocks every change to a deal, however large\u201D; the way out is an abandonment clause removing an absent party\u2019s voice (rule 89, outcome 0)",
-        cites: A(47, 89)
-      });
-    }
-  }
-  {
-    const why = [];
-    const rests = [];
-    const cites = [];
-    let bearers = [];
-    if (t.plan && !t.plan.maxRailFee) {
-      why.push("the split plan states no maximum fee per payout, so a payout may lose any rail fee and nothing beyond a maximum becomes the service\u2019s obligation");
-      rests.push("Agreements rule 25 (was 24a): the split plan \u201Cmay state a maximum fee per payout\u201D; \u201Cwhere it states none, there is no cap\u201D, and a client must flag the absence before signing (F271); Money rule 21");
-      cites.push(...A(25), { mir: "Money", rule: 21 });
-    }
-    if (owners.length) {
-      const need = signersFor(payload, t, 28);
-      bearers = need ? owners.filter((h) => !need.has(h)) : [];
-      if (bearers.length) {
-        why.push(`fees can be added or raised without ${who2(bearers)}, who bear${bearers.length === 1 ? "s" : ""} them with every stake`);
-        rests.push("Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature, save a holder with no voice in it, who signs a version paying its stake less (rule 48, F270)");
-        cites.push(...A(28, 48));
-      }
-    }
-    if (why.length) out.push({ code: "uncapped-fee", family: "listed", who: bearers.length ? bearers : void 0, text: `Uncapped fee: ${why.join("; and ")}.`, rests: rests.join("; "), cites });
-  }
-  {
-    const judges = /* @__PURE__ */ new Map();
-    const add = (h, as) => {
-      if (!h || !t.parties.includes(h)) return;
-      judges.set(h, [...judges.get(h) ?? [], as]);
-    };
-    for (const x of t.arbitrators ?? []) add(x, "an arbitrator");
-    add(t.forkJudge, "the judge of forks");
-    for (const x of t.keepers?.[0] ?? []) add(x, "a keeper\u2019s operator");
-    if (a?.authority === "named") add(a.identity, "the absence authority");
-    for (const [, next] of t.chain ?? []) for (const [hs] of next) add(hs[0], "a later link of the chain of judgment");
-    if (judges.size) {
-      const ids = [...judges.keys()];
-      out.push({
-        code: "judge-is-party",
-        family: "listed",
-        who: ids,
-        text: `A judge who is also a party: ${list(ids.map((h) => `${names(h)} judges as ${list([...new Set(judges.get(h))])}`))}, in a question where they have a stake of their own.`,
-        rests: "Agreements rule 35 (was 34a), the chain of judgment, which every party signs; Agreements bar it for specifications only (\u201Ca judge never handles what it judges\u201D, Q20), and let a party be the absence authority (rule 85)",
-        cites: A(35, 85)
-      });
-    }
-  }
-  if (deal && t.parties.length > 1 && !t.forkJudge) {
-    out.push({
-      code: "no-fork-judge",
-      family: "listed",
-      text: "No judge of forks: if two complete versions of the deal ever stand side by side, the deal stays on its reference until every party signs one settling version, and any party can keep it there.",
-      rests: "Agreements rule 47 (was 45b), field 27: \u201CWith no judge of forks named, the deal stays on its reference\u201D; stated cost: \u201Ca party of either branch can refuse every settlement and keep the deal on its reference\u201D",
-      cites: A(47)
-    });
-  }
-  if (owners.length) {
-    const hit = /* @__PURE__ */ new Set();
-    const why = [];
-    const rests = [];
-    const cites = [];
-    const lose = (a?.outcomes ?? []).filter((o) => o === 1 || o === 2);
-    if (a && lose.length) {
-      const heir = (h) => (t.succession ?? []).some((s) => s.party === h && (s.stakes ?? []).length > 0);
-      const declarable = (h) => (t.parties.includes(h) || (t.departed ?? []).includes(h)) && !(a.authority === "named" && h === a.identity);
-      const declared = owners.filter((h) => declarable(h) && !heir(h));
-      if (declared.length) {
-        for (const h of declared) hit.add(h);
-        why.push(`${who2(declared)}, naming no stake successor, may be declared absent and have ${declared.length === 1 ? "that stake" : "those stakes"} ${list(lose.map((o) => o === 1 ? "shared among the remaining holders" : "transferred to parties named or defined by role"))}, without signing; naming a successor sends the stake to the successor instead`);
-        rests.push("Agreements rule 89 (was 53), new in draft 12 (F279): outcomes 1 and 2 apply to a stake \u201Conly where the holder\u2019s succession plan names no stake successor\u201D; rule 48");
-        cites.push(...A(48, 89));
-      }
-    }
-    const r = t.releaseRule;
-    if (r && r.form !== "all") {
-      const need2 = new Set(r.form === "named" ? r.named ?? [] : []);
-      const left2 = owners.filter((h) => !need2.has(h));
-      if (left2.length) {
-        for (const h of left2) hit.add(h);
-        why.push(`a stake can be released to the public domain, ending what it earns, without ${who2(left2)}`);
-        rests.push("Agreements rule 55 (was 17), field 24: the release rule says which holders sign a release");
-        cites.push(...A(55));
-      }
-    }
-    const need = signersFor(payload, t, 8);
-    const left = need ? owners.filter((h) => !need.has(h)) : [];
-    if (left.length) {
-      for (const h of left) hit.add(h);
-      why.push(`the split plan, which sets what each stake is paid, can be changed without ${who2(left)}`);
-      rests.push("Agreements rules 45 and 48: the split plan (field 8) falls under its own power (rules 62 to 65; every party in a deal, rule 47); a version paying a stake less needs the signature of a holder with no voice in that power (a deal\u2019s holder who is no party, a collective\u2019s departed holder: rule 48, F270, F274), not of a member, whom the collective\u2019s own rules bind");
-      cites.push(...A(45, 48, 62, 63, 64, 65, 47));
-    }
-    if (why.length) out.push({ code: "dilutable-stake", family: "listed", who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join("; and ")}.`, rests: rests.join("; "), cites: unique(cites) });
-  }
-  if (!(t.stakes ?? []).length && (t.plan || (t.fees ?? []).length)) {
-    out.push({
-      code: "no-owner",
-      family: "listed",
-      text: "No owner: it divides money but writes no stake, so every share is overhead, taken off the top, and nothing is left for an owner. Nobody is paid as an owner is, protected against a fee raised or a share added without their signature. A deal made on a vow writes a stake in the vow, held by whoever signed it, and what is left after the overhead is theirs.",
-      rests: "Agreements rule 14, new in draft 13 (F284): \u201Ca deal made on a vow has an owner: the vow\u2019s signer, who holds the stake\u201D; rule 22 (F280): every share paying anyone but a stake is paid off the top, what is left going to the stakes alone; rule 48 (F270): a stake is not paid less without its holder",
-      cites: A(14, 22, 48)
-    });
-  }
-  if (a && !a.proof) {
-    out.push({
-      code: "absence-on-word",
-      family: "stated cost",
-      text: `Absence is on ${a.authority === "named" ? `${names(a.identity ?? "")}\u2019s` : "the other members\u2019"} word alone: no absence-proof cMIP checks it, and a party declared absent wrongly can only contest it, in public.`,
-      rests: "Agreements rule 87 (was 51), stated cost: a declaration is the authority\u2019s judgment, \u201Ca stated cost the party accepted\u201D; rule 85 (was 49), client conformance (F178)",
-      cites: A(87, 85)
-    });
-  }
-  if (owners.length) {
-    if (t.payeeGrants?.length || t.splitGrant) {
-      out.push({
-        code: "split-service-window",
-        family: "stated cost",
-        text: "A split service holds the money between receiving and paying out: after a stake is sold, a seller and the service acting together can keep paying the seller until the first split citing the sale.",
-        rests: "Agreements rule 10 (was 14), stated cost (the window after a transfer); rule 32 (was 31), the trust that remains",
-        cites: A(10, 32)
-      });
-    } else {
-      out.push({
-        code: "payer-side-split",
-        family: "stated cost",
-        text: "No split service: each payer divides its own payment, so a payer can pay some holders and not others, every holder\u2019s pointer is visible to payers, and the payer decides who gets a leftover unit.",
-        rests: "Agreements rule 16 (was 18), stated cost (payer-side splitting); rule 9, stated cost (the payer decides tied units)",
-        cites: A(16, 9)
-      });
-    }
-  }
-  return out;
-}
-
-// ../repo/src/manifest.ts
-function validPath(p) {
-  if (!p || p.startsWith("/") || p !== p.normalize("NFC")) return false;
-  if (/[\\\u0000-\u001f\u007f]/.test(p)) return false;
-  return p.split("/").every((s) => s !== "" && s !== "." && s !== "..");
-}
-var enc = new TextEncoder();
-function byBytes(a, b) {
-  const x = enc.encode(a);
-  const y = enc.encode(b);
-  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
-  return x.length - y.length;
-}
-function decodeManifest(bytes) {
-  const m = cborDecode(bytes);
-  if (!(m instanceof Map)) throw new Error("a manifest is a map");
-  for (const k of m.keys()) if (typeof k !== "number" || k < 0 || k > 6) throw new Error(`manifest: unknown field ${k}`);
-  const text3 = (v, w) => {
-    if (typeof v !== "string") throw new Error(`manifest: ${w}`);
-    return v;
-  };
-  const bytesOf = (v, n, w) => {
-    if (!(v instanceof Uint8Array) || v.length !== n) throw new Error(`manifest: ${w}`);
-    return v;
-  };
-  const list8 = (v, w) => {
-    if (!Array.isArray(v)) throw new Error(`manifest: ${w}`);
-    return v;
-  };
-  const prev = m.get(2);
-  const files = list8(m.get(3), "files").map((x) => {
-    const a = list8(x, "file");
-    if (a.length !== 6) throw new Error("manifest: a file has six fields");
-    const size = a[2];
-    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) throw new Error("manifest: file size");
-    return {
-      path: text3(a[0], "file path"),
-      work: hex(bytesOf(a[1], 32, "work hash")),
-      size,
-      locked: hex(bytesOf(a[3], 32, "locked hash")),
-      nonce: bytesOf(a[4], 24, "nonce"),
-      key: bytesOf(a[5], 32, "key")
-    };
-  });
-  if (!files.length) throw new Error("manifest: no files");
-  files.forEach((f, i) => {
-    if (!validPath(f.path)) throw new Error(`manifest: not a valid path: ${JSON.stringify(f.path)}`);
-    if (i && byBytes(files[i - 1].path, f.path) >= 0) throw new Error("manifest: paths sorted and unique");
-  });
-  const dependencies = list8(m.get(4), "dependencies").map((x) => {
-    const a = list8(x, "dependency");
-    if (a.length !== 4) throw new Error("manifest: a dependency has four fields");
-    return {
-      registry: text3(a[0], "registry"),
-      name: text3(a[1], "dependency name"),
-      version: text3(a[2], "dependency version"),
-      checksum: text3(a[3], "dependency checksum")
-    };
-  });
-  let impl;
-  if (m.has(6)) {
-    const entries = list8(m.get(6), "implements").map((e3) => {
-      if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2) throw new Error("manifest: an implemented specification is [spec, ? hint]");
-      const spec = hex(bytesOf(e3[0], 32, "an implemented specification"));
-      return e3.length === 2 ? { spec, hint: hex(bytesOf(e3[1], 32, "a publication hint")) } : { spec };
-    });
-    if (!entries.length) throw new Error("manifest: implements names at least one specification");
-    entries.forEach((x, i) => {
-      if (i && entries[i - 1].spec >= x.spec) throw new Error("manifest: implements sorted by spec hash and unique");
-    });
-    impl = entries;
-  }
-  return {
-    name: text3(m.get(0), "name"),
-    version: text3(m.get(1), "version"),
-    previous: prev === null ? null : hex(bytesOf(prev, 32, "previous")),
-    files,
-    dependencies,
-    source: m.has(5) ? text3(m.get(5), "source") : void 0,
-    implements: impl
-  };
-}
-
-// ../connector/src/words.ts
-var INVISIBLE2 = /[؜​‎‏‪-‮⁦-⁩]/g;
-function escapeControls(s) {
-  return s.replace(INVISIBLE2, (c) => `<U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}>`);
-}
-
-// src/signing.ts
-var SIGNING_SAY = "Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.";
-var SIGNING_OFF_SAY = "Signing is off: proposals to sign wait in your inbox, unread, until you turn Signing on in the identity window.";
-var SHARE_SAY = [
-  "This is your share of the collective\u2019s chain key: its number and 24 words. Write both on paper, in order, and keep the paper away from anything that goes online.",
-  "It is shown once. Dub keeps nothing of it: once you have typed three words back, the one-time key it came sealed to is destroyed, and the copy on the relays can never be opened again.",
-  "With enough members\u2019 papers, the collective\u2019s keys can be changed (in Ki\u0161ib, later). A lost paper weakens that, as the collective\u2019s rule allows; never type these words into Dub again.",
-  "It is not your own chain key, nor your signing key, nor a Bitcoin wallet."
-];
-async function fetchAct3(id, hints, via2 = {}) {
-  for (const h of hints) {
-    try {
-      const a = await relayAt(h, via2).getAct(id);
-      if (a && describeAct(a).id === id) return { act: a, at: h };
-    } catch {
-    }
-  }
-  return null;
-}
-async function readProposal(act, names, hints, via2 = {}, also = []) {
-  const d = describeAct(act);
-  const blocking = [];
-  if (!d.public || !d.payload) {
-    return { kind: "other", title: "A private act", summary: ["It cannot be read here, so it cannot be signed here."], sections: [], plain: [], risks: [], blocking: ["It is private."], collective: null };
-  }
-  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
-    const a = assess(d.payload, names);
-    const t = termsOf(d.payload);
-    const parent = t.parent;
-    const sections = [...a.sections];
-    const collective = null;
-    let kind = "founding";
-    if (parent) {
-      kind = "clone";
-      const p = await fetchAct3(parent, hints, via2);
-      const pd = p ? describeAct(p.act) : null;
-      if (pd?.payload) sections.unshift({ heading: "What it changes", lines: readChanges(pd.payload, d.payload, names) });
-      else blocking.push(`The agreement it changes (${parent}) was not found, so what it changes cannot be shown.`);
-    }
-    if (!t.grammar && !parent) return readDealProposal(d, a, names, hints, via2, also);
-    if (!t.grammar) blocking.push("These terms found no collective: Dub signs collectives\u2019 agreements only.");
-    if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
-    return {
-      kind,
-      title: kind === "founding" ? `Found a collective: ${a.title}` : `Change a collective\u2019s agreement: ${a.title}`,
-      summary: a.summary,
-      sections,
-      plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
-      risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
-      blocking,
-      collective
-    };
-  }
-  if (d.spec === SPECS.envelopes && d.type === 0) {
-    const m = cborDecode(d.payload);
-    if (hex(m.get(0)) !== REPO_SPECS.manifest) {
-      return { kind: "other", title: "A publication", summary: ["It is no release: nothing to sign here."], sections: [], plain: [], risks: [], blocking: ["Not a release."], collective: null };
-    }
-    const lockedHash = hex(m.get(2));
-    let manifest = null;
-    for (const h of [.../* @__PURE__ */ new Set([...m.get(6) ?? [], ...hints])]) {
-      try {
-        const locked = await relayAt(h, via2).getMedia(lockedHash);
-        if (!locked) continue;
-        const plain = openMedia(locked, m.get(5), m.get(4));
-        if (workHash(plain) !== hex(m.get(1))) continue;
-        manifest = decodeManifest(plain);
-        break;
-      } catch {
-      }
-    }
-    if (!manifest) {
-      return { kind: "release", title: "A release", summary: ["Its manifest was not found, so what it releases cannot be shown."], sections: [], plain: [], risks: [], blocking: ["Its manifest was not found."], collective: d.signer ?? null };
-    }
-    const files = manifest.files.slice(0, 200).map((f) => ({ text: `${f.path}: ${f.size} bytes, fingerprint ${f.work.slice(0, 16)}\u2026` }));
-    if (manifest.files.length > 200) files.push({ text: `And ${manifest.files.length - 200} more files.` });
-    return {
-      kind: "release",
-      title: `Sign a release: ${manifest.name} ${manifest.version}`,
-      summary: [
-        `Published by the collective ${names(d.signer)}. It counts as the collective\u2019s release once enough holders of its Releases area have signed it, each with an act of their own (Agreements rule 60).`,
-        "Dub cannot compare these files with a copy of your own: sign only if you checked them elsewhere (each file\u2019s fingerprint is listed)."
-      ],
-      sections: [...readRelease(manifest, null), { heading: `Its files (${manifest.files.length})`, lines: files }],
-      plain: [],
-      risks: [],
-      blocking,
-      collective: d.signer ?? null
-    };
-  }
-  const act2 = actOfCollective(d, names);
-  if (act2) return act2;
-  return { kind: "other", title: "An act Dub does not sign", summary: ["Dub signs founding terms, clones of a collective\u2019s agreement, releases, and a collective\u2019s acts waiting for a second key."], sections: [], plain: [], risks: [], blocking: ["Not something Dub signs."], collective: null };
-}
-async function readDealProposal(d, a, names, hints, via2, also) {
-  const blocking = [];
-  const sections = [];
-  const lines2 = [];
-  let version2 = d.id;
-  for (const id of also) {
-    const got = await fetchAct3(id, hints, via2);
-    const x = got ? describeAct(got.act) : null;
-    if (!x?.payload) {
-      blocking.push(`An act it asks you to sign (${id}) was not found, so it cannot be read.`);
-      continue;
-    }
-    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.terms) {
-      const c = termsOf(x.payload);
-      if (c.parent !== d.id) {
-        blocking.push(`An act it asks you to sign (${id}) is a version of another agreement.`);
-        continue;
-      }
-      version2 = x.id;
-      const shared = (c.stakes?.[0]?.[1] ?? []).map(([h, n]) => `${h ? names(h) : "the collective"} ${(n / 1e4).toLocaleString("en")}%`).join(", ");
-      sections.unshift({ heading: "Its second version: the stake shared", lines: [{ text: `The first version writes the vow\u2019s stake wholly to its signer (Agreements rule 14); this second one shares it: ${shared}. You sign both.` }, ...readChanges(d.payload, x.payload, names)] });
-      continue;
-    }
-    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.offer) {
-      const m = cborDecode(x.payload);
-      const under = m.get(0);
-      const price = m.get(2);
-      const payee = m.get(3);
-      if (!(under instanceof Uint8Array) || hex(under) !== d.id && hex(under) !== version2) {
-        blocking.push(`An act it asks you to sign (${id}) is an offer under another agreement.`);
-        continue;
-      }
-      lines2.push({ text: `Its offer, always public, made under the deal${payee instanceof Uint8Array ? ` and paying ${names(hex(payee))}, the deal\u2019s own payee` : ""}${Array.isArray(price) ? `, at ${String(price[1])} of its unit` : ""}. Every party signs it (Agreements, Standing offer: \u201Cunder a deal, it is signed by every party\u201D).` });
-      if (typeof m.get(4) === "string") lines2.push({ text: `Its words: \u201C${escapeControls(m.get(4))}\u201D` });
-      continue;
-    }
-    blocking.push(`An act it asks you to sign (${id}) is neither a version of the deal nor its offer.`);
-  }
-  if (lines2.length) sections.unshift({ heading: "What it sells", lines: lines2 });
-  if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
-  return {
-    kind: "deal",
-    title: `A shared deal: ${dealName(termsOf(d.payload).text ?? "") ? `\u201C${dealName(termsOf(d.payload).text ?? "")}\u201D` : a.title}`,
-    summary: [
-      "A deal between separate people (no collective): every party signs it, and every version of it.",
-      "Before you sign: the work then belongs to the deal, and every payment for it, a tip included, goes to its split service, which divides it and pays each owner by their share. A tip to you personally still goes to your own pointer.",
-      ...a.summary
-    ],
-    sections: [...sections, ...a.sections],
-    plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
-    risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
-    blocking,
-    collective: null
-  };
-}
-function actOfCollective(d, names) {
-  if (!d.signer || !d.payload) return null;
-  const by = d.binding && d.binding !== d.signer ? " It was made with one member\u2019s own key (F353)." : "";
-  const base = (title2, lines2, plain = []) => ({
-    kind: "act",
-    title: title2,
-    summary: [`An act of the collective ${names(d.signer)}, waiting for your signature: the area that reaches it asks one more key than it has.${by} Signing adds yours, with your own key for this collective where your apps hold it (Agreements rule 60, F353).`],
-    sections: [{ heading: "What it is", lines: lines2.map((text3) => ({ text: text3 })) }],
-    plain,
-    risks: [],
-    blocking: [],
-    collective: d.signer
-  });
-  try {
-    if (d.spec === MIRS.money) {
-      const r = moneyRead(d.type, d.payload).act;
-      const amount = r.amount;
-      const lines2 = [`A Money act: ${r.type}.`];
-      if (amount) lines2.push(`Amount: ${amount.value.toLocaleString("en")} in unit ${amount.unit.slice(0, 12)}\u2026 (the Bitcoin units Module names regtest satoshis so).`);
-      for (const k of ["payer", "payee", "debtor", "creditor"]) if (typeof r[k] === "string") lines2.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names(r[k])}.`);
-      if (r.type === "pointer") {
-        const rails = r.rails ?? [];
-        lines2.push(`Where payments to the collective go from now on (its payee pointer, version ${r.version}${r.previous ? `, replacing ${String(r.previous).slice(0, 12)}\u2026` : ""}):`);
-        for (const [i, x] of rails.entries()) lines2.push(`Rail ${i + 1}: ${labelOf(x.module) ?? `a rail Module not known here (${x.module.slice(0, 12)}\u2026)`}, address ${hex(new Uint8Array(x.address)).slice(0, 24)}\u2026`);
-        lines2.push("Signing it with your key counts as your consent in the area reaching Money: check that these rails are the ones the collective agreed (its split service\u2019s, say).");
-      }
-      return base(`Sign a money act of the collective: ${r.type}`, lines2);
-    }
-    if (d.spec === SPECS.text && d.type === 0) {
-      const m = cborDecode(d.payload);
-      const text3 = typeof m.get(0) === "string" ? m.get(0) : "";
-      return base("Sign a post of the collective", ["A post (Text), in the collective\u2019s name."], [{ heading: "Its words", text: escapeControls(text3) }]);
-    }
-    if (d.spec === SPECS.envelopes && d.type === 0) return base("Sign a publication of the collective", ["A publication (Envelopes), in the collective\u2019s name."]);
-    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.offer) {
-      const m = cborDecode(d.payload);
-      const price = m.get(2);
-      return base("Sign an offer of the collective", [`A standing offer, always public.${Array.isArray(price) ? ` Its price: ${String(price[1])}.` : ""}`], typeof m.get(4) === "string" ? [{ heading: "Its words", text: escapeControls(m.get(4)) }] : []);
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-async function holdsAnArea(act, hints, member, via2 = {}) {
-  const got = await fetchAct3(act, hints, via2);
-  const d = got ? describeAct(got.act) : null;
-  if (!d?.payload || d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms) return false;
-  try {
-    return termsOf(d.payload).areas.some((a) => a.holders.includes(member));
-  } catch {
-    return false;
-  }
 }
 
 // src/carryin.ts
@@ -11723,551 +10984,6 @@ function carriedKey(look, seed) {
   const version2 = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
   return { version: version2, act: look.encryptionKeyAct, secret: hex(secret) };
 }
-
-// src/names.ts
-var NAMING_SPEC = sha2562("Naming cMIP, draft 1, test value until publication");
-var NAME = 4;
-var NAME_WITHDRAWAL = 5;
-var MAX_NAME = 48;
-var FORBIDDEN = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "u");
-function nameProblem(name) {
-  if (name !== name.normalize("NFC")) return "it is not canonical text (NFC)";
-  if (!name.trim()) return "it is empty";
-  if (/^\s|\s$/u.test(name)) return "it starts or ends with a space";
-  if (FORBIDDEN.test(name)) return "it holds a line break, a control character or a direction override";
-  if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
-  return null;
-}
-function readName(typed) {
-  const name = typed.normalize("NFC").trim();
-  const why = nameProblem(name);
-  if (why) throw new Error(`That name cannot be used: ${why}. Nothing was signed.`);
-  return name;
-}
-var namePayload = (name) => cborEncode(
-  /* @__PURE__ */ new Map([
-    [0, name],
-    [1, unhex(NAMING_SPEC)]
-  ])
-);
-async function namesOf(identity, places, via2 = {}) {
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  const l = await lookUp(identity, places, via2, v);
-  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
-  const at = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...routed, ...places])];
-  await holdSequence(v, identity, l, at, via2);
-  const names = /* @__PURE__ */ new Map();
-  const withdrawn = /* @__PURE__ */ new Set();
-  const seen = /* @__PURE__ */ new Set();
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via2).feed({ signer: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "act") continue;
-          let d;
-          try {
-            d = describeAct(it.item);
-          } catch {
-            continue;
-          }
-          if (seen.has(d.id) || d.spec !== SPECS.identity || d.signer !== identity) continue;
-          if (d.type !== NAME && d.type !== NAME_WITHDRAWAL) continue;
-          seen.add(d.id);
-          v.add(it.item);
-          if (v.status(d.id) !== "valid") continue;
-          if (d.type === NAME_WITHDRAWAL) {
-            for (const [chain, target] of d.objects ?? []) if (chain === target) withdrawn.add(target);
-            continue;
-          }
-          const m = cborDecode(d.payload);
-          const name = m.get(0);
-          const cmip = m.get(1);
-          if (typeof name !== "string" || !(cmip instanceof Uint8Array) || hex(cmip) !== NAMING_SPEC) continue;
-          if (nameProblem(name)) continue;
-          names.set(d.id, { act: d.id, name });
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch {
-    }
-  }
-  return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
-}
-
-// src/shapes.ts
-var PUBLISH_WARNING = "Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.";
-
-// src/people.ts
-var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
-var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
-var FOLLOW_LIST = 0;
-var SEALED_LIST = 1;
-var NO_PEOPLE = () => ({ follows: [], muted: [], list: "private", published: null, sealed: null, carried: false, seen: [], inbox: { after: {}, items: [] }, sent: [] });
-function followListPayload(a) {
-  const m = /* @__PURE__ */ new Map([[0, a.version]]);
-  if (a.previous) m.set(1, unhex(a.previous));
-  m.set(2, a.withdrawn ? [] : a.ids.map(unhex));
-  if (a.withdrawn) m.set(3, true);
-  return cborEncode(m);
-}
-async function readFollowList(identity, places, via2 = {}) {
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  const l = await lookUp(identity, places, via2, v);
-  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
-  const at = [.../* @__PURE__ */ new Set([...routed, ...places, ...l.resolution.homes.map((h) => h.hint)])];
-  await holdSequence(v, identity, l, at, via2);
-  const acts = /* @__PURE__ */ new Map();
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via2).feed({ signer: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "act") continue;
-          let d;
-          try {
-            d = describeAct(it.item);
-          } catch {
-            continue;
-          }
-          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC && d.spec !== PEOPLE_SPEC_1 || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
-          v.add(it.item);
-          if (v.status(d.id) !== "valid") continue;
-          try {
-            const m = cborDecode(d.payload);
-            const version2 = Number(m.get(0));
-            const prev = m.get(1);
-            const ids = m.get(2).filter((x) => x instanceof Uint8Array).map(hex);
-            acts.set(d.id, { version: version2, previous: prev instanceof Uint8Array ? hex(prev) : null, ids, withdrawn: m.get(3) === true });
-          } catch {
-          }
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch {
-    }
-  }
-  const out = { act: null, version: 0, ids: [], withdrawn: false, forked: null };
-  let at_ = null;
-  for (; ; ) {
-    const next = [...acts.entries()].filter(([, a2]) => a2.previous === at_ && a2.version === out.version + 1);
-    if (next.length !== 1) {
-      if (next.length > 1) out.forked = out.version;
-      return out;
-    }
-    const [id, a] = next[0];
-    Object.assign(out, { act: id, version: a.version, ids: a.ids, withdrawn: a.withdrawn });
-    at_ = id;
-  }
-}
-function sealedListPayload(a) {
-  const m = /* @__PURE__ */ new Map([[0, a.version]]);
-  if (a.previous) m.set(1, unhex(a.previous));
-  m.set(
-    2,
-    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
-  );
-  return cborEncode(m);
-}
-function openerOf(identity, secrets) {
-  return async (sealed) => sealed.map((bytes) => {
-    for (const s of secrets) {
-      try {
-        return openSealed(bytes, identity, s);
-      } catch {
-      }
-    }
-    return null;
-  });
-}
-async function readSealedList(identity, keys, homes, via2 = {}) {
-  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
-  if (Array.isArray(keys) && !keys.length) return out;
-  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  let l;
-  try {
-    l = await lookUp(identity, homes, via2, v);
-  } catch (e3) {
-    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
-    return out;
-  }
-  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  const acts = /* @__PURE__ */ new Map();
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via2).feed({ to: identity, after });
-        const sealed = page.items.filter((it) => it.kind === "sealed");
-        const opened = sealed.length ? await open(sealed.map((it) => it.item)) : [];
-        for (const o of opened) {
-          const d = o?.described;
-          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
-          if (o.key) l.verifier.addWithKey(o.act, o.key);
-          else l.verifier.add(o.act);
-          if (l.verifier.status(d.id) !== "valid") continue;
-          try {
-            const m = cborDecode(d.payload);
-            const prev = m.get(1);
-            const follows = [];
-            for (const x of m.get(2)) {
-              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
-              const id = hex(x[0]);
-              if (follows.some((f) => f.id === id)) continue;
-              follows.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
-            }
-            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
-          } catch {
-          }
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch (e3) {
-      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
-    }
-  }
-  const best = (from, version2) => {
-    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version2 + 1);
-    if (next.length > 1) out.forked = true;
-    let pick = null;
-    for (const [id] of next) {
-      const below = best(id, version2 + 1);
-      const depth = below ? below.depth : version2 + 1;
-      const tip2 = below ? below.id : id;
-      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
-    }
-    return pick ? { id: pick.tip, depth: pick.depth } : null;
-  };
-  const tip = best(null, 0);
-  if (tip) {
-    const a = acts.get(tip.id);
-    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
-  }
-  return out;
-}
-
-// ../damgar/src/total.ts
-var GRANT_LIMITS_SPEC_3 = sha2562("Grant limits cMIP, draft 3, test value until publication");
-var TOTAL = 2;
-var TOTAL_SAY = "In all: kept by the apps, not judged by verifiers. Dub refuses to sign past it and Damgar counts it here; a reader of the lane\u2019s acts judges only the cap per payment and the expiry, since a total needs every act of the lane, some of them private.";
-function readAsked(v) {
-  if (!(v instanceof Map)) throw new Error("the limits are not a map");
-  const m = new Map(v);
-  let total = null;
-  if (m.has(TOTAL)) {
-    const t = m.get(TOTAL);
-    if (!Array.isArray(t) || t.length !== 2 || !(t[0] instanceof Uint8Array) || t[0].length !== 32 || typeof t[1] !== "number" || !Number.isSafeInteger(t[1]) || t[1] <= 0) throw new Error("the cap in all is not [unit, value], a whole amount above zero");
-    total = { unit: hex(t[0]), value: t[1] };
-    m.delete(TOTAL);
-  }
-  const limits = readLimits(m);
-  if (total && limits.cap && limits.cap.unit !== total.unit) throw new Error("the cap in all is in another unit than the cap per act");
-  return { limits, total };
-}
-function askedValue(limits, total, encode) {
-  const m = cborDecode(encode(limits));
-  if (total) {
-    if (!Number.isSafeInteger(total.value) || total.value <= 0) throw new Error("The cap in all is a whole amount above zero.");
-    if (limits.cap && total.value < limits.cap.value) throw new Error("The cap in all is at least the cap per payment.");
-    m.set(TOTAL, [unhex(total.unit), total.value]);
-  }
-  return cborDecode(cborEncode(m));
-}
-function spent(payments, unit) {
-  return payments.filter((p) => !p.refused && p.amount.unit === unit).reduce((n, p) => n + p.amount.value, 0);
-}
-
-// ../grants/src/lanes.ts
-function reaches(kinds, spec, type, layerOf2) {
-  if (!kinds?.length) return true;
-  return kinds.some((k) => "layer" in k ? layerOf2(spec) === k.layer : k.spec === spec && k.type === type);
-}
-async function grantsForKey(person, key, hints, via2 = {}) {
-  const out = [];
-  for (const a of await allBy(person, hints, via2)) {
-    const d = describeAct(a);
-    if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.grant || !d.payload) continue;
-    try {
-      const g = readGrant(d.payload);
-      if (g.grantee === person && g.key === key && !out.some((x) => x.id === d.id)) out.push({ id: d.id, grant: g });
-    } catch {
-    }
-  }
-  return out;
-}
-async function revocationsOf(grantor, grant, hints, via2 = {}) {
-  const out = [];
-  for (const a of await allBy(grantor, hints, via2)) {
-    const d = describeAct(a);
-    if (d.spec !== MIRS.agreements || d.type !== REVOCATION || !d.payload) continue;
-    const named2 = cborDecode(d.payload).get(0);
-    if (named2 instanceof Uint8Array && hex(named2) === grant && !out.includes(d.id)) out.push(d.id);
-  }
-  return out;
-}
-async function actsUnder(grantor, grant, hints, via2 = {}) {
-  const out = [];
-  for (const a of await allBy(grantor, hints, via2)) {
-    const d = describeAct(a);
-    if (d.binding === grant && !out.some((x) => x.id === d.id)) out.push({ id: d.id, public: d.public, spec: d.spec, type: d.type });
-  }
-  return out;
-}
-
-// ../damgar/src/link-say.ts
-var LINK_SAY = [
-  "Damgar can answer a Lightning payment to you by itself, if you let it make invoices on your node. It needs a permission from your node that makes invoices and does nothing else: it cannot pay, cannot read your balance, cannot move money.",
-  "On lnd: bake it with \u201Clncli bakemacaroon invoices:write invoices:read\u201D, and give its file here with the node\u2019s address and certificate. Damgar asks the node for its balance with it first, and refuses a permission that can read it.",
-  "Its cost: whoever steals it can make invoices in your node\u2019s name, never take anything. Remove it here at any time; without it, you make each invoice in your wallet, as before.",
-  "An invoice is made by itself only below the cap of your receipts lane, and only while \u201CFollow every step by hand\u201D is off."
-];
-
-// ../damgar/src/collective.ts
-var MONEY_LAYER = 2;
-function capOf2(hexed) {
-  if (!hexed) return null;
-  try {
-    const m = cborDecode(unhex(hexed));
-    const c = m instanceof Map ? m.get(0) : null;
-    return Array.isArray(c) && c[0] instanceof Uint8Array && typeof c[1] === "number" ? { unit: hex(c[0]), value: c[1] } : null;
-  } catch {
-    return null;
-  }
-}
-async function termsOf2(id, hints, via2) {
-  for (const h of hints) {
-    const a = await relayAt(h, via2).getAct(id).catch(() => null);
-    if (!a) continue;
-    const d = describeAct(a);
-    if (d.spec !== REPO_SPECS.agreements || d.type !== 0 || !d.payload) return null;
-    return readTerms(d.payload, AGREEMENTS_SPECS);
-  }
-  return null;
-}
-async function readCollective(me, id, hints, via2) {
-  const now6 = await collectiveNow(id, hints, via2);
-  if (!now6.agreement) return { id, agreement: null, area: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
-  const t = await termsOf2(now6.agreement, hints, via2);
-  const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
-  const area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf2(a.limits) } : null;
-  const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), via2).catch(() => []);
-  const key = keys.length ? await memberKeyFor(keys, id, hints, via2).catch(() => null) : null;
-  let why = null;
-  if (!area) why = "Its constitution draws no Money area: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
-  else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (\u201C${area.name}\u201D): your key does not count there.`;
-  else if (!key) why = "No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change.";
-  return { id, agreement: now6.agreement, area, key, why };
-}
-var withinCap = (area, amount) => !area.cap || area.cap.unit === amount.unit && amount.value <= area.cap.value;
-function promiseSay(c, me, a, names) {
-  const area = c.area;
-  const above = !withinCap(area, a.amount);
-  const need = area.number + (above ? 1 : 0);
-  const others = area.holders.filter((h) => h !== me);
-  const lines2 = [
-    `A promise to pay, by the collective ${names(c.id)}: it owes ${names(a.to)} ${a.amount.value.toLocaleString("en")} (a Money obligation, public, signed with your own key for the collective; F353).`,
-    `What for: ${a.whatFor || "nothing said"}.`,
-    `Its Money area, \u201C${area.name}\u201D: ${area.holders.map(names).join(", ")}; ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more (the grant limits cMIP, draft 2)` : ""}.`,
-    above ? `It is above the cap: it counts only with ${need} keys. Yours signs it now; ${others.map(names).join(", ")} ${others.length === 1 ? "is" : "are"} asked for theirs, in their own app.` : need === 1 ? "Within the area: your key alone makes it count." : `The area asks ${need} keys: yours signs it now; the others are asked for theirs.`,
-    "Damgar holds no wallet: paying the promise is a payment like any other."
-  ];
-  return { lines: lines2, above, others: need > 1 ? others : [] };
-}
-var promiseDigest = (c, payload) => sha2562(new Uint8Array([...new TextEncoder().encode(`MOR Damgar collective promise, version 1
-${c.id}
-`), ...payload]));
-var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
-async function signPromise(me, c, payload, ask3, text3, hints, via2) {
-  return signAndAsk(me, c.id, c.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask3, text3, hints, via2);
-}
-async function standing(c, act, amount, hints, via2) {
-  const area = c.area;
-  const verdicts = area?.cap ? [[act, withinCap(area, amount)]] : [];
-  return (await judgeCollective(c.id, [act], hints, via2, verdicts)).get(act);
-}
-
-// ../kit/src/engine/names.ts
-var now2 = () => Date.now();
-var NameReader = class {
-  /** `keep`: how long a name read (or none) is kept, in milliseconds; a name not reached is asked again after a tenth of it. */
-  constructor(o = {}) {
-    this.o = o;
-  }
-  kept = /* @__PURE__ */ new Map();
-  reading = /* @__PURE__ */ new Map();
-  /** Its published name, as its homes give it; `fresh` asks again whatever was kept. */
-  read(id, places, fresh = false) {
-    const keep2 = this.o.keep ?? 3e5;
-    const k = this.kept.get(id);
-    if (k && !fresh && now2() - k.at < (k.shown.state === "unreached" ? keep2 / 10 : keep2)) return Promise.resolve(k.shown);
-    const r = this.reading.get(id);
-    if (r && !fresh) return r;
-    const p = (async () => {
-      let shown;
-      try {
-        const found = await namesOf(id, places, this.o.via ?? {});
-        const name = found.map((x) => x.name).pop();
-        shown = name ? { state: "name", name } : { state: "none" };
-      } catch {
-        shown = { state: "unreached" };
-      }
-      this.kept.set(id, { shown, at: now2() });
-      this.reading.delete(id);
-      return shown;
-    })();
-    this.reading.set(id, p);
-    return p;
-  }
-  /** Several at once, by ID. */
-  async many(ids, places, fresh = false) {
-    const out = {};
-    await Promise.all([...new Set(ids)].filter((x) => /^[0-9a-f]{64}$/.test(x)).map(async (id) => out[id] = await this.read(id, places, fresh)));
-    return out;
-  }
-  /** What is kept of it now, without asking: "Loading…" where nothing is. */
-  now(id) {
-    return this.kept.get(id)?.shown ?? { state: "loading" };
-  }
-  /** Forget what was kept of one (its name was just changed here). */
-  forget(id) {
-    this.kept.delete(id);
-  }
-};
-
-// ../kit/src/engine/people.ts
-var heldSecrets = (me) => [...me.f.encryption].reverse().filter((x) => x.secret).map((x) => unhex(x.secret));
-async function readContacts(me, open, via2 = {}) {
-  if (!open || Array.isArray(open) && !open.length) return { contacts: [], version: 0, problem: "this app cannot open what is sealed to this identity, so its contacts cannot be read here" };
-  const l = await readSealedList(me.id, open, me.f.homes.map((h) => h.hint), via2);
-  return { contacts: l.follows, version: l.version, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
-}
-function readNick(typed) {
-  const n = (typed ?? "").normalize("NFC").trim();
-  if (!n) return null;
-  if ([...n].length > MAX_NAME) throw new Error(`A nickname is at most ${MAX_NAME} characters. Nothing was signed.`);
-  if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/u.test(n)) throw new Error("A nickname holds no line break, control character or direction override. Nothing was signed.");
-  return n;
-}
-async function changeContacts(me, change, o) {
-  const via2 = o.via ?? {};
-  if (!o.open || Array.isArray(o.open) && !o.open.length) throw new Error(`${o.app} cannot open what is sealed to this identity, so its contacts cannot be changed from here. Nothing was signed.`);
-  const homes = me.f.homes.map((h) => h.hint);
-  const found = await readSealedList(me.id, o.open, homes, via2);
-  if (!found.act && found.problems.length >= homes.length) throw new Error(`The contacts could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
-  const next = change(found.follows.map((f) => ({ ...f })));
-  if (!next) return [{ text: "Nothing changed.", tone: "ok" }];
-  const look = await lookUp(me.id, homes, via2);
-  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key: its contacts cannot be sealed to it. Nothing was signed.");
-  if (Array.isArray(o.open) && !me.f.encryption.some((x) => x.secret && hex(xwingPublic(unhex(x.secret))) === hex(look.encryptionKey))) throw new Error(`The encryption key this identity publishes is not one ${o.app} holds: its contacts cannot be sealed from here. Nothing was signed.`);
-  let made;
-  try {
-    made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: next }), { public: false, to: [me.id] });
-  } finally {
-    await o.save?.();
-  }
-  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
-  let left = 0;
-  for (const h of homes) {
-    try {
-      await relayAt(h, via2).putSealed(sealed);
-      left++;
-    } catch {
-    }
-  }
-  await leaveAtHomes(me, made, { via: via2, sealed: left > 0 });
-  await o.save?.();
-  const said2 = [];
-  if (found.forked) said2.push({ text: "Your contacts were forked at your homes: two apps changed them at once. The longer branch was continued.", tone: "warn" });
-  said2.push(left ? { text: `Your contacts are sealed to you and kept at your homes (version ${found.version + 1}): every app holding this identity reads them.`, tone: "ok" } : { text: "No home took your contacts: nothing changed there. Try again.", tone: "warn" });
-  return said2;
-}
-var addContact = (me, who2, o) => changeContacts(
-  me,
-  (now6) => {
-    if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
-    const nick = readNick(who2.nick);
-    const had = now6.find((f) => f.id === who2.id);
-    if (had && (!nick || had.name === nick)) return null;
-    if (had) had.name = nick;
-    else now6.push({ id: who2.id, name: nick });
-    return now6;
-  },
-  o
-);
-var setNick = (me, who2, o) => changeContacts(
-  me,
-  (now6) => {
-    const nick = readNick(who2.nick);
-    const had = now6.find((f) => f.id === who2.id);
-    if (!had) {
-      if (who2.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
-      now6.push({ id: who2.id, name: nick });
-      return now6;
-    }
-    if ((had.name ?? null) === nick) return null;
-    had.name = nick;
-    return now6;
-  },
-  o
-);
-var removeContact = (me, id, o) => changeContacts(me, (now6) => now6.some((f) => f.id === id) ? now6.filter((f) => f.id !== id) : null, o);
-
-// ../kit/src/engine/known.ts
-var HEX2 = /^[0-9a-f]{64}$/;
-var Known = class {
-  /** `app`: this app's name, as said ("Damgar"). */
-  constructor(app2, o = {}) {
-    this.app = app2;
-    this.names = new NameReader({ via: o.via });
-  }
-  names;
-  lists = /* @__PURE__ */ new Map();
-  /** The contacts sealed to the identity, read again at most once a minute (or now, `fresh`). */
-  async followed(me, open, via2 = {}, fresh = false) {
-    const c = this.lists.get(me.id);
-    if (c && !fresh && c.at + 6e4 > Date.now()) return c;
-    let r;
-    try {
-      r = await readContacts(me, open, via2);
-    } catch (e3) {
-      r = { contacts: c?.contacts ?? [], problem: e3 instanceof Error ? e3.message : String(e3) };
-    }
-    this.lists.set(me.id, { ...r, at: Date.now() });
-    return r;
-  }
-  /** The names of these identities: the nickname given (none for oneself), and the name each published, read at `places` and its own homes. */
-  async named(me, open, ids, places, o = {}) {
-    const want = [...new Set(ids.filter((x) => HEX2.test(x)))].slice(0, 200);
-    const [{ contacts }, published] = await Promise.all([this.followed(me, open, o.via), this.names.many(want, places, !!o.fresh)]);
-    return Object.fromEntries(want.map((id) => [id, { nick: id === me.id ? null : contacts.find((f) => f.id === id)?.name ?? null, published: published[id] }]));
-  }
-  /** The list, each contact with its names (its published name read, or its state). */
-  async contacts(me, open, places, o = {}) {
-    const { contacts, problem } = await this.followed(me, open, o.via, o.fresh);
-    const published = await this.names.many(contacts.map((c) => c.id), places);
-    return { contacts: contacts.map((c) => ({ id: c.id, form: idForm(c.id), name: c.name, named: { nick: c.name, published: published[c.id] } })), problem };
-  }
-  /** Add a contact, with a nickname if given; set or take away a nickname; take a contact out. Each sealed as the people cMIP keeps the list. */
-  async change(me, a, o) {
-    const id = HEX2.test(a.id) ? a.id : readIdWhere(a.id.trim()).id;
-    a = { ...a, id };
-    const opts = { open: o.open, via: o.via, app: this.app, save: o.save };
-    const said2 = a.op === "add" ? await addContact(me, { id: a.id, nick: a.nick ?? null }, opts) : a.op === "nick" ? await setNick(me, { id: a.id, nick: a.nick ?? null }, opts) : await removeContact(me, a.id, opts);
-    this.lists.delete(me.id);
-    return said2;
-  }
-  /** Forget what was kept for an identity (it was removed, or its key changed). */
-  forget(id) {
-    this.lists.delete(id);
-    this.names.forget(id);
-  }
-};
 
 // ../damgar/src/accepted.ts
 var SEALED_LIST2 = 1;
@@ -12454,6 +11170,7 @@ async function publishAccepted(me, list8, relays, previous, withdrawn, save) {
 }
 
 // ../damgar/src/damgar.ts
+var PRICE_TAG2 = 5;
 var LINE_SAY = "Damgar keeps its own line of acts for this identity (its money acts and messages). If the signing key is ever changed with the chain key, in Ki\u0161ib, that change must keep this line, or every claim and receipt signed here becomes void. Ki\u0161ib reads it from the homes and keeps it.";
 var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words Damgar holds no longer count. Nothing was signed. To go on here, give Damgar the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Damgar then goes on, in new lines.";
@@ -12486,10 +11203,10 @@ var ACCOUNT_NOTES = [
   "Amounts in different units are never added: one total per unit, side by side."
 ];
 var NO_BOOK = () => ({ after: {}, acts: {}, drafts: {}, requestsIn: {}, requestsOut: {}, invoices: {}, payments: {}, pointers: [], published: null });
-var list2 = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
+var list = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
 var message3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var now3 = () => Math.floor(Date.now() / 1e3);
-var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var b642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var railName = (m) => m === SPEC.lightning.hash ? "Lightning" : m === SPEC.onchain.hash ? "on-chain" : `rail Module ${m.slice(0, 8)}\u2026`;
 var Damgar = class {
@@ -12602,7 +11319,7 @@ var Damgar = class {
       const binding = r.links[r.links.length - 1];
       if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
       const chain = await servedChain(k.id, r.homes, {});
-      const named2 = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const named2 = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
       const f = {
         label: TEST_LABEL,
         identity: k.id,
@@ -12626,7 +11343,7 @@ var Damgar = class {
       await this.store.setActive(k.id);
       return {
         lines: [
-          { text: `Damgar uses ${k.name ?? short2(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Damgar none. Every money act is shown by Ki\u0161ib, in its panel here, before it is signed: money always asks.`, tone: "ok" },
+          { text: `Damgar uses ${k.name ?? short(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Damgar none. Every money act is shown by Ki\u0161ib, in its panel here, before it is signed: money always asks.`, tone: "ok" },
           p.opens.includes(k.id) ? { text: "Ki\u0161ib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.", tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
           { text: LINE_SAY, tone: "warn" }
         ]
@@ -12653,7 +11370,7 @@ var Damgar = class {
     return next;
   }
   who(id, me) {
-    return { id, short: short2(id), me: id === me };
+    return { id, short: short(id), me: id === me };
   }
   /** The Dubsar clock's time of each act shown (decided 23 October 2026: every app relies on it), in words; none where it has not stamped it. */
   async clockWords(ids) {
@@ -12697,8 +11414,8 @@ var Damgar = class {
       const r = look.resolution;
       const binding = r.links[r.links.length - 1];
       const chain = await servedChain(id, r.homes, via2);
-      const named2 = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
-      const relays = named2.length ? named2 : list2(a.relays ?? []);
+      const named2 = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : list(a.relays ?? []);
       if (!relays.length) throw new Error("This identity names no relays. Give one or more relay addresses, and bring it again.");
       const enc2 = carriedKey(look, seed);
       const f = {
@@ -12780,9 +11497,9 @@ var Damgar = class {
    */
   async make(a) {
     const via2 = a.via ?? {};
-    const hints = list2(a.homes);
+    const hints = list(a.homes);
     if (!hints.length) throw new Error("Give at least one home address: where the identity lives, and anyone can check it.");
-    const relays = list2(a.relays);
+    const relays = list(a.relays);
     for (const r of [...hints, ...relays]) if (!/^https?:\/\//.test(r)) throw new Error(`\u201C${r}\u201D: an address starts with https:// (or http://)`);
     const homes = [];
     for (const hint of hints) {
@@ -12999,7 +11716,7 @@ var Damgar = class {
       const f = await this.store.identity(id);
       const s2 = f ? await this.store.read(id, "settings") ?? { relays: [], via: {} } : null;
       const published = f && s2 ? await this.published(id, [...f.f.homes.map((h) => h.hint), ...s2.relays]) : { state: "unreached" };
-      held.push({ id, grouped: groupId(id), short: short2(id), active: id === active, runner: !f?.f.signingSecret, name: published.state === "name" ? published.name : null, named: { nick: null, published } });
+      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: published.state === "name" ? published.name : null, named: { nick: null, published } });
     }
     const me = active ? await this.load(active) : null;
     const out = { web: !!this.opts.web, settingsSaved: false, stage: "identity", held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
@@ -13011,7 +11728,7 @@ var Damgar = class {
       id: me.id,
       grouped: groupId(me.id),
       form: idForm(me.id),
-      short: short2(me.id),
+      short: short(me.id),
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
@@ -13020,7 +11737,7 @@ var Damgar = class {
       collectives: await Promise.all(
         (s.collectives ?? []).map(async (c) => {
           const published = await this.published(c, [...me.f.homes.map((h) => h.hint), ...s.relays]);
-          return { id: c, form: idForm(c), short: short2(c), name: published.state === "name" ? published.name : null, named: { nick: null, published } };
+          return { id: c, form: idForm(c), short: short(c), name: published.state === "name" ? published.name : null, named: { nick: null, published } };
         })
       ),
       name: held.find((h) => h.id === me.id)?.name ?? null,
@@ -13136,13 +11853,13 @@ var Damgar = class {
         try {
           c = await readCollective(me, id, places, s.via);
         } catch (e3) {
-          c = { id, agreement: null, area: null, key: null, why: message3(e3) };
+          c = { id, agreement: null, area: null, why: message3(e3) };
         }
         const acts = [];
         for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x2]) => x2.collective === id)) {
           acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.area ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
         }
-        out.push({ ...c, key: c.key ? { ...c.key, secret: new Uint8Array() } : null, acts });
+        out.push({ ...c, acts });
       }
       return { collectives: out };
     });
@@ -13155,7 +11872,7 @@ var Damgar = class {
       return hints;
     }
   }
-  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area and its own key for it is found. */
+  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area or layer (rule 60; a collective has no key, and its members no member keys: each acts with their own). */
   collectiveAdd(typed) {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();
@@ -13167,8 +11884,8 @@ var Damgar = class {
       const area = c.area;
       return {
         lines: [
-          { text: `Damgar acts for ${short2(id)} in money, with your own key for it (F353).`, tone: "ok" },
-          { text: `Its Money area, \u201C${area.name}\u201D: ${area.holders.map(short2).join(", ")}; ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more` : ""}.` }
+          { text: `Damgar acts for ${short(id)} in money, with your own identity\u2019s key, naming the collective (rule 58).`, tone: "ok" },
+          { text: `Its Money area, \u201C${area.name}\u201D: ${area.holders.map(short).join(", ")}; ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more` : ""}.` }
         ]
       };
     });
@@ -13179,7 +11896,7 @@ var Damgar = class {
       const { me, s } = await this.ctx();
       s.collectives = (s.collectives ?? []).filter((c) => c !== id);
       await this.store.write(me.id, "settings", s);
-      return { lines: [{ text: `Damgar no longer acts for ${short2(id)} here. Nothing was signed; add it again by its ID.`, tone: "ok" }] };
+      return { lines: [{ text: `Damgar no longer acts for ${short(id)} here. Nothing was signed; add it again by its ID.`, tone: "ok" }] };
     });
   }
   /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the area, its cap). Nothing is signed. */
@@ -13199,9 +11916,9 @@ var Damgar = class {
     const amount = { unit: a.unit || SPEC.units.regtest, value: readValue(a.value) };
     const acc = this.acceptedSet(await this.accepted(me));
     const pointer = (await this.payee(to, me, s)).look.verifier.moneyPointer(MONEY, to);
-    if (!pointer.act) throw new Error(`${short2(to)} publishes no payee pointer: there is nowhere the promise could be paid. Nothing was signed.`);
+    if (!pointer.act) throw new Error(`${short(to)} publishes no payee pointer: there is nowhere the promise could be paid. Nothing was signed.`);
     const payload = promisePayload(c, { to, amount, pointer: pointer.act });
-    const say_ = promiseSay(c, me.id, { to, amount, whatFor: a.whatFor.trim() }, short2);
+    const say_ = promiseSay(c, me.id, { to, amount, whatFor: a.whatFor.trim() }, short);
     if (!acc.has(amount.unit)) say_.lines.push(`Its unit is not one you accept: shown ${say(amount, acc)}.`);
     return { c, payload, say: say_, digest: promiseDigest(c, payload), to, amount, places };
   }
@@ -13212,15 +11929,15 @@ var Damgar = class {
       await this.current(me);
       const r = await this.collectivePromiseMake(me, s, hints, a);
       if (r.digest !== a.digest) throw new Error("It is not the promise read back: read it again. Nothing was signed.");
-      const text3 = `A promise of the collective ${short2(r.c.id)} to pay ${short2(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
+      const text3 = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
       const made = await signPromise(me, r.c, r.payload, r.say.others, text3, r.places, s.via);
       await this.store.saveIdentity(me);
       book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now3() } };
       await this.saveBook(me.id, book);
       const st = await standing(r.c, made.act, r.amount, r.places, s.via).catch(() => null);
-      const lines2 = [{ text: `Signed for the collective with your own key: act ${short2(made.act)}, public at ${made.places.join(", ")}.`, tone: "ok" }];
-      if (made.asked.length) lines2.push({ text: `Asked for their key: ${made.asked.map(short2).join(", ")}, in their own app.` });
-      if (made.notAsked.length) lines2.push({ text: `Not reached: ${made.notAsked.map(short2).join(", ")} (no inbox or encryption key found).`, tone: "warn" });
+      const lines2 = [{ text: `Signed for the collective with your own key: act ${short(made.act)}, public at ${made.places.join(", ")}.`, tone: "ok" }];
+      if (made.asked.length) lines2.push({ text: `Asked for their key: ${made.asked.map(short).join(", ")}, in their own app.` });
+      if (made.notAsked.length) lines2.push({ text: `Not reached: ${made.notAsked.map(short).join(", ")} (no inbox or encryption key found).`, tone: "warn" });
       lines2.push(st?.met ? { text: "It counts for the collective: its Money lane is met.", tone: "ok" } : { text: `It does not count yet: ${st ? st.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") : "not read"}.`, tone: "warn" });
       return { lines: lines2, act: made.act };
     });
@@ -13229,7 +11946,7 @@ var Damgar = class {
   /** Where this identity's inbox is, as its routes say. */
   async inboxOf(me, s) {
     const l = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
-    return list2([...l.inbox(MESSAGES_SPEC) ?? [], ...l.inbox(MONEY) ?? []]);
+    return list([...l.inbox(MESSAGES_SPEC) ?? [], ...l.inbox(MONEY) ?? []]);
   }
   /**
    * Read what arrived since last time: at the identity's homes (drafts
@@ -13265,7 +11982,7 @@ var Damgar = class {
       } catch (e3) {
         problems.push(`Its inbox could not be looked up: ${message3(e3)}`);
       }
-      const places = list2([...me.f.homes.map((h) => h.hint), ...inbox]);
+      const places = list([...me.f.homes.map((h) => h.hint), ...inbox]);
       const fresh = [];
       for (const hint of places) {
         let after = book.after[hint];
@@ -13329,20 +12046,20 @@ var Damgar = class {
         }
         if (underGrant && (!a || a.backing === "unknown")) {
           const was = book.uncounted?.[d.id];
-          if (!was) lines2.push({ text: `${short2(d.signer)} sent something signed under a lane that cannot count yet: in Waiting, To receive.`, tone: "warn" });
+          if (!was) lines2.push({ text: `${short(d.signer)} sent something signed under a lane that cannot count yet: in Waiting, To receive.`, tone: "warn" });
           (book.uncounted ??= {})[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : void 0, from: d.signer, found: was?.found ?? now3(), why: a ? this.waitingWhy(a) : "the grant it was signed under was not found at the places asked yet", stage: was?.stage ?? "new" };
           continue;
         }
         if (book.uncounted?.[d.id]) delete book.uncounted[d.id];
         if (st !== "valid") {
-          problems.push(`An act from ${short2(d.signer)} that does not count (${st}): set aside.`);
+          problems.push(`An act from ${short(d.signer)} that does not count (${st}): set aside.`);
           continue;
         }
         book.acts[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : void 0, from: d.signer };
         try {
           await this.file(me, s, book, d, lines2);
         } catch (e3) {
-          problems.push(`${short2(d.signer)}: ${message3(e3)}`);
+          problems.push(`${short(d.signer)}: ${message3(e3)}`);
         }
       }
       if (unopened) problems.push(`${unopened} sealed act${unopened === 1 ? "" : "s"} addressed to this identity did not open with the encryption keys Damgar holds: sealed to a key it does not hold.`);
@@ -13360,14 +12077,14 @@ var Damgar = class {
   /** On whose authority an act under a grant stands: its grant, its acceptance and the grantor's revocations read at these places and the signer's homes (`clients/grants`). */
   async authority(o, places, via2) {
     const signer = o.described.signer;
-    let hints = list2(places);
+    let hints = list(places);
     try {
       const l = await lookUp(signer, places, via2);
-      hints = list2([...places, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints)]);
+      hints = list([...places, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints)]);
     } catch {
     }
     try {
-      return await authorityOf(o.act, hints, via2, { key: o.key, names: short2 });
+      return await authorityOf(o.act, hints, via2, { key: o.key, names: short });
     } catch {
       return null;
     }
@@ -13379,7 +12096,7 @@ var Damgar = class {
     if (d.spec && MESSAGES_SPECS.includes(d.spec)) {
       const unread = (why) => {
         (book.unread ??= {})[d.id] = { from: signer, found: t, type: d.type ?? -1, why, stage: "new" };
-        lines2.push({ text: `A money message from ${short2(signer)} that Damgar cannot read: shown unknown, in Waiting.`, tone: "warn" });
+        lines2.push({ text: `A money message from ${short(signer)} that Damgar cannot read: shown unknown, in Waiting.`, tone: "warn" });
       };
       if ((d.type === TYPES.draft || d.type === TYPES.laneRequest || d.type === TYPES.sale) && signer !== me.id) return;
       if (d.type === TYPES.sale) return;
@@ -13404,7 +12121,7 @@ var Damgar = class {
       } else if (d.type === TYPES.request) {
         readRequest(d.payload);
         book.requestsIn[d.id] = { from: signer, found: t, stage: "new", obligation: null, payment: null };
-        lines2.push({ text: `A request to be paid, from ${short2(signer)}: in Waiting.`, tone: "ok" });
+        lines2.push({ text: `A request to be paid, from ${short(signer)}: in Waiting.`, tone: "ok" });
       } else if (d.type === TYPES.invoiceRequest) {
         book.invoices[d.id] = { from: signer, found: t, stage: "new", payment: null, why: null };
         await this.onInvoiceRequest(me, s, book, d.id, lines2);
@@ -13418,7 +12135,7 @@ var Damgar = class {
         if (p.other !== signer && p.service !== signer || p.key !== a2.commitment) throw new Error("an answer to no invoice request of this identity");
         if (a2.amount ? a2.amount.unit !== p.amount.unit || a2.amount.value !== p.amount.value : d.spec === MESSAGES_SPEC || d.spec === MESSAGES_SPEC_3) throw new Error("an answer naming no amount, or another than the payment\u2019s (the money messages cMIP draft 3, 5.1)");
         await this.onAnswer(me, s, book, p, d.id, a2.bound, a2.ticket);
-        lines2.push({ text: p.stage === "to pay" ? `${short2(signer)} answered: a payment is ready, in Waiting, To pay.` : `${short2(signer)} refused to bind the payment: ${p.bound?.kind === "refused" ? p.bound.why : ""}`, tone: p.stage === "to pay" ? "ok" : "warn" });
+        lines2.push({ text: p.stage === "to pay" ? `${short(signer)} answered: a payment is ready, in Waiting, To pay.` : `${short(signer)} refused to bind the payment: ${p.bound?.kind === "refused" ? p.bound.why : ""}`, tone: p.stage === "to pay" ? "ok" : "warn" });
       }
       return;
     }
@@ -13427,11 +12144,12 @@ var Damgar = class {
       const payouts = m.get(1) ?? [];
       const mine = payouts.filter((x) => x.get(0) instanceof Uint8Array && hex(x.get(0)) === me.id).map((x) => ({ amount: Number(x.get(1)), role: typeof x.get(3) === "string" ? x.get(3) : null }));
       const receipt = m.get(0);
-      const agreement = m.get(3);
+      const owners = payouts.find((x) => x.get(0) instanceof Uint8Array && hex(x.get(0)) === me.id && x.get(2) instanceof Uint8Array)?.get(2);
+      const agreement = owners instanceof Uint8Array ? owners : m.get(3);
       if (mine.length && receipt instanceof Uint8Array && agreement instanceof Uint8Array) {
         const rc = book.acts[hex(receipt)] ? this.moneyOf(book, hex(receipt)) : null;
         (book.splits ??= {})[d.id] = { service: signer, agreement: hex(agreement), receipt: hex(receipt), mine, unit: rc?.amount?.unit ?? null, at: t };
-        lines2.push({ text: `${short2(signer)} published a split naming you: ${mine.map((x) => `${x.amount}${x.role ? ` (${x.role})` : ""}`).join(", ")}, in the account.`, tone: "ok" });
+        lines2.push({ text: `${short(signer)} published a split naming you: ${mine.map((x) => `${x.amount}${x.role ? ` (${x.role})` : ""}`).join(", ")}, in the account.`, tone: "ok" });
       }
       return;
     }
@@ -13446,7 +12164,7 @@ var Damgar = class {
       }
       if (!p.claims.includes(d.id)) p.claims.push(d.id);
       if (p.stage === "to pay" || p.stage === "asked") p.stage = "paid";
-      lines2.push({ text: `${short2(signer)} says they paid you ${say(a.amount, new Set(unitOf(a.amount.unit) ? [a.amount.unit] : []))}: check it, and sign the receipt, in Waiting.`, tone: "ok" });
+      lines2.push({ text: `${short(signer)} says they paid you ${say(a.amount, new Set(unitOf(a.amount.unit) ? [a.amount.unit] : []))}: check it, and sign the receipt, in Waiting.`, tone: "ok" });
     } else if (a.type === "receipt" && a.payer === me.id) {
       const pr = readPaymentProof(new Uint8Array(a.proof));
       const key = paymentCommitment({ rail: a.rail, payee: a.payee, amount: a.amount, fulfils: a.fulfils, payer: me.id, paidTo: pr.paidTo, salt: pr.salt });
@@ -13454,14 +12172,14 @@ var Damgar = class {
       if (!p) throw new Error("a receipt for no payment of this identity");
       if (!p.receipts.includes(d.id)) p.receipts.push(d.id);
       p.stage = "settled";
-      lines2.push({ text: `${short2(signer)} signed the receipt for your payment: in the account.`, tone: "ok" });
+      lines2.push({ text: `${short(signer)} signed the receipt for your payment: in the account.`, tone: "ok" });
     } else if (a.type === "receipt" && a.payer !== me.id && a.payee !== me.id && a.payee === signer) {
       (book.shared ??= {})[d.id] = { payer: typeof a.payer === "string" ? a.payer : "", payee: a.payee, amount: a.amount, fulfils: a.fulfils, purchase: !!a.purchase, at: t };
-      lines2.push({ text: `A payment to a deal you share in was receipted in its payee\u2019s name (${short2(a.payee)}): in the account.`, tone: "ok" });
+      lines2.push({ text: `A payment to a deal you share in was receipted in its payee\u2019s name (${short(a.payee)}): in the account.`, tone: "ok" });
     } else if (a.type === "obligation" && a.creditor === me.id && a.debtor === signer) {
       const ask3 = Object.entries(book.requestsOut).find(([id, x]) => x.to === signer && !x.obligation && this.requestOf(book, id)?.pointer === a.pointer);
       if (ask3) ask3[1].obligation = d.id;
-      lines2.push({ text: `${short2(signer)} accepted a debt to you, signed: in the account. ${DEBT_SAY}`, tone: "ok" });
+      lines2.push({ text: `${short(signer)} accepted a debt to you, signed: in the account. ${DEBT_SAY}`, tone: "ok" });
     }
   }
   /**
@@ -13519,7 +12237,7 @@ var Damgar = class {
   /** An identity's public acts at these places, held by its lookup's verifier; their payloads, by act. */
   async actsOf(id, places, via2, l) {
     const out = /* @__PURE__ */ new Map();
-    for (const h of list2(places)) {
+    for (const h of list(places)) {
       let after;
       try {
         for (; ; ) {
@@ -13547,7 +12265,7 @@ var Damgar = class {
     try {
       look = await lookUp(id, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
     } catch (e3) {
-      throw new Error(`${short2(id)} was not found: ${message3(e3)}`);
+      throw new Error(`${short(id)} was not found: ${message3(e3)}`);
     }
     const outbox = look.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
     const acts = await this.actsOf(id, [...outbox, ...look.resolution.homes.map((h) => h.hint), ...s.relays], s.via, look);
@@ -13569,7 +12287,7 @@ var Damgar = class {
       await this.sendAnswer(me, s, book, id, f.hash, { kind: "refused", why: checked2.why.slice(0, 280) }, inv.from, null, void 0, f.amount);
       inv.stage = "refused";
       inv.why = checked2.why;
-      lines2.push({ text: `An invoice request from ${short2(inv.from)} was refused: ${checked2.why}.`, tone: "warn" });
+      lines2.push({ text: `An invoice request from ${short(inv.from)} was refused: ${checked2.why}.`, tone: "warn" });
       return;
     }
     const p = {
@@ -13609,11 +12327,11 @@ var Damgar = class {
         inv.stage = "refused";
         inv.why = why;
         delete book.payments[f.hash];
-        lines2.push({ text: `An on-chain invoice request from ${short2(inv.from)} could not be answered: ${why}.`, tone: "warn" });
+        lines2.push({ text: `An on-chain invoice request from ${short(inv.from)} could not be answered: ${why}.`, tone: "warn" });
         return;
       }
       if (s.manual) {
-        lines2.push({ text: `${short2(inv.from)} asks where to pay you ${say(f.amount, acc)} on-chain: an address to give, in Waiting (every step by hand).`, tone: "ok" });
+        lines2.push({ text: `${short(inv.from)} asks where to pay you ${say(f.amount, acc)} on-chain: an address to give, in Waiting (every step by hand).`, tone: "ok" });
         return;
       }
       const sig = onchainRequest(unhex(secret), f.hash, void 0);
@@ -13624,7 +12342,7 @@ var Damgar = class {
       p.answer = answer;
       p.bound = { kind: "request", request: base64(sig), confirmations: null };
       p.stage = "to pay";
-      lines2.push({ text: `${short2(inv.from)} asked where to pay you ${say(f.amount, acc)} on-chain: Damgar answered by itself with an address bound to that payment alone, signed with your request key${how.by === "lane" ? ", under your receipts lane" : ""}.`, tone: "ok" });
+      lines2.push({ text: `${short(inv.from)} asked where to pay you ${say(f.amount, acc)} on-chain: Damgar answered by itself with an address bound to that payment alone, signed with your request key${how.by === "lane" ? ", under your receipts lane" : ""}.`, tone: "ok" });
     } else {
       const keys = await this.keys(me.id);
       const lane = keys.link && this.opts.link ? await this.payeeLane(me, s, MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: "invoice", invoice: "" }, ticket: null, amount: f.amount })) : null;
@@ -13639,14 +12357,14 @@ var Damgar = class {
           p.bound = { kind: "invoice", invoice };
           p.stage = "to pay";
           inv.stage = "answered";
-          lines2.push({ text: `${short2(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: Damgar answered by itself, with an invoice your node made through its receive-only link, under your receipts lane.`, tone: "ok" });
+          lines2.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: Damgar answered by itself, with an invoice your node made through its receive-only link, under your receipts lane.`, tone: "ok" });
           return;
         } catch (e3) {
           lines2.push({ text: `Damgar could not make the invoice by itself (${message3(e3)}): make it in your wallet, in Waiting.`, tone: "warn" });
           return;
         }
       }
-      lines2.push({ text: `${short2(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in Waiting.${lane && "why" in lane && !s.manual ? ` Not answered by itself: ${lane.why.replace(/\.? ?Nothing was signed\.?$/, "")}.` : ""}`, tone: "ok" });
+      lines2.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in Waiting.${lane && "why" in lane && !s.manual ? ` Not answered by itself: ${lane.why.replace(/\.? ?Nothing was signed\.?$/, "")}.` : ""}`, tone: "ok" });
     }
   }
   /** What keeps a Lightning invoice from binding this payment (the Lightning rail Module's rule, and the checks of the money messages cMIP, 5.3). */
@@ -13686,7 +12404,7 @@ var Damgar = class {
       p.stage = "to pay";
       inv.stage = "answered";
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `An address bound to this payment alone was sent to ${short2(inv.from)}, sealed, signed with your request key.`, tone: "ok" }] };
+      return { lines: [{ text: `An address bound to this payment alone was sent to ${short(inv.from)}, sealed, signed with your request key.`, tone: "ok" }] };
     });
   }
   /** The payment cMIP's step 1, on the payee's side. */
@@ -13747,7 +12465,7 @@ var Damgar = class {
       p.stage = "to pay";
       inv.stage = "answered";
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `The invoice was checked and sent, sealed, to ${short2(inv.from)}. When they pay it in their wallet, their Damgar sends you the claim; check it, and sign the receipt.`, tone: "ok" }] };
+      return { lines: [{ text: `The invoice was checked and sent, sealed, to ${short(inv.from)}. When they pay it in their wallet, their Damgar sends you the claim; check it, and sign the receipt.`, tone: "ok" }] };
     });
   }
   /** Refuse an invoice request, saying why: nothing is bound. */
@@ -13800,31 +12518,29 @@ var Damgar = class {
    */
   async bind(me, s, book, a) {
     const acc = this.acceptedSet(await this.accepted(me));
-    let r = await this.route(me, s, a.payee, a.amount, acc);
-    const fulfils = a.fulfils ?? r.tipPointer;
+    const through = a.fulfils ? null : await this.splitAgreementOf(me, s, a.payee);
+    const payee = through?.service ?? (a.fulfils ? await this.payeeOf(me, s, a.payee, a.fulfils) : null) ?? a.payee;
+    const r = await this.route(me, s, payee, a.amount, acc);
+    const fulfils = a.fulfils ?? through?.agreement ?? r.tipPointer;
     if (!fulfils) throw new Error("The payee has no payee pointer: a tip follows one (Money rule 17). Nothing was signed.");
-    const service = await this.splitServiceFor(me, s, a.payee, fulfils);
-    if (service) {
-      const sr = await this.route(me, s, service, a.amount, acc);
-      if (sr.module !== r.module || base64(sr.address) !== base64(r.address)) r = { ...sr, tipPointer: r.tipPointer };
-    }
+    const service = null;
     const paidTo = r.to === "flow" ? { kind: "flow", pointer: r.pointer, rail: r.rail } : { kind: "vault", declaredBy: r.declaredBy, entry: r.entry };
     const salt = new Uint8Array(randomBytes(16));
-    const c = { rail: r.module, payee: a.payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...a.purchase ? { purchase: a.purchase } : {} };
+    const c = { rail: r.module, payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...a.purchase ? { purchase: a.purchase } : {} };
     const commitment = commitmentCbor(c);
     const key = paymentCommitment(c);
     const irPayload = invoiceRequestPayload({ commitment, whatFor: a.whatFor, answers: a.answers, ticket: a.ticket });
     const how = await this.payerHow(me, s, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, !!a.auto);
     if (how.by === "lane") {
-      const claimAs = moneyPayload({ type: "claim", rail: r.module, proof: new Uint8Array(0), payee: a.payee, amount: a.amount, fulfils });
+      const claimAs = moneyPayload({ type: "claim", rail: r.module, proof: new Uint8Array(0), payee, amount: a.amount, fulfils });
       const f = await this.laneFor(me, s, MONEY, claimAs.type, claimAs.payload, this.opts.app ? "app" : "payouts");
       if ("why" in f || f.lane.grant !== how.grant) throw new Error(`The lane does not reach the payment\u2019s claim${"why" in f ? ` (${f.why})` : ""}. Nothing was signed.`);
     }
-    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, service ?? a.payee, a.refs, how);
+    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, payee, a.refs, how);
     const p = {
       key,
       side: "out",
-      other: a.payee,
+      other: payee,
       amount: a.amount,
       fulfils,
       whatFor: a.whatFor,
@@ -13852,28 +12568,48 @@ var Damgar = class {
     return p;
   }
   /**
-   * The payee's split service, where its agreement names one (the money
-   * messages cMIP, draft 4, 4.4; F357): the agreement an offer followed is
-   * made under (field 0), or a collective payee's agreement in force; its
-   * field 14 read, as the pointer check reads Agreements. Null where none.
+   * A collective's split agreement in force (Agreements rule 15: a
+   * publication selling nothing, naming the collective's ownership
+   * agreement and its split service), as Agreements count it from what the
+   * collective's places hold: its first version and its service. Null where
+   * the payee is no collective, or names none that counts.
    */
-  async splitServiceFor(me, s, payee, fulfils) {
+  async splitAgreementOf(me, s, payee) {
     const places = await collectivePlaces(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via);
-    let agreement = null;
+    const got = await collectiveVerifier(payee, places, s.via).catch(() => null);
+    if (!got) return null;
+    let found = null;
+    for (const a of got.acts) {
+      const d = describeAct(a);
+      if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.publication || !d.payload || !d.objects?.some(([c]) => c === payee)) continue;
+      try {
+        const p = got.v.agreementsPublication(AGREEMENTS_SPECS, d.id);
+        if (p.counts && p.splitAgreement && p.latest.includes(d.id)) found = { agreement: p.first, service: p.service };
+      } catch {
+      }
+    }
+    return found;
+  }
+  /**
+   * Who a payment following `fulfils` pays, where that act decides it: a
+   * price tag's payee (Money rule 18, field 5), or a publication's split
+   * service for a tip through it (Money rule 18; Agreements rule 16). Null
+   * where the act decides nothing (a pointer, an obligation), or is not
+   * found at the places asked.
+   */
+  async payeeOf(me, s, payee, fulfils) {
+    const places = await collectivePlaces(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via);
     for (const h of places) {
       const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
       if (!act) continue;
       const d = describeAct(act);
-      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
-        const under = cborDecode(d.payload).get(0);
-        if (under instanceof Uint8Array) agreement = hex(under);
-      }
-      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) agreement = fulfils;
-      break;
+      if (!d.payload) return null;
+      const m = cborDecode(d.payload);
+      if (d.spec === MONEY && d.type === PRICE_TAG2 && m.get(5) instanceof Uint8Array) return hex(m.get(5));
+      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.publication && m.get(3) instanceof Uint8Array) return hex(m.get(3));
+      return null;
     }
-    if (!agreement) agreement = (await collectiveNow(payee, places, s.via).catch(() => null))?.agreement ?? null;
-    if (!agreement) return null;
-    return (await splitServiceOf(agreement, payee, places, s.via).catch(() => null))?.service ?? null;
+    return null;
   }
   /** An answer arrived: checked under the rail Module's rule before anything is shown to pay (the money messages cMIP, 5.2). */
   async onAnswer(me, s, book, p, id, bound, ticket) {
@@ -13926,13 +12662,13 @@ var Damgar = class {
       const acc = this.acceptedSet(await this.accepted(me));
       const items = [];
       const problems = [];
-      const shown = (a) => ({ ...a, said: say(a, acc) });
+      const shown2 = (a) => ({ ...a, said: say(a, acc) });
       for (const [id, x] of Object.entries(book.drafts)) {
         if (x.stage !== "new") continue;
         try {
           items.push({ ...await this.readDraftItem(me, s, book, id, acc), ...book.pasted?.[id] ? { byHand: true } : {} });
         } catch (e3) {
-          problems.push(`A draft ${short2(id)}: ${message3(e3)}`);
+          problems.push(`A draft ${short(id)}: ${message3(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.unread ?? {})) {
@@ -13960,7 +12696,7 @@ var Damgar = class {
           kind: "uncounted",
           from: this.who(x.from, me.id),
           app: null,
-          title: `Waiting to count: sent by ${short2(x.from)} under a lane`,
+          title: `Waiting to count: sent by ${short(x.from)} under a lane`,
           lines: [
             { text: `It cannot count yet: ${x.why}`, tone: "warn" },
             { text: "Damgar looks again each time it looks for what arrived; once it counts, it shows here as a payment to answer. Until then nothing is answered and nothing signed (unknown, as Development rule 10 says)." },
@@ -13978,20 +12714,20 @@ var Damgar = class {
         if (!r) continue;
         const known = acc.has(r.amount.unit) && acc.has(SPEC.payment) && acc.has(MESSAGES_SPEC);
         const lines2 = [
-          { text: `${short2(x.from)} asks you to pay ${say(r.amount, acc)}${r.whatFor ? `, for \u201C${r.whatFor}\u201D` : ""}.` },
+          { text: `${short(x.from)} asks you to pay ${say(r.amount, acc)}${r.whatFor ? `, for \u201C${r.whatFor}\u201D` : ""}.` },
           { text: "A request is not a debt: nothing binds you until you sign something (F66)." }
         ];
         if (x.stage === "debt") lines2.push({ text: `You accepted it as a debt (an obligation, signed). ${DEBT_SAY}`, tone: "warn" });
         else lines2.push({ text: "Accept as a debt: you sign an obligation, \u201CI owe this\u201D, only if you mean to owe it (to pay later). Or pay it now, as a payment to their pointer. Most simple payments skip the debt." });
         if (!known) lines2.push({ text: "Its unit, or the payment cMIP, is not one you accept: unknown, and nothing is signed for it.", tone: "warn" });
-        items.push({ id, kind: "request", from: this.who(x.from, me.id), app: null, title: "A request to be paid", lines: lines2, amount: shown(r.amount), unknown: !known, offers: known ? x.stage === "debt" ? ["pay", "decline"] : ["debt", "pay", "decline"] : ["decline"], found: x.found });
+        items.push({ id, kind: "request", from: this.who(x.from, me.id), app: null, title: "A request to be paid", lines: lines2, amount: shown2(r.amount), unknown: !known, offers: known ? x.stage === "debt" ? ["pay", "decline"] : ["debt", "pay", "decline"] : ["decline"], found: x.found });
       }
       for (const [id, x] of Object.entries(book.laneRequests ?? {})) {
         if (x.stage !== "new") continue;
         try {
           items.push(this.laneItem(me, book, id, acc));
         } catch (e3) {
-          problems.push(`A lane asked ${short2(id)}: ${message3(e3)}`);
+          problems.push(`A lane asked ${short(id)}: ${message3(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.invoices)) {
@@ -14005,10 +12741,10 @@ var Damgar = class {
             app: null,
             title: "Give an address for a payment to you",
             lines: [
-              { text: `${short2(x.from)} wants to pay you ${say(p.amount, acc)} on-chain${p.whatFor ? `, for \u201C${p.whatFor}\u201D` : ""}.` },
+              { text: `${short(x.from)} wants to pay you ${say(p.amount, acc)} on-chain${p.whatFor ? `, for \u201C${p.whatFor}\u201D` : ""}.` },
               { text: "Every step is followed by hand: Damgar waits for you to give an address bound to this payment alone, signed with your request key." }
             ],
-            amount: shown(p.amount),
+            amount: shown2(p.amount),
             unknown: false,
             offers: ["address", "refuse"],
             found: x.found
@@ -14022,11 +12758,11 @@ var Damgar = class {
           app: null,
           title: "Make an invoice for a payment to you",
           lines: [
-            { text: `${short2(x.from)} wants to pay you ${say(p.amount, acc)} on Lightning${p.whatFor ? `, for \u201C${p.whatFor}\u201D` : ""}, to your ${p.address ? "payee pointer\u2019s node" : "node"}.` },
+            { text: `${short(x.from)} wants to pay you ${say(p.amount, acc)} on Lightning${p.whatFor ? `, for \u201C${p.whatFor}\u201D` : ""}, to your ${p.address ? "payee pointer\u2019s node" : "node"}.` },
             { text: "In your own wallet, make an invoice for exactly this amount, with this description hash and no description. Paste it here: Damgar checks it and sends it to them, sealed." },
             { text: "Damgar holds no wallet: the invoice comes from the node your payee pointer names, and only that node can sign it." }
           ],
-          amount: shown(p.amount),
+          amount: shown2(p.amount),
           unknown: false,
           offers: ["invoice", "refuse"],
           descriptionHash: p.key,
@@ -14042,10 +12778,10 @@ var Damgar = class {
           app: null,
           title: "A payment to you: check it, then sign the receipt",
           lines: [
-            { text: `${short2(p.other)} says they paid you ${say(p.amount, acc)} on ${railName(p.rail)}, and sent their claim with the rail\u2019s proof.` },
+            { text: `${short(p.other)} says they paid you ${say(p.amount, acc)} on ${railName(p.rail)}, and sent their claim with the rail\u2019s proof.` },
             { text: "Signing the receipt says \u201CI received this, for that\u201D, signed by you (Money rule 7). Damgar first checks the claim by the rail Module\u2019s rule, from the rail\u2019s own evidence; you can sign only once it verifies." }
           ],
-          amount: shown(p.amount),
+          amount: shown2(p.amount),
           unknown: !acc.has(p.rail),
           offers: acc.has(p.rail) ? ["receipt"] : [],
           found: p.at
@@ -14067,25 +12803,25 @@ var Damgar = class {
       unknown = true;
       lines2.push({ text: `Under ${missing.map((h) => labelOf(h) ?? `${h.slice(0, 8)}\u2026`).join(", ")}, not accepted here: unknown, and it cannot be signed (F338). Accept it in Settings to read it.`, tone: "warn" });
     }
-    const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}\u2026${d.refSigners?.[i] ? ` by ${short2(d.refSigners[i])}` : ""}`);
+    const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}\u2026${d.refSigners?.[i] ? ` by ${short(d.refSigners[i])}` : ""}`);
     if (dr.what === "confirm") {
-      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short2(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
+      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
       const c = await this.ownClaim(me, s, dr).catch((e3) => ({ why: message3(e3) }));
       if ("why" in c) {
         unknown = true;
         lines2.push({ text: `${c.why}: it cannot be signed.`, tone: "warn" });
-      } else lines2.push({ text: `Signing signs your claim of that payment (${short2(dr.confirm.claim)}) again, in public, acknowledging ${dr.confirm.acks.map(short2).join(", ")}: the sale then reads confirmed for anyone who looks (Agreements rule 13). Nothing moves; it is public.`, tone: "ok" });
+      } else lines2.push({ text: `Signing signs your claim of that payment (${short(dr.confirm.claim)}) again, in public, acknowledging ${dr.confirm.acks.map(short).join(", ")}: the sale then reads confirmed for anyone who looks (Agreements rule 13). Nothing moves; it is public.`, tone: "ok" });
       return { id, kind: "draft", from: this.who(me.id, me.id), app: dr.app, title: "A purchase to confirm", lines: lines2, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ["decline"] : ["sign", "decline"], found: x.found };
     }
     if (dr.what === "ask") {
-      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: ask ${short2(dr.other)} to pay you ${say(dr.amount, acc)}${dr.whatFor ? `, for \u201C${dr.whatFor}\u201D` : ""}.` });
+      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: ask ${short(dr.other)} to pay you ${say(dr.amount, acc)}${dr.whatFor ? `, for \u201C${dr.whatFor}\u201D` : ""}.` });
       lines2.push({ text: "Signing sends them a request to be paid, sealed to them, naming your payee pointer in force. It binds nobody: they may pay it, accept it as a debt, or decline." });
     } else {
-      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: ${dr.what === "anchor" ? "pay an anchoring service" : "pay"} ${short2(dr.other)} ${say(dr.amount, acc)}${dr.whatFor ? `, for \u201C${dr.whatFor}\u201D` : ""}${about.length ? ` (about ${about.join(", ")})` : ""}.` });
+      lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: ${dr.what === "anchor" ? "pay an anchoring service" : "pay"} ${short(dr.other)} ${say(dr.amount, acc)}${dr.whatFor ? `, for \u201C${dr.whatFor}\u201D` : ""}${about.length ? ` (about ${about.join(", ")})` : ""}.` });
       const follows = dr.what === "pay" ? await this.followsOf(me, s, book, id, dr) : null;
       if (follows) {
         const deal = await readDeal(follows, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null);
-        if (deal) lines2.push({ text: `${sharedLine(deal, (x2) => x2 === me.id ? `you (${short2(x2)})` : short2(x2))} The payment follows the deal (${short2(follows)}): a tip, divided like a sale, no purchase.`, tone: "ok" });
+        if (deal) lines2.push({ text: `${sharedLine(deal, (x2) => x2 === me.id ? `you (${short(x2)})` : short(x2))} The payment follows the deal (${short(follows)}): a tip, divided like a sale, no purchase.`, tone: "ok" });
       }
       if (!unknown) {
         try {
@@ -14097,7 +12833,7 @@ var Damgar = class {
           lines2.push({ text: message3(e3), tone: "warn" });
         }
       }
-      if (dr.what === "anchor" && dr.anchor) lines2.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short2(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
+      if (dr.what === "anchor" && dr.anchor) lines2.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
     }
     return { id, kind: "draft", from: this.who(me.id, me.id), app: dr.app, title: dr.what === "ask" ? "A request to send" : dr.what === "anchor" ? "A payment for an anchor" : "A payment to make", lines: lines2, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ["decline"] : ["sign", "decline"], found: x.found };
   }
@@ -14170,6 +12906,8 @@ var Damgar = class {
       if (a.typed.trim() !== "RELY") throw new Error("Type RELY to sign the witness act. Nothing was signed.");
       const id = readActId(a.id);
       if (book.acts[id]?.from === me.id || me.f.sequence.includes(id)) throw new Error("It is this identity\u2019s own act: a witness act names other identities\u2019 acts. Nothing was signed.");
+      const copy2 = await this.copyOf(me, s, book, id);
+      if (!copy2) throw new Error("That act was not found here, at your homes or at your relays: Damgar keeps a copy of every act it relies on (F400), so it cannot rely on one it does not hold. Nothing was signed.");
       await this.current(me);
       let made;
       try {
@@ -14178,8 +12916,33 @@ var Damgar = class {
         await this.store.saveIdentity(me);
       }
       if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join("; ")}. It is signed here, not published.`);
-      return { lines: [{ text: `You rely on ${short2(id)}: witness act ${short2(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" }] };
+      const left = [];
+      for (const h of [.../* @__PURE__ */ new Set([...me.f.homes.map((x) => x.hint), ...s.relays])]) {
+        try {
+          await relayAt(h, s.via).putAct(copy2);
+          left.push(h);
+        } catch {
+        }
+      }
+      (book.relied ??= {})[id] = { act: base64(copy2), witness: made.id, at: now3(), left };
+      await this.saveBook(me.id, book);
+      return {
+        lines: [
+          { text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" },
+          { text: `A copy of the act is kept here${left.length ? ` and left at ${left.length} of your homes and relays` : ""}, so it does not vanish with its author: a signed act verifies from any copy (F400).`, tone: "ok" }
+        ]
+      };
     });
+  }
+  /** An act's bytes, for a copy kept by whoever relies on it (F400): as it arrived here, or as this identity's homes and relays hold it. */
+  async copyOf(me, s, book, id) {
+    const held = book.acts[id]?.act ?? book.relied?.[id]?.act;
+    if (held) return b642(held);
+    for (const h of [.../* @__PURE__ */ new Set([...s.relays, ...me.f.homes.map((x) => x.hint)])]) {
+      const got = await relayAt(h, s.via).getAct(id).catch(() => null);
+      if (got) return got;
+    }
+    return null;
   }
   /** An anchoring service's standing offers (the anchoring cMIP), read from its public acts. */
   anchorOffers(a) {
@@ -14208,7 +12971,7 @@ var Damgar = class {
     if (!tier) throw new Error("The offer has no such tier. Nothing was signed.");
     const blind = new Uint8Array(randomBytes(32));
     const leaf = anchoringLeaf(id, blind);
-    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short2(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf } };
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
@@ -14216,7 +12979,7 @@ var Damgar = class {
       await this.saveBook(me.id, book);
     });
     const signed = await this.signDraft(pasted.id);
-    return { lines: [{ text: `An anchor of ${short2(id)} asked of ${short2(service)}, tier ${a.tier} (within ${tier.blocks} blocks): the invoice request signed and sent. When the service answers with its invoice and ticket, pay it in To pay; it shows in Account \u203A Anchors. The blind is kept here.`, tone: "ok" }, ...signed.lines.slice(1)] };
+    return { lines: [{ text: `An anchor of ${short(id)} asked of ${short(service)}, tier ${a.tier} (within ${tier.blocks} blocks): the invoice request signed and sent. When the service answers with its invoice and ticket, pay it in To pay; it shows in Account \u203A Anchors. The blind is kept here.`, tone: "ok" }, ...signed.lines.slice(1)] };
   }
   /** Sign a draft (the money messages cMIP, 2.2): an invoice request, or a request to be paid. */
   signDraft(id) {
@@ -14233,7 +12996,7 @@ var Damgar = class {
         const claim = await this.publishPublic(me, s, made, { by: "hand" }, dr.confirm.acks, c.payee);
         x.stage = "signed";
         await this.saveBook(me.id, book);
-        return { lines: [{ text: `Your claim of that payment, acknowledging what you bought, is signed in public (${short2(claim)}): its sale reads confirmed for anyone who looks.`, tone: "ok" }] };
+        return { lines: [{ text: `Your claim of that payment, acknowledging what you bought, is signed in public (${short(claim)}): its sale reads confirmed for anyone who looks.`, tone: "ok" }] };
       }
       if (dr.what === "ask") {
         const { look, acts } = await this.payee(me.id, me, s);
@@ -14244,7 +13007,7 @@ var Damgar = class {
         book.requestsOut[req] = { to: dr.other, at: now3(), obligation: null, payment: null };
         x.stage = "signed";
         await this.saveBook(me.id, book);
-        return { lines: [{ text: `The request was sent to ${short2(dr.other)}, sealed. Their Damgar offers them to pay it, or accept it as a debt.`, tone: "ok" }] };
+        return { lines: [{ text: `The request was sent to ${short(dr.other)}, sealed. Their Damgar offers them to pay it, or accept it as a debt.`, tone: "ok" }] };
       }
       const p = await this.bind(me, s, book, {
         payee: dr.other,
@@ -14258,7 +13021,7 @@ var Damgar = class {
       x.stage = "signed";
       x.payment = p.key;
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `The invoice request was sent to ${short2(dr.other)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: "ok" }] };
+      return { lines: [{ text: `The invoice request was sent to ${short(dr.other)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: "ok" }] };
     });
   }
   /** Decline a draft or a request: nothing is signed, nothing is sent. */
@@ -14289,7 +13052,7 @@ var Damgar = class {
       x.obligation = await this.deliver(me, s, book, MONEY, made.type, made.payload, x.from);
       x.stage = "debt";
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `You signed the debt: you owe ${short2(x.from)} ${say(r.amount, this.acceptedSet(await this.accepted(me)))}. It was sent to them, sealed.`, tone: "ok" }, { text: DEBT_SAY, tone: "warn" }] };
+      return { lines: [{ text: `You signed the debt: you owe ${short(x.from)} ${say(r.amount, this.acceptedSet(await this.accepted(me)))}. It was sent to them, sealed.`, tone: "ok" }, { text: DEBT_SAY, tone: "warn" }] };
     });
   }
   /** Pay a request: an invoice request whose `fulfils` is the debt where one was signed, otherwise the pointer the request names. */
@@ -14303,7 +13066,7 @@ var Damgar = class {
       x.stage = "asked";
       x.payment = p.key;
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `The invoice request was sent to ${short2(x.from)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: "ok" }] };
+      return { lines: [{ text: `The invoice request was sent to ${short(x.from)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: "ok" }] };
     });
   }
   /**
@@ -14322,7 +13085,7 @@ var Damgar = class {
       const p = await this.bind(me, s, book, { payee: a.payee, amount: a.amount, fulfils: a.fulfils ?? null, whatFor: a.whatFor, answers: null, draft: null, ticket: null, referral: a.referral ?? null, refs: a.refs, purchase: a.purchase ?? null });
       if (a.visible) book.payments[p.key].visible = true;
       await this.saveBook(me.id, book);
-      return { key: p.key, lines: [{ text: `Asked of ${p.service ? `${short2(a.payee)}\u2019s split service, ${short2(p.service)}, which answers for it (the money messages cMIP, draft 4)` : short2(a.payee)}, under the lane: an invoice request for ${say(a.amount, acc)}, sealed. When they answer, pay it in your wallet.`, tone: "ok" }] };
+      return { key: p.key, lines: [{ text: `Asked of ${p.service ? `${short(a.payee)}\u2019s split service, ${short(p.service)}, which answers for it (the money messages cMIP, draft 4)` : short(a.payee)}, under the lane: an invoice request for ${say(a.amount, acc)}, sealed. When they answer, pay it in your wallet.`, tone: "ok" }] };
     });
   }
   // ------------------------------------------------------------ Pay
@@ -14372,7 +13135,7 @@ var Damgar = class {
       return {
         lines: [
           { text: `The rail Module\u2019s rule says ${verdict.answer}${verdict.why ? ` (${verdict.why})` : ""}.`, tone: verdict.answer === "valid" ? "ok" : "warn" },
-          { text: `Your payment claim (\u201CI paid ${short2(p.other)} ${say(p.amount, acc)}\u201D, with the rail\u2019s proof) is signed and sent to them, sealed. Their Damgar checks it and offers them the receipt.`, tone: "ok" }
+          { text: `Your payment claim (\u201CI paid ${short(p.other)} ${say(p.amount, acc)}\u201D, with the rail\u2019s proof) is signed and sent to them, sealed. Their Damgar checks it and offers them the receipt.`, tone: "ok" }
         ]
       };
     });
@@ -14566,7 +13329,7 @@ var Damgar = class {
     const l = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
     const hints = [...me.f.homes.map((h) => h.hint), ...s.relays];
     await this.actsOf(me.id, [...s.relays, ...hints], s.via, l);
-    for (const o of list2(others)) {
+    for (const o of list(others)) {
       try {
         const x = await lookUp(o, hints, s.via, l.verifier);
         const outbox = x.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
@@ -14626,21 +13389,34 @@ var Damgar = class {
     p.receipts.push(receipt);
     p.stage = "settled";
     const acc = opts.accepted.length ? new Set(opts.accepted) : /* @__PURE__ */ new Set();
-    const lines2 = [{ text: `${as.by === "lane" ? "Damgar checked their claim from the rail\u2019s own evidence and signed your receipt by itself, under your receipts lane" : "Their claim verifies from the rail\u2019s own evidence. Your receipt is signed"} (\u201CI received ${say(p.amount, acc)} from ${short2(p.other)}\u201D), and sent to them, sealed.`, tone: "ok" }];
+    const lines2 = [{ text: `${as.by === "lane" ? "Damgar checked their claim from the rail\u2019s own evidence and signed your receipt by itself, under your receipts lane" : "Their claim verifies from the rail\u2019s own evidence. Your receipt is signed"} (\u201CI received ${say(p.amount, acc)} from ${short(p.other)}\u201D), and sent to them, sealed.`, tone: "ok" }];
     lines2.push(...await this.afterSale(me, s, book, p, receipt, c));
     return lines2;
   }
-  /** A seller's offer this identity signed, read from its places: what it sells, its price, its words. */
+  /**
+   * A price tag this identity signed on a bare bake it uploaded (Money type 5,
+   * rule 18: on a bare bake only its uploader's tag counts, and a payment of
+   * it is a sale of the bake, unsplit), read from its places: the bake, the
+   * price, and the seller's words. A tag carries no words: they are the text
+   * of this identity's post naming the tag (Dub's sealed post). A tag under a
+   * publication is the split service's to tell: not read here.
+   */
   async offerOf(me, s, id) {
     const { acts } = await this.payee(me.id, me, s);
     const d = acts.get(id);
-    if (!d || d.signer !== me.id || d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.offer || !d.payload) return null;
+    if (!d || d.signer !== me.id || d.spec !== MONEY || d.type !== PRICE_TAG2 || !d.payload) return null;
     try {
       const m = cborDecode(d.payload);
-      const sold = m.get(1).find((x) => x[0] === 0);
-      const price = m.get(2);
-      if (!sold || !(sold[1] instanceof Uint8Array)) return null;
-      return { publication: hex(sold[1]), price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === "string" ? m.get(4) : null };
+      const bake = m.get(0);
+      const price = m.get(4);
+      if (!(bake instanceof Uint8Array) || !price) return null;
+      let words2 = null;
+      for (const x of acts.values()) {
+        if (x.signer !== me.id || x.spec !== MIRS.text || !x.payload || !(x.refs ?? []).includes(id)) continue;
+        const t = cborDecode(x.payload).get(0);
+        if (typeof t === "string") words2 = t;
+      }
+      return { publication: hex(bake), price: { unit: hex(price[0]), value: Number(price[1]) }, words: words2 };
     } catch {
       return null;
     }
@@ -14661,7 +13437,7 @@ var Damgar = class {
     const save = () => this.store.saveIdentity(me);
     const sale = await sendToSelf(me, TYPES.sale, salePayload({ offer: c.fulfils, buyer: p.other, receipt, publication: offer.publication }), { via: s.via, save });
     (book.sales ??= {})[receipt] = sale.id;
-    lines2.push({ text: `A sale of your offer ${short2(c.fulfils)}: told to your own Dub, sealed to yourself, which delivers the key to ${short2(p.other)}.`, tone: "ok" });
+    lines2.push({ text: `A sale of your offer ${short(c.fulfils)} (your price tag on the bake you uploaded): told to your own Dub, sealed to yourself, which delivers the key to ${short(p.other)}.`, tone: "ok" });
     const share2 = referralShare(offer.words);
     if (!c.referral || share2 === null) return lines2;
     const why = await this.repostProblem(me, s, c.referral, offer.publication);
@@ -14678,7 +13454,7 @@ var Damgar = class {
       { refs: [[c.referral.evidence, c.referral.identity]], via: s.via, save }
     );
     (book.referrals ??= {})[p.claims[p.claims.length - 1]] = { reposter: c.referral.identity, evidence: c.referral.evidence, amount, draft: draft.id };
-    lines2.push({ text: `The buyer followed a repost by ${short2(c.referral.identity)}: your offer promises ${share2}% to the reposter. Its payment is prepared (${say(amount, /* @__PURE__ */ new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in Waiting. A promise in words, not judged by the core (F351).`, tone: "ok" });
+    lines2.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share2}% to the reposter (in your post\u2019s words). Its payment is prepared (${say(amount, /* @__PURE__ */ new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in Waiting. A promise in words, not judged by the core (F351).`, tone: "ok" });
     return lines2;
   }
   /** Why a referral's evidence is no repost of this publication by its referrer, or null. */
@@ -14726,9 +13502,9 @@ var Damgar = class {
         const p = await this.bind(me, s, book, { payee: dr.other, amount: dr.amount, fulfils: null, whatFor: dr.whatFor, answers: null, draft: id, ticket: null, auto: true });
         x.stage = "signed";
         x.payment = p.key;
-        lines2.push({ text: `The referral share to ${short2(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Waiting, To pay, to pay in your wallet.`, tone: "ok" });
+        lines2.push({ text: `The referral share to ${short(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Waiting, To pay, to pay in your wallet.`, tone: "ok" });
       } catch (e3) {
-        lines2.push({ text: `The referral share to ${short2(dr.other)} waits in Waiting (${message3(e3)}).` });
+        lines2.push({ text: `The referral share to ${short(dr.other)} waits in Waiting (${message3(e3)}).` });
       }
     }
   }
@@ -14738,7 +13514,7 @@ var Damgar = class {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
-      const shown = (a) => ({ ...a, said: say(a, acc) });
+      const shown2 = (a) => ({ ...a, said: say(a, acc) });
       const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to), ...Object.values(book.shared ?? {}).map((x) => x.payee)];
       const problems = [];
       let l = null;
@@ -14763,12 +13539,12 @@ var Damgar = class {
       const asks = [
         ...Object.entries(book.requestsIn).map(([id, x]) => {
           const r = this.requestOf(book, id);
-          return { id, side: "in", other: this.who(x.from, me.id), amount: shown(r?.amount ?? { unit: "", value: 0 }), whatFor: r?.whatFor ?? null, state: { new: "asked of you, not answered", declined: "declined", debt: "accepted as a debt by you, not paid", asked: "being paid", paid: "paid" }[x.stage], obligation: x.obligation, lines: x.obligation ? [{ text: DEBT_SAY, tone: "warn" }] : [] };
+          return { id, side: "in", other: this.who(x.from, me.id), amount: shown2(r?.amount ?? { unit: "", value: 0 }), whatFor: r?.whatFor ?? null, state: { new: "asked of you, not answered", declined: "declined", debt: "accepted as a debt by you, not paid", asked: "being paid", paid: "paid" }[x.stage], obligation: x.obligation, lines: x.obligation ? [{ text: DEBT_SAY, tone: "warn" }] : [] };
         }),
         ...Object.entries(book.requestsOut).map(([id, x]) => {
           const r = this.requestOf(book, id);
           const paid = x.payment ? book.payments[x.payment] : null;
-          return { id, side: "out", other: this.who(x.to, me.id), amount: shown(r?.amount ?? { unit: "", value: 0 }), whatFor: r?.whatFor ?? null, state: paid ? paid.receipts.length ? "paid, receipt signed" : paid.claims.length ? "paid, by their claim" : "being paid" : x.obligation ? "accepted by them as a debt (signed), not paid" : "asked, not paid yet", obligation: x.obligation, lines: x.obligation ? [{ text: DEBT_SAY, tone: "warn" }] : [] };
+          return { id, side: "out", other: this.who(x.to, me.id), amount: shown2(r?.amount ?? { unit: "", value: 0 }), whatFor: r?.whatFor ?? null, state: paid ? paid.receipts.length ? "paid, receipt signed" : paid.claims.length ? "paid, by their claim" : "being paid" : x.obligation ? "accepted by them as a debt (signed), not paid" : "asked, not paid yet", obligation: x.obligation, lines: x.obligation ? [{ text: DEBT_SAY, tone: "warn" }] : [] };
         })
       ];
       const deals = /* @__PURE__ */ new Map();
@@ -14781,8 +13557,11 @@ var Damgar = class {
             if (!act) continue;
             const d = describeAct(act);
             if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) version2 = fulfils;
-            else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
-              const u2 = cborDecode(d.payload).get(0);
+            else if (d.spec === MONEY && d.type === PRICE_TAG2 && d.payload) {
+              const pub = cborDecode(d.payload).get(1);
+              const pa = pub instanceof Uint8Array ? await relayAt(h, s.via).getAct(hex(pub)).catch(() => null) : null;
+              const pd = pa ? describeAct(pa) : null;
+              const u2 = pd?.payload ? cborDecode(pd.payload).get(1) : null;
               if (u2 instanceof Uint8Array) version2 = hex(u2);
             }
             break;
@@ -14817,7 +13596,7 @@ var Damgar = class {
       for (const [receipt, x] of Object.entries(book.shared ?? {})) {
         const d = await dealOf(x.fulfils, null);
         if (!d || !d.parties.includes(me.id)) continue;
-        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
+        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown2(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
       }
       const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
@@ -14842,12 +13621,12 @@ var Damgar = class {
             // Sealed to the collective, whose keys this Damgar (holding your identity alone) does not hold: Edubba opens it, Damgar cannot judge it.
             { rail: { answer: "unknown", why: "its receipt is sealed to the collective, which this Damgar does not open" }, standing: "your share named in its split service\u2019s split; its receipt is sealed to the collective, which this Damgar does not open: whether it was paid is unknown here" }
           );
-          entry(d).payments.push({ receipt: x.receipt, payer: this.who(typeof r?.payer === "string" ? r.payer : "", me.id), amount: shown(r?.amount ?? { unit: unitOf2(mine) ?? "", value: mine }), kind: r && !r.purchase ? "a tip" : "a sale", ...judged2 });
+          entry(d).payments.push({ receipt: x.receipt, payer: this.who(typeof r?.payer === "string" ? r.payer : "", me.id), amount: shown2(r?.amount ?? { unit: unitOf2(mine) ?? "", value: mine }), kind: r && !r.purchase ? "a tip" : "a sale", ...judged2 });
         }
         for (const m of x.mine) {
           const unit = unitOf2(m.amount);
           const paid = payments.some((p) => p.side === "in" && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === "valid"));
-          entry(d).payouts.push({ split, amount: shown({ unit: unit ?? "", value: m.amount }), role: m.role, paid });
+          entry(d).payouts.push({ split, amount: shown2({ unit: unit ?? "", value: m.amount }), role: m.role, paid });
         }
       }
       const valid = (ps) => ps.some((x) => x.rail.answer === "valid");
@@ -14856,7 +13635,7 @@ var Damgar = class {
       const pending = payments.filter((p) => !valid(p.proofs) && p.stage !== "refused" && p.stage !== "declined").map((p) => p.amount);
       const owedYou = asks.filter((a) => a.side === "out" && !/^paid/.test(a.state)).map((a) => a.amount);
       const owedBy = asks.filter((a) => a.side === "in" && /not paid|not answered/.test(a.state)).map((a) => a.amount);
-      const t = (label, xs) => ({ label, amounts: totals(xs.filter((x) => x.unit)).map(shown) });
+      const t = (label, xs) => ({ label, amounts: totals(xs.filter((x) => x.unit)).map(shown2) });
       return {
         totals: [t("Came in (verified)", inn), t("Went out (verified)", out), t("Pending", pending), t("Asked of others, not paid", owedYou), t("Asked of you, not paid", owedBy)],
         payments,
@@ -14941,7 +13720,7 @@ var Damgar = class {
       `What it may sign: ${g.kinds.map(kindSaid).join("; ")}. Nothing else: never a grant, a revocation, a pointer, a debt or a post.`,
       g.limits?.cap ? `How much one act may move: at most ${say({ unit: g.limits.cap.unit, value: g.limits.cap.value }, acc)} (the grant limits cMIP, 2). An act above it is refused before it is signed, and one signed anyway counts for nothing.` : "How much one act may move: no cap. A lane without a cap is refused here.",
       g.total ? `In all: at most ${say({ unit: g.total.unit, value: g.total.value }, acc)} for the whole lane (the grant limits cMIP, draft 3, 8). ${TOTAL_SAY}` : "",
-      g.limits?.expiry?.clock === "timestamp" ? grantInWords(read4, me.id, short2).find((l) => l.startsWith("Until")) ?? "" : "Until: no expiry; it ends only when you revoke it.",
+      g.limits?.expiry?.clock === "timestamp" ? grantInWords(read4, me.id, short).find((l) => l.startsWith("Until")) ?? "" : "Until: no expiry; it ends only when you revoke it.",
       "Every act signed under it is shown, here and to every reader, as signed under this lane, not with your own key. One revocation ends it, here in Lanes.",
       "Public: the grant is published at your relays and homes (rule 73: a private grant backs nothing), so anyone can see that you hold such a lane, and its limits. Its name stays here."
     ];
@@ -14961,7 +13740,7 @@ var Damgar = class {
       await this.store.saveIdentity(me);
     }
     let left = 0;
-    for (const h of list2([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
+    for (const h of list([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
       try {
         await relayAt(h, s.via).putAct(grant.act);
         await relayAt(h, s.via).putAct(acc.act);
@@ -15085,7 +13864,7 @@ var Damgar = class {
         await this.store.saveIdentity(me);
       }
       let left = 0;
-      for (const h of list2([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
+      for (const h of list([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
         try {
           await relayAt(h, s.via).putAct(r.act);
           left++;
@@ -15122,7 +13901,7 @@ var Damgar = class {
         const under = l.here ? null : await this.underLane(me, s, book, grant, hints).catch(() => null);
         const unitOfLane = l.total?.unit ?? l.limits?.cap?.unit ?? null;
         const used = under && unitOfLane ? spent(under.payments.map((p) => ({ amount: p.amount, refused: p.stage === "refused" })), unitOfLane) : null;
-        const shown = (value) => ({ unit: unitOfLane, value, said: say({ unit: unitOfLane, value }, acc) });
+        const shown2 = (value) => ({ unit: unitOfLane, value, said: say({ unit: unitOfLane, value }, acc) });
         out.push({
           grant,
           label: l.label,
@@ -15131,15 +13910,15 @@ var Damgar = class {
           state: revoked ? "revoked" : expired ? "past its expiry (this device\u2019s clock)" : "in force",
           words: this.laneWords(me, l, acc),
           acts,
-          cap: l.limits?.cap ? shown(l.limits.cap.value) : null,
+          cap: l.limits?.cap ? shown2(l.limits.cap.value) : null,
           until: l.limits?.expiry?.clock === "timestamp" ? l.limits.expiry.time : null,
-          total: l.total ? shown(l.total.value) : null,
-          spent: used !== null ? shown(used) : null,
-          left: l.total && used !== null ? shown(Math.max(0, l.total.value - used)) : null,
-          over: l.total && used !== null && used > l.total.value ? shown(used - l.total.value) : null,
+          total: l.total ? shown2(l.total.value) : null,
+          spent: used !== null ? shown2(used) : null,
+          left: l.total && used !== null ? shown2(Math.max(0, l.total.value - used)) : null,
+          over: l.total && used !== null && used > l.total.value ? shown2(used - l.total.value) : null,
           // What is paid apart from what is only asked (H107): asked holds its amount against the cap in all, but no money has moved.
-          paid: under && unitOfLane ? shown(spent(under.payments.filter((p) => p.stage === "paid").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
-          asked: under && unitOfLane ? shown(spent(under.payments.filter((p) => p.stage === "asked").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          paid: under && unitOfLane ? shown2(spent(under.payments.filter((p) => p.stage === "paid").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
+          asked: under && unitOfLane ? shown2(spent(under.payments.filter((p) => p.stage === "asked").map((p) => ({ amount: p.amount, refused: false })), unitOfLane)) : null,
           payments: under ? await Promise.all(under.payments.map(async (p) => ({ key: p.key, to: { ...this.who(p.payee, me.id), name: await this.nameOf(p.payee, hints, s.via).catch(() => null) }, amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims }))) : [],
           sealed: under?.sealed ?? 0
         });
@@ -15361,7 +14140,7 @@ var Damgar = class {
       const c = clock.trim().toLowerCase();
       if (c && !/^[0-9a-f]{64}$/.test(c)) throw new Error("A clock is named by its identity: 64 characters, 0 to 9 and a to f.");
       await this.store.write(me.id, "settings", { ...s, clock: c || void 0 });
-      return { lines: [{ text: c ? `Lanes with an expiry are judged on the timestamp clock ${short2(c)}.` : "No clock: a lane can have no expiry.", tone: "ok" }] };
+      return { lines: [{ text: c ? `Lanes with an expiry are judged on the timestamp clock ${short(c)}.` : "No clock: a lane can have no expiry.", tone: "ok" }] };
     });
   }
   /** The receive-only link (F351): checked first (too wide a permission refused), kept owner-only beside the keys. */
@@ -15393,7 +14172,7 @@ var Damgar = class {
     let why = role === "app" ? `${this.opts.app ?? "This app"} holds no lane: ask Damgar for one` : "Damgar holds no lane for this";
     for (const l of keys.lanes ?? []) {
       if (l.role !== role) continue;
-      if (!reaches(l.kinds, spec, type, (x) => x === MONEY ? 2 : null)) {
+      if (!reaches(l.kinds, spec, type, (x) => x === MONEY ? 3 : null)) {
         why = `its lane \u201C${l.label}\u201D does not reach this act`;
         continue;
       }
@@ -15544,7 +14323,7 @@ var Damgar = class {
         await this.store.saveIdentity(me);
       }
       let left = 0;
-      for (const h of list2([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
+      for (const h of list([...s.relays, ...me.f.homes.map((x) => x.hint)])) {
         try {
           await relayAt(h, s.via).putAct(act.act);
           left++;
@@ -15561,7 +14340,7 @@ var Damgar = class {
   setRelays(relays) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
-      const r = list2(relays);
+      const r = list(relays);
       for (const x of r) if (!/^https?:\/\//.test(x)) throw new Error(`\u201C${x}\u201D: an address starts with https:// (or http://)`);
       if (!r.length) throw new Error("Give at least one relay.");
       await this.store.write(me.id, "settings", { ...s, relays: r });
@@ -15578,9 +14357,9 @@ var Damgar = class {
    */
   async deliver(me, s, book, spec, type, payload, to, refs, how = { by: "hand" }, also = []) {
     const l = await lookUp(to, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
-    if (!l.encryptionKey) throw new Error(`${short2(to)} publishes no encryption key: nothing can be sealed to it. Nothing was sent.`);
+    if (!l.encryptionKey) throw new Error(`${short(to)} publishes no encryption key: nothing can be sealed to it. Nothing was sent.`);
     const inbox = l.inbox(spec) ?? (MESSAGES_SPECS.includes(spec) ? MESSAGES_SPECS.map((x) => l.inbox(x)).find((x) => x) : void 0) ?? [];
-    if (!inbox.length) throw new Error(`${short2(to)} declares no inbox: nothing can be left for it. Nothing was sent.`);
+    if (!inbox.length) throw new Error(`${short(to)} declares no inbox: nothing can be left for it. Nothing was sent.`);
     await this.current(me);
     const others = [];
     for (const id of [...new Set(also)].filter((x) => x !== to && x !== me.id)) {
@@ -15624,7 +14403,7 @@ var Damgar = class {
     await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === "lane" && !(this.opts.app && me.f.signingSecret) });
     if (throughKisib) await this.laneRecordThroughKisib(me, s, made).catch(() => void 0);
     await this.store.saveIdentity(me);
-    if (!left) throw new Error(`${short2(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
+    if (!left) throw new Error(`${short(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
   }
   /**
@@ -15741,184 +14520,9 @@ function findOutput(tx, script) {
   return null;
 }
 
-// ../barebone/src/sealed.ts
-var SEALED_TEXT = POST_SPECS.text;
-var SEALED_PICTURE = POST_SPECS.jpeg;
-var SEALED_VIDEO = POST_SPECS.video;
-var SEALED_AUDIO = POST_SPECS.audio;
-var MEDIA_SPEC = { text: SEALED_TEXT, picture: SEALED_PICTURE, video: SEALED_VIDEO, audio: SEALED_AUDIO };
-var mediaOf = (spec) => Object.entries(MEDIA_SPEC).find(([, x]) => x === spec)?.[0] ?? null;
-function checkPlayable(media, bytes) {
-  if (media === "video") read2(bytes);
-  else if (media === "audio") read3(bytes);
-}
-function lockWork(a) {
-  let bytes = a.bytes;
-  let removed = [];
-  if (a.media === "picture") {
-    const s = strip(a.bytes);
-    bytes = s.bytes;
-    removed = s.removed;
-  } else if (a.media === "video" || a.media === "audio") {
-    const max = a.media === "video" ? MAX_BYTES : MAX_BYTES2;
-    if (a.bytes.length > max) throw new Error(`the file is ${a.bytes.length.toLocaleString("en")} bytes; the ${a.media === "video" ? "video" : "audio"} Module takes at most ${max.toLocaleString("en")}`);
-    if (a.media === "video") {
-      const s = strip2(a.bytes);
-      bytes = s.bytes;
-      removed = s.removed.map((c) => CARRIED_WORDS2[c]);
-    } else {
-      const s = strip3(a.bytes);
-      bytes = s.bytes;
-      removed = s.removed.map((c) => CARRIED_WORDS3[c]);
-    }
-  } else {
-    bytes = new TextEncoder().encode(new TextDecoder("utf-8", { fatal: true }).decode(a.bytes));
-  }
-  const l = lockMedia(bytes);
-  const m = /* @__PURE__ */ new Map([
-    [0, unhex(MEDIA_SPEC[a.media])],
-    [1, unhex(l.workHash)],
-    [2, unhex(l.lockedHash)],
-    [3, bytes.length],
-    [4, l.nonce],
-    [6, a.relays],
-    [7, [unhex(a.price.unit), a.price.value]]
-  ]);
-  if (a.forId) m.set(8, unhex(a.forId));
-  return { payload: cborEncode(m), locked: l.locked, key: hex(l.key), work: l.workHash, size: bytes.length, removed };
-}
-function offerPayload(a) {
-  const m = /* @__PURE__ */ new Map();
-  if (a.under) m.set(0, unhex(a.under));
-  m.set(1, ["publication" in a.sells ? [0, unhex(a.sells.publication)] : [3, unhex(a.sells.vow)]]);
-  m.set(2, [unhex(a.price.unit), a.price.value]);
-  if (a.payee) m.set(3, unhex(a.payee));
-  m.set(4, a.words);
-  return cborEncode(m);
-}
-var OFFER = 6;
-var KEY_DELIVERY = 1;
-function offerWords(price, referral) {
-  return `A sealed post, opened once paid: ${price}.${referral ? ` Referral: ${referral}% of the price to the repost the buyer names.` : ""}`;
-}
-async function postSealed(by, a) {
-  const w = lockWork(a.picture ? { media: "picture", bytes: a.picture, price: a.price, relays: a.relays } : { media: "text", bytes: new TextEncoder().encode(a.text ?? ""), price: a.price, relays: a.relays });
-  for (const hint of a.relays) {
-    for (const x of by.chainActs()) {
-      try {
-        await relayAt(hint, by.via).putAct(x);
-      } catch {
-      }
-    }
-  }
-  const publication = await by.publish(POST_SPECS.envelopes, PUBLICATION, w.payload, { public: true, relays: a.relays });
-  for (const hint of a.relays) await relayAt(hint, by.via).putMedia(w.locked);
-  const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { publication: publication.id }, price: a.price, words: a.words }), { public: true, relays: a.relays });
-  const post3 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.teaser), { public: true, relays: a.relays, refs: [referenceTo(publication.act), referenceTo(offer.act)] });
-  return { publication: publication.id, offer: offer.id, post: post3.id, key: w.key, acts: { publication: publication.act, offer: offer.act, post: post3.act }, removed: w.removed };
-}
-function readSealed(act) {
-  const d = describeAct(act);
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION || !d.payload || !d.signer) return null;
-  const m = cborDecode(d.payload);
-  const media = m.get(0);
-  const kind = media instanceof Uint8Array ? mediaOf(hex(media)) : null;
-  if (!kind || m.has(5)) return null;
-  const price = m.get(7);
-  return {
-    publication: d.id,
-    media: kind,
-    seller: d.signer,
-    price: Array.isArray(price) && price[0] instanceof Uint8Array ? { unit: hex(price[0]), value: Number(price[1]) } : null,
-    work: hex(m.get(1)),
-    lockedHash: hex(m.get(2)),
-    nonce: m.get(4),
-    size: Number(m.get(3)),
-    places: Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : []
-  };
-}
-function readOffer(act, seller, publication, coOwners = false) {
-  const d = describeAct(act);
-  if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
-  try {
-    const m = cborDecode(d.payload);
-    if (m.has(0) && !coOwners) return null;
-    const sells = m.get(1).some((x) => x[0] === 0 && x[1] instanceof Uint8Array && hex(x[1]) === publication);
-    const price = m.get(2);
-    if (!sells) return null;
-    const under = m.get(0);
-    const payee = m.get(3);
-    return {
-      offer: d.id,
-      price: { unit: hex(price[0]), value: Number(price[1]) },
-      words: typeof m.get(4) === "string" ? m.get(4) : null,
-      ...under instanceof Uint8Array ? { under: hex(under) } : {},
-      ...payee instanceof Uint8Array ? { payee: hex(payee) } : {}
-    };
-  } catch {
-    return null;
-  }
-}
-function keyDeliveryPayload2(publication, key) {
-  return cborEncode(
-    /* @__PURE__ */ new Map([
-      [0, unhex(publication)],
-      [1, unhex(key)],
-      [2, true]
-    ])
-  );
-}
-function readKeyDelivery2(payload) {
-  try {
-    const m = cborDecode(payload);
-    const p = m.get(0);
-    const k = m.get(1);
-    if (!(p instanceof Uint8Array) || !(k instanceof Uint8Array) || k.length !== 32 || m.get(2) !== true) return null;
-    return { publication: hex(p), key: hex(k) };
-  } catch {
-    return null;
-  }
-}
-async function openSealedBytes(s, key, hints, via2 = {}) {
-  let locked = null;
-  for (const h of [.../* @__PURE__ */ new Set([...hints, ...s.places])]) {
-    try {
-      locked = await relayAt(h, via2).getMedia(s.lockedHash);
-      if (locked) break;
-    } catch {
-    }
-  }
-  if (!locked) throw new Error("its locked bytes were not found at the relays asked");
-  let plain;
-  try {
-    plain = openMedia(locked, unhex(key), s.nonce);
-  } catch {
-    throw new Error("the key delivered does not open its bytes");
-  }
-  if (workHash(plain) !== s.work || plain.length !== s.size) throw new Error("its bytes do not match the work hash and size it was published with");
-  return plain;
-}
-async function repost(by, a) {
-  for (const hint of a.relays) {
-    for (const x of [...a.seller, ...by.chainActs(), a.publication, a.offer]) {
-      try {
-        await relayAt(hint, a.via ?? by.via).putAct(x);
-      } catch {
-      }
-    }
-    if (a.locked) {
-      try {
-        await relayAt(hint, a.via ?? by.via).putMedia(a.locked);
-      } catch {
-      }
-    }
-  }
-  return by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.text), { public: true, relays: a.relays, refs: [referenceTo(a.publication), referenceTo(a.offer)] });
-}
-
 // src/delivery.ts
 var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var list3 = (xs) => [...new Set(xs.filter(Boolean))];
+var list2 = (xs) => [...new Set(xs.filter(Boolean))];
 async function salesTold(me, via2) {
   const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   const out = [];
@@ -15973,7 +14577,7 @@ async function deliverSold(me, sold, a) {
 }
 async function deliverKey(me, buyer, publication, key, a) {
   await a.current();
-  const hints = list3([...me.f.homes.map((h) => h.hint), ...a.relays]);
+  const hints = list2([...me.f.homes.map((h) => h.hint), ...a.relays]);
   const l = await lookUp(buyer, hints, a.via);
   if (!l.encryptionKey) throw new Error("the buyer publishes no encryption key");
   const inbox = l.inbox(SPECS.envelopes) ?? [];
@@ -16016,20 +14620,50 @@ function readVow(act) {
     return null;
   }
 }
-function readVowOffer(act, seller, vow) {
-  const d = describeAct(act);
-  if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
-  try {
-    const m = cborDecode(d.payload);
-    const sells = m.get(1).some((x) => x[0] === 3 && x[1] instanceof Uint8Array && hex(x[1]) === vow);
-    if (!sells) return null;
-    const price = m.get(2);
-    const under = m.get(0);
-    const payee = m.get(3);
-    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === "string" ? m.get(4) : null, ...under instanceof Uint8Array ? { under: hex(under) } : {}, ...payee instanceof Uint8Array ? { payee: hex(payee) } : {} };
-  } catch {
-    return null;
+async function vowOffer(vow, seller, hints, via2 = {}, named2 = []) {
+  const r = reader(hints, via2);
+  await r.hold(seller);
+  for (const a of named2) r.add(a);
+  const pubs = [...r.held.values()].map((a) => readPublication(a)).filter((p) => !!p && p.drafter === seller && (p.vows.includes(vow) || p.ends && p.vows.length === 0));
+  const firsts = [...new Set(pubs.filter((p) => p.vows.includes(vow)).map((p) => p.first))];
+  if (!firsts.length) return null;
+  let chosen = null;
+  for (const f of firsts) {
+    let at = pubs.find((p) => p.id === f) ?? pubs.find((p) => p.first === f);
+    for (let i = 0; i < 1024; i++) {
+      const next = pubs.filter((p) => p.previous === at.id);
+      if (next.length !== 1) break;
+      at = next[0];
+    }
+    if (!chosen || chosen.ends && !at.ends) chosen = at;
   }
+  const pub = chosen;
+  const out = { publication: pub.first, version: pub.id, words: pub.words, owners: pub.owners, service: pub.service, designated: pub.designated, tag: null, price: null, payee: null, standing: "none", why: null };
+  if (pub.ends) return { ...out, why: "the publication selling it has ended: a later version sells nothing" };
+  const signers = [.../* @__PURE__ */ new Set([pub.service, ...pub.designated ? [pub.designated] : []])];
+  for (const x of signers) await r.hold(x);
+  for (const p of pub.partners) await r.hold(p.identity);
+  const tags = await Promise.all(signers.map((x) => tagsOf({ publication: pub.first }, x, hints, via2)));
+  for (const t of tags) for (const a of t.acts) r.add(a);
+  const latest = tags.map((t) => t.latest).find((t) => t) ?? named2.map(readTag).find((t) => t?.publication === pub.first) ?? null;
+  if (!latest) return { ...out, why: "no price tag of the publication\u2019s split service or designated party was found: it cannot be bought here" };
+  out.tag = latest;
+  if (!latest.price) return { ...out, standing: "withdrawn", why: "its price tag is withdrawn: a later version carries no price" };
+  if (pub.owners) {
+    const t = r.held.get(pub.owners);
+    const td = t ? describeAct(t) : null;
+    const m = td?.payload ? cborDecode(td.payload) : null;
+    for (const p of (m?.get(0) ?? []).map((x) => hex(x))) await r.hold(p);
+  }
+  for (let pass = 0; pass < 3; pass++) for (const a of [...r.held.values()]) r.add(a);
+  let verdict = "unknown";
+  try {
+    verdict = r.v.agreementsTagUnder(AGREEMENTS_SPECS, latest.id).verdict;
+  } catch {
+  }
+  out.standing = verdict;
+  if (verdict !== "counts") return { ...out, why: verdict === "nobody's offer" ? "its price tag is nobody\u2019s offer under the publication (signed by someone other than its split service or designated party)" : "whether its price tag counts under the publication is unknown here" };
+  return { ...out, price: latest.price, payee: latest.payee };
 }
 async function contestSale(by, a) {
   const made = await by.publish(MIRS.agreements, CONTEST, vowContestPayload(a.vow, a.sale, a.promise?.trim() || void 0), { public: true, relays: a.relays, objects: [[a.vow, a.vow]] });
@@ -16046,15 +14680,14 @@ async function vowSales(identity, relays, via2 = {}) {
     if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
   }
   for (const a of [...r.held.values()]) {
-    const d = describeAct(a);
-    if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== identity || !d.payload) continue;
-    const under = cborDecode(d.payload).get(0);
-    const t = under instanceof Uint8Array ? r.held.get(hex(under)) : void 0;
+    const p = readPublication(a);
+    if (!p || p.drafter !== identity || !p.vows.length) continue;
+    for (const x of [p.service, ...p.designated ? [p.designated] : [], ...p.partners.map((y) => y.identity)]) await r.hold(x);
+    const t = p.owners ? r.held.get(p.owners) : void 0;
     const td = t ? describeAct(t) : null;
     if (!td?.payload || td.type !== 0) continue;
     const m = cborDecode(td.payload);
-    if (m.has(12)) continue;
-    for (const p of (m.get(0) ?? []).map((x) => hex(x))) await r.hold(p);
+    for (const x of (m.get(0) ?? []).map((y) => hex(y))) await r.hold(x);
   }
   for (const a of [...claims, ...contests]) {
     const d = describeAct(a);
@@ -16128,8 +14761,8 @@ async function purchaseContests(a) {
 }
 function contestsOf(r, specs, purchase, contests, unanswered) {
   try {
-    const shown = r.v.agreementsPurchaseContests(specs, purchase);
-    return { state: "shown", contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
+    const shown2 = r.v.agreementsPurchaseContests(specs, purchase);
+    return { state: "shown", contests: shown2.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e3) {
     const m = e3 instanceof Error ? e3.message : String(e3);
     return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : /rail-unanswered/.test(m) ? `its payment is not verified here: ${unanswered.has(purchase) ? `its claim\u2019s ${unanswered.get(purchase).replace(/^its /, "")}` : railSaid2(unanswered) ?? "its claim has no rail answer here"}; whether it is a purchase is unknown` : m };
@@ -16305,7 +14938,60 @@ var DamgarKeepInDub = class {
 };
 var now4 = () => Math.floor(Date.now() / 1e3);
 var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var list4 = (xs) => [...new Set(xs.filter(Boolean))];
+var list3 = (xs) => [...new Set(xs.filter(Boolean))];
+var short2 = (x) => `${x.slice(0, 8)}\u2026`;
+var BYTES_STAY = "The bytes stay where they were uploaded unless homes and relays drop them: the bake itself is never withdrawn by the protocol.";
+var NOTHING_TO_END = "There is nothing to withdraw at the protocol level: a bake is never withdrawn, its bytes staying where they were uploaded unless homes and relays drop them, and no price tag or publication of yours sells it. A profile\u2019s picture is changed by a later profile simply naming another picture.";
+async function actAt2(id, places, via2) {
+  for (const h of places) {
+    const a = await relayAt(h, via2).getAct(id).catch(() => null);
+    if (a) return a;
+  }
+  return null;
+}
+async function publicationsBy(signer, places, via2) {
+  const out = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    let after;
+    for (let i = 0; i < 200; i++) {
+      const page = await relayAt(h, via2).feed({ signer, after }).catch(() => null);
+      if (!page) break;
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        const p = readPublication(it.item);
+        if (p && p.drafter === signer) out.set(p.id, { p, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  }
+  return [...out.values()];
+}
+async function publicationLine(first, drafter, places, via2) {
+  const all = (await publicationsBy(drafter, places, via2)).filter((x) => x.p.first === first || x.p.id === first);
+  let at = all.find((x) => x.p.id === first)?.p ?? null;
+  for (let i = 0; at && i < 1024; i++) {
+    const next = all.filter((x) => x.p.previous === at.id);
+    if (next.length !== 1) break;
+    at = next[0].p;
+  }
+  return { latest: at, acts: all.map((x) => x.act) };
+}
+async function publicationsSelling(bake, drafter, places, via2) {
+  const all = await publicationsBy(drafter, places, via2);
+  const firsts = list3(all.filter((x) => x.p.bakes.includes(bake)).map((x) => x.p.first));
+  const out = [];
+  for (const f of firsts) {
+    const l = await publicationLine(f, drafter, places, via2);
+    if (l.latest) out.push({ first: f, latest: l.latest });
+  }
+  return out;
+}
+function throughLine(d, names) {
+  const partners = (d.partners ?? []).map((p) => `${names(p.identity)} ${pct(p.share)}${p.label ? `, \u201C${p.label}\u201D` : ""}`);
+  const owners = d.owners.map(([id, n]) => d.owners.length > 1 ? `${names(id)} (${pct(n)})` : names(id));
+  return `Through the publication where you found it: its split service${d.service ? `, ${names(d.service)},` : ""} pays ${partners.length ? `its partners first (${partners.join("; ")}), then ` : ""}the owners: ${owners.join(", ")}.`;
+}
 var DubMoney = class {
   constructor(store, opts) {
     this.store = store;
@@ -16355,7 +15041,7 @@ var DubMoney = class {
       changed = true;
     }
     if (changed) await this.store.saveMoney(me.id, "keys", keys);
-    const shown = (l, state, grant) => ({
+    const shown2 = (l, state, grant) => ({
       label: l.label,
       state,
       cap: l.limits?.cap ? say({ unit: l.limits.cap.unit, value: l.limits.cap.value }, /* @__PURE__ */ new Set([l.limits.cap.unit])) : "no cap",
@@ -16363,11 +15049,11 @@ var DubMoney = class {
       until: l.limits?.expiry?.clock === "timestamp" ? l.limits.expiry.time : null,
       grant
     });
-    const out = (keys.asked ?? []).map((a) => shown(a, "asked", null));
+    const out = (keys.asked ?? []).map((a) => shown2(a, "asked", null));
     for (const l of keys.lanes ?? []) {
       const revoked = (await revocationsOf(me.id, l.grant, hints, s.via).catch(() => [])).length > 0;
       const expired = l.limits?.expiry?.clock === "timestamp" && now4() > l.limits.expiry.time;
-      out.push(shown(l, revoked ? "revoked" : expired ? "past its expiry" : "in force", l.grant));
+      out.push(shown2(l, revoked ? "revoked" : expired ? "past its expiry" : "in force", l.grant));
     }
     return out;
   }
@@ -16375,30 +15061,65 @@ var DubMoney = class {
   /**
    * A tip on a post, paid now under the lane: the invoice request signed with
    * the lane's key; refused before signing past its cap or expiry, saying
-   * why. A post under a deal between separate people (it names the deal, or
-   * an offer under it): the tip goes to the deal, not to the act (decided:
-   * "with a tip IF there is a split the target is the agreement not the
-   * act"): paid to the deal's own payee, following the deal, through its
-   * split service; said in one line before paying. A tip to a person's own
-   * post is unchanged.
+   * why. A work found through a publication (the post names it, or a price
+   * tag under it): the tip goes through that publication, not to whoever
+   * posted it (decided: "with a tip IF there is a split the target is the
+   * agreement not the act"; Money rule 18: "a payment naming a publication
+   * itself, without a tag, is a tip through the publication: no purchase,
+   * divided as the publication's split says"). It is paid to the
+   * publication's split service, naming the publication, and the service
+   * pays its partners first, then the owners; said in one line before
+   * paying. A tip to a person's own post is unchanged.
    */
   async tip(a) {
-    const d = a.deal;
-    if (d && d.payee) {
-      const r2 = await this.engine.payUnderLane({ payee: d.payee, amount: a.amount, whatFor: a.whatFor ?? "a tip to a shared work", fulfils: d.version, refs: [[a.post, a.signer]] });
-      return [sharedLine(d, a.names ?? ((x) => `${x.slice(0, 8)}\u2026`)), "The tip goes to the deal, not to the one who posted it: divided by its split service like a sale, and no purchase (nothing is owed back).", ...r2.lines.map((l) => l.text)];
+    const t = a.deal?.publication && a.deal.service ? a.deal : null;
+    if (t) {
+      const r2 = await this.engine.payUnderLane({ payee: t.service, amount: a.amount, whatFor: a.whatFor ?? "a tip to a work", fulfils: t.publication, refs: [[a.post, a.signer]] });
+      return [throughLine(t, a.names ?? short2), "The tip goes through the publication where you found it, not to the one who posted it: no purchase, nothing owed back.", ...r2.lines.map((l) => l.text)];
     }
     const r = await this.engine.payUnderLane({ payee: a.signer, amount: a.amount, whatFor: a.whatFor, refs: [[a.post, a.signer]] });
     return r.lines.map((l) => l.text);
   }
-  /** The deal a post is under, where it names one: null for a person's own post (the money messages cMIP, draft 5, 8). */
+  /**
+   * The publication a post's work was found through, with its owners where
+   * it names an ownership agreement: from what the post names (a
+   * publication, a price tag under one, or a work's ownership agreement).
+   * Null for a person's own post. Its `publication` is the founding version,
+   * what a tip through it names; its `service` the split service paid.
+   */
   async dealOf(post3, signer, hints, via2) {
     try {
       const act = (await followRef([post3, signer], hints, via2)).act;
+      const named2 = await this.named(act, hints, via2);
+      let pub = named2.map(readPublication).find((x) => x && !x.ends) ?? null;
+      if (!pub) {
+        const t = named2.map(readTag).find((x) => x?.publication);
+        const pa = t?.publication ? await actAt2(t.publication, hints, via2) : null;
+        pub = pa ? readPublication(pa) : null;
+      }
+      if (pub) {
+        const deal = pub.owners ? await readDeal(pub.owners, hints, via2, pub.id).catch(() => null) : null;
+        if (deal) return { ...deal, publication: pub.first, service: pub.service, payee: pub.service, partners: pub.partners };
+        return { version: pub.id, name: null, text: pub.words ?? "", parties: [pub.drafter], owners: [[pub.drafter, 1e6]], claim: null, publication: pub.first, payee: pub.service, service: pub.service, referral: 0, partners: pub.partners };
+      }
       return await dealOfPost(act, hints, via2);
     } catch {
       return null;
     }
+  }
+  /** The acts a post names in its refs, fetched (each from its signer's places where named). */
+  async named(post3, hints, via2) {
+    const d = describeAct(post3);
+    const out = [];
+    await Promise.all(
+      (d.refs ?? []).map(async (id, i) => {
+        try {
+          out[i] = (await followRef(d.refSigners?.[i] ? [id, d.refSigners[i]] : id, hints, via2)).act;
+        } catch {
+        }
+      })
+    );
+    return out.filter(Boolean);
   }
   /** The payments asked here: answered ones to pay in the wallet, the others waiting, after a look for answers and receipts. */
   async payments() {
@@ -16412,22 +15133,31 @@ var DubMoney = class {
     return (await this.engine.paid(key, proof)).lines.map((l) => l.text);
   }
   // ------------------------------------------------------------ pay-per-view, the seller's side
-  /** Seal a post with a price: the publication, its offer, the post naming both; the key kept here, to be delivered on each sale. */
+  /**
+   * Seal a post with a price: the bake (its key absent), the uploader's price
+   * tag on it (Money type 5: on a bare bake, paying it pays the uploader,
+   * unsplit), the post naming both; the key kept here, to be delivered on
+   * each sale. `publication` and `offer` in the answer: the bake and the tag,
+   * their names from before.
+   */
   async sell(me, s, a) {
     if (!Number.isSafeInteger(a.price.value) || a.price.value <= 0) throw new Error("A price is a whole amount above zero. Nothing was posted.");
     if (a.referral !== null && (!Number.isInteger(a.referral) || a.referral < 1 || a.referral > 99)) throw new Error("A referral share is a whole percentage, 1 to 99. Nothing was posted.");
     const priceSaid = say(a.price, /* @__PURE__ */ new Set([a.price.unit]));
     const made = await postSealed(me, { text: a.text, teaser: a.teaser, price: a.price, words: offerWords(priceSaid, a.referral), relays: s.relays });
     const sold = await this.store.money(me.id, "sold") ?? {};
-    sold[made.publication] = { key: made.key, offer: made.offer, post: made.post, delivered: {} };
+    sold[made.bake] = { key: made.key, offer: made.tag, post: made.post, delivered: {} };
     await this.store.saveMoney(me.id, "sold", sold);
     return {
       post: made.post,
-      publication: made.publication,
-      offer: made.offer,
+      bake: made.bake,
+      tag: made.tag,
+      publication: made.bake,
+      offer: made.tag,
       lines: [
-        `Posted, sealed: ${priceSaid} to open it. Its words are public; its text opens only with its key, which Dub keeps and delivers to each buyer once your Damgar has signed the receipt.`,
-        a.referral ? `Your offer promises ${a.referral}% of the price to the repost a buyer names: Damgar prepares that payment when it signs the receipt. A promise in words, not judged by the core (F351).` : "No referral share."
+        `Posted, sealed: ${priceSaid} to open it, by your price tag on it. Its words are public; its text opens only with its key, which Dub keeps and delivers to each buyer once your Damgar has signed the receipt.`,
+        a.referral ? `Your words promise ${a.referral}% of the price to the repost a buyer names: Damgar prepares that payment when it signs the receipt. A promise in words, not judged by the core (F351).` : "No referral share.",
+        "To stop selling it, withdraw the price tag (its menu): the bake stays where it was uploaded."
       ]
     };
   }
@@ -16444,40 +15174,142 @@ var DubMoney = class {
     return out;
   }
   // ------------------------------------------------------------ pay-per-view, the buyer's side
-  /** A sealed post a feed item names, read: its publication and offer, as this identity stands with it. */
-  async read(me, hints, via2, refs) {
-    let pub = null;
+  /**
+   * What a payment for a sealed work would follow, read from the acts a feed
+   * item names (Money rule 18): the bake, then the price tag that counts.
+   * Under a publication (the item names one selling the bake, or a tag under
+   * one), only the split service's tag or the designated party's counts,
+   * judged by the core (`agreementsTagUnder`). On a bare bake, only its
+   * uploader's latest tag counts (`priceTag`), and paying it pays the
+   * uploader, unsplit. A tag whose latest version carries no price is
+   * withdrawn: nothing to buy.
+   */
+  async priceOf(hints, via2, refs, post3) {
     const acts = [];
-    for (const r of refs) {
-      try {
-        const a = (await followRef(r.signer ? [r.id, r.signer] : r.id, hints, via2)).act;
-        acts.push(a);
-        const x = readSealed(a);
-        if (x && !pub) pub = { act: a, s: x };
+    await Promise.all(
+      refs.map(async (r, i) => {
+        try {
+          acts[i] = (await followRef(r.signer ? [r.id, r.signer] : r.id, hints, via2)).act;
+        } catch {
+        }
+      })
+    );
+    const named2 = acts.filter(Boolean);
+    const bakeAct = named2.find((a) => readSealed(a));
+    if (!bakeAct) return null;
+    const bake = readSealed(bakeAct);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+    const held = [...named2];
+    const look = async (id) => {
+      await lookUp(id, hints, via2, v).catch(() => null);
+    };
+    await look(bake.seller);
+    v.add(bakeAct);
+    const uploader = v.bakeUploader(bake.bake) ?? bake.seller;
+    let pubAct = named2.find((a) => readPublication(a)?.bakes.includes(bake.bake)) ?? null;
+    if (!pubAct) {
+      const t = named2.map(readTag).find((x) => x?.publication);
+      const a = t?.publication ? await actAt2(t.publication, hints, via2) : null;
+      if (a && readPublication(a)?.bakes.includes(bake.bake)) pubAct = a;
+    }
+    const out = { bake, tag: null, standing: "none", why: null, through: null, deal: null, uploader, acts: held };
+    if (post3) out.deal = await dealOfPost(post3, hints, via2).catch(() => null);
+    if (pubAct) {
+      const first = readPublication(pubAct);
+      const line = await publicationLine(first.first, first.drafter, hints, via2);
+      const pub = line.latest ?? first;
+      out.through = { ...pub, ends: pub.ends };
+      held.push(...line.acts);
+      if (pub.owners && !out.deal) out.deal = await readDeal(pub.owners, hints, via2, pub.id).catch(() => null);
+      if (pub.ends) {
+        out.why = "the publication it was offered through has ended: a later version sells nothing";
+        return out;
+      }
+      const signers = list3([pub.service, ...pub.designated ? [pub.designated] : []]);
+      const tags = await Promise.all(signers.map((x) => tagsOf({ publication: pub.first }, x, hints, via2)));
+      for (const t of tags) held.push(...t.acts);
+      const latest = tags.map((t) => t.latest).find((t) => t) ?? named2.map(readTag).find((t) => t?.publication === pub.first) ?? null;
+      out.tag = latest;
+      if (!latest) {
+        out.why = "no price tag of the publication\u2019s split service was found: it cannot be bought here";
+        return out;
+      }
+      for (const x of list3([pub.drafter, pub.service, ...pub.partners.map((p) => p.identity), ...pub.designated ? [pub.designated] : [], ...out.deal?.parties ?? []])) {
+        await look(x);
+        for (const h of hints) {
+          const page = await relayAt(h, via2).feed({ signer: x }).catch(() => null);
+          for (const it of page?.items ?? []) if (it.kind === "act") held.push(it.item);
+        }
+      }
+      for (let pass = 0; pass < 3; pass++) for (const a of held) try {
+        v.add(a);
       } catch {
       }
+      let verdict = "unknown";
+      try {
+        verdict = v.agreementsTagUnder(AGREEMENTS_SPECS, latest.id).verdict;
+      } catch {
+      }
+      out.standing = latest.price ? verdict : "withdrawn";
+      if (!latest.price) out.why = "its price tag is withdrawn: a later version carries no price";
+      else if (verdict !== "counts") out.why = verdict === "nobody's offer" ? "its price tag is nobody\u2019s offer under the publication (signed by someone other than its split service or designated party)" : "whether its price tag counts under the publication is unknown here: its parties\u2019 signatures were not all found";
+      return out;
     }
-    if (!pub) return null;
-    const p = pub.s;
-    const offer = acts.map((a) => readOffer(a, p.seller, p.publication, true)).find(Boolean) ?? null;
+    const mine = await tagsOf({ bake: bake.bake }, uploader, hints, via2);
+    held.push(...mine.acts);
+    out.tag = mine.latest;
+    if (!mine.latest) {
+      out.why = named2.some((a) => readTag(a)?.bake === bake.bake) ? "the price tag it names is not its uploader\u2019s: nobody\u2019s offer, it buys nothing" : "no price tag of its uploader was found: it cannot be bought here";
+      return out;
+    }
+    for (const a of mine.acts) try {
+      v.add(a);
+    } catch {
+    }
+    out.standing = mine.latest.price ? v.priceTag(mine.latest.id) ?? "unknown" : "withdrawn";
+    if (!mine.latest.price) out.why = "its uploader withdrew its price tag: a later version carries no price";
+    else if (out.standing !== "counts") out.why = `its price tag is ${out.standing}`;
+    return out;
+  }
+  /** A sealed post a feed item names, read: its bake, the price tag a purchase follows, and where this identity stands with it. */
+  async read(me, hints, via2, refs, post3, names = short2) {
+    const pr = await this.priceOf(hints, via2, refs, post3);
+    if (!pr) return null;
+    const p = pr.bake;
     const sold = await this.store.money(me.id, "sold") ?? {};
     const bought = await this.store.money(me.id, "bought") ?? {};
-    const price = offer?.price ?? p.price;
+    const counts = pr.tag?.price && pr.standing === "counts" ? pr.tag : null;
     const out = {
-      publication: p.publication,
-      offer: offer?.offer ?? null,
+      bake: p.bake,
+      publication: p.bake,
+      tag: counts?.id ?? null,
+      offer: counts?.id ?? null,
       seller: p.seller,
-      price: price ? say(price, /* @__PURE__ */ new Set([price.unit])) : "no price stated",
-      words: offer?.words ?? null,
+      price: counts?.price ? say(counts.price, /* @__PURE__ */ new Set([counts.price.unit])) : pr.tag?.price ? say(pr.tag.price, /* @__PURE__ */ new Set([pr.tag.price.unit])) : "no price stated",
+      words: pr.through?.words ?? null,
       state: "for sale",
       media: p.media,
       text: null,
       picture: null,
-      problem: offer ? null : "no offer of its seller selling it was found: it cannot be bought here"
+      problem: counts ? null : pr.why ?? "no price tag that counts was found: it cannot be bought here",
+      through: pr.through ? { publication: pr.through.first, version: pr.through.id, words: throughLine(this.asDeal(pr), names) } : null,
+      outside: null,
+      owners: null,
+      ends: null,
+      work: p.work
     };
-    const key = p.seller === me.id ? sold[p.publication]?.key : bought[p.publication]?.key;
-    if (p.seller === me.id) out.state = "yours";
-    else if (bought[p.publication]?.payment && !key) out.state = "paying";
+    if (pr.deal) {
+      const pd = post3 ? describeAct(post3) : null;
+      await this.ownersSeen(pr.deal, p.work, hints, via2, pd ? { post: pd.id, signer: pd.signer ?? null, bake: p.bake, price: counts ? out.price : null, words: pr.through?.words ?? null } : null);
+    }
+    this.outsideOf(out, pr.uploader, me.id, names);
+    if (p.seller === me.id) {
+      out.state = "yours";
+      if (pr.through && !pr.through.ends && pr.through.drafter === me.id) out.ends = "publication";
+      else if (!pr.through && pr.tag?.price && pr.tag.signer === me.id) out.ends = "tag";
+    }
+    const key = p.seller === me.id ? sold[p.bake]?.key : bought[p.bake]?.key;
+    if (p.seller !== me.id && bought[p.bake]?.payment && !key) out.state = "paying";
     if (key) {
       try {
         const bytes = await openSealedBytes(p, key, hints, via2);
@@ -16491,6 +15323,43 @@ var DubMoney = class {
     }
     return out;
   }
+  /** The ownership Dub has read, by work hash (this app's memory only): where a re-upload of the same work is met, its owners and their own publication are known. */
+  owned = /* @__PURE__ */ new Map();
+  /** Keep what was read of a work's owners: its claim's work hash, from the claim itself. */
+  async ownersSeen(deal, work, hints, via2, own) {
+    let w = work;
+    if (deal.claim) {
+      const c = await actAt2(deal.claim, hints, via2);
+      const d = c ? describeAct(c) : null;
+      const x = d?.payload ? cborDecode(d.payload).get(0) : null;
+      if (x instanceof Uint8Array) w = hex(x);
+    }
+    const before = this.owned.get(w);
+    const holders2 = deal.owners.map(([h]) => h);
+    const theirs = own && own.signer && holders2.includes(own.signer) && own.price ? own : null;
+    this.owned.set(w, { deal, post: theirs?.post ?? before?.post ?? null, signer: theirs?.signer ?? before?.signer ?? null, bake: theirs?.bake ?? before?.bake ?? null, price: theirs?.price ?? before?.price ?? null, words: theirs?.words ?? before?.words ?? null });
+  }
+  /**
+   * Where a sealed work's uploader is none of its owners, as the claim's
+   * ownership agreement names them (Verifier.bakeUploader, compared with the
+   * agreement's holders): said plainly, before paying (Agreements rule 14),
+   * and the owners' own publication offered, where Dub has read one.
+   */
+  outsideOf(out, uploader, me, names = short2) {
+    const seen = this.owned.get(out.work);
+    if (!seen) return;
+    const owners = seen.deal.owners;
+    if (!owners.length || owners.some(([h]) => h === uploader)) return;
+    const who2 = owners.map(([h, n]) => `${h === me ? "you" : names(h)} (${pct(n)})`).join(", ");
+    out.outside = `Its uploader, ${uploader === me ? "you" : names(uploader)}, is not one of this work\u2019s owners as its claim\u2019s ownership agreement names them: ${who2}. Paying here pays the uploader alone, outside that agreement; the owners are paid nothing of it.`;
+    if (seen.post && seen.signer && seen.bake && seen.bake !== out.bake) out.owners = { post: seen.post, signer: seen.signer, bake: seen.bake, price: seen.price ?? "its price", words: `The owners sell it themselves, through their own publication: ${seen.price ?? "its price"}.` };
+  }
+  /** A price read as the deal line's shape (`throughLine`). */
+  asDeal(pr) {
+    const t = pr.through;
+    if (pr.deal) return { ...pr.deal, publication: t.first, service: t.service, payee: t.service, partners: t.partners };
+    return { version: t.id, name: null, text: t.words ?? "", parties: [t.drafter], owners: [[t.drafter, 1e6]], claim: null, publication: t.first, payee: t.service, service: t.service, referral: 0, partners: t.partners };
+  }
   /**
    * A sealed film or recording's bytes, opened with the key that came with
    * the receipt (or one's own), checked against the work hash and size, then
@@ -16503,50 +15372,84 @@ var DubMoney = class {
     if (!p || p.media !== "video" && p.media !== "audio") throw new Error("not a sealed film or recording");
     const sold = await this.store.money(me.id, "sold") ?? {};
     const bought = await this.store.money(me.id, "bought") ?? {};
-    const key = p.seller === me.id ? sold[p.publication]?.key : bought[p.publication]?.key;
+    const key = p.seller === me.id ? sold[p.bake]?.key : bought[p.bake]?.key;
     if (!key) throw new Error("its key is not here: it opens once its seller\u2019s Damgar signs the receipt");
     const bytes = await openSealedBytes(p, key, hints, via2);
     checkPlayable(p.media, bytes);
     return { b64: base64(bytes), type: p.media === "video" ? "video/mp4" : "audio/mp4" };
   }
-  /** Buy a sealed post under the lane: an invoice request following the seller's offer, naming the repost followed (Money claim field 6) where it was found through one. */
-  async buy(me, hints, via2, a) {
-    const pubAct = (await followRef([a.publication, a.seller], hints, via2)).act;
-    const p = readSealed(pubAct);
-    if (!p) throw new Error("That is not a sealed post. Nothing was signed.");
-    if (p.seller === me.id) throw new Error("That post is your own. Nothing was signed.");
-    const offerId = await this.offerFor(a, hints, via2);
-    if (!offerId) throw new Error("No offer of its seller selling it was found. Nothing was signed.");
-    const offer = readOffer((await followRef([offerId, a.seller], hints, via2)).act, a.seller, a.publication, true);
-    let purchase = null;
-    if (offer.under) {
-      const now6 = await collectiveNow(a.seller, await collectivePlaces(a.seller, hints, via2), via2).catch(() => null);
-      purchase = [offer.under, now6?.agreement ?? offer.under];
-    }
-    const deal = offer.under ? await readDeal(offer.under, hints, via2).catch(() => null) : null;
-    const said2 = deal ? [sharedLine(deal, a.names ?? ((x) => `${x.slice(0, 8)}\u2026`))] : [];
-    const r = await this.engine.payUnderLane({ payee: offer.payee ?? a.seller, amount: offer.price, whatFor: "a sealed post", fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase });
-    const bought = await this.store.money(me.id, "bought") ?? {};
-    bought[a.publication] = { key: null, payment: r.key, seller: a.seller, offer: offer.offer };
-    await this.store.saveMoney(me.id, "bought", bought);
-    return [...said2, ...r.lines.map((l) => l.text), ...a.repost ? [`Your claim will name the repost you followed, by ${a.repost.by.slice(0, 8)}\u2026: it earns the referral share the offer states, if the seller pays it.`] : []];
-  }
-  /** The offer selling a publication, named beside it in the post or repost that names it. */
-  async offerFor(a, hints, via2) {
+  /**
+   * What a purchase pays, before anything is signed (Money rule 18): the
+   * price tag that counts, followed (`fulfils`), its price, to its payee; under
+   * a publication naming an ownership agreement, the purchase names that
+   * agreement and the version of it read (`[agreement, version]`, claim field
+   * 9, Agreements rule 12), and the split service, the tag's payee, pays its
+   * partners first, then the owners. A lone seller's publication, or a bare
+   * bake, names none. Throws, saying why, where nothing can be bought.
+   */
+  async purchaseOf(me, hints, via2, a) {
     const from = a.repost ? [a.repost.id, a.repost.by] : a.post ? [a.post, a.seller] : null;
-    const names = [];
-    if (from) {
-      const d = describeAct((await followRef(from, hints, via2)).act);
-      names.push(...d.refs ?? []);
+    const postAct = from ? (await followRef(from, hints, via2)).act : null;
+    const refs = [{ id: a.publication, signer: a.seller }];
+    if (postAct) {
+      const d = describeAct(postAct);
+      for (const [i, id] of (d.refs ?? []).entries()) if (id !== a.publication) refs.push({ id, signer: d.refSigners?.[i] });
     }
-    for (const id of names) {
-      try {
-        const o = readOffer((await followRef([id, a.seller], hints, via2)).act, a.seller, a.publication, true);
-        if (o) return o.offer;
-      } catch {
-      }
+    const pr = await this.priceOf(hints, via2, refs, postAct);
+    if (!pr) throw new Error("That is not a sealed work. Nothing was signed.");
+    if (pr.bake.seller === me.id) throw new Error("That work is your own upload. Nothing was signed.");
+    if (!pr.tag?.price || pr.standing !== "counts") throw new Error(`It cannot be bought: ${pr.why ?? "no price tag that counts was found"}. Nothing was signed.`);
+    const said2 = [];
+    const names = a.names ?? short2;
+    if (pr.through) said2.push(throughLine(this.asDeal(pr), names));
+    const shown2 = { work: pr.bake.work, publication: pr.bake.bake, outside: null, owners: null };
+    if (pr.deal) await this.ownersSeen(pr.deal, pr.bake.work, hints, via2, null);
+    this.outsideOf(shown2, pr.uploader, me.id, names);
+    if (shown2.outside) said2.push(shown2.outside);
+    return { payee: pr.tag.payee, amount: pr.tag.price, fulfils: pr.tag.id, purchase: pr.through?.owners ? [pr.through.owners, pr.deal?.version ?? pr.through.owners] : null, said: said2, read: pr };
+  }
+  /** Buy a sealed work under the lane: an invoice request following its price tag, naming the repost followed (Money claim field 6) where it was found through one. */
+  async buy(me, hints, via2, a) {
+    const x = await this.purchaseOf(me, hints, via2, a);
+    const r = await this.engine.payUnderLane({ payee: x.payee, amount: x.amount, whatFor: x.read.through ? "a work, through its publication" : "a sealed post", fulfils: x.fulfils, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase: x.purchase });
+    const bought = await this.store.money(me.id, "bought") ?? {};
+    bought[a.publication] = { key: null, payment: r.key, seller: a.seller, offer: x.fulfils };
+    await this.store.saveMoney(me.id, "bought", bought);
+    return [...x.said, ...r.lines.map((l) => l.text), ...a.repost ? [`Your claim will name the repost you followed, by ${a.repost.by.slice(0, 8)}\u2026: it earns a referral share where the publication's split plan has one.`] : []];
+  }
+  /**
+   * End what this identity sells a work by, named by its layer (decided 28
+   * October 2026; Nobody, allegedly, 30 October: "Yes, or even withdraw
+   * publication could also work"): its price tag on a bare bake (a later
+   * version with no price, Money rule 18), or its publication (a later
+   * version selling nothing, Agreements; it ends once every party signs it).
+   * A bake itself is never withdrawn: the bytes stay where they were
+   * uploaded unless homes and relays drop them.
+   */
+  async end(me, s, hints, bake) {
+    const relays = list3([...s.relays, ...me.f.homes.map((h) => h.hint)]);
+    const tags = await tagsOf({ bake }, me.id, list3([...hints, ...relays]), s.via);
+    if (tags.latest?.price) {
+      const w = await withdrawTag(me, tags.latest, relays);
+      return { id: w.id, ended: "tag", lines: [`Price tag withdrawn: version ${w.version} carries no price, so a payment of it buys nothing.`, BYTES_STAY] };
     }
-    return null;
+    const mine = await publicationsSelling(bake, me.id, list3([...hints, ...relays]), s.via);
+    const open = mine.find((x) => !x.latest.ends);
+    if (!open) throw new Error(`${NOTHING_TO_END} Nothing was signed.`);
+    const prev = await actAt2(open.latest.id, list3([...hints, ...relays]), s.via);
+    const m = cborDecode(describeAct(prev).payload);
+    m.set(0, []);
+    const objects = [[open.latest.first, open.latest.id], ...open.latest.owners ? [[open.latest.owners, open.latest.owners]] : []];
+    const made = await me.publish(MIRS.agreements, PUBLICATION_ACT, cborEncode(m), { public: true, relays, objects });
+    const others = list3([open.latest.service, ...open.latest.partners.map((p) => p.identity), ...open.latest.designated ? [open.latest.designated] : []]).filter((x) => x !== me.id);
+    return {
+      id: made.id,
+      ended: "publication",
+      lines: [
+        `Publication withdrawn: a later version that sells nothing, signed by you. It ends the publication once every party signs it too${others.length ? ` (${others.map(short2).join(", ")})` : ""}, as the first version needed.`,
+        BYTES_STAY
+      ]
+    };
   }
   /** Key deliveries arrived in this identity's inbox (Envelopes type 1), each from the seller of the post it opens: kept here. */
   async keysArrived(me, s, inbox) {
@@ -16555,7 +15458,7 @@ var DubMoney = class {
     if (!waiting.length) return [];
     const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const out = [];
-    for (const h of list4([...inbox, ...me.f.homes.map((x) => x.hint)])) {
+    for (const h of list3([...inbox, ...me.f.homes.map((x) => x.hint)])) {
       let after;
       try {
         for (; ; ) {
@@ -16598,12 +15501,12 @@ var DubMoney = class {
     const pubAct = named2.find((x) => readSealed(x));
     if (!pubAct) throw new Error("That post names no sealed post. Nothing was reposted.");
     const p = readSealed(pubAct);
-    const offerAct = named2.find((x) => readOffer(x, p.seller, p.publication, true));
-    if (!offerAct) throw new Error("That post names no offer selling it. Nothing was reposted.");
+    const offerAct = named2.find((x) => readTag(x)?.bake === p.bake || readTag(x)?.publication) ?? named2.find((x) => readPublication(x)?.bakes.includes(p.bake));
+    if (!offerAct) throw new Error("That post names no price tag or publication selling it. Nothing was reposted.");
     const seller = await lookUp(p.seller, hints, s.via);
     const chain = await servedChain(p.seller, seller.resolution.homes, s.via).catch(() => []);
     let locked = null;
-    for (const h of list4([...hints, ...p.places])) {
+    for (const h of list3([...hints, ...p.places])) {
       try {
         locked = await relayAt(h, s.via).getMedia(p.lockedHash);
         if (locked) break;
@@ -16616,7 +15519,7 @@ var DubMoney = class {
     } finally {
       await this.store.saveIdentity(me);
     }
-    return { id: made.id, lines: [`Reposted at your relays (${s.relays.join(", ")}), with the sealed post and its offer held there too: a reader of those relays finds it through you. A buyer who names your repost earns you the share its offer promises, if any.`] };
+    return { id: made.id, lines: [`Reposted at your relays (${s.relays.join(", ")}), with the sealed post and its price tag held there too: a reader of those relays finds it through you. A buyer who names your repost earns you a referral share where the publication's split plan has one.`] };
   }
   // ------------------------------------------------------------ vows (round 3)
   /** A vow a feed item names, read with its offer: null where the item names none. */
@@ -16630,35 +15533,50 @@ var DubMoney = class {
     }
     const v = acts.map(readVow).find((x) => x?.genesis);
     if (!v) return null;
-    const offer = acts.map((a) => readVowOffer(a, v.signer, v.name)).find(Boolean) ?? null;
+    const offer = await vowOffer(v.name, v.signer, hints, via2, acts).catch(() => null);
     const bought = (await this.store.money(me.id, "vows") ?? {})[v.name];
+    const price = offer?.price ?? offer?.tag?.price ?? null;
     return {
       vow: v.name,
-      offer: offer?.offer ?? null,
+      offer: offer?.publication ?? null,
       seller: v.signer,
       words: v.words,
-      price: offer ? say(offer.price, /* @__PURE__ */ new Set([offer.price.unit])) : "no price stated",
+      price: price ? say(price, /* @__PURE__ */ new Set([price.unit])) : "no price stated",
       state: v.signer === me.id ? "yours" : bought?.payment ? (await this.engine.payment(bought.payment))?.proof ? "bought" : "paying" : "for sale",
-      problem: offer ? null : "no offer of its signer selling it was found: it cannot be bought here"
+      problem: !offer ? "no publication of its signer selling it was found: it cannot be bought here" : offer.why
     };
   }
-  /** Buy a vow under the lane: an invoice request following its offer; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
+  /**
+   * What buying a vow pays, before anything is signed (round 8, F407): its
+   * publication's price tag that counts, followed (`fulfils`), its price, to
+   * its payee (the split service); where the publication names an ownership
+   * agreement, the purchase names it and the version read (claim field 9),
+   * said in one line first. Throws, saying why, where it cannot be bought.
+   */
+  async vowPurchaseOf(me, hints, via2, a) {
+    const postAct = (await followRef([a.post, a.seller], hints, via2)).act;
+    const named2 = await this.named(postAct, hints, via2);
+    const v = named2.map(readVow).find((x) => x?.genesis && x.name === a.vow);
+    if (!v) throw new Error("That post names no vow. Nothing was signed.");
+    if (v.signer === me.id) throw new Error("That vow is your own. Nothing was signed.");
+    const offer = await vowOffer(v.name, v.signer, hints, via2, named2);
+    if (!offer) throw new Error("No publication of its signer selling it was found. Nothing was signed.");
+    if (!offer.tag || !offer.price || !offer.payee) throw new Error(`It cannot be bought: ${offer.why ?? "no price tag that counts was found"}. Nothing was signed.`);
+    const deal = offer.owners ? await readDeal(offer.owners, hints, via2, offer.version).catch(() => null) : null;
+    const said2 = deal ? [sharedLine(deal, a.names ?? short2)] : [];
+    return { payee: offer.payee, amount: offer.price, fulfils: offer.tag.id, purchase: offer.owners ? [offer.owners, deal?.version ?? offer.owners] : null, said: said2, offer };
+  }
+  /** Buy a vow under the lane: an invoice request following its publication's price tag; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
   async buyVow(me, hints, via2, a) {
     const card2 = await this.readVowRef(me, hints, via2, [{ id: a.post, signer: a.seller }, ...(describeAct((await followRef([a.post, a.seller], hints, via2)).act).refs ?? []).map((id) => ({ id, signer: a.seller }))]);
     if (!card2 || card2.vow !== a.vow) throw new Error("That post names no vow. Nothing was signed.");
     if (card2.seller === me.id) throw new Error("That vow is your own. Nothing was signed.");
     if (!card2.offer || card2.problem) throw new Error(`${card2.problem ?? "No offer was found"}. Nothing was signed.`);
-    const offer = readVowOffer((await followRef([card2.offer, card2.seller], hints, via2)).act, card2.seller, card2.vow);
-    let purchase = null;
-    if (offer.under) {
-      const now6 = await collectiveNow(card2.seller, await collectivePlaces(card2.seller, hints, via2), via2).catch(() => null);
-      purchase = [offer.under, now6?.agreement ?? offer.under];
-    }
-    const deal = offer.under ? await readDeal(offer.under, hints, via2).catch(() => null) : null;
-    const said2 = deal ? [sharedLine(deal, a.names ?? ((x) => `${x.slice(0, 8)}\u2026`))] : [];
-    const r = await this.engine.payUnderLane({ payee: offer.payee ?? card2.seller, amount: offer.price, whatFor: "a vow", fulfils: offer.offer, refs: [[card2.vow, card2.seller]], visible: true, purchase });
+    const x = await this.vowPurchaseOf(me, hints, via2, a);
+    const r = await this.engine.payUnderLane({ payee: x.payee, amount: x.amount, whatFor: "a vow", fulfils: x.fulfils, refs: [[card2.vow, card2.seller]], visible: true, purchase: x.purchase });
+    const said2 = x.said;
     const vows = await this.store.money(me.id, "vows") ?? {};
-    vows[card2.vow] = { seller: card2.seller, offer: offer.offer, payment: r.key, post: a.post, words: card2.words };
+    vows[card2.vow] = { seller: card2.seller, offer: x.fulfils, payment: r.key, post: a.post, words: card2.words };
     await this.store.saveMoney(me.id, "vows", vows);
     return [...said2, ...r.lines.map((l) => l.text), "Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases)."];
   }
@@ -16702,7 +15620,7 @@ var DubMoney = class {
     if (!b || !sale) throw new Error("No sale of that vow is here to contest: it is contested once paid. Nothing was signed.");
     let id;
     try {
-      id = await contestSale(me, { vow, sale, promise, relays: list4([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+      id = await contestSale(me, { vow, sale, promise, relays: list3([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
     } finally {
       await this.store.saveIdentity(me);
     }
@@ -16725,7 +15643,7 @@ var DubMoney = class {
     if (!claims.length) throw new Error("It is not paid yet: a purchase is contested once paid, naming your claim of its payment. Nothing was signed.");
     let id;
     try {
-      id = await contestPurchase(me, { purchase: claims[0].id, promise, relays: list4([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+      id = await contestPurchase(me, { purchase: claims[0].id, promise, relays: list3([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
     } finally {
       await this.store.saveIdentity(me);
     }
@@ -16746,18 +15664,1500 @@ var DubMoney = class {
     for (const b of Object.values(bought)) {
       if (!b.offer) continue;
       try {
-        const o = readOffer((await followRef([b.offer, b.seller], hints, via2)).act, b.seller, Object.keys(bought).find((k) => bought[k] === b), true);
-        const d = o?.under ? await readDeal(o.under, hints, via2) : null;
-        if (d) parties.push(...d.parties, ...d.service ? [d.service] : []);
+        const t = readTag((await followRef(b.offer, hints, via2)).act);
+        const pa = t?.publication ? await actAt2(t.publication, hints, via2) : null;
+        const pub = pa ? readPublication(pa) : null;
+        if (pub) parties.push(pub.drafter, pub.service, ...pub.partners.map((x) => x.identity));
+        const d = pub?.owners ? await readDeal(pub.owners, hints, via2) : null;
+        if (d) parties.push(...d.parties);
       } catch {
       }
     }
-    const r = await purchaseContests({ purchases, parties: list4([me.id, ...purchases.map((p) => bought[p.publication].seller), ...parties]), relays: hints, via: via2 });
+    const r = await purchaseContests({ purchases, parties: list3([me.id, ...purchases.map((p) => bought[p.publication].seller), ...parties]), relays: hints, via: via2 });
     const paid = {};
     for (const p of purchases) paid[p.publication] = r.by[p.id] ?? { state: "unknown", contests: [], why: "its claim could not be read" };
     return { paid, problems: r.problems };
   }
 };
+
+// ../nudge/src/specs.ts
+var NUDGE_SPECS = {
+  /** The Text MIR (`TEXT`): an action is a text act. */
+  text: SPECS.text,
+  /** The nudge cMIP, draft 2. */
+  nudge: sha2562("nudge cMIP, draft 2, test value until publication")
+};
+var NUDGE_TYPES2 = { terms: 0, nudge: 1, pick: 2 };
+
+// ../nudge/src/nudge.ts
+var Invalid = class extends Error {
+};
+function asMap2(payload, what, fields) {
+  let m;
+  try {
+    m = cborDecode(payload);
+  } catch (e3) {
+    throw new Invalid(`${what}: not CBOR (${e3 instanceof Error ? e3.message : e3})`);
+  }
+  if (!(m instanceof Map)) throw new Invalid(`${what}: not a map`);
+  for (const k of m.keys()) if (!fields.includes(k)) throw new Invalid(`${what}: ${String(k)} is not one of its fields`);
+  return m;
+}
+function hash(v, what) {
+  if (!(v instanceof Uint8Array) || v.length !== 32) throw new Invalid(`${what} is not a hash`);
+  return hex(v);
+}
+var count = (v) => typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : typeof v === "bigint" ? Number.MAX_SAFE_INTEGER : null;
+function decodeNudge(payload) {
+  const m = asMap2(payload, "the nudge", [0, 1, 2, 3]);
+  const n = { agent: hash(m.get(0), "the agent (field 0)"), terms: hash(m.get(1), "the terms (field 1)"), count: 0 };
+  const c = count(m.get(2));
+  if (c === null) throw new Invalid("the count (field 2) is not a whole number");
+  if (c < 1) throw new Invalid("the count (field 2) is 0: a nudge allows at least one action (item 5)");
+  n.count = c;
+  if (m.has(3)) {
+    const t = m.get(3);
+    if (typeof t !== "string") throw new Invalid("the context (field 3) is not text");
+    try {
+      checkText(t);
+    } catch (e3) {
+      throw new Invalid(`the context (field 3): ${e3 instanceof Error ? e3.message : e3}`);
+    }
+    n.context = t;
+  }
+  return n;
+}
+function decodePick(payload) {
+  const m = asMap2(payload, "the pick", [0, 1, 2]);
+  return { agent: hash(m.get(0), "the agent (field 0)"), terms: hash(m.get(1), "the terms (field 1)"), picked: hash(m.get(2), "the act picked (field 2)") };
+}
+
+// ../reader/src/read.ts
+function standingWords(s) {
+  switch (s) {
+    case "valid":
+      return { ok: true, words: "Verified: signed by this identity with a key its identity chain counts, checked in this browser." };
+    case "pending":
+      return { ok: false, words: "Not verified yet: the identity chain it rests on is waiting for its homes to confirm it." };
+    case "disputed":
+      return { ok: false, words: "Disputed: signed with a key the identity has since replaced; its owner did not keep it, but another identity acknowledged it or a keeper recorded it." };
+    case "void":
+      return { ok: false, words: "Void: signed with a key the identity has since replaced, and its owner did not keep it." };
+    case "invalid":
+      return { ok: false, words: "Invalid: the signature or the act does not check." };
+    case "scoped":
+      return { ok: false, words: "Signed with a grant key: a key of a collective scoped to one of its grants (Agreements, F128). Whether the grant backs it is Agreements' to say, and this reader does not judge Agreements." };
+    default:
+      return { ok: false, words: `Not verified (${s}): this browser could not establish who signed it.` };
+  }
+}
+
+// src/appended.ts
+var APPENDED_FORMAT = sha2562("Appended collective cMIP, draft 1, test value until publication");
+function appendedOf(format, refs) {
+  if (format !== APPENDED_FORMAT) return null;
+  const first = refs[0]?.id;
+  return first && /^[0-9a-f]{64}$/.test(first) ? first : null;
+}
+var appendedRef = (collective) => collective;
+async function membership(member, collective, hints, via2 = {}) {
+  try {
+    const places = await collectivePlaces(collective, hints, via2);
+    const now6 = await collectiveNow(collective, places, via2);
+    if (!now6.agreement) return { checked: false, why: "its agreement in force was not found at its places" };
+    const t = await termsAt(now6.agreement, places, via2);
+    if (!t?.parties) return { checked: false, why: "its agreement in force could not be read" };
+    if (now6.departed.includes(member)) return { checked: false, why: "the writer has left it" };
+    return t.parties.includes(member) ? { checked: true, why: null } : { checked: false, why: "the writer is not one of its members" };
+  } catch (e3) {
+    return { checked: false, why: `it could not be read (${e3 instanceof Error ? e3.message : String(e3)})` };
+  }
+}
+
+// ../genesis/src/shown.ts
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function polymod(values) {
+  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+  let chk = 1;
+  for (const v of values) {
+    const b = chk >>> 25;
+    chk = (chk & 33554431) << 5 ^ v;
+    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
+  }
+  return chk >>> 0;
+}
+function shownForm(label, hex3) {
+  if (!/^([0-9a-f]{2})+$/i.test(hex3)) return hex3;
+  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
+  const five = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8 | b) & 65535;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      five.push(acc >> bits & 31);
+    }
+  }
+  if (bits > 0) five.push(acc << 5 - bits & 31);
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const values = [...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...five, 0, 0, 0, 0, 0, 0];
+  const pm = polymod(values) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >>> 5 * (5 - i) & 31);
+  return `${label}1${[...five, ...check].map((v) => CHARSET[v]).join("")}`;
+}
+var shownId = (hex3) => shownForm("mid", hex3);
+var shownAct = (hex3) => shownForm("mact", hex3);
+
+// ../collective/src/explain.ts
+var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var count2 = (n, one2, many = `${one2}s`) => `${n} ${n === 1 ? one2 : many}`;
+function termsOf2(payload) {
+  return readTerms(payload, AGREEMENTS_SPECS);
+}
+var KNOWN = {
+  [SPECS.identity]: "the Identity MIR",
+  [SPECS.envelopes]: "the Envelopes MIR",
+  [SPECS.text]: "the Text MIR",
+  [MIRS.money]: "the Money MIR",
+  [MIRS.development]: "the Development MIR",
+  [REPO_SPECS.agreements]: "the Agreements MIR",
+  [REPO_SPECS.manifest]: "the release manifest cMIP (draft 1)"
+};
+var EXTENSIONS = /* @__PURE__ */ new Set([REPO_SPECS.manifest]);
+var ABSENCE_PROOFS = /* @__PURE__ */ new Set();
+var specName = (h) => KNOWN[h] ?? `an unknown specification (${short3(h)})`;
+function list4(xs) {
+  if (xs.length <= 1) return xs.join("");
+  return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+}
+function ruleWords(r, parties, names) {
+  switch (r.form) {
+    case "all":
+      return parties.length === 1 ? "the one party" : `all ${parties.length} parties`;
+    case "threshold":
+      return `any ${r.threshold} of the ${parties.length} parties`;
+    case "named":
+      return list4((r.named ?? []).map(names));
+    case "share":
+      return `parties holding together at least ${pct2(r.share)} of what the voices that remain hold of stake ${r.stake}`;
+    case "holders":
+      return `holders of stake ${r.stake} holding together at least ${pct2(r.share)} of it, members or not`;
+    case "allOf":
+      return `all of: ${(r.rules ?? []).map((x) => ruleWords(x, parties, names)).join("; ")}`;
+  }
+}
+function ownersWithoutKeys(t, names) {
+  const parts = (r) => !r ? [] : r.form === "allOf" ? (r.rules ?? []).flatMap(parts) : [r];
+  const among = parts(t.constitutional).filter((r) => r.form === "holders");
+  if (!among.length || !t.grammar) return [];
+  const k = t.grammar.chainKey;
+  const keyed = /* @__PURE__ */ new Set([...k.members ?? [], ...k.holder ? [k.holder] : [], ...k.custodian ? [k.custodian] : [], ...t.grammar.recovery?.custodian ? [t.grammar.recovery.custodian] : []]);
+  const out = [];
+  for (const r of among) {
+    const holders2 = (t.stakes[r.stake ?? 0]?.[1] ?? []).map(([h]) => h).filter((h) => !!h && !t.parties.includes(h));
+    if (holders2.some((h) => keyed.has(h))) continue;
+    out.push({
+      text: `The constitution counts members among the holders of stake ${r.stake}, but none of them who is no member${holders2.length ? ` (${list4(holders2.map(names))})` : ""} holds a share of the chain key or is its custodian: if the owners vote the members out and the members refuse to rotate, the vote stands complete and unexecuted, and the collective runs on under the old members (Agreements draft 14, F317, a stated cost; client conformance).`,
+      tone: "warn"
+    });
+  }
+  return out;
+}
+function pct2(n) {
+  return `${(n ?? 0) / 1e4}%`;
+}
+function constitutionWords(t, names) {
+  const r = t.constitutional;
+  if (!r || r.form === "all") return "every member whose voice remains: nobody loses their say without signing (F103)";
+  if (r.form === "threshold") return `any ${r.threshold} of the ${t.parties.length} members (all of those whose voice remains, if fewer remain)`;
+  if (r.form === "named") return list4((r.named ?? []).map(names));
+  return ruleWords(r, t.parties, names);
+}
+function powerWords(p, areas, names) {
+  switch (p.form) {
+    case "constitutional":
+      return "the constitutional change rule";
+    case "clone":
+      return "the clone rule";
+    case "area": {
+      const a = areas.find((x) => x.id === p.area);
+      return a ? `the power of the \u201C${a.name}\u201D area (area ${p.area})` : `the power of area ${p.area}`;
+    }
+    case "plan":
+      return `the succession plan of ${names(p.party ?? "")}`;
+    case "judicial":
+      return "the judicial tier's rule, every member whose voice remains";
+    case "layer":
+      return `the rule of the ${LAYERS[p.area ?? -1] ?? `layer ${p.area}`} layer`;
+    case "holders":
+      return `the holders' rule of stake ${p.area}`;
+  }
+}
+var LAYERS = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
+var LAYER_ORDER = [3, 1, 2, 4, 5];
+var LAYER_DOES = {
+  1: "post texts",
+  2: "upload bakes (a release is one) and deliver its keys",
+  3: "set its payee pointer (where its income goes), sign its receipts and price tags, and take on debts",
+  4: "sign its publications (its split agreement among them), grants and other agreements",
+  5: "adopt extensions for it"
+};
+var TYPE_NAMES = {
+  [SPECS.envelopes]: { 0: "every bake the collective uploads (a release is one)", 1: "every key delivery of the collective", 4: "every encryption key of the collective" },
+  [REPO_SPECS.agreements]: { 0: "every terms act of the collective", 1: "every signature of the collective", 6: "every publication of the collective" },
+  [SPECS.text]: { 0: "every text of the collective" }
+};
+function kindWords2(k) {
+  if (k.form === "layer") {
+    const layer = LAYERS[k.layer ?? -1] ?? `layer ${k.layer}`;
+    return `every act of the ${layer} layer (a whole layer is now the layer's rule, terms field 19)`;
+  }
+  return TYPE_NAMES[k.spec ?? ""]?.[k.type ?? -1] ?? `every act of type ${k.type} of ${specName(k.spec ?? "")} made by the collective`;
+}
+var OPERATIONAL_FIELDS = { 7: "the stake", 17: "the refund terms" };
+function fieldRefWords(f) {
+  return f.form === "field" ? OPERATIONAL_FIELDS[f.number] ?? `field ${f.number}` : `the cMIP for task ${f.number}`;
+}
+var OUTCOMES = [
+  "their voice is removed (they no longer count in any rule or area)",
+  "their stake is shared among the remaining holders",
+  "their stake is transferred to parties named or defined by role",
+  "their obligations are redirected or held",
+  "the agreement is closed"
+];
+var AGREEMENTS_SAYS = {
+  check: "Agreements refuse these terms",
+  shape: "These are not terms in Agreements' format",
+  unsupported: "Agreements do not support these terms yet",
+  missing: "Agreements lacks something it needs to judge these terms",
+  unsettled: "Agreements cannot settle these terms yet"
+};
+function problemWords(p) {
+  return `${AGREEMENTS_SAYS[p.code] ?? `Agreements refuse these terms (${p.code})`}. Agreements' own words: \u201C${p.text}\u201D.`;
+}
+var INVISIBLE = /[؜​‎‏‪-‮⁦-⁩]/g;
+function uncovered(t) {
+  const voices = t.constitutional?.form === "named" ? t.constitutional.named ?? [] : t.parties;
+  const a = t.abandonment;
+  if (!a || !a.outcomes.includes(0)) return voices;
+  if (a.authority === "named") return voices.filter((v) => v === a.identity);
+  return [];
+}
+function absenceWarning(t, names) {
+  const a = t.abandonment;
+  if (!a) return null;
+  const by = a.authority === "named" ? names(a.identity) : `any ${a.threshold} of the other parties together`;
+  const outcomes = list4(a.outcomes.map((o) => OUTCOMES[o] ?? `outcome ${o}`));
+  const between = a.proof ? `An absence-proof cMIP stands between their word and your stake: ${specName(a.proof)}. A declaration counts only if it accepts it (Agreements rule 51).` : `No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or your activity. Signing accepts that (Agreements rules 49 and 51, a stated cost); if they declare you absent wrongly, you can only contest it, in public (Agreements rule 52).`;
+  return {
+    text: `If a party stops acting on the agreement, ${by} may declare them absent. What may then follow: ${outcomes}. ${between}`,
+    tone: "warn"
+  };
+}
+function layerLines(t, names) {
+  const n = t.parties.length;
+  const out = [
+    {
+      text: "For each layer it acts in, the founding names who acts for the collective there. An act in a layer counts once that rule is met: the member who makes it, with their own key, naming the collective, and the others each by a signature act of their own (Agreements rule 60). Shown layer by layer, Money first."
+    }
+  ];
+  for (const l of LAYER_ORDER) {
+    const name = LAYERS[l];
+    const r = (t.layers ?? []).find(([x]) => x === l)?.[1];
+    if (!r) {
+      out.push({ text: `${name} (layer ${l}): no rule named. A founding that leaves a layer unnamed founds nothing (Agreements rule 60).`, tone: "bad" });
+      continue;
+    }
+    const k = r.form === "threshold" ? r.threshold ?? 0 : r.form === "named" ? (r.named ?? []).length : r.form === "all" ? n : 0;
+    const who2 = r.form === "all" ? "every member whose voice remains, all together," : r.form === "threshold" ? k === 1 ? "any one member alone" : `any ${k} of the ${n} members together` : r.form === "named" ? `${list4((r.named ?? []).map(names))}${k > 1 ? " together" : " alone"}` : ruleWords(r, t.parties, names);
+    const alone2 = k === 1 && r.form !== "share" && r.form !== "holders" && r.form !== "allOf";
+    out.push({
+      text: `${name} (layer ${l}): ${who2} can ${LAYER_DOES[l]} for the collective. ${alone2 ? `One member alone can do that, without asking the others${l === 3 ? ": for example point its income at an address of their choosing" : ""}.` : k > 1 ? `No member can do it alone: an act counts once ${k - 1} other member${k - 1 === 1 ? "" : "s"} sign${k - 1 === 1 ? "s" : ""} it too.` : ""}`.trim(),
+      tone: alone2 ? "warn" : void 0
+    });
+  }
+  out.push({ text: "Identity is no layer it acts in: its genesis and rotations are its chain, signed by its chain key under the key grammar (Agreements rule 60)." });
+  return out;
+}
+function capOf2(hexed) {
+  if (!hexed) return null;
+  try {
+    const v = cborDecode(unhex(hexed));
+    const c = v instanceof Map ? v.get(0) : null;
+    return Array.isArray(c) && typeof c[1] === "number" ? c[1] : null;
+  } catch {
+    return null;
+  }
+}
+function readAgreement(t, names, parent) {
+  const blocking = [];
+  const plain = [];
+  const who2 = t.parties.map(names);
+  const sections = [];
+  const g = t.grammar;
+  const bound = [
+    { text: `${t.parties.length} parties: ${list4(who2)}.` },
+    { text: "Each is bound only by their own signature act. Until someone signs, nothing in it binds them (Agreements rule 1)." }
+  ];
+  if (!t.parent) {
+    if (t.signing?.form === "all") {
+      bound.push({
+        text: g ? "It exists only once every one of them has signed it: nobody is founded into a collective without signing (Agreements, \u201CFounding terms\u201D, Q11)." : "It exists only once every one of them has signed it (Agreements, \u201CFounding terms\u201D, F107)."
+      });
+    } else if (t.signing) {
+      bound.push({ text: `It says it exists once ${ruleWords(t.signing, t.parties, names)} have signed it; Agreements asks for every party.`, tone: "bad" });
+    }
+  } else {
+    bound.push({ text: `It is a clone of agreement ${short3(t.parent)}: once in force, it replaces it, and that one closes (Agreements rule 45).` });
+  }
+  sections.push({ heading: "Who is bound", lines: bound });
+  if (t.parent) {
+    const areas = parent?.areas ?? t.areas;
+    const lines2 = [];
+    if (!t.mark?.length) lines2.push({ text: "It carries no mark: it does not say by which power it comes in.", tone: "bad" });
+    const order = (ids) => {
+      const at = (x) => t.parties.indexOf(x) + 1 || Infinity;
+      return [...ids].sort((x, y) => at(x) - at(y));
+    };
+    for (const e3 of t.mark ?? []) {
+      lines2.push({ text: `It says it comes in by ${powerWords(e3.power, areas, names)} of that agreement, signed by ${list4(order(e3.signers).map(names))}.` });
+    }
+    lines2.push({
+      text: "Agreements check that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104)."
+    });
+    lines2.push({ text: "It is complete once everyone its mark names, and everyone it adds, has signed it (Agreements rule 45)." });
+    if (g) {
+      lines2.push({
+        text: "A change of the constitution is then put in force by a rotation of the collective; any other change by the collective's record, at once, which any member draws with their own key, naming the collective (Agreements rules 37, 37c, 60)."
+      });
+    }
+    sections.push({ heading: "How it comes into force: its mark", lines: lines2 });
+  }
+  if (g) {
+    const lines2 = [{ text: "It founds a collective: an identity of its own, with its own homes and chain key (Agreements rule 56)." }];
+    lines2.push({
+      text: "It has no signing key of its own: a member acts for the collective with their own identity's key, naming the collective in the act, and the act counts under the rule of the layer it falls in, or of a finer area reaching it (Agreements rules 56, 58, 60). There are no member keys: each member signs only with their own identity."
+    });
+    if (g.signing) lines2.push({ text: "It still names a signing key (key grammar key 0): withdrawn, a collective has none (Agreements rule 59).", tone: "bad" });
+    const k = g.chainKey;
+    if (k.form === "shares") {
+      const m = k.members ?? [];
+      lines2.push({
+        text: `The chain key, the one that rotates the collective (new members, new homes), is cut into ${m.length} shares, one each for ${list4(m.map(names))}. Any ${k.threshold} of them together rebuild it.`
+      });
+      if (k.threshold === 1) {
+        lines2.push({ text: "Any one member alone can rebuild the chain key and rotate the collective, without the others.", tone: "warn" });
+      } else if (k.threshold < m.length) {
+        lines2.push({ text: `If one member is lost, the other ${m.length - 1} can still rotate the collective (F96).`, tone: "ok" });
+      }
+    } else if (k.form === "one") {
+      lines2.push({ text: `${names(k.holder)} alone holds the chain key.`, tone: "warn" });
+    } else {
+      lines2.push({ text: `${names(k.custodian)} holds the chain key as custodian, under grant ${short3(k.grant)}.`, tone: "warn" });
+    }
+    if (g.recovery) {
+      const r = g.recovery;
+      lines2.push({
+        text: r.form === "escrow" ? `A further share is held in escrow, released by ${names(r.authority)}, the authority on absence.` : `A further share is held by ${names(r.custodian)}, as custodian under grant ${short3(r.grant)}.`
+      });
+    }
+    sections.push({ heading: "The collective's keys", lines: lines2 });
+    sections.push({ heading: "The five layers: who acts for it", lines: layerLines(t, names) });
+    const words2 = new Map(t.areaWords);
+    const al = [];
+    if (!t.areas.length) al.push({ text: "No finer area: every act of the collective counts under the rule of its layer, above." });
+    for (const a2 of t.areas) {
+      al.push(
+        a2.holders.length ? { text: `\u201C${a2.name}\u201D (area ${a2.id}): held by ${list4(a2.holders.map(names))}; any ${a2.threshold} of them decide together.` } : { text: `\u201C${a2.name}\u201D (area ${a2.id}): held by nobody. It stands frozen until the members refit it (Agreements rule 37b).`, tone: "warn" }
+      );
+      const reach = [...a2.kinds.map(kindWords2), ...a2.fields.map(fieldRefWords)];
+      al.push({ text: `It reaches ${list4(reach) || "nothing"}.` });
+      if (a2.limitsCmip) {
+        const cap2 = capOf2(a2.limits);
+        al.push({
+          text: cap2 !== null ? `Above ${cap2.toLocaleString("en")} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.` : `Its holders' acts are judged under limits of cMIP ${short3(a2.limitsCmip)}, a cMIP's rule beside the core's count (Agreements rule 60); an app that does not read it shows its acts as unknown.`,
+          tone: "warn"
+        });
+      }
+      const releases = a2.kinds.some((k2) => k2.form === "type" && k2.spec === MIRS.envelopes && k2.type === 0);
+      al.push({
+        text: `${releases ? "A release" : "An act it reaches"} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Agreements rule 36a, F100).`
+      });
+      const own = words2.get(a2.id);
+      if (own !== void 0) {
+        al.push({ text: "It has words of its own, shown below; its holders change them alone." });
+        plain.push({ heading: `The \u201C${a2.name}\u201D area's own words`, text: own });
+      }
+    }
+    if (t.areas.length) {
+      al.push({ text: "A holder acts in an area with their own key, naming the collective: that act counts as that member's signature. An area of one takes one member's act; an area of two takes one member's act and another member's signature. There are no member keys (Agreements rules 56, 58)." });
+      al.push({ text: "In an area, its holders alone decide, and may grant within it (Q5). Its holders, and how many of them decide, change only by the constitutional change rule." });
+      al.push({
+        text: "A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Agreements rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Agreements rule 37b)."
+      });
+      al.push({ text: "A finer area takes the act types it reaches out of their layer's rule; an act no area reaches counts under its layer's rule; an act of a specification this agreement names nowhere counts for nothing (Agreements rule 60, Q16)." });
+    }
+    sections.push({ heading: "Finer areas: who decides which act types", lines: al });
+    const clone = ruleWords(t.clone, t.parties, names);
+    sections.push({
+      heading: "Who decides what",
+      lines: [
+        {
+          text: `Constitutional: the members, the change rules, the key grammar, the five layers' rules, the finer areas and the constitution's words. They change only by the constitutional change rule: ${constitutionWords(t, names)}. Such a change is declared by a rotation of the collective, which deals a new chain key to the members after it (Agreements rule 37).`
+        },
+        {
+          text: `Judicial: the protected clauses (the abandonment clause, the keepers, the arbitrators, the time reference, the succession plans, the fork rule, and the condition, time reference and anchoring cMIPs). They change only with the signature of every member whose voice remains: one version for everyone (Agreements rule 46a, F121).`
+        },
+        {
+          text: `Operational: matters outside every area change by the clone rule, ${clone}, and are written on the collective's record at once (Agreements rule 37c); matters inside an area, by its holders; everyday acts in a layer, by that layer's rule (Agreements rule 60).`
+        },
+        { text: "A change touching the constitution needs the constitutional change rule alone, which may change every tier; any other needs the power of each area and tier it touches, all at once (Agreements rule 44c, Q7)." },
+        ...ownersWithoutKeys(t, names)
+      ]
+    });
+  }
+  sections.push({
+    heading: "Changing it",
+    lines: [
+      {
+        text: g ? "It is never edited. It changes only by a clone, a new version naming this one, whose mark names the powers its changes need (Agreements rule 45). A member who joins is bound once they sign it too: nobody is added without signing (Agreements rule 1, Q11)." : "It is never edited. It changes only by a clone, a new version naming this one, that every party signs (Agreements rule 45b, F107)."
+      }
+    ]
+  });
+  if (g) {
+    sections.push({
+      heading: "Leaving",
+      lines: [
+        { text: "Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own and staying bound by what they signed (Agreements rule 37a)." },
+        {
+          text: "It takes effect for the collective at the collective's next record, its line, which any member draws with their own key. Until then their signature still counts (F109, a stated cost). The members who stay then rotate the collective to a chain key the one who left holds no share of (Agreements rule 37).",
+          tone: "warn"
+        }
+      ]
+    });
+  }
+  const a = t.abandonment;
+  const absence = [];
+  const warning = absenceWarning(t, names);
+  if (warning) {
+    absence.push(warning);
+    if (a?.proof && !ABSENCE_PROOFS.has(a.proof)) {
+      absence.push({ text: `This client does not implement the absence-proof cMIP the clause names (${short3(a.proof)}): it cannot show how absence would be judged.`, tone: "bad" });
+      blocking.push(`It names an absence-proof cMIP this client does not implement (${short3(a.proof)}, task 14); a client MUST NOT sign terms naming one it does not implement, as for an unknown extension (Agreements, task "Absence proof", F182).`);
+    }
+    absence.push({ text: "Signing agrees to this in advance (Agreements rule 13). It is a protected clause: a later clone you do not sign cannot change it for you (Agreements rule 46a)." });
+    absence.push({ text: "A declaration moves nothing by itself: what follows takes effect only through a record, rotation or clone put in force under it, and no later act undoes that (Agreements rule 51)." });
+  } else {
+    absence.push({ text: "No abandonment clause: nobody can declare a party absent." });
+  }
+  if (g) {
+    const out = uncovered(t);
+    if (!out.length) {
+      absence.push({
+        text: "Every member with a say in the constitution is covered: if one disappears, their voice can be removed, so the constitution never freezes for want of them (F105).",
+        tone: "ok"
+      });
+    } else {
+      absence.push({ text: `Not covered by the abandonment clause, though they have a say in the constitution: ${list4(out.map(names))} (Agreements rule 36b, F105).`, tone: "bad" });
+    }
+  }
+  sections.push({ heading: "If someone disappears", lines: absence });
+  const more = [];
+  if (!t.cmips.length) more.push({ text: "It uses no task cMIP." });
+  for (const [task, h] of t.cmips) {
+    const known = KNOWN[h];
+    more.push({ text: `For task ${task}: ${specName(h)}.`, tone: known ? void 0 : "bad" });
+    if (!known) blocking.push(`It names a cMIP this client does not implement (${short3(h)}, task ${task}); a client that does not implement it cannot sign it (Agreements rule 2).`);
+  }
+  for (const h of t.extensions ?? []) {
+    if (EXTENSIONS.has(h)) more.push({ text: `It adds the rules of ${specName(h)}.` });
+    else {
+      more.push({ text: `It adds the rules of ${specName(h)}.`, tone: "bad" });
+      blocking.push(`It names an extension this client does not implement (${short3(h)}); a client that does not implement all of them cannot sign it (Agreements rule 2).`);
+    }
+  }
+  if (t.keepers) {
+    more.push({ text: `Keepers record the deal as it happens: ${list4(t.keepers[0].map(names))}; ${ruleWords(t.keepers[1], t.keepers[0], names)} count as recorded. A protected clause (Agreements rule 46a).` });
+  }
+  if (t.time) {
+    more.push({ text: `Time reference: ${specName(t.time)}. This client does not read time references.`, tone: "bad" });
+    blocking.push("It names a time reference, which this client does not read: it cannot show what its deadlines mean.");
+  }
+  if (t.arbitrators) more.push({ text: `Arbitrators or verifiers, who receive keys to judge content: ${list4(t.arbitrators.map(names))}.` });
+  const holderName = (h) => h == null ? "this collective" : names(h);
+  for (const [object, holders2] of t.stakes ?? []) {
+    more.push({
+      text: `${t.target?.[0] === "collective" || g && object == null ? "The one stake, in this collective itself, a share of all its income (its target, field 33)" : t.target?.[0] === "claim" ? `The one stake, in the work its claim binds (${short3(t.target[1] ?? "")})` : `Stake in ${object == null ? "this collective itself" : names(object)}`}: ${list4(holders2.map(([h, n]) => `${holderName(h)} ${n / 1e4}%`))}. Every payout of a split matches its share exactly, every fee alike (Agreements rule 22); no share is lowered without its holder's signature (Agreements rule 48).`
+    });
+  }
+  if (t.departed?.length) {
+    more.push({ text: `Departed holders: ${list4(t.departed.map(names))}. No voice and no veto; their share of the collective's income is in its stakes above (Agreements rule 46b, F124 N5).` });
+  }
+  for (const [judge2, next] of t.chain ?? []) {
+    more.push({ text: `If ${judge2.startsWith("task ") ? `the judge for ${judge2}` : names(judge2)} answers \u201Cunknown\u201D, or does not act within its period, ${list4(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? "s" : ""} over, in that order (Agreements rule 34a, F121).` });
+  }
+  more.push({
+    text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Agreements rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first."
+  });
+  if (t.forkedFrom) {
+    more.push({ text: `Forked from ${names(t.forkedFrom)}: a back-link only, deciding nothing; the fork act names this collective as a successor (Agreements rule 47a, F124 N4).` });
+  }
+  for (const p of t.succession ?? []) {
+    const parts = [];
+    if (p.stakes) parts.push(`stakes to ${list4(p.stakes.map(([h, n]) => `${names(h)} (${n / 1e4}%)`))}`);
+    if (p.seats) parts.push(`the seat to ${list4(p.seats.map(names))}${p.entry === 1 ? ", with the members\u2019 approval" : ""}`);
+    more.push({ text: `If ${names(p.party)} leaves or is declared absent: ${parts.join("; ") || "nothing named"}. A protected clause.` });
+  }
+  if (more.length) sections.push({ heading: "Also", lines: more });
+  if (t.problem) blocking.push(problemWords(t.problem));
+  const controls = [t.text, ...t.areaWords.map(([, w]) => w)].join("").match(INVISIBLE)?.length ?? 0;
+  if (controls) {
+    sections.push({
+      heading: "Hidden characters",
+      lines: [
+        {
+          text: `The words contain ${controls} invisible character${controls > 1 ? "s" : ""} that can make text display in another order than it is written. ${controls > 1 ? "They are" : "It is"} shown below as U+\u2026 codes (Text rule 5a). Read the words as shown before signing.`,
+          tone: "warn"
+        }
+      ]
+    });
+  }
+  return { sections, blocking, plain };
+}
+var FIELD_NAMES = {
+  0: "who the members are",
+  1: "the constitution's words",
+  3: "the keepers",
+  5: "the clone rule",
+  6: "the time reference",
+  7: "the stake",
+  9: "the abandonment clause",
+  12: "the key grammar",
+  13: "the arbitrators",
+  16: "the succession plans",
+  17: "the refund terms",
+  18: "the constitutional change rule",
+  19: "who acts for it in each layer, the five layers' rules",
+  22: "the departed holders",
+  33: "what it owns, its target",
+  34: "the finer areas"
+};
+function planOf(before, after) {
+  return agreementsClonePlan(before, after, AGREEMENTS_SPECS);
+}
+var powerKey = (p) => p.form === "area" ? `area ${p.area}` : p.form === "layer" ? `layer ${p.area}` : p.form === "plan" ? `plan ${p.party}` : p.form;
+function readChanges(beforePayload, afterPayload, names) {
+  const before = termsOf2(beforePayload);
+  const after = termsOf2(afterPayload);
+  const out = [];
+  const joined = after.parties.filter((p) => !before.parties.includes(p));
+  const left = before.parties.filter((p) => !after.parties.includes(p));
+  for (const p of joined) out.push({ text: `${names(p)} joins, bound once they sign the clone.` });
+  for (const p of left)
+    out.push({
+      text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`
+    });
+  const lw = (t, l) => {
+    const x = (t.layers ?? []).find(([y]) => y === l)?.[1];
+    return x ? ruleWords(x, t.parties, names) : "nobody named";
+  };
+  for (const l of LAYER_ORDER) {
+    const b = JSON.stringify((before.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    const a = JSON.stringify((after.layers ?? []).find(([y]) => y === l)?.[1] ?? null);
+    if (a !== b) out.push({ text: `Who acts for it in ${LAYERS[l]}: now ${lw(after, l)} (was ${lw(before, l)}).`, tone: "warn" });
+  }
+  const sb = before.grammar?.chainKey;
+  const sa = after.grammar?.chainKey;
+  if (sa?.form === "shares" && sb?.form === "shares" && JSON.stringify(sa) !== JSON.stringify(sb)) {
+    out.push({
+      text: `The chain key is dealt afresh: ${sa.members.length} shares, any ${sa.threshold} rebuild it (was ${sb.members.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
+      tone: sa.threshold === 1 && sb.threshold !== 1 ? "warn" : void 0
+    });
+  }
+  const ids = [...new Set([...before.areas, ...after.areas].map((a) => a.id))];
+  for (const id of ids) {
+    const b = before.areas.find((a2) => a2.id === id);
+    const a = after.areas.find((x) => x.id === id);
+    const held = (x) => x.holders.length ? `any ${x.threshold} of ${list4(x.holders.map(names))}` : "nobody: frozen";
+    if (!b && a) out.push({ text: `A new area, \u201C${a.name}\u201D (area ${id}): ${held(a)}.` });
+    else if (b && !a) out.push({ text: `The \u201C${b.name}\u201D area (area ${id}) is dropped.`, tone: "warn" });
+    else if (a && b && JSON.stringify(a) !== JSON.stringify(b)) {
+      out.push({ text: `The \u201C${a.name}\u201D area (area ${id}) is now decided by ${held(a)} (was ${held(b)}).` });
+    }
+  }
+  const rule = (r, parties) => ruleWords(r, parties, names);
+  if (JSON.stringify(before.constitutional) !== JSON.stringify(after.constitutional)) {
+    out.push({ text: `The constitution now changes with ${constitutionWords(after, names)} (was ${constitutionWords(before, names)}).` });
+  }
+  if (JSON.stringify(before.clone) !== JSON.stringify(after.clone)) {
+    out.push({ text: `Other changes now need ${rule(after.clone, after.parties)} (was ${rule(before.clone, before.parties)}).` });
+  }
+  if (JSON.stringify(before.abandonment) !== JSON.stringify(after.abandonment)) {
+    const words2 = (a) => !a ? "no one" : a.authority === "named" ? names(a.identity) : `any ${a.threshold} of the other parties`;
+    out.push({
+      text: `Absence is now judged by ${words2(after.abandonment)} (was ${words2(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121).`,
+      tone: "warn"
+    });
+  }
+  if (before.text !== after.text) out.push({ text: "The constitution's words change: read the new words below, in full.", tone: "warn" });
+  else out.push({ text: "The constitution's words stay the same." });
+  const wb = new Map(before.areaWords);
+  for (const [id, w] of after.areaWords) {
+    if (wb.get(id) !== w) out.push({ text: `The \u201C${after.areas.find((a) => a.id === id)?.name ?? `area ${id}`}\u201D area's own words change: read them below.`, tone: "warn" });
+  }
+  let plan;
+  try {
+    plan = planOf(beforePayload, afterPayload);
+  } catch (e3) {
+    out.push({ text: `Agreements cannot say what this clone changes: ${e3 instanceof Error ? e3.message : e3}`, tone: "bad" });
+    return out;
+  }
+  const areaName = (id) => before.areas.find((a) => a.id === id)?.name ?? after.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
+  for (const ch of plan.changes) {
+    const what = ch.form === "field" ? FIELD_NAMES[ch.field] ?? `field ${ch.field}` : ch.form === "task" ? `the cMIP for task ${ch.task}` : ch.form === "extension" ? `the extension ${specName(ch.extension)}` : `the \u201C${areaName(ch.area)}\u201D area's own words`;
+    const tier = ch.tier === "constitutional" ? "constitutional" : ch.tier === "judicial" ? "judicial, a protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121)" : ch.form === "words" ? `operational, in the \u201C${areaName(ch.area)}\u201D area` : "operational";
+    out.push({ text: `A change to ${what}: ${tier}.` });
+  }
+  if (!plan.changes.length) out.push({ text: "Agreements find nothing changed in the terms." });
+  const areas = before.areas;
+  out.push({ text: `So its mark must name ${list4(plan.needs.map((p) => powerWords(p, areas, names)))} (Agreements rule 44c).` });
+  const claimed = (after.mark ?? []).map((e3) => powerKey(e3.power));
+  if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
+    out.push({ text: "Its mark names exactly that.", tone: "ok" });
+  } else {
+    out.push({
+      text: `Its mark names ${list4((after.mark ?? []).map((e3) => powerWords(e3.power, areas, names))) || "nothing"}: a false mark sinks the clone (F104).`,
+      tone: "bad"
+    });
+  }
+  return out;
+}
+function readRelease(m, before) {
+  const files = [
+    { text: `${m.name} ${m.version}: ${count2(m.files.length, "file")}, ${count2(m.dependencies.length, "library", "libraries")} it depends on.` },
+    { text: m.source ? `Made from ${m.source}.` : "It names no source." }
+  ];
+  if (!m.previous) files.push({ text: "It is the first release: it names no release before it." });
+  if (before) {
+    const old = new Map(before.files.map((f) => [f.path, f.work]));
+    const now6 = new Map(m.files.map((f) => [f.path, f.work]));
+    const added = m.files.filter((f) => !old.has(f.path)).map((f) => f.path);
+    const changed = m.files.filter((f) => old.has(f.path) && old.get(f.path) !== f.work).map((f) => f.path);
+    const removed = before.files.filter((f) => !now6.has(f.path)).map((f) => f.path);
+    files.push({
+      text: `Since ${before.name} ${before.version}: ${count2(added.length, "file")} added, ${changed.length} changed, ${removed.length} removed; ${count2(m.files.length - added.length - changed.length, "file")} the same.`
+    });
+    const some = (xs, what) => {
+      if (!xs.length) return;
+      const shown2 = xs.slice(0, 30);
+      files.push({ text: `${what}: ${shown2.join(", ")}${xs.length > shown2.length ? `, and ${xs.length - shown2.length} more` : ""}.` });
+    };
+    some(added, "Added");
+    some(changed, "Changed");
+    some(removed, "Removed");
+    const key = (d) => `${d.registry} ${d.name}`;
+    const oldDeps = new Map(before.dependencies.map((d) => [key(d), d.version]));
+    const newDeps = new Map(m.dependencies.map((d) => [key(d), d.version]));
+    const depsAdded = [...newDeps.keys()].filter((k) => !oldDeps.has(k));
+    const depsRemoved = [...oldDeps.keys()].filter((k) => !newDeps.has(k));
+    const depsChanged = [...newDeps.keys()].filter((k) => oldDeps.has(k) && oldDeps.get(k) !== newDeps.get(k));
+    if (depsAdded.length + depsRemoved.length + depsChanged.length) {
+      files.push({ text: `Libraries: ${depsAdded.length} added, ${depsChanged.length} at another version, ${depsRemoved.length} removed.` });
+    } else files.push({ text: "The libraries are the same." });
+  } else if (m.previous) {
+    files.push({ text: `It follows release ${short3(m.previous)}, which this client does not hold, so what changed is not shown.` });
+  }
+  return [{ heading: "What is released", lines: files }];
+}
+
+// ../assess/src/assess.ts
+var A = (...rules) => rules.map((rule) => ({ mir: "Agreements", rule }));
+var unique = (cites) => cites.filter((c, i) => cites.findIndex((d) => d.mir === c.mir && d.rule === c.rule) === i);
+var cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+var pct3 = (n) => `${Number((n / 1e4).toFixed(4))}%`;
+var SHARED = ["The collective's keys", "The five layers: who acts for it", "Finer areas: who decides which act types", "Who decides what", "If someone disappears", "Hidden characters"];
+function assess(payload, names, found) {
+  const t = termsOf2(payload);
+  const collective = !!t.grammar;
+  const problem = t.problem ? problemWords(t.problem) : null;
+  const flags = problem ? [] : flagsOf(t, payload, names);
+  const shared = readAgreement(t, names);
+  const sections = [
+    signedSection(t, names, found),
+    boundSection(t, names),
+    sharesSection(t, names),
+    judgesSection(t, names),
+    endsSection(t, names),
+    owedSection(t, found),
+    ...shared.sections.filter((s) => SHARED.includes(s.heading)),
+    {
+      heading: "Risks",
+      lines: problem ? [{ text: `Not judged further: ${problem}`, tone: "bad" }] : flags.length ? flags.map((f) => ({ text: `${cap(f.text)} Rests on: ${f.rests}.`, tone: "warn" })) : [{ text: "None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, money divided with no owner, or a stated cost one of its clauses brings.", tone: "ok" }]
+    }
+  ];
+  const who2 = list4(t.parties.map(names));
+  const kind = collective ? "collective" : "deal";
+  const summary = [
+    collective ? `${t.parent ? "A new version of a collective\u2019s agreement" : "The founding agreement of a collective"} of ${t.parties.length} members: ${who2}.` : `${t.parent ? "A new version of a deal" : "A deal"} between ${t.parties.length === 1 ? "one party" : `${t.parties.length} parties`}: ${who2}.`,
+    problem ? "Agreements refuse these terms: they bind nobody as they stand." : flags.length ? `${flags.length === 1 ? "One risk" : `${flags.length} risks`} flagged, each with the rule it rests on.` : "No risk flagged."
+  ];
+  return {
+    kind,
+    title: collective ? "A collective\u2019s agreement, assessed" : "A deal, assessed",
+    summary,
+    sections,
+    plain: [{ heading: "The words, as signed", text: t.text }, ...shared.plain],
+    flags,
+    problem
+  };
+}
+function signedSection(t, names, found) {
+  const lines2 = [];
+  if (!found) {
+    lines2.push({ text: `The relays were not asked: who has signed is not known here. Its parties: ${list4(t.parties.map(names))}.` });
+  } else {
+    for (const p of t.parties) {
+      lines2.push(
+        found.signed.includes(p) ? { text: `${names(p)} has signed.`, tone: "ok" } : { text: `${names(p)} has not signed: nothing in it binds ${names(p)} yet.`, tone: "warn" }
+      );
+    }
+    if (found.invalid) lines2.push({ text: `Agreements count it invalid: ${found.invalid}`, tone: "bad" });
+    else if (found.exists === true) lines2.push({ text: "It exists: every signature its rule asks for is there, as far as the relays asked show.", tone: "ok" });
+    else if (found.exists === false) lines2.push({ text: "It is not in force: it exists only once every party has signed it.", tone: "warn" });
+    else lines2.push({ text: "Whether it exists cannot be said from what the relays hold.", tone: "warn" });
+    if (found.fork) {
+      lines2.push({
+        text: found.fork.tangled ? `The deal is tangled (${found.fork.tangled}): it stays on its reference ${found.fork.reference.slice(0, 8)}\u2026 until one version names every tip it drops (rule 47).` : `The deal stands forked: ${found.fork.branches.length} branches from its reference ${found.fork.reference.slice(0, 8)}\u2026; a payment under either branch counts (rule 47).`,
+        tone: "warn"
+      });
+    } else if (found.inForce) {
+      lines2.push({ text: `The version of this deal in force is ${found.inForce.slice(0, 8)}\u2026, as far as ${list4(found.at)} show.` });
+    }
+  }
+  lines2.push({ text: "Each party is bound only through its own signature act (Agreements rule 1)." });
+  return { heading: "Who signed", lines: lines2 };
+}
+function roles(t, who2, names) {
+  const out = [];
+  for (const [object, holders2] of t.stakes ?? []) {
+    for (const [h, n] of holders2) if (h === who2) out.push(`holds ${pct3(n)} of ${object == null ? "all of this collective\u2019s income" : names(object)}`);
+  }
+  if (t.arbitrators?.includes(who2)) out.push("is named arbitrator or verifier");
+  if (t.forkJudge === who2) out.push("is the judge of the deal\u2019s forks");
+  if (t.keepers?.[0].includes(who2)) out.push("operates a keeper");
+  if (t.abandonment?.authority === "named" && t.abandonment.identity === who2) out.push("judges whether a party is absent");
+  for (const [, next] of t.chain ?? []) if (next.some(([hs]) => hs[0] === who2)) out.push("takes over as a judge in the chain of judgment");
+  for (const a of t.areas ?? []) if (a.holders.includes(who2)) out.push(`holds the \u201C${a.name}\u201D area`);
+  for (const p of t.succession ?? []) if (p.party === who2) out.push("has a succession plan in it");
+  if (t.plan?.shares.some((s) => s.kind === "receiver" && s.receiver === who2)) out.push("is a named receiver in the split plan");
+  return out;
+}
+function boundSection(t, names) {
+  const lines2 = [{ text: "Each party who signs is bound to the words below, as signed, and to every rule of these terms: a signature is consent to everything they define, pre-authorised changes included (Agreements rule 8)." }];
+  for (const p of t.parties) {
+    const r = roles(t, p, names);
+    lines2.push({ text: `${names(p)}: ${r.length ? list4(r) : "a party, with no stake or role of its own in these terms"}.` });
+  }
+  const others = /* @__PURE__ */ new Set();
+  for (const [, holders2] of t.stakes ?? []) for (const [h] of holders2) if (h && !t.parties.includes(h)) others.add(h);
+  for (const h of others) lines2.push({ text: `${names(h)}, not a party: ${list4(roles(t, h, names))}. Bound by nothing here; protected by it (Agreements rules 45, 48).` });
+  lines2.push({
+    text: t.grammar ? "A member\u2019s obligations change only as the constitution\u2019s rules allow; no share is lowered without its holder\u2019s signature (Agreements rules 45, 48)." : "No version of it changes without every party\u2019s signature (Agreements rule 47, was 45b)."
+  });
+  return { heading: "What each party is bound to", lines: lines2 };
+}
+function sharesSection(t, names) {
+  const lines2 = [];
+  const stakes = t.stakes ?? [];
+  stakes.forEach(([object, holders2], i) => {
+    lines2.push({
+      text: `Stake ${i}, in ${object == null ? "this collective itself, a share of all its income" : names(object)}: ${list4(holders2.map(([h, n]) => `${h == null ? "this collective" : names(h)} ${pct3(n)}`))}, written in millionths summing to 100% (Agreements rule 9).`
+    });
+  });
+  const p = t.plan;
+  if (p) {
+    const share2 = (s) => s.kind === "stake" ? `stake ${s.stake}, paid to its holders as currently held` : s.kind === "role" ? `the role \u201C${s.role}\u201D, paid to whoever fills it, with evidence the payer acknowledges (rule 22)` : s.kind === "receiver" ? `${names(s.receiver ?? "")}, a named receiver holding no stake` : `metric ${s.metric}`;
+    lines2.push({
+      text: `Each payment in is divided by the split cMIP ${names(p.cmip)}, which computes the amounts from these parts: ${p.shares.map((s, i) => `${share2(s)}, part ${s.part}${p.top.includes(i) ? ", taken off the top first" : ""}`).join("; ")} (Agreements rules 17, 27).`
+    });
+    if (p.shares.some((s) => s.kind === "role")) {
+      lines2.push({
+        text: p.unfilled === "stakes" ? "A role nobody fills goes to the stakes, in proportion to their parts (F218)." : p.unfilled === "held-open" ? "A role nobody fills is held open, as an obligation." : `A role nobody fills goes to ${names(p.unfilledTo ?? "")}.`
+      });
+    }
+    const bearer = p.serviceBearsRailFees ? "The split service bears each payout\u2019s rail fee" : "Each receiver bears its payout\u2019s rail fee";
+    const m = p.maxRailFee;
+    lines2.push(
+      m ? { text: `${bearer}; no payout may lose more than ${m.form === "millionths" ? `${pct3(m.value)} of each payout` : `${m.value} of ${names(m.unit ?? "")}`} to it, and a shortfall beyond that is the service\u2019s open obligation (Agreements rule 25).` } : { text: `${bearer}; the plan states no maximum fee per payout (Agreements rule 25).`, tone: "warn" }
+    );
+  }
+  for (const f of t.fees ?? []) {
+    const when = f.scope === "every" ? "every payment" : f.scope === "publication" ? `payments for ${names(f.of ?? "")}` : `payments by the rail ${names(f.of ?? "")}`;
+    lines2.push({ text: `A fee entry: ${names(f.module)} is owed part ${f.part} of ${when}, taken off the top before the stakes divide, so it falls alike on every stake; a split leaving it out owes it (Agreements rule 28, F213, F214).` });
+  }
+  if (t.payeeGrants?.length || t.splitGrant) {
+    lines2.push({ text: `Payments go to a split service, by ${t.splitGrant ? "the collective\u2019s grant" : `${t.payeeGrants.length === 1 ? "one payee\u2019s grant" : `each payee\u2019s own grant (${t.payeeGrants.length})`}`}: it publishes each split, delivered to every holder it pays, naming each fee and who received it (Agreements rules 16, 20).` });
+    if (t.backups?.services.length) lines2.push({ text: `If an attempt at the service fails, ${t.backups.services.length === 1 ? "one backup" : `${t.backups.services.length} backups`} take${t.backups.services.length === 1 ? "s" : ""} that payment, in order (Agreements rule 17, field 29).` });
+  } else if (stakes.length) {
+    lines2.push({ text: "No split service: each payer\u2019s wallet pays each holder\u2019s own pointer by the stakes (payer-side splitting, Agreements rule 16)." });
+  }
+  if (!lines2.length) lines2.push({ text: "It divides no money: no stakes, no split plan, no fees." });
+  return { heading: "Shares and fees", lines: lines2 };
+}
+function judgesSection(t, names) {
+  const lines2 = [];
+  const then = (key) => {
+    const next = (t.chain ?? []).find(([j]) => j === key)?.[1] ?? [];
+    return next.length ? `, then ${list4(next.map(([hs, p]) => `${names(hs[0])} after ${p} on the time reference`))}, in that order` : "";
+  };
+  const cmip = (task) => t.cmips.find(([n]) => n === task)?.[1];
+  const c9 = cmip(9);
+  if (c9) lines2.push({ text: `Conditions are judged by the condition cMIP ${names(c9)}${then("task 9")}.` });
+  const time = t.time ?? cmip(10);
+  if (time) lines2.push({ text: `Time is judged by the time reference ${names(time)}: for this agreement, only it says whether something is before, after or past its terms (Agreements rule 33)${then("task 10")}.` });
+  const c11 = cmip(11);
+  if (c11) lines2.push({ text: `Anchoring is judged by ${names(c11)}${then("task 11")}.` });
+  for (const a2 of t.arbitrators ?? []) lines2.push({ text: `Content is judged by ${names(a2)}, an arbitrator or verifier, who receives the keys it must judge${then(a2)}.` });
+  if (!t.grammar) {
+    lines2.push(
+      t.forkJudge ? { text: `The judge of forks is ${names(t.forkJudge)} (field 27): if two complete versions of the deal ever stand side by side, it settles them on a party\u2019s request${then(t.forkJudge)} (Agreements rule 47).` } : { text: "No judge of forks: if two complete versions of the deal ever stand side by side, only a version every party signs settles them (Agreements rule 47).", tone: "warn" }
+    );
+  }
+  if (t.keepers) {
+    const [ops, r] = t.keepers;
+    const need = ops.length === 1 ? "its record counts" : `${r.form === "all" ? `all ${ops.length}` : r.form === "threshold" ? `any ${r.threshold}` : list4((r.named ?? []).map(names))} count as recorded`;
+    lines2.push({ text: `${ops.length === 1 ? "A keeper records" : "Keepers record"} what happens, sealed, without reading it: operated by ${list4(ops.map((o) => `${names(o)}${then(o)}`))}; ${need} (Agreements rule 36).` });
+  }
+  const a = t.abandonment;
+  if (a) {
+    lines2.push({
+      text: a.authority === "named" ? `Whether a party is absent is judged by ${names(a.identity ?? "")}${a.proof ? `, checked by the absence-proof cMIP ${names(a.proof)}` : ""}${then(a.identity ?? "")} (Agreements rules 85, 87).` : `Whether a member is absent is judged by any ${a.threshold} of the other members${a.proof ? `, checked by the absence-proof cMIP ${names(a.proof)}` : ""} (Agreements rules 85, 87).`
+    });
+  }
+  if (lines2.length) lines2.push({ text: "A judge that answers \u201Cunknown\u201D, or does not act within its period, passes the question to the next in its chain, which every party signed; only the active link settles (Agreements rule 35)." });
+  else lines2.push({ text: "Nobody judges anything: no condition cMIP, no time reference, no arbitrator, keeper or absence authority." });
+  return { heading: "Who judges, and in what order", lines: lines2 };
+}
+function endsSection(t, names) {
+  const lines2 = [];
+  if (t.parent) lines2.push({ text: `It is a new version of ${names(t.parent)}: once complete, it replaces it (Agreements rule 45).` });
+  if (t.grammar) {
+    lines2.push({ text: "Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own (Agreements rule 70)." });
+    lines2.push({ text: "The collective ends by a fork, its members splitting into successors, or by a closing once it holds nothing and owes nothing (Agreements rule 91)." });
+  } else {
+    lines2.push({ text: "A deal has no closing act. It ends, or winds down, by a new version every party signs, stating where its stakes went, what is still owed, and, where it is a party of another agreement, to whom that one now pays (Agreements rule 47, F263)." });
+    lines2.push({ text: "A party leaves only as its terms provide." });
+  }
+  if (t.abandonment?.outcomes.includes(4)) lines2.push({ text: `A declaration of absence may close it (Agreements rule 89, outcome 4: ${OUTCOMES[4]}).` });
+  if ((t.stakes ?? []).length) {
+    const r = t.releaseRule;
+    lines2.push({ text: `A stake ends if released to the public domain, which ${!r || r.form === "all" ? "every holder of it signs" : r.form === "named" ? `${list4((r.named ?? []).map(names))} sign` : `holders of it holding together at least ${(r.share ?? 0) / 1e4}% sign`} (Agreements rule 55, field 24; Agreements draft 14, F308: by share, never by head).` });
+  }
+  return { heading: "How it ends", lines: lines2 };
+}
+function owedSection(t, found) {
+  const lines2 = [];
+  const service = !!(t.payeeGrants?.length || t.splitGrant);
+  if (found) {
+    lines2.push(...found.owed.length ? found.owed : [{ text: `Nothing owed under it, as far as ${list4(found.at)} show.` }]);
+  } else {
+    lines2.push({ text: "The relays were not asked: no payment made under it is known here." });
+    if (service) lines2.push({ text: "What its split service receives and does not split, or splits and does not pay out, is that service\u2019s open obligation, naming one receiver and this agreement (Agreements rule 30)." });
+  }
+  if (t.refund?.until != null) lines2.push({ text: `A refund owed on a payment under it is claimable until ${t.refund.until} on its time reference; past that point it is ended (field 17, F219).` });
+  else if (service || (t.stakes ?? []).length) lines2.push({ text: "No refund terms: a refund owed stays open until claimed (Agreements rule 11; the core sets no lapse, F80)." });
+  lines2.push({ text: "A party who has not signed owes nothing under it: its obligations are shown as unsigned, never as open (Agreements rule 1, F74)." });
+  return { heading: "What is still owed", lines: lines2 };
+}
+function mustSign(t, p) {
+  const rule = (r, among) => {
+    if (!r || r.form === "all") return among;
+    if (r.form === "named") return r.named ?? [];
+    return (r.threshold ?? 0) >= among.length ? among : [];
+  };
+  switch (p.form) {
+    case "clone":
+      return rule(t.clone, t.parties);
+    case "constitutional":
+      return rule(t.constitutional, t.parties);
+    case "judicial":
+      return t.parties;
+    case "area": {
+      const a = t.areas.find((x) => x.id === p.area);
+      return a && a.threshold >= a.holders.length ? a.holders : [];
+    }
+    default:
+      return [];
+  }
+}
+function signersFor(payload, t, field) {
+  const m = new Map(cborDecode(payload));
+  const mark = (x) => unhex(sha2562(`deal assessment: a version changing field ${field}, ${x}`));
+  m.set(11, mark("its parent"));
+  m.set(4, [[[1], [...t.parties].sort().map(unhex)]]);
+  if (field === 8) {
+    const plan = m.get(8);
+    if (plan instanceof Map) m.set(8, new Map([...plan, [7, "a changed parameter"]]));
+    else m.set(8, /* @__PURE__ */ new Map([[0, [[0, 0, 1]]], [1, mark("a split cMIP")]]));
+  } else {
+    m.set(28, [[mark("a fee Module"), 1]]);
+  }
+  try {
+    const plan = agreementsClonePlan(payload, cborEncode(m), AGREEMENTS_SPECS);
+    return /* @__PURE__ */ new Set([...plan.needs.flatMap((p) => mustSign(t, p)), ...plan.paySigners]);
+  } catch {
+    return null;
+  }
+}
+function holders(t) {
+  const out = [];
+  for (const [, hs] of t.stakes ?? []) for (const [h] of hs) if (h && !out.includes(h)) out.push(h);
+  return out;
+}
+function flagsOf(t, payload, names) {
+  const out = [];
+  const deal = !t.grammar;
+  const who2 = (xs) => list4(xs.map(names));
+  const owners = holders(t);
+  const a = t.abandonment;
+  if (deal && t.parties.length > 1) {
+    const stuck = uncovered(t);
+    if (stuck.length) {
+      out.push({
+        code: "no-exit",
+        family: "listed",
+        who: stuck,
+        text: `${who2(stuck)} cannot be declared absent: if ${stuck.length === 1 ? "that party goes" : "any of them goes"} silent, nobody can change or end the deal, and no party can leave it.`,
+        rests: "Agreements rule 47 (was 45b), stated cost: \u201Cone silent party blocks every change to a deal, however large\u201D; the way out is an abandonment clause removing an absent party\u2019s voice (rule 89, outcome 0)",
+        cites: A(47, 89)
+      });
+    }
+  }
+  {
+    const why = [];
+    const rests = [];
+    const cites = [];
+    let bearers = [];
+    if (t.plan && !t.plan.maxRailFee) {
+      why.push("the split plan states no maximum fee per payout, so a payout may lose any rail fee and nothing beyond a maximum becomes the service\u2019s obligation");
+      rests.push("Agreements rule 25 (was 24a): the split plan \u201Cmay state a maximum fee per payout\u201D; \u201Cwhere it states none, there is no cap\u201D, and a client must flag the absence before signing (F271); Money rule 21");
+      cites.push(...A(25), { mir: "Money", rule: 21 });
+    }
+    if (owners.length) {
+      const need = signersFor(payload, t, 28);
+      bearers = need ? owners.filter((h) => !need.has(h)) : [];
+      if (bearers.length) {
+        why.push(`fees can be added or raised without ${who2(bearers)}, who bear${bearers.length === 1 ? "s" : ""} them with every stake`);
+        rests.push("Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature, save a holder with no voice in it, who signs a version paying its stake less (rule 48, F270)");
+        cites.push(...A(28, 48));
+      }
+    }
+    if (why.length) out.push({ code: "uncapped-fee", family: "listed", who: bearers.length ? bearers : void 0, text: `Uncapped fee: ${why.join("; and ")}.`, rests: rests.join("; "), cites });
+  }
+  {
+    const judges = /* @__PURE__ */ new Map();
+    const add = (h, as) => {
+      if (!h || !t.parties.includes(h)) return;
+      judges.set(h, [...judges.get(h) ?? [], as]);
+    };
+    for (const x of t.arbitrators ?? []) add(x, "an arbitrator");
+    add(t.forkJudge, "the judge of forks");
+    for (const x of t.keepers?.[0] ?? []) add(x, "a keeper\u2019s operator");
+    if (a?.authority === "named") add(a.identity, "the absence authority");
+    for (const [, next] of t.chain ?? []) for (const [hs] of next) add(hs[0], "a later link of the chain of judgment");
+    if (judges.size) {
+      const ids = [...judges.keys()];
+      out.push({
+        code: "judge-is-party",
+        family: "listed",
+        who: ids,
+        text: `A judge who is also a party: ${list4(ids.map((h) => `${names(h)} judges as ${list4([...new Set(judges.get(h))])}`))}, in a question where they have a stake of their own.`,
+        rests: "Agreements rule 35 (was 34a), the chain of judgment, which every party signs; Agreements bar it for specifications only (\u201Ca judge never handles what it judges\u201D, Q20), and let a party be the absence authority (rule 85)",
+        cites: A(35, 85)
+      });
+    }
+  }
+  if (deal && t.parties.length > 1 && !t.forkJudge) {
+    out.push({
+      code: "no-fork-judge",
+      family: "listed",
+      text: "No judge of forks: if two complete versions of the deal ever stand side by side, the deal stays on its reference until every party signs one settling version, and any party can keep it there.",
+      rests: "Agreements rule 47 (was 45b), field 27: \u201CWith no judge of forks named, the deal stays on its reference\u201D; stated cost: \u201Ca party of either branch can refuse every settlement and keep the deal on its reference\u201D",
+      cites: A(47)
+    });
+  }
+  if (owners.length) {
+    const hit = /* @__PURE__ */ new Set();
+    const why = [];
+    const rests = [];
+    const cites = [];
+    const lose = (a?.outcomes ?? []).filter((o) => o === 1 || o === 2);
+    if (a && lose.length) {
+      const heir = (h) => (t.succession ?? []).some((s) => s.party === h && (s.stakes ?? []).length > 0);
+      const declarable = (h) => (t.parties.includes(h) || (t.departed ?? []).includes(h)) && !(a.authority === "named" && h === a.identity);
+      const declared = owners.filter((h) => declarable(h) && !heir(h));
+      if (declared.length) {
+        for (const h of declared) hit.add(h);
+        why.push(`${who2(declared)}, naming no stake successor, may be declared absent and have ${declared.length === 1 ? "that stake" : "those stakes"} ${list4(lose.map((o) => o === 1 ? "shared among the remaining holders" : "transferred to parties named or defined by role"))}, without signing; naming a successor sends the stake to the successor instead`);
+        rests.push("Agreements rule 89 (was 53), new in draft 12 (F279): outcomes 1 and 2 apply to a stake \u201Conly where the holder\u2019s succession plan names no stake successor\u201D; rule 48");
+        cites.push(...A(48, 89));
+      }
+    }
+    const r = t.releaseRule;
+    if (r && r.form !== "all") {
+      const need2 = new Set(r.form === "named" ? r.named ?? [] : []);
+      const left2 = owners.filter((h) => !need2.has(h));
+      if (left2.length) {
+        for (const h of left2) hit.add(h);
+        why.push(`a stake can be released to the public domain, ending what it earns, without ${who2(left2)}`);
+        rests.push("Agreements rule 55 (was 17), field 24: the release rule says which holders sign a release");
+        cites.push(...A(55));
+      }
+    }
+    const need = signersFor(payload, t, 8);
+    const left = need ? owners.filter((h) => !need.has(h)) : [];
+    if (left.length) {
+      for (const h of left) hit.add(h);
+      why.push(`the split plan, which sets what each stake is paid, can be changed without ${who2(left)}`);
+      rests.push("Agreements rules 45 and 48: the split plan (field 8) falls under its own power (rules 62 to 65; every party in a deal, rule 47); a version paying a stake less needs the signature of a holder with no voice in that power (a deal\u2019s holder who is no party, a collective\u2019s departed holder: rule 48, F270, F274), not of a member, whom the collective\u2019s own rules bind");
+      cites.push(...A(45, 48, 62, 63, 64, 65, 47));
+    }
+    if (why.length) out.push({ code: "dilutable-stake", family: "listed", who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join("; and ")}.`, rests: rests.join("; "), cites: unique(cites) });
+  }
+  if (!(t.stakes ?? []).length && (t.plan || (t.fees ?? []).length)) {
+    out.push({
+      code: "no-owner",
+      family: "listed",
+      text: "No owner: it divides money but writes no stake, so every share is overhead, taken off the top, and nothing is left for an owner. Nobody is paid as an owner is, protected against a fee raised or a share added without their signature. A deal made on a vow writes a stake in the vow, held by whoever signed it, and what is left after the overhead is theirs.",
+      rests: "Agreements rule 14, new in draft 13 (F284): \u201Ca deal made on a vow has an owner: the vow\u2019s signer, who holds the stake\u201D; rule 22 (F280): every share paying anyone but a stake is paid off the top, what is left going to the stakes alone; rule 48 (F270): a stake is not paid less without its holder",
+      cites: A(14, 22, 48)
+    });
+  }
+  if (a && !a.proof) {
+    out.push({
+      code: "absence-on-word",
+      family: "stated cost",
+      text: `Absence is on ${a.authority === "named" ? `${names(a.identity ?? "")}\u2019s` : "the other members\u2019"} word alone: no absence-proof cMIP checks it, and a party declared absent wrongly can only contest it, in public.`,
+      rests: "Agreements rule 87 (was 51), stated cost: a declaration is the authority\u2019s judgment, \u201Ca stated cost the party accepted\u201D; rule 85 (was 49), client conformance (F178)",
+      cites: A(87, 85)
+    });
+  }
+  if (owners.length) {
+    if (t.payeeGrants?.length || t.splitGrant) {
+      out.push({
+        code: "split-service-window",
+        family: "stated cost",
+        text: "A split service holds the money between receiving and paying out: after a stake is sold, a seller and the service acting together can keep paying the seller until the first split citing the sale.",
+        rests: "Agreements rule 10 (was 14), stated cost (the window after a transfer); rule 32 (was 31), the trust that remains",
+        cites: A(10, 32)
+      });
+    } else {
+      out.push({
+        code: "payer-side-split",
+        family: "stated cost",
+        text: "No split service: each payer divides its own payment, so a payer can pay some holders and not others, every holder\u2019s pointer is visible to payers, and the payer decides who gets a leftover unit.",
+        rests: "Agreements rule 16 (was 18), stated cost (payer-side splitting); rule 9, stated cost (the payer decides tied units)",
+        cites: A(16, 9)
+      });
+    }
+  }
+  return out;
+}
+
+// ../repo/src/manifest.ts
+function validPath(p) {
+  if (!p || p.startsWith("/") || p !== p.normalize("NFC")) return false;
+  if (/[\\\u0000-\u001f\u007f]/.test(p)) return false;
+  return p.split("/").every((s) => s !== "" && s !== "." && s !== "..");
+}
+var enc = new TextEncoder();
+function byBytes(a, b) {
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+function decodeManifest(bytes) {
+  const m = cborDecode(bytes);
+  if (!(m instanceof Map)) throw new Error("a manifest is a map");
+  for (const k of m.keys()) if (typeof k !== "number" || k < 0 || k > 6) throw new Error(`manifest: unknown field ${k}`);
+  const text3 = (v, w) => {
+    if (typeof v !== "string") throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const bytesOf = (v, n, w) => {
+    if (!(v instanceof Uint8Array) || v.length !== n) throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const list8 = (v, w) => {
+    if (!Array.isArray(v)) throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const prev = m.get(2);
+  const files = list8(m.get(3), "files").map((x) => {
+    const a = list8(x, "file");
+    if (a.length !== 6) throw new Error("manifest: a file has six fields");
+    const size = a[2];
+    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) throw new Error("manifest: file size");
+    return {
+      path: text3(a[0], "file path"),
+      work: hex(bytesOf(a[1], 32, "work hash")),
+      size,
+      locked: hex(bytesOf(a[3], 32, "locked hash")),
+      nonce: bytesOf(a[4], 24, "nonce"),
+      key: bytesOf(a[5], 32, "key")
+    };
+  });
+  if (!files.length) throw new Error("manifest: no files");
+  files.forEach((f, i) => {
+    if (!validPath(f.path)) throw new Error(`manifest: not a valid path: ${JSON.stringify(f.path)}`);
+    if (i && byBytes(files[i - 1].path, f.path) >= 0) throw new Error("manifest: paths sorted and unique");
+  });
+  const dependencies = list8(m.get(4), "dependencies").map((x) => {
+    const a = list8(x, "dependency");
+    if (a.length !== 4) throw new Error("manifest: a dependency has four fields");
+    return {
+      registry: text3(a[0], "registry"),
+      name: text3(a[1], "dependency name"),
+      version: text3(a[2], "dependency version"),
+      checksum: text3(a[3], "dependency checksum")
+    };
+  });
+  let impl;
+  if (m.has(6)) {
+    const entries = list8(m.get(6), "implements").map((e3) => {
+      if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2) throw new Error("manifest: an implemented specification is [spec, ? hint]");
+      const spec = hex(bytesOf(e3[0], 32, "an implemented specification"));
+      return e3.length === 2 ? { spec, hint: hex(bytesOf(e3[1], 32, "a publication hint")) } : { spec };
+    });
+    if (!entries.length) throw new Error("manifest: implements names at least one specification");
+    entries.forEach((x, i) => {
+      if (i && entries[i - 1].spec >= x.spec) throw new Error("manifest: implements sorted by spec hash and unique");
+    });
+    impl = entries;
+  }
+  return {
+    name: text3(m.get(0), "name"),
+    version: text3(m.get(1), "version"),
+    previous: prev === null ? null : hex(bytesOf(prev, 32, "previous")),
+    files,
+    dependencies,
+    source: m.has(5) ? text3(m.get(5), "source") : void 0,
+    implements: impl
+  };
+}
+
+// ../connector/src/words.ts
+var INVISIBLE2 = /[؜​‎‏‪-‮⁦-⁩]/g;
+function escapeControls(s) {
+  return s.replace(INVISIBLE2, (c) => `<U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}>`);
+}
+
+// ../grants/src/publishing-read.ts
+var pct4 = (n) => `${Number((n / 1e4).toFixed(4))}%`;
+var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var shown = (s) => s.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f​-‏‪-‮⁠-⁤﻿]/g, (c) => `[U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}]`);
+async function fetchAct3(id, hints, via2) {
+  for (const h of hints) {
+    const a = await relayAt(h, via2).getAct(id).catch(() => null);
+    if (a && describeAct(a).id === id) return a;
+  }
+  return null;
+}
+function ownership(payload) {
+  try {
+    const t = readTerms(payload, AGREEMENTS_SPECS);
+    return t.target?.[0] === "claim" ? t : null;
+  } catch {
+    return null;
+  }
+}
+async function readPublishingProposal(act, names, hints, via2 = {}, also = []) {
+  const d = describeAct(act);
+  if (!d.public || !d.payload || d.spec !== MIRS.agreements) return null;
+  const base = (title2, summary, sections, plain = [], blocking = []) => ({ kind: "deal", title: title2, summary, sections, plain, risks: [], blocking, collective: null });
+  if (d.type === AGREEMENTS_TYPES.claim) {
+    const m = cborDecode(d.payload);
+    const work = m.get(0) instanceof Uint8Array ? hex(m.get(0)) : "?";
+    const creators = (m.get(1) ?? []).map(hex);
+    return base(
+      `A claim to sign: a work made with ${d.signer ? names(d.signer) : "?"}`,
+      ["A claim: \u201Cwe made this\u201D, binding a work\u2019s fingerprint to its creators (Agreements rule 7). It is bound once every creator it names has signed it.", "It records who said it first on MOR, never who truly made it; it sells nothing, and gives nobody any money."],
+      [{ heading: "What it names", lines: [{ text: `The work whose fingerprint is ${work.slice(0, 16)}\u2026 (its bake, or a vow\u2019s name).` }, { text: `Its creators: ${creators.map(names).join(", ")}.` }, { text: "Sign only if you made it with them.", tone: "warn" }] }]
+    );
+  }
+  if (d.type === AGREEMENTS_TYPES.terms) {
+    const t = ownership(d.payload);
+    if (!t) return null;
+    const sections = [];
+    const blocking = [];
+    let holders2 = (t.stakes?.[0]?.[1] ?? []).filter((x) => typeof x[0] === "string");
+    for (const id of also) {
+      const a = await fetchAct3(id, hints, via2);
+      const x = a ? describeAct(a) : null;
+      const c = x?.payload && x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.terms ? ownership(x.payload) : null;
+      if (!c || c.parent !== d.id) {
+        blocking.push(`An act it asks you to sign (${id}) is not a version of this ownership agreement.`);
+        continue;
+      }
+      holders2 = (c.stakes?.[0]?.[1] ?? []).filter((y) => typeof y[0] === "string");
+      sections.push({ heading: "Its second version: the stake shared", lines: [{ text: "The first version writes the vow\u2019s stake wholly to its signer (Agreements rule 14); the second shares it. You sign both." }] });
+    }
+    sections.unshift({ heading: "Who owns it", lines: holders2.map(([id, n]) => ({ text: `${names(id)}: ${pct4(n)}.` })) });
+    sections.push({ heading: "Stated costs", lines: [{ text: "Changing it later needs every owner: nobody\u2019s share is lowered without them (rules 8, 47).", tone: "warn" }, { text: "Each publication of the work reads these shares: what it sells, with which partners and through which split service is the publication\u2019s, which you sign separately." }] });
+    return base(
+      `An ownership agreement to sign${t.text.startsWith("\u201C") ? `: ${t.text.slice(0, t.text.indexOf("\u201D") + 1)}` : ""}`,
+      [`Who owns the work its claim names (${t.target?.[1] ? short4(t.target[1]) : "?"}), and what share. Ownership only: no split, no fees, no split service (Agreements rule 7).`, "It counts once every owner has signed it."],
+      sections,
+      [{ heading: "Its words, which every owner signs", text: shown(t.text) }],
+      blocking
+    );
+  }
+  if (d.type === AGREEMENTS_TYPES.publication) {
+    const m = cborDecode(d.payload);
+    const sold = Array.isArray(m.get(0)) ? m.get(0) : null;
+    const owners = m.get(1) instanceof Uint8Array ? hex(m.get(1)) : null;
+    const partners = (Array.isArray(m.get(2)) ? m.get(2) : []).filter((p) => p instanceof Map).map((p) => ({ identity: hex(p.get(0)), share: Number(p.get(1) ?? 0), label: typeof p.get(2) === "string" ? p.get(2) : null }));
+    const service = m.get(3) instanceof Uint8Array ? hex(m.get(3)) : "?";
+    const plan = m.get(4) instanceof Map ? m.get(4) : null;
+    let referral = 0;
+    for (const x of Array.isArray(plan?.get(0)) ? plan.get(0) : []) if (Array.isArray(x) && x.includes("referral") && typeof x.at(-1) === "number") referral = x.at(-1);
+    const words2 = typeof m.get(5) === "string" ? m.get(5) : null;
+    const designated = m.get(10) instanceof Uint8Array ? hex(m.get(10)) : null;
+    const ends = !!sold && sold.length === 0;
+    if ((d.objects ?? []).filter(([a, b]) => !(owners && a === owners && b === owners)).length > 1) return null;
+    let holders2 = [];
+    if (owners) {
+      const a = await fetchAct3(owners, hints, via2);
+      const x = a ? describeAct(a) : null;
+      if (x?.payload && x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.terms && !ownership(x.payload)) return null;
+      const t = x?.payload ? ownership(x.payload) : null;
+      holders2 = (t?.stakes?.[0]?.[1] ?? []).filter((y) => typeof y[0] === "string");
+    }
+    const lines2 = [];
+    for (const s of sold ?? []) {
+      if (s[0] === 0 && s[1] instanceof Uint8Array) lines2.push({ text: `An upload (a bake), ${short4(hex(s[1]))}.` });
+      else if (s[0] === 3 && s[1] instanceof Uint8Array) lines2.push({ text: `A vow, by its name, ${short4(hex(s[1]))}.` });
+      else lines2.push({ text: "A delivery proven under a cMIP\u2019s terms." });
+    }
+    return base(
+      ends ? `The end of a publication to sign, drafted by ${d.signer ? names(d.signer) : "?"}` : `A publication to sign, drafted by ${d.signer ? names(d.signer) : "?"}`,
+      ends ? ["A later version of a publication that sells nothing: once every party has signed it, the publication is ended for everyone (Agreements rule 11). Past sales stand."] : ["The publication is the offer: what is sold, with which partners, through which split service. Every payment goes to its split service, which pays everyone: the partners and a referral off the top, then the owners by their shares.", "It sells once every party has signed it: each owner, each partner, the split service."],
+      [
+        ...ends ? [] : [{ heading: "What it sells", lines: lines2 }],
+        {
+          heading: "Who takes what",
+          lines: [
+            ...partners.map((p) => ({ text: `${names(p.identity)}${p.label ? ` (\u201C${shown(p.label)}\u201D)` : ""}: ${pct4(p.share)} off the top, a partner.` })),
+            ...referral ? [{ text: `Off the top: ${pct4(referral)} of each payment to whoever reposted it where the buyer found it.` }] : [],
+            { text: owners ? `The rest, to the owners of the ownership agreement ${short4(owners)}${holders2.length ? `: ${holders2.map(([id, n]) => `${names(id)} ${pct4(n)}`).join(", ")}` : " (not found here)"}.` : `The rest, to its drafter, ${d.signer ? names(d.signer) : "?"}, its lone owner.` },
+            { text: `Its split service, ${names(service)}, receives every payment and pays everyone.` },
+            ...designated ? [{ text: `${names(designated)} may sign its price tags beside the split service (the party it designates).` }] : []
+          ]
+        },
+        { heading: "Stated costs", lines: [{ text: "The split service sees who pays, how much and for what; it holds the money until it pays each one.", tone: "warn" }, { text: "Ending it later takes a version every party signs: no party ends it alone.", tone: "warn" }] }
+      ],
+      words2 ? [{ heading: "Its words, which every party signs", text: shown(words2) }] : []
+    );
+  }
+  return null;
+}
+
+// src/signing.ts
+var SIGNING_SAY = "Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.";
+var SIGNING_OFF_SAY = "Signing is off: proposals to sign wait in your inbox, unread, until you turn Signing on in the identity window.";
+var SHARE_SAY = [
+  "This is your share of the collective\u2019s chain key: its number and 24 words. Write both on paper, in order, and keep the paper away from anything that goes online.",
+  "It is shown once. Dub keeps nothing of it: once you have typed three words back, the one-time key it came sealed to is destroyed, and the copy on the relays can never be opened again.",
+  "With enough members\u2019 papers, the collective\u2019s keys can be changed (in Ki\u0161ib, later). A lost paper weakens that, as the collective\u2019s rule allows; never type these words into Dub again.",
+  "It is not your own chain key, nor your signing key, nor a Bitcoin wallet."
+];
+async function fetchAct4(id, hints, via2 = {}) {
+  for (const h of hints) {
+    try {
+      const a = await relayAt(h, via2).getAct(id);
+      if (a && describeAct(a).id === id) return { act: a, at: h };
+    } catch {
+    }
+  }
+  return null;
+}
+async function readProposal(act, names, hints, via2 = {}, also = []) {
+  const d = describeAct(act);
+  const blocking = [];
+  if (!d.public || !d.payload) {
+    return { kind: "other", title: "A private act", summary: ["It cannot be read here, so it cannot be signed here."], sections: [], plain: [], risks: [], blocking: ["It is private."], collective: null };
+  }
+  const pub = await readPublishingProposal(act, names, hints, via2, also);
+  if (pub) return pub;
+  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
+    const a = assess(d.payload, names);
+    const t = termsOf2(d.payload);
+    const parent = t.parent;
+    const sections = [...a.sections];
+    const collective = null;
+    let kind = "founding";
+    if (parent) {
+      kind = "clone";
+      const p = await fetchAct4(parent, hints, via2);
+      const pd = p ? describeAct(p.act) : null;
+      if (pd?.payload) sections.unshift({ heading: "What it changes", lines: readChanges(pd.payload, d.payload, names) });
+      else blocking.push(`The agreement it changes (${parent}) was not found, so what it changes cannot be shown.`);
+    }
+    if (!t.grammar && !parent) return readDealProposal(d, a, names, hints, via2, also);
+    if (!t.grammar) blocking.push("These terms found no collective: Dub signs collectives\u2019 agreements only.");
+    if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
+    return {
+      kind,
+      title: kind === "founding" ? `Found a collective: ${a.title}` : `Change a collective\u2019s agreement: ${a.title}`,
+      summary: a.summary,
+      sections,
+      plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
+      risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
+      blocking,
+      collective
+    };
+  }
+  if (d.spec === SPECS.envelopes && d.type === 0) {
+    const m = cborDecode(d.payload);
+    if (hex(m.get(0)) !== REPO_SPECS.manifest) {
+      return { kind: "other", title: "A publication", summary: ["It is no release: nothing to sign here."], sections: [], plain: [], risks: [], blocking: ["Not a release."], collective: null };
+    }
+    const lockedHash = hex(m.get(2));
+    let manifest = null;
+    for (const h of [.../* @__PURE__ */ new Set([...m.get(6) ?? [], ...hints])]) {
+      try {
+        const locked = await relayAt(h, via2).getMedia(lockedHash);
+        if (!locked) continue;
+        const plain = openMedia(locked, m.get(5), m.get(4));
+        if (workHash(plain) !== hex(m.get(1))) continue;
+        manifest = decodeManifest(plain);
+        break;
+      } catch {
+      }
+    }
+    if (!manifest) {
+      return { kind: "release", title: "A release", summary: ["Its manifest was not found, so what it releases cannot be shown."], sections: [], plain: [], risks: [], blocking: ["Its manifest was not found."], collective: d.signer ?? null };
+    }
+    const files = manifest.files.slice(0, 200).map((f) => ({ text: `${f.path}: ${f.size} bytes, fingerprint ${f.work.slice(0, 16)}\u2026` }));
+    if (manifest.files.length > 200) files.push({ text: `And ${manifest.files.length - 200} more files.` });
+    return {
+      kind: "release",
+      title: `Sign a release: ${manifest.name} ${manifest.version}`,
+      summary: [
+        `Published by the collective ${names(d.signer)}. It counts as the collective\u2019s release once enough holders of its Releases area have signed it, each with an act of their own (Agreements rule 60).`,
+        "Dub cannot compare these files with a copy of your own: sign only if you checked them elsewhere (each file\u2019s fingerprint is listed)."
+      ],
+      sections: [...readRelease(manifest, null), { heading: `Its files (${manifest.files.length})`, lines: files }],
+      plain: [],
+      risks: [],
+      blocking,
+      collective: d.signer ?? null
+    };
+  }
+  const act2 = actOfCollective(d, names);
+  if (act2) return act2;
+  return { kind: "other", title: "An act Dub does not sign", summary: ["Dub signs founding terms, clones of a collective\u2019s agreement, releases, and a collective\u2019s acts waiting for a second key."], sections: [], plain: [], risks: [], blocking: ["Not something Dub signs."], collective: null };
+}
+async function readDealProposal(d, a, names, hints, via2, also) {
+  const blocking = [];
+  const sections = [];
+  const lines2 = [];
+  let version2 = d.id;
+  for (const id of also) {
+    const got = await fetchAct4(id, hints, via2);
+    const x = got ? describeAct(got.act) : null;
+    if (!x?.payload) {
+      blocking.push(`An act it asks you to sign (${id}) was not found, so it cannot be read.`);
+      continue;
+    }
+    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.terms) {
+      const c = termsOf2(x.payload);
+      if (c.parent !== d.id) {
+        blocking.push(`An act it asks you to sign (${id}) is a version of another agreement.`);
+        continue;
+      }
+      version2 = x.id;
+      const shared = (c.stakes?.[0]?.[1] ?? []).map(([h, n]) => `${h ? names(h) : "the collective"} ${(n / 1e4).toLocaleString("en")}%`).join(", ");
+      sections.unshift({ heading: "Its second version: the stake shared", lines: [{ text: `The first version writes the vow\u2019s stake wholly to its signer (Agreements rule 14); this second one shares it: ${shared}. You sign both.` }, ...readChanges(d.payload, x.payload, names)] });
+      continue;
+    }
+    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.publication) {
+      const m = cborDecode(x.payload);
+      const owners = m.get(1);
+      const service = m.get(3);
+      if (!(owners instanceof Uint8Array) || hex(owners) !== d.id && hex(owners) !== version2) {
+        blocking.push(`An act it asks you to sign (${id}) is a publication under another ownership agreement.`);
+        continue;
+      }
+      lines2.push({ text: `Its publication, always public, its owners this deal${service instanceof Uint8Array ? `, its split service ${names(hex(service))}, which receives every payment and pays everyone` : ""}. Its price is a price tag the split service signs. Every party signs the publication (Agreements, Publication: \u201Cevery party of it has signed it\u201D).` });
+      if (typeof m.get(5) === "string") lines2.push({ text: `Its words: \u201C${escapeControls(m.get(5))}\u201D` });
+      continue;
+    }
+    blocking.push(`An act it asks you to sign (${id}) is neither a version of the deal nor its publication.`);
+  }
+  if (lines2.length) sections.unshift({ heading: "What it sells", lines: lines2 });
+  if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
+  return {
+    kind: "deal",
+    title: `A shared deal: ${dealName(termsOf2(d.payload).text ?? "") ? `\u201C${dealName(termsOf2(d.payload).text ?? "")}\u201D` : a.title}`,
+    summary: [
+      "A deal between separate people (no collective): every party signs it, and every version of it.",
+      "Before you sign: the work then belongs to the deal, and every payment for it, a tip included, goes to its split service, which divides it and pays each owner by their share. A tip to you personally still goes to your own pointer.",
+      ...a.summary
+    ],
+    sections: [...sections, ...a.sections],
+    plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
+    risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
+    blocking,
+    collective: null
+  };
+}
+function actOfCollective(d, names) {
+  if (!d.signer || !d.payload) return null;
+  const by = d.binding && d.binding !== d.signer ? " It was made with one member\u2019s own key (F353)." : "";
+  const base = (title2, lines2, plain = []) => ({
+    kind: "act",
+    title: title2,
+    summary: [`An act of the collective ${names(d.signer)}, waiting for your signature: the area that reaches it asks one more key than it has.${by} Signing adds yours, with your own key for this collective where your apps hold it (Agreements rule 60, F353).`],
+    sections: [{ heading: "What it is", lines: lines2.map((text3) => ({ text: text3 })) }],
+    plain,
+    risks: [],
+    blocking: [],
+    collective: d.signer
+  });
+  try {
+    if (d.spec === MIRS.money) {
+      const r = moneyRead(d.type, d.payload).act;
+      const amount = r.amount;
+      const lines2 = [`A Money act: ${r.type}.`];
+      if (amount) lines2.push(`Amount: ${amount.value.toLocaleString("en")} in unit ${amount.unit.slice(0, 12)}\u2026 (the Bitcoin units Module names regtest satoshis so).`);
+      for (const k of ["payer", "payee", "debtor", "creditor"]) if (typeof r[k] === "string") lines2.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names(r[k])}.`);
+      if (r.type === "pointer") {
+        const rails = r.rails ?? [];
+        lines2.push(`Where payments to the collective go from now on (its payee pointer, version ${r.version}${r.previous ? `, replacing ${String(r.previous).slice(0, 12)}\u2026` : ""}):`);
+        for (const [i, x] of rails.entries()) lines2.push(`Rail ${i + 1}: ${labelOf(x.module) ?? `a rail Module not known here (${x.module.slice(0, 12)}\u2026)`}, address ${hex(new Uint8Array(x.address)).slice(0, 24)}\u2026`);
+        lines2.push("Signing it with your key counts as your consent in the area reaching Money: check that these rails are the ones the collective agreed (its split service\u2019s, say).");
+      }
+      return base(`Sign a money act of the collective: ${r.type}`, lines2);
+    }
+    if (d.spec === SPECS.text && d.type === 0) {
+      const m = cborDecode(d.payload);
+      const text3 = typeof m.get(0) === "string" ? m.get(0) : "";
+      return base("Sign a post of the collective", ["A post (Text), in the collective\u2019s name."], [{ heading: "Its words", text: escapeControls(text3) }]);
+    }
+    if (d.spec === SPECS.envelopes && d.type === 0) return base("Sign an upload of the collective", ["A bake (Envelopes): an upload, in the collective\u2019s name. It carries no price: a price is a price tag."]);
+    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.publication) {
+      const m = cborDecode(d.payload);
+      return base("Sign a publication of the collective", ["A publication (Agreements), always public: what is sold, on which terms, which split service pays everyone. Its price is a price tag naming it."], typeof m.get(5) === "string" ? [{ heading: "Its words", text: escapeControls(m.get(5)) }] : []);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 // ../desk/src/memory.ts
 var MEMORY_SPEC = sha2562("Agent memory cMIP, draft 1, test value until publication");
@@ -16815,7 +17215,7 @@ async function readNotes(me, keys, via2 = {}) {
       problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
-  const rootOf2 = (x) => {
+  const rootOf = (x) => {
     const seen = /* @__PURE__ */ new Set();
     let at = x;
     while (at.corrects && versions.has(at.corrects) && !seen.has(at.id)) {
@@ -16826,7 +17226,7 @@ async function readNotes(me, keys, via2 = {}) {
   };
   const byNote = /* @__PURE__ */ new Map();
   for (const x of versions.values()) {
-    const r = rootOf2(x);
+    const r = rootOf(x);
     byNote.set(r, [...byNote.get(r) ?? [], x]);
   }
   const notes = [...byNote.entries()].map(([id, vs]) => {
@@ -16860,6 +17260,7 @@ async function writeNote(me, a, o) {
 }
 
 // ../kit/src/engine/rules.ts
+var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
 var holds = (r, set) => r.hashes.every((h) => set.has(h));
 async function readRules(app2, runs, me, here, o = {}) {
   const open = heldSecrets(me).length ? heldSecrets(me) : o.open ?? null;
@@ -16919,7 +17320,7 @@ var SUITE_RULES = {
   naming: { key: "naming", name: "Naming", kind: "cMIP", hashes: [NAMING_SPEC], does: "Display names: the name an identity publishes for itself, shown beside its ID.", text: "cmips/cmip-naming-draft-1.md" },
   corrections: { key: "corrections", name: "Corrections", kind: "cMIP", hashes: [CORRECTIONS_SPEC], does: "A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.", text: "cmips/cmip-corrections-draft-2.md" },
   appended: { key: "appended", name: "Appended collective", kind: "cMIP", hashes: [APPENDED_FORMAT], does: "A collective\u2019s posts whose members append, each signed by its member.", text: "cmips/cmip-appended-collective-draft-1.md" },
-  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "A member\u2019s own key for acting as a collective, granted and revoked by it.", text: "cmips/cmip-member-keys-draft-1.md" },
+  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired: there are no member keys now. A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-1.md" },
   "agent-memory": { key: "agent-memory", name: "Agent memory", kind: "cMIP", hashes: [MEMORY_SPEC], does: "What an agent keeps between its sessions, sealed to its owner.", text: "cmips/cmip-agent-memory-draft-2.md" },
   notes: { key: "notes", name: "Notes", kind: "cMIP", hashes: [NOTES_FORMAT], does: "Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.", text: "cmips/cmip-notes-draft-1.md" },
   "long-form": { key: "long-form", name: "Long form", kind: "cMIP", hashes: [LONGFORM_SPECS.longform], does: "Long documents with headings: drafts of MIPs, and their replies.", text: "cmips/cmip-long-form-draft-1.md" },
@@ -16946,11 +17347,10 @@ var SPENT_SAY2 = "This identity\u2019s signing key was changed elsewhere, with i
 var RUNNER_OLD_KEY_SAY2 = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Dub then goes on, in new lines.";
 var RUNNER_HOLDS_SAY2 = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
 var RUNNER_NO_OPEN_SAY2 = "Ki\u0161ib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Ki\u0161ib: Runner, Apps, Dub, \u201Cmay open what is sealed to\u201D this identity.";
-var RUNNER_MEMBER_ASKED_SAY = "Ki\u0161ib holds this identity\u2019s keys, so it holds its key for this collective too: Dub asked Ki\u0161ib to add it. Approve it in Ki\u0161ib (Identities, Held here, or Runner, Waiting), then choose the collective here again. The key never comes to Dub.";
 var RUNNER_OPENS_SAY = "Ki\u0161ib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Ki\u0161ib (Runner, Signed).";
 var NO_KEY_SAY2 = "This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key\u2019s words. Messages can still be sent from here.";
 var READER = "https://reader.dubsar.org/";
-var DUB_RULES = rulesOf("payment", "messages", "grant-limits", "people", "naming", "corrections", "appended", "member-keys", "notes");
+var DUB_RULES = rulesOf("payment", "messages", "grant-limits", "people", "naming", "corrections", "appended", "notes");
 var MONEY_RULES = ["payment", "messages", "grant-limits"];
 var NO_SIGNING = () => ({ answered: {}, waiting: {}, received: {} });
 var MONEY_KEPT = ["settings", "book", "keys", "sold", "bought", "vows", "anchors"];
@@ -17148,9 +17548,9 @@ var Dub = class _Dub {
     const c = this.rulesRead.get(me.id);
     if (c && !fresh && c.at + 60 > now5()) return c.shown;
     const { open } = await this.opener(me);
-    const { shown } = await readRules("Dub", DUB_RULES, me, s.rulesHere ?? [], { open, via: s.via });
-    this.rulesRead.set(me.id, { shown, at: now5() });
-    return shown;
+    const { shown: shown2 } = await readRules("Dub", DUB_RULES, me, s.rulesHere ?? [], { open, via: s.via });
+    this.rulesRead.set(me.id, { shown: shown2, at: now5() });
+    return shown2;
   }
   /** How this app opens what is sealed to an identity it holds (Edubba's Rules I follow reads it so), or null. */
   async openerFor(id) {
@@ -17410,8 +17810,6 @@ var Dub = class _Dub {
     } else if (last && look.encryptionKeyAct === last.act) {
       await this.store.saveIdentity(me);
       await me.publishEncryptionKey(encryptionSecret(seed));
-      const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e3) => unhex(e3.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
-      if (resealed) lines2.push({ text: `Its ${resealed} member key${resealed === 1 ? "" : "s"} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: "ok" });
       await this.store.saveIdentity(me);
       lines2.push({ text: "Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.", tone: "ok" });
     } else {
@@ -17713,32 +18111,31 @@ var Dub = class _Dub {
       }
       if (made.film) lines2.push({ text: made.film.removed.length ? `Taken out of the film before publishing: ${made.film.removed.join("; ")}.` : "The film carried nothing to take out.", tone: "ok" });
       if (made.recording) lines2.push({ text: made.recording.removed.length ? `Taken out of the recording before publishing: ${made.recording.removed.map((c) => CARRIED_WORDS3[c]).join("; ")}.` : "The recording carried nothing to take out.", tone: "ok" });
-      const shown = await readPost(made.id, hints, s.via);
-      return { post: this.item(shown, me.id, p, s, "feed", [], false), lines: lines2 };
+      const shown2 = await readPost(made.id, hints, s.via);
+      return { post: this.item(shown2, me.id, p, s, "feed", [], false), lines: lines2 };
     });
   }
   /**
-   * A public post signed as the collective acted as, with this identity's
-   * own member key (F353), in the area reaching public posts: text, and a
-   * reply's reference. Where the area asks more keys than one, it counts
-   * once its other holders sign it (in Edubba's To sign), said.
+   * A public post for the collective acted as (Agreements rule 58, the
+   * keyless collective): signed with this identity's own key, naming the
+   * collective and its latest decision as its one object (Text rule 14), in
+   * the area (or the Text layer's rule) reaching public posts: text, and a
+   * reply's reference. Where it asks more signers than one, it counts once
+   * its other holders sign it (in Edubba's To sign), said.
    */
   async postAsCollective(me, s, p, hints, text3, a) {
     const collective = s.acting;
     if (a.jpeg || a.mp4 || a.m4a || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error("As a collective, Dub posts text and replies only: no picture, film, recording or address. Nothing was posted.");
-    const k = await this.memberKeyHere(me, s, collective, hints);
-    if (!k.key || k.why) throw new Error(`Dub cannot post as this collective: ${k.why ?? "no member key"} Nothing was posted.`);
+    const k = await this.memberHere(me, s, collective, hints);
+    if (k.why) throw new Error(`Dub cannot post as this collective: ${k.why} Nothing was posted.`);
     await this.current(me);
     const refs = a.reply ? [[readId(a.reply.id), readId(a.reply.signer)]] : [];
-    const at = await chainFor(collective, k.key, k.places, s.via);
-    const made = !me.f.signingSecret && this.opts.runner ? (
-      // Through Kišib (draft 3, 9.2): the act asked of Kišib, its panel shown here, signed there with the member key it holds.
-      await this.opts.runner.request({ identity: me.id, as: collective, line: "member", binding: k.key.signature, sequence: at.strand, spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text3), public: true, objects: [[collective, k.key.terms]], ...refs.length ? { refs } : {} })
-    ) : signAsMember(collective, k.key, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text3), public: true, ...refs.length ? { refs } : {} });
+    const at = await chainFor(collective, k.places, s.via);
+    const made = await this.signed(me, () => signAsMember(collective, me, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text3), public: true, ...refs.length ? { refs } : {} }));
     const took = await publishAt([made.act], [.../* @__PURE__ */ new Set([...s.relays, ...k.places])], s.via);
     if (!took.length) throw new Error("No relay took the post. Nothing counts yet: try again.");
-    const lines2 = [{ text: `Posted as the collective, with your own member key, at ${took.join(", ")}.`, tone: "ok" }];
-    if (k.number > 1) lines2.push({ text: `Its area asks ${k.number} keys: it counts once another holder signs it too (Edubba, Collectives \u203A To sign).`, tone: "warn" });
+    const lines2 = [{ text: `Posted for the collective, signed with your own key and naming the collective, at ${took.join(", ")}.`, tone: "ok" }];
+    if (k.number > 1) lines2.push({ text: `${k.area} asks ${k.number} signers: it counts once another holder signs it too (Edubba, Collectives \u203A To sign).`, tone: "warn" });
     let item;
     try {
       item = this.item(await readPost(made.id, [...s.relays, ...k.places], s.via), me.id, p, s, "feed", [], false);
@@ -17753,12 +18150,13 @@ var Dub = class _Dub {
       src: r.bytes && r.picture ? `data:image/jpeg;base64,${base64(r.bytes)}` : null,
       width: r.picture?.shownWidth ?? 0,
       height: r.picture?.shownHeight ?? 0,
-      publication: r.publication,
+      bake: r.bake,
+      publication: r.bake,
       problem: r.problem,
-      withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid"
+      own: r.signer === me && sp.signer === me && r.standing === "valid"
     }));
-    const films = sp.refs.filter((r) => r.kind === "film").map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid" }));
-    const recordings = sp.refs.filter((r) => r.kind === "recording").map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid" }));
+    const films = sp.refs.filter((r) => r.kind === "film").map((r) => ({ bake: r.bake, publication: r.bake, signer: r.signer, size: r.size, problem: r.problem, own: r.signer === me && sp.signer === me && r.standing === "valid" }));
+    const recordings = sp.refs.filter((r) => r.kind === "recording").map((r) => ({ bake: r.bake, publication: r.bake, signer: r.signer, size: r.size, problem: r.problem, own: r.signer === me && sp.signer === me && r.standing === "valid" }));
     const doc = isLongForm(sp.format) ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
     return {
       id: sp.id,
@@ -17791,6 +18189,7 @@ var Dub = class _Dub {
     const { me, s, p, hints } = await this.ctx();
     const authors = [me.id, ...s.acting ? [s.acting] : [], ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
     const feed = await readFeed(authors, hints, s.via, void 0, dubsarClock());
+    const names = (x) => this.nameOf(x, me.id, p);
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items = [];
     for (const fp of feed.posts) {
@@ -17808,12 +18207,14 @@ var Dub = class _Dub {
       it.unstamped = !!dubsarClock() && !fp.time;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       if (fp.post.refs.some((r) => r.kind === "picture" && !r.bytes || (r.kind === "film" || r.kind === "recording") && /is locked: its key is not public/.test(r.problem ?? ""))) {
-        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => r.kind === "picture" || r.kind === "film" || r.kind === "recording" ? { id: r.publication, signer: r.signer || void 0 } : { id: r.id, signer: r.signer ?? r.actSigner })).catch(() => null);
+        const where = [...hints, ...this.inboxPlaces(p)];
+        const postAct = await followRef([fp.id, fp.signer], where, s.via).then((x) => x.act).catch(() => null);
+        const sealed = await this.money.read(me, where, s.via, fp.post.refs.map((r) => r.kind === "picture" || r.kind === "film" || r.kind === "recording" ? { id: r.bake, signer: r.signer || void 0 } : { id: r.id, signer: r.signer ?? r.actSigner }), postAct, names).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
-          it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
-          it.films = (it.films ?? []).filter((x) => x.publication !== sealed.publication);
-          it.recordings = (it.recordings ?? []).filter((x) => x.publication !== sealed.publication);
+          it.pictures = it.pictures.filter((x) => x.bake !== sealed.bake);
+          it.films = (it.films ?? []).filter((x) => x.bake !== sealed.bake);
+          it.recordings = (it.recordings ?? []).filter((x) => x.bake !== sealed.bake);
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
@@ -17823,6 +18224,7 @@ var Dub = class _Dub {
       }
       items.push(it);
     }
+    for (const it of items) if (it.sealed && !it.sealed.outside) this.money.outsideOf(it.sealed, it.sealed.seller, me.id, names);
     for (const it of items) {
       if (it.standing === "valid" || it.via !== "feed") continue;
       const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? shortId(id) }).catch(() => null);
@@ -17904,8 +18306,8 @@ var Dub = class _Dub {
       const who2 = this.whoFrom(d.signer ?? d.id, me.id, p);
       if (d.spec === POST_SPECS.text && d.type === TEXT_ACT && d.signer) {
         try {
-          const shown = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge2);
-          items.push({ ...this.item(shown, me.id, p, s, "relay", [], false), what: null, labels: await this.labelsOf(shown, me.id, p, [hint, ...s.relays, ...hints], s.via) });
+          const shown2 = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge2);
+          items.push({ ...this.item(shown2, me.id, p, s, "relay", [], false), what: null, labels: await this.labelsOf(shown2, me.id, p, [hint, ...s.relays, ...hints], s.via) });
           continue;
         } catch (e3) {
           items.push({ id: d.id, form: actForm(d.id), who: who2, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: message6(e3), seen: true, what: "A post" });
@@ -18054,12 +18456,12 @@ var Dub = class _Dub {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       const problems = await this.readInbox(me, s, p, hints);
-      const shown = p.inbox.items.filter((k) => !k.from || !p.muted.includes(k.from));
-      const hidden = p.inbox.items.length - shown.length;
-      await this.warm([...shown.map((k) => k.from).filter(Boolean), ...p.sent.map((x) => x.to)], hints, s.via);
+      const shown2 = p.inbox.items.filter((k) => !k.from || !p.muted.includes(k.from));
+      const hidden = p.inbox.items.length - shown2.length;
+      await this.warm([...shown2.map((k) => k.from).filter(Boolean), ...p.sent.map((x) => x.to)], hints, s.via);
       const places = [...hints, ...this.inboxPlaces(p)];
       const toYou = [];
-      for (const k of shown.filter((x) => x.kind === "public").sort((a, b) => b.found - a.found).slice(0, 30)) {
+      for (const k of shown2.filter((x) => x.kind === "public").sort((a, b) => b.found - a.found).slice(0, 30)) {
         const answers = k.refs.filter((r) => r.signer === me.id || ownIds(me.f).includes(r.id));
         if (!answers.length && !k.to.includes(me.id)) continue;
         const ans = answers.map((r) => ({ id: r.id, who: this.whoFrom(me.id, me.id, p), snippet: null }));
@@ -18086,7 +18488,7 @@ var Dub = class _Dub {
         item.seen = p.seen.includes(k.key);
         toYou.push(item);
       }
-      const privates = shown.filter((k) => k.kind === "private" || k.kind === "other" && k.key.startsWith("sealed:"));
+      const privates = shown2.filter((k) => k.kind === "private" || k.kind === "other" && k.key.startsWith("sealed:"));
       const appended = [...privates.flatMap((k) => k.from && appendedOf(k.format, k.refs) ? [appendedOf(k.format, k.refs)] : []), ...p.sent.flatMap((x) => x.of ? [x.of] : [])];
       await this.warm([...appended, ...privates.flatMap((k) => k.to), ...p.sent.flatMap((x) => x.cc ?? [])], hints, s.via);
       const ofFor = async (from, collective) => {
@@ -18276,7 +18678,7 @@ var Dub = class _Dub {
         let reading = null;
         let problem = null;
         try {
-          const got = await fetchAct3(act, places, s.via);
+          const got = await fetchAct4(act, places, s.via);
           if (!got) problem = `The act it asks you to sign (${act}) was not found at ${places.join(", ")}.`;
           else reading = await readProposal(got.act, names, places, s.via, k.refs.slice(1).map((r2) => r2.id));
         } catch (e3) {
@@ -18335,7 +18737,7 @@ var Dub = class _Dub {
     if (!k) throw new Error("No such proposal in this identity\u2019s inbox.");
     const act = k.refs[0].id;
     const places = [.../* @__PURE__ */ new Set([...hints, ...await this.placesOf(k.refs[0].signer ?? k.from, hints, s.via)])];
-    const got = await fetchAct3(act, places, s.via);
+    const got = await fetchAct4(act, places, s.via);
     if (!got) throw new Error(`The act it asks you to sign (${act}) was not found. Nothing was signed.`);
     const also = k.refs.slice(1).map((r) => r.id);
     const reading = await readProposal(got.act, this.namer(me.id, p), places, s.via, also);
@@ -18361,35 +18763,20 @@ var Dub = class _Dub {
       if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(" ")} Nothing was signed.`);
       await this.current(me);
       const where = [.../* @__PURE__ */ new Set([...s.relays, ...places, ...collective ? await this.placesOf(collective, hints, s.via) : []])];
-      const holds2 = reading.kind === "founding" || reading.kind === "clone" ? await holdsAnArea(act, places, me.id, s.via) : false;
-      const key = holds2 ? makeMemberKey() : null;
-      let own = null;
-      if ((reading.kind === "act" || reading.kind === "release") && collective) {
-        const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-        own = keys.length ? await memberKeyFor(keys, collective, where, s.via).catch(() => null) : null;
-      }
+      const forCollective = (reading.kind === "act" || reading.kind === "release") && !!collective;
       let made;
-      if (own) {
-        const at = await chainFor(collective, own, where, s.via);
-        const x = cosignAsMember(collective, own, at, act);
+      if (forCollective) {
+        const x = await this.signed(me, () => cosignAsMember(me, act));
         const took = await publishAt([x.act], where, s.via);
         if (!took.length) throw new Error("No relay took your signature. Nothing counts yet: try again.");
         made = { id: x.id };
-      } else made = await this.signed(me, () => sign(me, act, where, key?.public));
-      const lines2 = [{ text: own ? `Signed for the collective with your own key (F353): the signature act ${made.id} is published at ${where.join(", ")}.` : `Signed: your signature act ${made.id} is published at ${where.join(", ")}.`, tone: "ok" }];
+      } else made = await this.signed(me, () => sign(me, act, where));
+      const lines2 = [{ text: forCollective ? `Signed for the collective with your own key: the signature act ${made.id} is published at ${where.join(", ")}.` : `Signed: your signature act ${made.id} is published at ${where.join(", ")}.`, tone: "ok" }];
       const more = [];
       for (const x of also) {
         const sx = await this.signed(me, () => sign(me, x, where));
         more.push(sx.id);
         lines2.push({ text: `Signed too: ${x.slice(0, 12)}\u2026, your signature act ${sx.id}.`, tone: "ok" });
-      }
-      if (key) {
-        try {
-          await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => void 0));
-          lines2.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the areas you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: "ok" });
-        } catch (e3) {
-          lines2.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message6(e3)}`, tone: "bad" });
-        }
       }
       let oneTime;
       if (reading.kind === "founding" || reading.kind === "clone") {
@@ -18915,9 +19302,9 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
   }
   // ------------------------------------------------------------ collectives under the identity (acting as one: the same gesture as switching)
   /**
-   * Add a collective this identity can act as from here, by its ID: its
-   * member key (F353) read from this identity's homes, and the area of its
-   * agreement in force that reaches public posts. Added even where it cannot
+   * Add a collective this identity can act as from here, by its ID: the
+   * area of its agreement in force (or its Text layer's rule) that reaches
+   * public posts, and whether it counts this identity (no member keys). Added even where it cannot
    * act yet, saying why.
    */
   collectiveAdd(a) {
@@ -18925,7 +19312,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const { me, s, hints } = await this.ctx();
       const { id, hints: where } = readIdWhere(a.id);
       if (id === me.id) throw new Error("That is this identity itself.");
-      const r = await this.memberKeyHere(me, s, id, [...where, ...hints]);
+      const r = await this.memberHere(me, s, id, [...where, ...hints]);
       const rest = (s.collectives ?? []).filter((c) => c.id !== id);
       await this.store.saveSettings(me.id, { ...s, collectives: [...rest, { id, available: !r.why, why: r.why }] });
       await this.warm([id], [...where, ...hints], s.via);
@@ -18947,50 +19334,34 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       if (a.id) {
         let c = (s.collectives ?? []).find((x) => x.id === a.id);
         if (!c) throw new Error("That collective is not under this identity here.");
-        if (!c.available && !me.f.signingSecret && this.opts.runner) {
-          const r = await this.memberKeyHere(me, s, c.id, me.f.homes.map((h) => h.hint));
+        if (!c.available) {
+          const r = await this.memberHere(me, s, c.id, me.f.homes.map((h) => h.hint));
           c = { id: c.id, available: !r.why, why: r.why };
           s.collectives = [...(s.collectives ?? []).filter((x) => x.id !== c.id), c];
           await this.store.saveSettings(me.id, s);
         }
-        if (!c.available) throw new Error(`Dub cannot act as it: ${c.why ?? "its member key is not here"}`);
+        if (!c.available) throw new Error(`Dub cannot act as it: ${c.why ?? "it does not count this identity among those acting for it"}`);
       }
       await this.store.saveSettings(me.id, { ...s, acting: a.id });
       return { lines: [] };
     });
   }
   /**
-   * The member key this identity holds for a collective, and the area
-   * reaching public posts; `why` where it cannot act. For an identity used
-   * through Kišib (the Dubsar runner cMIP, draft 3, section 9), Kišib holds
-   * the key: Dub reads its public parts from Kišib, and, where Kišib holds
-   * none yet, asks Kišib to add it, approved there. Its secret never comes
-   * here (`secret` empty).
+   * Whether this identity can act for a collective from here (Agreements
+   * rules 58 and 60, the keyless collective): there are no member keys; a
+   * member signs with its own key, naming the collective. It needs the area
+   * of the agreement in force reaching public posts, or else the Text
+   * layer's rule, to count this identity among its holders. `why` where it
+   * cannot act; `area` names what reaches posts, in words.
    */
-  async memberKeyHere(me, s, collective, hints) {
+  async memberHere(me, s, collective, hints) {
     const places = [.../* @__PURE__ */ new Set([...await collectivePlaces(collective, hints, s.via).catch(() => []), ...hints])];
-    let key;
-    if (!me.f.signingSecret && this.opts.runner) {
-      const r = this.opts.runner;
-      const p = await r.paired().catch((e3) => {
-        throw new Error(message6(e3).replace(/ Nothing was signed\.$/, ""));
-      });
-      const held = p?.identities.find((x) => x.id === me.id)?.members?.find((m) => m.collective === collective);
-      if (!held) {
-        if (p?.state !== "approved") return { key: null, places, why: "Dub is not paired with Ki\u0161ib for this identity any more.", number: 0 };
-        await r.memberAsk(me.id, collective, places);
-        return { key: null, places, why: RUNNER_MEMBER_ASKED_SAY, number: 0 };
-      }
-      key = { act: "", terms: held.terms, signature: held.signature, public: [0, new Uint8Array()], secret: new Uint8Array(), position: held.position };
-    } else {
-      const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-      key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
-    }
-    if (!key) return { key: null, places, why: "no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).", number: 0 };
     const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
-    if (!reach.area) return { key, places, why: "its agreement in force gives no area reaching public posts.", number: 0 };
-    if (!reach.area.holders.includes(me.id)) return { key, places, why: `this identity holds no box in its area \u201C${reach.area.name}\u201D, which reaches public posts.`, number: 0 };
-    return { key, places, why: null, number: reach.area.number };
+    if (!reach.agreement) return { places, why: "its agreement in force was not found at its places.", number: 0, area: "" };
+    if (!reach.area) return { places, why: "its agreement in force gives no area or layer rule reaching public posts.", number: 0, area: "" };
+    const said2 = reach.area.layer ? `Its Text layer\u2019s rule` : `Its area \u201C${reach.area.name}\u201D`;
+    if (!reach.area.holders.includes(me.id)) return { places, why: `this identity is not among those ${reach.area.layer ? "its Text layer\u2019s rule counts" : `holding its area \u201C${reach.area.name}\u201D`}, which reaches public posts.`, number: 0, area: said2 };
+    return { places, why: null, number: reach.area.number, area: said2 };
   }
   // ------------------------------------------------------------ Purchases (decided, 21 October 2026)
   /** Files bought and vows purchased here, each as it stands: a file opened once its key arrived, a vow with its sale. */
@@ -19047,17 +19418,26 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
    * default, everything has to be done in Damgar… now we're looking at
    * using more to do something closer to a prototype"): under Dub's lane,
    * with what is left of it; Ask Damgar, a money message it queues; by
-   * hand, the draft shown to copy for Damgar. A purchase names its offer,
+   * hand, the draft shown to copy for Damgar. A purchase follows its price tag,
    * which a money message cannot carry yet: only the lane buys.
    */
   payWays(a) {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
-      const deal = a.post && a.signer && a.kind !== "pay" ? await this.money.dealOf(readId(a.post), readId(a.signer), [...hints, ...this.inboxPlaces(p)], s.via) : null;
+      const names = (x) => this.nameOf(x, me.id, p);
+      const where = [...hints, ...this.inboxPlaces(p)];
+      let shared = null;
+      if (a.kind === "buy" && a.bake && a.seller) {
+        const x = await this.money.purchaseOf(me, where, s.via, { publication: readId(a.bake), seller: readId(a.seller), post: a.post ? readId(a.post) : null, names }).catch(() => null);
+        shared = x?.said.length ? x.said.join(" ") : null;
+      } else if (a.post && a.signer && a.kind !== "pay") {
+        const deal = await this.money.dealOf(readId(a.post), readId(a.signer), where, s.via);
+        shared = deal ? deal.publication && deal.service ? throughLine(deal, names) : `${sharedLine(deal, names)} No publication of it was found here: a tip goes to whoever posted it.` : null;
+      }
       const lanes = await this.money.lanes(me, s, hints).catch(() => []);
       const lane = lanes.find((l) => l.state === "in force");
       const purchase = a.kind === "buy" || a.kind === "vow";
-      const noDraft = "A purchase names the seller\u2019s offer, which a money message to Damgar cannot carry yet: buy it under Dub\u2019s lane.";
+      const noDraft = "A purchase follows the seller\u2019s price tag, which a money message to Damgar cannot carry yet: buy it under Dub\u2019s lane.";
       let spent2 = null;
       let left = null;
       let total = null;
@@ -19077,7 +19457,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         lane: lane ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent: spent2, total, left } : { open: false, why: lanes.some((l) => l.state === "asked") ? "Dub\u2019s lane is asked, not yet granted in Damgar." : "Dub has no lane from Damgar: ask for one in the identity\u2019s menu (A lane from Damgar).", label: null, perPayment: null, until: null, spent: null, total: null, left: null },
         damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null, wakes: !!this.opts.damgar },
         hand: purchase ? { open: false, why: noDraft } : { open: true, why: null },
-        shared: deal ? sharedLine(deal, (x) => this.nameOf(x, me.id, p)) : null
+        shared
       };
     });
   }
@@ -19147,7 +19527,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       if (!UNITS_MODULES.some((m) => m.units.some((u2) => u2.hash === a.unit))) throw new Error("Choose a unit. Nothing was prepared.");
       const amount = { unit: a.unit, value: readValue(a.value) };
       const deal = a.post ? await this.money.dealOf(readId(a.post), other, [...hints, ...this.inboxPlaces(p)], s.via) : null;
-      if (deal?.payee) throw new Error("A tip to a shared work is paid under Dub\u2019s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go to the deal. Nothing was prepared.");
+      if (deal?.service) throw new Error("A tip to a work found through a publication is paid under Dub\u2019s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go through the publication. Nothing was prepared.");
       const d = { what: "pay", other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: "Dub", anchor: null };
       return {
         lines: [{ text: "Shown, not signed and not sent: copy it into Damgar, which reads it to you and signs it there." }],
@@ -19187,7 +19567,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         if (d.signer !== other) throw new Error("The post tipped is not signed by the identity tipped. Nothing was prepared.");
         refs = [[d.id, other]];
         const deal = a.what === "pay" ? await this.money.dealOf(d.id, other, places, s.via) : null;
-        if (deal?.payee) other = deal.payee;
+        if (deal?.service) other = deal.service;
       }
       await this.current(me);
       const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: "Dub", anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
@@ -19296,7 +19676,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       return { lines: (await this.money.paid(key, proof)).map((text3) => ({ text: text3, tone: "ok" })) };
     });
   }
-  /** A post sealed with a price (pay-per-view), its offer, its key kept here for each buyer. */
+  /** A post sealed for sale (pay-per-view): its bake, its uploader's price tag, its key kept here for each buyer. */
   sell(a) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
@@ -19545,23 +19925,37 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     ];
   }
   // ------------------------------------------------------------ pictures
-  /** Withdraw a picture this identity published (Envelopes, "Withdrawal"): readers stop showing it; the post stands. */
-  withdraw(publication) {
+  /**
+   * Withdraw what sells a work this identity uploaded, named by what
+   * actually ends (decided 28 October 2026, one withdrawal per layer; by
+   * Nobody, allegedly, 30 October: "Yes, or even withdraw publication could
+   * also work"): its price tag on a bare bake (a later version with no
+   * price, Money rule 18), or its publication (a later version selling
+   * nothing, Agreements). A bake itself is never withdrawn: where neither
+   * exists, refused, saying there is nothing to withdraw at protocol level
+   * (a profile's picture is changed by a later profile naming another).
+   * `publication`: the bake's id, its name from before.
+   */
+  withdraw(a) {
     return this.serial(async () => {
-      const { me, s } = await this.ctx();
-      if (!/^[0-9a-f]{64}$/.test(publication)) throw new Error("not a publication id");
+      const { me, s, hints } = await this.ctx();
+      const bake = typeof a === "string" ? a : a.bake ?? a.publication ?? "";
+      if (!/^[0-9a-f]{64}$/.test(bake)) throw new Error("not a bake\u2019s id");
       let act = null;
-      for (const r of s.relays) {
+      for (const r2 of [...s.relays, ...hints]) {
         try {
-          act = await relayAt(r, s.via).getAct(publication);
+          act = await relayAt(r2, s.via).getAct(bake);
           if (act) break;
         } catch {
         }
       }
-      if (!act) throw new Error("That picture was not found at the relays.");
-      if (describeAct(act).signer !== me.id) throw new Error("That picture was published by another identity: only its signer can withdraw it.");
+      if (!act) throw new Error("That upload was not found at the relays.");
+      const d = describeAct(act);
+      if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE) throw new Error("That is not a bake (an upload).");
+      if (d.signer !== me.id) throw new Error("That was uploaded by another identity: only its uploader can withdraw what sells it, and a bake itself is never withdrawn. Nothing was signed.");
       await this.current(me);
-      return this.signed(me, () => withdraw(me, publication, s.relays));
+      const r = await this.signed(me, () => this.money.end(me, s, hints, bake));
+      return { id: r.id, ended: r.ended, lines: r.lines.map((text3, i) => ({ text: text3, tone: i === 0 ? "ok" : void 0 })) };
     });
   }
 };
@@ -19586,14 +19980,14 @@ function whatAct(d) {
     return "An Identity act";
   }
   if (d.spec === SPECS.envelopes) {
-    if (d.type === PUBLICATION) return "A publication (a picture or a file)";
-    if (d.type === WITHDRAWAL) return "A publication withdrawn";
+    if (d.type === BAKE) return "An upload (a bake: a picture or a file)";
+    if (d.type === RETIRED_WITHDRAWAL) return "A withdrawal, retired: invalid, it withdraws nothing";
     if (d.type === 4) return "Its encryption key";
     return "An Envelopes act";
   }
   if (d.spec === POST_SPECS.text) return "A text act";
-  if (d.spec === MIRS.agreements) return "An Agreements act (an agreement, a signature, or talk about one)";
-  if (d.spec === MIRS.money) return "A Money act";
+  if (d.spec === MIRS.agreements) return d.type === PUBLICATION_ACT ? "A publication (what is sold, on which terms, who is paid)" : "An Agreements act (an agreement, a signature, or talk about one)";
+  if (d.spec === MIRS.money) return d.type === PRICE_TAG ? "A price tag" : "A Money act";
   if (d.spec === MIRS.development) return "A Development act";
   if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? "A published follow list" : "A people act";
   return "An act of another specification";
@@ -19729,7 +20123,7 @@ async function run(dub2, op, a, p) {
     case "list":
       return dub2.listOption({ published: a.published === true, shown: text2(a.shown) });
     case "withdraw":
-      return dub2.withdraw(text2(a.publication));
+      return dub2.withdraw(text2(a.bake) || text2(a.publication));
     case "signing":
       return dub2.setSigning(a.on === true);
     case "proposals":
@@ -19819,7 +20213,7 @@ async function run(dub2, op, a, p) {
     case "damgar answer":
       return dub2.damgarAnswer(text2(a.request));
     case "pay ways":
-      return dub2.payWays({ kind: payKind(a.kind), post: text2(a.post) || void 0, signer: text2(a.signer) || void 0 });
+      return dub2.payWays({ kind: payKind(a.kind), post: text2(a.post) || void 0, signer: text2(a.signer) || void 0, bake: text2(a.bake) || void 0, seller: text2(a.seller) || void 0 });
     case "pay":
       return dub2.pay({
         how: a.how === "lane" || a.how === "damgar" || a.how === "hand" ? a.how : (() => {
@@ -20202,7 +20596,7 @@ function card(a, o = {}) {
 }
 function inPlace(acts) {
   const byId = new Map(acts.map((a) => [a.id, a]));
-  const rootOf2 = (a) => {
+  const rootOf = (a) => {
     let r = a;
     const seen = /* @__PURE__ */ new Set();
     while (r.corrects && !seen.has(r.id)) {
@@ -20214,16 +20608,16 @@ function inPlace(acts) {
     return r;
   };
   const groups = /* @__PURE__ */ new Map();
-  for (const a of acts) groups.set(rootOf2(a).id, [...groups.get(rootOf2(a).id) ?? [], a]);
+  for (const a of acts) groups.set(rootOf(a).id, [...groups.get(rootOf(a).id) ?? [], a]);
   const out = [];
   const done = /* @__PURE__ */ new Set();
   for (const a of acts) {
-    const g = groups.get(rootOf2(a).id);
+    const g = groups.get(rootOf(a).id);
     if (g.length < 2) {
       out.push(a);
       continue;
     }
-    const key = rootOf2(a).id;
+    const key = rootOf(a).id;
     if (done.has(key)) continue;
     done.add(key);
     const [latest, ...rest] = g;
@@ -20263,10 +20657,10 @@ function switcher(parts, on) {
   return `<nav class="k-switch" aria-label="Views">${parts.map((p) => `<button type="button" data-k-part="${e(p.key)}" class="${p.key === on ? "k-on" : ""}"${p.key === on ? ' aria-current="page"' : ""}>${e(p.label)}<span class="k-count" data-k-count="${e(p.key)}"></span></button>`).join("")}</nav>`;
 }
 function meButton(o) {
-  const shown = o.as ?? o;
-  const n = namedOf(shown);
+  const shown2 = o.as ?? o;
+  const n = namedOf(shown2);
   const label = nameOf(n) ?? NAME_WORDS[n.published?.state === "name" ? "none" : n.published?.state ?? "loading"];
-  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(label)}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(label)}</span><span class="k-s">${e(shortForm(shown2.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
 }
 function contactsButton(label = "Contacts") {
   return `<button type="button" class="k-menu-btn" data-k-open="contacts" aria-haspopup="dialog"><span aria-hidden="true">\u2630</span><span class="k-l">${e(label)}</span></button>`;
@@ -20773,7 +21167,7 @@ var escapeText = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;
 function attachNames(field, contacts, o) {
   field.setAttribute("autocomplete", "off");
   field.setAttribute("autocorrect", "off");
-  let shown = [];
+  let shown2 = [];
   let at = 0;
   const query = () => {
     const v = field.value;
@@ -20784,7 +21178,7 @@ function attachNames(field, contacts, o) {
   };
   const close = () => {
     if (openMenu?.button === field) closeMenu();
-    shown = [];
+    shown2 = [];
   };
   const choose = (c) => {
     if (o.mention) {
@@ -20805,10 +21199,10 @@ function attachNames(field, contacts, o) {
     if (!o.mention) delete field.dataset.kId;
     if (q === null || !o.mention && !q) return close();
     const ql = q.toLowerCase();
-    shown = contacts().filter((c) => [labelOf2(c), ...c.names ?? []].some((n) => n.toLowerCase().split(/\s+/).some((w) => w.startsWith(ql)) || n.toLowerCase().startsWith(ql))).slice(0, 8);
-    if (!shown.length) return close();
+    shown2 = contacts().filter((c) => [labelOf2(c), ...c.names ?? []].some((n) => n.toLowerCase().split(/\s+/).some((w) => w.startsWith(ql)) || n.toLowerCase().startsWith(ql))).slice(0, 8);
+    if (!shown2.length) return close();
     at = 0;
-    const pop = popAt(field, suggestions(shown, o.title ?? (o.mention ? "Mention" : "Contacts")), o.mention ? "above" : "below", () => void 0);
+    const pop = popAt(field, suggestions(shown2, o.title ?? (o.mention ? "Mention" : "Contacts")), o.mention ? "above" : "below", () => void 0);
     const box2 = o.mention ? field.closest(".k-typing") : null;
     if (box2) {
       pop.classList.add("k-anchored");
@@ -20817,7 +21211,7 @@ function attachNames(field, contacts, o) {
     }
     pop.addEventListener("click", (ev) => {
       const b = ev.target.closest("[data-k-pick]");
-      const c = b && shown.find((x) => x.id === b.dataset.kPick);
+      const c = b && shown2.find((x) => x.id === b.dataset.kPick);
       if (c) choose(c);
     });
     field.focus({ preventScroll: true });
@@ -20825,7 +21219,7 @@ function attachNames(field, contacts, o) {
   field.addEventListener("input", offer);
   field.addEventListener("keydown", (ev) => {
     if (!(ev instanceof KeyboardEvent)) return;
-    if (!shown.length || openMenu?.button !== field) return;
+    if (!shown2.length || openMenu?.button !== field) return;
     const items = [...openMenu.pop.querySelectorAll("[data-k-pick]")];
     if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
       ev.preventDefault();
@@ -20834,7 +21228,7 @@ function attachNames(field, contacts, o) {
     } else if (ev.key === "Enter" || ev.key === "Tab") {
       ev.preventDefault();
       ev.stopPropagation();
-      choose(shown[at]);
+      choose(shown2[at]);
     }
   });
 }
@@ -21483,9 +21877,18 @@ function sealedPlayBox(x) {
 function sealedBox(p) {
   const x = p.sealed;
   const what = x.media === "picture" ? "picture" : x.media === "video" ? "film" : x.media === "audio" ? "recording" : "text";
-  const opened = x.picture ? `<img src="${e(x.picture)}" alt="The picture, opened">` : x.media === "video" || x.media === "audio" ? x.problem ? "" : sealedPlayBox({ publication: x.publication, seller: x.seller, media: x.media }) : `<div class="k-txt" dir="auto">${e(x.text ?? "")}</div>`;
-  const state = x.state === "opened" || x.state === "yours" ? `${opened}<div class="k-small k-soft">${x.state === "yours" ? "Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt." : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>` : x.state === "paying" ? '<div class="k-small k-soft">Bought: pay it in your wallet (Payments, in Private). Its key arrives once the seller\u2019s Damgar signs the receipt.</div>' : `<div class="k-small k-soft">Sealed: its ${what} opens once paid. Buy it from the act\u2019s menu.</div>`;
-  return `<div class="dub-sealed"><span class="k-small">${e(x.price)}</span>${x.words ? `<div class="k-small k-soft">${e(x.words)}</div>` : ""}${state}${x.problem ? `<div class="k-label k-warn">${e(x.problem)}</div>` : ""}</div>`;
+  const opened = x.picture ? `<img src="${e(x.picture)}" alt="The picture, opened">` : x.media === "video" || x.media === "audio" ? x.problem ? "" : sealedPlayBox({ publication: x.bake, seller: x.seller, media: x.media }) : `<div class="k-txt" dir="auto">${e(x.text ?? "")}</div>`;
+  const state = x.state === "opened" || x.state === "yours" ? `${opened}<div class="k-small k-soft">${x.state === "yours" ? "Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt." : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was uploaded with.`}</div>` : x.state === "paying" ? '<div class="k-small k-soft">Bought: pay it in your wallet (Payments, in Private). Its key arrives once the seller\u2019s Damgar signs the receipt.</div>' : `<div class="k-small k-soft">Sealed: its ${what} opens once paid. Buy it from the act\u2019s menu.</div>`;
+  const through = x.through ? `<div class="k-small k-soft dub-through">${e(x.through.words)}</div>` : "";
+  const outside = x.outside ? `<div class="k-label k-warn dub-outside">${e(x.outside)}</div>` : "";
+  const owners = x.owners ? `<div class="k-small dub-owners">${e(x.owners.words)} Buy it there from the act\u2019s menu: Buy from the owners\u2019 publication.</div>` : "";
+  return `<div class="dub-sealed"><span class="k-small">${e(x.price)}</span>${x.words ? `<div class="k-small k-soft">${e(x.words)}</div>` : ""}${through}${outside}${owners}${state}${x.problem ? `<div class="k-label k-warn">${e(x.problem)}</div>` : ""}</div>`;
+}
+function endConfirm(what) {
+  return what === "tag" ? "Withdraw the price tag? A later version of your tag, with no price: from then on, paying it buys nothing. The bytes stay where they were uploaded unless homes and relays drop them." : "Withdraw the publication? A later version of it that sells nothing, signed by you: it ends once every party signs it too. The bytes stay where they were uploaded unless homes and relays drop them.";
+}
+function keptSay(what) {
+  return `<div class="k-box dub-kept"><p>There is nothing to withdraw at the protocol level. The ${what} is a bake, an upload: a bake is never withdrawn by the protocol, and its bytes stay where they were uploaded unless homes and relays drop them.</p><p class="k-small k-soft">What can be withdrawn is what sells an upload: a price tag (withdrawn by its signer) or a publication (ended by a later version selling nothing). This one carries neither. A profile\u2019s picture is the same: a later profile simply names another picture.</p></div>`;
 }
 function vowBox(p) {
   const x = p.vow;
@@ -21651,10 +22054,10 @@ function notesPart(o) {
   if (o.open === "new") right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">\u2190 Back</button><h2>A new note</h2></div>${box2("", null)}${say2("Sealed to you, kept at your homes.", ["A note is a private text act sealed to this identity alone, left at its homes: any app holding the identity opens it (through Ki\u0161ib where Ki\u0161ib holds it and lets the app open). Nothing is ever updated: Edit signs a new version, the earlier ones kept under Earlier drafts."])}`;
   else if (chosen) {
     const [latest, ...earlier] = chosen.versions;
-    const shown = chosen.retired ? earlier[0] ?? latest : latest;
+    const shown2 = chosen.retired ? earlier[0] ?? latest : latest;
     const drafts = (chosen.retired ? earlier.slice(1) : earlier).map((x, i, all) => `<div class="dub-note-draft" data-note-draft="${e(x.id)}"><p class="k-small k-soft">Version ${all.length - i} ${actId2(x.id)}</p><div class="dub-note-text" dir="auto">${e(x.text)}</div></div>`).join("");
-    right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">\u2190 Back</button><h2 dir="auto">${e(firstLine(chosen))}</h2>${chosen.retired ? '<span class="k-chip">Retired</span>' : ""}<span class="k-grow"></span>${actId2(shown.id)}</div>
-${o.editing && !chosen.retired ? box2(latest.text, latest.id) : `<div class="dub-note-text dub-note-latest" dir="auto">${e(shown.text)}</div>${chosen.retired ? '<p class="k-small k-soft">Retired: dropped, kept readable with its drafts.</p>' : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="note-edit">Edit</button><button type="button" class="k-btn k-q" data-action="note-retire" data-latest="${e(latest.id)}">Retire</button></div>`}`}
+    right = `<div class="dub-head"><button type="button" class="k-back" data-action="notes-list">\u2190 Back</button><h2 dir="auto">${e(firstLine(chosen))}</h2>${chosen.retired ? '<span class="k-chip">Retired</span>' : ""}<span class="k-grow"></span>${actId2(shown2.id)}</div>
+${o.editing && !chosen.retired ? box2(latest.text, latest.id) : `<div class="dub-note-text dub-note-latest" dir="auto">${e(shown2.text)}</div>${chosen.retired ? '<p class="k-small k-soft">Retired: dropped, kept readable with its drafts.</p>' : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="note-edit">Edit</button><button type="button" class="k-btn k-q" data-action="note-retire" data-latest="${e(latest.id)}">Retire</button></div>`}`}
 ${drafts ? fold(`Earlier drafts (${chosen.retired ? earlier.length - 1 : earlier.length})`, drafts) : '<p class="k-small k-faint">No earlier drafts.</p>'}`;
   } else right = '<p class="k-empty">Choose a note, or write a new one.</p>';
   const problems = [...o.opening ? [o.opening] : [], ...o.problems].map((x) => `<p class="k-clock">${e(x)}</p>`).join("");
@@ -21894,7 +22297,7 @@ function mount(app2, b) {
   let addressed = [];
   let cc = [];
   let appended = null;
-  let shown = null;
+  let shown2 = null;
   let profileOf = null;
   const drawn = /* @__PURE__ */ new Map();
   const popup2 = new Popup(app2);
@@ -22075,8 +22478,8 @@ function mount(app2, b) {
   function drawBought() {
     const box2 = $("bought");
     if (!box2 || !bought) return;
-    const shown2 = bought.filter((x) => shelf === "all" || (shelf === "files" ? x.kind === "file" : x.kind === "vow"));
-    box2.innerHTML = shown2.length ? shown2.map((p) => card(keep2(purchaseAct(p), { purchase: p }))).join("") : '<p class="k-empty">Nothing bought here yet. A file or a vow you buy shows here.</p>';
+    const shown3 = bought.filter((x) => shelf === "all" || (shelf === "files" ? x.kind === "file" : x.kind === "vow"));
+    box2.innerHTML = shown3.length ? shown3.map((p) => card(keep2(purchaseAct(p), { purchase: p }))).join("") : '<p class="k-empty">Nothing bought here yet. A file or a vow you buy shows here.</p>';
   }
   async function readPayments() {
     try {
@@ -22128,7 +22531,7 @@ function mount(app2, b) {
     popup2.close();
     closePanel();
     if (s.stage === "confirm") {
-      app2.innerHTML = typeBack(shown?.positions ?? s.confirm.positions);
+      app2.innerHTML = typeBack(shown2?.positions ?? s.confirm.positions);
       return;
     }
     if (s.stage === "identity" && !s.identity) {
@@ -22232,9 +22635,19 @@ function mount(app2, b) {
     const open = conv ? all.find((c) => c.with.id === conv) ?? null : null;
     const msgs = open ? (inbox?.messages ?? []).filter((m) => m.with === open.with.id).sort((a, b2) => a.at - b2.at) : [];
     const body = app2.querySelector(".k-body");
+    const typing = app2.querySelector("#message textarea");
+    const kept = typing ? { value: typing.value, focused: document.activeElement === typing, start: typing.selectionStart, end: typing.selectionEnd, conv: open?.with.id ?? null } : null;
     const html = privatePart(state, all, open, msgs.map((m) => (keep2(messageAct(m), { message: m }), m)));
     if (body) body.outerHTML = html;
     else app2.insertAdjacentHTML("beforeend", html);
+    const again = app2.querySelector("#message textarea");
+    if (kept && again && kept.value && kept.conv === (open?.with.id ?? null) && !again.value) {
+      again.value = kept.value;
+      if (kept.focused) {
+        again.focus();
+        again.setSelectionRange(kept.start, kept.end);
+      }
+    }
     const notes2 = [
       ...inbox && !inbox.encryption ? [inbox.opening ?? "No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes."] : [],
       ...inbox?.hidden ? [`${inbox.hidden} from muted identities, not shown.`] : [],
@@ -22309,9 +22722,12 @@ function mount(app2, b) {
       if (!a.signer.me && (it || d?.message)) after.push({ key: "tip", label: "Tip" });
       if (it?.sealed?.state === "for sale" && !it.who.me) after.push({ key: "buy", label: "Buy" });
       if (it?.vow?.state === "for sale" && !it.who.me && !it.vow.problem) after.push({ key: "buy-vow", label: "Buy" });
-      for (const p of it?.pictures.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${p.publication}`, label: "Withdraw the picture" });
-      for (const f of it?.films?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${f.publication}`, label: "Withdraw the film" });
-      for (const r of it?.recordings?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${r.publication}`, label: "Withdraw the recording" });
+      if (it?.sealed?.owners && it.sealed.state === "for sale" && !it.who.me) after.push({ key: "buy-owners", label: "Buy from the owners\u2019 publication" });
+      if (it?.sealed?.ends === "tag") after.push({ key: `end:tag:${it.sealed.bake}`, label: "Withdraw the price tag" });
+      if (it?.sealed?.ends === "publication") after.push({ key: `end:publication:${it.sealed.bake}`, label: "Withdraw the publication" });
+      for (const p of it?.pictures.filter((x) => x.own) ?? []) after.push({ key: `kept:picture`, label: "Why the picture can\u2019t be withdrawn" });
+      for (const _ of it?.films?.filter((x) => x.own) ?? []) after.push({ key: `kept:film`, label: "Why the film can\u2019t be withdrawn" });
+      for (const _ of it?.recordings?.filter((x) => x.own) ?? []) after.push({ key: `kept:recording`, label: "Why the recording can\u2019t be withdrawn" });
       const vow = it?.vow?.state === "bought" ? it.vow.vow : d?.purchase?.kind === "vow" && d.purchase.paid && d.purchase.sale !== "confirmed" && d.purchase.sale !== "contested" ? d.purchase.id : null;
       if (vow) after.push({ key: `confirm:${vow}`, label: "Confirm: it was kept", line: true }, { key: `contest:${vow}`, label: "Contest it\u2026" });
       else if (d?.purchase?.kind === "file" && d.purchase.paid) after.push({ key: `contest-file:${d.purchase.id}`, label: "Contest it\u2026", line: true });
@@ -22445,11 +22861,17 @@ function mount(app2, b) {
       case "buy-vow":
         return payOpen("vow", a, d);
     }
-    if (key.startsWith("withdraw:")) {
-      const publication = key.slice("withdraw:".length);
-      if (!confirm("Withdraw it? Readers stop showing it; the post stays. It cannot be undone.")) return;
-      const r = await busy("Withdrawing\u2026", () => b.ask("withdraw", { publication }));
-      if (r) say3("done", `Withdrawn (act <code>${e(shortForm(actFormOf(r.id)))}</code>).`), await readFeed2();
+    if (key === "buy-owners") return payOpen("buy-owners", a, d);
+    if (key.startsWith("end:")) {
+      const [, what, bake] = key.split(":");
+      if (!confirm(endConfirm(what === "tag" ? "tag" : "publication"))) return;
+      const r = await busy("Withdrawing\u2026", () => b.ask("withdraw", { bake }));
+      if (r) say3("done", `${lines(r.lines)}<span class="k-small k-faint">act <code>${e(shortForm(actFormOf(r.id)))}</code></span>`), await readFeed2();
+      return;
+    }
+    if (key.startsWith("kept:")) {
+      const what = key.slice("kept:".length);
+      popup2.show(`Why the ${what} can\u2019t be withdrawn`, keptSay(what));
       return;
     }
     if (key.startsWith("confirm:")) {
@@ -22510,19 +22932,22 @@ function mount(app2, b) {
     app2.querySelector("#message textarea")?.focus();
   }
   let paying = null;
-  async function payOpen(kind, a, d, to) {
+  async function payOpen(asked, a, d, to) {
     const it = d?.item;
-    const who2 = to ?? whoOf(a.signer.id);
+    const owners = asked === "buy-owners" ? it?.sealed?.owners ?? null : null;
+    const kind = asked === "buy-owners" ? "buy" : asked;
+    const who2 = owners ? whoOf(owners.signer) : to ?? whoOf(a.signer.id);
     paying = { kind, signer: who2.id };
     if (kind === "tip" && a) paying.post = a.id;
-    if (kind === "buy" && it?.sealed) Object.assign(paying, { publication: it.sealed.publication, signer: it.sealed.seller, ...it.repost ? { repost: it.id, reposter: it.repost.by.id } : { post: it.id } });
+    if (owners) Object.assign(paying, { publication: owners.bake, signer: owners.signer, post: owners.post });
+    else if (kind === "buy" && it?.sealed) Object.assign(paying, { publication: it.sealed.bake, signer: it.sealed.seller, ...it.repost ? { repost: it.id, reposter: it.repost.by.id } : { post: it.id } });
     if (kind === "vow" && it?.vow) Object.assign(paying, { vow: it.vow.vow, signer: it.vow.seller, post: it.id });
     const name = nameOf2(who2);
     const title2 = kind === "tip" ? `Tip ${name}` : kind === "pay" ? `Pay ${name}` : kind === "vow" ? `Buy ${name}\u2019s vow` : `Buy ${name}\u2019s sealed ${it?.sealed?.media ?? "file"}`;
     popup2.show(title2, '<p class="k-empty">Reading the ways open\u2026</p>');
     try {
-      const ways = await b.ask("pay ways", { kind, post: paying.post ?? (it?.id || void 0), signer: a?.signer.id ?? who2.id });
-      popup2.replace(payChooser({ title: title2, sub: `${kind === "tip" && a ? `For ${shortForm(a.form)} \xB7 ` : ""}${name} \xB7 ${shortForm(who2.form)}`, kind, ways, units: state?.units ?? [], price: it?.vow?.price ?? it?.sealed?.price ?? null }));
+      const ways = await b.ask("pay ways", { kind, post: paying.post ?? (it?.id || void 0), signer: owners ? owners.signer : a?.signer.id ?? who2.id, ...kind === "buy" && paying.publication ? { bake: paying.publication, seller: paying.signer } : {} });
+      popup2.replace(payChooser({ title: title2, sub: `${kind === "tip" && a ? `For ${shortForm(a.form)} \xB7 ` : ""}${name} \xB7 ${shortForm(who2.form)}`, kind, ways, units: state?.units ?? [], price: owners ? owners.price : it?.vow?.price ?? it?.sealed?.price ?? null }));
     } catch (err) {
       popup2.replace(note("error", e(errorOf(err))));
     }
@@ -22843,11 +23268,11 @@ function mount(app2, b) {
         return;
       }
       case "written":
-        app2.innerHTML = typeBack(shown.positions);
+        app2.innerHTML = typeBack(shown2.positions);
         return;
       case "abandon":
         if (!confirm("Forget this new identity? Nothing of it was published. A new one will show new words.")) return;
-        shown = null;
+        shown2 = null;
         try {
           await b.ask("abandon");
           await b.start();
@@ -23039,7 +23464,7 @@ function mount(app2, b) {
         );
         if (r) {
           popup2.close();
-          shown = { positions: r.positions };
+          shown2 = { positions: r.positions };
           app2.innerHTML = words(r.words, r.say);
         }
         return;
@@ -23048,7 +23473,7 @@ function mount(app2, b) {
         const typed = [...form2.querySelectorAll("input")].map((i) => i.value);
         const r = await busy("Checking the words, then sending the genesis to the homes\u2026", () => b.ask("confirm", { typed }));
         if (r) {
-          shown = null;
+          shown2 = null;
           part = "public";
           await b.start();
           say3("done", `<strong>The identity is born.</strong>${lines(r.lines)}${ownIdNow()}`);
@@ -23158,6 +23583,8 @@ function mount(app2, b) {
           fresh = null;
           cc = [];
           appended = null;
+          const box2 = form2.querySelector("textarea");
+          if (box2) box2.value = "";
           say3("done", `<strong>Sent.</strong>${lines(r.lines)}`);
           await readInbox();
           drawPrivate();
