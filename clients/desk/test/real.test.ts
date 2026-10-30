@@ -32,7 +32,6 @@ import { Kishib } from '../../kishib/src/kishib.ts';
 import { serve, type Running } from '../src/server.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
-import { COLLECTIVE_KEY_CHANGED_SAY } from '../src/desk.ts';
 import { ummiaFor } from './ummia.ts';
 
 let homes: Relay[];
@@ -276,26 +275,18 @@ test('three people on three devices: a real collective founded, a release, a mem
   await k.collectivePaper({ number: String(papers[bo.id].x), words: toWords(papers[bo.id].value).join(' ') });
   let ks = await k.collectiveRotate();
   for (let i = 0; (ks.sitting!.stage as string) === 'sent' && i < 3; i++) ks = await k.resend();
-  assert.equal(ks.sitting!.stage, 'counts', JSON.stringify(ks.sitting!.lines));
+  // Round 8: a collective has no signing key, so no new words to show: its sitting ends at "done" once the homes' receipts are in.
+  assert.equal(ks.sitting!.stage, 'done', JSON.stringify(ks.sitting!.lines));
   const rot = { shares: ks.sitting!.shares! };
   for (const s of rot.shares) {
     k.collectiveShare({ holder: s.holder });
     k.collectiveShareWritten({ holder: s.holder });
   }
-  const cw = k.showWords();
-  assert.equal(cw.holder, nobody);
-  const kt = k.written();
-  k.typed({ typed: kt.sitting!.positions!.map((n) => cw.words[n - 1]) });
-  // H80: until it does, the collective's own key held here no longer counts: said (with the box for its words beside it on the page), and
-  // every path signing with it (a grant, a record, a registered resignation) refuses through the same check, before anything is signed.
-  const changed = await e.c.ask<{ id: string; kind: string; say: string }[]>('keys check');
-  assert.deepEqual(changed.filter((x) => x.kind === 'collective').map((x) => x.id), [col]);
-  assert.equal(changed.find((x) => x.id === col)!.say, COLLECTIVE_KEY_CHANGED_SAY);
-  // Edubba takes the collective's new words: wrong ones refused; then its copy follows the change.
-  await refused(e.c.ask('real collective renew', { collective: col, words: toWords(papers[ana.id].value).join(' ') }), /do not give this identity’s current signing key/);
-  const renewed = await e.c.ask<Done>('real collective renew', { collective: col, words: cw.words.join(' ') });
+  // Round 8: no new words (a collective holds no signing key), so none are shown, typed or taken: Kišib says so.
+  assert.throws(() => k.showWords(), /A collective has no signing key/);
+  // Edubba follows the change from the rotation itself (no words), and the member change is in force.
+  const renewed = await e.c.ask<Done>('real collective renew', { collective: col });
   assert.equal(renewed.title, 'The member change is in force');
-  assert.deepEqual((await e.c.ask<{ id: string }[]>('keys check')).filter((x) => x.id === col), [], 'the collective’s key counts again');
   const inForce = (await e.c.ask<any>('state')).proposals.find((x: any) => x.act === clone);
   assert.equal(inForce.rotated, ks.sitting!.act);
   const rc = await e.c.ask<any>('real collective', { collective: col });
@@ -312,7 +303,7 @@ test('three people on three devices: a real collective founded, a release, a mem
   await cy.c.ask('accept', { thread: cr.thread });
   const st2 = await um.standing(rel2);
   assert.ok(st2.met, JSON.stringify(st2.lines));
-  assert.match(st2.lines[0].text, /2 of 2 keys, 2 with their own key/);
+  assert.match(st2.lines[0].text, /2 of 2 signatures, each with its member’s own key/);
   // Bo, leaving, gets no new share: its one-time key waits, and it may destroy it.
   const bq = (await bo.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
   assert.equal(bq.share, 'waiting');

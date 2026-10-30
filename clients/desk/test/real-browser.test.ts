@@ -439,6 +439,13 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.click('#real-change [data-action="member-add"]');
   await ed.locator('#real-change input[data-member-id]').last().fill(nobody.replace(/./g, (ch, i) => (i === 0 ? (ch === 'a' ? 'b' : 'a') : ch)));
   await ed.locator('#real-change input[data-member-id]').last().dispatchEvent('change');
+  // H101: a member change carries the shares; each joining member's box is required (a quarter each here).
+  const changeShares = ed.locator('#e-grid-real-change input[data-grid-share]');
+  await changeShares.nth(3).waitFor({ timeout: 30_000 });
+  for (let i = 0; i < (await changeShares.count()); i++) {
+    await changeShares.nth(i).fill('25');
+    await changeShares.nth(i).dispatchEvent('change');
+  }
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await shot(ed, 'edubba-change-review');
