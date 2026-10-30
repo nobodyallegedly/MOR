@@ -219,7 +219,8 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   };
   const ids: string[] = [];
   for (const [name, mine] of [['Me', true], ['Ana', false], ['Bo', false]] as const) ids.push((await confirm({ kind: 'identity', name, mine })).acts[0]);
-  await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: {} });
+  // Its Text layer: any one member alone (rule 60); the other layers the clone rule's two.
+  await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: { layers: { 1: 1 } } });
   // The collective client's own collectives are no longer listed in Edubba's state (test collectives removed from Edubba, decided): found by its store.
   assert.ok(!(await c.ask<any>('state')).collectives.some((x: any) => x.name === 'Tablet house'), 'no test collective among Edubba’s collectives');
   const col = app.collectives.list().find((x) => x.name === 'Tablet house')!;
@@ -228,8 +229,10 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const text = p.items[0];
   assert.equal(text.what, 'Post a text for it');
   assert.equal(text.state, 'yes');
-  assert.ok(text.lines.some((l: any) => /No area reaches a text .*Agreements rule 60/.test(l.text)));
-  assert.ok(text.lines.some((l: any) => /rule 59/.test(l.text) && /You hold it/.test(l.text)));
+  // Before the redesign a text counted on the collective's own signature, its key held here (rule 59); a
+  // collective has no signing key now: a member makes it with their own key, under the Text layer's rule.
+  assert.ok(text.lines.some((l: any) => /No finer area reaches a text .*the Text layer's rule, any 1 of .*Agreements rule 60/.test(l.text)), JSON.stringify(text.lines));
+  assert.ok(text.lines.some((l: any) => /no signing key: a member acts for it with their own key/.test(l.text) && /You are a member whose voice remains/.test(l.text)));
   assert.ok(text.lines.some((l: any) => /Text rule 14, F334/.test(l.text)));
   const pic = p.items[1];
   assert.equal(pic.state, 'with others');
