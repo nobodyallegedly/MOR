@@ -101,7 +101,13 @@ test('F402, rules 56 to 60: members found the collective naming all five layers,
     chainKey: 2,
     absence: 2,
     layers: { 1: { holders: [...all], number: 1 }, 2: { holders: [...all], number: 1 }, 3: { holders: [A, iPa.id], number: 2 }, 4: { holders: [...all], number: 3 }, 5: { holders: [iPh.id], number: 1 } },
-    areas: [{ name: 'Debts', layer: 3, kinds: debts, holders: [A, iPa.id], number: 1, cap: 10_000 }],
+    // Posts as a finer area of Text, any one member: the same rule as the Text layer's. Judged under a layer's
+    // own rule, an act cannot be read through this binding yet (its lane's id overflows a JavaScript number:
+    // for the MOR lead, docs/suite-r8-report.md), so the posts are given an area of their own.
+    areas: [
+      { name: 'Posts', layer: 1, kinds: kindsFor(1).map((k) => `${k.spec}:${k.type}`), holders: [...all], number: 1 },
+      { name: 'Debts', layer: 3, kinds: debts, holders: [A, iPa.id], number: 1, cap: 10_000 },
+    ],
     clone: 2,
     shares: evenPercent(all),
   };
