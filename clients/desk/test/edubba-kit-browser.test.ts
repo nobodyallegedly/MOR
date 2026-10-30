@@ -236,7 +236,9 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   await c.ask('real contact add', { id: ana.id, name: 'Ana' });
   await c.ask('real contact add', { id: bo.id, name: 'Bo' });
   const all = [ME, ana.id, bo.id];
-  const grid = { members: all, constitution: { holders: all, number: 3 }, chainKey: 2, absence: 2, areas: [{ name: 'Publishing', layer: 1, holders: all, number: 1 }], clone: 2 };
+  // Text and Envelopes, any one member alone; Money, Agreements and Development, any two (F402: every layer named); shares even.
+  const row = (number: number) => ({ holders: all, number });
+  const grid = { members: all, constitution: { holders: all, number: 3 }, chainKey: 2, absence: 2, layers: { 1: row(1), 2: row(1), 3: row(2), 4: row(2), 5: row(2) }, areas: [], clone: 2, shares: { [all[0]]: 33.3334, [all[1]]: 33.3333, [all[2]]: 33.3333 } };
   const rv = await c.ask<any>('real found prepare', { name: 'Three tablets', founder: ME, members: [ana.id, bo.id], grid });
   const terms = (await c.ask<Done>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   for (const m of [ana, bo]) {

@@ -969,6 +969,22 @@ export class Real {
   private async splitAgreementCounts(c: TestCollective, act: string): Promise<{ counts: boolean; unsigned: string[]; problems: string[] }> {
     const places = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]);
     const { v } = await collectiveVerifier(c.identity, places, this.via, [act]);
+    // The split service is a party: its chain and its signature act, read too.
+    const service = this.proposal(act).service;
+    if (service) {
+      try {
+        const l = await lookUp(service, places, this.via, v);
+        for (const a of await allBy(service, this.hints([...places, ...l.resolution.homes.map((h) => h.hint)]), this.via)) {
+          try {
+            v.add(a);
+          } catch {
+            // held already
+          }
+        }
+      } catch {
+        // not found: its signature cannot count
+      }
+    }
     const pe = v.agreementsPublication(AGREEMENTS_SPECS, act) as { counts: boolean; unsigned: string[]; problems: string[] };
     return pe;
   }

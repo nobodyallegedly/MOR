@@ -347,10 +347,28 @@ export class Collectives {
       return [...new Set([...c.f.relays, ...s.relays, ...s.homes.map((h) => h.hint), ...c.f.identity.homes.map((h) => h.hint)])];
     })();
     try {
+      const via = b ? this.desk.settings().via : s.via;
+      // A collective signs no post of its own (Agreements rule 56): its posts are its members' acts naming it (rule 58).
+      let members: string[] = [];
+      try {
+        members = b ? (await this.read(collective, b.hints)).terms.t.parties : this.store.collective(collective).f.members.map((m) => (typeof m === 'string' ? m : (m as { id: string }).id));
+      } catch {
+        // its agreement not read: no member's posts can be told apart
+      }
       // Ordered by the Dubsar clock's stamps, each signer's own sequence kept (decided 23 October 2026).
-      const f = await readFeed([{ identity: collective, name: null }], places, b ? this.desk.settings().via : s.via, undefined, dubsarClock());
+      const f = await readFeed(members.map((identity) => ({ identity, name: null })), places, via, undefined, dubsarClock());
+      const forIt = new Set<string>();
+      for (const x of f.posts) {
+        for (const h of places) {
+          const a = await relayAt(h, via).getAct(x.id).catch(() => null);
+          if (!a) continue;
+          const d = describeAct(a) as { objects?: [string, string][] };
+          if (d.objects?.some(([chain]) => chain === collective)) forIt.add(x.id);
+          break;
+        }
+      }
       return {
-        items: f.posts.map((x) => ({
+        items: f.posts.filter((x) => forIt.has(x.id)).map((x) => ({
           id: x.id,
           text: escapeControls(x.post?.text ?? ''),
           standing: x.post?.standing ?? x.problem ?? 'unknown',
