@@ -10831,6 +10831,11 @@ async function purchaseContests(a) {
   for (const id of a.parties) await r.hold(id);
   const ids = [];
   for (const p of a.purchases) ids.push(r.add(p.act, p.key ?? void 0));
+  for (const x of [...r.held.values()]) {
+    const d = describeAct(x);
+    if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.publication) continue;
+    for (const [named2] of d.objects ?? []) if (!a.parties.includes(named2)) await r.hold(named2);
+  }
   const contests = (await r.byKind(MIRS.agreements, CONTEST)).filter((x) => {
     const d = describeAct(x);
     return (d.objects ?? []).some(([c2]) => ids.includes(c2));
@@ -18674,12 +18679,13 @@ var TestCollective = class _TestCollective {
   }
   /**
    * Where its agreements, records and the signatures on them are left: its
-   * relays, and its homes. A collective publishes no routes (it signs no
-   * everyday act, Identity rule 1), so a reader who knows only where it lives
-   * (Kišib, from its homes) finds its agreement there.
+   * relays. A collective publishes no routes (it signs no everyday act,
+   * Identity rule 1), so a reader finds them through its members' routes
+   * (Kišib reads them so, `clients/kishib/src/collective.ts`). Not its homes
+   * too: the tests of a record lost on the way to the relay need it lost.
    */
   get places() {
-    return [.../* @__PURE__ */ new Set([...this.f.relays, ...this.f.identity.homes.map((h) => h.hint)])];
+    return [...this.f.relays];
   }
   /** The collective's chain as its next act cites it (rule 58): its latest decision and the head this device made since. */
   citing() {
@@ -22623,7 +22629,17 @@ var Actions = class {
       depends: [a.collective, ...sign2.flatMap((n) => n.signers)],
       run: async () => {
         if (!stripped2 && c2.f.identity.cites?.length) c2.f.identity.cites = [c2.f.identity.cites[0]];
-        const made = await post(c2.id, { text: text4, jpeg: stripped2 ?? void 0, relays: c2.f.relays, corrects: corrects ? [corrects, c2.identity] : void 0 });
+        let correctedBy = c2.identity;
+        if (corrects) {
+          for (const h of c2.f.relays) {
+            const was = await relayAt(h).getAct(corrects).catch(() => null);
+            if (was) {
+              correctedBy = describeAct(was).signer ?? c2.identity;
+              break;
+            }
+          }
+        }
+        const made = await post(c2.id, { text: text4, jpeg: stripped2 ?? void 0, relays: c2.f.relays, corrects: corrects ? [corrects, correctedBy] : void 0 });
         this.store.saveCollective(c2);
         const lines4 = [{ text: `Posted for \u201C${perms.name}\u201D: ${short5(made.id)}${made.picture ? `, with the picture ${short5(made.picture.id)}` : ""}.`, tone: "ok" }];
         const acts = [made.id, ...made.picture ? [made.picture.id] : []];
@@ -24056,13 +24072,13 @@ var Real = class {
           if (ptr.needed > 1) lines4.push({ text: `It asks ${ptr.needed}: ${ptr.asked.length ? `${ptr.asked.map(names2).join(", ")} asked` : "nobody could be asked"}.`, tone: "warn" });
           return { title: "One trusted pointer", lines: lines4, acts: [ptr.act] };
         }
-        const { area } = await areaReaching(c2.identity, await collectivePlaces(c2.identity, places, this.via), { spec: MIRS.agreements, type: AGREEMENTS_TYPES.publication }, this.via);
         const at = await chainFor(c2.identity, places, this.via);
         const made = await signAsMember(c2.identity, me2, at, { spec: MIRS.agreements, type: AGREEMENTS_TYPES.publication, payload, public: true, objects: [[owners, owners]] });
         this.store.saveIdentity(me2);
         await publishAt([made.act], places, this.via);
-        const holders2 = area?.holders.filter((h) => h !== founder) ?? [];
-        const needed2 = Math.max(0, (area?.number ?? 1) - 1);
+        const voices = c2.f.members.filter((m) => !(c2.f.governance.departed ?? []).includes(m));
+        const holders2 = voices.filter((h) => h !== founder);
+        const needed2 = holders2.length;
         const p = {
           act: made.id,
           kind: "money",
@@ -24079,8 +24095,8 @@ var Real = class {
           at: now5()
         };
         this.saveProposal(p);
-        lines4.push({ text: `The split agreement is act ${shownAct(made.id)}, made by ${names2(founder)} for the collective under \u201C${area?.name ?? "its Agreements layer"}\u201D.`, tone: "ok" });
-        if (needed2) p.threads = await this.invite(founder, made.id, founder, holders2, `${names2(founder)} made the split agreement of the collective \u201C${cname}\u201D, naming its split service ${names2(service)}: act ${made.id}. Its rule asks ${needed2 + 1} members: read it in Dub\u2019s Signing tab, then sign or decline.`, a.collective, lines4);
+        lines4.push({ text: `The split agreement is act ${shownAct(made.id)}, made by ${names2(founder)} for the collective; every member signs it (its judicial tier: it decides how the money of all is divided).`, tone: "ok" });
+        if (needed2) p.threads = await this.invite(founder, made.id, founder, holders2, `${names2(founder)} made the split agreement of the collective \u201C${cname}\u201D, naming its split service ${names2(service)}: act ${made.id}. Every member signs it (${needed2 + 1}): read it in Dub\u2019s Signing tab, then sign or decline.`, a.collective, lines4);
         this.saveProposal(p);
         lines4.push({ text: `The split service ${names2(service)} signs it in its own app. Once it counts, record it here: the collective\u2019s payee pointer then names the service.` });
         return { title: "The collective\u2019s split agreement is made", lines: lines4, acts: [made.id] };
@@ -29465,8 +29481,12 @@ var DubMoney = class {
         const pa = t?.publication ? await actAt3(t.publication, hints, via) : null;
         const pub = pa ? readPublication(pa) : null;
         if (pub) parties.push(pub.drafter, pub.service, ...pub.partners.map((x) => x.identity));
-        const d = pub?.owners ? await readDeal(pub.owners, hints, via) : null;
+        const d = pub?.owners ? await readDeal(pub.owners, hints, via).catch(() => null) : null;
         if (d) parties.push(...d.parties);
+        else if (pub?.owners) {
+          const col = await termsAt(pub.owners, hints, via).catch(() => null);
+          parties.push(...col?.parties ?? []);
+        }
       } catch {
       }
     }
@@ -34000,7 +34020,7 @@ var Collectives = class {
         members = b ? (await this.read(collective, b.hints)).terms.t.parties : this.store.collective(collective).f.members.map((m) => typeof m === "string" ? m : m.id);
       } catch {
       }
-      const f = await readFeed(members.map((identity2) => ({ identity: identity2, name: null })), places, via, void 0, dubsarClock());
+      const f = await readFeed([collective, ...members].map((identity2) => ({ identity: identity2, name: null })), places, via, void 0, dubsarClock());
       const forIt = /* @__PURE__ */ new Set();
       for (const x of f.posts) {
         for (const h of places) {
