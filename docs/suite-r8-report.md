@@ -8,7 +8,8 @@
 3. **A collective's income through a split service is a payment to the service that fulfils the split agreement**, the service signing no receipt in another's name (Agreements rule 16).
 4. **One change outside the suite's folders:** the relay refused a collective's first act, its genesis with no signing key (`relay/src/node.rs`, three lines, said under For the MOR lead). Without it no collective could be founded at a home. Nothing in `core/`, `wasm/`, `spec/` or the vectors was changed.
 5. **The anchoring binding stays the MOR lead's.** `anchoringOffer`, `anchoringReadOffer` and `anchoringCheckTicket` in `wasm/src/money_js.rs` still refuse ("the anchoring cMIP still makes a standing offer…"); S7h-4 says the binding follows the moved cMIP once it is on its branch, which it now is. The tests that anchor wait for it (listed in Part 5).
-6. **Assess** (`clients/assess`) was not moved: it judges the old money terms (fields 8, 14, 28, 29), it is not in CI, and whether it should judge publications at all is a question (question 1).
+6. **The anchoring and conversion cMIPs' own regtest tests** (`harness/tests/anchoring.rs`, `conversion.rs`) moved with their cMIPs, as "their Rust tests compiling and passing" asks; nothing else in `harness/` changed.
+7. **Assess** (`clients/assess`) was not moved: it judges the old money terms (fields 8, 14, 28, 29), it is not in CI, and whether it should judge publications at all is a question (question 1).
 
 ## 1. In plain words, app by app
 
@@ -99,7 +100,7 @@ Run on this machine after the last fixes (Linux x86-64; Chromium for the browser
 | anchoring service | typechecks | | tested where it is used (Damgar) |
 | Rust workspace | 782 | 0 | 1 ignored, as before |
 
-Every one of the six reds throws the binding's own words: "the anchoring cMIP still makes a standing offer, which the core no longer reads…". They turn green once the binding follows anchoring draft 6; nothing in the suite can do that (`wasm/` is the MOR lead's). **Assess** (`clients/assess`, not in CI) was not moved: 12 of 39 fail (reading 6, question 1).
+Every one of the six reds throws the binding's own words: "the anchoring cMIP still makes a standing offer, which the core no longer reads…". They turn green once the binding follows anchoring draft 6; nothing in the suite can do that (`wasm/` is the MOR lead's). **Assess** (`clients/assess`, not in CI) was not moved: 12 of 39 fail (reading 7, question 1).
 
 On GitHub: see the pull request's checks; the summary comment there says which were green.
 
