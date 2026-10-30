@@ -14732,6 +14732,11 @@ async function purchaseContests(a) {
   for (const id of a.parties) await r.hold(id);
   const ids = [];
   for (const p of a.purchases) ids.push(r.add(p.act, p.key ?? void 0));
+  for (const x of [...r.held.values()]) {
+    const d = describeAct(x);
+    if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.publication) continue;
+    for (const [named2] of d.objects ?? []) if (!a.parties.includes(named2)) await r.hold(named2);
+  }
   const contests = (await r.byKind(MIRS.agreements, CONTEST)).filter((x) => {
     const d = describeAct(x);
     return (d.objects ?? []).some(([c]) => ids.includes(c));
@@ -15668,8 +15673,12 @@ var DubMoney = class {
         const pa = t?.publication ? await actAt2(t.publication, hints, via2) : null;
         const pub = pa ? readPublication(pa) : null;
         if (pub) parties.push(pub.drafter, pub.service, ...pub.partners.map((x) => x.identity));
-        const d = pub?.owners ? await readDeal(pub.owners, hints, via2) : null;
+        const d = pub?.owners ? await readDeal(pub.owners, hints, via2).catch(() => null) : null;
         if (d) parties.push(...d.parties);
+        else if (pub?.owners) {
+          const col = await termsAt(pub.owners, hints, via2).catch(() => null);
+          parties.push(...col?.parties ?? []);
+        }
       } catch {
       }
     }
