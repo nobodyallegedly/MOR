@@ -13,10 +13,14 @@
 // never the promise.
 //
 // Precisely:
-// - **The vow**: Envelopes type 5, `{ 0: words }`; its offer, Agreements type
-//   6, selling `[3, vow]`, its words required (F237).
+// - **The vow**: Envelopes type 5, `{ 0: words }`; its offer, a publication
+//   (Agreements type 6, which replaced the standing offer at F407), selling
+//   `[3, vow]`, its words required (F237): a lone seller's, or under an
+//   ownership agreement where co-owners stand behind it. Its price is a
+//   price tag (Money type 5) naming the publication's first version, signed
+//   by its split service or the party it designates (field 10).
 // - **A sale** is the buyer's own payer's claim of a payment following the
-//   offer (F193's shape). For the look-up to see it, Dub signs that claim in
+//   price tag: a purchase under the publication (rule 12; F193's shape). For the look-up to see it, Dub signs that claim in
 //   public when it buys a vow (a reading, the build's: the claim at payment
 //   is otherwise sealed to the payee).
 // - **Confirmed**: a second public claim of the same payment by the buyer,
@@ -35,12 +39,13 @@
 //
 // TEST IDENTITIES ONLY.
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, moneyRead, openWithKey, purchaseContestPayload, readPaymentProof, vowContestPayload, withGrantLimits } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, moneyRead, openWithKey, publicationPayload, purchaseContestPayload, readPaymentProof, vowContestPayload, withGrantLimits } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
-import { OFFER, offerPayload, type Amount } from '../../barebone/src/sealed.ts';
+import { AGREEMENTS_SPECS, SPLIT_CMIP, planIn } from '../../repo/src/agreements.ts';
+import { readPublication, type Amount, type PublicationRead } from '../../barebone/src/sealed.ts';
+import { putTag, readTag, tagsOf, type TagRead } from '../../barebone/src/tag.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { ACCEPTABLE } from '../../damgar/src/specs.ts';
@@ -73,37 +78,148 @@ export function readVow(act: Uint8Array): { name: string; signer: string; words:
   }
 }
 
-/** An offer selling a vow, read: its id, price and words; null where `act` is no offer of `seller` naming `vow`. */
-export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; price: Amount; words: string | null; under?: string; payee?: string } | null {
-  const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
-  if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
-  try {
-    const m = cborDecode(d.payload) as Map<number, unknown>;
-    const sells = (m.get(1) as unknown[][]).some((x) => x[0] === 3 && x[1] instanceof Uint8Array && hex(x[1] as Uint8Array) === vow);
-    if (!sells) return null;
-    const price = m.get(2) as [Uint8Array, number];
-    const under = m.get(0);
-    const payee = m.get(3);
-    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null, ...(under instanceof Uint8Array ? { under: hex(under) } : {}), ...(payee instanceof Uint8Array ? { payee: hex(payee) } : {}) };
-  } catch {
-    return null;
-  }
+/**
+ * A publication selling a vow, read from one act (Agreements type 6,
+ * selling `[3, vow]`; it replaced the standing offer, F407): its id, its
+ * words, and where it was made under an ownership agreement (`under`). Null
+ * where `act` is no publication drafted by `seller` selling `vow`. A
+ * publication carries no price: `price` is null here; the price is its
+ * price tag (`vowOffer` finds it). Kept under its name from before.
+ */
+export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; first: string; price: Amount | null; words: string | null; under?: string; payee?: string; service: string; designated: string | null } | null {
+  const p = readPublication(act);
+  if (!p || p.drafter !== seller || !p.vows.includes(vow)) return null;
+  return { offer: p.id, first: p.first, price: null, words: p.words, ...(p.owners ? { under: p.owners } : {}), payee: p.service, service: p.service, designated: p.designated };
 }
 
-/** The offer's words for a vow: what it promises and its price (required where it names a vow, F237). */
+/** A vow's offer as a buyer reads it before paying: the publication (its first version and the version read), and the price tag under it that counts. */
+export interface VowOffer {
+  /** The publication's first version: what its price tag names. */
+  publication: string;
+  /** The version read (the latest found on its drafter's line). */
+  version: string;
+  words: string | null;
+  /** The ownership agreement it names, where co-owners stand behind the vow; null for a lone seller's publication. */
+  owners: string | null;
+  service: string;
+  designated: string | null;
+  /** The tag's version a purchase follows, its price and payee; null where none counts. */
+  tag: TagRead | null;
+  price: Amount | null;
+  payee: string | null;
+  /** How the core reads the tag under it (`agreementsTagUnder`): "counts", "nobody's offer", "unknown", or "withdrawn". */
+  standing: string;
+  /** Why it cannot be bought, where it cannot. */
+  why: string | null;
+}
+
+/**
+ * The offer of a vow (Agreements rule 13 on the redesigned core): a
+ * publication selling `[3, vow]`, drafted by the vow's `seller` (named among
+ * `named`, the acts a post names, or found in the seller's feed), at its
+ * latest version (one selling nothing ends it), and its price tag: a Money
+ * type 5 naming the publication's first version, signed by its split service
+ * or the party it designates (field 10), judged by the core. Null where no
+ * publication sells it.
+ */
+export async function vowOffer(vow: string, seller: string, hints: string[], via: Via = {}, named: Uint8Array[] = []): Promise<VowOffer | null> {
+  const r = reader(hints, via);
+  await r.hold(seller);
+  for (const a of named) r.add(a);
+  const pubs = [...r.held.values()].map((a) => readPublication(a)).filter((p): p is PublicationRead => !!p && p.drafter === seller && (p.vows.includes(vow) || (p.ends && p.vows.length === 0)));
+  const firsts = [...new Set(pubs.filter((p) => p.vows.includes(vow)).map((p) => p.first))];
+  if (!firsts.length) return null;
+  // The latest version on each line (each later version naming the one before); the first line still selling it.
+  let chosen: PublicationRead | null = null;
+  for (const f of firsts) {
+    let at = pubs.find((p) => p.id === f) ?? pubs.find((p) => p.first === f)!;
+    for (let i = 0; i < 1024; i++) {
+      const next = pubs.filter((p) => p.previous === at.id);
+      if (next.length !== 1) break;
+      at = next[0];
+    }
+    if (!chosen || (chosen.ends && !at.ends)) chosen = at;
+  }
+  const pub = chosen!;
+  const out: VowOffer = { publication: pub.first, version: pub.id, words: pub.words, owners: pub.owners, service: pub.service, designated: pub.designated, tag: null, price: null, payee: null, standing: 'none', why: null };
+  if (pub.ends) return { ...out, why: 'the publication selling it has ended: a later version sells nothing' };
+  // Its tag: the split service's, or the designated party's (Money rule 18).
+  const signers = [...new Set([pub.service, ...(pub.designated ? [pub.designated] : [])])];
+  for (const x of signers) await r.hold(x);
+  for (const p of pub.partners) await r.hold(p.identity);
+  const tags = await Promise.all(signers.map((x) => tagsOf({ publication: pub.first }, x, hints, via)));
+  for (const t of tags) for (const a of t.acts) r.add(a);
+  const latest = tags.map((t) => t.latest).find((t) => t) ?? named.map(readTag).find((t) => t?.publication === pub.first) ?? null;
+  if (!latest) return { ...out, why: 'no price tag of the publication’s split service or designated party was found: it cannot be bought here' };
+  out.tag = latest;
+  if (!latest.price) return { ...out, standing: 'withdrawn', why: 'its price tag is withdrawn: a later version carries no price' };
+  if (pub.owners) {
+    // Co-owners behind it: the ownership agreement's parties held, so their signatures count.
+    const t = r.held.get(pub.owners);
+    const td = t ? (describeAct(t) as { payload?: Uint8Array }) : null;
+    const m = td?.payload ? (cborDecode(td.payload) as Map<number, unknown>) : null;
+    for (const p of ((m?.get(0) as Uint8Array[] | undefined) ?? []).map((x) => hex(x))) await r.hold(p);
+  }
+  for (let pass = 0; pass < 3; pass++) for (const a of [...r.held.values()]) r.add(a);
+  let verdict = 'unknown';
+  try {
+    verdict = (r.v.agreementsTagUnder(AGREEMENTS_SPECS, latest.id) as { verdict: string }).verdict;
+  } catch {
+    // the core cannot say
+  }
+  out.standing = verdict;
+  if (verdict !== 'counts') return { ...out, why: verdict === "nobody's offer" ? 'its price tag is nobody’s offer under the publication (signed by someone other than its split service or designated party)' : 'whether its price tag counts under the publication is unknown here' };
+  return { ...out, price: latest.price, payee: latest.payee };
+}
+
+/** The words a vow's publication carries: what it promises and its price (required where it sells a vow, F237). */
 export function vowOfferWords(words: string, price: string): string {
   return `A vow: ${words} For ${price}. Each sale is confirmed or contested by its buyer.`;
 }
 
 /**
- * A vow published by oneself: the vow, the lone seller's offer naming it,
- * and a post naming both, so it shows in a feed. Save the identity after.
+ * A vow's publication (Agreements type 6, selling `[3, vow]`, its words
+ * required): a lone seller's (no owners; by default the seller is its own
+ * split service, so it is signed by drafting it), or, with `owners`, one
+ * under an ownership agreement where co-owners stand behind the vow (its act
+ * then names `[agreement, agreement]`). `designated` (field 10) may sign its
+ * price tags beside the split service: the seller, where the service is
+ * another identity. Checked by the core library as it is encoded.
  */
-export async function publishVow(by: TestIdentity, a: { words: string; title: string; price: Amount; offerWords: string; relays: string[] }): Promise<{ vow: string; offer: string; post: string }> {
+export function vowPublicationPayload(a: { vow: string; words: string; service: string; owners?: string | null; designated?: string | null; partners?: { identity: string; share: number; label?: string }[] }): { type: number; payload: Uint8Array } {
+  return publicationPayload({
+    sold: [{ vow: a.vow }],
+    ...(a.owners ? { owners: a.owners } : {}),
+    service: a.service,
+    plan: planIn({ roles: [], cmip: SPLIT_CMIP }),
+    partners: a.partners ?? [],
+    words: a.words.normalize('NFC'),
+    ...(a.designated ? { designated: a.designated } : {}),
+  }) as { type: number; payload: Uint8Array };
+}
+
+/**
+ * A vow published by oneself (round 8, F407): the vow (Envelopes type 5),
+ * the publication selling it (`offerWords` its words), its price tag (Money
+ * type 5, naming the publication's first version, signed by the seller,
+ * who is its split service or its designated party), and a post naming all
+ * three, so it shows in a feed. By default the seller is its own split
+ * service; with `service`, another identity is, and the seller is the
+ * designated party (the service must then sign the publication for it to
+ * count). With `owners`, it is sold under that ownership agreement. `offer`
+ * in the answer: the publication, its name from before. Save the identity after.
+ */
+export async function publishVow(
+  by: TestIdentity,
+  a: { words: string; title: string; price: Amount; offerWords: string; relays: string[]; service?: string; owners?: string | null },
+): Promise<{ vow: string; offer: string; publication: string; tag: string; post: string }> {
+  const service = a.service ?? by.id;
   const vow = await by.publish(SPECS.envelopes, VOW, vowPayload(a.words), { public: true, relays: a.relays });
-  const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { vow: vow.id }, price: a.price, words: a.offerWords }), { public: true, relays: a.relays });
-  const post = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: a.relays, refs: [referenceTo(vow.act), referenceTo(offer.act)] });
-  return { vow: vow.id, offer: offer.id, post: post.id };
+  const p = vowPublicationPayload({ vow: vow.id, words: a.offerWords, service, owners: a.owners ?? null, designated: service === by.id ? null : by.id });
+  const pub = await by.publish(MIRS.agreements, p.type, p.payload, { public: true, relays: a.relays, ...(a.owners ? { objects: [[a.owners, a.owners] as [string, string]] } : {}) });
+  const tag = await putTag(by, { publication: pub.id }, { price: a.price, payee: service, relays: a.relays });
+  const post = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: a.relays, refs: [referenceTo(vow.act), referenceTo(pub.act), referenceTo(tag.act)] });
+  return { vow: vow.id, offer: pub.id, publication: pub.id, tag: tag.id, post: post.id };
 }
 
 /** A contest of a vow's sale (Agreements type 14, F253): public, its chain the vow's name. Save the identity after. */
@@ -160,17 +276,17 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     const x = readVow(a);
     if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
   }
-  // An offer made under a deal between separate people counts only signed by every party (Agreements, Standing offer): each party held too, the deal's payee among them.
+  // Each publication of this identity selling a vow (it replaced the standing offer): its split service, designated party and partners held, with their tags and signatures,
+  // and, under an ownership agreement, every party of it, so the publication counts only signed by every party (Agreements rule 11).
   for (const a of [...r.held.values()]) {
-    const d = describeAct(a) as { spec?: string; type?: number; signer?: string; payload?: Uint8Array };
-    if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== identity || !d.payload) continue;
-    const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
-    const t = under instanceof Uint8Array ? r.held.get(hex(under)) : undefined;
+    const p = readPublication(a);
+    if (!p || p.drafter !== identity || !p.vows.length) continue;
+    for (const x of [p.service, ...(p.designated ? [p.designated] : []), ...p.partners.map((y) => y.identity)]) await r.hold(x);
+    const t = p.owners ? r.held.get(p.owners) : undefined;
     const td = t ? (describeAct(t) as { spec?: string; type?: number; payload?: Uint8Array }) : null;
     if (!td?.payload || td.type !== 0) continue;
     const m = cborDecode(td.payload) as Map<number, unknown>;
-    if (m.has(12)) continue;
-    for (const p of ((m.get(0) as Uint8Array[] | undefined) ?? []).map((x) => hex(x))) await r.hold(p);
+    for (const x of ((m.get(0) as Uint8Array[] | undefined) ?? []).map((y) => hex(y))) await r.hold(x);
   }
   // Each claim's and contest's signer, held with its acts (its chain, its lanes).
   for (const a of [...claims, ...contests]) {

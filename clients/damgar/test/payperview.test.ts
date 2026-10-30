@@ -2,8 +2,9 @@
 // when a buyer names the repost they followed"; F351). Set up as Nobody,
 // allegedly asked: the seller's acts at one relay; the reposter at both;
 // the buyer only at the other, so the buyer finds the work only through the
-// repost. The post is sealed with a price, its offer's words promising the
-// reposter 10%; the buyer pays it from Dub through Dub's lane, naming the
+// repost. The post is sealed with a price (a bake, the uploader's price tag
+// and a post naming both, round 8), its words promising the reposter 10%;
+// the buyer pays it from Dub through Dub's lane, naming the
 // repost; the seller's Damgar signs the receipt by itself and tells the
 // seller's Dub, which delivers the key; the post opens in the buyer's Dub;
 // the seller's Damgar prepares the referral share and asks for it under its
@@ -79,7 +80,9 @@ test('a sealed post sold through a repost on another relay: paid from Dub, the k
   const original = qFeed.find((i) => i.id === sold.post)!;
   assert.equal(original.sealed?.state, 'for sale');
   assert.equal(original.sealed?.price, '1 000 regtest satoshis');
-  assert.match(original.sealed?.words, /Referral: 10% of the price to the repost the buyer names\./);
+  // Round 8: a price tag carries no words (Money type 5), so the seller's words, the referral sentence among them, are the post's own text,
+  // naming the bake and the tag; before, they were the standing offer's words (`sealed.words`), an act the core no longer reads.
+  assert.match(original.text, /Referral: 10% of the price to the repost the buyer names\./);
   assert.equal(original.sealed?.text, null, 'sealed: its text is not shown');
   const rp = await reposter.dub.c.ask<{ id: string }>('repost', { post: sold.post, signer: seller.id });
 

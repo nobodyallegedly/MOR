@@ -34,7 +34,7 @@ import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
-import { contestPurchase, contestSale, purchaseContests, readVow, readVowOffer, vowSales, type ContestsBeside } from './vows.ts';
+import { contestPurchase, contestSale, purchaseContests, readVow, vowOffer, vowSales, type ContestsBeside, type VowOffer } from './vows.ts';
 import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
 import { dealOfPost, pct, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
@@ -872,36 +872,53 @@ export class DubMoney {
     }
     const v = acts.map(readVow).find((x) => x?.genesis);
     if (!v) return null;
-    const offer = acts.map((a) => readVowOffer(a, v.signer, v.name)).find(Boolean) ?? null;
+    // Its publication (selling [3, vow]) and the price tag under it that counts (round 8, F407).
+    const offer = await vowOffer(v.name, v.signer, hints, via, acts).catch(() => null);
     const bought = ((await this.store.money<VowsBought>(me.id, 'vows')) ?? {})[v.name];
+    const price = offer?.price ?? offer?.tag?.price ?? null;
     return {
       vow: v.name,
-      offer: offer?.offer ?? null,
+      offer: offer?.publication ?? null,
       seller: v.signer,
       words: v.words,
-      price: offer ? say(offer.price, new Set([offer.price.unit])) : 'no price stated',
+      price: price ? say(price, new Set([price.unit])) : 'no price stated',
       state: v.signer === me.id ? 'yours' : bought?.payment ? ((await this.engine.payment(bought.payment))?.proof ? 'bought' : 'paying') : 'for sale',
-      problem: offer ? null : 'no offer of its signer selling it was found: it cannot be bought here',
+      problem: !offer ? 'no publication of its signer selling it was found: it cannot be bought here' : offer.why,
     };
   }
 
-  /** Buy a vow under the lane: an invoice request following its offer; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
+  /**
+   * What buying a vow pays, before anything is signed (round 8, F407): its
+   * publication's price tag that counts, followed (`fulfils`), its price, to
+   * its payee (the split service); where the publication names an ownership
+   * agreement, the purchase names it and the version read (claim field 9),
+   * said in one line first. Throws, saying why, where it cannot be bought.
+   */
+  async vowPurchaseOf(me: TestIdentity, hints: string[], via: Via, a: { vow: string; seller: string; post: string; names?: (id: string) => string }): Promise<{ payee: string; amount: { unit: string; value: number }; fulfils: string; purchase: [string, string] | null; said: string[]; offer: VowOffer }> {
+    const postAct = (await followRef([a.post, a.seller], hints, via)).act;
+    const named = await this.named(postAct, hints, via);
+    const v = named.map(readVow).find((x) => x?.genesis && x.name === a.vow);
+    if (!v) throw new Error('That post names no vow. Nothing was signed.');
+    if (v.signer === me.id) throw new Error('That vow is your own. Nothing was signed.');
+    const offer = await vowOffer(v.name, v.signer, hints, via, named);
+    if (!offer) throw new Error('No publication of its signer selling it was found. Nothing was signed.');
+    if (!offer.tag || !offer.price || !offer.payee) throw new Error(`It cannot be bought: ${offer.why ?? 'no price tag that counts was found'}. Nothing was signed.`);
+    const deal = offer.owners ? await readDeal(offer.owners, hints, via, offer.version).catch(() => null) : null;
+    const said = deal ? [sharedLine(deal, a.names ?? short)] : [];
+    return { payee: offer.payee, amount: offer.price, fulfils: offer.tag.id, purchase: offer.owners ? [offer.owners, deal?.version ?? offer.owners] : null, said, offer };
+  }
+
+  /** Buy a vow under the lane: an invoice request following its publication's price tag; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
   async buyVow(me: TestIdentity, hints: string[], via: Via, a: { vow: string; seller: string; post: string; names?: (id: string) => string }): Promise<string[]> {
     const card = await this.readVowRef(me, hints, via, [{ id: a.post, signer: a.seller }, ...(((describeAct((await followRef([a.post, a.seller], hints, via)).act) as { refs?: string[] }).refs ?? []).map((id) => ({ id, signer: a.seller })))]);
     if (!card || card.vow !== a.vow) throw new Error('That post names no vow. Nothing was signed.');
     if (card.seller === me.id) throw new Error('That vow is your own. Nothing was signed.');
     if (!card.offer || card.problem) throw new Error(`${card.problem ?? 'No offer was found'}. Nothing was signed.`);
-    const offer = readVowOffer((await followRef([card.offer, card.seller], hints, via)).act, card.seller, card.vow)!;
-    let purchase: [string, string] | null = null;
-    if (offer.under) {
-      const now = await collectiveNow(card.seller, await collectivePlaces(card.seller, hints, via), via).catch(() => null);
-      purchase = [offer.under, now?.agreement ?? offer.under];
-    }
-    const deal = offer.under ? await readDeal(offer.under, hints, via).catch(() => null) : null;
-    const said = deal ? [sharedLine(deal, a.names ?? ((x) => `${x.slice(0, 8)}…`))] : [];
-    const r = await this.engine.payUnderLane({ payee: offer.payee ?? card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true, purchase });
+    const x = await this.vowPurchaseOf(me, hints, via, a);
+    const r = await this.engine.payUnderLane({ payee: x.payee, amount: x.amount, whatFor: 'a vow', fulfils: x.fulfils, refs: [[card.vow, card.seller]], visible: true, purchase: x.purchase });
+    const said = x.said;
     const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
-    vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
+    vows[card.vow] = { seller: card.seller, offer: x.fulfils, payment: r.key, post: a.post, words: card.words };
     await this.store.saveMoney(me.id, 'vows', vows);
     return [...said, ...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases).'];
   }
