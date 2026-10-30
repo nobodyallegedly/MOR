@@ -4,6 +4,17 @@
 
 **Test identities only.** Every key is held in software in the program's folders. The real identity's signer plugs in at step 16b.
 
+## In plain words (round 8, F407, 30 October 2026): what is true now
+
+*Where an older section below says otherwise, this one holds. Report: `docs/suite-r8-report.md`.*
+
+- **A collective has no key of its own, and no member keys.** A member acts for it with **their own key, naming the collective** and its latest decision (Agreements rules 56 to 60). Its first act is signed by a chain key dealt to its members; its later rotations carry no signing key.
+- **Founding a collective:** two members, you and one other, then **+ Add a member**. Above the grid, **what one member may do alone, layer by layer, Money first**. The grid's bands: its constitution and judges; **"Who acts for the collective, layer by layer"**, the five layers (Money, Text, Envelopes, Agreements, Development), each naming who acts (any one, so many, or all); **"Finer areas (optional)"**, some kinds of act within a layer, each kind named from the core's type tables, a cap allowed on a Money area; **"Shares: who owns the collective"**, even until touched, adding up to 100. A founding leaving a layer unnamed is refused.
+- **Changing members:** the same grid, filled from what is in force; a joining member's share box is empty and required; a member who leaves keeps their share as a departed holder.
+- **Money tab: where payments land, nothing else.** A **split service** (a split agreement of the collective naming the service, reading the shares from the constitution at each payment, never a copy; the service signs it too; then **Record it**), or **one trusted pointer** (one member's own wallet). A referral share may come off the top. **Keepers** are a form of their own beside it (every member signs; **Record it**).
+- **Publishing**, four ways in: an upload (then nothing, a price tag, or a claim), a price tag, a claim and its ownership agreement, a publication and its ending. Splits open with two rows, then **+ Add a person** (H98).
+- **Withdrawing:** one per layer. A publication ends by a later version selling nothing; a price tag is withdrawn by its signer; an upload (a bake) is never withdrawn, its bytes staying where they were uploaded unless homes and relays drop them.
+
 ## In plain words (round 4 of the redesign, 22 October 2026)
 
 *Edubba moved onto the Dubsar Suite's kit (`clients/kit`), as Dub, Kišib and Damgar did before it, from the redesign drawn and approved (`docs/design/suite-redesign.md`; the mockups `docs/design/mockups/edubba-*`). Every function stayed, or went where the design note says it went (the table in `docs/edubba-kit-report.md`). Report: `docs/edubba-kit-report.md`.*
@@ -27,9 +38,9 @@ The column lists the agents (on or off), **+ Add an agent** (the API key, its na
 
 The column lists the collectives (real ones by their members' count, test ones as such, brought ones as brought), each **founding in progress** with its count ("2 of 3 signed"), **To sign** (every proposal sent to the identity in use), then **+ Found a collective**, **+ Found a test collective** (Mac only) and **+ Bring a collective**. For the collective selected: its name, **"Its constitution, in plain words"** top right (a pop-up: the deal-assessment tool's reading and its risks), and five tabs (decided):
 
-- **Act**: what you may do for it, from its agreement, as chips; its posts, as cards in the feed box; the typing box at the bottom, **posting for it** (a real collective: Dub's own posting as a collective, signed with your own member key in the area reaching public posts; a test collective: read back first, a picture allowed, its consent simulated).
-- **Members**: its members, who holds its signing key, the dealing's fingerprint; **Change its members** (the grid; then it waits for Kišib); resignations found, **Register a resignation** at the collective's line; shares to show here once.
-- **Money**: its money terms (stakes, a referral share, its split service, keepers), **Record it** once every member signed; **Pay a member** and **Anchor one of its acts** (prepared for Damgar, Mac only). A collective's releases are made in Ummia; anchoring a collective's founding and agreements stays here until Ummia's round takes it.
+- **Act**: what you may do for it, from its agreement, as chips; its posts, as cards in the feed box; the typing box at the bottom, **posting for it** (a real collective: Dub's own posting as a collective, signed with your own key, naming the collective (round 8: no member keys); a test collective: read back first, a picture allowed, its consent simulated).
+- **Members**: its members, the dealing's fingerprint (round 8: a collective holds no signing key); **Change its members** (the grid; then it waits for Kišib); resignations found, **Register a resignation** at the collective's line; shares to show here once.
+- **Money**: where its payments land, a split service or one trusted pointer (round 8; its shares are set in its constitution), **Record it** once it counts; **Pay a member** and **Anchor one of its acts** (prepared for Damgar, Mac only). A collective's releases are made in Ummia; anchoring a collective's founding and agreements stays here until Ummia's round takes it.
 - **Keepers**: its keepers, **Record what arrived** (an Edubba agent can be one), and the disputes shown, not voids.
 - **To sign**: proposals to the identity in use for this collective, read in plain words, **Sign it** or **Decline**; its share of the chain key shown once; **Leave this collective…** (the code that came from Dub's Signing tab, removed in round 1: "agreements are signed here").
 

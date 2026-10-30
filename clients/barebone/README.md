@@ -2,6 +2,8 @@
 
 The barebone client (roadmap step 9): it posts text with a picture, and shows posts, verified. At step 17 it publishes the first short post.
 
+**Round 8 (F407):** an upload is a bake, never withdrawn; what sells it is a price tag (`src/tag.ts`), withdrawn by its signer with a later version carrying no price. Report: `docs/suite-r8-report.md`.
+
 ## In plain words
 
 A post with a picture is two acts. The picture is uploaded first: stripped to the picture alone (the JPEG Module), locked, and described by a public **bake** ("I uploaded this") carrying its key; whoever signs the bake is its **uploader**. Then the post: a text act whose references name that bake (F27). A reader who knows only the post's id and a relay fetches the post, checks it through its signer's identity chain, then the picture: its bake, its uploader, its bytes against their hashes. Only then is the picture shown, turned the right way up, under the name of whoever uploaded it.

@@ -2,6 +2,8 @@
 
 **A TEST split service**, on regtest only, so that a work's sales, or a collective's income, can be paid and divided among everyone who shares in it, as Agreements draft 17 (rules 11 to 23, "Publication (type 6)", "Split plan and split (type 8)"), the split cMIP (draft 4, `cmips/cmip-split-draft-4.md`) and the money messages cMIP (draft 4, 4.4) describe. Its coins are regtest coins, worth nothing. Never for real money.
 
+**Round 8 (F407):** the service reads a publication (Agreements type 6) naming it, and the shares by reference to the ownership agreement in force: `accept` signs a publication or a collective's split agreement, `tag` signs or withdraws its price tag, `watch` follows a collective, `tick` pays what came in (split cMIP draft 4). Grant keys are gone. Report: `docs/suite-r8-report.md`.
+
 ## In plain words
 
 On first start it makes its own test identity and says where it is paid (its Lightning node, carol by default).

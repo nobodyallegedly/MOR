@@ -2,6 +2,8 @@
 
 The genesis client, in TypeScript, with the core library through WebAssembly. Roadmap step 5.
 
+**Round 8 (F407):** a test collective is keyless and acts through a member (`TestIdentity.actor`), citing its latest decision; a text act carries one object (Text rule 14). Report: `docs/suite-r8-report.md`.
+
 **Test identities only.** A test identity holds its chain key in software, in its file: a prototype, labelled as such in the file itself. The real identity is created only with the air-gapped chain key Module, at the first acts (roadmap step 17).
 
 ## In plain words

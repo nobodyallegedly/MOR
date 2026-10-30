@@ -2,6 +2,8 @@
 
 The repo client, in TypeScript, with the core library through WebAssembly. Roadmap step 5a: MOR governs its own code.
 
+**Round 8 (F407):** a collective here is keyless (`keylessGenesis`, `collectiveIdentity`); its terms write the layer rules (field 19), finer areas (34) and shares (7); member changes carry the shares (`sharesAfter`); `release` needs `--member`, the member who uploads for the collective. Report: `docs/suite-r8-report.md`.
+
 **The command line is a test tool, not a client** (F187, 9). `src/cli.ts` drives this package's mechanics for tests and scripts: it marks a member change from this device's copy of the collective, without asking Agreements first, so it can sign and publish a clone whose mark Agreements call false, which breaks the collective (Agreements rule 37d; the step 11b fault). The collective client (`clients/collective`) is the client: it takes every mark from Agreements' own count and asks Agreements again before anything is sent.
 
 **Test collectives only.** A test collective holds every member's share of its chain key in software, in its file. It has no signing key of its own (the redesign, Agreements rules 56 to 60): each member acts for it with their own key. Its members are simulated identities, all held by whoever runs it, so the mechanics run (the release rule, visible signatures, clone, rotation) while independent consent does not; the freeze report says so. The real collective is created at step 17 the same way, with each member's share on that member's own offline device.
