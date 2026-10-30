@@ -1,9 +1,11 @@
 //! The pooled anchoring service's second pass (F225), over the core
 //! library's verifier and Agreements view: buying an anchor is an
-//! agreement. The service's offer is an Agreements standing offer, a lone
-//! seller's (F215), which the core reads as one that counts; a payment
-//! following it is a purchase accepted under its terms; a default owes the
-//! price back under those terms, and the refund is paid back for real over
+//! agreement. The service's offer is, since the anchoring cMIP's draft 6
+//! (round 8, F407), an Agreements **publication**, a lone seller's, the
+//! service its own split service, which the core reads as one that counts,
+//! and its **price tag**, which the core counts under it; a payment of the
+//! tag is a purchase under the publication; a default owes the price back
+//! under its terms, and the refund is paid back for real over
 //! Lightning (a real BOLT 11 invoice signed by the payer's test node key,
 //! settled by its preimage): the service's claim, naming the payment
 //! refunded, with the rail's proof that the money reached the payer's own
@@ -14,6 +16,13 @@
 //! move. Agreements say what must happen, in return or in consequence,
 //! when money moves" (Nobody, allegedly, F225). Test identities and
 //! regtest units only.
+//!
+//! *Premises moved (draft 6): where these tests read an Agreements standing
+//! offer (`AgreementsView::offer`, gone from the core), they read the
+//! publication (`AgreementsView::publication`) and its price tag
+//! (`AgreementsView::tag_under`); a payment that followed the offer now
+//! pays the tag (Money rule 18), and the core's purchase verdict is read
+//! the same way.*
 
 #[path = "../../../core/tests/common/mod.rs"]
 mod common;
@@ -147,7 +156,10 @@ struct Story {
     service_pointer: Hash,
     ana_pointer: Hash,
     ben_pointer: Hash,
-    offer_id: Hash,
+    /// The service's publication, its first version.
+    publication_id: Hash,
+    /// Its price tag's first version: what a purchase pays.
+    tag_id: Hash,
     rail_valid: BTreeMap<Hash, PaidAt>,
     payments: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -166,13 +178,17 @@ impl Story {
         let service_pointer = pointer(&mut w, &mut service, "the service's node");
         let ana_pointer = pointer(&mut w, &mut ana, "ana's node");
         let ben_pointer = pointer(&mut w, &mut ben, "ben's node");
-        // The service's standing offer, public, citing its latest pointer
-        // (Money rule 14's client conformance for an act that can pay its
-        // signer).
-        let offer = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest, priced by urgency".into()), None);
-        let a = w.everyday_act_refs(&mut service, mirs().agreements, agreements::types::STANDING_OFFER, offer.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
-        let offer_id = w.add(&a);
-        Story { w, service, ana, ben, service_pointer, ana_pointer, ben_pointer, offer_id, rail_valid: BTreeMap::new(), payments: BTreeMap::new() }
+        // The service's publication, public, a lone seller's, the service
+        // its own split service; and its price tag, citing its latest
+        // pointer (Money rule 17's client conformance for an act that can
+        // pay its signer).
+        let p = terms.publication(service.id, h("a split cMIP"), Some("Anchoring on Bitcoin regtest, priced by urgency".into()), None);
+        let a = w.everyday_act(&mut service, mirs().agreements, agreements::types::PUBLICATION, p.to_map(), None, None);
+        let publication_id = w.add(&a);
+        let tag = terms.price_tag(publication_id, mor_onchain::unit(Network::Regtest), service.id);
+        let a = w.everyday_act_refs(&mut service, mirs().money, fin::types::PRICE_TAG, Payload::PriceTag(tag).to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
+        let tag_id = w.add(&a);
+        Story { w, service, ana, ben, service_pointer, ana_pointer, ben_pointer, publication_id, tag_id, rail_valid: BTreeMap::new(), payments: BTreeMap::new() }
     }
 
     fn view(&self) -> AgreementsView<'_> {
@@ -182,11 +198,14 @@ impl Story {
         v
     }
 
-    /// The offer as the anchoring cMIP reads it from the held act.
+    /// The offer as the anchoring cMIP reads it from the held publication
+    /// and price tag.
     fn offer(&self) -> Offer {
-        let x = self.w.v.get(&self.offer_id).unwrap();
-        let o = agreements::Offer::decode(&x.inside).expect("an offer in Agreements' format").offer;
-        Offer::read(self.offer_id, self.service.id, &o).expect("an anchoring offer")
+        let x = self.w.v.get(&self.publication_id).unwrap();
+        let p = agreements::Publication::decode(&x.inside).expect("a publication in Agreements' format").publication;
+        let t = self.w.v.get(&self.tag_id).unwrap();
+        let Ok(Payload::PriceTag(tag)) = Payload::decode(t.inside.type_, &t.inside.payload) else { panic!("a price tag") };
+        Offer::from_publication(self.publication_id, self.service.id, &p, self.tag_id, t.act.outside.signer.unwrap(), &tag).expect("an anchoring offer")
     }
 
     /// Sign and hold a claim; state to the Agreements view, as an
@@ -236,30 +255,37 @@ fn terms() -> Terms {
 
 // ---------------------------------------------------------------- the tests
 
-/// F225: the core reads the service's offer as an Agreements standing
-/// offer that counts (public, a lone seller's, its payee the service);
-/// Ana's payment following it is verified on the Lightning rail, follows
-/// the pointer the offer holds (Money rules 14 and 15), and is a purchase
-/// accepted under the offer's terms (F215). It buys the ticket the service
-/// signed. The same payment made as a tip to the service's pointer (step
-/// 14a's reading 3, reversed) is no purchase under any offer, and buys no
-/// ticket.
+/// F225: the core reads the service's publication as one that counts
+/// (public, a lone seller's, the service its own split service) and its
+/// price tag as counting under it, paid to the service; Ana's payment of
+/// the tag is verified on the Lightning rail, follows the pointer the tag
+/// holds (Money rule 17), and is a purchase under the publication
+/// (Agreements rule 12). It buys the ticket the service signed. The same
+/// payment made as a tip to the service's pointer (step 14a's reading 3,
+/// reversed) is no purchase, and buys no ticket.
+///
+/// *Premise moved (draft 6): "the core reads a standing offer that counts"
+/// is now "the core reads a publication that counts and a price tag that
+/// counts under it"; "a payment following the offer" is a payment of the
+/// tag.*
 #[test]
-fn f225_the_core_reads_the_services_offer_as_a_standing_offer_and_the_payment_as_a_purchase() {
+fn f225_the_core_reads_the_services_publication_and_tag_and_the_payment_as_a_purchase() {
     let mut s = Story::new(&terms());
-    let e = s.view().offer(&s.offer_id).unwrap();
+    let e = s.view().publication(&s.publication_id).unwrap();
     assert!(e.counts, "{:?}", e.problems);
-    assert_eq!(e.offer.payee(&s.service.id), Some(s.service.id));
+    assert_eq!((e.publication.service, e.drafter, e.publication.owners), (s.service.id, s.service.id, None), "a lone seller's, its own split service");
+    assert_eq!(s.view().tag_under(&s.tag_id).unwrap(), agreements::TagUnder::Counts { publication: s.publication_id, withdrawn: false });
     let offer = s.offer();
+    assert_eq!(offer.payee, s.service.id, "the tag's payee: the service");
     let mut ana = s.ana.clone();
-    let (sid, sp, oid) = (s.service.id, s.service_pointer, s.offer_id);
-    let (c, claim, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, oid, "ana buys one hash");
+    let (sid, sp, pid, tid) = (s.service.id, s.service_pointer, s.publication_id, s.tag_id);
+    let (c, claim, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, tid, "ana buys one hash");
     assert_eq!(answer, Answer::Valid, "paid over Lightning, verified by the Lightning rail Module");
     let x = s.w.v.get(&claim).unwrap();
     let Ok(Payload::Claim(cl)) = Payload::decode(x.inside.type_, &x.inside.payload) else { panic!() };
-    assert_eq!(beside(Record::Claim(&cl, ana.id, &Citations::default()), &AgreementsHeld { view: s.view() }), Answer::Valid, "the pointer the service's offer holds");
-    assert_eq!(s.view().purchase(&claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "accepted under the offer's terms (F215)");
-    let ticket = Ticket { offer: oid, leaf: tree::leaf(&h("ana's act"), &h("ana's blind")), commitment: c.hash(), tier: 0, batch: 0, deadline: 102, quote: None };
+    assert_eq!(beside(Record::Claim(&cl, ana.id, &Citations::default()), &AgreementsHeld { view: s.view() }), Answer::Valid, "the pointer the service's price tag holds");
+    assert_eq!(s.view().purchase(&claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "a purchase under the publication (Agreements rule 12)");
+    let ticket = Ticket { offer: pid, leaf: tree::leaf(&h("ana's act"), &h("ana's blind")), commitment: c.hash(), tier: 0, batch: 0, deadline: 102, quote: None };
     assert_eq!(service::acceptable(&offer, &ticket, &c, 100, None), Ok(()));
     // A tip to the service's pointer: no purchase, no ticket.
     let (tip, tip_claim, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, sp, "ana tips the service");
@@ -283,10 +309,10 @@ fn f225_a_default_is_refunded_for_real_and_shown_repaid() {
     let offer = s.offer();
     let mut ana = s.ana.clone();
     let mut service = s.service.clone();
-    let (aid, sid, sp, oid) = (ana.id, s.service.id, s.service_pointer, s.offer_id);
+    let (aid, sid, sp, oid, tid) = (ana.id, s.service.id, s.service_pointer, s.publication_id, s.tag_id);
     let mut chain = support::chain(&[mine(h("the chain so far"), &[h("a block")], REGTEST_BITS, 1)]);
     let now = chain.tip();
-    let (c, owed, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, oid, "ana buys one hash");
+    let (c, owed, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, tid, "ana buys one hash");
     assert_eq!(answer, Answer::Valid);
     let ticket = Ticket { offer: oid, leaf: tree::leaf(&h("ana's act"), &h("ana's blind")), commitment: c.hash(), tier: 0, batch: 0, deadline: now + 2, quote: None };
     grow(&mut chain, 2 + N - 1);
@@ -325,9 +351,9 @@ fn rq1_a_refund_to_the_refund_rail_the_payers_claim_names_is_checked_and_shown_r
     let mut s = Story::new(&terms());
     let mut ana = s.ana.clone();
     let mut service = s.service.clone();
-    let (aid, sid, sp, ap, oid) = (ana.id, s.service.id, s.service_pointer, s.ana_pointer, s.offer_id);
+    let (aid, sid, sp, ap, tid) = (ana.id, s.service.id, s.service_pointer, s.ana_pointer, s.tag_id);
     let refund_rail = ln_rail(&secret("ana's refund node")).remove(0);
-    let (_, owed, a) = s.pay_to(&mut ana, sid, PaidTo::Flow { pointer: sp, rail: 0 }, "the service's node", 50, oid, "ana buys one hash", Some(refund_rail));
+    let (_, owed, a) = s.pay_to(&mut ana, sid, PaidTo::Flow { pointer: sp, rail: 0 }, "the service's node", 50, tid, "ana buys one hash", Some(refund_rail));
     assert_eq!(a, Answer::Valid);
     let to = RefundTo::Identity(aid);
     let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit).unwrap();
@@ -374,18 +400,18 @@ fn rq1_a_refund_to_a_bare_key_is_checked_where_its_claim_said() {
     use mor_core::sig::SchnorrKey;
     let mut s = Story::new(&terms());
     let mut service = s.service.clone();
-    let (sid, sp, oid) = (s.service.id, s.service_pointer, s.offer_id);
+    let (sid, sp, tid) = (s.service.id, s.service_pointer, s.tag_id);
     let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
     let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
     let mut once = s.w.genesis("a one-time identity", vec![own_home()], None, None);
     // The anonymous payment: its commitment names the bare key as payer.
     let paid_to = PaidTo::Flow { pointer: sp, rail: 0 };
     let salt: [u8; 16] = h("an anonymous purchase")[..16].try_into().unwrap();
-    let c = Commitment { rail: mor_lightning::spec(), payee: sid, amount: sat(50), fulfils: oid, payer: Some(Payer::Key(bare.clone())), paid_to, salt, purchase: None };
+    let c = Commitment { rail: mor_lightning::spec(), payee: sid, amount: sat(50), fulfils: tid, payer: Some(Payer::Key(bare.clone())), paid_to, salt, purchase: None };
     let preimage = h("the anonymous preimage");
     let ln = LnProof { invoice: invoice(&secret("the service's node"), 50_000, &c.hash(), &preimage), preimage: Some(preimage) };
     let refund_rail = ln_rail(&secret("the key's refund node")).remove(0);
-    let mut claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: sid, amount: sat(50), fulfils: oid, disagrees: None, referral: None, refund: Some(refund_rail), anonymous: None, purchase: None, previous: None };
+    let mut claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: sid, amount: sat(50), fulfils: tid, disagrees: None, referral: None, refund: Some(refund_rail), anonymous: None, purchase: None, previous: None };
     claim.anonymous = Some(Anonymous { key: bare.clone(), sig: key.sign(&claim.anonymous_message(&Citations::default()), &[0; 32]).sig });
     let (owed, a) = s.claim(&mut once, &claim);
     assert_eq!(a, Answer::Valid, "the anonymous payment, verified");
@@ -429,20 +455,21 @@ impl service::BatchClock for StatedClock {
 /// judgment is the first checker the core asks. Ana's hash anchored by the
 /// deadline: proven. Anchored late, or left out of a batch the service
 /// published: not proven. A verifier holding no checker for the anchoring
-/// cMIP: not proven for it (unknown). The core reads the offer as a proven
-/// offer by its form alone.
+/// cMIP: not proven for it (unknown). The core reads the publication as
+/// selling a proven delivery by its form alone (draft 6: the publication in
+/// place of the standing offer).
 #[test]
 fn draft_11_f261_the_anchoring_check_is_the_first_proof_checker() {
     let mut s = Story::new(&terms());
     let offer = s.offer();
     let mut ana = s.ana.clone();
-    let (sid, sp, oid) = (s.service.id, s.service_pointer, s.offer_id);
-    let (c, _, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, oid, "ana buys one hash");
+    let (sid, sp, oid, tid) = (s.service.id, s.service_pointer, s.publication_id, s.tag_id);
+    let (c, _, answer) = s.pay(&mut ana, sid, sp, "the service's node", 50, tid, "ana buys one hash");
     assert_eq!(answer, Answer::Valid);
     let leaf = tree::leaf(&h("ana's act"), &h("ana's blind"));
     let ticket = Ticket { offer: oid, leaf, commitment: c.hash(), tier: 0, batch: 0, deadline: 102, quote: None };
-    let o = agreements::Offer::decode(&s.w.v.get(&oid).unwrap().inside).unwrap().offer;
-    assert!(matches!(o.sold[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_anchoring::spec()), "the access form: a proven offer");
+    let o = agreements::Publication::decode(&s.w.v.get(&oid).unwrap().inside).unwrap().publication;
+    assert!(matches!(o.sold.as_ref().unwrap()[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_anchoring::spec()), "the access form: a proven offer");
     let verdict = |s: &Story, publications: Vec<service::Publication>, anchor: Option<&[u8]>, now: u64, with_checker: bool| {
         let clock = StatedClock { now };
         let checker = service::Checker { offers: vec![offer.clone()], publications, payments: vec![Payment { commitment: c.clone(), answer: Answer::Valid }], clock: &clock };
