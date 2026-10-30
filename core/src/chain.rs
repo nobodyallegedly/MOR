@@ -1907,6 +1907,39 @@ impl Verifier {
         closure_at(self, &self.resolve_cx(cx, op)).is_some()
     }
 
+    /// Identity rule 49: a person's homeless rotation, at the position next
+    /// to the chain's end, that a single valid objection from a live home
+    /// of the old set names, is void. A collective's, or one an escape
+    /// endorsement carries, is not (section 11).
+    fn objection_voids(&self, cx: &mut Cx, id: &Hash, res: &Resolution, x: &Held) -> bool {
+        let Some(Payload::Rotation(r)) = x.payload() else { return false };
+        if !r.homeless || r.position == 0 || res.links.len() as u64 != r.position {
+            return false;
+        }
+        let k = r.position as usize - 1;
+        let (prev, ps) = (res.links[k].act, &res.states[k]);
+        if r.prev != prev || ps.signing_key.is_none() || self.endorsements(id, &prev, ps, &x.id).next().is_some() {
+            return false;
+        }
+        let old = ps.operators();
+        for oid in self.by_type.get(&types::OBJECTION).into_iter().flatten() {
+            let o = &self.acts[oid];
+            let (Some(Payload::Objection(ob)), Some(s)) = (o.payload(), o.signer()) else {
+                continue;
+            };
+            if &ob.identity != id || !names(&o.inside, id, &x.id) || !old.contains(&Operator::Id(*s)) {
+                continue;
+            }
+            if res.dishonest.iter().any(|(d, p)| *d == Operator::Id(*s) && *p < r.position) || self.closed(cx, s) {
+                continue;
+            }
+            if self.status_cx(cx, o) == Status::Valid {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Homeless procedure steps 1, 3 (if `objections`), 4 and 5, and escape.
     #[allow(clippy::too_many_arguments)]
     fn homeless_basis(
@@ -2263,6 +2296,8 @@ impl Verifier {
             let res = self.resolve_cx(cx, &who);
             return if res.position_of(&x.id).is_some() {
                 Status::Valid
+            } else if self.objection_voids(cx, &who, &res, x) {
+                Status::Void
             } else if res.waiting().contains(&x.id) || self.on_waiting(cx, &res, x) {
                 Status::Pending
             } else if self.lost_at(&res, &who, x) {

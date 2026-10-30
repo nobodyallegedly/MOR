@@ -238,25 +238,70 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// Why the holders of the collective's stake in itself have not
-    /// consented to the owners' matter `id` (rules 48, 94, 95), or `None`:
-    /// the stake read on the ownership agreement `owners` in force; under
-    /// every holder, each holder who is no member signs; under a rule by
-    /// share, the holders signing hold together at least that share.
+    /// consented to the owners' matter `id`, a version of the collective's
+    /// split agreement paying the stake less (rules 15, 48, 94, 95), or
+    /// `None`. The stake is read on the collective's agreement in force for
+    /// the version; who holds what, on the roster at the version, the
+    /// transfers its history places applied (rule 94). Each holder consents
+    /// by a signature act naming the version, held and valid; a holder who
+    /// is no member may vote by its proxy, placed in the version's history,
+    /// where it has not signed itself (rule 97). Under every holder, each
+    /// holder who is no member signs (rule 48); under a rule by share, the
+    /// holders consenting hold together at least that share, and each holder
+    /// who is no member and whom the rule does not bind (it neither signed a
+    /// version carrying the rule nor bought under it) signs for itself.
     fn owners_consent_problem(&self, id: &Hash, owners: &Hash) -> R<Option<String>> {
-        let t = self.terms(&self.version_in_force(owners)?)?;
+        let h = self.held(id)?;
+        let Some(c) = self.collective_of(owners)? else { return Ok(None) };
+        let col = self.col(&c);
+        let at = Line::Record(h);
+        let ag = match self.in_force(id) {
+            Ok(Some(a)) => a,
+            _ => self.version_in_force(owners)?,
+        };
+        let t = self.terms(&ag)?;
         let Some((i, st)) = t.own_stake() else { return Ok(None) };
-        let roster = st.identified();
-        let signed: Vec<Hash> = roster.iter().map(|(h, _)| *h).filter(|h| !self.signers(id, &[*h]).is_empty()).collect();
-        Ok(match t.holders_rule(i as u64).0 {
+        let i = i as u64;
+        let roster = self.roster_at(&col, at, &ag, i)?;
+        // Each holder's signature act naming the version (rule 15: "each by
+        // a signature act naming the version").
+        let mut by: BTreeMap<Hash, Hash> = BTreeMap::new();
+        for x in self.v.held_acts() {
+            if self.is_agreements(x, types::SIGNATURE) && decode_signature(&x.inside).ok() == Some(*id) && self.valid(&x.id) {
+                if let Some(s) = x.act.outside.signer {
+                    by.entry(s).or_insert(x.id);
+                }
+            }
+        }
+        let member = |x: &Hash| t.parties.contains(x);
+        let (rule, _) = t.holders_rule(i);
+        match rule {
             crate::agreements::HoldersRule::Every => {
-                let missing: Vec<&Hash> = roster.iter().map(|(h, _)| h).filter(|h| !t.parties.contains(h) && !signed.contains(h)).collect();
-                (!missing.is_empty()).then(|| "it pays the collective's stake less, and a holder who is no member has not signed it (rules 48, 94)".into())
+                let missing = roster.iter().any(|(x, n)| *n > 0 && !member(x) && !by.contains_key(x));
+                Ok(missing.then(|| "it pays the collective's stake less, and a holder who is no member has not signed it (rules 48, 94)".into()))
             }
             crate::agreements::HoldersRule::Share(need) => {
-                let got: u64 = roster.iter().filter(|(h, _)| signed.contains(h)).map(|(_, n)| *n).sum();
-                (got < need).then(|| "it pays the collective's stake less, and its holders signing it do not meet the stake's holders' rule (rule 94)".into())
+                let lineage = self.lineage(&ag)?;
+                let bound = |x: &Hash| {
+                    let bought = !st.identified().iter().any(|(y, _)| y == x);
+                    bought || lineage.iter().any(|(v, vt)| vt.holders_rule(i).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[*x]).is_empty())
+                };
+                let mut got = 0u64;
+                for (x, n) in &roster {
+                    if *n == 0 {
+                        continue;
+                    }
+                    let own = by.contains_key(x);
+                    if !own && !member(x) && !bound(x) {
+                        return Ok(Some("it pays the collective's stake less, and a holder the stake's holders' rule does not bind has not signed it (rules 48, 94)".into()));
+                    }
+                    if own || (!member(x) && self.proxy_votes(&col, at, &ag, id, i, x, &by)?) {
+                        got += n;
+                    }
+                }
+                Ok((got < need).then(|| "it pays the collective's stake less, and its holders signing it do not meet the stake's holders' rule (rule 94)".into()))
             }
-        })
+        }
     }
 
     /// The versions of a publication's line held, valid, each with the
@@ -420,6 +465,27 @@ impl<'a> AgreementsView<'a> {
             Ok(Fin::PriceTag(t)) => Some((h, t)),
             _ => None,
         }
+    }
+
+    /// The later versions of `tag`'s line that withdraw it (no price),
+    /// valid, by the same signer, pricing the same thing (Money rule 18).
+    fn tag_withdrawals(&self, tag_h: &Held, tag: &fin::PriceTag) -> Vec<Hash> {
+        let first_of = |h: &Held, t: &fin::PriceTag| -> Hash {
+            if t.previous.is_none() {
+                h.id
+            } else {
+                t.follows(&crate::money::Citations::of(&h.inside)).map(|(f, _)| f).unwrap_or(h.id)
+            }
+        };
+        let first = first_of(tag_h, tag);
+        let signer = tag_h.act.outside.signer;
+        self.v
+            .held_acts()
+            .filter(|h| h.act.outside.signer == signer && self.valid(&h.id))
+            .filter_map(|h| self.tag_of(&h.id).map(|(h, t)| (h, t)))
+            .filter(|(h, t)| t.withdrawn() && t.priced == tag.priced && t.version > tag.version && first_of(h, t) == first)
+            .map(|(h, _)| h.id)
+            .collect()
     }
 
     /// Whether a price tag under a publication counts (Money rule 18;
@@ -645,6 +711,16 @@ impl<'a> AgreementsView<'a> {
                 }
                 if !endings.is_empty() && receipts.iter().all(|r| self.after_own_signature(r, &service, &endings)) {
                     return no(e, "on a push rail, the split service recorded its receipt after its own signature on the version ending the publication: a payment racing the ending, owed back by the service, then by each party (rule 11)");
+                }
+                // A sale before a price tag's withdrawal, settled as a push
+                // rail settles an ending (rule 12): a receipt the split
+                // service records whose history holds the version with no
+                // price is no sale.
+                let withdrawals = self.tag_withdrawals(tag_h, &tag);
+                if !withdrawals.is_empty()
+                    && receipts.iter().all(|r| self.after_own_signature(r, &service, &withdrawals) || withdrawals.iter().any(|w| self.act_history(&r.id).contains(w)))
+                {
+                    return no(e, "on a push rail, the split service recorded its receipt after the tag's withdrawal was in its history: no sale, owed back as a payment naming a tag the publication does not count (rule 12)");
                 }
                 Ok(Some(e))
             }

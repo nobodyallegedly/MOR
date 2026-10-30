@@ -2821,7 +2821,11 @@ struct AgreementOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AreaCountOut {
-    area: u64,
+    /// A finer area's id (field 34); a layer's rule (field 19) as minus its
+    /// layer, a JavaScript number either way.
+    area: i64,
+    /// The layer whose rule this is, where it is a layer's rule.
+    layer: Option<u64>,
     name: String,
     frozen: bool,
     voices: Vec<String>,
@@ -3107,7 +3111,8 @@ impl Verifier {
                 o.areas = areas
                     .iter()
                     .map(|a| AreaCountOut {
-                        area: a.area,
+                        area: agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)),
+                        layer: agreements::lane_of(a.area),
                         name: a.name.clone(),
                         frozen: a.frozen,
                         voices: a.voices.iter().map(hx).collect(),

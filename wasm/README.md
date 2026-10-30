@@ -61,3 +61,16 @@ The core now reads the redesign's remaining formats too (S7h-2): the publication
 - **A text act may carry one object** (Text rule 14: `[grantor, grant]` or `[collective, decision]`): genesis 1 (F295, F296: a text act naming a chain in objects answers unknown where it expected invalid, the chain named not held).
 
 Already failing at S7h, for the reasons its report gives (the bake, the retired withdrawal, the layers renumbered, the price tag): barebone 2, collective 1, damgar 10, desk 42, dub 5, kishib 7, kit 16, manage 2, reader 6, site 65, testwallet 4, ummia 10.
+
+**Changed in S7h-4** (the core brought to the texts; rebuild against this commit):
+
+| Old | New | Why |
+| --- | --- | --- |
+| `agreementsConsent(...)`: each area count's `area`, a whole number; for a layer's rule (field 19) the core's internal lane id near 2^64, which JavaScript cannot hold, so the call threw | `area` a JavaScript number: a finer area's id (field 34), or a layer's rule as minus its layer (`-1` Text ... `-5` Development); new `layer`, the layer's number, or `null` for a finer area | a binding's bug: every member's act judged under a layer's rule read "unread" |
+
+Verdicts an app may see change:
+- **A payment naming a price tag's earlier, priced version, receipted on a push rail after the withdrawal is in the split service's history, is no purchase** (Agreements rule 12): it was a purchase. On a request rail, nothing changes.
+- **A person's homeless rotation that a valid objection from a live home of the old set names is void** (Identity rule 49): it read "pending". A collective's is unchanged (its own escape endorsement).
+- **A clone marked with a succession plan naming stake successors must pass the party's stakes to them**; one leaving them as they were, or changing a layer's rule beyond putting the seat successor in the party's place, is invalid (rules 64 and 83). One passing them, valid until now only without a stake change, is not invalid.
+RULE48_PLACEHOLDER
+- The anchoring binding (`anchoringOffer`, `anchoringReadOffer`, `anchoringCheckTicket`) is unchanged: the moved anchoring cMIP is not yet on this branch, and the binding follows it once it is.

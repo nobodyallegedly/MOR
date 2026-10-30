@@ -4082,9 +4082,20 @@ impl<'a> AgreementsView<'a> {
         } else if got != rest {
             return Err("it does not drop the executed plan alone from the succession plans (B14)".into());
         }
+        // Field 19: the seat successors in the party's place in every
+        // layer's rule naming it, once for each seat, as in field 0, nothing
+        // else in the layers' rules changed (rules 64 and 83).
+        if clone.layers != plan_layers(parent, p, &seats) {
+            return Err("it changes the layers' rules beyond putting the seat successors in the party's place (rules 64, 83)".into());
+        }
+        // Field 7: the party's stakes passed to its stake successors, in the
+        // plan's parts (rule 83); with none named, the stakes unchanged.
+        if !plan_stakes(parent, clone, p, plan.stakes.as_deref().unwrap_or_default()) {
+            return Err("it changes the stakes beyond passing the party's shares to its stake successors, in the plan's parts (rules 64, 83)".into());
+        }
         for c in changes(parent, clone) {
             // Field 34: the party taken off every area it held (rule 64).
-            if !matches!(c, Change::Field(0 | 12 | 16 | 19 | 34)) {
+            if !matches!(c, Change::Field(0 | 7 | 12 | 16 | 19 | 34)) {
                 return Err("it changes more than the plan gives (rule 44c)".into());
             }
         }
@@ -5373,6 +5384,67 @@ fn union(a: &[Hash], b: &[Hash]) -> Vec<Hash> {
 /// The key grammar a succession clone carries (Flaw B14): the parent's,
 /// with the seat successors in the party's place in every holding, every
 /// threshold unchanged.
+/// The layers' rules a plan's clone carries (rules 64, 83): the seat
+/// successors in the party's place in every rule naming it, once for each
+/// seat, as in field 0; every other rule as it was.
+fn plan_layers(parent: &Terms, party: &Hash, seats: &[Hash]) -> Option<Vec<(u64, Rule)>> {
+    parent.layers.as_ref().map(|ls| {
+        ls.iter()
+            .map(|(l, r)| match r {
+                Rule::Named(n) if n.contains(party) => (*l, Rule::Named(n.iter().flat_map(|m| if m == party { seats.to_vec() } else { vec![*m] }).collect())),
+                other => (*l, other.clone()),
+            })
+            .collect()
+    })
+}
+
+/// Whether a plan's clone passes the party's stakes to `heirs`, in their
+/// parts (millionths), as rule 83 gives: every share the party held, of
+/// every stake, gone; each heir's gain its exact part, or less than one
+/// millionth from it (the build's rounding, as for a stake moved by
+/// abandonment), the total exact; every other holder as it was. With no
+/// heirs named, the stakes are unchanged.
+fn plan_stakes(parent: &Terms, clone: &Terms, party: &Hash, heirs: &[(Hash, u64)]) -> bool {
+    if heirs.is_empty() {
+        return parent.stakes == clone.stakes;
+    }
+    if clone.release_rule != parent.release_rule {
+        return false;
+    }
+    let me = Who::Id(*party);
+    let (a, b) = (parent.stakes.clone().unwrap_or_default(), clone.stakes.clone().unwrap_or_default());
+    if a.len() != b.len() {
+        return false;
+    }
+    let total: u128 = heirs.iter().map(|(_, x)| *x as u128).sum();
+    for (st, after) in a.iter().zip(b.iter()) {
+        if st.object != after.object || after.share_of(&me) != 0 {
+            return false;
+        }
+        let n = st.share_of(&me) as u128;
+        let sum = |x: &Stake| x.holders.iter().map(|(_, k)| *k as u128).sum::<u128>();
+        if sum(st) != sum(after) {
+            return false;
+        }
+        let mut who: Vec<Who> = vec![];
+        for (w, _) in st.holders.iter().chain(after.holders.iter()) {
+            if *w != me && !who.contains(w) {
+                who.push(*w);
+            }
+        }
+        for w in who {
+            let gain = after.share_of(&w) as i128 - st.share_of(&w) as i128;
+            let exact = n * heirs.iter().filter(|(h, _)| Who::Id(*h) == w).map(|(_, x)| *x as u128).sum::<u128>();
+            let lo = if total == 0 { 0 } else { (exact / total) as i128 };
+            let hi = lo + i128::from(total != 0 && exact % total != 0);
+            if gain < lo || gain > hi {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 fn plan_grammar(parent: &Terms, party: &Hash, seats: &[Hash]) -> Option<KeyGrammar> {
     let swap = |h: &Holding| match h {
         Holding::One(x) if x == party => Holding::One(seats[0]),
@@ -6895,7 +6967,11 @@ impl<'a> AgreementsView<'a> {
         for (i, ag) in e.successors.clone().iter().enumerate() {
             let Some(ag) = ag else { continue };
             let st = self.terms(ag)?;
-            if !super::pay::stakes_paid_less(&t, &st).iter().any(|(o, _)| *o == Who::This) || kept_ids.is_empty() {
+            // Compared too: the split agreement the successor's founding
+            // names first, against the original's in force at the fork's
+            // line (rule 95, item 4).
+            let paid_less = super::pay::stakes_paid_less(&t, &st).iter().any(|(o, _)| *o == Who::This) || self.successor_split_pays_less(&f.agreement, id, ag)?;
+            if !paid_less || kept_ids.is_empty() {
                 continue;
             }
             let consented = |x: &Hash| {
@@ -7403,7 +7479,8 @@ impl<'a> AgreementsView<'a> {
     /// closing that ended it, and so counts for nothing in Agreements: that act.
     pub fn after_closing(&self, act: &Hash) -> R<Option<Hash>> {
         let x = self.held(act)?;
-        let Some(c) = x.act.outside.signer else { return Ok(None) };
+        // The collective the act names (rule 58), else its signer.
+        let Some(c) = self.author(x) else { return Ok(None) };
         let Some(e) = self.closed_by(&c)? else { return Ok(None) };
         let col = self.col(&c);
         Ok((!self.before_line(&col, x, &e.line)).then_some(e.by))
@@ -9659,6 +9736,29 @@ impl<'a> AgreementsView<'a> {
             Some((missing, vault_missing)) => Ok(PointerCheck::Bypasses { pointer: pid, missing, vault_missing }),
             None => undetermined("no split service's own pointer in force is held".into()),
         }
+    }
+
+    /// Whether the split agreement a fork's successor's founding `succ`
+    /// names first pays the kept holders' stake less than the original's
+    /// split agreement in force at the fork `fork`'s line (rules 48, 95,
+    /// item 4): what each takes off the top, the fees each bears, and the
+    /// split cMIP and its parameters. An original naming none pays its
+    /// stake through no split: a successor's that takes anything off the
+    /// top pays it less. A successor naming none changes nothing here.
+    fn successor_split_pays_less(&self, original: &Hash, fork: &Hash, succ: &Hash) -> R<bool> {
+        let first_of = |root: &Hash| -> Option<Hash> {
+            self.v.held_acts().find_map(|h| {
+                let (_, a) = self.pub_act(&h.id)?;
+                (a.follows.is_none() && a.publication.is_split_agreement() && a.publication.owners.as_ref() == Some(root) && self.valid(&h.id)).then_some(h.id)
+            })
+        };
+        let Some(sf) = first_of(succ) else { return Ok(false) };
+        let Some((_, sa)) = self.pub_act(&sf) else { return Ok(false) };
+        let orig = self.line_of(original).and_then(|r| first_of(&r)).map(|of| self.pub_version_for(&of, fork));
+        Ok(match orig.and_then(|v| self.pub_act(&v)) {
+            Some((_, oa)) => !super::owners_line_lowered(&oa.publication, &sa.publication).is_empty(),
+            None => !sa.publication.partners.is_empty() || !sa.publication.plan.fees.is_empty() || !sa.publication.plan.shares.is_empty(),
+        })
     }
 
     /// A collective's split agreement in force (rule 15): the latest counting

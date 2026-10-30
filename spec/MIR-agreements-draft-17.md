@@ -1750,6 +1750,7 @@ Which powers a clone needs, from its changes alone:
    - the party out of the parties (field 0), its seat successors in;
    - the party out of the holders of every area it held, nothing else in the areas changed;
    - **the seat successors in the party's place in every holding of the key grammar (field 12), every threshold unchanged**;
+   - **the party's stakes passed to its stake successors, in the plan's parts (field 7)**, every other holder as it was;
    - **the seat successors in the party's place in every layer's rule naming it (field 19, `[2, [+ hash]]`), written once for each seat, as in field 0, nothing else in the layers' rules changed**;
    - the executed plan dropped from field 16, every other plan as it was;
    - where the party held the chain key alone (`[0, party]`), a succession plan for the seat successor in the executed plan's place, naming at least one seat successor of theirs, as rule 59 requires. The seat successor signs the clone as the plan's signer, so that plan is signed by them in the same clone.
@@ -2220,6 +2221,7 @@ Succession is a clone: the new terms carry the stakes and seats the plan gives, 
 The clone's mark then names the plan, `[3, party]`, with the seat successors entering as its signers. It comes into force on the trigger (rule 82) and their signatures, with no other power, provided it changes nothing but what the plan gives, as rule 64 says:
 - the party out and its seat successors in, among the parties and in its place in every holding of the key grammar, every threshold unchanged, and in every layer's rule naming it;
 - the party out of every area it held;
+- its stakes passed to its stake successors, in the plan's parts;
 - the executed plan dropped;
 - and, where the party held the chain key alone, a plan for the successor in its place, naming their own successor, signed by the successor in that clone (rule 59).
 
