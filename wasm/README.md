@@ -74,3 +74,18 @@ Verdicts an app may see change:
 - **A clone marked with a succession plan naming stake successors must pass the party's stakes to them**; one leaving them as they were, or changing a layer's rule beyond putting the seat successor in the party's place, is invalid (rules 64 and 83). One passing them, valid until now only without a stake change, is not invalid.
 - **A collective's split agreement:** a later version paying the stake less needs its holders' consent by the stake's holders' rule (rules 15, 48, 94 and 95): every holder who is no member signs under "every holder"; under a rule by share the holders signing meet the share, a proxy voting for a non-member where it has not signed itself; the roster read at the version, the transfers its history places applied. A version that once counted on the parties' signatures alone may now be a draft. A fork's successor whose first split agreement pays its kept holders less than the original's did needs them too (rule 95).
 - The anchoring binding (`anchoringOffer`, `anchoringReadOffer`, `anchoringCheckTicket`) is unchanged: the moved anchoring cMIP is not yet on this branch, and the binding follows it once it is.
+
+**Changed in S7h-5** (rebuild against this commit):
+
+| Old | New | Why |
+| --- | --- | --- |
+| none | `Verifier.agreementsPublicationTip(specs, first)` → `{ latest, tags, owners, ownersLatest }`: a publication's latest versions, the latest version of each price tag line that counts under it (one per price), the ownership agreement it names and its latest version | F409: every app that pays follows the line to its tip first |
+| `anchoringOffer(network, tiers, words)`, refused | `anchoringOffer(network, tiers, words, service, splitCmip, refundUntil?)` → `{ type: 6, payload }`, a lone seller's publication (anchoring draft 6) | the anchoring cMIP moved to a publication |
+| none | `anchoringPriceTags(network, tiers, publication, service)` → `[{ tier, type: 5, payload }]`, one tag per tier, each priced exactly at its tier | F409: one price tag per price |
+| `anchoringReadOffer(act)`, refused | `anchoringReadOffer(publicationAct, tagActs?)` → `{ id, payee, unit, network, tiers, words, refundUntil, tags: [{ tier, tag }] }` | draft 6 |
+| `anchoringCheckTicket(offerAct, ticket, commitment, leaf, now)` | `anchoringCheckTicket(publicationAct, tagAct, ticket, commitment, leaf, now)`: the tag paid must be the ticket's tier's | draft 6; a payment naming the publication is a tip and buys no ticket |
+| `publicationPayload({ plan })`, no fees | `plan.fees: [{ module, part, scope?: "bake" or "rail", of? }]`, read back the same | F409 |
+
+Verdicts an app may see change: an act a departed member drafts for the collective after the line registering the departure counts for nothing, however many current members sign it (rule 58); a payment to a backup the publication lists, still naming the tag, is a purchase where it was none (rule 17).
+
+**For the suite, to turn the anchoring tests green** (the binding cannot meet the old calls and follow draft 6): `clients/anchoring-service/src/service.ts` makes its publication with `anchoringOffer(3, TIERS, words, this.me.id, SPEC.split)` and signs each of `anchoringPriceTags(3, TIERS, o.id, this.me.id)` under Money, keeping the tag ids, and accepts a payment whose `fulfils` is the ticket's tier's tag (line 246); `clients/damgar/src/damgar.ts` (line 1935) looks up the tag act a payment fulfils and passes it to `anchoringCheckTicket`; `clients/desk/src/money.ts` (line 164) and `clients/ummia/src/anchor.ts` (line 89) pass the service's tag acts to `anchoringReadOffer` and pay `tags[tier].tag`.
