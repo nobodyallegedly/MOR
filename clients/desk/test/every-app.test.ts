@@ -144,7 +144,7 @@ test('H93: Rules I follow in Dub, Edubba and Ummia: asked under the top; followe
   // Max accepted every money rule in Damgar (its list sealed at the homes): Payment, Money messages and Grant limits are on it.
   const steps = [
     { app: 'Dub', here: 'corrections', list: 'naming', listed: ['payment', 'grant-limits'], notCarried: [] as string[] },
-    { app: 'Edubba', here: 'agent-memory', list: 'member-keys', listed: ['naming', 'messages'], notCarried: ['corrections'] },
+    { app: 'Edubba', here: 'agent-memory', list: 'appended', listed: ['naming', 'messages'], notCarried: ['corrections'] },
     { app: 'Ummia', here: 'release-manifest', list: 'long-form', listed: ['naming'], notCarried: [] },
   ];
   for (const st of steps) {

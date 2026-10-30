@@ -298,7 +298,7 @@ export function runnerForm(r: { available: boolean; state: string | null; code: 
       ? `<p class="k-small k-soft">Kišib approved Edubba. The identities it lets Edubba use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Edubba in Kišib (Runner, Apps).</p>'}`
       : r.state === 'waiting'
         ? `<p class="k-small k-soft">Waiting for Kišib: approve Edubba there (Runner, Apps), comparing this code:</p><p class="k-mono">${e(r.code ?? '')}</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">Look again</button></div>`
-        : `<p class="k-small k-soft">Edubba holds no key of an identity used through Kišib: Kišib signs, in its panel inside Edubba’s window, for To sign (as Dub does); let Edubba open what is sealed to it there (Runner, Apps), so the proposals sent to it can be read here. Member keys are added to Kišib one at a time, on an app’s ask, each approved there.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Kišib</button></div>`;
+        : `<p class="k-small k-soft">Edubba holds no key of an identity used through Kišib: Kišib signs, in its panel inside Edubba’s window, for To sign (as Dub does); let Edubba open what is sealed to it there (Runner, Apps), so the proposals sent to it can be read here. A member acts for a collective with their own key, which Kišib holds: no key of the collective’s is added.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Kišib</button></div>`;
   return `<h4>Use one from Kišib</h4>${r.problem ? `<p class="k-small k-bad">${e(r.problem)}</p>` : ''}${state}`;
 }
 

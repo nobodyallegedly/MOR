@@ -32684,7 +32684,7 @@ async function digestOf3(x) {
 }
 
 // src/member.ts
-var EDUBBA_RULES = rulesOf("payment", "messages", "grant-limits", "people", "naming", "corrections", "appended", "member-keys", "agent-memory");
+var EDUBBA_RULES = rulesOf("payment", "messages", "grant-limits", "people", "naming", "corrections", "appended", "agent-memory");
 var HEX645 = /^[0-9a-f]{64}$/;
 var MemberKeep = class {
   constructor(store, desk, named2 = () => []) {
@@ -33358,6 +33358,7 @@ function operations(p, opts) {
         }
         for (const x of real.collectives()) {
           const c2 = real.collective(x.id);
+          if (!c2.f.identity.signingSecret) continue;
           try {
             await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c2.f.identity.signingSecret, homes: c2.f.identity.homes, relays: c2.f.relays });
           } catch (e3) {
@@ -36176,10 +36177,10 @@ ${WEB ? note3("warn", `<strong>This is a web page.</strong> ${e2(WEB_FOUNDING_SA
 ${note3("", "How: each member reads the founding terms in plain words and signs on their own device, in their own Edubba (Collectives, To sign; on a computer or on the web). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member\u2019s share goes sealed to a one-time key their Edubba makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.")}
 <section class="card"><form id="real-found">
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
-<label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e2(i.id)}"${i.id === s.acting ? " selected" : ""}>${e2(i.name)}</option>`).join("")}</select>
+<label>You: the founder, who proposes and signs first (a collective holds no signing key: each member acts for it with their own key)</label><select name="founder">${founders.map((i) => `<option value="${e2(i.id)}"${i.id === s.acting ? " selected" : ""}>${e2(i.name)}</option>`).join("")}</select>
 <label>Its members: you, and at least one other (each by ID, or chosen from Contacts beside it)</label>${memberRows("real-found", true, [])}
 <h3>Who decides what</h3>
-<p class="small">Members are the columns; tap a box to give that member\u2019s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign.</p>
+<p class="small">Members are the columns; tap a box to give that member\u2019s key power in that row. The constitution first, then the judges, then the five layers, then any finer areas, then the shares (Agreements rules 60 and 62). Each member signs with their own key.</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
 <label>The words everyone signs (empty: the grid\u2019s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
@@ -36459,7 +36460,7 @@ function firstScreen() {
 function runnerForm(r) {
   if (!r.available) return '<p class="k-small k-soft">Ki\u0161ib\u2019s runner is in Edubba on a computer only, never the web client: bring the identity with its signing key\u2019s words instead.</p>';
   const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div><span>${who({ id: x.id, form: x.form })}</span><span class="k-r">${x.held ? "held here" : `<button type="button" class="k-btn k-small" data-action="runner-take" data-id="${e(x.id)}">Use it here</button>`}</span></div>`).join("")}</div>` : "";
-  const state2 = r.state === "approved" ? `<p class="k-small k-soft">Ki\u0161ib approved Edubba. The identities it lets Edubba use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Edubba in Ki\u0161ib (Runner, Apps).</p>'}` : r.state === "waiting" ? `<p class="k-small k-soft">Waiting for Ki\u0161ib: approve Edubba there (Runner, Apps), comparing this code:</p><p class="k-mono">${e(r.code ?? "")}</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">Look again</button></div>` : `<p class="k-small k-soft">Edubba holds no key of an identity used through Ki\u0161ib: Ki\u0161ib signs, in its panel inside Edubba\u2019s window, for To sign (as Dub does); let Edubba open what is sealed to it there (Runner, Apps), so the proposals sent to it can be read here. Member keys are added to Ki\u0161ib one at a time, on an app\u2019s ask, each approved there.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Ki\u0161ib</button></div>`;
+  const state2 = r.state === "approved" ? `<p class="k-small k-soft">Ki\u0161ib approved Edubba. The identities it lets Edubba use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Edubba in Ki\u0161ib (Runner, Apps).</p>'}` : r.state === "waiting" ? `<p class="k-small k-soft">Waiting for Ki\u0161ib: approve Edubba there (Runner, Apps), comparing this code:</p><p class="k-mono">${e(r.code ?? "")}</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">Look again</button></div>` : `<p class="k-small k-soft">Edubba holds no key of an identity used through Ki\u0161ib: Ki\u0161ib signs, in its panel inside Edubba\u2019s window, for To sign (as Dub does); let Edubba open what is sealed to it there (Runner, Apps), so the proposals sent to it can be read here. A member acts for a collective with their own key, which Ki\u0161ib holds: no key of the collective\u2019s is added.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Ki\u0161ib</button></div>`;
   return `<h4>Use one from Ki\u0161ib</h4>${r.problem ? `<p class="k-small k-bad">${e(r.problem)}</p>` : ""}${state2}`;
 }
 function spent2(lines4, forms) {
