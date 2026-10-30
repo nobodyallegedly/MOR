@@ -195,10 +195,10 @@ fn story_json(cw: &ColWorld) -> J {
                 m.insert("tips".into(), json!(cites));
                 m.insert("objects".into(), json!(objects));
                 m.insert("agreement".into(), json!(hx(&c.agreement)));
-                // Out of verifier2's scope: whether the collective holds a stake (N9).
-                // The generator's collective holds its work where it owns one, and
-                // nothing in the stories releases it.
-                m.insert("holds_nothing".into(), json!(!cw.shape.owns_work));
+                // Out of verifier2's scope: whether the collective holds a stake (N9),
+                // read here as the library reads it at the closing's line (the
+                // complete transfers its history cites applied).
+                m.insert("holds_nothing".into(), json!(cw.view().closing(&id).map(|e| e.holds.is_empty()).unwrap_or(!cw.shape.owns_work)));
                 acts.push(J::Object(m));
             }
             continue;
@@ -291,6 +291,9 @@ fn story_json(cw: &ColWorld) -> J {
                 // the generator's acknowledgement of acts (Agreements draft 14,
                 // F303: what a closing relies on); exported as any action.
                 agreements::new_types::LIVENESS => ("publication", Map::new()),
+                // The collective's publication of its work (type 6): an
+                // action of the collective, exported as any action.
+                agreements::types::PUBLICATION => ("publication", Map::new()),
                 other => {
                     skipped.push(json!({"id": hx(&id), "why": format!("law type {other}"), "grant": grant.map(|g| hx(&g))}));
                     continue;
@@ -327,6 +330,16 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         };
         let mut m = base(type_, strand);
+        // A device's act is drafted by member 0 with their own key: the
+        // drafter's act is their signature (rule 58), counted beside the
+        // signature acts naming it.
+        if grant.is_none() {
+            let mut s: Vec<String> = m.get("sigs").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
+            if !s.contains(&hx(&signer)) {
+                s.push(hx(&signer));
+            }
+            m.insert("sigs".into(), json!(s));
+        }
         for (k, val) in extra {
             m.insert(k, val);
         }
@@ -413,7 +426,9 @@ fn ref_json(cw: &ColWorld, story: &J) -> J {
         let counts = match t {
             "genesis" => true,
             "obligation" => lv.obligation_binds(&id).ok().flatten() == Some(true),
-            "record" => lv.record(&col, &id).map(|r| r.line).unwrap_or(false) && after.is_none() && a.get("grant").is_none(),
+            // `after_closing` reads the act's signer, a member for a keyless
+            // collective's record: the consent's `Closed` is the collective's.
+            "record" => lv.record(&col, &id).map(|r| r.line).unwrap_or(false) && after.is_none() && !matches!(consent, Ok(Consent::Closed { .. })) && a.get("grant").is_none(),
             _ if a.get("grant").is_some() => valid && c && backing.as_ref().map(|b| binds(b)).unwrap_or(false),
             _ => valid && c && after.is_none(),
         };
