@@ -387,6 +387,16 @@ export class TestCollective {
     return this;
   }
 
+  /**
+   * Where its agreements, records and the signatures on them are left: its
+   * relays, and its homes. A collective publishes no routes (it signs no
+   * everyday act, Identity rule 1), so a reader who knows only where it lives
+   * (Kišib, from its homes) finds its agreement there.
+   */
+  get places(): string[] {
+    return [...new Set([...this.f.relays, ...this.f.identity.homes.map((h) => h.hint)])];
+  }
+
   /** The collective's chain as its next act cites it (rule 58): its latest decision and the head this device made since. */
   citing(): [string, string][] {
     return (this.f.identity.cites ?? [this.identity]).map((d): [string, string] => [this.identity, d]);
@@ -477,9 +487,9 @@ export class TestCollective {
     const ids = opts.members.map((m) => m.id);
     const payload = termsPayload(collectiveTerms(opts.governance, ids));
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the founding agreement is not the one shown: nothing signed');
-    const proposed = await proposePayload(opts.members[0], payload, undefined, opts.relays);
+    const proposed = await proposePayload(opts.members[0], payload, undefined, [...opts.relays, ...opts.homes.map((h) => h.hint)]);
     const signed: Signed[] = [];
-    for (const m of opts.members) signed.push({ member: m.id, act: (await sign(m, proposed.id, opts.relays)).id });
+    for (const m of opts.members) signed.push({ member: m.id, act: (await sign(m, proposed.id, [...opts.relays, ...opts.homes.map((h) => h.hint)])).id });
 
     const scheme = opts.scheme ?? 2;
     const { genesis, chainKey } = keylessGenesis(ids, opts.governance.safetyThreshold, scheme, opts.homes, proposed.id);
@@ -551,10 +561,10 @@ export class TestCollective {
     const resigned: Signed[] = [];
     let line: string | undefined;
     for (const m of opts.leaving ?? []) {
-      resigned.push({ member: m.id, act: (await resign(m, this.f.agreement, this.f.relays, undefined, opts.drafts?.[m.id])).id });
+      resigned.push({ member: m.id, act: (await resign(m, this.f.agreement, this.places, undefined, opts.drafts?.[m.id])).id });
     }
     if (resigned.length) {
-      line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;
+      line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.places)).id;
     }
     const left = new Set(resigned.map((r) => r.member));
     let mark: MarkEntry[];
@@ -577,9 +587,9 @@ export class TestCollective {
     const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', record: line, resigned, signed, sent: [], stopped });
     const before = await opts.beforeClone?.();
     if (before) return stop(before);
-    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
+    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.places);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.places, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return stop(unsent, proposed.id, signed);
 
@@ -695,9 +705,9 @@ export class TestCollective {
     const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', signed, sent: [], stopped });
     const ahead = await opts.beforeClone?.();
     if (ahead) return stop(ahead);
-    const proposed = await proposePayload(opts.proposer, payload, opts.before, this.f.relays);
+    const proposed = await proposePayload(opts.proposer, payload, opts.before, this.places);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.places, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return stop(unsent, proposed.id, signed);
     const declaration = {
@@ -785,7 +795,7 @@ export class TestCollective {
    */
   async recordSigned(a: { governance: Governance; clone: string; signatures: string[] }): Promise<string> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    const r = await record(this.id, { clone: a.clone, signatures: a.signatures, inForce: this.f.agreement }, this.f.relays);
+    const r = await record(this.id, { clone: a.clone, signatures: a.signatures, inForce: this.f.agreement }, this.places);
     this.f.governance = a.governance;
     this.f.agreement = a.clone;
     this.f.agreements.push(a.clone);
@@ -819,12 +829,12 @@ export class TestCollective {
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
     const before = await opts.beforeClone?.();
     if (before) return { clone: '', record: '', signed: [], stopped: before };
-    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
+    const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.places);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.places, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return { clone: proposed.id, record: '', signed, stopped: unsent };
-    const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);
+    const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.places);
     this.f.governance = opts.governance;
     this.f.agreement = proposed.id;
     this.f.agreements.push(proposed.id);
@@ -882,15 +892,15 @@ export class TestCollective {
     const payload = await this.declarationFor(opts.member, opts.via, named);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
     const clause = await this.clauseOf(opts.member, opts.via, named);
-    const d = await declare(opts.by, { agreement: named, clause: clause!, party: opts.member, outcomes: [0] }, this.f.relays);
+    const d = await declare(opts.by, { agreement: named, clause: clause!, party: opts.member, outcomes: [0] }, this.places);
     const signed: Signed[] = [];
-    for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.f.relays)).id });
+    for (const m of opts.cosigners) signed.push({ member: m.id, act: (await sign(m, d.id, this.places)).id });
     if (opts.broken) {
       this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act), named }];
       return { declaration: d.id, signed };
     }
     if (!this.id.actor || this.id.actor.id === opts.member) this.by(opts.by);
-    const r = await record(this.id, { registers: [d.id], inForce: this.f.agreement, acks: signed.map((s) => s.act) }, this.f.relays);
+    const r = await record(this.id, { registers: [d.id], inForce: this.f.agreement, acks: signed.map((s) => s.act) }, this.places);
     this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, record: r.id }];
     this.f.records = [...(this.f.records ?? []), r.id];
     return { declaration: d.id, signed, record: r.id };
