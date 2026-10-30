@@ -110,7 +110,7 @@ test('founding: proposed by negotiation messages, each member signing alone; sha
   }
 
   // Every party signed: found, deal, seal each other member's share to its one-time key.
-  const { collective: c, shares } = await TestCollective.foundSigned({ agreement: terms.id, members, homes: homes.map((h) => h.home), relays: [relay.base], governance });
+  const { collective: c, shares } = await TestCollective.foundSigned({ agreement: terms.id, members, homes: homes.map((h) => h.home), relays: [relay.base], governance, actor: founder });
   assert.deepEqual(c.f.safety.shares, [], 'no share kept in the collective file');
   const fv = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   await lookUp(c.identity, [relay.base, homes[0].base], {}, fv);
@@ -149,13 +149,14 @@ test('founding: proposed by negotiation messages, each member signing alone; sha
   // A release of the collective, counting once two members signed it, each from its own identity.
   const pub = { id: c.id, relays: c.f.relays, releases: c.f.releases };
   const rel = await publishPrepared(pub, prepareRelease(pub, { name: 'tablets', version: '1', files: [{ path: 'a.txt', bytes: new TextEncoder().encode('clay\n') }] }));
+  // The founder uploads it for the collective with their own key (it has none, Agreements rule 56): one of the two.
   let v = await verifyRelease(rel.id, [relay.base]);
-  assert.equal(v.ok, false, 'not a release before two members sign it');
+  assert.equal(v.ok, false, 'not a release before a second member signs it');
+  assert.deepEqual(v.signers, [founder.id]);
   await sign(ana, rel.id, c.f.relays);
-  await sign(bo, rel.id, c.f.relays);
   v = await verifyRelease(rel.id, [relay.base]);
   assert.ok(v.ok, JSON.stringify(v.problems));
-  assert.deepEqual(v.signers.sort(), [ana.id, bo.id].sort());
+  assert.deepEqual(v.signers.sort(), [founder.id, ana.id].sort());
 
   // A member change: Cy joins, Bo leaves. The clone proposed; every voice and the joining member sign alone.
   const next = [founder.id, ana.id, cy.id];
@@ -167,13 +168,13 @@ test('founding: proposed by negotiation messages, each member signing alone; sha
 
   // The rotation, from two paper shares (Ana's and Bo's): Kišib's work, the repo client standing in.
   await assert.rejects(
-    c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, holder: clone.holder, papers: [papers.get(ana.id)!] }),
+    c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, papers: [papers.get(ana.id)!] }),
     /do not rebuild the collective's chain key/,
   );
   const wrong = { ...papers.get(bo.id)!, value: papers.get(bo.id)!.value.slice() };
   wrong.value[5] ^= 1;
-  await assert.rejects(c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, holder: clone.holder, papers: [papers.get(ana.id)!, wrong] }), /written wrong/);
-  const rot = await c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, holder: clone.holder, papers: [papers.get(ana.id)!, papers.get(bo.id)!] });
+  await assert.rejects(c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, papers: [papers.get(ana.id)!, wrong] }), /written wrong/);
+  const rot = await c.rotateFromPaper({ agreement: proposed.id, signatures: sigs, members: next, governance: clone.governance, papers: [papers.get(ana.id)!, papers.get(bo.id)!] });
   assert.equal(rot.shares.length, 3);
   assert.deepEqual(rot.shares.map((s) => s.holder), next);
   assert.ok(await c.settle(), 'the rotation counts');
@@ -191,11 +192,13 @@ test('founding: proposed by negotiation messages, each member signing alone; sha
   }
   assert.equal((after.agreementsCurrent(AGREEMENTS_SPECS, c.identity) as { agreement: string }).agreement, proposed.id, 'the clone in force after the rotation');
 
-  // The new key rebuilds from two of the new papers (the old ones no longer).
+  // The new key rebuilds from two of the new papers (the old ones no longer). Key 0 signed the
+  // genesis (Identity rule 1), key 1 was dealt at founding, so the new key is key 2.
+  assert.equal(c.f.safety.index, 2);
   const newPapers = rot.shares.map((s) => shareOnPaper(s.share) as { x: number; value: Uint8Array });
   const { rebuildChainKeyFromPaper } = await import('../../genesis/src/core.ts');
-  assert.equal((rebuildChainKeyFromPaper({ seedModule: 'words', scheme: 3, index: 1, commit: c.f.safety.commit, papers: newPapers.slice(1) }) as { commit: string }).commit, c.f.safety.commit);
-  assert.throws(() => rebuildChainKeyFromPaper({ seedModule: 'words', scheme: 3, index: 1, commit: c.f.safety.commit, papers: [papers.get(ana.id)!, papers.get(bo.id)!] }));
+  assert.equal((rebuildChainKeyFromPaper({ seedModule: 'words', scheme: 3, index: c.f.safety.index, commit: c.f.safety.commit, papers: newPapers.slice(1) }) as { commit: string }).commit, c.f.safety.commit);
+  assert.throws(() => rebuildChainKeyFromPaper({ seedModule: 'words', scheme: 3, index: c.f.safety.index, commit: c.f.safety.commit, papers: [papers.get(ana.id)!, papers.get(bo.id)!] }));
 
   // A decline is a negotiation message too, read as such.
   const t2 = await negotiate(founder, await reach(cy), { text: 'Another proposal.', refs: [[terms.id, founder.id]] });

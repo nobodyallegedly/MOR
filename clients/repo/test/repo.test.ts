@@ -18,7 +18,7 @@ import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy } from '../../genesis/src/lines.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { TestCollective, type Governance } from '../src/collective.ts';
-import { AGREEMENTS_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
+import { AGREEMENTS_SPECS, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../src/specs.ts';
 import {
   checkImplements, findImplemented, resolveImplements,
@@ -105,13 +105,18 @@ test('a release counts only once two members have signed it', async () => {
     },
   ]);
 
+  // A collective has no signing key: the first member uploaded the release
+  // with their own key, naming the collective, and so is its drafter, one of
+  // the two the Releases area needs (Agreements rules 58 and 60).
   let v = await verifyRelease(first, [relay.base]);
-  assert.equal(v.ok, false);
-  assert.match(v.problems[0], /not a release: any 2 of the Releases area's holders must sign it; 0 did/);
+  assert.equal(v.ok, false, 'one member of two');
+  assert.match(v.problems[0], /not a release: any 2 of the Releases area's holders must sign it; 1 did/);
+  assert.deepEqual(v.signers, [m[0].id]);
 
+  // The uploader's own signature act adds nobody.
   await signRelease(m[0], first, c.f.relays);
   v = await verifyRelease(first, [relay.base]);
-  assert.equal(v.ok, false, 'one signature of two');
+  assert.equal(v.ok, false, 'still one member of two');
   assert.deepEqual(v.signers, [m[0].id]);
 
   // Someone outside the collective signing never counts.
@@ -163,21 +168,27 @@ test('a member leaves alone and another joins, by record, clone and rotation', a
   assert.equal(c.f.agreements.length, 2);
   // The leaving member holds no share of the next key.
   assert.ok(!c.f.safety.shares.some((s) => s.holder === m3.id));
-  assert.equal(c.f.safety.index, 1);
+  // Key 0 signed the genesis (Identity rule 1), key 1 was dealt at founding, key 2 now.
+  assert.equal(c.f.safety.index, 2);
 
   // The first release still stands, under the founding agreement.
   const v1 = await verifyRelease(first, [relay.base]);
   assert.ok(v1.ok, v1.problems.join('; '));
   assert.equal(v1.agreement, c.f.agreements[0]);
 
-  // The old signing key signs a "release" after the rotation: void (F100).
-  const ghost = new TestCollective({ ...c.f, identity: old, releases: [] });
+  // A collective has no signing key to outlive a change (F100 is moot): the
+  // member who left uploads a "release" naming it after the change, with
+  // their own key. They are no party of the agreement in force, so they are
+  // not counted as its drafter (Agreements rules 58, 60): one current
+  // member's signature is one of the two the Releases area needs.
+  void old;
+  const ghost = new TestCollective(JSON.parse(JSON.stringify({ ...c.f, releases: [] })), c.id.via).by(m3);
   const g = await publishRelease(ghost, { name: 'MOR test tree', version: 'ghost', files: small });
   await signRelease(m1, g.id, c.f.relays);
-  await signRelease(m3, g.id, c.f.relays);
   const vg = await verifyRelease(g.id, [relay.base]);
   assert.equal(vg.ok, false);
-  assert.match(vg.problems[0], /void/);
+  assert.deepEqual(vg.signers, [m1.id]);
+  assert.ok(!vg.signers.includes(m3.id), 'the member who left is counted for nothing');
 });
 
 test('the next release is signed under the new rules', async () => {
@@ -206,15 +217,18 @@ test('the next release is signed under the new rules', async () => {
   const act = await relayAt(relay.base).getAct(second);
   const objects = (describeAct(act!) as { objects?: [string, string][] }).objects ?? [];
   assert.deepEqual(objects, [[c.identity, c.f.identity.binding]]);
+  // An upload naming the collective but citing, on its chain, an act that
+  // is no decision of it (here the uploader's own genesis) is on none of its
+  // chains (rule 58).
   const cites = c.f.identity.cites;
-  c.f.identity.cites = undefined;
+  c.f.identity.cites = [m1.id];
   const loose = await publishRelease(c, { name: 'MOR test tree', version: 'uncited', files });
   c.f.identity.cites = cites;
   await signRelease(m1, loose.id, c.f.relays);
   await signRelease(m4, loose.id, c.f.relays);
   const vl = await verifyRelease(loose.id, [relay.base]);
   assert.equal(vl.ok, false);
-  assert.match(vl.problems[0], /F127/);
+  assert.match(vl.problems[0], /on no chain of the collective.*rule 58/);
 });
 
 test('an ordinary change is recorded at once, without a rotation', async () => {
@@ -347,12 +361,23 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
         [2, new Map()],
         [4, [0]],
         [5, [1, 2]],
+        [7, [[h(1), 333_334], [h(2), 333_333], [h(3), 333_333]]],
         [9, new Map<number, unknown>([[0, [1, 2]], [1, [0]]])],
-        [12, new Map<number, unknown>([[0, [0, h(1)]], [1, chainKey]])],
+        [12, new Map<number, unknown>([[1, chainKey]])],
+        [19, new Map<number, unknown>([1, 2, 3, 4, 5].map((l) => [l, [1, 1]]))],
+        [33, [1, null]],
         ...extra,
       ]),
     );
   checkTerms(terms([1, 2, [h(1), h(2), h(3)]]), AGREEMENTS_SPECS);
+  // Rule 59: a collective has no signing key; a key grammar naming one (key 0) is refused.
+  const keyed = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
+  keyed.set(12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]]]));
+  assert.throws(() => checkTerms(cborEncode(keyed), AGREEMENTS_SPECS), /^Error: law\/(check|shape):/);
+  // Rule 60: a founding naming who acts in only four layers founds nothing.
+  const four = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
+  four.set(19, new Map<number, unknown>([1, 2, 3, 4].map((l) => [l, [1, 1]])));
+  assert.throws(() => checkTerms(cborEncode(four), AGREEMENTS_SPECS), /^Error: law\/(check|shape):.*layer/);
   // F128: terms field 25 (the relays) is withdrawn; terms carrying it are refused.
   const relays = cborDecode(terms([1, 2, [h(1), h(2), h(3)]])) as Map<number, unknown>;
   relays.set(25, [[null, 'https://relay.test']]);
@@ -367,14 +392,17 @@ test('a key grammar that one lost holder would freeze is refused (F96)', () => {
   );
   // Draft 6's listed act types are retired: areas reach acts.
   assert.throws(
-    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[0, [0, h(1)]], [1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), AGREEMENTS_SPECS),
-    /^Error: law\/shape:/,
+    () => checkTerms(terms([1, 2, [h(1), h(2), h(3)]], [[12, new Map<number, unknown>([[1, [1, 2, [h(1), h(2), h(3)]]], [2, []]])]]), AGREEMENTS_SPECS),
+    /^Error: law\/(shape|check):/,
   );
 });
 
-test("a deal lists its payees' grants in field 14, one per payee (F129, H4)", () => {
+test("a deal carries no split plan, payees' grants, fees or backups: a publication does (terms fields 8, 14, 28, 29 withdrawn)", () => {
+  // Before the redesign a deal listed its payees' grants in field 14 (F129, H4);
+  // now the publication names its split service, which receives in its own name,
+  // its plan, its fees and its backups (Agreements, "Publication (type 6)").
   const h = (n: number) => new Uint8Array(32).fill(n);
-  const deal = (f14: unknown) =>
+  const deal = (extra: [number, unknown][] = []) =>
     cborEncode(
       new Map<number, unknown>([
         [0, [h(1), h(2)]],
@@ -382,15 +410,13 @@ test("a deal lists its payees' grants in field 14, one per payee (F129, H4)", ()
         [2, new Map()],
         [4, [0]],
         [5, [0]],
-        [14, f14],
+        ...extra,
       ]),
     );
-  checkTerms(deal([h(7), h(8)]), AGREEMENTS_SPECS);
-  assert.throws(() => checkTerms(deal(h(7)), AGREEMENTS_SPECS), /^Error: law\/check:.*H4/);
-  assert.throws(() => checkTerms(deal([h(7), h(7)]), AGREEMENTS_SPECS), /^Error: law\/check:.*H4/);
-  const g = cborDecode(dealGrantPayload(hex(h(9)), [0, h(5)])) as Map<number, unknown>;
-  assert.equal(g.get(1), 1);
-  assert.equal(g.get(2), null);
+  checkTerms(deal(), AGREEMENTS_SPECS);
+  for (const [field, value] of [[8, new Map<number, unknown>([[0, []], [1, h(4)]])], [14, [h(7), h(8)]], [28, [[h(5), 1000]]], [29, new Map<number, unknown>([[0, [h(6)]]])]] as [number, unknown][]) {
+    assert.throws(() => checkTerms(deal([[field, value]]), AGREEMENTS_SPECS), /^Error: law\/check:.*withdrawn/, `field ${field}`);
+  }
 });
 
 test('shares check alone, and fewer than the threshold rebuild nothing', () => {
@@ -457,33 +483,25 @@ async function standingOf(identity: string, id: string): Promise<string> {
   return l.verifier.status(id);
 }
 
-/** Another device of the collective, holding its signing key, keeping its own line. */
-const otherDevice = (col: TestCollective) => new TestCollective({ ...structuredClone(col.f), identity: { ...structuredClone(col.f.identity), sequence: [] }, releases: [] });
-
-test('Identity rule 35 (was 17): a member change keeps the line another device of the collective made, and leaves one out only after the warning', async () => {
+test('Identity rotation check 4: a collective\'s rotation keeps no tip, and voids nothing a member made for it (Identity rule 35 has nothing to keep for it)', async () => {
+  // Before the redesign a collective's other device kept its own line under
+  // the collective's signing key, and a rotation had to keep it (rule 35).
+  // A collective has no signing key now: each act for it is a member's own,
+  // on the member's line, placed on the collective's line by citation
+  // (Agreements rule 58); its rotation installs no key and keeps no tip.
   const [m1, m2, m3, m4] = m;
   const col = (await TestCollective.found({ members: [m1, m2, m3, m4], homes: homes.map((h) => h.home), relays: [relay.base], governance, scheme: 3 })).collective;
-  const kept = await publishRelease(otherDevice(col), { name: 'Released from another device', version: 'kept', files: small });
-  const lines = await col.id.lines({ hints: col.f.relays, specs: AGREEMENTS_SPECS });
-  const other = lines.find((l) => !l.own)!;
-  assert.ok(other?.readable, 'the other device’s line, read from the relays');
-  assert.equal(other.tip, kept.id);
-  // Left out without the warning passed back: nothing is signed at all.
-  const agreement = col.f.agreement;
-  await assert.rejects(col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], lines: { leaveOut: [other.tip] } }), /Nothing was signed.*becomes void/s);
-  assert.equal(col.f.pending, null);
-  assert.equal(col.f.agreement, agreement);
-  // Kept, by default.
+  const kept = await publishRelease(col.by(m2), { name: 'Released by another member', version: 'kept', files: small });
+  await signRelease(m1, kept.id, col.f.relays);
+  assert.ok((await verifyRelease(kept.id, [relay.base])).ok, 'the release counts: Ben uploaded it, Ana signed it');
+  // No line of the collective's own to keep, and so no warning to pass.
+  const { plan } = await col.id.planRotation({ hints: col.f.relays, specs: AGREEMENTS_SPECS });
+  assert.equal(plan.warning ?? null, null);
   await col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], leaving: [m3] });
   assert.equal(await col.settle(), true);
-  assert.equal(await standingOf(col.identity, kept.id), 'valid', 'the other device’s release is kept by the rotation');
-
-  // A line left out on purpose, after the warning: void.
-  const dropped = await publishRelease(otherDevice(col), { name: 'Released from a device the members do not recognise', version: 'dropped', files: small });
-  const { plan } = await col.id.planRotation({ leaveOut: [dropped.id], hints: col.f.relays, specs: AGREEMENTS_SPECS });
-  assert.match(plan.warning ?? '', /becomes void/);
-  await col.changeMembers({ members: [m1.id, m2.id, m4.id], proposer: m1, signers: [m1, m2, m4], rebuilders: [m1.id, m2.id], governance: { ...governance, text: `${governance.text} Its devices share their lines before a key change.` }, lines: { leaveOut: [dropped.id], warned: plan.warning! } });
-  assert.equal(await col.settle(), true);
-  assert.notEqual(await standingOf(col.identity, dropped.id), 'valid', 'left out: void');
-  assert.equal(await standingOf(col.identity, kept.id), 'valid', 'kept before, still valid');
+  assert.equal(col.f.identity.signingSecret, '', 'the rotation installed no signing key');
+  assert.equal(await standingOf(m2.id, kept.id), 'valid', 'Ben\'s own act, valid on his own chain');
+  const v = await verifyRelease(kept.id, [relay.base]);
+  assert.ok(v.ok, v.problems.join('; '));
+  assert.equal(v.agreement, col.f.agreements[0], 'judged under the agreement its history holds');
 });

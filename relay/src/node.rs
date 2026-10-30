@@ -946,8 +946,11 @@ impl Node {
             _ => None,
         };
         // Identity rule 2: an act signed with a chain key must be a rotation
-        // or a chain signature (F132).
-        if sig::is_slh(&act.signature.scheme) && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
+        // or a chain signature (F132), or a collective's genesis, which
+        // declares no signing key and is signed by its first chain key
+        // (rule 1); the core's genesis check below verifies that key.
+        let keyless_genesis = matches!(&payload, Some(Payload::Genesis(g)) if g.signing_key.is_none());
+        if sig::is_slh(&act.signature.scheme) && !keyless_genesis && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
             return wire(
                 code::INVALID,
                 "an act signed with a chain key must be a rotation or a chain signature",

@@ -18,10 +18,13 @@ export const REPO_SPECS = {
 export const AGREEMENTS_TYPES = {
   terms: 0,
   signature: 1,
+  claim: 3,
   release: 5,
-  offer: 6,
+  /** The publication (rules 11 to 17): the offer, with its partners, split service and plan; its price a price tag (Money type 5). */
+  publication: 6,
   split: 8,
   grant: 9,
+  revocation: 10,
   /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
   liveness: 12,
   declaration: 13,
