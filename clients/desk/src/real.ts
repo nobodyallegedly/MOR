@@ -935,13 +935,15 @@ export class Real {
           if (ptr.needed > 1) lines.push({ text: `It asks ${ptr.needed}: ${ptr.asked.length ? `${ptr.asked.map(names).join(', ')} asked` : 'nobody could be asked'}.`, tone: 'warn' });
           return { title: 'One trusted pointer', lines, acts: [ptr.act] };
         }
-        const { area } = await areaReaching(c.identity, await collectivePlaces(c.identity, places, this.via), { spec: MIRS.agreements, type: AGREEMENTS_TYPES.publication }, this.via);
+        // A collective's split agreement is judged in its judicial tier (Agreements rules 48 and 94, as S7h-4 built them):
+        // every member whose voice remains signs it, whatever the Agreements layer's rule.
         const at = await chainFor(c.identity, places, this.via);
         const made = await signAsMember(c.identity, me, at, { spec: MIRS.agreements, type: AGREEMENTS_TYPES.publication, payload: payload!, public: true, objects: [[owners, owners]] });
         this.store.saveIdentity(me);
         await publishAt([made.act], places, this.via);
-        const holders = area?.holders.filter((h) => h !== founder) ?? [];
-        const needed = Math.max(0, (area?.number ?? 1) - 1);
+        const voices = c.f.members.filter((m) => !(c.f.governance.departed ?? []).includes(m));
+        const holders = voices.filter((h) => h !== founder);
+        const needed = holders.length;
         const p: Proposal = {
           act: made.id,
           kind: 'money',
@@ -958,8 +960,8 @@ export class Real {
           at: now(),
         };
         this.saveProposal(p);
-        lines.push({ text: `The split agreement is act ${shownAct(made.id)}, made by ${names(founder)} for the collective under “${area?.name ?? 'its Agreements layer'}”.`, tone: 'ok' });
-        if (needed) p.threads = await this.invite(founder, made.id, founder, holders, `${names(founder)} made the split agreement of the collective “${cname}”, naming its split service ${names(service)}: act ${made.id}. Its rule asks ${needed + 1} members: read it in Dub’s Signing tab, then sign or decline.`, a.collective, lines);
+        lines.push({ text: `The split agreement is act ${shownAct(made.id)}, made by ${names(founder)} for the collective; every member signs it (its judicial tier: it decides how the money of all is divided).`, tone: 'ok' });
+        if (needed) p.threads = await this.invite(founder, made.id, founder, holders, `${names(founder)} made the split agreement of the collective “${cname}”, naming its split service ${names(service)}: act ${made.id}. Every member signs it (${needed + 1}): read it in Dub’s Signing tab, then sign or decline.`, a.collective, lines);
         this.saveProposal(p);
         lines.push({ text: `The split service ${names(service)} signs it in its own app. Once it counts, record it here: the collective’s payee pointer then names the service.` });
         return { title: 'The collective’s split agreement is made', lines, acts: [made.id] };

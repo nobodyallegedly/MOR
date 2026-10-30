@@ -35,7 +35,7 @@ import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
 import { contestPurchase, contestSale, purchaseContests, readVow, vowOffer, vowSales, type ContestsBeside, type VowOffer } from './vows.ts';
-import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, termsAt } from '../../grants/src/member.ts';
 import { dealOfPost, pct, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
@@ -1016,8 +1016,13 @@ export class DubMoney {
         const pa = t?.publication ? await actAt(t.publication, hints, via) : null;
         const pub = pa ? readPublication(pa) : null;
         if (pub) parties.push(pub.drafter, pub.service, ...pub.partners.map((x) => x.identity));
-        const d = pub?.owners ? await readDeal(pub.owners, hints, via) : null;
+        const d = pub?.owners ? await readDeal(pub.owners, hints, via).catch(() => null) : null;
         if (d) parties.push(...d.parties);
+        // A collective's publication: its owners are its constitution, whose parties (its members) sign it for the collective.
+        else if (pub?.owners) {
+          const col = (await termsAt(pub.owners, hints, via).catch(() => null)) as { parties?: string[] } | null;
+          parties.push(...(col?.parties ?? []));
+        }
       } catch {
         // its tag was not found: held as before
       }
