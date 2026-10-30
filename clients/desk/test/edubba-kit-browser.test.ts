@@ -17,8 +17,9 @@
 //   screens), its Act tab (permissions as chips, a post reviewed and signed,
 //   shown as a card with the kit's two menus), its constitution in plain
 //   words, top right.
-// - Publishing: who acts, what (a text, a picture, a video, an audio); an
-//   audio stripped and read back, then signed; Published here; Sales.
+// - Publishing (way 1, Upload, round 8): who acts, what (a text, a picture,
+//   a video, an audio); an audio stripped, a price tag on it, read back, then
+//   signed; Published here; Sales.
 // - Vows: a vow read back and signed; Track pointing at its signer.
 // - The identity panel: identities, + Add's three ways, the menu, Remove
 //   said plainly; the foot, "This app".
@@ -283,31 +284,32 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   await shot(page, 'mac-26-found-agreements-kinds');
 });
 
-test('Publishing: who acts, what; an audio (M4A) stripped by the audio Module, read back, signed; Published here', async () => {
+test('Publishing, way 1 (Upload, round 8): who acts, what; an audio (M4A) stripped by the audio Module, a price tag on it, read back, signed; Published here', async () => {
   await tabTo('Publishing');
-  await page.locator('h2', { hasText: 'A protected file' }).waitFor();
+  await page.locator('h2', { hasText: 'Upload' }).waitFor();
   await page.locator('button[data-media=audio]').click();
-  await page.locator('#pub-work[data-media=audio]').waitFor();
-  await page.locator('#pub-work input[name=file]').waitFor();
-  await page.setInputFiles('#pub-work input[name=file]', { name: 'reading-thursday.m4a', mimeType: 'audio/mp4', buffer: M4A });
-  await page.fill('#pub-work input[name=title]', 'The reading, recorded');
-  await page.fill('#pub-work input[name=price]', '1500');
+  await page.locator('#pub-upload[data-media=audio]').waitFor();
+  await page.locator('#pub-upload input[name=file]').waitFor();
+  await page.setInputFiles('#pub-upload input[name=file]', { name: 'reading-thursday.m4a', mimeType: 'audio/mp4', buffer: M4A });
+  await page.fill('#pub-upload input[name=title]', 'The reading, recorded');
+  await page.check('#pub-upload input[name=then][value=price]');
+  await page.fill('#pub-upload input[name=price]', '1500');
   await shot(page, 'mac-30-publishing-audio');
-  await page.click('#pub-work button[type=submit]');
-  await page.locator('#e-pub-review #reading', { hasText: 'A protected recording' }).waitFor({ timeout: 90_000 });
+  await page.click('#pub-upload button[type=submit]');
+  await page.locator('#e-pub-review #reading', { hasText: 'Upload a recording' }).waitFor({ timeout: 90_000 });
   await page.locator('#e-pub-review #reading', { hasText: 'Stripped from the recording before it is locked' }).waitFor();
   await shot(page, 'mac-31-publishing-review');
   await page.click('#e-pub-review [data-action=confirm]');
   await page.locator('#here-feed .k-act', { hasText: 'The reading, recorded' }).waitFor({ timeout: 90_000 });
   await shot(page, 'mac-32-published-here');
   // A file the Module refuses: refused in plain words, nothing signed.
-  await col('A protected file');
+  await col('1 · Upload');
   await page.locator('button[data-media=audio]').click();
-  await page.locator('#pub-work[data-media=audio]').waitFor();
-  await page.setInputFiles('#pub-work input[name=file]', { name: 'not.m4a', mimeType: 'audio/mp4', buffer: readFileSync(new URL('../../../modules/audio/test/fixtures/with-picture.m4a', import.meta.url)) });
-  await page.fill('#pub-work input[name=title]', 'A picture inside');
-  await page.fill('#pub-work input[name=price]', '10');
-  await page.click('#pub-work button[type=submit]');
+  await page.locator('#pub-upload[data-media=audio]').waitFor();
+  await page.setInputFiles('#pub-upload input[name=file]', { name: 'not.m4a', mimeType: 'audio/mp4', buffer: readFileSync(new URL('../../../modules/audio/test/fixtures/with-picture.m4a', import.meta.url)) });
+  await page.fill('#pub-upload input[name=title]', 'A picture inside');
+
+  await page.click('#pub-upload button[type=submit]');
   await page.locator('#e-pub-review #reading').waitFor({ timeout: 90_000 });
   await shot(page, 'mac-33-publishing-refused');
   assert.match(await page.locator('#e-pub-review').innerText(), /not a recording the audio Module plays/);

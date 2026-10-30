@@ -14,7 +14,7 @@
 // grey-violet for what is sealed); red only for a contest, a void act or a
 // stolen key; no glow; each item in its own clearly outlined card.
 
-import { chooserHtml, type Actor } from '../../../ummia/src/acting.ts';
+import type { Actor } from '../../../ummia/src/acting.ts';
 import { e } from '../../../manage/src/view.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { proposal as dubProposal, share as dubShare, SIGNING_LABEL } from '../../../dub/src/page/view.ts';

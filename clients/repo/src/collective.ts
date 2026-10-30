@@ -409,7 +409,8 @@ export class TestCollective {
    */
   departedAfter(g: Governance, members: string[], from: string[] = this.f.members): Governance {
     const before = collectiveShares({ stakes: g.stakes, parties: from });
-    const departed = [...(g.departed ?? [])];
+    // A member who comes back is a party again, no longer a departed holder (the core refuses a departed entry naming a party).
+    const departed = (g.departed ?? []).filter((d) => !members.includes(d));
     for (const m of from.filter((x) => !members.includes(x))) {
       const share = before.find(([h]) => h === m)?.[1] ?? 0;
       if (share > 0 && !departed.includes(m)) departed.push(m);

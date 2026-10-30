@@ -229,13 +229,17 @@ test('the split service: defined in Edubba, signed by every member in Dub; a buy
   assert.equal(opened.sealed.text, 'Three verses, by three hands.');
 });
 
-// The judged referral (F215, F351): a lone seller's work under a one-party
-// deal of its own, its split plan carrying the referral share, paid by the
-// same split service. A publishes a sealed text as themself, a 20% referral
-// judged by the service; a buyer buys it through a repost; the service
-// receipts with A's grant key, pays 200 to the reposter and 800 to A; A's
-// Edubba, told of the sale by the service, delivers the key.
-test('the judged referral: a lone seller’s one-party deal, its split plan carrying the referral share, paid by the split service', async () => {
+// Way 4 as a lone seller (round 8, F407; replacing the judged referral's
+// one-party deal, whose terms carried the split plan and the payee grant,
+// fields 8 and 14, now withdrawn): A uploads a text (way 1, stopping at the
+// upload) and builds a publication of it with no ownership agreement (a lone
+// seller's publication, A its only owner), a referral role of 20% and a
+// split service, which signs it in its own app and puts its price tag on it.
+// A reposter reposts the post announcing it; a buyer, following only the
+// reposter, buys through the repost: the service receipts in its own name,
+// pays 200 to the reposter and 800 to A; A's Edubba, told of the sale by the
+// service, delivers the key.
+test('way 4 as a lone seller: a publication with a referral share, paid by its split service; bought through a repost; the key delivered by the uploader’s Edubba', async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const A = await paidPerson(H, RL);
@@ -244,20 +248,20 @@ test('the judged referral: a lone seller’s one-party deal, its split plan carr
   const node = serviceNode();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });
   await svc.start();
-  const key = svc.grantKey(A.id);
 
-  // Read back: the deal before the offer; a service without a share, or a bad key, is refused.
-  const text = new TextEncoder().encode('A short story, judged.');
-  const no = await e.c.ask<any>('publishing work read', { media: 'text', data: b64(text), title: 'A story', price: '1000', service: svc.id, serviceKey: key });
-  assert.ok(no.reading.blocking.some((b: string) => /give the share too/.test(b)), JSON.stringify(no.reading.blocking));
-  const w = await e.c.ask<any>('publishing work read', { media: 'text', data: b64(text), title: 'A story', price: '1000', referral: '20', service: svc.id, serviceKey: key });
+  const up = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('A short story, sold through a publication.')), title: 'A story', then: 'none' });
+  const [bake] = (await e.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
+  const w = await e.c.ask<any>('publishing publication read', { owners: '', sold: [bake], service: svc.id, referral: '20', price: '1000', tagBy: 'service' });
   assert.deepEqual(w.reading.blocking, []);
   const said = JSON.stringify(w.reading);
-  assert.match(said, /The deal, before the offer/);
-  assert.match(said, /under a deal of its own, you its one party/);
-  assert.doesNotMatch(said, /a promise in words/);
-  const [publication, , post] = (await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest })).acts;
-  assert.ok((await svc.tick()).some((t) => /grant .* accepted/.test(t)), 'the service accepts the seller’s grant');
+  assert.match(said, /Sold by you alone: a lone seller’s publication, you its only owner/);
+  assert.match(said, /Off the top: 20% of each payment to whoever reposted it/);
+  const [publication] = (await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest })).acts;
+  assert.match(await svc.accept(publication), /signed, as its split service/);
+  const g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is published: every party signed it/.test(l.text)), JSON.stringify(g.lines));
+  assert.match(await svc.tag(publication, { unit: R, value: 1000 }), /./);
+  const post = (await e.c.ask<any>('publishing')).publications.find((x: any) => x.id === publication).post;
 
   // A reposter reposts it; a buyer, following only the reposter, buys through the repost.
   const reposter = await paidPerson(H, RL);
@@ -271,8 +275,8 @@ test('the judged referral: a lone seller’s one-party deal, its split plan carr
   await buyer.damgar.c.ask('grant lane', { id: lane.id });
   await buyer.dub.c.ask('follow', { id: reposter.id, name: 'Critic' });
   await buyer.dub.c.ask('feed', { fresh: true });
-  const bought = await buyer.dub.c.ask<{ lines: { text: string }[] }>('buy', { publication, seller: A.id, repost: rp.id, reposter: reposter.id });
-  assert.ok(bought.lines.some((l) => /split service, .* which answers for it/.test(l.text)), JSON.stringify(bought.lines));
+  const bought = await buyer.dub.c.ask<{ lines: { text: string }[] }>('buy', { publication: bake, seller: A.id, repost: rp.id, reposter: reposter.id });
+  assert.ok(bought.lines.some((l) => /Through the publication where you found it/.test(l.text)), JSON.stringify(bought.lines));
 
   assert.ok((await svc.tick()).some((t) => /An invoice of its node sent/.test(t)));
   await buyer.damgar.c.ask('look');
@@ -281,23 +285,23 @@ test('the judged referral: a lone seller’s one-party deal, its split plan carr
   (node as unknown as { markPaid(i: string): void }).markPaid(invoice);
   await buyer.dub.c.ask('paid', { key: pays[0].key, proof: pay(invoice) });
 
-  const t1 = (await svc.tick()).join(' | ');
-  assert.match(t1, /its receipt signed with .* grant key/);
-  assert.match(t1, /Split .*: 200 to .* \(referral\), 800 to/);
-  for (const m of [A, reposter]) await m.damgar.c.ask('look');
-  const t2 = (await svc.tick()).join(' | ');
-  assert.equal((t2.match(/Paid \d+ to/g) ?? []).length, 2, t2);
+  const said2: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    said2.push(...(await svc.tick()));
+    for (const m of [A, reposter]) await m.damgar.c.ask('look');
+  }
+  const t = said2.join(' | ');
+  assert.match(t, /Split .*: 200 to .* \(referral\), 800 to/, t);
   for (const [m, value] of [[A, 800], [reposter, 200]] as const) {
-    await m.damgar.c.ask('look');
     const got = (await m.damgar.c.ask<Account>('account')).payments.find((x) => x.side === 'in' && x.other.id === svc.id);
     assert.equal(got?.amount.value, value);
   }
 
   // A's Edubba, told of the sale by the service, delivers the key; the text opens in the buyer's Dub.
   const d = await e.c.ask<{ lines: { text: string }[] }>('publishing deliver');
-  assert.ok(d.lines.some((l) => /a sale your deal’s split service receipted/.test(l.text)), JSON.stringify(d.lines));
+  assert.ok(d.lines.some((l) => /a sale its publication’s split service receipted/.test(l.text)), JSON.stringify(d.lines));
   await buyer.dub.c.ask('money look');
   const opened = (await buyer.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === rp.id)!;
   assert.equal(opened.sealed.state, 'opened');
-  assert.equal(opened.sealed.text, 'A short story, judged.');
+  assert.equal(opened.sealed.text, 'A short story, sold through a publication.');
 });

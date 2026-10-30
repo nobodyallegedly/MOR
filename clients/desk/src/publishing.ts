@@ -70,7 +70,7 @@ import { NotSound } from '../../../modules/audio/src/audio.ts';
 import { BAKE, POST_SPECS, PRICE_TAG, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
-import { areaReaching, chainFor, collectiveNow, collectivePlaces, publishAt, signAsMember, termsAt, type AreaHere } from '../../grants/src/member.ts';
+import { areaReaching, chainFor, collectiveNow, collectivePlaces, publishAt, signAsMember, type AreaHere } from '../../grants/src/member.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverKey, deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
 import { VOW, contestSale, purchaseContests, readVow, vowOfferWords, vowPayload, vowSales, type ContestsBeside, type VowShown } from '../../dub/src/vows.ts';
@@ -1357,7 +1357,7 @@ export class Publishing {
           const bb = this.book();
           bb.vows.unshift({ vow: vow.id, publication: pub.id, offer: tag.id, post: post.id, as: me.id, member: me.id, collective: false, words, title, price, at: now() });
           this.save(bb);
-          return { title: 'A vow, published', lines: [{ text: `“${title}” is published, sold by its own publication at ${s.relays.join(', ')}. Each buyer confirms or contests their sale.`, tone: 'ok' }], acts: [vow.id, pub.id, tag.id, post.id] };
+          return { title: 'A vow, published', lines: [{ text: `“${title}” is published, sold by its own publication at ${s.relays.join(', ')}. Each buyer confirms or contests their sale.`, tone: 'ok' }], acts: [vow.id, tag.id, post.id, pub.id] };
         } finally {
           this.store.saveIdentity(me);
         }
