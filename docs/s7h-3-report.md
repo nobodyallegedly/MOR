@@ -4,38 +4,40 @@
 
 ## The sentences written
 
-**Agreements draft 17:**
+**Agreements draft 17, the MICS and the suite:**
 
-- **Rule 14, "A vow has an owner" (Q1):**
+- **Rule 14, "A vow has an owner" (Q1).**
   - An ownership agreement claiming a vow gives its signer the whole stake, as before.
-  - **A publication selling a vow that no ownership agreement claims is a lone seller's publication: its drafter is its owners' side, and its owners' line is the drafter's.**
-  - *Stated cost:* a vow's owner is paid by a publication of her vow only where she drafts it, is one of its partners, or claims the vow under an ownership agreement it names.
-  - The worker's example now claims her vow first.
-  - The "No owner" bullet ("counts whether or not it pays the vow's signer") now agrees with the rule.
-- **Rules 11 and 30 (Q2):** "On the owners' line, each holder paid owes back their own payout: the party is the ownership agreement, and what it received is what its holders were paid." Rule 30's obligation of another identity says the same.
-- **Rule 58 (Q3):** "The two sentences answer two questions: whether an act counts for the collective is decided by the first, as soon as it is done and cites the latest decision; what an ending's or a record's line holds is decided by this one alone."
-- **Rules 64.3 and 83 (Q4):**
-  - A clone marked with a succession plan puts the seat successors in the party's place in every layer's rule naming it (field 19, `[2, names]`), nothing else in the layers' rules changed.
-  - Rule 83 says why: a layer's rule is the collective's own rule for a whole layer, not a job given within it, and one naming a party who left could never be met again.
-  - Areas (field 34) still pass to nobody.
-- **Rule 12 (Q5):** "A sale before a price tag's withdrawal is a payment naming the tag's earlier version, the one carrying a price; a payment naming the version with no price is no purchase, owed back as a payment naming a tag the publication does not count. The payment decides, as for wrong receipts below." See question 1: the decision also named rule 12's push-rail test, which the core does not apply to a tag's withdrawal.
+  - A publication selling a vow that no ownership agreement claims has the owners' side rule 11 gives any publication. Naming no ownership agreement, it is a lone seller's: its drafter is its owners' side, and its owners' line is the drafter's.
+  - *Stated cost:* a vow's owner is paid only where she drafts the publication, is its partner, or claims the vow under an ownership agreement it names.
+  - "No owner" now flags a publication selling her vow that pays her nothing.
+  - The same is written in the MICS's bullet, Agreements' format of a publication naming a vow, its freeze line, the suite's two component lines and its case 9f, where the cleaner now claims her vow first.
+- **Rules 11 and 30 (Q2).** "Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout": a holder that is itself an ownership agreement owes it back through its own holders. "This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication." That last part keeps it clear of rule 1's "shown as unsigned".
+- **Rule 58 (Q3).** Its sentence on placement now ends "one nothing cites is outside every line", and goes on: "This decides what a line of the collective holds (an ending's, a record's, a rotation's through the signature acts it names), and nothing else: whether an act counts for the collective is decided above, as soon as it is done and cites the collective's latest decision as the signer knew it. An act outside every line still counts; no ending, record or rotation holds it." The words "and counts for nothing" were struck from that sentence: the decision gives it lines alone.
+- **Rules 64.3 and 83 (Q4).** A plan-marked clone puts the seat successors in the party's place in every layer's rule naming it (field 19, `[2, names]`). One already named there is written once, and nothing else in the layers' rules changes. Areas still pass to nobody.
+- **Rule 12 (Q5).** "A sale before a price tag's withdrawal is a payment naming the tag's earlier version, the one carrying a price, settled as above."
+  - On a request rail, the version the request committed to decides.
+  - On a push rail, a receipt whose history does not hold the version with no price is a sale. One whose history holds it is no purchase, owed back, and so is a payment naming the version with no price.
+  - **The core does not yet apply this push-rail test to a tag's withdrawal** (question 1).
 
 ## Scenario 9
 
-- **9.1:**
-  - The transfer names the ownership agreement, its chain, and no longer "the work's chain".
-  - The split service's open obligation to Cy runs "from the service's first split citing the transfer (split key 8)", as rule 10 writes it. That is the stranger's case 5, settled: the text was clear.
-- **9.2:**
-  - The founding's key grammar names an escrowed share as its recovery path.
-  - The re-dealt key is "both needed, the escrowed share kept as the way that survives the loss of either", so it keeps rule 59.
-- **9.3:** the declaration states outcome 0, the dead member's voice removed (the stranger's case 16). See question 2 for case 17.
-- **9.5:**
-  - A person's homeless rotation under the objection, with no endorsement, "does not count: it stays pending while the old home lives".
-  - The pass line now says the collective escapes "by its homeless rotation, its own escape endorsement, which no member signs".
-- **9.7:**
+- **9.1.**
+  - The transfer "names the ownership agreement, its chain", no longer "the work's chain".
+  - The split service's open obligation to Cy runs "from the service's first split citing the transfer (split key 8)", as rule 10 writes it. That is the stranger's case 5, settled.
+- **9.2.**
+  - The founding's key grammar names an escrowed share released by the abandonment authority.
+  - The re-dealt key is "both needed, and an escrowed share of the new key where the recovery path puts it", which keeps rule 59.
+- **9.3.** The declaration states outcome 0, the voice removed (the stranger's case 16). Case 17 is question 3.
+- **9.5.**
+  - A person's homeless rotation under the objection, with no endorsement, "does not count, the person's chain ending before it", citing Identity rules 49 and 53.
+  - The decision's "pending while the old home lives" is not written: Identity rule 49 says one valid objection voids it (question 2).
+  - The pass line says the collective escapes "by its homeless rotation, its own escape endorsement, which no member signs".
+  - Receipts are cited as Identity rule 20, where the text had rule 7.
+- **9.7.**
+  - A successor changes the tag prefix, so each act is made anew under MOR 2, saying what it said, with every hash new, its work hash and claim among them (Development rule 27).
   - What MOR 1 checks is the source alone: the bake, the claim and the ownership agreement, each valid in core format, read without any publication.
-  - A successor changes the tag prefix, so each act is made anew under MOR 2, its content as it was.
-  - How MOR 2 checks what it makes anew is MOR 2's.
+  - The claim that "nothing in the ownership agreement needs to change" is dropped.
 
 ## The second verifier's export
 
@@ -44,43 +46,68 @@ VERIFIER2_PLACEHOLDER
 ## Vectors
 
 - **Every earlier case keeps its verdict, its acts and its ids.** No case was exactly one of this session's decisions.
-- **Four Agreements cases added**, all in `core/vectors/README.md`:
+- **Three Agreements cases added**, all in `core/vectors/README.md`:
   - a platform's publication of a worker's vow that no ownership agreement claims: a purchase, its drafter the owners' side;
   - a succession clone putting the seat successor in the departing member's place in the rule for Text: not invalid;
-  - the same clone leaving that rule naming the departed member: invalid;
-  - scenario 9.5, a person's homeless rotation under an objection: pending.
+  - the same clone leaving that rule naming the departed member: invalid.
+- **Not added:** scenario 9.5's case. It does not yet agree (question 2).
 - **The decisions already shown by earlier cases:**
   - Q2 by 9.6's "owed back by: label 150, Ana 340, Ben 510";
-  - Q5 by 9.6's withdrawn tag and the sale before it.
+  - Q5's cases written so far by 9.6's withdrawn tag and the sale before it. A payment naming the priced version after the withdrawal has no case until the core follows (question 1).
 - **Checks:** the Rust check passes 10 of 10, and the Python check says "all 276 vectors agree".
 - **Readmes:** `core/vectors/README.md` and `core/README.md` are updated. `scripts/c-box/vectors-README.md`, the box's copy, is outside this session's folders and stays at S7h-2; see question 4.
 - **The core test that waited on Q1** (`f285_…_is_its_drafters`) is rewritten to the decision and passes.
 
 ## The stranger's reading
 
-STRANGER_PLACEHOLDER
+A reader given only the eight texts read each changed sentence, and scenario 9 whole. **Its first reading found the first draft did not yet read as one story.** Each point was answered in the texts above:
+
+- **Rule 14's decision was contradicted by text that had not changed:** the MICS, the suite's component lines and 9f, Agreements' freeze line and the publication format. All now say the drafter is the owners' side.
+- **Rule 58's new sentence contradicted the one it explained.** That sentence now decides lines alone, "as the signer knew it" kept.
+- **Q5's first wording let a payment naming the priced version count after the withdrawal**, against rule 11, the suite and Money rule 18. It is now settled as a push rail settles (question 1).
+- **Rules 11 and 30 ran into rule 1's "shown as unsigned"**, and wrote "the party is the ownership agreement" of a lone seller too. The obligation is now the rule's own, and holds only where the owners' side is an ownership agreement.
+- **9.5's "pending" ran against Identity rule 49** (question 2).
+- **9.7's "content as it was" ran against Development rule 27's "every hash is new".**
+- **Rules 64.3 and 83 gave a reason the rules do not support** ("never met again"). It is struck, and the case of a successor already named is written.
+- **Points outside the decisions:** listed as question 5.
+
+What it found fitting at once: 9.1's transfer wording, 9.2's re-dealt grammar under rule 59's "both" option, 9.3's outcome 0, and 9.5's and 9.7's pass lines.
+
+SECOND_READING
 
 ## Questions
 
 Each is in plain words, then precisely, with the options, my lean and its cost.
 
-1. **The tag's withdrawal and the push-rail test (Q5).**
-   - *Plain words:* the decision says a sale before a tag's withdrawal is the payment naming the earlier, priced version, "under rule 12's push-rail test". The core decides it by the version the payment names alone. A payment naming the priced version counts, even when the split service records it after the withdrawal.
+1. **A tag's withdrawal and the push-rail test (Q5).** *This needs the core, so the suite rebuilds.*
+   - *Plain words:* the text now settles a sale before a withdrawal as a push rail settles an ending: a receipt the split service records after the withdrawal is in its history is no sale. The core decides by the tag version the payment names alone, so a payment naming the old, priced version counts even when recorded after the withdrawal.
    - *Options:*
-     - (a) The text as written: the version named decides, as for wrong receipts. This is what the core does.
-     - (b) Add the push-rail test: a receipt whose history holds the version with no price is owed back. That changes the core, and so the WebAssembly.
-   - *Lean:* (a). *Cost:* a buyer who paid the old version after its withdrawal keeps the purchase, and the seller bears it, as a seller on a push rail already does.
-2. **A plan passing a stake (the stranger's case 17).**
-   - *Plain words:* rule 83 says a succession clone "carries the stakes and seats the plan gives", but rule 64.3's list of what a plan-marked clone may change leaves out the stake (field 7). The core refuses a plan-marked clone that changes field 7. So scenario 9.3's "their share to two children" cannot pass in the automatic clone.
+     - (a) The core follows the text. It changes `publishing.rs`'s purchase check, and so the WebAssembly.
+     - (b) The text says "the version named decides". That was this session's first draft, and the stranger showed it runs against rule 11's "stops sales at that price", the suite's 2.6 and 9.6, and Money rule 18's "the latest version counts".
+   - *Lean:* (a), in a session allowed to change the core.
+2. **A person's homeless rotation under an objection (9.5).**
+   - *Plain words:* Identity rule 49 says one valid objection from a live home voids a homeless rotation. The core shows it "pending" while the old home is not shown gone. The decision says "pending while the old home lives".
    - *Options:*
-     - (a) Add "the stake passed to its stake successors in its shares, field 7" to rule 64.3. The core would follow, and the WebAssembly changes.
+     - (a) The core follows rule 49 and shows it void. That is a core change.
+     - (b) Identity says such a rotation is pending until the old home is shown gone, and void once its objection is held. That is a text change, beyond this session's decisions.
+   - *Lean:* (a). *Cost:* a core change. Meanwhile 9.5 says "does not count", which both readings give, and its vector waits.
+3. **A plan passing a stake (the stranger's case 17).**
+   - *Plain words:* rule 83 says a succession clone "carries the stakes and seats the plan gives", but rule 64.3's list leaves out the stake (field 7), and the core refuses a plan-marked clone that changes it. So 9.3's "their share to two children" cannot pass in the automatic clone.
+   - *Options:*
+     - (a) Add the stake to rule 64.3, and the core follows (WebAssembly).
      - (b) Say that the stake passes by succession outside the plan-marked clone (rule 89).
-   - *Lean:* (a), since rule 83 is plain. *Cost:* one core change, which the suite rebuilds against.
-3. **A plan's clone that changes a layer's rule beyond the successor (Q4).**
-   - *Plain words:* the texts now allow only the successor in the party's place. The core accepts any change to field 19 in a plan-marked clone; it refuses only a rule naming someone no longer a party.
-   - *Lean:* tighten the core to the text. *Cost:* a core change, so the WebAssembly changes.
-4. **The c-box's own vectors README** (`scripts/c-box/vectors-README.md`) is outside the folders this session may touch, so it lacks this session's bullet.
-   - *Lean:* copy the bullet from `core/vectors/README.md` when the scripts are next open.
+   - *Lean:* (a), since rule 83 is plain.
+4. **A plan's clone changing a layer's rule beyond the successor (Q4).**
+   - *Plain words:* the texts allow only the successor in the party's place. The core accepts any change to field 19 in a plan-marked clone; it refuses only a rule naming someone no longer a party.
+   - *Lean:* tighten the core to the text. *Cost:* a core change.
+5. **The stranger's points this session did not change**, each outside the decisions:
+   - Agreements' freeze line "transfer naming both chains";
+   - 9.1's pass line "from the next payment", beside rule 10's stated-cost window;
+   - 9.3's "counts twice" beside rule 81's "no voting weight";
+   - 9.3's fourth case, "the other signature acts" where "nobody but the declared member remains".
+   - *Lean:* one pass of words in the next text session.
+6. **The c-box's own vectors README** (`scripts/c-box/vectors-README.md`) is outside this session's folders, so it lacks the S7h-3 bullet.
+   - *Lean:* copy it from `core/vectors/README.md` when `scripts/` is next open.
 
 ## Still open from S7h-2, in the core
 
