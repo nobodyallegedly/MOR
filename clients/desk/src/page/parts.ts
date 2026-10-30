@@ -679,10 +679,10 @@ ${WEB ? note('warn', `<strong>This is a web page.</strong> ${e(WEB_FOUNDING_SAY)
 ${note('', 'How: each member reads the founding terms in plain words and signs on their own device, in their own Edubba (Collectives, To sign; on a computer or on the web). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Edubba makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
 <section class="card"><form id="real-found">
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
-<label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
+<label>You: the founder, who proposes and signs first (a collective holds no signing key: each member acts for it with their own key)</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its members: you, and at least one other (each by ID, or chosen from Contacts beside it)</label>${memberRows('real-found', true, [])}
 <h3>Who decides what</h3>
-<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign.</p>
+<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the five layers, then any finer areas, then the shares (Agreements rules 60 and 62). Each member signs with their own key.</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
 <label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>

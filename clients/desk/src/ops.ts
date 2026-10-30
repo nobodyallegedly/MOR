@@ -337,6 +337,8 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         }
         for (const x of real.collectives()) {
           const c = real.collective(x.id);
+          // Round 8: a collective holds no signing key (Agreements rule 56), so none can have changed under Edubba.
+          if (!c.f.identity.signingSecret) continue;
           try {
             await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c.f.identity.signingSecret, homes: c.f.identity.homes, relays: c.f.relays });
           } catch (e) {
