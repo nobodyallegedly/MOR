@@ -78,14 +78,23 @@ What S7h-4's core changed for the apps, and what the suite did:
 - **Words fixed:** Edubba's founding form no longer says the founder "holds its signing key"; the retired Member keys rule is off Edubba's list of rules to approve.
 - The disk filled during one full run (test folders left in the system's temporary folder by earlier runs); the Rust build folder was cleared and rebuilt, and the last run kept its temporary files in a folder of its own.
 
+### S7h-4's verdicts, where the apps show them
+
+The suite lead's message of 30 October, 17:40, asked that each verdict S7h-4 lets an app see be shown in plain words where the app shows it, with a test where an app reads it.
+
+- **A person's homeless rotation, objected to by a live home of the old set, is void (was pending).** Kišib, reading an identity, now hands each served homeless rotation that does not count back to the old homes. It holds any objection a home gives back, and the core decides. A void rotation is said once, in red: "Void: the homeless change of its keys at position 1… A home of its old set, still alive, objected to it, and no escape endorsement signed with its signing key backs it (Identity rule 49): it can never count." It is no longer listed as waiting for receipts. Kišib's own escape is always endorsed with the signing key, so an objection never voids it. Test: `clients/kishib/test/rare.test.ts`, "S7h-4 (Identity rule 49)": a homeless rotation made with the stolen paper alone, objected to by a live old home, read as void.
+- **A succession plan's clone passes the party's stakes to the heirs, and changes a layer's rule only by putting the successor in the party's place.** No suite app makes a succession plan or a plan-marked clone. The collective app reads a clone's mark in words, so the plan's power now says what its clone must do (Agreements rules 64 and 83). Test: `clients/collective/test/explain.test.ts`, "S7h-4 (rules 64 and 83)".
+- **A withdrawn price tag on a push rail: a receipt the split service records after the withdrawal is no sale.** This cannot arise in the suite. The core judges it only on a push rail, and the suite's split services are paid on Lightning only, by invoice request (a request rail), and refuse a request naming a withdrawn tag ("the price tag it names is withdrawn"). Where the core does call a payment no purchase, Dub's Purchases and Edubba's Sales already show its reason, word for word. Nothing new was built.
+- **A collective's split-agreement version paying its non-member holders less needs their signatures.** No suite app makes a later version of a collective's split agreement. Edubba's Money tab makes a first version each time, and a first version is not judged so. Where Edubba checks a split agreement, it already names everyone still to sign. Nothing new was built. Once an app offers a change of a split agreement's plan, it should say why a departed holder is asked.
+
 ### Tests
 
 Run on this machine after the last fixes (Linux x86-64; Chromium for the browser tests), every app's `npm test`, then `cargo test --workspace --locked`:
 
 | App | Passed | Failed | Why it fails |
 | --- | --- | --- | --- |
-| collective | 44 | 0 | |
-| Kišib | 43 | 0 | |
+| collective | 45 | 0 | |
+| Kišib | 44 | 0 | |
 | repo, grants, kit, barebone, manage, testwallet | 21, 8, 18, 15, 7, 4 | 0 | |
 | reader, reports, longform, connector | 22, 9, 26, 13 | 0 | |
 | genesis | 41 | 0 | |
