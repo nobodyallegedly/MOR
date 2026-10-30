@@ -7,17 +7,17 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MIRS } from '../../genesis/src/core.ts';
-import { receiptPayload } from '../../repo/src/agreements.ts';
-import { MONEY_TYPES, TEST_RAIL } from '../../repo/src/specs.ts';
+import { MIRS, moneyPayload, publicationPayload } from '../../genesis/src/core.ts';
+import { SPLIT_CMIP, receiptPayload, sign as agreementsSign } from '../../repo/src/agreements.ts';
+import { AGREEMENTS_TYPES, MONEY_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
 import type { Governance } from '../../repo/src/collective.ts';
 import type { State } from '../src/page/api.ts';
-import { lossy, prepare, sign, state, words, world, type World } from './setup.ts';
+import { commit, lossy, prepare, sign, state, words, world, type World } from './setup.ts';
 
 let w: World;
 before(async () => {
   w = await world();
-  for (const n of ['Sim One', 'Sim Two', 'Sim Three', 'A Patron']) await sign(w.client, { kind: 'identity', name: n, mine: false });
+  for (const n of ['Sim One', 'Sim Two', 'Sim Three', 'A Patron', 'Splitter']) await sign(w.client, { kind: 'identity', name: n, mine: false });
   await sign(w.client, { kind: 'identity', name: 'Ada', mine: true });
 });
 after(async () => {
@@ -59,25 +59,57 @@ async function breakBy(id: string, relay: { drop: boolean }, stay: string[], rem
   for (const i of [...s, leaving]) store.saveIdentity(i);
 }
 
+/**
+ * A sale of the collective (Agreements rules 11, 12): its publication selling a bake, drafted by a
+ * member with their own key, naming the collective (rule 58), signed by the other members held here
+ * and by its split service, a party; and the service's price tag on it (Money type 5), which a buyer's
+ * payment fulfils. (Was: the collective's standing offer, which the core no longer reads: a
+ * publication with a price tag replaces it.)
+ */
+async function saleOf(id: string, service: string, bake: string): Promise<{ publication: string; tag: string }> {
+  const store = w.app.store;
+  const col = store.collective(id);
+  const owners = col.f.agreements[0];
+  const made = publicationPayload({ sold: [{ bake }], owners, partners: [], service, plan: { shares: [], cmip: SPLIT_CMIP } }) as { type: number; payload: Uint8Array };
+  const p = await col.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.publication, made.payload, { public: true, relays: col.f.relays, objects: [[owners, owners]] });
+  store.saveCollective(col);
+  for (const m of col.f.members.filter((x) => x !== col.id.actor?.id && store.holds(x))) {
+    const i = store.identity(m);
+    await agreementsSign(i, p.id, col.f.relays);
+    store.saveIdentity(i);
+  }
+  const svc = store.identity(service);
+  await agreementsSign(svc, p.id, col.f.relays);
+  const t = moneyPayload({ type: 'priceTag', publication: p.id, version: 1, price: { unit: TEST_RAIL, value: 10 }, payee: service }) as { type: number; payload: Uint8Array };
+  const tag = await svc.publish(MIRS.money, t.type, t.payload, { public: true, relays: col.f.relays });
+  store.saveIdentity(svc);
+  return { publication: p.id, tag: tag.id };
+}
+
+/** A payment to the split service under a sale's price tag, its receipt signed by the service as payee (Agreements rule 16). */
+async function paid(service: string, tag: string, value: number, relays: string[], payer?: string): Promise<string> {
+  const svc = w.app.store.identity(service);
+  const r = await svc.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: service, unit: TEST_RAIL, value, fulfils: tag, payer }), { public: true, relays });
+  w.app.store.saveIdentity(svc);
+  return r.id;
+}
+
 test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as owed back; one under an offer before the break is kept', async () => {
   const c = w.client;
   let s = await state(c);
-  const [ada, one, two, patron] = ['Ada', 'Sim One', 'Sim Two', 'A Patron'].map((n) => idOf(s, n));
+  const [ada, one, two, patron, splitter] = ['Ada', 'Sim One', 'Sim Two', 'A Patron', 'Splitter'].map((n) => idOf(s, n));
   const { id, relay } = await found('Till', [ada, one, two], { safety: 2, release: 2, clone: 2, others: 1 });
   try {
+    // A sale made before the break: its publication drafted while the collective worked.
+    commit(w.checkout, 'src/lib.rs', 'pub fn till() -> u8 { 21 }\n');
+    const bake = (await sign(c, { kind: 'release', publisher: id, version: 'till.1' })).done.acts[0];
+    const before = await saleOf(id, splitter, bake);
     await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
-    const store = w.app.store;
-    const col = store.collective(id);
-    const founding = col.f.agreements[0];
-    // The clone the broken act declared: an offer of the broken stretch.
-    const ofStretch = col.f.agreement;
-    assert.notEqual(ofStretch, founding);
-    // The collective's own receipts, signed in the stretch, for payments naming each.
-    const pay = (line: string, value: number) =>
-      col.id.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer: patron, purchase: [founding, line] }), { public: true, relays: col.f.relays });
-    await pay(founding, 5);
-    await pay(ofStretch, 12);
-    store.saveCollective(col);
+    // A sale of the broken stretch: its publication drafted for the collective after the broken act.
+    const during = await saleOf(id, splitter, bake);
+    const relays = w.app.store.collective(id).f.relays;
+    await paid(splitter, before.tag, 5, relays, patron);
+    await paid(splitter, during.tag, 12, relays, patron);
     s = await state(c);
     const b = box(s, id);
     assert.equal(b.owedBack.length, 1, JSON.stringify(b.owedBack));
@@ -90,19 +122,17 @@ test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as o
 test('QG1 and F197: a closing names money owed back to nobody; a payer with no address is sent a notice with a deadline', async () => {
   const c = w.client;
   let s = await state(c);
-  const [ada, one, two, patron] = ['Ada', 'Sim One', 'Sim Two', 'A Patron'].map((n) => idOf(s, n));
+  const [ada, one, two, patron, splitter] = ['Ada', 'Sim One', 'Sim Two', 'A Patron', 'Splitter'].map((n) => idOf(s, n));
   const { id, relay } = await found('Ledger', [ada, one, two], { safety: 2, release: 2, clone: 2, others: 1 });
   try {
+    commit(w.checkout, 'src/lib.rs', 'pub fn ledger() -> u8 { 22 }\n');
+    const bake = (await sign(c, { kind: 'release', publisher: id, version: 'ledger.1' })).done.acts[0];
     await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
-    const store = w.app.store;
-    const col = store.collective(id);
-    const founding = col.f.agreements[0];
-    const ofStretch = col.f.agreement;
-    const pay = (value: number, payer?: string) =>
-      col.id.publish(MIRS.money, MONEY_TYPES.receipt, receiptPayload({ rail: TEST_RAIL, payee: id, unit: TEST_RAIL, value, fulfils: founding, payer, purchase: [founding, ofStretch] }), { public: true, relays: col.f.relays });
-    await pay(3);
-    await pay(9, patron);
-    store.saveCollective(col);
+    // Two payments under a sale of the broken stretch: one committing no key, one by the patron.
+    const during = await saleOf(id, splitter, bake);
+    const relays = w.app.store.collective(id).f.relays;
+    await paid(splitter, during.tag, 3, relays);
+    await paid(splitter, during.tag, 9, relays, patron);
     const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 1, release: 1, clone: 1, others: 1 } });
     assert.deepEqual(rb.reading.blocking, [], words(rb.reading));
     await c.ask('confirm', { plan: rb.plan, digest: rb.digest });

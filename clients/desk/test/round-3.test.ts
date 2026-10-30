@@ -170,7 +170,7 @@ function regtest(dir: string): Money {
   };
 }
 
-test(`round 3, end to end${run ? ', on regtest' : ''}: areas, member keys from Damgar and Ummia, the split service and a judged referral, a vow confirmed and contested, keepers, a resignation`, { timeout: 900_000 }, async () => {
+test(`round 3, end to end${run ? ', on regtest' : ''}: layers and areas, members acting for it from Damgar and Ummia with their own keys, the split agreement and a judged referral, a vow confirmed and contested, keepers, a resignation`, { timeout: 900_000 }, async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const m = run ? regtest(run) : memory();
@@ -188,11 +188,11 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: areas, member keys from D
     { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
     { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 1 },
     { name: 'Money', layer: 3, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
-  ]);
+  ], { shares: { [A.id]: 50, [iPa.id]: 30, [iPh.id]: 20 } });
 
-  // 2a. A's own key, from Damgar: within the cap alone; above it, with iPa's key from Dub.
+  // 2a. A's own key, from Damgar: within the Money area's cap alone; above it, with iPa's signature from Dub.
   const added = await A.damgar.c.ask<any>('collective add', { id: collective });
-  assert.match(added.lines[1].text, /Its Money area, “Money”: .*1 key; above 10,000 an act, one more/);
+  assert.match(added.lines[1].text, /“Money”.*above 10,000 an act, one more/);
   const small = { collective, to: iPh.id, value: '2000', unit: '', whatFor: 'clay' };
   const s1 = await A.damgar.c.ask<any>('collective promise read', small);
   assert.ok((await A.damgar.c.ask<any>('collective promise', { ...small, digest: s1.digest })).lines.some((l: any) => /It counts for the collective/.test(l.text)));
@@ -201,11 +201,11 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: areas, member keys from D
   assert.ok(s2.lines.some((l: any) => /It is above the cap: it counts only with 2 keys/.test(l.text)));
   const p2 = await A.damgar.c.ask<any>('collective promise', { ...big, digest: s2.digest });
   const ask = (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === p2.act);
-  assert.match((await iPa.dub.c.ask<any>('accept', { thread: ask.thread })).lines[0].text, /Signed for the collective with your own key/);
+  assert.match((await iPa.dub.c.ask<any>('accept', { thread: ask.thread })).lines[0].text, /your own key/);
   const promised = (await A.damgar.c.ask<any>('collectives')).collectives[0].acts;
   assert.deepEqual(promised.map((a: any) => [a.amount.value, a.standing.met]).sort(), [[2000, true], [50000, true]].sort());
 
-  // 2b. A's own key, from Ummia: a release of the collective, in its Publishing area.
+  // 2b. A's own key, from Ummia: a release of the collective, under its Envelopes rule.
   const u = await ummia();
   await u.c.ask('bring', { id: A.id, words: A.dub.words, address: H[0] });
   await u.c.ask('settings', { relays: RL, track: RL });
@@ -215,21 +215,29 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: areas, member keys from D
   const rel = (await u.c.ask<Done>('release confirm', { plan: rr.plan, digest: rr.digest })).acts[0];
   assert.equal((await u.c.ask<{ ok: boolean }>('release check', { id: rel })).ok, true, 'one key of Publishing counts');
 
-  // 3. Its money, with its split service and keeper; every member signs in Dub; recorded.
+  // 3. Its money (H101): its shares were set at its founding; here, where its payments land: a split
+  // agreement naming its split service, a referral off the top, reading the shares by reference; the
+  // service signs it; then its payee pointer names the service. Its keeper, apart: every member signs in Dub.
   const node = m.service();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });
   await svc.start();
-  const review = await e.c.ask<any>('real money prepare', { collective, shares: { [A.id]: 50, [iPa.id]: 30, [iPh.id]: 20 }, referral: 10, service: svc.id, serviceKey: svc.grantKey(collective), keepers: [keeper], keepersNeeded: 1 });
+  const review = await e.c.ask<any>('real money prepare', { collective, way: 'service', referral: 10, service: svc.id });
   assert.deepEqual(review.reading.blocking, []);
-  const clone = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
+  assert.match(JSON.stringify(review.reading), /never copied here/);
+  const split = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
+  await assert.rejects(e.c.ask('real money record', { act: split }), /does not count yet: waiting for/);
+  await svc.accept(split);
+  const rec = await e.c.ask<Done>('real money record', { act: split });
+  assert.ok(rec.lines.some((l) => /payee pointer now names the split service/.test(l.text)), JSON.stringify(rec.lines));
+  const kr = await e.c.ask<any>('real keepers prepare', { collective, keepers: [keeper], keepersNeeded: 1 });
+  assert.deepEqual(kr.reading.blocking, []);
+  const clone = (await e.c.ask<Done>('real confirm', { plan: kr.plan, digest: kr.digest })).acts[0];
   for (const x of [iPa, iPh]) {
     const p = (await x.dub.c.ask<any>('proposals')).proposals.find((y: any) => y.act === clone);
     await x.dub.c.ask('accept', { thread: p.thread });
   }
   assert.equal((await e.c.ask<any>('real gather', { act: clone })).standing.enough, true);
-  const rec = await e.c.ask<Done>('real money record', { act: clone });
-  assert.ok(rec.lines.some((l) => /payee pointer now leads to the split service/.test(l.text)), JSON.stringify(rec.lines));
-  assert.ok((await svc.tick()).some((t) => /grant .* accepted/.test(t)));
+  await e.c.ask<Done>('real keepers record', { act: clone });
   const kept1 = await e.c.ask<Done>('real keep', { collective, keeper });
   assert.ok(kept1.acts.length > 0);
 

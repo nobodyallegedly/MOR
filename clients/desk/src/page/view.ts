@@ -170,7 +170,8 @@ export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; 
       ];
     }
     case 'publishing':
-      return [{ key: 'file', label: 'A protected file' }, { key: 'post', label: 'A shared post' }, { key: 'here', label: 'Published here', k: k.here }, { key: 'deals', label: 'Shared deals', k: k.deals }, { key: 'sign', label: 'To sign', k: k.dealsToSign || undefined }, { key: 'sales', label: 'Sales', k: k.sales }];
+      // The four ways in (F407): upload, claim, an ownership agreement, a publication; then what was done here, what waits, and sales.
+      return [{ key: 'upload', label: '1 · Upload' }, { key: 'claim', label: '2 · Claim' }, { key: 'ownership', label: '3 · Ownership agreement' }, { key: 'publication', label: '4 · Publication' }, '-', { key: 'here', label: 'Published here', k: k.here }, { key: 'sign', label: 'To sign', k: k.dealsToSign || undefined }, { key: 'sales', label: 'Sales', k: k.sales }];
     case 'vows':
       return [{ key: 'track', label: 'Track' }, { key: 'new', label: 'A new vow' }, { key: 'mine', label: 'Vows published here', k: k.mine }];
   }
@@ -183,7 +184,7 @@ export function firstPart(tab: Tab, s: State): string {
     case 'collectives':
       return s.collectives[0] ? `c:${s.collectives[0].id}` : 'found';
     case 'publishing':
-      return 'file';
+      return 'upload';
     case 'vows':
       return 'track';
   }
@@ -440,55 +441,88 @@ export function whoActs(actors: { id: string; short: string; kind: 'self' | 'col
     .join('')}${fold('+ a collective by its ID', `<form id="collective-add" class="k-row"><input name="collective" placeholder="mid1…" autocomplete="off" spellcheck="false">${contactsButtonFor('collective')}<button type="submit" class="k-btn">Add it</button></form>`)}</div>`;
 }
 
-export function filePane(o: { who: string; media: string; unit: string; say: string[]; judged: string; shares?: string }): string {
+/**
+ * Rows of people (H98, decided by Nobody, allegedly: "start with two IDs me
+ * and another, then give option to add more people"): you, filled in, and
+ * one other person, then "+ Add a person"; the first two not removable.
+ * With shares, even until one is touched; with labels, a short note of who
+ * each is ("client", "relay", "split service"…), suggested, never required.
+ */
+export function peopleRows(o: { id: string; me: string; shares?: boolean; labels?: boolean; names: string[]; meLabel?: string; other?: string; add?: string }): string {
+  const list = `<datalist id="e-names-${e(o.id)}">${o.names.map((n) => `<option value="${e(n)}"></option>`).join('')}</datalist><datalist id="e-labels"><option value="publisher"></option><option value="client"></option><option value="relay"></option><option value="split service"></option></datalist>`;
+  return `${list}<div class="e-people" data-people="${e(o.id)}"${o.shares && !o.labels ? ' data-even' : ''}>${personRow(o, 1, o.me, true)}${personRow(o, 2, '', false)}</div><div class="k-row"><button type="button" class="k-btn" data-action="people-add" data-people-for="${e(o.id)}">${e(o.add ?? '+ Add a person')}</button></div>`;
+}
+
+/** One row of `peopleRows`: the first is you (filled in, not typed). */
+export function personRow(o: { id: string; shares?: boolean; labels?: boolean; meLabel?: string; other?: string }, n: number, me: string, first: boolean): string {
+  const who = first
+    ? `<input name="who-${n}" value="${e(me)}" readonly aria-label="You" class="k-grow">`
+    : `<input name="who-${n}" class="k-grow" list="e-names-${e(o.id)}" autocomplete="off" placeholder="${e(o.other ?? 'A name in your contacts')}" aria-label="Person ${n}">${contactsButtonFor(`who-${n}`)}`;
+  return `<div class="edubba-grid e-person" data-person="${n}"><div><label>${first ? 'You' : n === 2 ? 'And' : 'And also'}</label><div class="k-row">${who}</div></div>${o.labels ? `<div><label>Label (optional)</label><input name="label-${n}" list="e-labels" maxlength="60" autocomplete="off" value="${first && o.meLabel ? e(o.meLabel) : ''}"></div>` : ''}${o.shares ? `<div><label>${o.labels ? 'Share off the top, %' : 'Share, %'}</label><div class="k-row"><input name="share-${n}" inputmode="decimal" autocomplete="off" class="k-grow">${n > 2 ? `<button type="button" class="k-btn k-q" data-action="people-remove" aria-label="Remove person ${n}">Remove</button>` : ''}</div></div>` : n > 2 ? '<div><button type="button" class="k-btn k-q" data-action="people-remove">Remove</button></div>' : ''}</div>`;
+}
+
+/** Way 1: upload, then (optional) a price tag on the bare bake or a claim. */
+export function uploadPane(o: { who: string; media: string; unit: string; say: string[]; me: string; names: string[]; bakeStays: string }): string {
   const what = `<div class="edubba-chips"><span class="k-lbl">What</span>${MEDIA.map((m) => `<button type="button" class="k-chip${m.key === o.media ? ' k-on' : ''}" data-media="${m.key}">${e(m.label)}</button>`).join('')}</div>`;
   const input =
     o.media === 'text'
-      ? '<label>The text to seal (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>'
-      : `<label>${o.media === 'picture' ? 'The picture: a JPEG file' : o.media === 'video' ? 'The film: an MP4 file (the video Module)' : 'The recording: an M4A file (the audio Module)'}</label><input type="file" name="file" accept="${o.media === 'picture' ? 'image/jpeg' : o.media === 'video' ? '.mp4,video/mp4' : '.m4a,audio/mp4'}">${o.media === 'picture' ? '' : `<p class="k-small k-soft">Checked by the ${o.media === 'video' ? 'video' : 'audio'} Module, then stripped to the ${o.media === 'video' ? 'film' : 'sound'} alone before anything is sealed: every ${o.media === 'video' ? 'frame' : 'sample'} byte for byte; titles, dates, places and covers removed.</p>`}`;
-  return `<h2>A protected file</h2>${say('Sealed under terms, paid in Damgar, opened by the buyer', o.say)}${o.who}${what}
-<form id="pub-work" data-media="${e(o.media)}">${input}
-<div class="edubba-grid"><div><label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="The public words beside its offer"></div><div><label>Price (${e(o.unit)})</label><input name="price" inputmode="numeric" autocomplete="off"></div></div>
-${fold('Details: referral share and split', `<label>Referral share, % (optional; yourself only)</label><input name="referral" inputmode="numeric" autocomplete="off">
-<p class="k-small k-soft">${e(o.judged)}</p><label>The split service: its ID (optional)</label><div class="k-row"><input name="service" type="text" class="k-grow" autocomplete="off" spellcheck="false">${contactsButtonFor('service')}</div>
-<label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false">`)}
-${o.shares ?? ''}
+      ? '<label>The text to upload (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>'
+      : `<label>${o.media === 'picture' ? 'The picture: a JPEG file' : o.media === 'video' ? 'The film: an MP4 file (the video Module)' : 'The recording: an M4A file (the audio Module)'}</label><input type="file" name="file" accept="${o.media === 'picture' ? 'image/jpeg' : o.media === 'video' ? '.mp4,video/mp4' : '.m4a,audio/mp4'}">${o.media === 'picture' ? '' : `<p class="k-small k-soft">Checked by the ${o.media === 'video' ? 'video' : 'audio'} Module, then stripped to the ${o.media === 'video' ? 'film' : 'sound'} alone before anything is locked: every ${o.media === 'video' ? 'frame' : 'sample'} byte for byte; titles, dates, places and covers removed.</p>`}`;
+  return `<h2>Upload</h2>${say('Locked, uploaded; then, if you want, a price tag or a claim', [...o.say, o.bakeStays])}${o.who}${what}
+<form id="pub-upload" data-media="${e(o.media)}">${input}
+<label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="The public words of the post that shows it">
+<fieldset class="e-then"><legend class="k-lbl">Then</legend>
+<label class="k-check"><input type="radio" name="then" value="none" checked> Nothing more for now</label>
+<label class="k-check"><input type="radio" name="then" value="price"> A price tag on it: whoever pays it pays you, the uploader, unsplit</label>
+<div class="e-then-price"><label>Price (${e(o.unit)})</label><input name="price" inputmode="numeric" autocomplete="off"></div>
+<label class="k-check"><input type="radio" name="then" value="claim"> A claim: you made it (with others, if so); then an ownership agreement and a publication, if you want</label>
+<div class="e-then-claim"><p class="k-small k-soft">Made with (optional): each signs the claim in their own Edubba.</p>${peopleRows({ id: 'upload-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}</div>
+</fieldset>
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 
-/**
- * "Who shares in it" (this round, decided: "Edubba is the place"): the people
- * by a contact's name, never by hash alone; each one's share, yours
- * included, adding to 100; the referral off the top; the split service and
- * the key it made for the deal's own payee, whose ID is shown to give it.
- */
-export function sharesFields(o: { names: string[]; payee: string | null; say: string[]; kind: string }): string {
-  const list = `<datalist id="e-share-names">${o.names.map((n) => `<option value="${e(n)}"></option>`).join('')}</datalist>`;
-  // H119: a Contacts button beside each; the one chosen is written by its nickname (a person is named here by your name for them, never by an ID alone).
-  const row = (i: number) => `<div class="edubba-grid"><div><label>Shared with (a name in your contacts)</label><div class="k-row"><input name="with${i}" class="k-grow" list="e-share-names" autocomplete="off">${contactsButtonFor(`with${i}`)}</div></div><div><label>Their share, %</label><input name="share${i}" inputmode="decimal" autocomplete="off"></div></div>`;
-  // H99: a panel to work in, opened by a chevron (the "?" only explains).
-  return fold('Who shares in it: a split with other people', `${o.say.map((t) => `<p class="k-small k-soft">${e(t)}</p>`).join('')}${list}
-${row(0)}${row(1)}
-<div class="edubba-grid"><div><label>Your share, %</label><input name="mine" inputmode="decimal" autocomplete="off"></div><div><label>Referral share off the top, % (optional)</label><input name="dealReferral" inputmode="decimal" autocomplete="off"></div></div>
-<label>The split service that divides each payment: its ID</label><div class="k-row"><input name="dealService" type="text" class="k-grow" autocomplete="off" spellcheck="false">${contactsButtonFor('dealService')}</div>
-<p class="k-small k-soft">The deal’s own payee, made here for this ${e(o.kind)}: <code class="k-mono edubba-wrap">${e(o.payee ?? '…')}</code>. Ask the service for a key for it (<code class="edubba-wrap">mor-split-service key ${e(o.payee ?? 'ID')}</code>), and give that key below.</p>
-<label>The key the service made for the deal’s payee (64 hexadecimal characters)</label><input name="dealKey" type="text" autocomplete="off" spellcheck="false">`, { attrs: 'data-shares' });
+/** Way 2: a claim alone, of a work already uploaded (here or anywhere) or a vow by its name. */
+export function claimPane(o: { who: string; me: string; names: string[]; bakes: { id: string; title: string }[] }): string {
+  return `<h2>Claim</h2>${say('“I made this”: a work already uploaded', ['A claim binds a work’s fingerprint to its creators (Agreements rule 7). It records who said it first on MOR, never who truly made it, and sells nothing: an ownership agreement and a publication come after, if you want.'])}${o.who}
+<form id="pub-claim"><label>The work: an upload here, or a bake’s ID, a vow’s name, or a work’s fingerprint</label>
+<div class="k-row"><input name="work" class="k-grow" list="e-bakes" autocomplete="off" spellcheck="false">${contactsButtonFor('work')}</div>
+<datalist id="e-bakes">${o.bakes.map((b) => `<option value="${e(b.id)}">${e(b.title)}</option>`).join('')}</datalist>
+<label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="How it is called here and in To sign">
+<p class="k-small k-soft">Its creators: you, and those you made it with (optional), each signing it in their own Edubba.</p>${peopleRows({ id: 'claim-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 
-/** A plain post under a deal (this round): its tips go to the deal, through its split service. */
-export function sharedPostPane(o: { who: string; shares: string }): string {
-  return `<h2>A shared post</h2>${say('A post whose tips go to the people sharing in it', ['A tip on it goes to the deal, not to you alone (decided: “with a tip IF there is a split the target is the agreement not the act”): its split service divides each tip like a sale, and nobody owes it back.'])}${o.who}
-<form id="pub-post"><label>The post’s words</label><textarea name="text" rows="4" maxlength="2000"></textarea>${o.shares.replace('<details class="k-fold" data-shares>', '<details class="k-fold" open data-shares>')}
-<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-post-review" class="e-in"></div>`;
+/** Way 3: an ownership agreement from a claim (H98: you and one other, then more; shares even until touched). */
+export function ownershipPane(o: { who: string; me: string; names: string[]; claims: { id: string; title: string }[]; say: string[] }): string {
+  return `<h2>Ownership agreement</h2>${say('Who owns what share of a claimed work', ['Ownership only: no split, no fees, no split service. How it is sold, with which partners, is each publication’s, reading these shares.', ...o.say])}${o.who}
+<form id="pub-ownership"><label>From the claim</label>
+<select name="claim">${o.claims.length ? o.claims.map((c) => `<option value="${e(c.id)}">${e(c.title)} · ${e(c.id.slice(0, 8))}…</option>`).join('') : '<option value="">No claim made here yet: claim a work first (2 · Claim)</option>'}</select>
+<label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="Its words begin with it (the claim’s title if empty)">
+<h3>Who owns it</h3>${peopleRows({ id: 'owners', me: o.me, shares: true, names: o.names })}
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 
-/** The deals set up here: who has signed, what waits, what was announced. */
-export function dealsPane(cards: string): string {
-  return `<h2>Shared deals</h2>${say('Deals with other people, set up here', ['Each waits until every person has signed it in their own Edubba; then its work is announced: its post, its locked bytes, its key sealed to each of you.'])}<div class="k-row"><button type="button" class="k-btn" data-action="pub-deals-gather">Look for signatures</button></div>${feedBox({ id: 'deals-feed', cards, empty: 'No deal set up here yet: “Who shares in it”, under Details, when publishing.' })}`;
+/** Way 4: a publication from an ownership agreement (or as its lone seller). */
+export function publicationPane(o: { who: string; me: string; names: string[]; unit: string; ownerships: { id: string; title: string; ready: boolean }[]; bakes: { id: string; title: string }[] }): string {
+  return `<h2>Publication</h2>${say('How it is sold: what, with which partners, through which split service, at what price', ['The publication is the offer. Every payment goes to its split service, which pays everyone: the partners and a referral off the top, then the owners by their shares. Every party signs it: each owner, each partner, the split service.'])}${o.who}
+<form id="pub-publication"><label>Its owners</label>
+<select name="owners">${o.ownerships.map((x) => `<option value="${e(x.id)}">The ownership agreement “${e(x.title)}”${x.ready ? '' : ' (not every owner has signed yet)'}</option>`).join('')}<option value="">You alone: a lone seller’s publication</option></select>
+<label>What it sells</label><div class="e-sold">${o.bakes.length ? o.bakes.map((b, i) => `<label class="k-check"><input type="checkbox" name="sold" value="${e(b.id)}"${i === 0 ? ' checked' : ''}> ${e(b.title)}</label>`).join('') : '<p class="k-small k-soft">Nothing uploaded here yet: give a bake’s ID or a vow’s name below.</p>'}</div>
+<input name="soldTyped" placeholder="Or a bake’s ID, or a vow’s name" autocomplete="off" spellcheck="false">
+<label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="The public words of the post announcing it">
+<div class="edubba-grid"><div><label>Price (${e(o.unit)})</label><input name="price" inputmode="numeric" autocomplete="off"></div><div><label>Referral off the top, % (optional)</label><input name="referral" inputmode="decimal" autocomplete="off"></div></div>
+<label>The split service: receives every payment, pays everyone</label><div class="k-row"><input name="service" class="k-grow" list="e-names-partners" autocomplete="off" spellcheck="false" placeholder="A name in your contacts, or its ID">${contactsButtonFor('service')}</div>
+<label class="k-check"><input type="checkbox" name="withPartners" value="yes"> With partners, each paid off the top (a publisher, a relay, a client…)</label>
+<div class="e-partners">${peopleRows({ id: 'partners', me: o.me, shares: true, labels: true, names: o.names, meLabel: 'publisher', other: 'A name in your contacts, or an ID', add: '+ Add a partner' })}</div>
+<fieldset><legend class="k-lbl">Its price tag, signed by</legend>
+<label class="k-check"><input type="radio" name="tagBy" value="service" checked> Its split service, in its own app</label>
+<label class="k-check"><input type="radio" name="tagBy" value="me"> You, the party it designates (as its lone seller, or one of its partners)</label></fieldset>
+<label>Its words (optional): its terms of delivery, refund and contest</label><textarea name="words" rows="2"></textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 
-export function herePane(cards: string): string {
-  return `<h2>Published here</h2><div class="k-row"><button type="button" class="k-btn" data-action="pub-deliver">Deliver keys to buyers</button><span class="k-small k-soft">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${feedBox({ id: 'here-feed', cards, empty: 'Nothing published here yet.' })}`;
+export function herePane(cards: string, waiting: number): string {
+  return `<h2>Published here</h2><div class="k-row"><button type="button" class="k-btn" data-action="pub-gather">Look for signatures${waiting ? ` · ${waiting} waiting` : ''}</button><button type="button" class="k-btn" data-action="pub-deliver">Deliver keys to buyers</button><span class="k-small k-soft">Keys go to each buyer your Damgar, or a publication’s split service, told of.</span></div><div id="e-pub-review" class="e-in"></div>${feedBox({ id: 'here-feed', cards, empty: 'Nothing uploaded, claimed or published here yet.' })}`;
 }
 
 export function salesPane(rows: string, problems: string[] = [], shared = ''): string {

@@ -406,7 +406,7 @@ export class DubMoney {
       }
       if (pub) {
         const deal = pub.owners ? await readDeal(pub.owners, hints, via, pub.id).catch(() => null) : null;
-        if (deal) return { ...deal, publication: pub.first, service: pub.service, payee: pub.service };
+        if (deal) return { ...deal, publication: pub.first, service: pub.service, payee: pub.service, partners: pub.partners } as DealRead;
         // A lone seller's publication: its drafter is the lone owner.
         return { version: pub.id, name: null, text: pub.words ?? '', parties: [pub.drafter], owners: [[pub.drafter, 1_000_000]], claim: null, publication: pub.first, payee: pub.service, service: pub.service, referral: 0, partners: pub.partners } as DealRead;
       }
@@ -591,14 +591,13 @@ export class DubMoney {
   }
 
   /** A sealed post a feed item names, read: its bake, the price tag a purchase follows, and where this identity stands with it. */
-  async read(me: TestIdentity, hints: string[], via: Via, refs: { id: string; signer?: string }[], post?: Uint8Array | null): Promise<SealedShown | null> {
+  async read(me: TestIdentity, hints: string[], via: Via, refs: { id: string; signer?: string }[], post?: Uint8Array | null, names: (id: string) => string = short): Promise<SealedShown | null> {
     const pr = await this.priceOf(hints, via, refs, post);
     if (!pr) return null;
     const p = pr.bake;
     const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
     const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
     const counts = pr.tag?.price && pr.standing === 'counts' ? pr.tag : null;
-    const names = (x: string) => short(x);
     const out: SealedShown = {
       bake: p.bake,
       publication: p.bake,
@@ -623,7 +622,7 @@ export class DubMoney {
       const pd = post ? (describeAct(post) as { id: string; signer?: string }) : null;
       await this.ownersSeen(pr.deal, p.work, hints, via, pd ? { post: pd.id, signer: pd.signer ?? null, bake: p.bake, price: counts ? out.price : null, words: pr.through?.words ?? null } : null);
     }
-    this.outsideOf(out, pr.uploader, me.id);
+    this.outsideOf(out, pr.uploader, me.id, names);
     if (p.seller === me.id) {
       out.state = 'yours';
       if (pr.through && !pr.through.ends && pr.through.drafter === me.id) out.ends = 'publication';
@@ -671,13 +670,13 @@ export class DubMoney {
    * agreement's holders): said plainly, before paying (Agreements rule 14),
    * and the owners' own publication offered, where Dub has read one.
    */
-  outsideOf(out: SealedShown, uploader: string, me: string): void {
+  outsideOf(out: SealedShown, uploader: string, me: string, names: (id: string) => string = short): void {
     const seen = this.owned.get(out.work);
     if (!seen) return;
     const owners = seen.deal.owners;
     if (!owners.length || owners.some(([h]) => h === uploader)) return;
-    const who = owners.map(([h, n]) => `${h === me ? 'you' : short(h)} (${pct(n)})`).join(', ');
-    out.outside = `Its uploader, ${uploader === me ? 'you' : short(uploader)}, is not one of this work’s owners as its claim’s ownership agreement names them: ${who}. Paying here pays the uploader alone, outside that agreement; the owners are paid nothing of it.`;
+    const who = owners.map(([h, n]) => `${h === me ? 'you' : names(h)} (${pct(n)})`).join(', ');
+    out.outside = `Its uploader, ${uploader === me ? 'you' : names(uploader)}, is not one of this work’s owners as its claim’s ownership agreement names them: ${who}. Paying here pays the uploader alone, outside that agreement; the owners are paid nothing of it.`;
     if (seen.post && seen.signer && seen.bake && seen.bake !== out.bake) out.owners = { post: seen.post, signer: seen.signer, bake: seen.bake, price: seen.price ?? 'its price', words: `The owners sell it themselves, through their own publication: ${seen.price ?? 'its price'}.` };
   }
 
@@ -715,7 +714,7 @@ export class DubMoney {
    * partners first, then the owners. Throws, saying why, where nothing can
    * be bought.
    */
-  async purchaseOf(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; post?: string | null; repost?: { id: string; by: string } | null }): Promise<{ payee: string; amount: { unit: string; value: number }; fulfils: string; purchase: [string, string] | null; said: string[]; read: PriceRead }> {
+  async purchaseOf(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; post?: string | null; repost?: { id: string; by: string } | null; names?: (id: string) => string }): Promise<{ payee: string; amount: { unit: string; value: number }; fulfils: string; purchase: [string, string] | null; said: string[]; read: PriceRead }> {
     const from = a.repost ? [a.repost.id, a.repost.by] : a.post ? [a.post, a.seller] : null;
     const postAct = from ? (await followRef(from as [string, string], hints, via)).act : null;
     const refs: { id: string; signer?: string }[] = [{ id: a.publication, signer: a.seller }];
@@ -728,12 +727,14 @@ export class DubMoney {
     if (pr.bake.seller === me.id) throw new Error('That work is your own upload. Nothing was signed.');
     if (!pr.tag?.price || pr.standing !== 'counts') throw new Error(`It cannot be bought: ${pr.why ?? 'no price tag that counts was found'}. Nothing was signed.`);
     const said: string[] = [];
-    if (pr.through) said.push(throughLine(this.asDeal(pr), short));
+    const names = a.names ?? short;
+    if (pr.through) said.push(throughLine(this.asDeal(pr), names));
     const shown: SealedShown = { work: pr.bake.work, publication: pr.bake.bake, outside: null, owners: null } as SealedShown;
     if (pr.deal) await this.ownersSeen(pr.deal, pr.bake.work, hints, via, null);
-    this.outsideOf(shown, pr.uploader, me.id);
+    this.outsideOf(shown, pr.uploader, me.id, names);
     if (shown.outside) said.push(shown.outside);
-    return { payee: pr.tag.payee, amount: pr.tag.price, fulfils: pr.tag.id, purchase: pr.through ? [pr.through.first, pr.through.id] : null, said, read: pr };
+    // Field 9 names the ownership agreement the publication names, by its founding version, and a version on its line (Agreements rule 12); a lone seller's publication names none.
+    return { payee: pr.tag.payee, amount: pr.tag.price, fulfils: pr.tag.id, purchase: pr.through?.owners ? [pr.through.owners, pr.deal?.version ?? pr.through.owners] : null, said, read: pr };
   }
 
   /** Buy a sealed work under the lane: an invoice request following its price tag, naming the repost followed (Money claim field 6) where it was found through one. */

@@ -14,6 +14,7 @@ import { chromium, type Browser } from 'playwright-core';
 import { closeAll, dub, start, type Relay } from '../../damgar/test/world.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { NOTES_FORMAT } from '../src/notes.ts';
+import { stopAll } from './stop.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -28,11 +29,7 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
-after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
-});
+after(() => stopAll(() => browser?.close(), () => closeAll(), ...[...(homes ?? []), relay].map((r) => () => r?.stop())));
 
 interface NoteShown {
   id: string;

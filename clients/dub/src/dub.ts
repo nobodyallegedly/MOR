@@ -143,7 +143,8 @@ export interface Settings {
 }
 
 /** The rules Dub runs (H93): its money (Damgar's code, in Dub), its people, names, corrections, collectives and notes. */
-export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys', 'notes');
+// The member keys cMIP is no longer run (Agreements rule 58: no member keys; a member acts for a collective with their own key).
+export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'notes');
 const MONEY_RULES = ['payment', 'messages', 'grant-limits'];
 
 /**
@@ -743,6 +744,7 @@ export class Dub {
       // This app wrote the version that counts: it renews it from the new words (2a.4); the old secrets stay, to open older messages.
       await me.publishEncryptionKey(encryptionSecret(seed));
       // No member keys to seal again: a member acts for a collective with its own key (Agreements rule 58).
+      await this.store.saveIdentity(me);
       lines.push({ text: 'Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.', tone: 'ok' });
     } else {
       await this.store.saveIdentity(me);
@@ -1165,6 +1167,7 @@ export class Dub {
     // H54: ordered by the timestamp clock this identity names (the timestamp clock Module), each signer's own sequence kept.
     // Decided 23 October 2026: every app relies on the Dubsar clock by default; a clock named here earlier is kept, not read, until a choice of clocks comes.
     const feed = await readFeed(authors, hints, s.via, undefined, dubsarClock());
+    const names = (x: string) => this.nameOf(x, me.id, p);
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items: Item[] = [];
     for (const fp of feed.posts) {
@@ -1186,7 +1189,7 @@ export class Dub {
       if (fp.post.refs.some((r) => (r.kind === 'picture' && !r.bytes) || ((r.kind === 'film' || r.kind === 'recording') && /is locked: its key is not public/.test(r.problem ?? '')))) {
         const where = [...hints, ...this.inboxPlaces(p)];
         const postAct = await followRef([fp.id, fp.signer], where, s.via).then((x) => x.act).catch(() => null);
-        const sealed = await this.money.read(me, where, s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.bake, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner })), postAct).catch(() => null);
+        const sealed = await this.money.read(me, where, s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.bake, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner })), postAct, names).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
           it.pictures = it.pictures.filter((x) => x.bake !== sealed.bake);
@@ -1203,7 +1206,7 @@ export class Dub {
       items.push(it);
     }
     // A work met again, uploaded by someone none of its owners: said once the feed is read, whichever post came first (Agreements rule 14).
-    for (const it of items) if (it.sealed && !it.sealed.outside) this.money.outsideOf(it.sealed, it.sealed.seller, me.id);
+    for (const it of items) if (it.sealed && !it.sealed.outside) this.money.outsideOf(it.sealed, it.sealed.seller, me.id, names);
     // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
     for (const it of items) {
       // Its feed's verifier holds no grant: unknown there (F298), or scoped; only an act bound to a grant is read so.
@@ -2500,7 +2503,7 @@ export class Dub {
       // a purchase, what its price tag pays and, plainly, an uploader who is none of the work's owners (Agreements rule 14).
       let shared: string | null = null;
       if (a.kind === 'buy' && a.bake && a.seller) {
-        const x = await this.money.purchaseOf(me, where, s.via, { publication: readId(a.bake), seller: readId(a.seller), post: a.post ? readId(a.post) : null }).catch(() => null);
+        const x = await this.money.purchaseOf(me, where, s.via, { publication: readId(a.bake), seller: readId(a.seller), post: a.post ? readId(a.post) : null, names }).catch(() => null);
         shared = x?.said.length ? x.said.join(' ') : null;
       } else if (a.post && a.signer && a.kind !== 'pay') {
         const deal = await this.money.dealOf(readId(a.post), readId(a.signer), where, s.via);

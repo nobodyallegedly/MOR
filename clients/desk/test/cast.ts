@@ -27,7 +27,7 @@ export interface CastRow {
 }
 
 /** Found a real collective from Edubba `e` (its founder `founder`), the other members signing in their Dubs. Returns the collective and its founding terms. */
-export async function foundCollective(e: { c: Client }, founder: string, others: { c: Client; id: string }[], rows: CastRow[], o: { name?: string; clone?: number } = {}): Promise<{ collective: string; terms: string }> {
+export async function foundCollective(e: { c: Client }, founder: string, others: { c: Client; id: string }[], rows: CastRow[], o: { name?: string; clone?: number; shares?: Record<string, number> } = {}): Promise<{ collective: string; terms: string }> {
   const members = [founder, ...others.map((x) => x.id)];
   const clone = o.clone ?? Math.min(2, members.length);
   const layers = Object.fromEntries([1, 2, 3, 4, 5].map((l) => [l, { holders: [...members], number: clone }])) as Grid['layers'];
@@ -49,7 +49,7 @@ export async function foundCollective(e: { c: Client }, founder: string, others:
     layers,
     areas,
     clone,
-    shares: evenPercent(members),
+    shares: o.shares ?? evenPercent(members),
   };
   const review = await e.c.ask<any>('real found prepare', { name: o.name ?? 'Three tablets', founder, members: others.map((x) => x.id), grid });
   assert.deepEqual(review.reading.blocking, []);

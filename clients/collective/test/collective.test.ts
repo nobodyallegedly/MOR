@@ -634,10 +634,14 @@ test('money and endings (Agreements draft 10, F121 to F124): stakes at founding,
   const debt = await sign(c, { kind: 'debt', collective: col.id, creditor: supplier, amount: 50 });
   assert.match(words(debt.review.reading), /Sealed to the creditor and to every member/);
 
-  // Shape D, N7: the collective releases its work by its own rules.
-  const pd = await sign(c, { kind: 'release-work', collective: col.id, release: rel.done.acts[0] });
-  assert.match(words(pd.review.reading), /F124 N7/);
-  assert.equal(pd.done.title, 'Released to the public domain', JSON.stringify(pd.done));
+  // Shape D, N7, was: the collective releases its work by the stake its own terms carried in it. That
+  // premise is gone: the collective's terms carry one stake, in the collective itself (Agreements rule
+  // 56, field 33), and a work is owned by its own ownership agreement, on its claim (rules 7, 17), whose
+  // stake a release names. This client does not make that claim and ownership agreement yet (an open
+  // item for the lead): the review says so plainly and nothing is signed.
+  const pd = await prepare(c, { kind: 'release-work', collective: col.id, release: rel.done.acts[0] });
+  assert.match(pd.reading.blocking.join(' '), /a work is owned by an ownership agreement on its claim \(Agreements rules 7, 17\).*one stake only, in the collective itself \(rule 56\)/);
+  await c.ask('cancel', { plan: pd.plan });
 
   // Shape B: each side founds its successor first, the fork names them; the debt goes to both jointly.
   const fk = await sign(c, { kind: 'fork', collective: col.id, sides: [[ada, four], [two, five]] });

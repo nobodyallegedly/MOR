@@ -615,9 +615,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const open = conv ? (all.find((c) => c.with.id === conv) ?? null) : null;
     const msgs = open ? (inbox?.messages ?? []).filter((m) => m.with === open.with.id).sort((a, b) => a.at - b.at) : [];
     const body = app.querySelector('.k-body');
+    // What is being typed survives the redraw (the inbox read again while typing would clear it): kept for the same conversation, focus and caret too.
+    const typing = app.querySelector<HTMLTextAreaElement>('#message textarea');
+    const kept = typing ? { value: typing.value, focused: document.activeElement === typing, start: typing.selectionStart, end: typing.selectionEnd, conv: open?.with.id ?? null } : null;
     const html = v.privatePart(state!, all, open, msgs.map((m) => (keep(v.messageAct(m), { message: m }), m)));
     if (body) body.outerHTML = html;
     else app.insertAdjacentHTML('beforeend', html);
+    const again = app.querySelector<HTMLTextAreaElement>('#message textarea');
+    if (kept && again && kept.value && kept.conv === (open?.with.id ?? null) && !again.value) {
+      again.value = kept.value;
+      if (kept.focused) {
+        again.focus();
+        again.setSelectionRange(kept.start, kept.end);
+      }
+    }
     const notes = [
       ...(inbox && !inbox.encryption
         ? [inbox.opening ?? 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
@@ -1631,6 +1642,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           fresh = null;
           cc = [];
           appended = null;
+          // Sent: the typing box empties (a redraw keeps only what is still being typed).
+          const box = form.querySelector<HTMLTextAreaElement>('textarea');
+          if (box) box.value = '';
           say('done', `<strong>Sent.</strong>${v.lines(r.lines)}`);
           await readInbox();
           drawPrivate();

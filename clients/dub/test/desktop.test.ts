@@ -43,12 +43,16 @@ test('make-desktop.sh: a desktop entry named Dub, running a launcher that starts
   // As the desktop runs it: the program starts in ~/mor-dub, its link in the launcher's log.
   execFileSync(launch, [], { env, cwd: home });
   const dir = join(home, 'mor-dub');
-  assert.ok(existsSync(join(dir, 'run.json')), 'the program runs in its default folder');
-  const run = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { port: number; pid: number };
-  assert.match(readFileSync(join(home, 'mor-dub-launcher.log'), 'utf8'), new RegExp(`127\\.0\\.0\\.1:${run.port}/#pair=`));
-  const hello = (await (await fetch(`http://127.0.0.1:${run.port}/hello`)).json()) as { pid: number };
-  assert.equal(hello.pid, run.pid);
-  execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env, encoding: 'utf8' });
+  // The program the launcher started is stopped whatever the outcome (Part 4).
+  try {
+    assert.ok(existsSync(join(dir, 'run.json')), 'the program runs in its default folder');
+    const run = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { port: number; pid: number };
+    assert.match(readFileSync(join(home, 'mor-dub-launcher.log'), 'utf8'), new RegExp(`127\\.0\\.0\\.1:${run.port}/#pair=`));
+    const hello = (await (await fetch(`http://127.0.0.1:${run.port}/hello`)).json()) as { pid: number };
+    assert.equal(hello.pid, run.pid);
+  } finally {
+    execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env, encoding: 'utf8' });
+  }
 });
 
 test('make-app.sh (H25): Dub.app carries its own icon, named in its Info.plist', () => {

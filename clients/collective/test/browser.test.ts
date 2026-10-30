@@ -44,12 +44,32 @@ after(async () => {
 
 const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
 
+/**
+ * Part 4: wait for a condition on a page that fills later, never read it once. Polls until `check`
+ * holds or the bound passes, then fails saying what was last seen.
+ */
+async function eventually(what: string, check: () => Promise<boolean | string>, timeout = 60_000): Promise<void> {
+  const end = Date.now() + timeout;
+  let last: boolean | string = false;
+  while (Date.now() < end) {
+    last = await check().catch((e) => String(e));
+    if (last === true) return;
+    await new Promise((ok) => setTimeout(ok, 200));
+  }
+  assert.fail(`${what}: ${typeof last === 'string' ? last : 'not yet'}`);
+}
+
 /** Wait for the review, check it says what it should, then press Sign. */
 async function review(page: Page, title: string | RegExp, name: string, says: (string | RegExp)[] = []) {
   const r = page.locator('#reading');
   await r.locator('h2', { hasText: title }).waitFor({ timeout: 60_000 });
-  const text = (await r.textContent())!;
-  for (const s of says) assert.ok(typeof s === 'string' ? text.includes(s) : s.test(text), `the review says ${s}:\n${text}`);
+  // The review fills in one go, but wait for every sentence rather than read it once (Part 4).
+  for (const s of says) {
+    await eventually(`the review says ${s}`, async () => {
+      const text = (await r.textContent()) ?? '';
+      return (typeof s === 'string' ? text.includes(s) : s.test(text)) || text;
+    });
+  }
   await shot(page, name);
   await r.locator('[data-action=confirm]').click();
 }
@@ -108,6 +128,9 @@ test('the author, without a terminal, from the page alone', async () => {
     'nobody is founded into a collective without signing',
     'Who decides what',
     'any 2 of them decide together',
+    // A collective has no signing key; the five layers' rules, Money first (Agreements rules 56, 60).
+    'It has no signing key of its own',
+    'Money (layer 3): any 2 of the 3 members together',
     'Their consent is simulated',
   ]);
   await done(page, '“Makers” is founded');
@@ -131,14 +154,13 @@ test('the author, without a terminal, from the page alone', async () => {
   commit(co, 'src/lib.rs', 'pub fn two() -> u8 { 2 }\n');
   await card.locator('form.release input[name=version]').fill('11b.1');
   await card.locator('form.release button').click();
-  await review(page, /Publish MOR 11b\.1 as the collective “Makers”/, '6-release', ['It is not a release yet', 'It is the first release', '3 files']);
+  // Ada uploads it with her own key, naming the collective: her upload is her act for the Releases
+  // area (Agreements rules 58, 60), so Sim Three's signature makes the two (was: Ada signed it first).
+  await review(page, /Publish MOR 11b\.1 as the collective “Makers”/, '6-release', ['It is not a release yet', 'It is the first release', '3 files', 'with their own key, naming the collective', 'it counts as their signature']);
   await done(page, 'MOR 11b.1 is published');
   const rel = (await card.locator('li', { hasText: '11b.1' }).locator('code').getAttribute('title'))!;
-  await card.locator('li', { hasText: '11b.1' }).locator('[data-action=sign]', { hasText: 'Sign as Ada (you)' }).click();
-  await review(page, /Sign MOR 11b\.1 as Ada \(you\)/, '7-sign', ['all 3 files are the same', 'No member has signed it yet', 'cannot be taken back']);
-  await done(page, 'Signed by Ada');
   await card.locator('li', { hasText: '11b.1' }).locator('[data-action=sign]', { hasText: 'Sign as Sim Three' }).click();
-  await review(page, /Sign MOR 11b\.1 as Sim Three/, '8-sign', ['Signed so far by Ada (you)']);
+  await review(page, /Sign MOR 11b\.1 as Sim Three/, '8-sign', ['all 3 files are the same', 'Signed so far by Ada (you)', 'cannot be taken back']);
   await page.locator('#status .note.done', { hasText: 'It is now a release: VERIFIED' }).waitFor({ timeout: 60_000 });
 
   // Leave: a resignation alone, registered by the collective's record. No rule is rewritten.
@@ -150,8 +172,8 @@ test('the author, without a terminal, from the page alone', async () => {
     'The members who stay then refit the collective',
   ]);
   await done(page, 'left “Makers”');
-  assert.equal(await card.locator('[data-action=leave]').count(), 0, 'no longer a member with a voice');
-  assert.match((await card.locator('dt:text-is("Members") + dd').textContent())!, /Ada \(you\).*left/);
+  await eventually('no longer a member with a voice', async () => (await card.locator('[data-action=leave]').count()) === 0);
+  await eventually('Ada shown as left', async () => /Ada \(you\).*left/.test((await card.locator('dt:text-is("Members") + dd').textContent()) ?? ''));
 
   // The refit: remove the member who left, with numbers that fit the two who stay (F96).
   await card.locator('details.change > summary').click();
@@ -161,18 +183,19 @@ test('the author, without a terminal, from the page alone', async () => {
   await card.locator('form.change button[type=submit]').click();
   await review(page, /Remove Ada \(you\) .* from “Makers”/, '10-refit', [
     'already left',
-    'The signing key passes to Sim Two',
+    // No signing key passes to anyone (was: "The signing key passes to Sim Two"): the rotation keeps no tip.
+    'installs no signing key and keeps no tip',
     'Any one member alone can rebuild the chain key',
   ]);
   await done(page, ': done');
-  assert.equal(/Ada/.test((await card.locator('dt:text-is("Members") + dd').textContent())!), false);
+  await eventually('Ada no longer a member', async () => !/Ada/.test((await card.locator('dt:text-is("Members") + dd').textContent()) ?? 'Ada'));
 
   // An ordinary change: the release area's own words, recorded at once.
   await card.locator('form.words input[name=text]').fill('We release only what we both checked.');
   await card.locator('form.words button').click();
   await review(page, /New words for the Releases area of “Makers”/, '11-words', ['An ordinary change', 'no rotation']);
   await done(page, 'has new words');
-  assert.match((await card.locator('.area dt:text-is("Its own words") + dd').textContent())!, /We release only what we both checked/);
+  await eventually('the new words shown', async () => /We release only what we both checked/.test((await card.locator('.area dt:text-is("Its own words") + dd').textContent()) ?? ''));
 
   // Anyone can check the release; a fresh verifier agrees.
   await card.locator('li', { hasText: '11b.1' }).locator('[data-action=verify]').click();
@@ -182,7 +205,8 @@ test('the author, without a terminal, from the page alone', async () => {
   assert.equal(v.ok, true, v.problems.join('; '));
 
   // Everything signed is listed.
-  assert.equal(await page.locator('#history li').count(), 14);
+  // One fewer than before: Ada's upload is her act, so she signs no separate act on the release.
+  await eventually('13 acts listed', async () => (await page.locator('#history li').count()) === 13 || `${await page.locator('#history li').count()} listed`);
   assert.deepEqual(problems, []);
   await context.close();
 });
