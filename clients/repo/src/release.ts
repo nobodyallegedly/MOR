@@ -402,6 +402,7 @@ interface Described {
   spec?: string;
   type?: number;
   payload?: Uint8Array;
+  objects?: [string, string][];
 }
 
 /**
@@ -442,19 +443,24 @@ export async function verifyRelease(
     return fail('the publication is not a release manifest');
   }
   if (!d.signer) return fail('the release has no signer');
-  r.collective = d.signer;
-  if (opts.collective && opts.collective !== d.signer) {
-    return fail(`the release is signed by ${d.signer}, not by the collective ${opts.collective}`);
+  // A collective has no signing key (Agreements rule 56): a member uploads
+  // the release with their own key, naming the collective in `objects`, its
+  // identity as chain (rule 58; a bake's type defines no objects of its own).
+  const collective = d.objects?.[0]?.[0] ?? d.signer;
+  r.collective = collective;
+  if (opts.collective && opts.collective !== collective) {
+    return fail(`the release names ${collective}, not the collective ${opts.collective}`);
   }
 
   // 2. The signer's chain, and the publication's standing.
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let homes: string[];
   try {
-    const l = await lookUp(d.signer, hints, via, v);
+    const l = await lookUp(collective, hints, via, v);
     homes = l.resolution.homes.map((h) => h.hint);
+    if (collective !== d.signer) homes.push(...(await lookUp(d.signer, hints, via, v)).resolution.homes.map((h) => h.hint));
   } catch (e) {
-    return fail(`the collective's identity was not found: ${e}`);
+    return fail(`the collective's identity, or its uploader's, was not found: ${e}`);
   }
   v.add(act);
   // The signer's other acts first: a release that is no longer the latest
@@ -487,10 +493,10 @@ export async function verifyRelease(
 
   // 3. Agreements: the agreements the collective declared, their parties' chains and signature acts.
   const places = [...new Set([...hints, ...((media.get(6) as string[]) ?? []), ...homes])];
-  const res = v.resolve(d.signer) as { links: { act: string }[] };
+  const res = v.resolve(collective) as { links: { act: string }[] };
   const agreements = new Set<string>();
   for (const link of res.links) {
-    const a = v.agreementsDeclared(AGREEMENTS_SPECS, d.signer, link.act);
+    const a = v.agreementsDeclared(AGREEMENTS_SPECS, collective, link.act);
     if (a) agreements.add(a);
   }
   const parties = new Set<string>();
@@ -577,7 +583,7 @@ export async function verifyRelease(
         ? `the ${area.name} area, which has no holder left: frozen until the members refit it`
         : `any ${area.needed} of the ${area.name} area's holders`
       : consent.kind === 'no-area'
-        ? "the collective's own signature (no area of its agreement reaches publications)"
+        ? "the uploading member's own act (no area of its agreement reaches bakes)"
         : consent.kind === 'not-collective'
           ? "its signer's own signature (not a collective)"
           : undefined;
@@ -585,7 +591,7 @@ export async function verifyRelease(
     // No signature can make it a release: say what Agreements read, as a sentence.
     fail(
       consent.kind === 'broken'
-        ? v.agreementsBroken(AGREEMENTS_SPECS, d.signer)
+        ? v.agreementsBroken(AGREEMENTS_SPECS, collective)
           ? `Agreements read the collective that published it as broken: no agreement can be found in force for it, so no member's signature can make this a release. Agreements' reason: ${consent.reason ?? 'none given'}`
           : // Rolled back since (Agreements rule 37d, F185): the act stays in the broken stretch.
             `It was published while Agreements read the collective that published it as broken, before the rollback that brought the collective back: it counts for nothing, for good, so no member's signature can make this a release (Agreements rule 37d). Agreements' reason for the broken act: ${consent.reason ?? 'none given'}`

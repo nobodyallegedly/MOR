@@ -63,7 +63,7 @@ test('found, release, sign, verify from the command line', async () => {
   assert.equal((found.match(/: receipt/g) ?? []).length, 3);
   assert.match(readFileSync(c, 'utf8'), /MOR TEST COLLECTIVE/);
 
-  const rel = await cli('release', '--file', c, '--version', '1', '--root', tree);
+  const rel = await cli('release', '--file', c, '--member', files[0], '--version', '1', '--root', tree);
   const id = rel.match(/release ([0-9a-f]{64})/)![1];
   assert.match(rel, /2 files \(2 new\)/);
 

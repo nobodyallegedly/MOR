@@ -24,8 +24,9 @@ so it can sign and publish a clone whose mark Agreements call false, breaking th
 collective (Agreements rule 37d). To manage a collective, use the collective
 client (clients/collective), which asks Agreements before anything is signed.
 
-A TEST COLLECTIVE HOLDS EVERY KEY IN SOFTWARE, in its file: its signing key
-and every member's share of its chain key. A prototype, never for a real
+A TEST COLLECTIVE HOLDS EVERY MEMBER'S SHARE OF ITS CHAIN KEY IN SOFTWARE, in
+its file. It has no signing key of its own: each member acts for it with their
+own key, naming it (Agreements rules 56 and 58). A prototype, never for a real
 collective. Keep the file secret. Members are test identities made with the
 genesis client (clients/genesis: mor-genesis new).
 
@@ -62,9 +63,10 @@ genesis client (clients/genesis: mor-genesis new).
         An ordinary change: the release area's own words, changed by its
         holders (enough of them to meet the release rule) and recorded by the
         collective at once, with no rotation.
-  release --file C --version V [--name N] [--root DIR] [--implements ID ...]
+  release --file C --member M.json --version V [--name N] [--root DIR] [--implements ID ...]
         Publish every file git tracks under DIR (default: this repository) as a
-        release of the collective. It counts once enough members sign it.
+        release of the collective, uploaded by the member M with their own key,
+        naming the collective. It counts once enough members sign it.
         --implements names a specification the release implements, by the act
         id of one of its publications: its content is read at the collective's
         relays and decoded whole, and the release names it by its spec hash,
@@ -230,6 +232,10 @@ async function main() {
     case 'release': {
       const file = need('file');
       const c = TestCollective.load(file, via);
+      // A collective has no signing key: a member uploads the release for it, naming it.
+      const uploaderPath = need('member');
+      const uploader = member(uploaderPath);
+      c.by(uploader);
       const dir = resolve(one('root') ?? root);
       const files = gitFiles(dir);
       // Release manifest cMIP draft 4: the specifications it implements, named by their spec hashes,
@@ -246,6 +252,7 @@ async function main() {
         via,
       });
       c.save(file);
+      uploader.save(uploaderPath);
       console.log(`release ${p.id}`);
       console.log(`${p.manifest.files.length} files (${p.uploaded} new), ${p.manifest.dependencies.length} dependencies, previous ${p.manifest.previous ?? 'none'}`);
       for (const x of p.manifest.implements ?? []) console.log(`  implements ${x.spec}${x.hint ? ` (a publication of it: ${x.hint})` : ''}`);
@@ -291,7 +298,6 @@ async function main() {
       console.log(JSON.stringify({
         collective: c.identity,
         members: c.f.members,
-        signingHolder: c.f.signingHolder,
         agreement: c.f.agreement,
         agreements: c.f.agreements,
         chainKey: { index: c.f.safety.index, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint },

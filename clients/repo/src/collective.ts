@@ -1,11 +1,13 @@
-// A test collective (Agreements rules 35 to 37): an identity of its own, founded by
-// an agreement its members sign, its signing key with one member, its
+// A test collective (Agreements rules 56 to 60): an identity of its own, founded by
+// an agreement its members sign, with no signing key of its own (rule 56):
+// each member acts for it with their own key, naming it (rule 58); its
 // chain key dealt as shares among the members (air-gapped Module, section
-// 5), its members changed by a clone of the founding agreement plus a
-// rotation declaring the clone.
+// 5), its members changed by a clone of the founding agreement, put in
+// force by a record, or by a rotation declaring it where the chain key's
+// holders change.
 //
-// A TEST COLLECTIVE HOLDS EVERY KEY IN SOFTWARE, IN ONE FILE: the everyday
-// key and every member's share. Its members are simulated, so the mechanics
+// A TEST COLLECTIVE HOLDS ITS CHAIN KEY'S SHARES IN SOFTWARE, IN ONE FILE:
+// every member's share. Its members are simulated, so the mechanics
 // run (release rule, visible signatures, clone, rotation) while independent
 // consent does not (roadmap step 5a, "Run and not run"). A real collective
 // deals and rebuilds its chain key on offline devices, one share per member.
@@ -19,10 +21,9 @@ import {
   hex,
   makeGenesis,
   makeRotation,
-  newSigningSecret,
+  newTestChainKey,
   rebuildChainKey,
   rebuildChainKeyFromPaper,
-  signingPublic,
   verifyShare,
 } from '../../genesis/src/core.ts';
 import { TestIdentity, type Home, type IdentityFile, type Submitted } from '../../genesis/src/identity.ts';
@@ -45,12 +46,14 @@ import {
   type Power,
   type Rule,
   type AreaSpec,
-  type SplitPlan,
+  type LayerNumber,
+  collectiveShares,
+  evenShares,
 } from './agreements.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
 
 export const COLLECTIVE_LABEL =
-  'MOR TEST COLLECTIVE. Its everyday key and every member share are held in software, in this file: a prototype, never for a real collective.';
+  'MOR TEST COLLECTIVE. Every member share of its chain key is held in software, in this file: a prototype, never for a real collective.';
 
 const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 const same = (a: Uint8Array, b: Uint8Array) => Buffer.from(a).equals(Buffer.from(b));
@@ -90,17 +93,15 @@ export interface Governance {
   releaseOut?: string[];
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
-  /** The areas the founding grid draws (round 3, rules 60 and 62); absent, the one Releases area above. */
+  /** Who acts for the collective in each layer (terms field 19, rule 60): Text, Envelopes, Money, Agreements, Development; a layer left out takes the clone rule. */
+  layers?: Partial<Record<LayerNumber, Rule>>;
+  /** The finer areas the founding grid draws (field 34, rules 60 and 62); absent, the one Releases area above. */
   areas?: AreaSpec[];
   text: string;
-  /** Stakes (terms field 7): the collective's own (object null, F124 S1:
-   * a share of all its income, F121 Q8), keyed by holder, and works it
-   * holds (holder null). Absent in older files. */
+  /** The one stake (terms field 7), on the collective itself (field 33,
+   * `[1, null]`): its holders' shares of all its income, in millionths.
+   * Absent: even shares among the members. */
   stakes?: Stake[];
-  /** The split service's grant (field 14), a judicial clause. */
-  splitGrant?: string;
-  /** The split plan (field 8; round 3, part C). */
-  plan?: SplitPlan;
   /** Named keepers (field 3; round 3, part C). */
   keepers?: { ids: string[]; rule: Rule };
   /** Departed holders (field 22): who left keeping a share of the collective's income, which is in `stakes` (F124 N5). */
@@ -118,8 +119,6 @@ export interface CollectiveFile {
   governance: Governance;
   /** The parties of the agreement in force, in order. */
   members: string[];
-  /** Who holds the signing key. */
-  signingHolder: string;
   /** The agreement in force: the founding agreement, then each clone. */
   agreement: string;
   agreements: string[];
@@ -134,12 +133,10 @@ export interface CollectiveFile {
    * registered at once by a record, its line (rule 37a), or who were
    * declared absent, by a declaration it registered the same way (rule 53). They stay parties
    * of the agreement in force until the members refit the collective
-   * without them; the list stays as history after. A member declared
-   * absent while holding the signing key has no record (Agreements draft 9, C7,
-   * B16, B18): the declaration takes effect at the recovery rotation, the
-   * member change removing them, which names `signatures`, the other
-   * members' signature acts on it; `rotation` is that rotation once made,
-   * and `at` the length of the collective's sequence it kept.
+   * without them; the list stays as history after. During a broken stretch
+   * the declaration names `signatures`, the other members' signature acts
+   * on it, and the rollback registers it; `rotation` and `at` are kept in
+   * older files only.
    */
   departed?: {
     member: string;
@@ -187,7 +184,7 @@ export interface CollectiveFile {
    * can rebuild the agreement in force just before a broken act (Agreements rule
    * 37d).
    */
-  rules?: Record<string, { governance: Governance; members: string[]; signingHolder: string }>;
+  rules?: Record<string, { governance: Governance; members: string[] }>;
 }
 
 /** What happened to one act the members signed. */
@@ -204,7 +201,7 @@ export function governanceText(g: Omit<Governance, 'text'>): string {
   const constitution = g.constitutionalThreshold
     ? `any ${g.constitutionalThreshold} members`
     : 'every member whose voice remains';
-  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. Its signing key is held by its first member; its chain key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
+  return `The MOR test collective. It publishes releases of the MOR code and nothing else. Test acts only, wiped before the first real acts. It has no signing key of its own: each member acts for it with their own key. Its chain key is split among the members, any ${g.safetyThreshold} of whom rebuild it. Releases are an area held by every member: a release counts only when ${g.releaseThreshold} members have signed it, each with an act of their own. Members, these rules and the release area change by a clone signed by ${constitution} and by each member who joins, and a rotation of the collective declaring it. Other changes need any ${g.cloneThreshold} members, and are recorded by the collective at once. A member may leave alone at any time, keeping what they own. The other members together decide whether a member is absent; the outcome is that member losing their voice.`;
 }
 
 /** The abandonment clause these rules write: any `abandonmentOthers` of the other members, outcome 0, no absence-proof cMIP. */
@@ -225,18 +222,18 @@ export interface Gates {
 }
 
 /** The terms of a founding agreement (no parent) or of a clone, from its rules. */
-export function collectiveTerms(g: Governance, members: string[], holder: string, parent?: string, mark?: MarkEntry[]): CollectiveTerms {
+export function collectiveTerms(g: Governance, members: string[], parent?: string, mark?: MarkEntry[]): CollectiveTerms {
   const rule = (k: number): Rule => ({ threshold: k });
   return {
     parties: members,
     text: g.text,
     clone: rule(g.cloneThreshold),
     constitutional: g.constitutionalNamed?.length ? { named: g.constitutionalNamed } : g.constitutionalThreshold ? rule(g.constitutionalThreshold) : undefined,
-    signingHolder: holder,
+    layers: g.layers,
     chainKey: { threshold: g.safetyThreshold, members },
-    // A release is a publication of the collective (Envelopes type 0): an
-    // area held by every member, counting with this many members' own
-    // signature acts (F100, F103).
+    // A release is a bake of the collective (Envelopes type 0): a finer
+    // area of Envelopes held by every member, counting with this many
+    // members' own acts (F100, F103).
     releases: { holders: members.filter((m) => !(g.releaseOut ?? []).includes(m)), threshold: g.releaseThreshold, words: g.releaseWords },
     // Outcome 0, a voice removed: every member is covered (F105).
     abandonment: abandonmentOf(g),
@@ -244,8 +241,6 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     parent,
     mark,
     stakes: g.stakes,
-    splitGrant: g.splitGrant,
-    plan: g.plan,
     keepers: g.keepers,
     departed: g.departed,
     // Field 23 is for founding terms only: a clone never carries it.
@@ -298,6 +293,76 @@ export interface KeptLines {
   warned?: string;
 }
 
+/**
+ * The shares after a member change, where the caller set none: a member who
+ * leaves keeps theirs; the members who stay, who all sign the change,
+ * divide their shares evenly with each joining member, so that no share is
+ * lowered without its holder's signature (rules 46, 46b) and every joining
+ * member holds one. Unchanged where nobody joins.
+ */
+export function sharesAfter(before: [string, number][], from: string[], members: string[]): [string | null, number][] {
+  const joining = members.filter((m) => !from.includes(m) && !before.some(([h]) => h === m));
+  if (!joining.length) return before;
+  const staying = before.filter(([h]) => members.includes(h));
+  const pot = staying.reduce((n, [, x]) => n + x, 0);
+  const holders = [...staying.map(([h]) => h), ...joining];
+  const each = Math.floor(pot / holders.length);
+  // The first who stays takes what rounding leaves.
+  const scaled = holders.map((h, i): [string, number] => [h, i === 0 ? pot - each * (holders.length - 1) : each]);
+  return [...before.filter(([h]) => !members.includes(h)), ...scaled];
+}
+
+/** The power a clone plan's need names, as a mark writes it. */
+export const powerOf = (n: { form: string; area?: number }): Power =>
+  n.form === 'area' ? { area: n.area! } : n.form === 'layer' ? { layer: n.area! } : n.form === 'constitutional' ? { constitutional: true } : n.form === 'judicial' ? { judicial: true } : { clone: true };
+
+/**
+ * A collective's genesis (Identity rule 1): it declares its founding
+ * agreement in place of a signing key, and is signed by a first chain key,
+ * revealed in its signature, made here and dropped at once; it commits the
+ * next chain key, dealt as shares to the members (index 1).
+ */
+export function keylessGenesis(members: string[], threshold: number, scheme: number, homes: Home[], agreement: string): { genesis: Uint8Array; chainKey: Dealt } {
+  const first = newTestChainKey(scheme) as { scheme: number; seeds: Uint8Array; commit: string };
+  const chainKey = deal(members, threshold, 1, scheme);
+  const genesis = makeGenesis({
+    identitySpec: SPECS.identity,
+    firstChainKeySeeds: first.seeds,
+    firstChainKeyScheme: first.scheme,
+    chainKeyScheme: scheme,
+    chainKeyCommit: chainKey.commit,
+    homes,
+    declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: agreement }],
+  });
+  first.seeds.fill(0);
+  return { genesis, chainKey };
+}
+
+/** The identity file of a keyless collective: no signing key; its acts cite its genesis first (rule 58). */
+export function collectiveIdentity(genesis: Uint8Array, homes: Home[]): IdentityFile {
+  const id = actId(genesis);
+  return {
+    label: 'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.',
+    identity: id,
+    position: 0,
+    binding: id,
+    // A collective has no signing key (Agreements rule 56): its members act for it.
+    signingSecret: '',
+    // Held as shares, never whole: see `safety` in the collective file.
+    safety: { scheme: 0, seeds: '' },
+    chain: [b64(genesis)],
+    homes,
+    rule: null,
+    sequence: [],
+    routes: null,
+    encryption: [],
+    pending: null,
+    // Rule 58: its acts cite, on its chain, the decision they act under:
+    // its genesis first, then its latest rotation, record or grant.
+    cites: [id],
+  };
+}
+
 export class TestCollective {
   readonly id: TestIdentity;
 
@@ -313,6 +378,21 @@ export class TestCollective {
   }
 
   /**
+   * The member who makes the collective's next acts, with their own key,
+   * naming it (Agreements rules 56, 58): a collective has no signing key.
+   * Returns this collective, so a call reads `c.by(member).…`.
+   */
+  by(member: TestIdentity): this {
+    this.id.actor = member;
+    return this;
+  }
+
+  /** The collective's chain as its next act cites it (rule 58): its latest decision and the head this device made since. */
+  citing(): [string, string][] {
+    return (this.f.identity.cites ?? [this.identity]).map((d): [string, string] => [this.identity, d]);
+  }
+
+  /**
    * What a rotation of the collective would keep now (Identity rule 35):
    * every line read from its homes and relays, as `KeptLines` leaves them.
    */
@@ -324,21 +404,23 @@ export class TestCollective {
    * The rules after a member change: a member who leaves keeping a share
    * of the collective's income (its stake in itself, field 7) is recorded
    * as departed in the departed members entry, nothing else (Agreements rules
-   * 37a, 46b; F121, F124 N5).
+   * 37a, 46b; F121, F124 N5). The shares are carried in the same clone
+   * (`sharesAfter`): a joining member always holds one.
    */
   departedAfter(g: Governance, members: string[], from: string[] = this.f.members): Governance {
-    const own = g.stakes?.find((x) => x.object === null);
+    const before = collectiveShares({ stakes: g.stakes, parties: from });
     const departed = [...(g.departed ?? [])];
     for (const m of from.filter((x) => !members.includes(x))) {
-      const share = own?.holders.find(([h]) => h === m)?.[1] ?? 0;
+      const share = before.find(([h]) => h === m)?.[1] ?? 0;
       if (share > 0 && !departed.includes(m)) departed.push(m);
     }
-    return departed.length ? { ...g, departed } : g;
+    const out = { ...g, stakes: [{ object: null, holders: sharesAfter(before, from, members) }] };
+    return departed.length ? { ...out, departed } : out;
   }
 
   /** Keep the rules of the agreement now in force (F185): what a rollback rebuilds. */
   remember(): void {
-    this.f.rules = { ...(this.f.rules ?? {}), [this.f.agreement]: { governance: this.f.governance, members: [...this.f.members], signingHolder: this.f.signingHolder } };
+    this.f.rules = { ...(this.f.rules ?? {}), [this.f.agreement]: { governance: this.f.governance, members: [...this.f.members] } };
   }
 
   /**
@@ -349,7 +431,7 @@ export class TestCollective {
    * there (`voices`), without anyone else Agreements no longer counts (F187, 1).
    * Null where this device kept no rules for it.
    */
-  rollbackRules(before: string, leaving: string[], voices?: string[]): { governance: Governance; members: string[]; holder: string } | null {
+  rollbackRules(before: string, leaving: string[], voices?: string[]): { governance: Governance; members: string[] } | null {
     const r = this.f.rules?.[before];
     if (!r) return null;
     // F187 (1): the members are Agreements' voices, never this device's copy: a
@@ -359,13 +441,7 @@ export class TestCollective {
     return {
       governance: this.departedAfter(r.governance, members, r.members),
       members,
-      holder: members.includes(r.signingHolder) ? r.signingHolder : members[0],
     };
-  }
-
-  /** Who holds the signing key after a member change: the holder if they stay, else the first member. */
-  nextHolder(members: string[]): string {
-    return members.includes(this.f.signingHolder) ? this.f.signingHolder : members[0];
   }
 
   static load(path: string, via: Via = {}): TestCollective {
@@ -398,52 +474,21 @@ export class TestCollective {
     expect?: Uint8Array;
   }): Promise<{ collective: TestCollective; agreement: string; signed: Signed[]; sent: Submitted[] }> {
     const ids = opts.members.map((m) => m.id);
-    const holder = ids[0];
-    const payload = termsPayload(collectiveTerms(opts.governance, ids, holder));
+    const payload = termsPayload(collectiveTerms(opts.governance, ids));
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the founding agreement is not the one shown: nothing signed');
     const proposed = await proposePayload(opts.members[0], payload, undefined, opts.relays);
     const signed: Signed[] = [];
     for (const m of opts.members) signed.push({ member: m.id, act: (await sign(m, proposed.id, opts.relays)).id });
 
     const scheme = opts.scheme ?? 2;
-    const chainKey = deal(ids, opts.governance.safetyThreshold, 0, scheme);
-    const signingSecret = newSigningSecret();
-    const genesis = makeGenesis({
-      identitySpec: SPECS.identity,
-      signingSecret,
-      chainKeyScheme: scheme,
-      chainKeyCommit: chainKey.commit,
-      homes: opts.homes,
-      declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: proposed.id }],
-    });
-    const id = actId(genesis);
-    const identity: IdentityFile = {
-      label: 'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.',
-      identity: id,
-      position: 0,
-      binding: id,
-      signingSecret: hex(signingSecret),
-      // Held as shares, never whole: see `chainKey` in the collective file.
-      safety: { scheme, seeds: '' },
-      chain: [b64(genesis)],
-      homes: opts.homes,
-      rule: null,
-      sequence: [],
-      routes: null,
-      encryption: [],
-      pending: null,
-      // F127: its actions cite, on its chain, the decision they act under:
-      // its genesis first, then its latest rotation or record.
-      cites: [id],
-    };
+    const { genesis, chainKey } = keylessGenesis(ids, opts.governance.safetyThreshold, scheme, opts.homes, proposed.id);
     const c = new TestCollective(
       {
         label: COLLECTIVE_LABEL,
-        identity,
+        identity: collectiveIdentity(genesis, opts.homes),
         relays: opts.relays,
         governance: opts.governance,
         members: ids,
-        signingHolder: holder,
         agreement: proposed.id,
         agreements: [proposed.id],
         safety: chainKey,
@@ -452,9 +497,11 @@ export class TestCollective {
       },
       opts.via ?? {},
     );
+    // Its first acts are made by the first member, naming it.
+    c.by(opts.members[0]);
     c.remember();
+    // Its genesis only: routes are an everyday Identity act, and a collective signs none (Identity, everyday check 4).
     const sent = await c.id.publishGenesis();
-    await c.id.publishRoutes([{ scope: null, hints: opts.relays }]);
     return { collective: c, agreement: proposed.id, signed, sent };
   }
 
@@ -499,7 +546,7 @@ export class TestCollective {
     // Identity rule 35: before anything is signed, so that nothing is.
     checkWarned(await this.planLines(opts.lines), opts.lines?.warned);
     const governance = this.departedAfter(opts.governance ?? this.f.governance, opts.members);
-    const holder = this.nextHolder(opts.members);
+    if (!this.id.actor) this.by(opts.proposer);
     const resigned: Signed[] = [];
     let line: string | undefined;
     for (const m of opts.leaving ?? []) {
@@ -509,26 +556,21 @@ export class TestCollective {
       line = (await record(this.id, { registers: resigned.map((r) => r.act), inForce: this.f.agreement }, this.f.relays)).id;
     }
     const left = new Set(resigned.map((r) => r.member));
-    // C7, B16, Flaw B18: a declared holder of the signing key, removed by
-    // this change, is removed at this rotation, which names the other
-    // members' signature acts on the declaration.
-    const recovered = this.recovering().filter((d) => !opts.members.includes(d.member));
-    const absence = recovered.flatMap((d) => d.signatures ?? []);
     let mark: MarkEntry[];
     if (opts.mark) mark = opts.mark;
     else {
       const voices = opts.signers.map((m) => m.id).filter((id) => this.f.members.includes(id) && !left.has(id));
       mark = [{ power: { constitutional: true }, signers: voices }];
-      const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+      const parent = collectiveTerms(this.f.governance, this.f.members);
       // F122: a version that also changes a judge needs every member for it.
-      if (clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+      if (clonePlan(parent, collectiveTerms(governance, opts.members, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
         mark.push({ power: { judicial: true }, signers: voices });
       }
-      if (!markMatches(mark, clonePlan(parent, collectiveTerms(governance, opts.members, holder, this.f.agreement, mark)).needs)) {
+      if (!markMatches(mark, clonePlan(parent, collectiveTerms(governance, opts.members, this.f.agreement, mark)).needs)) {
         throw new Error('a member change is constitutional: its mark names the constitutional change rule');
       }
     }
-    const next = collectiveTerms(governance, opts.members, holder, this.f.agreement, mark);
+    const next = collectiveTerms(governance, opts.members, this.f.agreement, mark);
     const payload = termsPayload(next);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
     const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', record: line, resigned, signed, sent: [], stopped });
@@ -536,7 +578,7 @@ export class TestCollective {
     if (before) return stop(before);
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return stop(unsent, proposed.id, signed);
 
@@ -545,13 +587,8 @@ export class TestCollective {
       kind: FOUNDING_AGREEMENT,
       value: proposed.id,
       signatures: signed.map((s) => s.act),
-      ...(absence.length ? { absence } : {}),
     };
-    const { id, sent, at } = await this.rotateTo({ agreement: proposed.id, members: opts.members, governance, holder, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
-    for (const d of recovered) {
-      d.rotation = id;
-      d.at = at;
-    }
+    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: opts.members, governance, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
     return { clone: proposed.id, rotation: id, record: line, resigned, signed, sent };
   }
 
@@ -566,7 +603,6 @@ export class TestCollective {
     agreement: string;
     members: string[];
     governance: Governance;
-    holder: string;
     rebuilders: string[];
     declaration: Record<string, unknown>;
     lines?: KeptLines;
@@ -584,9 +620,9 @@ export class TestCollective {
     const dealt = deal(o.members, o.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
 
     const f = this.f.identity;
-    const newSigning = newSigningSecret();
     const seq = f.sequence;
-    const kept = plan.kept;
+    // Identity rotation check 4: a collective's rotation installs no signing key and keeps no tip.
+    void plan;
     const rotation = makeRotation({
       identitySpec: SPECS.identity,
       identity: f.identity,
@@ -594,23 +630,21 @@ export class TestCollective {
       position: f.position + 1,
       chainKeySeeds: current.seeds,
       chainKeyScheme: current.scheme,
-      newSigningPublic: signingPublic(newSigning),
       nextChainKeyScheme: dealt.scheme,
       nextChainKeyCommit: dealt.commit,
-      kept,
+      kept: [],
       declarations: [o.declaration],
     });
     const id = actId(rotation);
     f.pending = {
       rotation: b64(rotation),
       id,
-      signingSecret: hex(newSigning),
+      signingSecret: '',
       safety: { scheme: dealt.scheme, seeds: '' },
       homes: f.homes,
       rule: f.rule,
     };
     this.f.pending = { safety: dealt, agreement: o.agreement, members: o.members, governance: o.governance === this.f.governance ? undefined : o.governance };
-    this.f.signingHolder = o.holder;
     const sent = await this.id.submitRotation();
     return { id, sent, at: seq.length };
   }
@@ -654,14 +688,15 @@ export class TestCollective {
     const kept = this.rollbackRules(opts.before, opts.leaving, opts.voices);
     if (!kept) throw new Error('this device kept no rules for the agreement in force before the broken act');
     const r = opts.governance ? { ...kept, governance: opts.governance } : kept;
-    const payload = termsPayload(collectiveTerms(r.governance, r.members, r.holder, opts.before, opts.mark));
+    const payload = termsPayload(collectiveTerms(r.governance, r.members, opts.before, opts.mark));
+    if (!this.id.actor) this.by(opts.proposer);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the clone is not the one shown: nothing signed');
     const stop = (stopped: string, clone = '', signed: Signed[] = []) => ({ clone, rotation: '', signed, sent: [], stopped });
     const ahead = await opts.beforeClone?.();
     if (ahead) return stop(ahead);
     const proposed = await proposePayload(opts.proposer, payload, opts.before, this.f.relays);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return stop(unsent, proposed.id, signed);
     const declaration = {
@@ -672,7 +707,7 @@ export class TestCollective {
       broken: opts.broken,
       registers: opts.registers,
     };
-    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: r.members, governance: r.governance, holder: r.holder, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
+    const { id, sent } = await this.rotateTo({ agreement: proposed.id, members: r.members, governance: r.governance, rebuilders: opts.rebuilders, declaration, lines: opts.lines });
     return { clone: proposed.id, rotation: id, signed, sent };
   }
 
@@ -727,22 +762,6 @@ export class TestCollective {
   }
 
   /**
-   * Name the split service (terms field 14, by its grant): a judicial
-   * change, every member whose voice remains signing it (Agreements rule 46a,
-   * F121), recorded at once.
-   */
-  async nameSplitService(opts: {
-    grant: string;
-    proposer: TestIdentity;
-    signers: TestIdentity[];
-    expect?: Uint8Array;
-  } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
-    const governance = { ...this.f.governance, splitGrant: opts.grant };
-    return this.recordChange({ ...opts, governance, power: { judicial: true }, what: 'not a judicial change naming the split service' });
-  }
-
-  /**
-   * A change written on the collective's record at once (rule 37c): a  /**
    * The clone a change of these rules would be (round 3: the money card,
    * the split plan, the split service, the keepers): its terms, marked with
    * every power its changes need, each met by every member whose voice
@@ -750,19 +769,18 @@ export class TestCollective {
    * checked by the core. Members then sign it in their own apps.
    */
   sameMembersClone(governance: Governance): { terms: CollectiveTerms; payload: Uint8Array; needs: { form: string; area?: number }[] } {
-    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
-    const draft = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, [{ power: { clone: true }, signers: [this.f.members[0]] }]);
+    const parent = collectiveTerms(this.f.governance, this.f.members);
+    const draft = collectiveTerms(governance, this.f.members, this.f.agreement, [{ power: { clone: true }, signers: [this.f.members[0]] }]);
     const needs = clonePlan(parent, draft).needs;
-    const power = (n: { form: string; area?: number }): Power => (n.form === 'area' ? { area: n.area! } : n.form === 'constitutional' ? { constitutional: true } : n.form === 'judicial' ? { judicial: true } : { clone: true });
-    const mark: MarkEntry[] = needs.map((n) => ({ power: power(n), signers: [...this.f.members] }));
-    const terms = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
+    const mark: MarkEntry[] = needs.map((n) => ({ power: powerOf(n), signers: [...this.f.members] }));
+    const terms = collectiveTerms(governance, this.f.members, this.f.agreement, mark);
     return { terms, payload: termsPayload(terms), needs };
   }
 
   /**
    * Record a clone its members signed in their own apps (rule 72: every
    * complete clone is written on the record at once), with their signature
-   * acts and the signing key held here; from then on it is in force.
+   * acts, drawn by any member (`by`, Agreements rule 60); from then on it is in force.
    */
   async recordSigned(a: { governance: Governance; clone: string; signatures: string[] }): Promise<string> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
@@ -777,7 +795,8 @@ export class TestCollective {
   /**
    * A change written on the collective's record at once (rule 37c): a
    * clone marked with the one power its changes need, signed by `signers`,
-   * recorded with their signature acts (A2) and the signing key.
+   * recorded with their signature acts (A2), the record drawn by the
+   * proposer unless another member was given (`by`).
    */
   private async recordChange(opts: {
     governance: Governance;
@@ -788,10 +807,11 @@ export class TestCollective {
     expect?: Uint8Array;
   } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    if (!this.id.actor) this.by(opts.proposer);
     const mark: MarkEntry[] = opts.mark ?? [{ power: opts.power, signers: opts.signers.map((m) => m.id) }];
-    const next = collectiveTerms(opts.governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
+    const next = collectiveTerms(opts.governance, this.f.members, this.f.agreement, mark);
     if (!opts.mark) {
-      const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+      const parent = collectiveTerms(this.f.governance, this.f.members);
       if (!markMatches(mark, clonePlan(parent, next).needs)) throw new Error(opts.what);
     }
     const payload = termsPayload(next);
@@ -800,7 +820,7 @@ export class TestCollective {
     if (before) return { clone: '', record: '', signed: [], stopped: before };
     const proposed = await proposePayload(opts.proposer, payload, this.f.agreement, this.f.relays);
     const signed: Signed[] = [];
-    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays)).id });
+    for (const m of opts.signers) signed.push({ member: m.id, act: (await sign(m, proposed.id, this.f.relays, this.citing())).id });
     const unsent = await opts.beforeSend?.(proposed.id);
     if (unsent) return { clone: proposed.id, record: '', signed, stopped: unsent };
     const r = await record(this.id, { clone: proposed.id, signatures: signed.map((s) => s.act), inForce: this.f.agreement }, this.f.relays);
@@ -838,11 +858,9 @@ export class TestCollective {
    * under the clause the absent member signed last; the others add
    * signature acts naming it, as for terms; the collective registers it at
    * once by a record that acknowledges those signatures, placing them at
-   * its line. From that line the member's voice counts for nothing (F109).
-   * Where the member holds the signing key, the collective cannot draw
-   * its line without them: no record is made, and the declaration takes
-   * effect at the recovery rotation, the member change removing them,
-   * which names those signature acts (Agreements draft 9, C7, B16, B18).
+   * its line, drawn by the declaring member. From that line the member's
+   * voice counts for nothing (F109). A collective has no signing key, so
+   * no member's absence keeps it from drawing its line (rule 60).
    */
   async declareAbsent(opts: {
     member: string;
@@ -859,7 +877,6 @@ export class TestCollective {
     broken?: { before: string };
   }): Promise<{ declaration: string; signed: Signed[]; record?: string }> {
     if (this.f.pending) throw new Error('a member change is pending: settle it first');
-    if (!opts.broken && this.recovering().length) throw new Error('the signing key\'s holder was declared absent: refit the collective first');
     const named = opts.broken?.before ?? this.f.agreement;
     const payload = await this.declarationFor(opts.member, opts.via, named);
     if (opts.expect && !same(opts.expect, payload)) throw new Error('the declaration is not the one shown: nothing signed');
@@ -871,23 +888,11 @@ export class TestCollective {
       this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act), named }];
       return { declaration: d.id, signed };
     }
-    if (opts.member === this.f.signingHolder) {
-      this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, signatures: signed.map((s) => s.act) }];
-      return { declaration: d.id, signed };
-    }
+    if (!this.id.actor || this.id.actor.id === opts.member) this.by(opts.by);
     const r = await record(this.id, { registers: [d.id], inForce: this.f.agreement, acks: signed.map((s) => s.act) }, this.f.relays);
     this.f.departed = [...(this.f.departed ?? []), { member: opts.member, declaration: d.id, record: r.id }];
     this.f.records = [...(this.f.records ?? []), r.id];
     return { declaration: d.id, signed, record: r.id };
-  }
-
-  /**
-   * Declarations against the signing key's holder waiting for the
-   * recovery rotation (C7, B16): no record could register them, since the
-   * collective cannot draw its line without the declared holder.
-   */
-  recovering(): NonNullable<CollectiveFile['departed']> {
-    return (this.f.departed ?? []).filter((d) => d.declaration && !d.record && !d.rotation && this.f.members.includes(d.member));
   }
 
   /**
@@ -914,11 +919,11 @@ export class TestCollective {
 
   /**
    * The founding terms of a real collective (H18): every member a party,
-   * the first the signing key's holder. Nothing is signed here: the founder
+   * no signing key (rule 56). Nothing is signed here: the founder
    * proposes them, and each member signs on their own device.
    */
   static foundingTerms(governance: Governance, members: string[]): Uint8Array {
-    return termsPayload(collectiveTerms(governance, members, members[0]));
+    return termsPayload(collectiveTerms(governance, members));
   }
 
   /**
@@ -929,8 +934,9 @@ export class TestCollective {
    * genesis declaring the agreement and naming its homes, the routes. **No
    * share is kept**: they are returned, to be sent to each member (sealed
    * to a one-time key) or shown once, and the file holds the dealing's
-   * public part only. The signing key is held here, by the first member's
-   * app (the key grammar's one holder).
+   * public part only. The genesis is signed by a first chain key made here
+   * and dropped at once (Identity rule 1); the key dealt is the next one.
+   * The collective has no signing key: its members act for it.
    */
   static async foundSigned(opts: {
     agreement: string;
@@ -940,46 +946,20 @@ export class TestCollective {
     governance: Governance;
     scheme?: 2 | 3;
     via?: Via;
+    /** The member whose app founds it, who makes its first acts with their own key. */
+    actor?: TestIdentity;
   }): Promise<{ collective: TestCollective; shares: { holder: string; share: Uint8Array }[]; sent: Submitted[] }> {
     const ids = opts.members;
     const scheme = opts.scheme ?? 3;
-    const chainKey = deal(ids, opts.governance.safetyThreshold, 0, scheme);
+    const { genesis, chainKey } = keylessGenesis(ids, opts.governance.safetyThreshold, scheme, opts.homes, opts.agreement);
     const shares = chainKey.shares.map((s) => ({ holder: s.holder, share: unb64(s.share) }));
-    const signingSecret = newSigningSecret();
-    const genesis = makeGenesis({
-      identitySpec: SPECS.identity,
-      signingSecret,
-      chainKeyScheme: scheme,
-      chainKeyCommit: chainKey.commit,
-      homes: opts.homes,
-      declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: opts.agreement }],
-    });
-    const id = actId(genesis);
-    const identity: IdentityFile = {
-      label: 'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.',
-      identity: id,
-      position: 0,
-      binding: id,
-      signingSecret: hex(signingSecret),
-      // Held as shares on the members' paper, never here.
-      safety: { scheme, seeds: '' },
-      chain: [b64(genesis)],
-      homes: opts.homes,
-      rule: null,
-      sequence: [],
-      routes: null,
-      encryption: [],
-      pending: null,
-      cites: [id],
-    };
     const c = new TestCollective(
       {
         label: COLLECTIVE_LABEL,
-        identity,
+        identity: collectiveIdentity(genesis, opts.homes),
         relays: opts.relays,
         governance: opts.governance,
         members: ids,
-        signingHolder: ids[0],
         agreement: opts.agreement,
         agreements: [opts.agreement],
         safety: { ...chainKey, shares: [] },
@@ -989,8 +969,9 @@ export class TestCollective {
       opts.via ?? {},
     );
     c.remember();
+    // Its genesis only: a collective signs no everyday act, routes among them (Identity, everyday check 4).
     const sent = await c.id.publishGenesis();
-    await c.id.publishRoutes([{ scope: null, hints: opts.relays }]);
+    if (opts.actor) c.by(opts.actor);
     return { collective: c, shares, sent };
   }
 
@@ -1002,17 +983,16 @@ export class TestCollective {
    * bound. The founder proposes it; the rotation that declares it waits for
    * Kišib (decided by Nobody, allegedly: "Wait for Kišib").
    */
-  cloneFor(members: string[], governance?: Governance): { payload: Uint8Array; signers: string[]; holder: string; governance: Governance } {
+  cloneFor(members: string[], governance?: Governance): { payload: Uint8Array; signers: string[]; governance: Governance } {
     const g = this.departedAfter(governance ?? this.f.governance, members);
-    const holder = this.nextHolder(members);
     const voices = this.f.members.filter((m) => !(this.f.departed ?? []).some((d) => d.member === m));
     const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: voices }];
-    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
-    if (clonePlan(parent, collectiveTerms(g, members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+    const parent = collectiveTerms(this.f.governance, this.f.members);
+    if (clonePlan(parent, collectiveTerms(g, members, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
       mark.push({ power: { judicial: true }, signers: voices });
     }
-    const payload = termsPayload(collectiveTerms(g, members, holder, this.f.agreement, mark));
-    return { payload, signers: [...new Set([...voices, ...members])], holder, governance: g };
+    const payload = termsPayload(collectiveTerms(g, members, this.f.agreement, mark));
+    return { payload, signers: [...new Set([...voices, ...members])], governance: g };
   }
 
   /**
@@ -1029,7 +1009,6 @@ export class TestCollective {
     signatures: string[];
     members: string[];
     governance: Governance;
-    holder: string;
     papers: { x: number; value: Uint8Array }[];
     lines?: KeptLines;
   }): Promise<{ id: string; sent: Submitted[]; shares: { holder: string; share: Uint8Array }[] }> {
@@ -1046,7 +1025,7 @@ export class TestCollective {
     const dealt = deal(o.members, o.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
     const shares = dealt.shares.map((s) => ({ holder: s.holder, share: unb64(s.share) }));
     const f = this.f.identity;
-    const newSigning = newSigningSecret();
+    // Identity rotation check 4: no signing key, no kept tip.
     const rotation = makeRotation({
       identitySpec: SPECS.identity,
       identity: f.identity,
@@ -1054,17 +1033,15 @@ export class TestCollective {
       position: f.position + 1,
       chainKeySeeds: current.seeds,
       chainKeyScheme: current.scheme,
-      newSigningPublic: signingPublic(newSigning),
       nextChainKeyScheme: dealt.scheme,
       nextChainKeyCommit: dealt.commit,
-      kept: plan.kept,
+      kept: [],
       declarations: [{ spec: AGREEMENTS_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: o.agreement, signatures: o.signatures }],
     });
     current.seeds.fill(0);
     const id = actId(rotation);
-    f.pending = { rotation: b64(rotation), id, signingSecret: hex(newSigning), safety: { scheme: dealt.scheme, seeds: '' }, homes: f.homes, rule: f.rule };
+    f.pending = { rotation: b64(rotation), id, signingSecret: '', safety: { scheme: dealt.scheme, seeds: '' }, homes: f.homes, rule: f.rule };
     this.f.pending = { safety: { ...dealt, shares: [] }, agreement: o.agreement, members: o.members, governance: o.governance === this.f.governance ? undefined : o.governance };
-    this.f.signingHolder = o.holder;
     const sent = await this.id.submitRotation();
     return { id, sent, shares };
   }
