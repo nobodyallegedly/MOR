@@ -225,6 +225,14 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: layers and areas, members
   assert.deepEqual(review.reading.blocking, []);
   assert.match(JSON.stringify(review.reading), /never copied here/);
   const split = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
+  await assert.rejects(e.c.ask('real money record', { act: split }), /Its rule asks more members first/);
+  // Its judicial tier (S7h-4): every member signs the collective's split agreement, iPa and iPh in Dub's Signing tab.
+  for (const x of [iPa, iPh]) {
+    const sp = (await x.dub.c.ask<any>('proposals')).proposals.find((q: any) => q.act === split);
+    assert.ok(sp, 'the split agreement reached the member’s Signing tab');
+    await x.dub.c.ask('accept', { thread: sp.thread });
+  }
+  assert.equal((await e.c.ask<any>('real gather', { act: split })).standing.enough, true);
   await assert.rejects(e.c.ask('real money record', { act: split }), /does not count yet: waiting for/);
   await svc.accept(split);
   const rec = await e.c.ask<Done>('real money record', { act: split });
@@ -241,29 +249,44 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: layers and areas, members
   const kept1 = await e.c.ask<Done>('real keep', { collective, keeper });
   assert.ok(kept1.acts.length > 0);
 
-  // 4. A protected text of the collective; a buyer pays through a repost; the split; the key; opened.
+  // 4. A text of the collective, sold by its own publication (round 8: an upload, then the publication, A's act for the
+  // collective under the Agreements layer, iPa signing too; its price tag the service's); a buyer pays through a repost.
   await e.c.ask('publishing act as', { id: collective });
-  const w = await e.c.ask<any>('publishing work read', { media: 'text', data: b64(new TextEncoder().encode('Three verses, by three hands.')), title: 'Verses, by the collective', price: '3000' });
-  assert.deepEqual(w.reading.blocking, []);
-  const [publication, , post] = (await e.c.ask<Done>('publishing confirm', { plan: w.plan, digest: w.digest })).acts;
+  const up = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Three verses, by three hands.')), title: 'Verses, by the collective', then: 'none' });
+  assert.deepEqual(up.reading.blocking, []);
+  const [bake] = (await e.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
+  const pr = await e.c.ask<any>('publishing publication read', { sold: [bake], service: svc.id, referral: '10', price: '3000', tagBy: 'service' });
+  assert.deepEqual(pr.reading.blocking, []);
+  const [publication] = (await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest })).acts;
+  assert.match(await svc.accept(publication), /signed, as its split service/);
+  for (const x of [iPa, iPh]) {
+    const pp = (await x.dub.c.ask<any>('proposals')).proposals.find((y: any) => y.act === publication);
+    if (pp) await x.dub.c.ask('accept', { thread: pp.thread });
+  }
+  const g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /is published by the collective .*: every party signed it/.test(l.text)), JSON.stringify(g.lines));
+  assert.match(await svc.tag(publication, { unit: R, value: 3000 }), /./);
+  const post = (await e.c.ask<any>('publishing')).publications.find((x: any) => x.id === publication).post;
   const reposter = await m.person(H, RL, { node: 'carol' });
-  await reposter.dub.c.ask('follow', { id: collective, name: 'Three tablets' });
+  // The collective's post is signed by A with A's own key, naming the collective (rule 58): reposted as A's.
+  await reposter.dub.c.ask('follow', { id: A.id, name: 'A' });
   await reposter.dub.c.ask('feed', { fresh: true });
-  const rp = await reposter.dub.c.ask<{ id: string }>('repost', { post, signer: collective });
+  const rp = await reposter.dub.c.ask<{ id: string }>('repost', { post, signer: A.id });
   const buyer = await person(H, RL);
   await buyer.dub.c.ask('lane ask', { label: 'Dub', cap: '5000', unit: R });
   await buyer.damgar.c.ask('look');
   await buyer.damgar.c.ask('grant lane', { id: (await buyer.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'lane')!.id });
   await buyer.dub.c.ask('follow', { id: reposter.id, name: 'Critic' });
   assert.equal((await buyer.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === rp.id)!.sealed.state, 'for sale');
-  await buyer.dub.c.ask('buy', { publication, seller: collective, repost: rp.id, reposter: reposter.id });
+  await buyer.dub.c.ask('buy', { publication: bake, seller: A.id, repost: rp.id, reposter: reposter.id });
   assert.ok((await svc.tick()).some((t) => /An invoice of its node sent/.test(t)));
   await buyer.damgar.c.ask('look');
   const bp = (await buyer.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments[0];
   await buyer.dub.c.ask('paid', { key: bp.key, proof: await m.pay(bp.pay!.invoice!) });
   const t1 = (await svc.tick()).join(' | ');
-  assert.match(t1, /its receipt signed with .* grant key/);
-  assert.match(t1, /Split .*: 300 to .* \(referral\), 1350 to .*, 810 to .*, 540 to/);
+  assert.match(t1, /its receipt signed in the service’s own name/);
+  assert.match(t1, /Split .*: 300 to .* \(referral\)/, t1);
+  for (const v of [1350, 810, 540]) assert.match(t1, new RegExp(`Split .*${v} to`), t1);
   for (const x of [A, iPa, iPh, reposter]) await x.damgar.c.ask('look');
   const t2 = (await svc.tick()).join(' | ');
   assert.equal((t2.match(/Paid \d+ to/g) ?? []).length, 4, t2);
