@@ -122,10 +122,13 @@ export async function readPublishingProposal(act: Uint8Array, names: Names, hint
     const words = typeof m.get(5) === 'string' ? (m.get(5) as string) : null;
     const designated = m.get(10) instanceof Uint8Array ? hex(m.get(10) as Uint8Array) : null;
     const ends = !!sold && sold.length === 0;
+    // A collective's publication (it cites the collective's chain, rule 58, or names its own agreement) is Dub's own reading of a collective's act: not read here.
+    if ((d.objects ?? []).filter(([a, b]) => !(owners && a === owners && b === owners)).length > 1) return null;
     let holders: [string, number][] = [];
     if (owners) {
       const a = await fetchAct(owners, hints, via);
       const x = a ? (describeAct(a) as Described) : null;
+      if (x?.payload && x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.terms && !ownership(x.payload)) return null;
       const t = x?.payload ? ownership(x.payload) : null;
       holders = (t?.stakes?.[0]?.[1] ?? []).filter((y): y is [string, number] => typeof y[0] === 'string');
     }
