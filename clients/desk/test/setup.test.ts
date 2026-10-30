@@ -231,10 +231,14 @@ test('H14 and H15 for collectives: “What you may do for it” folded and remem
   assert.ok(p.notes.some((n: any) => /Edubba holds none of its keys/.test(n.text)));
   assert.ok(p.notes.some((n: any) => /Ana .* is a party of it/.test(n.text)));
   assert.ok(p.items.every((i: any) => i.state === 'no'));
-  assert.ok(p.items[1].lines.some((l: any) => /“Releases” area reaches a picture’s publication: any 2 of .*You hold this area/.test(l.text)), JSON.stringify(p.items[1].lines));
+  assert.ok(p.items[1].lines.some((l: any) => /The finer area “Releases” reaches a picture’s publication: any 2 of .*You hold this area/.test(l.text)), JSON.stringify(p.items[1].lines));
   const k = await b.ask<any>('collective constitution', { collective: col });
   assert.equal(k.agreement, p.agreement);
-  assert.ok(k.sections.some((s: any) => s.heading === 'Areas: who decides which acts'));
+  // F402: who acts for it in each of the five layers, then its finer areas (the Releases area among them).
+  assert.ok(k.sections.some((s: any) => s.heading === 'The five layers: who acts for it'));
+  assert.ok(k.sections.some((s: any) => s.heading === 'Finer areas: who decides which act types'));
   const posts = await b.ask<any>('collective posts', { collective: col });
-  assert.ok(posts.items.some((x: any) => x.text === 'For the house.' && x.standing === 'valid'), JSON.stringify(posts));
+  // A member's post for the collective, naming its decision (Text rule 14): a reader of Identity and Text alone,
+  // not holding that decision on the collective's chain, answers unknown; Agreements judge it (rule 58).
+  assert.ok(posts.items.some((x: any) => x.text === 'For the house.' && ['valid', 'unknown'].includes(x.standing)), JSON.stringify(posts));
 });
