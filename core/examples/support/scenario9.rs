@@ -111,6 +111,74 @@ pub fn agreements(out: &mut Out) {
     walk_6(out);
     walk_7(out);
     keyless_agreements(out);
+    decisions(out);
+}
+
+/// The decisions on S7h-2's questions where a verdict turns on them: a
+/// vow no ownership agreement claims sold by its drafter alone (rule 14);
+/// a succession plan putting the seat successor into a layer's rule naming
+/// the departing member (rules 64 and 83).
+fn decisions(out: &mut Out) {
+    // Rule 14: a platform's publication of a worker's vow, no ownership
+    // agreement claiming it: the drafter is its owners' side.
+    let mut w = World::new();
+    let mut worker = w.genesis("a worker", vec![own_home()], None, None);
+    let mut platform = w.genesis("a platform", vec![own_home()], None, None);
+    let fan = w.genesis("a customer", vec![own_home()], None, None);
+    let v = mor_core::envelopes::vow::Vow { words: "Two hours of cleaning".into(), cmip: None };
+    let vow = { let a = w.everyday_act(&mut worker, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
+    let p = Publication { sold: Some(vec![agreements::Sold::Vow(vow)]), owners: None, partners: vec![], service: platform.id, plan: test_plan(), words: Some("Two hours of cleaning, booked here.".into()), time: None, until: None, refund: None, cmips: vec![], designated: None, backups: vec![], failed: None };
+    let pb = ag_act(&mut w, &mut platform, agreements::types::PUBLICATION, p.to_map(), None);
+    let pid = platform.id;
+    let tag = price_tag(&mut w, &mut platform, mirs().money, money::Priced::Publication(pb), 300, spec(UNIT), pid);
+    let proof = b"a customer books the cleaning";
+    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(Payer::Identity(fan.id)), payee: pid, amount: Amount { unit: spec(UNIT), value: 300 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
+    let rec = { let a = w.everyday_act(&mut platform, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+    let facts = Facts { rail_valid: vec![(rec, pid)], rail_payments: vec![(proof.to_vec(), b"the booking".to_vec())], ..Default::default() };
+    out.case(&mut w, "a platform's publication of a worker's vow, no ownership agreement claiming it: a purchase, its drafter the owners' side", "Agreements rule 14, \"A vow has an owner\"; rule 11",
+        "A publication selling a vow no ownership agreement claims is a lone seller's: its drafter is its owners' side, and the worker, no party of it, is paid nothing by it (the stated cost).", facts, ask("purchase", &rec), json!("purchase"), None);
+
+    // Rules 64 and 83: Ben's plan passes his seat to Dee; the rule for Text
+    // names Ben alone.
+    let mut w = World::new();
+    let dee = w.genesis("dee, ben's colleague", vec![own_home()], None, None);
+    let dee_id = dee.id;
+    let (col, mut authority) = band(&mut w, "a band whose text is ben's", &|t, ids| {
+        let mut l = layers_all(Rule::Threshold(1));
+        l[0] = (agreements::layers::TEXT, Rule::Named(vec![ids[1]]));
+        t.layers = Some(l);
+        t.succession = Some(vec![agreements::SuccessionPlan { party: ids[1], stakes: None, seats: Some(vec![dee_id]), entry: Some(0) }]);
+    });
+    let (f, cid) = (col.founding, col.id);
+    let (ana_id, ben_id, cy_id) = (col.m[0].id, col.m[1].id, col.m[2].id);
+    let d = agreements::AbsenceDeclaration { agreement: f, clause: f, party: ben_id, outcomes: vec![outcomes::VOICE_REMOVED] };
+    let d = ag_act(&mut w, &mut authority, agreements::types::DECLARATION, d.to_map(), obj(f));
+    let rec = {
+        let mut cy = col.m[2].acting_for(cid, vec![cid]);
+        let a = w.everyday_act(&mut cy, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, registers: Some(vec![d]) }.to_map(), obj(f), None);
+        w.add(&a)
+    };
+    let new = vec![ana_id, dee_id, cy_id];
+    let clone_with = |w: &mut World, text_rule: Vec<Hash>, words: &str| {
+        let mut t = view(w).terms(&f).unwrap();
+        t.parent = Some(f);
+        t.parties = new.clone();
+        t.succession = None;
+        t.text = words.into();
+        t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 3, members: new.clone() };
+        let mut l = t.layers.clone().unwrap();
+        l[0] = (agreements::layers::TEXT, Rule::Named(text_rule));
+        t.layers = Some(l);
+        t.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Plan(ben_id), signers: vec![dee_id] }]);
+        ag_act(w, &mut col.m[0].acting_for(cid, vec![rec]), agreements::types::TERMS, t.to_map(), obj(f))
+    };
+    let words = view(&w).terms(&f).unwrap().text;
+    let k = clone_with(&mut w, vec![dee_id], &words);
+    out.case(&mut w, "a succession clone putting the seat successor in the departing member's place in the rule for Text: not invalid", "Agreements rules 64 and 83",
+        "The rule for Text names Ben alone; the clone marked with his plan puts Dee in his place there, as in the key grammar, nothing else changed.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k) }), json!("not invalid"), None);
+    let k2 = clone_with(&mut w, vec![ben_id], &words);
+    out.case(&mut w, "the same clone leaving the rule for Text naming the departed member: invalid", "Agreements rules 60 and 83",
+        "A layer's rule names parties of the agreement; Ben is no party of the clone.", Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k2) }), json!("invalid"), None);
 }
 
 /// A collective of Ana, Ben and Cy, its founding changed by `f` before
@@ -598,9 +666,19 @@ fn walk_5(out: &mut Out) {
     out.case(&mut w, "9.5 the band's homeless rotation, its old home objecting: it counts, its own escape endorsement", "Identity rule 53, \"The escape endorsement\"",
         "Signed with its chain key, rebuilt from k of its members' shares, it is its own escape endorsement; the old home's objection voids nothing.", Facts::default(), json!({ "question": "chain", "identity": hx(&band.id) }), json!({ "counting": [hx(&band.id), hx(&r1), hx(&r2)], "next": "end", "dishonest": [] }), None);
     // A person's homeless rotation under the same objection, with no
-    // endorsement, is voided (the homeless procedure, step 3). Not written
-    // as a vector: the core shows that rotation pending, not void, while
-    // the old home is not gone (see the S7h-2 report).
+    // endorsement: it does not count, pending while the old home lives.
+    let mut w = World::new();
+    let mut home = w.operator("dan's home, later hostile");
+    let new_home = w.operator("dan's new home");
+    let dan = w.genesis("dan", vec![home_of(&home)], None, None);
+    let (r1, dan1) = w.rotate(&dan, Rot::default());
+    w.receipt(&mut home, &dan.id, &r1, 1);
+    let (r2, _) = w.rotate(&dan1, Rot { homes: Some(vec![home_of(&new_home)]), homeless: true, ..Default::default() });
+    let mut nh = new_home.clone();
+    w.receipt(&mut nh, &dan.id, &r2, 2);
+    w.object(&mut home, &dan.id, &r2);
+    out.case(&mut w, "9.5 a person's homeless rotation under the same objection, with no endorsement: it does not count, pending while the old home lives", "Identity rule 53, \"The escape endorsement\"",
+        "A person's genesis declares a signing key: its homeless rotation needs no valid objection naming it, or an escape endorsement; the old home objects, and lives.", Facts::default(), ask_status(&r2), json!("pending"), None);
 }
 
 /// 9.6, a refund owed back.

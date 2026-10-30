@@ -12309,22 +12309,24 @@ fn f285_a_publication_selling_a_vow_counts_under_its_ownership_agreement() {
     assert!(e.counts && e.problems.is_empty(), "{:?}", e.problems);
 }
 
-/// Rule 14: "A publication selling a vow that no ownership agreement
-/// claims pays its owners' line to the vow's signer, who signs it as the
-/// owners' side." The platform's publication of the cleaner's vow, naming
-/// no ownership agreement, counts only once the cleaner signs it.
+/// Rule 14: "A publication selling a vow that no ownership agreement claims
+/// is a lone seller's publication: its drafter is its owners' side" (F405,
+/// Q1). The platform's publication of the cleaner's vow, naming no
+/// ownership agreement, counts on the platform's own signature; the
+/// cleaner's signature is not asked, and she is paid nothing by it (the
+/// stated cost).
 #[test]
-#[ignore = "open question: rule 14 has the vow's signer sign as the owners' side, and also counts a publication naming a vow whether or not it pays the vow's signer; the core keeps the drafter"]
-fn f285_a_publication_selling_anothers_vow_with_no_ownership_agreement_is_signed_by_the_vows_signer() {
+fn f285_a_publication_selling_anothers_vow_with_no_ownership_agreement_is_its_drafters() {
     let mut w = World::new();
     let mut cleaner = w.genesis("a cleaner", vec![own_home()], None, None);
     let mut platform = w.genesis("a platform", vec![own_home()], None, None);
     let vow = f284_vow(&mut w, &mut cleaner, "Cleaning, two hours, at your home");
     let p = agreements::Publication { sold: Some(vec![agreements::Sold::Vow(vow)]), owners: None, partners: vec![], service: platform.id, plan: common::test_plan(), words: Some("Two hours of cleaning.".into()), time: None, until: None, refund: None, cmips: vec![], designated: None, backups: vec![], failed: None };
     let pb = agreements_act(&mut w, &mut platform, agreements::types::PUBLICATION, p.to_map(), None);
-    assert!(!view(&w).publication(&pb).unwrap().counts, "the vow's signer has not signed as the owners' side");
-    sign(&mut w, &mut cleaner, &pb);
-    assert!(view(&w).publication(&pb).unwrap().counts);
+    let e = view(&w).publication(&pb).unwrap();
+    assert!(e.counts && e.problems.is_empty(), "the drafter is the owners' side: {:?}", e.problems);
+    assert_eq!(e.parties, vec![platform.id], "the cleaner is no party of it");
+    let _ = &mut cleaner;
 }
 
 /// F284 beside a collective: a member's vow, claimed by an ownership
