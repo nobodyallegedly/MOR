@@ -691,6 +691,26 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The tips a payment names (F409), for a publication by its first
+   * version: `latest`, its latest versions (two or more, the parties'
+   * fork); `tags`, the latest version of each price tag line that counts
+   * under it, one per price; `owners` and `ownersLatest`, the ownership
+   * agreement it names and that agreement's latest version, which a
+   * purchase names in field 9.
+   * @param {any} specs
+   * @param {string} first
+   * @returns {any}
+   */
+  agreementsPublicationTip(specs, first) {
+    const ptr0 = passStringToWasm0(first, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublicationTip(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A publication, judged (Agreements rule 11): its parties and who has
    * not signed, whether it counts and why not, the latest versions of its
    * line, whether this version ends it, and the ownership agreements

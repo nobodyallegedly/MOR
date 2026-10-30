@@ -673,6 +673,26 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The tips a payment names (F409), for a publication by its first
+   * version: `latest`, its latest versions (two or more, the parties'
+   * fork); `tags`, the latest version of each price tag line that counts
+   * under it, one per price; `owners` and `ownersLatest`, the ownership
+   * agreement it names and that agreement's latest version, which a
+   * purchase names in field 9.
+   * @param {any} specs
+   * @param {string} first
+   * @returns {any}
+   */
+  agreementsPublicationTip(specs, first) {
+    const ptr0 = passStringToWasm0(first, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublicationTip(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A publication, judged (Agreements rule 11): its parties and who has
    * not signed, whether it counts and why not, the latest versions of its
    * line, whether this version ends it, and the ownership agreements
@@ -1461,25 +1481,27 @@ function agreementsClonePlan(parent, clone, specs) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now6) {
-  const ptr0 = passArray8ToWasm0(offer_act, wasm.__wbindgen_malloc);
+function anchoringCheckTicket(publication, tag, ticket, commitment, leaf, now6) {
+  const ptr0 = passArray8ToWasm0(publication, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  const ptr1 = passArray8ToWasm0(ticket, wasm.__wbindgen_malloc);
+  const ptr1 = passArray8ToWasm0(tag, wasm.__wbindgen_malloc);
   const len1 = WASM_VECTOR_LEN;
-  const ptr2 = passArray8ToWasm0(commitment, wasm.__wbindgen_malloc);
+  const ptr2 = passArray8ToWasm0(ticket, wasm.__wbindgen_malloc);
   const len2 = WASM_VECTOR_LEN;
-  const ptr3 = passStringToWasm0(leaf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const ptr3 = passArray8ToWasm0(commitment, wasm.__wbindgen_malloc);
   const len3 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, now6);
+  const ptr4 = passStringToWasm0(leaf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len4 = WASM_VECTOR_LEN;
+  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, now6);
   if (ret[3]) {
     throw takeFromExternrefTable0(ret[2]);
   }
-  let v5;
+  let v6;
   if (ret[0] !== 0) {
-    v5 = getStringFromWasm0(ret[0], ret[1]);
+    v6 = getStringFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   }
-  return v5;
+  return v6;
 }
 function anchoringLeaf(act, blind) {
   let deferred4_0;
@@ -1504,10 +1526,10 @@ function anchoringLeaf(act, blind) {
     wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
   }
 }
-function anchoringReadOffer(act) {
-  const ptr0 = passArray8ToWasm0(act, wasm.__wbindgen_malloc);
+function anchoringReadOffer(publication, tags) {
+  const ptr0 = passArray8ToWasm0(publication, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringReadOffer(ptr0, len0);
+  const ret = wasm.anchoringReadOffer(ptr0, len0, tags);
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
