@@ -157,6 +157,16 @@ Each app makes or brings an identity the hard way (its ID and words).
 - **An agent's sitting** in the next walkthrough: a fresh agent with only the connector, given real tasks (find, verify, act under a grant, correct itself), to see where agents struggle on MOR (the lead's suggestion; Nobody, allegedly: "I wanna be sure that MOR is a protocol where agents can perform well"; and on cost: "an agent that leaves a lot keeps a lot it can work from when needed").
 - **Verdict reports as data** ("Machine readability matters more and more"; "Sounds like a fun project for after the freeze"): a Dubsar cMIP for verdict reports (verdict, rule, acts relied on, what is missing and where to look, or "open-ended" where no single act is missing), the Rust library as its first implementation (the MOR lead's code). Not in the freeze: the conformance vectors agree on verdicts, not on explanations.
 
+## Built in round 8 (F407, 30 October 2026, `docs/suite-r8-report.md`)
+- **The whole suite on the redesigned core.** A collective holds no key: a member acts for it with their own key, naming the collective and its latest decision; Edubba, Dub, Kišib, Ummia, Damgar and the display client all read it so. Member keys are gone everywhere (the member keys cMIP proposed for retirement).
+- **Edubba's Publishing tab, four ways in:** upload a file (then nothing, a price tag, or a claim); a price tag read or withdrawn; a claim and its ownership agreement; a publication (owners, what it sells, partners with labels, its split service, a referral share) and its ending (a later version selling nothing).
+- **A collective's founding:** two members, then **+ Add a member**; the five layers named, shown Money first, each with what one member may do alone; finer areas optional (some kinds of act within a layer); a **Shares** band, required, even until touched. A member change carries the shares, the joining member's box required.
+- **The Money tab** chooses only where payments land: a split service (a split agreement of the collective naming the service, reading the shares by reference, the service signing it too) or one trusted pointer (one member's own wallet). Keepers are their own form beside it.
+- **Splits (H98):** on a publication, two rows, you and one other, then **+ Add a person**.
+- **Dub:** buying follows the seller's price tag; a tip goes through the publication where the work was found; a buyer is led to the owners' publication; where a bake's uploader is no owner, Dub says so. "Withdraw the publication" and "Withdraw the price tag" say plainly that the bytes stay where they were uploaded.
+- **Damgar:** payments by publication and price tag; Rely keeps a copy (F400).
+- **Nakišib:** a collective's keyless genesis is not offered this round (its README says so).
+
 ## Still open
 - Question 2 of the H80 report: private lines Kišib cannot place (apps leaving each private act's locked act at the identity's homes).
 - **Two lines per app** (decided 21 October: "Agreed", option (a) of the private-lines report): each app keeps its public acts and its private acts on separate lines, so anyone can follow the public line after a change of keys. To build before round 2 (F376).

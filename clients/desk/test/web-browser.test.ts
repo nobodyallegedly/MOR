@@ -539,12 +539,20 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('#e-real-change > summary');
   const cg = ed.locator('#e-grid-real-change table.grid');
   await cg.waitFor({ timeout: 60_000 });
-  assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
+  assert.equal(await cg.locator('tr[data-area="0"] input.areaname').inputValue(), 'Day to day money', 'the finer areas in force carried into the change');
   assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
   await ed.click('#real-change [data-action="member-add"]');
   await ed.fill('#real-change input[name=member-4]', shownId(cyId));
   await ed.locator('#real-change input[name=member-4]').dispatchEvent('change');
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
+  // A member change carries the shares; the joining member's box is required (H101): a quarter each.
+  const cgShares = cg.locator('input[data-grid-share]');
+  assert.equal(await cgShares.count(), 4);
+  assert.equal(await cg.locator(`input[data-grid-share="${cyId}"]`).inputValue(), '', 'Cy’s share starts empty');
+  for (let i = 0; i < 4; i++) {
+    await cgShares.nth(i).fill('25');
+    await cgShares.nth(i).dispatchEvent('change');
+  }
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await ed.click('#e-real-review [data-action=confirm]');

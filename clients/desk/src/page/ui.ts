@@ -172,7 +172,7 @@ async function syncGrid(fid: string): Promise<void> {
     const was = g!.members.every((m) => r.holders.includes(m));
     return [k, { holders: [...keep(r.holders), ...(was ? added : [])], number: was && r.number >= g!.members.length ? members.length : Math.min(r.number, Math.max(1, members.length)) }];
   })) as Grid['layers'];
-  const shares = fid === 'real-found' && !touched.has(`${fid}:shares`) ? evenPercent(members) : Object.fromEntries([...members, ...(g.departed ?? [])].map((m) => [m, g!.shares[m] ?? 0]));
+  const shares = fid === 'real-found' && !touched.has(`${fid}:shares`) ? evenPercent(members) : Object.fromEntries([...members, ...(g.departed ?? [])].filter((m) => m in g!.shares).map((m) => [m, g!.shares[m]]));
   g = {
     ...g,
     members,
