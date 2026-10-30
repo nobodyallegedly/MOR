@@ -7399,6 +7399,42 @@ fn others_judge_absence(t: &mut Terms) {
     g.recovery = None;
 }
 
+/// The label's own publication (type 6) selling `sold`, under its own
+/// ownership agreement (the founding), the label its own split service,
+/// drafted on device `d`; and its price tag, signed for the label on the
+/// same device under the Money area (Ben signing): `(publication, tag)`.
+/// Drafted during a broken stretch, the publication never counts (rule 93).
+fn self_sale(lab: &mut Lab, d: usize, sold: Vec<agreements::Sold>, price: u64) -> (Hash, Hash) {
+    let f = lab.founding;
+    let label = lab.col.id;
+    let p = agreements::Publication { sold: Some(sold), owners: Some(f), partners: vec![], service: label, plan: common::test_plan(), words: None, time: None, until: None, refund: None, cmips: vec![], designated: None, backups: vec![], failed: None };
+    let o = lab.chain(&[]);
+    let mut objects = vec![Object { chain: f, predecessor: f }];
+    objects.extend(o);
+    let a = lab.w.everyday_act(&mut lab.c[d], mirs().agreements, agreements::types::PUBLICATION, p.to_map(), Some(objects), None);
+    let pb = lab.own(d, &a);
+    let t = mor_core::money::Payload::PriceTag(mor_core::money::PriceTag { priced: mor_core::money::Priced::Publication(pb), version: 1, previous: None, price: Some(mor_core::money::Amount { unit: spec("a unit"), value: price }), payee: label });
+    let a = lab.w.everyday_act(&mut lab.c[d], mirs().money, mor_core::money::types::PRICE_TAG, t.to_map(), None, None);
+    let tag = lab.own(d, &a);
+    lab.sign(BEN, &tag);
+    (pb, tag)
+}
+
+/// The label's receipt (Money type 2), on device `d`, of `fan`'s payment
+/// of `value` on `rail` following `tag`, naming the ownership agreement
+/// `f` at `line` (field 9); Ben signs it under the Money area.
+#[allow(clippy::too_many_arguments)]
+fn stretch_receipt(lab: &mut Lab, d: usize, rail: Hash, fan: Hash, proof: &[u8], tag: Hash, line: Hash, value: u64) -> Hash {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    let label = lab.col.id;
+    let f = lab.founding;
+    let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(fan)), payee: label, amount: Amount { unit: spec("a unit"), value }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: f, line }) });
+    let a = lab.w.everyday_act(&mut lab.c[d], mirs().money, 2, r.to_map(), None, None);
+    let x = lab.own(d, &a);
+    lab.sign(BEN, &x);
+    x
+}
+
 /// A rotation declaring a rollback.
 fn roll_back(lab: &mut Lab, k: Hash, sigs: &[Hash], broken: Hash, regs: &[Hash]) -> Hash {
     let agreements = mirs().agreements;
@@ -7666,87 +7702,68 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
     assert!(matches!(lab.view().backing(&during).unwrap(), Backing::NotBacked { .. }));
 }
 
-/// RB2's follow-up, narrowed by BQ2 and BQ3 (decided 9 October 2026): a
-/// broken collective keeps exactly what its rules before the break
-/// allowed, judged by the offer a payment names, never by when it was paid.
-/// A sale under an offer made before the break is kept, even received in
-/// the stretch; one under an offer of the stretch is no purchase and is
-/// owed back, a payer's claim alone included (BQ3), unless the sale is
-/// signed anew after the rollback: a receipt of the collective for the same
+/// RB2's follow-up, narrowed by BQ2 and BQ3 (decided 9 October 2026), as
+/// rule 93 reads it now: a broken collective keeps exactly what its rules
+/// before the break allowed, judged by the publication a payment names,
+/// never by when it was paid. A sale under a publication the collective
+/// signed before the break is kept, even received in the stretch; one under
+/// a publication it signed during the stretch is no purchase and is owed
+/// back, a payer's claim alone included (BQ3), unless the sale is signed
+/// anew after the rollback: a receipt of the collective for the same
 /// payment, never an acknowledgement adopting the stretch's.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
-fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
-    use mor_core::money::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt, RefundTo};
-    let work = spec("a song");
-    let mut lab = Lab::new(&|t| {
-        let p = t.parties.clone();
-        t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)]), owns(work)]);
-    });
+fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_publication_named() {
+    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase, RefundTo};
+    let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.col.id;
     let rail = spec("a rail Module");
     let ptr = lab.pointer(0, 1, None, &[rail]);
     lab.sign(BEN, &ptr);
-    let publication = {
-        let a = lab.w.everyday_act(&mut lab.c[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
-        lab.w.add(&a)
-    };
-    lab.sign(ANA, &publication);
-    let receipt = |lab: &mut Lab, fan: &str, proof: &[u8], line: Hash| {
-        let r = Fin::Receipt(Receipt {
-            rail,
-            proof: proof.to_vec(),
-            payer: Some(Payer::Identity(spec(fan))),
-            payee: label,
-            amount: Amount { unit: spec("a unit"), value: 10 },
-            fulfils: publication,
-            previous: None,
-            forward: None,
-            batch: None,
-            purchase: Some(Purchase { agreement: f, line }),
-        });
-        let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
-        let x = lab.w.add(&a);
-        lab.sign(BEN, &x);
-        x
-    };
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    let (pre, pre_tag) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 10);
+    assert!(lab.view().publication(&pre).unwrap().counts, "{:?}", lab.view().publication(&pre).unwrap().problems);
     let k1 = lab.clone_terms(&f, vec![(Power::Clone, vec![ANA, BEN])], &|t| t.text = "Changed words.".into());
     let k1 = lab.propose(ANA, &k1);
     let ks = vec![lab.sign(ANA, &k1), lab.sign(BEN, &k1)];
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
-    // Under the offer made before the break, received in the stretch: kept.
-    let kept = receipt(&mut lab, "Dee the fan", b"dee", f);
+    assert!(lab.view().broken(&label).unwrap().is_some(), "the clone changes no constitutional field: broken (rule 93)");
+    // A publication the label signs during the stretch, and its tag.
+    let (during, during_tag) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 10);
+    assert!(!lab.view().publication(&during).unwrap().counts, "a publication of the stretch never counts");
+    // Under the publication signed before the break, received in the stretch: kept.
+    let kept = stretch_receipt(&mut lab, 0, rail, spec("Dee the fan"), b"dee", pre_tag, f, 10);
     let got = common::stand_in_answers(lab.view()).purchase(&kept).unwrap().unwrap();
     assert!(!matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
-    // Under the clone of the stretch: owed back.
-    let paid = receipt(&mut lab, "Eve the fan", b"eve", k1);
+    // Under the publication of the stretch: owed back.
+    let paid = stretch_receipt(&mut lab, 0, rail, spec("Eve the fan"), b"eve", during_tag, f, 10);
     let got = common::stand_in_answers(lab.view()).purchase(&paid).unwrap().unwrap();
-    assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
+    assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
     assert_eq!(got.refund_to, RefundTo::Identity(spec("Eve the fan")));
-    // BQ3: shown only by the payer's own claim, judged by the offer it names.
+    // BQ3: shown only by the payer's own claim, judged by the publication its tag names.
     let mut fan = lab.w.genesis("Fay the fan", vec![own_home()], None, None);
-    let claim = |w: &mut World, fan: &mut Person, line: Hash, proof: &[u8]| {
+    let claim = |w: &mut World, fan: &mut Person, tag: Hash, proof: &[u8]| {
         let c = Fin::Claim(Claim {
             rail,
             proof: proof.to_vec(),
             payee: label,
-            amount: Amount { unit: spec("a unit"), value: 4 },
-            fulfils: publication,
+            amount: Amount { unit: spec("a unit"), value: 10 },
+            fulfils: tag,
             disagrees: None,
             referral: None,
             refund: None,
             anonymous: None,
-            purchase: Some(Purchase { agreement: f, line }),
+            purchase: Some(Purchase { agreement: f, line: f }),
             previous: None,
         });
         let x = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         w.add(&x)
     };
-    let by_claim = claim(&mut lab.w, &mut fan, k1, b"fay");
-    let before_claim = claim(&mut lab.w, &mut fan, f, b"fay2");
+    let by_claim = claim(&mut lab.w, &mut fan, during_tag, b"fay");
+    let before_claim = claim(&mut lab.w, &mut fan, pre_tag, b"fay2");
     let v = common::stand_in_answers(lab.view());
-    assert!(matches!(v.purchase(&by_claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")));
+    assert!(matches!(v.purchase(&by_claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
     assert!(!matches!(v.purchase(&before_claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
     let owed: Vec<Hash> = v.owed_back(&label).unwrap().iter().map(|o| o.payment).collect();
     assert_eq!(sorted(owed), sorted(vec![paid, by_claim]));
@@ -7761,7 +7778,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     lab.adopt(0, paid);
     assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().iter().any(|o| o.payment == paid));
     // A receipt for the same payment, signed after the rollback: the sale, signed anew.
-    receipt(&mut lab, "Eve the fan", b"eve", k1);
+    stretch_receipt(&mut lab, 0, rail, spec("Eve the fan"), b"eve", during_tag, f, 10);
     assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().iter().all(|o| o.payment != paid));
 }
 
@@ -7887,33 +7904,35 @@ fn published_resignations_and_declarations_naming_a_party() {
     assert_eq!((named[0].0, named[0].1, named[0].2.party), (d, lab.authority.id, ids[ANA]));
 }
 
-/// RB2 with BQ2: a payment naming an offer of the broken stretch, paid to
-/// the collective itself, with no stake making it a seller, is owed back
-/// too.
+/// RB2 with BQ2, as rule 93 reads it now: a payment following a price tag
+/// of a publication the collective signed during the broken stretch, paid
+/// to the collective itself as its own split service, is owed back too.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.col.id;
-    let (k1, _, _, _) = break_by_lost_record(&mut lab);
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    break_by_lost_record(&mut lab);
+    let (_, tag) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 7);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
         payer: Some(Payer::Identity(spec("a patron"))),
         payee: label,
         amount: Amount { unit: spec("a unit"), value: 7 },
-        fulfils: f,
+        fulfils: tag,
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: k1 }),
+        purchase: Some(Purchase { agreement: f, line: f }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let x = lab.w.add(&a);
     let got = common::stand_in_answers(lab.view()).purchase(&x).unwrap().unwrap();
-    assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
+    assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
     let owed = common::stand_in_answers(lab.view()).owed_back(&label).unwrap();
     assert_eq!((owed.len(), owed[0].still_broken, owed[0].amount.value), (1, true, 7));
 }
@@ -8365,25 +8384,27 @@ fn f189_7_no_closing_counts_while_broken_whatever_its_line() {
 /// a closing's "owes nothing", so a collective cannot close until those
 /// payers are settled.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
     use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
-    let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    let (_, _, _, rot1) = break_by_lost_record(&mut lab);
     let f = lab.founding;
-    // A patron pays under the clone of the broken stretch: owed back (BQ2).
+    // A patron pays a tag of a publication of the broken stretch: owed back (rule 93).
+    let (_, tag) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 7);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
         payer: Some(Payer::Identity(spec("a patron"))),
         payee: label,
         amount: Amount { unit: spec("a unit"), value: 7 },
-        fulfils: k1,
+        fulfils: tag,
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: k1 }),
+        purchase: Some(Purchase { agreement: f, line: f }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     lab.w.add(&a);
@@ -8920,15 +8941,17 @@ fn f190_qf4_a_missing_or_repeated_number_breaks_the_plan() {
 /// the collective's claim. No new act. Repaid in full, it no longer blocks
 /// a closing (F189, 7).
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
     use mor_core::money::{Amount, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
     let mut patron = lab.w.genesis("a patron", vec![own_home()], None, None);
-    let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    let (_, _, _, rot1) = break_by_lost_record(&mut lab);
     let f = lab.founding;
     let unit = spec("a unit");
+    let (_, k1) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 7);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
@@ -8939,7 +8962,7 @@ fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: k1 }),
+        purchase: Some(Purchase { agreement: f, line: f }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
@@ -9976,10 +9999,10 @@ fn f195_a_resignation_never_registered_is_spent_by_coming_back() {
     assert!(!n.voices.contains(&lab.ids()[BEN]));
 }
 
-/// A broken collective that took a payment under an offer of its broken
-/// stretch, from `payer` (as the receipt names it): owed back (rule 37d).
-/// Returns the lab, the collective, the receipt, the stretch's clone and
-/// the broken act.
+/// A broken collective that took a payment following the price tag of a
+/// publication it signed in its broken stretch, from `payer` (as the
+/// receipt names it): owed back (rule 93). Returns the lab, the
+/// collective, the receipt, that tag and the broken act.
 fn owed_back_lab(payer: Option<mor_core::money::Payer>, proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash) {
     let (lab, label, owed, k1, rot1, _) = owed_back_lab_with(|_| (payer, None), proof);
     (lab, label, owed, k1, rot1)
@@ -9997,8 +10020,11 @@ fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (O
     let mut lab = Lab::new(f);
     let (payer, person) = make(&mut lab);
     let label = lab.col.id;
-    let (k1, _, _, rot1) = break_by_lost_record(&mut lab);
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    let (_, _, _, rot1) = break_by_lost_record(&mut lab);
     let f = lab.founding;
+    let (_, k1) = self_sale(&mut lab, 0, vec![agreements::Sold::Bake(bake)], 7);
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: proof.to_vec(),
@@ -10009,7 +10035,7 @@ fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (O
         previous: None,
         forward: None,
         batch: None,
-        purchase: Some(Purchase { agreement: f, line: k1 }),
+        purchase: Some(Purchase { agreement: f, line: f }),
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
@@ -10037,7 +10063,7 @@ fn payers_claim_on(lab: &mut Lab, payer: &mut Person, label: Hash, owed_proof: &
         referral: None,
         refund: refund.map(|a| Rail { module: spec("a rail Module"), address: a.to_vec() }),
         anonymous: None,
-        purchase: Some(Purchase { agreement: lab.founding, line: k1 }),
+        purchase: Some(Purchase { agreement: lab.founding, line: lab.founding }),
         previous: None,
     });
     let a = lab.w.everyday_act(payer, mirs().money, 3, c.to_map(), cites, None);
@@ -10051,7 +10077,6 @@ fn payers_claim_on(lab: &mut Lab, payer: &mut Person, label: Hash, owed_proof: &
 /// payment, or the payer's pointer in force where there is none; the
 /// payer's own receipt counts wherever the money went.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn qg2_money_owed_back_follows_the_debt_rule() {
     use mor_core::money::PaidAt;
     let unit = spec("a unit");
@@ -10080,7 +10105,6 @@ fn qg2_money_owed_back_follows_the_debt_rule() {
 /// refund rail repays nothing; paid to the vault, it repays. With a limit
 /// of 10, the refund rail repays it, as before F255.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
     use mor_core::money::{vault_declaration, PaidAt, VaultEntry};
     let unit = spec("a unit");
@@ -10113,7 +10137,6 @@ fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
 /// a debt (Money rule 14: the selected wallet or an older one, never a
 /// newer one); with no act of theirs on it, the pointer in force.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn qg2_the_pointer_the_payers_own_acts_hold() {
     use mor_core::money::PaidAt;
     let unit = spec("a unit");
@@ -10139,7 +10162,6 @@ fn qg2_the_pointer_the_payers_own_acts_hold() {
 /// carries the rail's proof that the money reached where the claim signed
 /// with that key said (key 7).
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
     use mor_core::money::{Amount, Anonymous, Citations, Claim, PaidAt, Payer, Payload as Fin, Purchase, Rail};
     let key = SchnorrKey::from_secret(&spec("a one-time key")).unwrap();
@@ -10158,7 +10180,7 @@ fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
         referral: None,
         refund: Some(Rail { module: spec("a rail Module"), address: b"the key's refund address".to_vec() }),
         anonymous: None,
-        purchase: Some(Purchase { agreement: lab.founding, line: k1 }),
+        purchase: Some(Purchase { agreement: lab.founding, line: lab.founding }),
         previous: None,
     };
     c.anonymous = Some(Anonymous { key: bare, sig: key.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
@@ -10203,7 +10225,6 @@ fn close_with(lab: &mut Lab, label: Hash, rot1: Hash, open: Vec<agreements::Open
 /// stays open and visible, but does not block a closing: the closing act
 /// names every such obligation it leaves open (field 4).
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn qg1_money_owed_to_nobody_does_not_block_a_closing_that_names_it() {
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
     let (mut lab, label, owed, _, rot1) = owed_back_lab(None, b"an anonymous tip");
@@ -10224,7 +10245,6 @@ fn qg1_money_owed_to_nobody_does_not_block_a_closing_that_names_it() {
 /// unpaid. A holder outliving the closing may be named (a cMIP's role):
 /// shown, not required.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     use mor_core::money::Payer;
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
@@ -10402,7 +10422,6 @@ fn review_fdb_4_today_a_second_settlement_from_the_reference_naming_the_first_ch
 /// given, the closing names the debt and does not wait. Without a notice,
 /// or before the deadline, the debt still blocks.
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
     use mor_core::money::Payer;
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
@@ -10923,7 +10942,6 @@ fn f210_one_record_is_spent_for_its_payers_other_claims() {
 /// owed and blocks as before. Terms with no refund terms never lapse
 /// (rule 32: the core sets no lapse).
 #[test]
-#[ignore = "core: rule 93 for publications (a payment under a publication the collective signed during the broken stretch, owed back) is not yet built: owed_back reads the withdrawn RB2 verdict; this test's fixture is on the withdrawn model (a receipt fulfilling terms)"]
 fn f219_a_refund_past_its_terms_is_ended() {
     use mor_core::money::Payer;
     let carla = spec("Carla, a payer, F219");
