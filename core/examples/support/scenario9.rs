@@ -360,7 +360,7 @@ fn walk_1(out: &mut Out) {
     let s4 = split(&mut wc, &mut svc.clone(), r4, through_label, 1, vec![to_partner(lid, 150, 0), on_line(ana.id, 340, own), on_line(ben.id, 510, own)], vec![], everyone);
     let (_, mut ana_rotated) = wc.rotate(&ana_after, Rot::default());
     let wrong = payout_receipt(&mut wc, &mut ana_rotated, s4, b"ana's payout after the transfer");
-    out.case(&mut wc, "9.1 a payout receipt Ana signs for the share, bound to a rotation after her transfer's chain signature: a wrong receipt", "Agreements rules 10 and 30; F217",
+    out.case(&mut wc, "9.1 a payout receipt Ana signs for the share, bound to a rotation after her transfer's chain signature: a wrong receipt", "Agreements rules 10 and 30",
         "Her chain signature fixed the transfer's place on her own line; a receipt she signs after it, for the stake sold, counts for nothing, and that payout is owed to Cy.",
         Facts::default(), ask("transfer", &x), json!({ "effective": true, "wrong_receipts": [hx(&wrong)] }), None);
     let _ = (cy_signs, cs);

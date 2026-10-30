@@ -3046,7 +3046,7 @@
           }
         },
         "name": "9.1 a payout receipt Ana signs for the share, bound to a rotation after her transfer's chain signature: a wrong receipt",
-        "rule": "Agreements rules 10 and 30; F217",
+        "rule": "Agreements rules 10 and 30",
         "verdict": {
           "effective": true,
           "wrong_receipts": [
