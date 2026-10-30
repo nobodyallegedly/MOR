@@ -276,13 +276,16 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   assert.equal(await page.locator('#real-found [data-member-row]').count(), 2);
   await page.fill('#real-found input[name=member-2]', 'cd'.repeat(32));
   await page.locator('#real-found input[name=member-2]').dispatchEvent('change');
+  // F402: five layer rows, every one named; a finer area, added, chooses one layer and its kinds, each the core defines, in words.
+  await page.locator('#e-grid-real-found tr[data-layer="3"]').waitFor({ timeout: 30_000 });
+  assert.equal(await page.locator('#e-grid-real-found tr[data-layer]').count(), 5);
+  await page.click('[data-grid-add=real-found]');
   const area = page.locator('#e-grid-real-found tr[data-area="0"]');
   await area.waitFor({ timeout: 30_000 });
-  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Text', 'Envelopes', 'Text and Envelopes, together', 'Money', 'Agreements', 'Development']);
-  await area.locator('select[data-grid-layer]').selectOption('3');
-  await page.locator('#e-grid-real-found tr[data-area="0"] [data-grid-some]').check();
+  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Money', 'Text', 'Envelopes', 'Agreements', 'Development']);
+  await area.locator('select[data-grid-layer]').selectOption('4');
   const kinds = await page.locator('#e-grid-real-found tr.kinds').innerText();
-  for (const k of ['work claims', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
+  for (const k of ['claims: a work bound to its creators', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
   await shot(page, 'mac-26-found-agreements-kinds');
 });
 

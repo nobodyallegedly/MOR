@@ -517,9 +517,11 @@ export class Real {
         await this.desk.keyCurrent(a.founder);
         const me = this.store.identity(a.founder);
         const lines: Line[] = [];
-        const terms = await proposePayload(me, payload, undefined, relays);
+        // Left at its homes too: a collective publishes no routes, so a reader who knows where it lives (Kišib) finds it there.
+        const places = [...new Set([...relays, ...s.homes.map((h) => h.hint)])];
+        const terms = await proposePayload(me, payload, undefined, places);
         this.store.saveIdentity(me);
-        const own = await this.signAsParty(me, terms.id, relays);
+        const own = await this.signAsParty(me, terms.id, places);
         lines.push({ text: `The terms are act ${shownAct(terms.id)}; ${names(a.founder)} signed them (${shownAct(own.id)}).`, tone: 'ok' });
         const p: Proposal = {
           act: terms.id,
@@ -797,7 +799,7 @@ export class Real {
         await this.desk.keyCurrent(founder);
         const me = this.store.identity(founder);
         const lines: Line[] = [];
-        const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.f.relays);
+        const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.places);
         this.store.saveIdentity(me);
         const own = await this.signAsParty(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), a.collective);
         const name = this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective);
@@ -1119,7 +1121,7 @@ export class Real {
         await this.desk.keyCurrent(founder);
         const lines: Line[] = [];
         const me = this.store.identity(founder);
-        const proposed = await proposePayload(me, preview.payload, c.f.agreement, c.f.relays);
+        const proposed = await proposePayload(me, preview.payload, c.f.agreement, c.places);
         this.store.saveIdentity(me);
         const own = await this.signAsParty(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), a.collective);
         const p: Proposal = { act: proposed.id, kind: 'keepers', name: cname, collective: a.collective, founder, members, signers: members, needed: members.length, governance: g, relays: c.f.relays, threads: {}, answers: { [founder]: { verdict: 'signed', signature: own.id, text: '', message: '' } }, at: now() };
@@ -1279,7 +1281,7 @@ export class Real {
       const by = this.proposals().find((p) => p.founded === collective)?.founder ?? c.f.members.find((m) => m !== r.member && this.store.holds(m));
       if (!by) throw new Error('No other member’s identity is held here to draw the record.');
       const me = await this.actFor(c, by);
-      const line = await record(c.id, { registers: [act], inForce: c.f.agreement }, c.f.relays);
+      const line = await record(c.id, { registers: [act], inForce: c.f.agreement }, c.places);
       this.store.saveIdentity(me);
       c.f.departed = [...(c.f.departed ?? []), { member: r.member, resignation: act, record: line.id }];
       c.f.records = [...(c.f.records ?? []), line.id];

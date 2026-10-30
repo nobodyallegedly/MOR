@@ -364,6 +364,16 @@ async function readCollective(id: string, address: string[], via: Via): Promise<
   const t = readTerms(agreementPayload, AGREEMENTS_SPECS) as { parties: string[]; grammar?: { chainKey: { form: string; threshold?: number; members?: string[] } } };
   const ck = t.grammar?.chainKey;
   if (!ck || ck.form !== 'shares' || !ck.threshold) throw new Error('Its agreement does not split the chain key into members’ shares: Kišib rotates only collectives whose key is on their members’ paper.');
+  // A collective publishes no routes (it signs no everyday act, Identity rule 1): its acts are its members', found
+  // where each member publishes (their homes and routes), beside the collective's own homes.
+  for (const p of t.parties) {
+    try {
+      const l = await lookUp(p, rd.places, via);
+      for (const h of [...l.resolution.homes.map((x) => x.hint), ...l.routes.routes.flatMap((x) => x.hints)]) if (!rd.places.includes(h)) rd.places.push(h);
+    } catch {
+      // that member not found: their acts are looked for where the others are
+    }
+  }
   const latest = r.links[r.links.length - 1];
   // A keyless collective (Identity rule 1): its genesis was signed by chain key 0, revealed, and committed key 1, dealt to the members; its rotation at position p reveals key p. Any other identity's genesis commits key 0.
   const keyless = !r.signingKey;

@@ -416,7 +416,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await shot(wed, 'web-release');
   await rel.getByRole('button', { name: 'Sign it' }).click();
   await done(wed, '#e-status .k-note.k-done', 'Signed');
-  assert.ok((await um.standing(relId)).met, 'it counts as the collective’s release');
+  { const st = await um.standing(relId); assert.ok(st.met, 'it counts as the collective’s release: ' + JSON.stringify(st.lines)); }
   await shot(ed, 'edubba-collective');
 
   // A member change, reviewed (its signing in members' apps and its rotation are in test/real.test.ts):

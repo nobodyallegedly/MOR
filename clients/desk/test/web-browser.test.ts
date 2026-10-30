@@ -507,7 +507,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   const collective = JSON.parse(places_.edubba)['edubba/files'] as Record<string, unknown>;
   const colFile = Object.keys(collective).find((k) => k.startsWith('/edubba/real/collectives/') && k.endsWith('.json'))!;
   const col = await file<{ identity: { signingSecret: string; safety: { seeds: string } } }>(ed, colFile);
-  assert.ok(col.identity.signingSecret, 'the collective’s signing key, held by its founder here');
+  assert.equal(col.identity.signingSecret, '', 'no signing key: a collective has none (Agreements rule 56)');
   assert.equal(col.identity.safety.seeds, '', 'never its chain key');
 
   // Its tabs (decided): Act (permissions as chips, its feed, the typing box), Members, Money, Keepers, To sign; its constitution top right.
@@ -521,20 +521,15 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('.edubba-tabs button:has-text("Money")');
   await ed.locator('#pane', { hasText: 'A collective’s releases are made in Ummia' }).waitFor({ timeout: 60_000 });
   assert.equal(await ed.locator('#real-release, [data-action=pick-folder], [data-anchorable]').count(), 0, 'no release from a folder and no money drafts on the web');
-  const shares = ed.locator('#real-money input[name=share]');
-  assert.equal(await shares.count(), 3);
-  await shares.nth(0).fill('50');
-  await shares.nth(1).fill('30');
-  await shares.nth(2).fill('20');
+  // Its shares were set at its founding (the grid's Shares band); this card only chooses where payments land (H101).
+  assert.equal(await ed.locator('#real-money input[name=share]').count(), 0, 'no shares on the Money tab');
   await ed.fill('#real-money input[name=referral]', '10');
   await ed.fill('#real-money input[name=service]', cyId);
-  await ed.fill('#real-money input[name=serviceKey]', '11'.repeat(32));
-  await ed.fill('#real-money textarea[name=keepers]', cyId);
   await ed.click('#real-money button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'The money of “The tablet house”' }).waitFor({ timeout: 60_000 });
   const moneyRead = await ed.locator('#e-real-review').innerText();
   assert.match(moneyRead, /a referral share of 10%/);
-  assert.match(moneyRead, /50%[\s\S]*30%[\s\S]*20%/);
+  assert.match(moneyRead, /never copied here/);
   await shot(ed, 'money-review');
   await ed.click('#e-real-review [data-action=cancel]');
   await done(ed, '#e-status', /Nothing was signed/);
