@@ -4121,3 +4121,10 @@ fn push_rail_spec() -> mor_core::development::Rail {
     use mor_core::development::{Bound, Rail, RailKind};
     Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
 }
+
+// verifier2 (docs/verifier2-report.md): exports the random collective
+// histories above, and the library's verdicts on them, for the independent
+// verifier in verifier2/ to judge. Ignored unless asked for; changes nothing.
+mod verifier2_export {
+    include!("../../verifier2/export/export.rs");
+}
