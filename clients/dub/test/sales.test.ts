@@ -28,7 +28,8 @@ import { MIRS, publicationPayload } from '../../genesis/src/core.ts';
 import { referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
-import { lockWork } from '../../barebone/src/sealed.ts';
+import { lockWork, readPublication } from '../../barebone/src/sealed.ts';
+import { publishVow, readVowOffer, vowOffer, vowOfferWords, vowSales } from '../src/vows.ts';
 import { BAKE, POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { putTag } from '../../barebone/src/tag.ts';
 import { SPLIT_CMIP, planIn, sign } from '../../repo/src/agreements.ts';
@@ -271,4 +272,59 @@ test('by clicks: Withdraw the publication on a work offered through one (a later
   assert.match(b.problem ?? '', /withdrew its price tag/);
   assert.equal(b.ends, null);
   await context.close();
+});
+
+// Vows on the redesigned core (F407): a vow is sold by a publication selling
+// [3, vow], its words required, and a price tag under it signed by its split
+// service or its designated party; no standing offer any more.
+test('a vow sold by a publication and its price tag: a lone seller as its own split service; another with a split service and the seller designated; read, priced and bought by its tag, and found by the look-up', async () => {
+  const R = [relay!.base];
+  const H = [relay!.base, ...homes.map((h) => h.base)];
+  // Ada alone: her own split service, so her publication counts signed by drafting it, and her tag is the service's.
+  const lone = await publishVow(ada, { words: 'A chair, made by hand within a month.', title: 'A chair, to order.', price: { unit: SATS, value: 1000 }, offerWords: vowOfferWords('A chair, made by hand within a month.', '1 000 regtest satoshis'), relays: R });
+  assert.equal(lone.offer, lone.publication, 'the publication, under its name from before');
+  // Bo: the split service above sells for him, Bo the designated party signing the tag.
+  const shared = await publishVow(bo, { words: 'A lesson, one hour.', title: 'A lesson.', price: { unit: SATS, value: 600 }, offerWords: vowOfferWords('A lesson, one hour.', '600 regtest satoshis'), relays: R, service: svc.id });
+  await sign(svc, shared.publication, R);
+
+  const p1 = readPublication((await relayAt(relay!.base).getAct(lone.publication))!)!;
+  assert.deepEqual(p1.vows, [lone.vow]);
+  assert.equal(p1.service, ada.id);
+  const p2 = readPublication((await relayAt(relay!.base).getAct(shared.publication))!)!;
+  assert.equal(p2.designated, bo.id);
+  assert.equal(readVowOffer((await relayAt(relay!.base).getAct(shared.publication))!, bo.id, shared.vow)?.offer, shared.publication);
+
+  const o1 = await vowOffer(lone.vow, ada.id, H);
+  assert.equal(o1?.standing, 'counts', o1?.why ?? '');
+  assert.equal(o1?.tag?.id, lone.tag);
+  assert.deepEqual(o1?.price, { unit: SATS, value: 1000 });
+  const o2 = await vowOffer(shared.vow, bo.id, H);
+  assert.equal(o2?.standing, 'counts', 'the designated party’s tag counts (Money rule 18)');
+  assert.equal(o2?.payee, svc.id, 'paid to the split service');
+
+  // In the buyer's feed: the vow, its price from the tag; the purchase follows the tag.
+  let card: Item | undefined;
+  for (let i = 0; i < 40 && !card?.vow; i++) {
+    card = (await feedItems()).find((x) => x.id === lone.post);
+    if (!card?.vow) await new Promise((r) => setTimeout(r, 250));
+  }
+  assert.equal(card?.vow?.offer, lone.publication);
+  assert.equal(card?.vow?.problem, null);
+  assert.equal(card?.vow?.state, 'for sale');
+  assert.match(card!.vow!.price, /1[ ,]?000/);
+  const ctx = await (app!.dub as unknown as { ctx(): Promise<{ me: TestIdentity }> }).ctx();
+  const x1 = await app!.dub.money.vowPurchaseOf(ctx.me, H, {}, { vow: lone.vow, seller: ada.id, post: lone.post });
+  assert.equal(x1.payee, ada.id);
+  assert.equal(x1.fulfils, lone.tag);
+  assert.equal(x1.purchase, null, 'a lone seller’s publication names no ownership agreement');
+  const x2 = await app!.dub.money.vowPurchaseOf(ctx.me, H, {}, { vow: shared.vow, seller: bo.id, post: shared.post });
+  assert.equal(x2.payee, svc.id);
+  assert.equal(x2.fulfils, shared.tag);
+
+  // The look-up: the vow, its publication as its offer; no sale yet.
+  const look = await vowSales(ada.id, H);
+  const seen = look.vows.find((v) => v.name === lone.vow);
+  assert.ok(seen, JSON.stringify(look.problems));
+  assert.deepEqual(seen!.offers, [lone.publication]);
+  assert.deepEqual(seen!.sales, []);
 });
