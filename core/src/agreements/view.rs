@@ -2462,6 +2462,14 @@ impl<'a> AgreementsView<'a> {
                 continue;
             };
             todo.extend(Self::cites(h, &col.id));
+            // A person's own sequence, its grant keys' strands among it, is
+            // its chain (F352): its `prev` is followed. A collective signs no
+            // act, so a member's `prev` never is.
+            if h.act.outside.signer == Some(col.id) {
+                if let Some([p]) = h.inside.prev.as_deref() {
+                    todo.push(*p);
+                }
+            }
         }
         let h = Rc::new(History { acts, missing });
         self.histories.borrow_mut().insert(key, h.clone());

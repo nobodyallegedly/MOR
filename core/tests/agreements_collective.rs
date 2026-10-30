@@ -18,13 +18,11 @@ use mor_core::act::Object;
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
-use mor_core::identity::KeptTip;
 use mor_core::agreements::{
     self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, Field4, Grant, Who,
     Holding, KeyGrammar, Keepers, Kind, AgreementsError, AgreementsView, MarkEntry, Mirs, Power, Record,
     Recovery, ReleaseRule, HoldersRule, Resignation, Rule, SuccessionPlan, Terms,
 };
-use mor_core::mmr::Mmr;
 
 fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -186,14 +184,6 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
     };
     f(&mut t);
     t
-}
-
-fn tip(dev: &Person) -> KeptTip {
-    KeptTip {
-        act: *dev.seq.last().expect("a device with acts"),
-        position: dev.seq.len() as u64,
-        summary: Mmr::from_ids(&dev.seq).root(),
-    }
 }
 
 /// The rule for Money (terms field 19) the treasurer's alone, `[2, [ben]]`:
@@ -591,7 +581,9 @@ impl Lab {
         let v = self.view();
         for i in devs {
             for x in self.handed[*i].iter().chain(&self.c[*i].seq) {
-                let names = self.w.v.get(x).is_some_and(|h| h.inside.objects.iter().flatten().any(|o| o.chain == self.col.id));
+                // An act this verifier does not hold is still the device's own,
+                // and its client cites it.
+                let names = self.w.v.get(x).is_none_or(|h| h.inside.objects.iter().flatten().any(|o| o.chain == self.col.id));
                 // An act on no chain of the label is no head a client cites.
                 let on_chain = !matches!(v.consent(x), Ok(Consent::Uncited { .. }));
                 if names && on_chain && !out.contains(x) {
@@ -2641,9 +2633,11 @@ fn a_threshold_authority_is_counted_at_the_line() {
     }
 }
 
-/// C7: where the declared member is the only holder of the label's
-/// signing key, the declaration takes effect at the rotation the recovery
-/// path makes; the authority's declaration draws no line by itself.
+/// C7, as Agreements draft 17 leaves it: a declaration takes effect at the
+/// rotation the recovery path makes only where no member but the declared
+/// one remains to draw a record; here Ben and Cy remain, so a rotation
+/// registering nothing leaves Ana counted, sole chain-key holder or not.
+/// The authority's declaration draws no line by itself.
 #[test]
 fn a_declaration_against_the_key_holder_takes_effect_at_the_recovery_rotation() {
     for (sole, declared) in [(true, true), (true, false), (false, true)] {
@@ -4012,11 +4006,9 @@ fn line_payout(receiver: Hash, amount: u64, owners: Hash) -> agreements::Payout 
 /// (field 33): a collective's founding terms target the collective they
 /// found, `[1, null]`, and carry its one stake, in the collective itself,
 /// written null; a deal cannot use null; a collective holds no stake in
-/// itself; the founding grant by "this collective" (field 8) stays.
+/// itself.
 #[test]
 fn founding_terms_carry_stakes_in_the_collective_itself() {
-    let mut w = World::new();
-    let svc = w.genesis("a split service", vec![own_home()], None, None);
     let lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -5082,7 +5074,7 @@ fn a_collective_forks() {
     let (mut sa, ta) = found_successor(&mut lab, "side A", &[ANA], &kept, label);
     let (mut sb, tb) = found_successor(&mut lab, "side B", &[BEN, CY], &kept, label);
     let (sa_id, sb_id) = (sa.id, sb.id);
-    let fork = |lab: &Lab, debts: Vec<(Hash, Vec<u64>)>| agreements::Fork {
+    let fork = |_: &Lab, debts: Vec<(Hash, Vec<u64>)>| agreements::Fork {
         agreement: k,
         collective: label,
         sides: vec![agreements::Side { successor: sa_id, members: vec![ids[ANA]] }, agreements::Side { successor: sb_id, members: vec![ids[BEN], ids[CY]] }],
@@ -5953,7 +5945,7 @@ fn a_collective_releases_its_work_and_closes() {
     let f = lab.founding;
     let wa = label_owns(&mut lab, work);
     let label = lab.col.id;
-    let closing = |lab: &Lab| agreements::Closing { agreement: f, collective: label, open: vec![] };
+    let closing = |_: &Lab| agreements::Closing { agreement: f, collective: label, open: vec![] };
     let p = lab.publish(0);
     lab.sign(ANA, &p);
     let x = closing(&lab);
@@ -12753,7 +12745,6 @@ fn a_holders_rule_3_7aj() {
 /// matter, the record names the signature, the holder rotates and disowns
 /// it: the change stays in force, the vote shown disputed.
 #[test]
-#[ignore = "core: what a collective's stake is paid is now its split agreement's (rules 15, 48, 94, 95); the core does not yet judge split-agreement versions by the holders' rule, and terms carry no fees (field 28 withdrawn): these votes are on no owners' matter"]
 fn a_disowned_vote_stays_placed_3_7ab() {
     let (mut lab, dana, k) = owned_label(400_000);
     let ids = lab.ids();
@@ -13165,7 +13156,7 @@ fn state_at(lab: &Lab, r: &Hash, lapsed: &[Hash], within: &[Hash]) -> CloneState
 #[test]
 fn an_issuance_3_7ac() {
     let clock = |t: &mut Terms| t.time = Some((spec("a clock"), Value::Uint(1)));
-    let (mut lab, mut dana, k) = owned_label_by(100_000, true, None, None, &clock, false);
+    let (mut lab, dana, k) = owned_label_by(100_000, true, None, None, &clock, false);
     let ids = lab.ids();
     let mut ivy = lab.w.genesis("ivy, the new holder", vec![own_home()], None, None);
     let unit = spec("a unit");
@@ -14709,7 +14700,7 @@ fn an_act_a_revocation_misses_is_void_or_disputed_rule_76() {
     let mut keeper = w.genesis("a keeper", vec![own_home()], None, None);
     let env = mirs().envelopes;
     let deal = kept_deal(&mut w, &mut singer, &mut fan, vec![keeper.id], Rule::All);
-    let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id) };
+    let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..person_grant(agent.id) };
     let g = agreements_act(&mut w, &mut singer, agreements::types::GRANT, grant.to_map(), None);
     sign(&mut w, &mut agent, &g);
     let mut s1 = singer.clone();
@@ -14739,8 +14730,9 @@ fn an_act_a_revocation_misses_is_void_or_disputed_rule_76() {
     assert!(matches!(v.backing(&by_grantee).unwrap(), Backing::NotBacked { .. }), "the grantee's own acknowledgement rescues nothing");
     assert!(matches!(v.backing(&by_other).unwrap(), Backing::Disputed { ref reason, .. } if reason.contains("acknowledged")));
     assert!(matches!(v.backing(&in_deal).unwrap(), Backing::Disputed { ref reason, .. } if reason.contains("keeper")), "{:?}", v.backing(&in_deal));
-    // Disputed confers nothing.
-    assert!(!v.consent(&by_other).unwrap().counts());
+    // Disputed confers nothing (a person is no collective: Agreements
+    // read the act by its backing).
+    assert!(!matches!(v.backing(&by_other).unwrap(), Backing::Backed { .. } | Backing::Binds { .. }));
 }
 
 /// Text 11, rule 14, and Agreements 17, rules 58 and 73: a text signed with
