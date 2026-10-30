@@ -42,6 +42,7 @@ const running: Running[] = [];
 /** Start a home or relay, kept for `after` at once: stopped whatever happens next (CI). */
 const up = async (role: 'home' | 'relay') => {
   const r = await start(role);
+  running.push(r);
   return r;
 };
 let nobody: TestIdentity;

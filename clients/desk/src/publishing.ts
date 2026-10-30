@@ -70,7 +70,8 @@ import { NotSound } from '../../../modules/audio/src/audio.ts';
 import { BAKE, POST_SPECS, PRICE_TAG, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
-import { areaReaching, chainFor, collectiveNow, collectivePlaces, publishAt, signAsMember, type AreaHere } from '../../grants/src/member.ts';
+import { areaReaching, chainFor, collectiveNow, collectivePlaces, collectiveVerifier, publishAt, signAsMember, termsAt, type AreaHere } from '../../grants/src/member.ts';
+import { negotiate } from '../../repo/src/proposals.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverKey, deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
 import { VOW, contestSale, purchaseContests, readVow, vowOfferWords, vowPayload, vowSales, type ContestsBeside, type VowShown } from '../../dub/src/vows.ts';
@@ -173,6 +174,8 @@ export interface PublicationHere {
   latest: string;
   title: string;
   by: string;
+  /** A collective's publication (made by `by` for it), or null. */
+  collective?: string | null;
   owners: string | null;
   holders: [string, number][];
   bakes: string[];
@@ -942,17 +945,36 @@ export class Publishing {
   preparePublication(a: { owners?: string; sold?: string[]; partners?: { who: string; share?: string; label?: string }[]; service: string; referral?: string; price: string; tagBy?: string; words?: string; title?: string }): Promise<{ plan: string; digest: string; reading: Reading }> {
     return this.desk.serial(async () => {
       const b = this.book();
-      const { acting, me, collective } = this.who(b);
+      const { acting, as, me, collective } = this.who(b);
       const s = this.settings();
       const names = this.asking.names();
       const blocking: string[] = [];
-      if (collective) blocking.push('A collective’s publication is not offered here yet: act as yourself.');
       // The owners: an ownership agreement (by its founding version), or none: you, its lone seller.
       let owners: string | null = (a.owners ?? '').trim() || null;
       let holders: [string, number][] = [[acting, PARTS]];
       let parties: string[] = [acting];
       let ownTitle = '';
-      if (owners) {
+      // A collective's publication (Agreements rules 15, 58, 60): its owners the collective's own founding agreement, its shares read
+      // by reference from its agreement in force; made by a member with their own key for it, under the rule reaching publications.
+      let c: CollectiveHere | null = null;
+      let area: AreaHere | null = null;
+      if (collective) {
+        owners = null;
+        c = await this.collectiveHere(me, as);
+        if (c.why) blocking.push(`The collective ${short(as)}: ${c.why}.`);
+        else {
+          owners = (await collectiveVerifier(c.id, c.places, s.via)).founding;
+          area = (await areaReaching(c.id, c.places, { spec: MIRS.agreements, type: AGREEMENTS_TYPES.publication }, s.via).catch(() => ({ area: null }))).area;
+          if (!area) blocking.push(`The collective ${short(as)}: no rule of its agreement reaches publications (the Agreements layer).`);
+          else if (!area.holders.includes(acting)) blocking.push(`The collective ${short(as)}: you have no voice in ${area.name.startsWith('the ') ? area.name : `its area “${area.name}”`}, which reaches publications.`);
+          const t = c.agreement ? ((await termsAt(c.agreement, c.places, s.via)) as { stakes?: [string | null, [string | null, number][]][] } | null) : null;
+          const own = t?.stakes?.find(([o]) => o === null)?.[1] ?? [];
+          holders = own.filter((x): x is [string, number] => typeof x[0] === 'string');
+          parties = [as];
+          ownTitle = `the collective ${short(as)}`;
+        }
+        if (a.tagBy === 'me') blocking.push('A collective’s publication: its split service signs its price tag, in its own app.');
+      } else if (owners) {
         try {
           if (!HEX64.test(owners)) owners = readId(owners);
         } catch {
@@ -1030,7 +1052,7 @@ export class Publishing {
       if (top >= PARTS) blocking.push(`The partners’ shares and the referral take ${pct(top)} off the top: they must leave something to the owners.`);
       const price = this.priceOf(a.price, blocking);
       // Who signs its price tag: its split service, in its own app, or you, as the party it designates (field 10, one of its parties).
-      const tagByMe = a.tagBy === 'me';
+      const tagByMe = a.tagBy === 'me' && !collective;
       const myParty = !owners || partners.some((p) => p.identity === acting) || service === acting;
       if (tagByMe && !myParty) blocking.push('You sign its price tag only as one of its parties (field 10): add yourself as a partner (a “publisher”, at 0% if you like), or let the split service sign it.');
       const designated = tagByMe && service !== acting ? acting : null;
@@ -1045,13 +1067,19 @@ export class Publishing {
           blocking.push(`Agreements refuse this publication: ${err(e)}`);
         }
       }
-      const people = list([...parties.filter((x) => x !== acting), ...partners.map((p) => p.identity).filter((x) => x !== acting), ...(service && service !== acting ? [service] : [])]);
+      const people = list([...(collective ? [] : parties.filter((x) => x !== acting)), ...partners.map((p) => p.identity).filter((x) => x !== acting), ...(service && service !== acting ? [service] : [])]);
+      // A collective's: the other members its rule asks, each signing with their own key in their own app (rules 6, 60).
+      const cosigners = collective && area && area.number > 1 ? area.holders.filter((h) => h !== acting) : [];
       const barePriced = bakes.map((x) => b.bakes.find((y) => y.bake === x)).filter((x) => x?.tag?.price);
-      const notMine = bakes.filter((x) => !b.bakes.some((y) => y.bake === x && !y.collective && y.key));
+      const notMine = bakes.filter((x) => !b.bakes.some((y) => y.bake === x && y.key && (collective ? y.as === as : !y.collective)));
       const reading: Reading = {
         title: `A publication: “${title || '…'}”`,
         summary: [
-          owners ? `Sold by the owners of “${ownTitle || short(owners)}” (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read from their ownership agreement in force.` : 'Sold by you alone: a lone seller’s publication, you its only owner.',
+          collective
+            ? `Sold by the collective ${short(as)}, made by you (${names(acting)}) with your own key for it, under ${area ? (area.name.startsWith('the ') ? area.name : `its area “${area.name}”`) : 'its rule for publications'}; its owners its constitution in force (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read by reference at each payment.`
+            : owners
+              ? `Sold by the owners of “${ownTitle || short(owners)}” (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read from their ownership agreement in force.`
+              : 'Sold by you alone: a lone seller’s publication, you its only owner.',
           `Every payment goes to its split service, ${service ? names(service) : '…'}, which pays everyone: the partners and the referral off the top, then the owners by their shares.`,
         ],
         sections: [
@@ -1069,6 +1097,7 @@ export class Publishing {
             lines: [
               { text: 'You draft it, which is your signature. Each other party signs it: every owner (the ownership agreement consents through every one of them), each partner, and the split service in its own app. It sells once every one has signed (rule 11).' },
               ...(people.length ? [{ text: `Asked to sign: ${people.map(names).join(', ')}.` }] : []),
+              ...(collective ? [{ text: area && area.number > 1 ? `Its rule asks ${area.number} members: ${cosigners.map(names).join(', ')} asked, each signing with their own key.` : 'For the collective, your act alone is its consent under its rule.' }] : []),
               { text: 'Once it counts: its price tag, a post announcing it, and the work’s key sealed to each owner.' },
             ],
           },
@@ -1085,25 +1114,45 @@ export class Publishing {
         plain: [{ heading: 'Its words, which every party signs', text: words }],
         blocking,
       };
-      const digest = sha256(cborEncode(['MOR Edubba publication, version 1', acting, made ? hex(made.payload) : '', title, price ?? 0, people]));
+      const digest = sha256(cborEncode(['MOR Edubba publication, version 1', acting, as, made ? hex(made.payload) : '', title, price ?? 0, people]));
       const plan = this.plan(digest, async () => {
         if (blocking.length || !made || !service || !price) throw new Error('This cannot be signed while a reason above stands. Nothing was signed.');
         await this.desk.keyCurrent(me.id);
         try {
           await carryChain(me, s.relays);
-          const p = await me.publish(MIRS.agreements, made.type, made.payload, { public: true, relays: s.relays, ...(owners ? { objects: [[owners, owners]] as [string, string][] } : {}) });
-          const lines: Line[] = [{ text: `The publication ${short(p.id)} is drafted and signed by you.`, tone: 'ok' }];
+          let p: { id: string; act: Uint8Array };
+          const lines: Line[] = [];
+          if (collective) {
+            const at = await chainFor(c!.id, c!.places, s.via);
+            p = await signAsMember(c!.id, me, at, { spec: MIRS.agreements, type: made.type, payload: made.payload, public: true, objects: [[owners!, owners!]] });
+            if (!(await publishAt([p.act], list([...c!.places, ...s.relays]), s.via)).length) throw new Error('No relay took the publication: nothing counts. Try again.');
+            lines.push({ text: `The publication ${short(p.id)} is made for the collective ${short(c!.id)} by you, with your own key, naming it.`, tone: 'ok' });
+            for (const h of cosigners) {
+              try {
+                const l = await lookUp(h, c!.places, s.via);
+                const inbox = l.inbox(MIRS.agreements) ?? [];
+                if (!l.encryptionKey || !inbox.length) throw new Error('no inbox or encryption key');
+                await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `${names(me.id)} made a publication of the collective, “${title}”: act ${p.id}. Its rule asks ${area!.number} members: read it in your Signing tab, then sign or decline.`, refs: [[p.id, c!.id], [c!.id, c!.id]] });
+                lines.push({ text: `${names(h)} is asked, in their own app.`, tone: 'ok' });
+              } catch (e) {
+                lines.push({ text: `${names(h)} could not be asked: ${err(e)}`, tone: 'warn' });
+              }
+            }
+          } else {
+            p = await me.publish(MIRS.agreements, made.type, made.payload, { public: true, relays: s.relays, ...(owners ? { objects: [[owners, owners]] as [string, string][] } : {}) });
+            lines.push({ text: `The publication ${short(p.id)} is drafted and signed by you.`, tone: 'ok' });
+          }
           // The split service signs it in its own app (rule 11: every party signs).
           if (service !== me.id) lines.push(this.askService(service, p.id));
-          const here: PublicationHere = { id: p.id, latest: p.id, title, by: me.id, owners, holders, bakes, vow, partners, service, referral, designated, price, words, people, state: 'waiting', tag: null, post: null, delivered: {}, at: now() };
+          const here: PublicationHere = { id: p.id, latest: p.id, title, by: me.id, collective: collective ? as : null, owners, holders, bakes, vow, partners, service, referral, designated, price, words, people: list([...people, ...cosigners]), state: 'waiting', tag: null, post: null, delivered: {}, at: now() };
           const bb = this.book();
           bb.publications.unshift(here);
           this.save(bb);
           const asked = await this.asking.ask(me, { id: p.id, kind: 'publication', title, acts: [p.id], people: people.filter((x) => x !== service), text: `A publication to sign: “${title}”, drafted by ${short(me.id)}. Read it in To sign, from its exact bytes, and sign it, or decline.` });
-          // The service is waited on too, though it reads no proposal: it signs in its own app.
+          // The service is waited on too, though it reads no proposal: it signs in its own app; so are a collective's other members asked above.
           const w = asked.waiting;
-          if (service !== me.id) {
-            w.people = list([...w.people, service]);
+          if (service !== me.id || cosigners.length) {
+            w.people = list([...w.people, ...(service !== me.id ? [service] : []), ...cosigners]);
             w.state = 'waiting';
             this.asking.keep(w);
           }
@@ -1146,6 +1195,7 @@ export class Publishing {
       const problems = judged.problems.filter((x) => !/not every party has signed/.test(x));
       if (problems.length || judged.unsigned.some((u) => u !== p.owners)) throw new Error(`Agreements do not count it yet: ${[...problems, ...(judged.unsigned.length ? [`not signed by ${judged.unsigned.map(names).join(', ')}`] : [])].join('; ')}`);
     }
+    if (p.collective) return this.collectivePublicationCounts(me, p, b);
     await this.desk.keyCurrent(me.id);
     await carryChain(me, s.relays);
     let tagAct: Uint8Array | null = null;
@@ -1185,11 +1235,35 @@ export class Publishing {
     return lines;
   }
 
-  /** A publication as the core judges it, from the acts of its drafter and every party found where Edubba looks. */
+  /** A collective's publication that counts: the post announcing it, made by the member for the collective (its key was sealed to every member at its upload). */
+  private async collectivePublicationCounts(me: TestIdentity, p: PublicationHere, b: Book): Promise<Line[]> {
+    const s = this.settings();
+    const c = await this.collectiveHere(me, p.collective!);
+    const places = list([...c.places, ...s.relays]);
+    const named: Uint8Array[] = [];
+    for (const x of [...p.bakes, ...(p.vow ? [p.vow] : []), p.id]) {
+      const a = await actAt(x, places, s.via);
+      if (a) named.push(a);
+    }
+    await this.desk.keyCurrent(me.id);
+    const at = await chainFor(c.id, c.places, s.via);
+    const post = await signAsMember(c.id, me, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(p.title), public: true, refs: named.map((a) => referenceTo(a)) });
+    this.store.saveIdentity(me);
+    if (!(await publishAt([post.act], places, s.via)).length) throw new Error('No relay took the post announcing it. Try again.');
+    p.post = post.id;
+    p.state = 'counts';
+    this.save(b);
+    return [
+      { text: `“${p.title}” is published by the collective ${short(c.id)}: every party signed it. A post announces it.`, tone: 'ok' },
+      { text: `Its split service, ${this.asking.names()(p.service)}, puts its price tag on it in its own app (${this.said(p.price)}): a buyer can pay once it has.` },
+    ];
+  }
+
+  /** A publication as the core judges it, from the acts of its drafter and every party found where Edubba looks (a collective's from its own chain too). */
   private async judgePublication(p: PublicationHere): Promise<{ counts: boolean; problems: string[]; unsigned: string[] }> {
     const s = this.settings();
     const places = list([...s.relays, ...s.homes]);
-    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+    const v = p.collective ? (await collectiveVerifier(p.collective, await collectivePlaces(p.collective, places, s.via), s.via, [p.latest])).v : new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
     const held: Uint8Array[] = [];
     for (const x of list([p.by, p.service, ...p.partners.map((y) => y.identity), ...p.holders.map(([h]) => h)])) {
       await lookUp(x, places, s.via, v).catch(() => null);
@@ -1223,6 +1297,7 @@ export class Publishing {
       const p = b.publications.find((x) => x.id === a.publication && x.by === acting);
       if (!p) blocking.push('That publication is not one drafted here.');
       else if (p.state === 'ended' || p.state === 'ending') blocking.push('Its ending is signed already.');
+      else if (p.collective) blocking.push('A collective’s publication is ended by a version made for the collective: not offered here yet. To stop sales at once, its split service withdraws its price tag.');
       let made: { type: number; payload: Uint8Array } | null = null;
       if (p) {
         try {
@@ -1604,6 +1679,15 @@ export class Publishing {
         continue;
       }
       try {
+        if (bake.collective) {
+          // A collective's: a key delivery of the collective's, by this member with their own key, sealed to the buyer and every member (rule 57).
+          await this.desk.keyCurrent(me.id);
+          bake.delivered[sale.buyer] = await this.collectiveKeyDelivery(me, await this.collectiveHere(me, bake.as), bake.bake, bake.key!, [sale.buyer], []);
+          this.store.saveIdentity(me);
+          pub.delivered[sale.buyer] = bake.delivered[sale.buyer];
+          lines.push({ text: `The key of the collective’s “${bake.title}” was delivered to ${short(sale.buyer)}, as the collective, sealed to them and to every member: a sale its publication’s split service receipted.`, tone: 'ok' });
+          continue;
+        }
         bake.delivered[sale.buyer] = await deliverKey(me, sale.buyer, bake.bake, bake.key!, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
         pub.delivered[sale.buyer] = bake.delivered[sale.buyer];
         lines.push({ text: `The key of “${bake.title}” was delivered to ${short(sale.buyer)}, sealed to them: a sale its publication’s split service receipted.`, tone: 'ok' });
@@ -1621,7 +1705,7 @@ export class Publishing {
       const lines: Line[] = (await this.gatherNow().catch((e) => ({ lines: [{ text: `The signatures could not be read: ${err(e)}`, tone: 'warn' as const }] }))).lines.filter((l) => l.tone);
       const b = this.book();
       const s = this.settings();
-      for (const id of list(b.bakes.filter((w) => !w.collective && w.key).map((w) => w.as))) {
+      for (const id of list(b.bakes.filter((w) => w.key).map((w) => w.member))) {
         if (!this.store.holds(id)) continue;
         const me = this.me(id);
         const sold: SoldWorks = {};
@@ -1633,6 +1717,7 @@ export class Publishing {
         }
         for (const w of b.bakes) if (sold[w.bake]) w.delivered = sold[w.bake].delivered;
         if (b.publications.some((p) => p.by === id || p.holders.some(([h]) => h === id))) {
+          // A collective's bakes and publications are kept under the member who acts.
           try {
             lines.push(...(await this.deliverTold(me, b)));
           } catch (e) {
