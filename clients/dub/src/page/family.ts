@@ -528,7 +528,8 @@ export function post(p: Item): string {
     p.sealed && p.sealed.seller !== p.who.id ? '' : p.sealed && !p.who.me ? `<button data-action="repost">Repost</button>` : '',
     p.who.me ? '' : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
     p.who.me ? '' : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
-    ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
+    // A bake is never withdrawn (Envelopes rule 24): what can end is a price tag or a publication, from Dub's act menu.
+    ...(p.sealed?.ends ? [`<button data-action="withdraw" data-publication="${e(p.sealed.bake)}">${p.sealed.ends === 'tag' ? 'Withdraw the price tag' : 'Withdraw the publication'}</button>`] : []),
   ].join('');
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
 <div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}

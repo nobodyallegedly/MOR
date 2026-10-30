@@ -307,15 +307,15 @@ export interface BuiltIn {
  * computes from the current drafts' text (MICS v30, the freeze test suite
  * v30); `test/cards.test.ts` computes them again from the files.
  */
-export const MICS_HASH = '647c5fcef155bde9878c5378dc57733006e2938d3b42b2cef2c9356eb9634439';
-export const SUITE_HASH = 'e0599d7d3588998ac4dcac0b159f7165ad101eeb81d605236db448a81fdc014b';
+export const MICS_HASH = '30add49a7b90d0ff98971b136706ee399e41941481998363bc54f2ad3bf6f646';
+export const SUITE_HASH = '4485bf65b1307db72ef37f2e33dfd60e8a3fd84c14ccf5216dfef8614be382d5';
 
 export const BUILT_IN: BuiltIn[] = [
   { hash: MIRS.identity, title: 'MIR: Identity', kind: 'MIR', summary: 'Who signs: identities, their keys, homes, rotations, receipts and succession.' },
   { hash: MIRS.text, title: 'MIR: Text', kind: 'MIR', summary: 'What a text act is, and canonical text: the words every act is written in.' },
-  { hash: MIRS.envelopes, title: 'MIR: Envelopes', kind: 'MIR', summary: 'The shape of every act: public and private acts, sequences, references, media, relays.' },
+  { hash: MIRS.envelopes, title: 'MIR: Envelopes', kind: 'MIR', summary: 'The shape of every act: public and private acts, sequences, references, bakes and vows, relays.' },
   { hash: MIRS.money, title: 'MIR: Money', kind: 'MIR', summary: 'Payments, claims and receipts, rails and units: how a payment is proven.' },
-  { hash: MIRS.agreements, title: 'MIR: Agreements', kind: 'MIR', summary: 'Agreements, collectives, vows and offers, splits, keepers and judgments.' },
+  { hash: MIRS.agreements, title: 'MIR: Agreements', kind: 'MIR', summary: 'Agreements, ownership, publications, collectives, splits, keepers and judgments.' },
   { hash: MIRS.development, title: 'MIR: Development', kind: 'MIR', summary: 'cMIPs and Modules: named by hash, frozen at publication, adopted by choice.' },
   { hash: MICS_HASH, title: 'The MICS: MOR Inscribed Core Spec', kind: 'MICS document', summary: 'The core in one document: what MOR is, its layers and the six MIRs it names.' },
   { hash: SUITE_HASH, title: 'MOR Freeze Test Suite', kind: 'test suite', summary: 'What must be tested before the freeze: every step, and what it shows.' },

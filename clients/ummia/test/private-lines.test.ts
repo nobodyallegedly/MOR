@@ -4,7 +4,8 @@
 // each app shows names an act the homes hold, and the identity's other apps
 // can follow the line. One identity with lines from Dub, Edubba, Damgar and
 // Ummia, private acts on each; a change of keys in Kišib places every line,
-// and the member key for a collective is kept. Then, with one locked act
+// and the member's own new key acts for the collective (round 8: there are
+// no member keys, rule 58; before, the member key for a collective was kept). Then, with one locked act
 // removed from the homes on purpose, Kišib's review says so in red, and
 // nothing is signed until it is read.
 //
@@ -29,9 +30,13 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 type Line = { acts: number; latest: string | null; summary: string | null; atHomes: boolean | null; missing: number; hidden: number | null; card: string | null };
@@ -53,7 +58,7 @@ async function placed(line: Line, app: string, what: string): Promise<string> {
   return line.card!;
 }
 
-test('every app leaves each private act at the homes, its card names it, and a change of keys in Kišib places every line, the member key kept', async () => {
+test('every app leaves each private act at the homes, its card names it, and a change of keys in Kišib places every line, the member’s own new key acting for the collective', async () => {
   const H = homes.map((h) => h.base);
   const R = [relay.base];
   const A = await dub(H, R);
@@ -73,28 +78,28 @@ test('every app leaves each private act at the homes, its card names it, and a c
   await placed(f, 'Dub', 'the follow list, sealed');
 
   // Edubba: first a payment prepared for Damgar (sealed to oneself), then a real collective founded with iPa and iPh:
-  // its terms and A's signature, public, and A's member key, sealed to A, and the invitations and the founding's word,
+  // its terms and A's signature, public, and the invitations and the founding's word (no member key now: rule 58),
   // sealed to them. The founding comes after a private act on purpose (F376): on one line, a public act behind a private
   // act was unknown to every other reader after a change of keys; on Edubba's public line, it stays valid.
   const edubbaLine = async () => (await e.c.ask<{ identities: { id: string; line: Line }[] }>('state')).identities.find((i) => i.id === A.id)!.line;
   const unit = (await e.c.ask<{ hash: string }[]>('money units'))[0].hash;
   await e.c.ask('money pay', { identity: A.id, to: iPa.id, value: '5', unit, whatFor: 'clay' });
   await placed(await edubbaLine(), 'Edubba', 'a payment prepared for Damgar');
+  // The layers renumbered (Text 1, Envelopes 2, Money 3, Agreements 4, Development 5): Money is a layer row and a finer area of obligations with its cap.
+  const all = [A.id, iPa.id, iPh.id];
   const grid = {
-    members: [A.id, iPa.id, iPh.id],
-    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
+    members: all,
+    constitution: { holders: all, number: 3 },
     chainKey: 2,
     absence: 2,
-    areas: [
-      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-      { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
-      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
-    ],
+    layers: { 1: { holders: all, number: 1 }, 2: { holders: all, number: 1 }, 3: { holders: [A.id, iPa.id], number: 2 }, 4: { holders: all, number: 3 }, 5: { holders: [iPh.id], number: 1 } },
+    areas: [{ name: 'Money', layer: 3, kinds: [`${MIRS.money}:1`], holders: [A.id, iPa.id], number: 1, cap: 10_000 }],
     clone: 2,
+    shares: { [A.id]: 34, [iPa.id]: 33, [iPh.id]: 33 },
   };
   const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
   const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
-  await placed(await edubbaLine(), 'Edubba', 'its member key and the invitations');
+  await placed(await edubbaLine(), 'Edubba', 'the invitations');
   for (const m of [iPa, iPh]) {
     await m.c.ask('signing', { on: true });
     const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
@@ -159,7 +164,8 @@ test('every app leaves each private act at the homes, its card names it, and a c
   const publicActs = seen.map((x) => describeAct(x) as { id: string; public: boolean; signer?: string }).filter((d) => d.public && d.signer === A.id);
   assert.ok(publicActs.some((d) => d.id === terms), 'the founding’s terms are among A’s public acts');
   for (const d of publicActs) assert.equal(reader.verifier.status(d.id), 'valid', `${d.id}: valid for every reader after A’s change of keys`);
-  // Damgar takes the new words; the member key lived on Edubba's line, kept: Damgar signs for the collective with it.
+  // Damgar takes the new words: it signs for the collective with A's own new key, naming the collective (rule 58: no member keys;
+  // the premise "the member key kept" is replaced by this one: the member's own key, changed in Kišib, acts for the collective again).
   await g.c.ask('renew', { words: fresh.signing.join(' ') });
   const p3 = await g.c.ask<any>('collective promise', { ...big, digest: s2.digest });
   assert.ok(p3.lines.some((l: any) => /Signed for the collective with your own key/.test(l.text)), JSON.stringify(p3.lines));

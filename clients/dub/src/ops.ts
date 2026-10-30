@@ -206,7 +206,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'list':
       return dub.listOption({ published: a.published === true, shown: text(a.shown) });
     case 'withdraw':
-      return dub.withdraw(text(a.publication));
+      // `bake`; `publication`, its name from before.
+      return dub.withdraw(text(a.bake) || text(a.publication));
     case 'signing':
       return dub.setSigning(a.on === true);
     case 'proposals':
@@ -296,7 +297,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'damgar answer':
       return dub.damgarAnswer(text(a.request));
     case 'pay ways':
-      return dub.payWays({ kind: payKind(a.kind), post: text(a.post) || undefined, signer: text(a.signer) || undefined });
+      return dub.payWays({ kind: payKind(a.kind), post: text(a.post) || undefined, signer: text(a.signer) || undefined, bake: text(a.bake) || undefined, seller: text(a.seller) || undefined });
     case 'pay':
       return dub.pay({
         how: a.how === 'lane' || a.how === 'damgar' || a.how === 'hand' ? a.how : (() => { throw new Error('Choose a way to pay.'); })(),

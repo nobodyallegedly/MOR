@@ -877,7 +877,7 @@ export class Actions {
   private async keptLines(_c: TestCollective, leaveOut: string[] = [], cardsText = '', _blocking: string[] = []): Promise<{ section: Section; lines: KeptLines; digest: string }> {
     const lines: Line[] = [
       {
-        text: "The rotation installs no signing key and keeps no tip: a collective signs no act of its own (Identity rotation check 4; Agreements rule 56). Its history is what the acts made for it cite on its chain, each in its member's own sequence, so no act made for it from another device becomes void (Agreements rule 58).",
+        text: "The rotation installs no signing key and keeps no tip: a collective signs no act of its own (Identity rotation check 4; Agreements rule 56). Its history is what the acts made for it cite on its chain, each in its member's own sequence, so no act made for it from another device is dropped by a rotation (Agreements rule 58).",
       },
     ];
     if (leaveOut.length || cardsText.trim()) {
@@ -2192,7 +2192,7 @@ export class Actions {
       summary: [
         "An ordinary change: it changes only the Releases area's own words, an operational matter in that area (Agreements rules 44a, 44b).",
         `The clone is marked with the Releases area's power and signed by ${list(signers.map(names))}: enough of the area's holders (${anyOf(k, voices, names)}) (Agreements rules 44c, 45a).`,
-        "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective: no rotation, no new keys (Agreements rules 37c, 60; Q8).",
+        "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective (Agreements rule 60): no rotation, no new keys (Agreements rule 37c, Q8).",
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...(await this.unheard(c))] },
@@ -2305,7 +2305,7 @@ export class Actions {
         `Today any ${old} of the other members together decide whether a member is absent; after the change, any ${others}. The outcome stays the same: the member loses their voice, never what they own (F105).`,
         `The clone is marked with the judicial tier's power and signed by ${list(signers.map(names))}: every member whose voice remains (Agreements rules 44c, 45a, 46a).`,
         'The judicial tier changes only with every member\'s signature, so there is one version for everyone: the new clause judges each member (Agreements draft 10, F121).',
-        "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective: no rotation, no new keys (Agreements rules 37c, 60; Q8).",
+        "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective (Agreements rule 60): no rotation, no new keys (Agreements rule 37c, Q8).",
       ],
       sections: [
         { heading: 'What changes', lines: [...changes, ...notes, ...(await this.unheard(c))] },
@@ -3005,11 +3005,20 @@ export class Actions {
     const hints = isCol ? this.hintsOf(this.store.collective(a.owner)) : this.store.settings().relays;
     let previous: string | undefined;
     let version = 1;
-    for (const x of await allBy(a.owner, hints, this.via)) {
+    // A collective's pointer is made by its members, each with their own key, naming it (Agreements
+    // rule 58): its versions are read from their acts, by the payee they name.
+    const col0 = isCol ? this.store.collective(a.owner) : null;
+    const signers = col0 ? [...new Set([...col0.f.members, ...departedOf(col0).map((d) => d.member), ...(col0.f.governance.departed ?? [])])] : [a.owner];
+    const found: Uint8Array[] = [];
+    for (const who of signers) found.push(...(await allBy(who, hints, this.via)));
+    for (const x of found) {
       try {
         const d = describeAct(x) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
         if (d.spec !== MIRS.money || d.type !== MONEY_TYPES.pointer || !d.payload) continue;
-        const v = (cborDecode(d.payload) as Map<number, unknown>).get(1) as number;
+        const pm = cborDecode(d.payload) as Map<number, unknown>;
+        const payee = pm.get(0);
+        if (!(payee instanceof Uint8Array) || hex(payee) !== a.owner) continue;
+        const v = pm.get(1) as number;
         if (v >= version) {
           version = v + 1;
           previous = d.id;

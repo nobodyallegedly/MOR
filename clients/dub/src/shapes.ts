@@ -139,7 +139,7 @@ export interface Item {
     problem: string | null;
     through: { publication: string; version: string; words: string } | null;
     outside: string | null;
-    owners: { post: string; signer: string; price: string; words: string } | null;
+    owners: { post: string; signer: string; bake: string; price: string; words: string } | null;
     ends: 'tag' | 'publication' | null;
     work: string;
   } | null;

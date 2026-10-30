@@ -26,10 +26,13 @@ before(async () => {
   relay = await start('relay');
 });
 
-// Every server and app this file starts is stopped whatever the outcome.
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [aliceHome, bobHome, relay]) await h?.stop().catch(() => undefined);
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [aliceHome, bobHome, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 test('F400: Rely keeps a copy of the act it names, kept in Damgar and left at the relier’s own homes; an act it cannot find is refused, nothing signed', async () => {

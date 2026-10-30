@@ -265,6 +265,7 @@ export interface Book {
   /** Payments to a deal between separate people this identity is a party of, receipted by its split service in the deal's payee's name and sealed to every party (this round), by receipt. */
   shared?: Record<string, { payer: string; payee: string; amount: Amount; fulfils: string; purchase: boolean; at: number }>;
   /** The splits a split service sealed to this identity (Agreements type 8), by act: the agreement and this identity's payouts. */
+  /** `agreement`: the ownership agreement its owners' line names (payout key 2), else the publication (split field 3). */
   splits?: Record<string, { service: string; agreement: string; receipt: string; mine: { amount: number; role: string | null }[]; unit: string | null; at: number }>;
   /** Promises signed here for a collective with this member's own key, naming the collective (rule 58), by act. */
   collectiveActs?: Record<string, { collective: string; to: string; amount: Amount; whatFor: string; asked: string[]; at: number }>;
@@ -1392,7 +1393,9 @@ export class Damgar {
       const payouts = (m.get(1) as Map<number, unknown>[] | undefined) ?? [];
       const mine = payouts.filter((x) => x.get(0) instanceof Uint8Array && hex(x.get(0) as Uint8Array) === me.id).map((x) => ({ amount: Number(x.get(1)), role: typeof x.get(3) === 'string' ? (x.get(3) as string) : null }));
       const receipt = m.get(0);
-      const agreement = m.get(3);
+      // Field 3 names the publication it divides under (round 8); a payout on the owners' line names the ownership agreement (key 2): the agreement shown is that one where it is named, else the publication.
+      const owners = payouts.find((x) => x.get(0) instanceof Uint8Array && hex(x.get(0) as Uint8Array) === me.id && x.get(2) instanceof Uint8Array)?.get(2);
+      const agreement = owners instanceof Uint8Array ? owners : m.get(3);
       if (mine.length && receipt instanceof Uint8Array && agreement instanceof Uint8Array) {
         const rc = book.acts[hex(receipt)] ? this.moneyOf(book, hex(receipt)) : null;
         (book.splits ??= {})[d.id] = { service: signer, agreement: hex(agreement), receipt: hex(receipt), mine, unit: rc?.amount?.unit ?? null, at: t };

@@ -21,9 +21,13 @@ before(async () => {
   relays = [await start('relay'), await start('relay')];
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, ...relays]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, ...relays]) await h?.stop().catch(() => undefined);
+  }
 });
 
 /** A deal's terms (Agreements type 0): its parties, its words, the extensions it names. */
@@ -52,7 +56,8 @@ test('extensions public agreements name, an xtype’s use, a sealed agreement no
   const [a, b] = relays.map((r) => r.base);
   const d = await developer(H, [a], { track: [a, b] });
   const c = d.ummia.c;
-  const rv = await c.ask<Review>('spec prepare', { kind: 0, text: '# cMIP: Test bounties, draft 1\n\nBounties as acts.', types: '0 bounty bounty = tstr', layers: '3' });
+  // The layers are renumbered (MICS, "Structure"; round 8): Agreements is layer 4 now (Text 1, Envelopes 2, Money 3), so a cMIP acting on Agreements names 4.
+  const rv = await c.ask<Review>('spec prepare', { kind: 0, text: '# cMIP: Test bounties, draft 1\n\nBounties as acts.', types: '0 bounty bounty = tstr', layers: '4' });
   await c.ask<Done>('confirm', { plan: rv.plan, digest: rv.digest });
   const x = rv.hash!;
 

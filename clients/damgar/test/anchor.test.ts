@@ -28,9 +28,13 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 test('an anchor of a collective’s act: asked in Edubba, paid from Damgar, anchored by the service, checked in Edubba', async () => {

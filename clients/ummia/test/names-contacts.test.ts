@@ -35,10 +35,14 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  try {
+    await browser?.close().catch(() => undefined);
+    await closeAll();
+  } finally {
+    for (const r of [...(homes ?? []), relay]) await r?.stop().catch(() => undefined);
+  }
 });
 
 async function open(url: string): Promise<Page> {

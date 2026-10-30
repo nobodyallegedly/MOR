@@ -421,7 +421,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'identity renew':
         return after.renewIdentity(text(a.identity), text(a.words));
       case 'real collective renew':
-        return after.renewCollective(text(a.collective), text(a.words));
+        return after.renewCollective(text(a.collective));
       case 'real lists':
         // Read again where asked: the one list as every app sees it, its nicknames too (H100).
         known.forget();

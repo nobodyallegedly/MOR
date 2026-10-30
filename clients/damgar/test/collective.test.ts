@@ -17,11 +17,10 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apps, closeAll, damgar, dub, edubba, everything, kishib, refused, start, type Relay } from './world.ts';
+import { apps, closeAll, damgar, dub, edubba, everything, kishib, moneyGrid, refused, start, type Relay } from './world.ts';
 import { changeKeys } from '../../kishib/test/world.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
-import { MIRS } from '../../genesis/src/core.ts';
 import { TestNode } from './node.ts';
 
 let homes: Relay[];
@@ -32,9 +31,13 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 test('a member acts for the collective from Damgar with their own key: within the Money area’s cap alone, above it with a second key', async () => {
@@ -46,18 +49,7 @@ test('a member acts for the collective from Damgar with their own key: within th
   const iPa = await dub(H, R);
   const iPh = await dub(H, R);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
-  const all = [A.id, iPa.id, iPh.id];
-  const grid = {
-    members: all,
-    constitution: { holders: all, number: 3 },
-    chainKey: 2,
-    absence: 2,
-    layers: { 1: { holders: all, number: 1 }, 2: { holders: all, number: 1 }, 3: { holders: [A.id, iPa.id], number: 2 }, 4: { holders: all, number: 3 }, 5: { holders: [iPh.id], number: 1 } },
-    // The finer Money area: obligations, A and iPa, one of them alone up to 10,000 an act (the grant limits cMIP).
-    areas: [{ name: 'Money', layer: 3, kinds: [`${MIRS.money}:1`], holders: [A.id, iPa.id], number: 1, cap: 10_000 }],
-    clone: 2,
-    shares: { [A.id]: 34, [iPa.id]: 33, [iPh.id]: 33 },
-  };
+  const grid = moneyGrid(A.id, iPa.id, iPh.id);
   const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
   const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   for (const m of [iPa, iPh]) {

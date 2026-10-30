@@ -27,8 +27,9 @@ import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from 
 import { TestIdentity, TEST_LABEL, freshLines, ownIds, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { Judge, filmBytes, leaveInInbox, post, readPost, soundBytes, textPayload, withdraw, type ShownFilm, type ShownPicture, type ShownPost, type ShownRecording } from '../../barebone/src/post.ts';
-import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from '../../barebone/src/specs.ts';
+import { Judge, filmBytes, leaveInInbox, post, readPost, soundBytes, textPayload, type ShownFilm, type ShownPicture, type ShownPost, type ShownRecording } from '../../barebone/src/post.ts';
+import { BAKE, POST_SPECS, PRICE_TAG, RETIRED_WITHDRAWAL, TEXT_ACT } from '../../barebone/src/specs.ts';
+import { PUBLICATION_ACT } from '../../barebone/src/sealed.ts';
 import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
@@ -37,6 +38,7 @@ import { CARRIED_WORDS as SOUND_CARRIED_WORDS } from '../../../modules/audio/src
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, idWhere, readActId, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { sharedLine } from '../../grants/src/deal.ts';
+import { throughLine } from './money.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
@@ -1179,15 +1181,17 @@ export class Dub {
       it.when = fp.time ? byClock(fp.time) : null;
       it.unstamped = !!dubsarClock() && !fp.time;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
-      // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
-      // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
+      // A sealed work: its bake has no key; read with the price tag that counts (on a bare bake, its uploader's; under a publication, its side's), and opened where its key is here.
+      // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked bake, never played as a public one.
       if (fp.post.refs.some((r) => (r.kind === 'picture' && !r.bytes) || ((r.kind === 'film' || r.kind === 'recording') && /is locked: its key is not public/.test(r.problem ?? '')))) {
-        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+        const where = [...hints, ...this.inboxPlaces(p)];
+        const postAct = await followRef([fp.id, fp.signer], where, s.via).then((x) => x.act).catch(() => null);
+        const sealed = await this.money.read(me, where, s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.bake, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner })), postAct).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
-          it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
-          it.films = (it.films ?? []).filter((x) => x.publication !== sealed.publication);
-          it.recordings = (it.recordings ?? []).filter((x) => x.publication !== sealed.publication);
+          it.pictures = it.pictures.filter((x) => x.bake !== sealed.bake);
+          it.films = (it.films ?? []).filter((x) => x.bake !== sealed.bake);
+          it.recordings = (it.recordings ?? []).filter((x) => x.bake !== sealed.bake);
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
@@ -1198,6 +1202,8 @@ export class Dub {
       }
       items.push(it);
     }
+    // A work met again, uploaded by someone none of its owners: said once the feed is read, whichever post came first (Agreements rule 14).
+    for (const it of items) if (it.sealed && !it.sealed.outside) this.money.outsideOf(it.sealed, it.sealed.seller, me.id);
     // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
     for (const it of items) {
       // Its feed's verifier holds no grant: unknown there (F298), or scoped; only an act bound to a grant is read so.
@@ -2485,11 +2491,21 @@ export class Dub {
    * hand, the draft shown to copy for Damgar. A purchase names its offer,
    * which a money message cannot carry yet: only the lane buys.
    */
-  payWays(a: { kind: 'tip' | 'buy' | 'vow' | 'pay'; post?: string; signer?: string }): Promise<PayWays> {
+  payWays(a: { kind: 'tip' | 'buy' | 'vow' | 'pay'; post?: string; signer?: string; bake?: string; seller?: string }): Promise<PayWays> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
-      // Under a deal between separate people, said in one line before paying (decided: "This work is shared: X, Y, Z. The split service answers for it.").
-      const deal = a.post && a.signer && a.kind !== 'pay' ? await this.money.dealOf(readId(a.post), readId(a.signer), [...hints, ...this.inboxPlaces(p)], s.via) : null;
+      const names = (x: string) => this.nameOf(x, me.id, p);
+      const where = [...hints, ...this.inboxPlaces(p)];
+      // Said in one line before paying: a tip through the publication where the work was found (its partners, then the owners);
+      // a purchase, what its price tag pays and, plainly, an uploader who is none of the work's owners (Agreements rule 14).
+      let shared: string | null = null;
+      if (a.kind === 'buy' && a.bake && a.seller) {
+        const x = await this.money.purchaseOf(me, where, s.via, { publication: readId(a.bake), seller: readId(a.seller), post: a.post ? readId(a.post) : null }).catch(() => null);
+        shared = x?.said.length ? x.said.join(' ') : null;
+      } else if (a.post && a.signer && a.kind !== 'pay') {
+        const deal = await this.money.dealOf(readId(a.post), readId(a.signer), where, s.via);
+        shared = deal ? (deal.publication && deal.service ? throughLine(deal, names) : `${sharedLine(deal, names)} No publication of it was found here: a tip goes to whoever posted it.`) : null;
+      }
       const lanes = await this.money.lanes(me, s, hints).catch(() => []);
       const lane = lanes.find((l) => l.state === 'in force');
       const purchase = a.kind === 'buy' || a.kind === 'vow';
@@ -2516,7 +2532,7 @@ export class Dub {
           : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null, total: null, left: null },
         damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null, wakes: !!this.opts.damgar },
         hand: purchase ? { open: false, why: noDraft } : { open: true, why: null },
-        shared: deal ? sharedLine(deal, (x) => this.nameOf(x, me.id, p)) : null,
+        shared,
       };
     });
   }
@@ -2590,9 +2606,9 @@ export class Dub {
       if (other === me.id) throw new Error('That is this identity itself. Nothing was prepared.');
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was prepared.');
       const amount = { unit: a.unit, value: readValue(a.value) };
-      // A tip to a work shared under a deal: a draft copied by hand carries no post, so it could not follow the deal (the money messages cMIP, draft 5, 8): refused, saying so.
+      // A tip to a work found through a publication: a draft copied by hand carries no post, so it could not go through the publication (the money messages cMIP, draft 5, 8): refused, saying so.
       const deal = a.post ? await this.money.dealOf(readId(a.post), other, [...hints, ...this.inboxPlaces(p)], s.via) : null;
-      if (deal?.payee) throw new Error('A tip to a shared work is paid under Dub’s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go to the deal. Nothing was prepared.');
+      if (deal?.service) throw new Error('A tip to a work found through a publication is paid under Dub’s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go through the publication. Nothing was prepared.');
       const d: Draft = { what: 'pay', other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: 'Dub', anchor: null };
       return {
         lines: [{ text: 'Shown, not signed and not sent: copy it into Damgar, which reads it to you and signs it there.' }],
@@ -2633,9 +2649,9 @@ export class Dub {
         const d = describeAct((await followRef([readId(a.post), other], places, s.via)).act) as Described;
         if (d.signer !== other) throw new Error('The post tipped is not signed by the identity tipped. Nothing was prepared.');
         refs = [[d.id, other]];
-        // A post under a deal between separate people: the tip pays the deal's own payee; Damgar reads the deal from the post the draft names, and the payment follows it (the money messages cMIP, draft 5, 8).
+        // A work found through a publication: the tip goes through it, to its split service; Damgar reads the publication from the post the draft names (the money messages cMIP, draft 5, 8).
         const deal = a.what === 'pay' ? await this.money.dealOf(d.id, other, places, s.via) : null;
-        if (deal?.payee) other = deal.payee;
+        if (deal?.service) other = deal.service;
       }
       await this.current(me);
       const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: 'Dub', anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
@@ -3037,24 +3053,38 @@ export class Dub {
 
   // ------------------------------------------------------------ pictures
 
-  /** Withdraw a picture this identity published (Envelopes, "Withdrawal"): readers stop showing it; the post stands. */
-  withdraw(publication: string): Promise<{ id: string }> {
+  /**
+   * Withdraw what sells a work this identity uploaded, named by what
+   * actually ends (decided 28 October 2026, one withdrawal per layer; by
+   * Nobody, allegedly, 30 October: "Yes, or even withdraw publication could
+   * also work"): its price tag on a bare bake (a later version with no
+   * price, Money rule 18), or its publication (a later version selling
+   * nothing, Agreements). A bake itself is never withdrawn: where neither
+   * exists, refused, saying there is nothing to withdraw at protocol level
+   * (a profile's picture is changed by a later profile naming another).
+   * `publication`: the bake's id, its name from before.
+   */
+  withdraw(a: string | { bake?: string; publication?: string }): Promise<{ id: string; ended: 'tag' | 'publication'; lines: Line[] }> {
     return this.serial(async () => {
-      const { me, s } = await this.ctx();
-      if (!/^[0-9a-f]{64}$/.test(publication)) throw new Error('not a publication id');
+      const { me, s, hints } = await this.ctx();
+      const bake = typeof a === 'string' ? a : (a.bake ?? a.publication ?? '');
+      if (!/^[0-9a-f]{64}$/.test(bake)) throw new Error('not a bake’s id');
       let act: Uint8Array | null = null;
-      for (const r of s.relays) {
+      for (const r of [...s.relays, ...hints]) {
         try {
-          act = await relayAt(r, s.via).getAct(publication);
+          act = await relayAt(r, s.via).getAct(bake);
           if (act) break;
         } catch {
           // the next
         }
       }
-      if (!act) throw new Error('That picture was not found at the relays.');
-      if ((describeAct(act) as Described).signer !== me.id) throw new Error('That picture was published by another identity: only its signer can withdraw it.');
+      if (!act) throw new Error('That upload was not found at the relays.');
+      const d = describeAct(act) as Described;
+      if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE) throw new Error('That is not a bake (an upload).');
+      if (d.signer !== me.id) throw new Error('That was uploaded by another identity: only its uploader can withdraw what sells it, and a bake itself is never withdrawn. Nothing was signed.');
       await this.current(me);
-      return this.signed(me, () => withdraw(me, publication, s.relays));
+      const r = await this.signed(me, () => this.money.end(me, s, hints, bake));
+      return { id: r.id, ended: r.ended, lines: r.lines.map((text, i) => ({ text, tone: i === 0 ? ('ok' as const) : undefined })) };
     });
   }
 }
@@ -3086,14 +3116,14 @@ function whatAct(d: Described): string {
     return 'An Identity act';
   }
   if (d.spec === SPECS.envelopes) {
-    if (d.type === PUBLICATION) return 'A publication (a picture or a file)';
-    if (d.type === WITHDRAWAL) return 'A publication withdrawn';
+    if (d.type === BAKE) return 'An upload (a bake: a picture or a file)';
+    if (d.type === RETIRED_WITHDRAWAL) return 'A withdrawal, retired: invalid, it withdraws nothing';
     if (d.type === 4) return 'Its encryption key';
     return 'An Envelopes act';
   }
   if (d.spec === POST_SPECS.text) return 'A text act';
-  if (d.spec === MIRS.agreements) return 'An Agreements act (an agreement, a signature, or talk about one)';
-  if (d.spec === MIRS.money) return 'A Money act';
+  if (d.spec === MIRS.agreements) return d.type === PUBLICATION_ACT ? 'A publication (what is sold, on which terms, who is paid)' : 'An Agreements act (an agreement, a signature, or talk about one)';
+  if (d.spec === MIRS.money) return d.type === PRICE_TAG ? 'A price tag' : 'A Money act';
   if (d.spec === MIRS.development) return 'A Development act';
   if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? 'A published follow list' : 'A people act';
   return 'An act of another specification';
