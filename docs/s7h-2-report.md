@@ -89,7 +89,20 @@
 
 The binding changes are listed in `wasm/README.md`, old shape first.
 
-CLIENTS_PLACEHOLDER
+**Client tests failing because of the core** (run on 30 October 2026 against this core, its WebAssembly built locally and not released). Pass: grants, longform, reports, anchoring-service, split-service. Each failing app, with its reasons:
+
+- **The collective's founding terms the clients make carry the old key grammar** (keys 0 and 2, a signing key for the collective; Agreements rule 59: a collective has no signing key; Identity rule 1). The core refuses them, and every test that founds a collective stops there:
+  - collective: 22 tests, among them the author's walk from the page alone, records and their warning, the judicial change, absence under the collective's rule and of the signing key's holder, money and endings, Identity rule 35, the founding read from its bytes, the release area's words, a clone's mark in words, hidden direction controls, refusals by format, Agreements' objections by code, a clone's changes by tier, rule 49 before signing an abandonment clause, owners choosing members, and F187 (1, 2, 3, 4, 8) and F189 (1);
+  - connector: all 13 tests (its shared fixture founds a collective through `clients/repo`'s `termsPayload`);
+  - desk: 7 (collectives: what you may do; the cast's grid into founding terms; members ticked for the constitution; H80 after a change of keys; keepers; an identity used through Kišib; H14 and H15 for collectives), and 2 that follow from them (the vow published from Edubba, its sale read from the founding's line; three people on three devices, which no longer reaches "Propose to found");
+  - repo: 13 (found, release, sign and verify from the command line; founding by negotiation; a collective founded; a release counting at two signatures; a checkout that differs; a member leaving and another joining; the next release; an ordinary change; the MOR repository published; a release naming its specifications; a key grammar one lost holder would freeze; shares checking alone; Identity rule 35, a member change keeping another device's line);
+  - site: 1 (a collective's site refused until Agreements draft 7 is approved).
+- **Terms fields 8, 14, 28 and 29 are withdrawn** (a publication carries the split plan, split service, fees and backups): collective, a deal's backup split services (field 29); desk, the judged referral (a lone seller's deal carrying its split plan); repo, a deal listing its payees' grants (field 14).
+- **The anchoring cMIP still makes and reads a standing offer**, which the core no longer reads (`anchoringOffer` and `anchoringReadOffer` refuse; the cMIPs are left as they are): damgar 3 (the act menu's anchor; an anchor of a collective's act; a missed deadline); ummia 1 (a release anchored on Bitcoin).
+- **A collective's rotation now carries no signing key and keeps no tip, and there are no member keys** (Identity rotation check 4; Agreements rule 58): Kišib refuses to sign what the apps show, "What was shown cannot be signed": kishib 3 (a collective rotation from two of three paper shares; the hour, F337; in the same room); desk 1 (H33, Edubba acting as a member, its member key); ummia 1 (every app leaves each private act at the homes, "the member key kept").
+- **A text act may carry one object** (Text rule 14: `[grantor, grant]` or `[collective, decision]`): genesis 1 (F295, F296: a text act naming a chain in objects answers unknown where it expected invalid, the chain named not held).
+
+Already failing at S7h, for the reasons its report gives (the bake, the retired withdrawal, the layers renumbered, the price tag): barebone 2, collective 1, damgar 10, desk 42, dub 5, kishib 7, kit 16, manage 2, reader 6, site 65, testwallet 4, ummia 10.
 
 ## Questions
 
