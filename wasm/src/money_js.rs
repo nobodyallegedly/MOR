@@ -1312,23 +1312,175 @@ impl Verifier {
 
 use mor_anchoring::service::{self as anchor_svc};
 
-/// A pooled anchoring service's standing offer (the anchoring cMIP, item 9;
-/// an Agreements standing offer, type 6, a lone seller's, F225): its tiers,
-/// fixed prices in the unit of `network`, on the Bitcoin clock of that
-/// network. `{ type, payload }`, to sign under the Agreements MIR's spec.
-#[wasm_bindgen(js_name = anchoringOffer)]
-pub fn anchoring_offer(network: u32, tiers: JsValue, words: Option<String>) -> R<JsValue> {
-    let _ = (network, tiers, words);
-    Err(err("the anchoring cMIP still makes a standing offer, which the core no longer reads: a publication (Agreements type 6) with a price tag replaces it, once the cMIP moves"))
+#[derive(Deserialize, Serialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+struct TierIn {
+    price: u64,
+    blocks: u64,
 }
 
-/// A standing offer act read as this cMIP's (the anchoring cMIP, item 9;
-/// `service::Offer::read`): its payee, unit, the Bitcoin clock's network
-/// and its tiers. Throws where it is no anchoring offer, saying why.
+/// The anchoring cMIP's terms on the Bitcoin clock of `network`, its tiers
+/// at fixed prices in that network's unit.
+fn anchor_terms(network: u32, tiers: JsValue) -> R<(anchor_svc::Terms, Hash)> {
+    let n = Network::from_number(network as u64).ok_or_else(|| err("networks are 0 to 3"))?;
+    let ts: Vec<TierIn> = from_js(tiers)?;
+    if ts.is_empty() {
+        return Err(err("an anchoring publication sells at least one tier"));
+    }
+    let terms = anchor_svc::Terms { reference: mor_onchain::clock::reference(n), tiers: ts.iter().map(|t| anchor_svc::Tier { price: anchor_svc::Price::Fixed(t.price), blocks: t.blocks }).collect() };
+    Ok((terms, mor_onchain::unit(n)))
+}
+
+/// A pooled anchoring service's publication (Agreements type 6; the
+/// anchoring cMIP draft 6, item 9): a lone seller's, the service its own
+/// split service under a split plan naming `splitCmip`, selling exactly
+/// this cMIP's terms, its tiers at fixed prices in the unit of `network`, on
+/// that network's Bitcoin clock, its refund point `refundUntil` where one is
+/// set. `{ type, payload }`, to sign under the Agreements MIR's spec, by the
+/// service, public, with no `objects`: its first version.
+#[wasm_bindgen(js_name = anchoringOffer)]
+pub fn anchoring_offer(network: u32, tiers: JsValue, words: Option<String>, service: &str, split_cmip: &str, refund_until: Option<u64>) -> R<JsValue> {
+    let (terms, _) = anchor_terms(network, tiers)?;
+    let p = terms.publication(unhex(service)?, unhex(split_cmip)?, words, refund_until);
+    to_js(&MadeOut { type_: mor_core::agreements::types::PUBLICATION, payload: cbor::encode(&Value::Map(p.to_map())) })
+}
+
+/// The price tags of an anchoring publication: **one per tier, each paying
+/// exactly that tier's price** (Money rule 18), first versions naming the
+/// publication's first version `publication`, paid to the service. `[{
+/// tier, type, payload }]`, each to sign under the Money MIR's spec by the
+/// service, public.
+#[wasm_bindgen(js_name = anchoringPriceTags)]
+pub fn anchoring_price_tags(network: u32, tiers: JsValue, publication: &str, service: &str) -> R<JsValue> {
+    #[derive(Serialize)]
+    struct Out {
+        tier: u64,
+        #[serde(rename = "type")]
+        type_: u64,
+        #[serde(with = "serde_bytes")]
+        payload: Vec<u8>,
+    }
+    let (terms, unit) = anchor_terms(network, tiers)?;
+    let (first, payee) = (unhex(publication)?, unhex(service)?);
+    let out: Vec<Out> = terms
+        .tiers
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let tag = money::PriceTag { priced: money::Priced::Publication(first), version: 1, previous: None, price: Some(Amount { unit, value: t.price.most() }), payee };
+            Out { tier: i as u64, type_: money::types::PRICE_TAG, payload: cbor::encode(&Value::Map(Payload::PriceTag(tag).to_map())) }
+        })
+        .collect();
+    to_js(&out)
+}
+
+/// A publication act read as this cMIP's offer, and the price tags given
+/// beside it: its first version, the publication's checks of draft 6 (a
+/// lone seller's, the drafter its own split service, selling exactly this
+/// cMIP's terms, not ended, on the terms' own clock, naming this cMIP for
+/// the anchoring task), and each tag matched to the tier whose price it
+/// pays exactly (Money rule 18). Throws where it is no anchoring
+/// publication, saying why.
+fn read_anchor(publication: &[u8], tags: &[Vec<u8>]) -> R<(anchor_svc::Offer, Hash, mor_core::agreements::Publication, Option<u64>, Vec<(u64, Hash)>)> {
+    let a = mor_core::act::Act::decode(publication).map_err(err)?;
+    let inside = a.open(None).map_err(|_| err("a publication is public"))?;
+    if inside.type_ != mor_core::agreements::types::PUBLICATION {
+        return Err(err("not a publication (Agreements type 6)"));
+    }
+    let drafter = a.outside.signer.ok_or_else(|| err("a publication names its signer"))?;
+    let pa = mor_core::agreements::Publication::decode(&inside).map_err(err)?;
+    let first = pa.follows.map(|(f, _)| f).unwrap_or(a.id());
+    let p = pa.publication;
+    // The publication's own checks, with a tag at the most one hash costs
+    // standing in for the tags read below.
+    let probe = anchor_svc::Terms::decode(&match p.sold.as_deref() {
+        Some([mor_core::agreements::Sold::Access(_, params)]) => cbor::decode(params).map_err(err)?,
+        _ => Value::Null,
+    });
+    let most = probe.as_ref().map(|t| t.most()).unwrap_or(0);
+    let network = probe.as_ref().and_then(|t| match &t.reference.params {
+        Value::Uint(n) => Some(*n),
+        _ => None,
+    });
+    let unit = network.and_then(Network::from_number).map(mor_onchain::unit).unwrap_or([0; 32]);
+    let stand_in = money::PriceTag { priced: money::Priced::Publication(first), version: 1, previous: None, price: Some(Amount { unit, value: most }), payee: p.service };
+    let o = anchor_svc::Offer::from_publication(first, drafter, &p, first, p.service, &stand_in).map_err(err)?;
+    let mut matched: Vec<(u64, Hash)> = vec![];
+    for t in tags {
+        let ta = mor_core::act::Act::decode(t).map_err(err)?;
+        let ti = ta.open(None).map_err(|_| err("a price tag is public"))?;
+        let Ok(Payload::PriceTag(tag)) = Payload::decode(ti.type_, &ti.payload) else { return Err(err("not a price tag (Money type 5)")) };
+        let signer = ta.outside.signer.ok_or_else(|| err("a price tag names its signer"))?;
+        if tag.priced != money::Priced::Publication(first) {
+            return Err(err("the price tag names another publication, or a bake"));
+        }
+        if signer != p.service && p.designated != Some(signer) {
+            return Err(err("the price tag is signed neither by the service nor by the party the publication designates: nobody's offer (Money rule 18)"));
+        }
+        if tag.payee != p.service {
+            return Err(err("the price tag is paid to the service, its own split service"));
+        }
+        let Some(price) = tag.price else { continue };
+        if price.unit != o.price.unit {
+            return Err(err("the price tag is in another unit than the terms' network's"));
+        }
+        for (i, tier) in o.terms.tiers.iter().enumerate() {
+            if tier.price.most() == price.value && !matched.iter().any(|(j, _)| *j == i as u64) {
+                matched.push((i as u64, ta.id()));
+            }
+        }
+    }
+    matched.sort();
+    Ok((o, drafter, p, network, matched))
+}
+
+fn acts_of(v: JsValue) -> R<Vec<Vec<u8>>> {
+    if v.is_undefined() || v.is_null() {
+        return Ok(vec![]);
+    }
+    let xs: Vec<ByteBuf> = from_js(v)?;
+    Ok(xs.into_iter().map(|b| b.into_vec()).collect())
+}
+
+/// An anchoring publication act read as this cMIP's offer (draft 6, item
+/// 9; `service::Offer::from_publication`), with the price tag acts given
+/// beside it (`tags`, an array of acts; may be empty): its first version,
+/// payee (the service), unit, the Bitcoin clock's network, tiers, words,
+/// refund point, and the tag that pays each tier exactly (`tags: [{ tier,
+/// tag }]`, a tier with none absent). The caller finds the latest version
+/// of each (Agreements rule 11, Money rule 18). Throws where it is no
+/// anchoring publication, saying why.
 #[wasm_bindgen(js_name = anchoringReadOffer)]
-pub fn anchoring_read_offer(act: &[u8]) -> R<JsValue> {
-    let _ = act;
-    Err(err("the anchoring cMIP still reads a standing offer, which the core no longer reads: a publication (Agreements type 6) with a price tag replaces it, once the cMIP moves"))
+pub fn anchoring_read_offer(publication: &[u8], tags: JsValue) -> R<JsValue> {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct TagOut {
+        tier: u64,
+        tag: String,
+    }
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Out {
+        id: String,
+        payee: String,
+        unit: String,
+        network: Option<u64>,
+        tiers: Vec<TierIn>,
+        words: Option<String>,
+        refund_until: Option<u64>,
+        tags: Vec<TagOut>,
+    }
+    let (o, _, p, network, matched) = read_anchor(publication, &acts_of(tags)?)?;
+    to_js(&Out {
+        id: hx(&o.id),
+        payee: hx(&o.payee),
+        unit: hx(&o.price.unit),
+        network,
+        tiers: o.terms.tiers.iter().map(|t| TierIn { price: t.price.most(), blocks: t.blocks }).collect(),
+        words: p.words.clone(),
+        refund_until: o.refund_until,
+        tags: matched.iter().map(|(i, t)| TagOut { tier: *i, tag: hx(t) }).collect(),
+    })
 }
 
 #[derive(Deserialize, Serialize)]
@@ -1360,18 +1512,17 @@ pub fn anchoring_read_ticket(payload: &[u8]) -> R<JsValue> {
     }
 }
 
-/// The payer's check of a ticket before paying (the anchoring cMIP, client
-/// conformance: "Check the ticket before paying"): it names the offer, the
-/// leaf sent and the payer's commitment; the commitment follows the offer
-/// and pays exactly the tier's price to its payee; the deadline is after
+/// The payer's check of a ticket before paying (the anchoring cMIP draft 6,
+/// client conformance: "Check the ticket before paying"), against the
+/// publication act and the price tag act paid (the latest versions the
+/// client found): it names the publication, the leaf sent and the payer's
+/// commitment; the commitment pays the ticket's tier's own tag, exactly the
+/// tier's price, to its payee; the deadline is after
 /// `now` (the payer's own point on the clock) and within the tier's blocks
 /// and one block of slack. Null where acceptable, else why not.
 #[wasm_bindgen(js_name = anchoringCheckTicket)]
-pub fn anchoring_check_ticket(offer_act: &[u8], ticket: &[u8], commitment: &[u8], leaf: &str, now: u64) -> R<Option<String>> {
-    let a = mor_core::act::Act::decode(offer_act).map_err(err)?;
-    let inside = a.open(None).map_err(|_| err("an offer is public"))?;
-    let oa = mor_core::agreements::Offer::decode(&inside).map_err(err)?;
-    let o = anchor_svc::Offer::read(a.id(), a.outside.signer.ok_or_else(|| err("an offer names its signer"))?, &oa.offer).map_err(err)?;
+pub fn anchoring_check_ticket(publication: &[u8], tag: &[u8], ticket: &[u8], commitment: &[u8], leaf: &str, now: u64) -> R<Option<String>> {
+    let (mut o, _, _, _, matched) = read_anchor(publication, &[tag.to_vec()])?;
     let t = anchor_svc::Ticket::from_map(&super::payload_of(ticket)?).ok_or_else(|| err("not a ticket"))?;
     if t.leaf != unhex(leaf)? {
         return Ok(Some("the ticket names another leaf than the one sent".into()));
@@ -1402,6 +1553,14 @@ pub fn anchoring_check_ticket(offer_act: &[u8], ticket: &[u8], commitment: &[u8]
         },
         purchase: None,
     };
+    // The tag paid is the ticket's tier's own (one price tag per price).
+    let Some((_, tag_id)) = matched.iter().find(|(i, _)| *i == t.tier) else {
+        return Ok(Some("the price tag given does not pay the ticket's tier's price".into()));
+    };
+    o.tag = *tag_id;
+    if let Some(p) = o.price(t.tier, t.quote) {
+        o.price = p;
+    }
     Ok(anchor_svc::acceptable(&o, &t, &cm, now, None).err())
 }
 
@@ -1414,7 +1573,7 @@ struct PublicationIn {
     /// The txid, in Bitcoin's byte order (as the core's hashes are), hex.
     tx: String,
     output: u64,
-    /// The x-only key the batch's output is tweaked from, and the script tree's root, where one is: fields 5 and 6, the anchoring cMIP draft 6 (this build's).
+    /// The x-only key the batch's output is tweaked from, and the script tree's root, where one is: fields 5 and 6, as decided for draft 6 (F341; the suite's draft 6 text does not yet carry them).
     key: Option<String>,
     tree: Option<String>,
 }

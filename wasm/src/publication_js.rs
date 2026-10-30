@@ -56,6 +56,43 @@ struct PlanIn {
     /// A maximum rail fee per payout in millionths, if any.
     #[serde(default)]
     max_rail_fee_millionths: Option<u64>,
+    /// The fees the plan names (key 9): each a Module, its part in
+    /// millionths, and what it applies to: every payment (no `scope`),
+    /// payments for a `bake`, or by a `rail` Module, `of` naming it.
+    #[serde(default)]
+    fees: Vec<FeeIn>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FeeIn {
+    module: String,
+    part: u64,
+    #[serde(default)]
+    scope: Option<String>,
+    #[serde(default)]
+    of: Option<String>,
+}
+
+impl FeeIn {
+    fn core(&self) -> R<agreements::Fee> {
+        let scope = match (self.scope.as_deref(), &self.of) {
+            (None | Some("every"), None) => agreements::FeeScope::Every,
+            (Some("bake"), Some(h)) => agreements::FeeScope::Bake(unhex(h)?),
+            (Some("rail"), Some(h)) => agreements::FeeScope::Rail(unhex(h)?),
+            _ => return Err(err("a fee applies to every payment, or to a bake or a rail Module it names")),
+        };
+        Ok(agreements::Fee { module: unhex(&self.module)?, part: self.part, scope })
+    }
+
+    pub(crate) fn of(f: &agreements::Fee) -> FeeIn {
+        let (scope, of) = match &f.scope {
+            agreements::FeeScope::Every => (None, None),
+            agreements::FeeScope::Bake(h) => (Some("bake".to_string()), Some(hx(h))),
+            agreements::FeeScope::Rail(h) => (Some("rail".to_string()), Some(hx(h))),
+        };
+        FeeIn { module: hx(&f.module), part: f.part, scope, of }
+    }
 }
 
 /// A publication's fields as a client names them. `sold` absent: a split
@@ -129,7 +166,7 @@ impl PublicationIn {
             max_rail_fee: self.plan.max_rail_fee_millionths.map(Value::Uint),
             params: None,
             metrics: vec![],
-            fees: vec![],
+            fees: self.plan.fees.iter().map(FeeIn::core).collect::<R<Vec<_>>>()?,
         };
         let mut partners = self.partners.iter().map(|p| Ok(Partner { identity: unhex(&p.identity)?, share: p.share, label: p.label.clone() })).collect::<R<Vec<_>>>()?;
         partners.sort_by(|a, b| a.identity.cmp(&b.identity));
