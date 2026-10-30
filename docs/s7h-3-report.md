@@ -41,7 +41,25 @@
 
 ## The second verifier's export
 
-VERIFIER2_PLACEHOLDER
+`verifier2/export/export.rs` now maps the keyless collective onto the second verifier's terms. Its module is restored in `core/tests/agreements_invariants.rs`.
+
+**What the export now does:**
+- **An act for the collective** names it in its objects, and comes from a member's device or from a grantee under its grant. The drafter's act is their signature.
+- **History** is what an act cites on the collective's chain, each device citing its own previous act there.
+- **Records** carry no tips. **An ending's line** is what it cites.
+- **The collective's publications** are exported as actions. They were left out before, which made a hole in every ending's history.
+- **What the second verifier takes as given** is read from the library:
+  - "holds nothing" at the closing's line;
+  - each departed holder a fork's successor keeps at its share.
+- `verifier2/README.md` says how the mapping reads. The Python side is unchanged, and its 24 unit tests pass.
+
+**On 1,000 stories (seed 1), the second verifier and the library disagree on none.** The first run, 300 stories, disagreed in 164. All of those came from the export's old mapping: the publication left out, and the drafter's signature. They fell to 5, all over a successor's kept holders, and then to none.
+
+`cargo test -p mor-core --test agreements_invariants` passes 34. The export comparison runs only when asked, as before.
+
+**One core flaw it found, not fixed, since `core/src` was outside this session:** `after_closing` (`core/src/agreements/view.rs`) finds the closing through the act's signer. For a keyless collective that is a member, so it never finds the collective's closing.
+- No verdict moves: its one caller checks consent first, and consent already says "closed".
+- The fix is one line, the author instead of the signer, as `counts_before` does. It is question 7.
 
 ## Vectors
 
@@ -135,6 +153,7 @@ Each is in plain words, then precisely, with the options, my lean and its cost.
    - *Lean:* one pass of words in the next text session.
 6. **The c-box's own vectors README** (`scripts/c-box/vectors-README.md`) is outside this session's folders, so it lacks the S7h-3 bullet.
    - *Lean:* copy it from `core/vectors/README.md` when `scripts/` is next open.
+7. **`after_closing` reads the signer, not the collective an act names** (above). *Lean:* the one-line fix in the next core session. *Cost:* the WebAssembly changes, though no verdict does.
 
 ## Still open from S7h-2, in the core
 
@@ -152,4 +171,12 @@ S7h-2's report counted these as "the original ignores". They are gaps in the cor
 
 ## Checks
 
-CHECKS_PLACEHOLDER
+- **Rust:**
+  - `mor-core`, `mor-relay` and `mor-airgap` pass every test.
+  - `agreements_invariants`, the export restored, passes 34.
+  - The cMIPs' tests (split, anchoring, conversion, on-chain service) are the suite's, and still do not build against this core.
+- **Vectors:**
+  - They regenerate byte for byte (`git diff --exit-code core/vectors` clean).
+  - The Rust check passes 10 of 10.
+  - The Python check says "all 276 vectors agree".
+- **The core library is unchanged by this session**, so the WebAssembly and every binding answer as at S7h-2.
