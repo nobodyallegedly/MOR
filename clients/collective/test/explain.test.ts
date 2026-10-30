@@ -10,7 +10,7 @@ import { cborDecode, cborEncode, checkTerms, publicationPayload, sha256 } from '
 import { plainHtml } from '../../longform/src/html.ts';
 import { collectiveTerms, type Governance } from '../../repo/src/collective.ts';
 import { AGREEMENTS_SPECS, encodeTerms, type MarkEntry } from '../../repo/src/agreements.ts';
-import { absenceWarning, agreementsThrown, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withAgreements, type Reading } from '../src/explain.ts';
+import { absenceWarning, agreementsThrown, powerWords, problemWords, readAgreement, readChanges, rulesHints, termsOf, uncovered, withAgreements, type Reading } from '../src/explain.ts';
 
 const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((x) => sha256(`member ${x}`));
 const NAMES: Record<string, string> = { [a]: 'Ann', [b]: 'Ben', [c]: 'Cy', [d]: 'Di' };
@@ -309,4 +309,9 @@ test('owners who choose the members, holding no key: the reading warns (Agreemen
   // Di holds a share of the chain key: no warning.
   t.grammar!.chainKey = { ...t.grammar!.chainKey, members: [...(t.grammar!.chainKey.members ?? []), d] };
   assert.doesNotMatch(section(readAgreement(t, names), 'Who decides what'), /complete and unexecuted/);
+});
+
+test('S7h-4 (rules 64 and 83): a succession plan named in a mark is read with what its clone must do: pass the stakes to the heirs, change a layer only by the successor', () => {
+  const said = powerWords({ form: 'plan', party: 'Ben' }, [], (x) => x);
+  assert.match(said, /^the succession plan of Ben \(its clone must pass Ben’s stakes to the heirs the plan names, in its parts, and may change a layer’s rule only by putting the successor in Ben’s place: Agreements rules 64 and 83\)$/);
 });

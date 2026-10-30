@@ -14880,7 +14880,7 @@ function powerWords(p, areas, names2) {
       return a ? `the power of the \u201C${a.name}\u201D area (area ${p.area})` : `the power of area ${p.area}`;
     }
     case "plan":
-      return `the succession plan of ${names2(p.party ?? "")}`;
+      return `the succession plan of ${names2(p.party ?? "")} (its clone must pass ${names2(p.party ?? "")}\u2019s stakes to the heirs the plan names, in its parts, and may change a layer\u2019s rule only by putting the successor in ${names2(p.party ?? "")}\u2019s place: Agreements rules 64 and 83)`;
     case "judicial":
       return "the judicial tier's rule, every member whose voice remains";
     case "layer":

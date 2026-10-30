@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 e72db93434226933dc0044c19ce7b4f0f2092739ae298a7e350aeed2b2bc965e  index.html
-1d6b1cfb9931ad1df21e72f176dec2153324b88edec6b9cb64d9f8ec0faa1f0a  kishib.js
+fdbb8a88117b7851a6a8f097264cd7ccf6eaad93ed2ddc9ccfe1e26c64760648  kishib.js
 b7a484e3c76203d6b15ea3ee2ce0bdd076201b10728a860a0aae7b2a2263f9aa  kishib.css
 889b43f980eda12d7724c596fdd676024883938a2476e83d9a09767a20b1c472  mor_wasm_bg.wasm
 ca63dcac534c6a7e54594417c4cceb2a285d4a9f92af46ad5fb02b8ff4c89781  kishib_airgap_bg.wasm
@@ -23,7 +23,7 @@ d5249b446b5ed906bf4ae4d3effadf8f48a21a84231a66a2d32b38dec0463830  icon.png
 
 SHA-256 of each file (as sha256sum prints it):
 2643b24ef8422a5c85ddee5a674d4beef8a3b2226c894cf3044a6cf4daa776fc  index.html
-f3c593a65212f900e0af4af3b0fd25720bb7106054c7df2fd36732f24b0d6a4d  kishib.js
+943d6775ec493b7991c9c3aaf4cfbfbae26dd676c76856ae94c5b1d82f27662f  kishib.js
 4f7b06e3c4dbe1df982add61881d461dd597069b68b88be0f68235045feeaf23  kishib.css
 3974a18b53104d6f64eacf14f3023a05a3af957f8ece41eaefa07cc7258c2fa3  mor_wasm_bg.wasm
 26f4af8835204e4f2cedd62968ba14b48c1fe52278b6fd1496d605fa757623f3  kishib_airgap_bg.wasm
