@@ -6,12 +6,20 @@
 //! built with rust-bitcoin. Omission made provable (review section 9, item
 //! 2); selective delay bounded by priced urgency tiers (item 3).
 //!
-//! Second pass (F225, F228): the service's offer is an Agreements standing
-//! offer, a lone seller's (F215), carrying the anchoring cMIP's terms (its
-//! tiers, prices or price scheme, and deadlines); a payment buys a ticket by
-//! following that offer, and every default owes the price back under its
-//! terms. Reading 3 of step 14a (a payment following the service's pointer
-//! as a tip does) is reversed.
+//! Second pass (F225, F228): buying an anchor is an agreement; the
+//! service's offer carries the anchoring cMIP's terms (its tiers, prices or
+//! price scheme, and deadlines); a payment buys a ticket by paying the
+//! offer, and every default owes the price back under its terms. Reading 3
+//! of step 14a (a payment following the service's pointer as a tip does) is
+//! reversed.
+//!
+//! Draft 6 (round 8, F407): the Agreements standing offer is gone from the
+//! core. The offer is now a **publication** (Agreements type 6), a lone
+//! seller's, the service its own split service, selling the cMIP's terms in
+//! the access form, and a **price tag** (Money type 5) naming it, signed by
+//! the service and paid to it, its price the most one hash costs. Where a
+//! test read a standing offer, it reads that publication and tag; a payment
+//! that followed the offer now pays the tag.
 
 mod support;
 
@@ -23,6 +31,7 @@ use mor_anchoring::tree::{self, Batch};
 use mor_core::envelopes::anchoring::Anchors;
 use mor_core::money::{Amount, Citations, Claim, PayeePointer, Payer, Rail, RefundTo, VaultEntry};
 use mor_core::agreements;
+use mor_core::money::PriceTag;
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
@@ -92,10 +101,27 @@ fn terms() -> Terms {
     Terms { reference: clock::reference(Network::Regtest), tiers: tiers() }
 }
 
-/// The standing offer the service signs (Agreements type 6), as the
-/// cMIP reads it: a lone seller's, its payee the service.
-fn offer_of(l: &agreements::Offer) -> Offer {
-    Offer::read(h("the service's offer act"), h("the anchoring service"), l).expect("an anchoring offer")
+/// The service's publication's first version, by a stand-in act id.
+fn publication_id() -> Hash {
+    h("the service's publication act")
+}
+
+/// The service's publication (Agreements type 6) selling `t`, a lone
+/// seller's, the service its own split service, with a refund point where
+/// given.
+fn publication_of(t: &Terms, refund_until: Option<u64>) -> agreements::Publication {
+    t.publication(h("the anchoring service"), h("a split cMIP"), None, refund_until)
+}
+
+/// The service's price tag (Money type 5) under its publication.
+fn tag_of(t: &Terms) -> PriceTag {
+    t.price_tag(publication_id(), mor_onchain::unit(Network::Regtest), h("the anchoring service"))
+}
+
+/// The publication and its price tag as the cMIP reads them, the tag
+/// signed by the service: its offer.
+fn offer_of(p: &agreements::Publication, tag: &PriceTag) -> Offer {
+    Offer::from_publication(publication_id(), h("the anchoring service"), p, h("the service's price tag act"), h("the anchoring service"), tag).expect("an anchoring offer")
 }
 
 fn world() -> World {
@@ -108,7 +134,7 @@ fn world() -> World {
         rails: vec![Rail { module: mor_lightning::spec(), address: LnAddress { network: LnNetwork::Regtest, node: PublicKey::from_secret_key(&Secp256k1::new(), &node).serialize(), endpoint: None }.encode() }],
     };
     let pointer_id = h("the service's pointer act");
-    let offer = offer_of(&terms().standing_offer(mor_onchain::unit(Network::Regtest), None, None));
+    let offer = offer_of(&publication_of(&terms(), None), &tag_of(&terms()));
     World { service, pointer_id, pointer, node, offer_id: offer.id, offer, key: xonly(&secret("the anchoring service's key")) }
 }
 
@@ -143,11 +169,12 @@ fn invoice(sk: &SecretKey, msat: u64, dh: &Hash, preimage: &Hash) -> String {
 /// the service's ticket names batch `batch`, by a deadline `blocks` after
 /// `now`.
 fn buy(w: &World, who: &str, tier: u64, paid: u64, settled: bool, batch: u64, now: u64) -> Bought {
-    buy_quoted(w, who, tier, paid, settled, batch, now, None, w.offer_id)
+    buy_quoted(w, who, tier, paid, settled, batch, now, None, w.offer.tag)
 }
 
 /// As [`buy`], the ticket quoting `quote` (a price scheme's measure), the
-/// payment following `follows` (the offer, unless a test says otherwise).
+/// payment following `follows` (the price tag, unless a test says
+/// otherwise).
 #[allow(clippy::too_many_arguments)]
 fn buy_quoted(w: &World, who: &str, tier: u64, paid: u64, settled: bool, batch: u64, now: u64, quote: Option<u64>, follows: Hash) -> Bought {
     let act = h(&format!("{who}'s act"));
@@ -358,67 +385,94 @@ fn the_payers_client_checks_the_ticket_against_the_offer_before_paying() {
     assert!(service::acceptable(&w.offer, &cheap.ticket, &cheap.commitment, now, None).is_err(), "not the tier's price");
     let elsewhere = Commitment { fulfils: w.pointer_id, ..ana.commitment.clone() };
     let t = Ticket { commitment: elsewhere.hash(), ..ana.ticket.clone() };
-    assert!(service::acceptable(&w.offer, &t, &elsewhere, now, None).is_err(), "following the service's pointer as a tip, not its standing offer (reading 3 reversed, F225)");
+    assert!(service::acceptable(&w.offer, &t, &elsewhere, now, None).is_err(), "following the service's pointer as a tip, not its price tag (reading 3 reversed, F225)");
     assert!(service::acceptable(&w.offer, &ana.ticket, &cheap.commitment, now, None).is_err(), "the ticket names another commitment");
 }
 
 // ---------------------------------------------------------------- second pass: F225, F228
 
 /// F225 (decided by Nobody, allegedly, 10 October 2026: "Paying for
-/// anchoring is an agreement"): the service's offer is an Agreements
-/// standing offer, a lone seller's (F215), carrying the anchoring cMIP's
-/// terms in what it sells (`[2, [anchoring cMIP, terms]]`): its tiers,
-/// prices and deadlines, on its own time reference, the clock the
-/// deadlines are points on. Its field 2, the one amount an offer states, is
-/// the most one hash costs under it (mechanic, the build's). What does not
-/// read as such an offer is refused, not guessed. A payment following the
-/// service's pointer as a tip does buys no ticket: reading 3 of step 14a is
-/// reversed.
+/// anchoring is an agreement"), as draft 6 writes it: the service sells
+/// under a publication, a lone seller's (no ownership agreement, no
+/// partner), the service its own split service, carrying the anchoring
+/// cMIP's terms in what it sells (`[2, [anchoring cMIP, terms]]`): its
+/// tiers, prices and deadlines, on its time reference, the clock the
+/// deadlines are points on; naming the cMIP for the anchoring task. Its
+/// price tag, signed by the service and paid to it, prices it at the most
+/// one hash costs (mechanic, the build's). What does not read as such an
+/// offer is refused, not guessed. A payment following the service's pointer
+/// as a tip does buys no ticket: reading 3 of step 14a is reversed.
+///
+/// *Premises moved (draft 6): the standing offer is gone; its field 2 is
+/// now the tag's price, its own time reference and refund terms the
+/// publication's fields 6 and 8. Draft 5's "paid to another payee by field
+/// 3" is now a tag paying anyone but the service, refused: the service is
+/// its own split service and receives in its own name (Agreements, "Split
+/// service"). "Selling a publication", a form the core no longer has, is
+/// now selling a bake. New refusals: an ended publication, a split
+/// agreement, a partner, another drafter, no anchoring task, a withdrawn
+/// tag, a tag on another publication or signed by someone else.*
 #[test]
-fn f225_the_services_offer_is_a_lone_sellers_standing_offer_carrying_its_terms() {
+fn f225_the_services_offer_is_a_lone_sellers_publication_and_its_price_tag() {
     let unit = mor_onchain::unit(Network::Regtest);
-    let l = terms().standing_offer(unit, Some("Anchoring on Bitcoin regtest, priced by urgency".into()), Some(900));
-    assert_eq!(l.under, None, "a lone seller's offer: no co-owners' agreement behind it");
-    assert_eq!(l.price, Amount { unit, value: 50 }, "field 2: the most one hash costs, the urgent tier's 50");
-    assert_eq!(l.time.as_ref().map(|(c, p)| (*c, p.clone())), Some((clock::reference(Network::Regtest).cmip, clock::reference(Network::Regtest).params)), "its own time reference: the Bitcoin clock");
-    assert!(l.refund.is_some(), "its own refund terms, where the service sets them");
-    let o = offer_of(&l);
-    assert_eq!((o.payee, o.refund_until, o.terms.clone()), (h("the anchoring service"), Some(900), terms()));
+    let service = h("the anchoring service");
+    let mut l = publication_of(&terms(), Some(900));
+    l.words = Some("Anchoring on Bitcoin regtest, priced by urgency".into());
+    let tag = tag_of(&terms());
+    assert_eq!((l.owners, l.partners.len(), l.service), (None, 0, service), "a lone seller's publication: no ownership agreement, no partner, its own split service");
+    assert_eq!(tag.price, Some(Amount { unit, value: 50 }), "the tag's price: the most one hash costs, the urgent tier's 50");
+    assert_eq!((tag.payee, tag.priced.clone()), (service, mor_core::money::Priced::Publication(publication_id())), "paid to the service, naming the publication by its first version");
+    assert_eq!(l.time.as_ref().map(|(c, p)| (*c, p.clone())), Some((clock::reference(Network::Regtest).cmip, clock::reference(Network::Regtest).params)), "its time reference: the Bitcoin clock");
+    assert!(l.refund.is_some(), "its refund terms, where the service sets them");
+    assert_eq!(l.cmip(service::ANCHORING_TASK), Some(&mor_anchoring::spec()), "naming the anchoring cMIP for the anchoring task");
+    let o = offer_of(&l, &tag);
+    assert_eq!((o.payee, o.refund_until, o.terms.clone(), o.id, o.tag), (service, Some(900), terms(), publication_id(), h("the service's price tag act")));
     assert_eq!(o.price(1, None), Some(sat(20)));
     // Refused, not guessed.
-    let refuse = |m: agreements::Offer, why: &str| assert!(Offer::read(h("x"), h("the anchoring service"), &m).is_err(), "{why}");
-    refuse(agreements::Offer { under: Some(h("co-owners' agreement")), time: None, refund: None, paid: Some(agreements::Paid::Payee(h("a payee"))), ..l.clone() }, "under co-owners' agreement");
-    refuse(agreements::Offer { sold: vec![agreements::Sold::Publication(h("a song"))], ..l.clone() }, "selling a publication");
-    refuse(agreements::Offer { sold: vec![agreements::Sold::Access(h("another cMIP"), mor_core::cbor::encode(&terms().to_value()))], ..l.clone() }, "another cMIP's access");
-    refuse(agreements::Offer { sold: vec![], ..l.clone() }, "a version selling nothing withdraws the offer");
-    refuse(agreements::Offer { price: Amount { unit, value: 49 }, ..l.clone() }, "field 2 below what the urgent tier costs");
-    refuse(agreements::Offer { time: Some((h("another clock"), mor_core::cbor::Value::Uint(3))), ..l.clone() }, "deadlines on another reference than the terms'");
-    refuse(agreements::Offer { time: None, refund: None, ..l.clone() }, "no time reference for its deadlines");
-    // Field 2's unit is the unit every tier's price is in.
-    let other = Offer::read(h("x"), h("the anchoring service"), &agreements::Offer { price: Amount { unit: h("another unit"), value: 50 }, ..l.clone() }).unwrap();
+    let refuse = |p: agreements::Publication, t: PriceTag, why: &str| assert!(Offer::from_publication(publication_id(), service, &p, h("x"), service, &t).is_err(), "{why}");
+    refuse(agreements::Publication { owners: Some(h("an ownership agreement")), ..l.clone() }, tag.clone(), "under an ownership agreement");
+    refuse(agreements::Publication { partners: vec![agreements::Partner { identity: h("a partner"), share: 1000, label: None }], ..l.clone() }, tag.clone(), "with a partner");
+    refuse(agreements::Publication { service: h("another split service"), ..l.clone() }, tag.clone(), "another split service than its drafter");
+    refuse(agreements::Publication { sold: Some(vec![agreements::Sold::Bake(h("a song"))]), ..l.clone() }, tag.clone(), "selling a bake");
+    refuse(agreements::Publication { sold: Some(vec![agreements::Sold::Access(h("another cMIP"), mor_core::cbor::encode(&terms().to_value()))]), ..l.clone() }, tag.clone(), "another cMIP's access");
+    refuse(agreements::Publication { sold: Some(vec![]), ..l.clone() }, tag.clone(), "a version selling nothing ends the publication");
+    refuse(agreements::Publication { sold: None, ..l.clone() }, tag.clone(), "a split agreement sells nothing");
+    refuse(l.clone(), PriceTag { price: Some(Amount { unit, value: 49 }), ..tag.clone() }, "the tag's price below what the urgent tier costs");
+    refuse(l.clone(), PriceTag { price: None, ..tag.clone() }, "a tag version with no price withdraws it");
+    refuse(l.clone(), PriceTag { priced: mor_core::money::Priced::Publication(h("another publication")), ..tag.clone() }, "a tag on another publication");
+    refuse(l.clone(), PriceTag { payee: h("the service's collector"), ..tag.clone() }, "a tag paying anyone but the service, its own split service");
+    refuse(agreements::Publication { time: Some((h("another clock"), mor_core::cbor::Value::Uint(3))), ..l.clone() }, tag.clone(), "deadlines on another reference than the terms'");
+    refuse(agreements::Publication { time: None, refund: None, ..l.clone() }, tag.clone(), "no time reference for its deadlines");
+    refuse(agreements::Publication { cmips: vec![], ..l.clone() }, tag.clone(), "not naming the cMIP for the anchoring task");
+    assert!(Offer::from_publication(publication_id(), service, &l, h("x"), h("a stranger"), &tag).is_err(), "a tag signed by someone else: nobody's offer");
+    let designating = agreements::Publication { designated: Some(h("the service's pricing desk")), ..l.clone() };
+    assert!(Offer::from_publication(publication_id(), service, &designating, h("x"), h("the service's pricing desk"), &tag).is_ok(), "a tag signed by the party the publication designates");
+    // The tag's unit is the unit every tier's price is in.
+    let other = Offer::from_publication(publication_id(), service, &l, h("x"), service, &PriceTag { price: Some(Amount { unit: h("another unit"), value: 50 }), ..tag.clone() }).unwrap();
     assert_eq!(other.price(0, None), Some(Amount { unit: h("another unit"), value: 50 }));
-    // Paid to someone else by field 3: that payee is who a payment goes to.
-    let o2 = Offer::read(h("x"), h("the anchoring service"), &agreements::Offer { paid: Some(agreements::Paid::Payee(h("the service's collector"))), ..l.clone() }).unwrap();
-    assert_eq!(o2.payee, h("the service's collector"));
     // Reading 3 reversed: a payment following the pointer buys nothing.
     let w = world();
     let c = regtest_chain();
     let tip = buy_quoted(&w, "ana", 1, 20, true, 0, c.tip(), None, w.pointer_id);
     let pay = payment(&w, &tip, "ana");
     assert_eq!(pay.answer, Answer::Valid, "a valid tip to the service's pointer...");
-    assert!(matches!(judge(&w, &tip, &pay, &[], None, &c), Judgment::NotPaid(_)), "...is no purchase under its standing offer");
+    assert!(matches!(judge(&w, &tip, &pay, &[], None, &c), Judgment::NotPaid(_)), "...is no purchase under its publication");
+    // Nor does a payment naming the publication itself, without its tag: a
+    // tip through the publication (Money rule 18).
+    let through = buy_quoted(&w, "ben", 1, 20, true, 0, c.tip(), None, w.offer_id);
+    assert!(matches!(judge(&w, &through, &payment(&w, &through, "ben"), &[], None, &c), Judgment::NotPaid(_)), "a tip through the publication buys no ticket");
 }
 
-/// F225: each default owes the price back **under the offer's terms**: to
-/// the payer the payment committed to (an identity, a bare key, or nobody:
-/// Money rule 10a), claimable until the offer's refund point where it
-/// sets one (F219). Money carries the repayment: what it shows repaid
+/// F225: each default owes the price back **under the publication's
+/// terms**: to the payer the payment committed to (an identity, a bare
+/// key, or nobody: Money rule 19), claimable until the publication's refund
+/// point (field 8) where it sets one (F219). Money carries the repayment: what it shows repaid
 /// (the core's `AgreementsView::refund_repaid`, tested in `tests/agreement.rs`)
 /// settles it; past the terms unpaid, the refund is ended, the money kept.
 #[test]
 fn f225_a_default_owes_the_price_back_under_the_offers_terms() {
     let mut w = world();
-    w.offer = offer_of(&terms().standing_offer(mor_onchain::unit(Network::Regtest), None, Some(START + 40)));
+    w.offer = offer_of(&publication_of(&terms(), Some(START + 40)), &tag_of(&terms()));
     w.offer_id = w.offer.id;
     let mut c = regtest_chain();
     let now = c.tip();
@@ -465,10 +519,11 @@ fn f228_a_price_scheme_tied_to_an_onchain_measure() {
     let scheme = Scheme { measure: service::FEE_RATE, base: 10, per: 3, cap: 400 };
     let t = Terms { reference: clock::reference(Network::Regtest), tiers: vec![Tier { price: Price::Scheme(scheme), blocks: 2 }, Tier { price: Price::Fixed(5), blocks: 144 }] };
     assert_eq!(Terms::decode(&t.to_value()), Some(t.clone()));
-    let l = t.standing_offer(unit, None, None);
-    assert_eq!(l.price.value, 400, "field 2: the scheme's cap, the most a hash costs");
+    let l = t.publication(h("the anchoring service"), h("a split cMIP"), None, None);
+    let tag = t.price_tag(publication_id(), unit, h("the anchoring service"));
+    assert_eq!(tag.price.map(|p| p.value), Some(400), "the tag's price: the scheme's cap, the most a hash costs");
     let mut w = world();
-    w.offer = Offer::read(h("the scheme offer"), w.service, &l).unwrap();
+    w.offer = offer_of(&l, &tag);
     w.offer_id = w.offer.id;
     assert_eq!(w.offer.price(0, Some(12)), Some(sat(46)), "10 + 3 × 12 sat/vB");
     assert_eq!(w.offer.price(0, Some(1_000)), Some(sat(400)), "never above the cap");
@@ -476,14 +531,14 @@ fn f228_a_price_scheme_tied_to_an_onchain_measure() {
     assert_eq!(w.offer.price(1, Some(12)), None, "a fixed price takes no quote");
     let mut c = regtest_chain();
     let now = c.tip();
-    let ana = buy_quoted(&w, "ana", 0, 46, true, 0, now, Some(12), w.offer_id);
+    let ana = buy_quoted(&w, "ana", 0, 46, true, 0, now, Some(12), w.offer.tag);
     assert_eq!(service::acceptable(&w.offer, &ana.ticket, &ana.commitment, now, Some(12)), Ok(()));
     assert_eq!(service::acceptable(&w.offer, &ana.ticket, &ana.commitment, now, Some(15)), Ok(()), "a quote below the payer's own reading");
     assert!(service::acceptable(&w.offer, &ana.ticket, &ana.commitment, now, Some(11)).is_err(), "a quote above the payer's own reading");
     assert!(service::acceptable(&w.offer, &ana.ticket, &ana.commitment, now, None).is_err(), "a scheme's quote the payer's client cannot read: refused");
     let pay = payment(&w, &ana, "ana");
     assert_eq!(judge(&w, &ana, &pay, &[], None, &c), Judgment::Pending, "bought at the quoted price");
-    let short = buy_quoted(&w, "ben", 0, 45, true, 0, now, Some(12), w.offer_id);
+    let short = buy_quoted(&w, "ben", 0, 45, true, 0, now, Some(12), w.offer.tag);
     assert!(matches!(judge(&w, &short, &payment(&w, &short, "ben"), &[], None, &c), Judgment::NotPaid(_)), "less than the quote's price");
     // The fee rate then spikes: the batch's transaction costs far more than
     // the 46 Ana paid. Nothing in the terms moves the deadline: undelivered,

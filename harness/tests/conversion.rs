@@ -1,13 +1,18 @@
-//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`), end
-//! to end on regtest: a rail swap sold as a proven offer, with receipts per
-//! hop. Freeze suite, scenario 2, steps 4 and 4b, for the route.
+//! The conversion cMIP, draft 4 (`cmips/cmip-conversion-draft-4.md`), end
+//! to end on regtest: a rail swap sold as a proven delivery, with receipts
+//! per hop. Freeze suite, scenario 2, steps 4 and 4b, for the route.
 //!
-//! A conversion service publishes a standing offer (Agreements type 6, a
-//! lone seller's) selling the conversion cMIP's terms: Lightning in,
-//! Bitcoin regtest out, 1:1, a fee of 500, within 6 blocks. Ana pays it
+//! A conversion service signs a publication (Agreements type 6, a lone
+//! seller's, the service its own split service) selling the conversion
+//! cMIP's terms: Lightning in, Bitcoin regtest out, 1:1, a fee of 500,
+//! within 6 blocks; and a price tag naming it (Money type 5), paid to the
+//! service, its price the most one conversion takes in. Ana pays the tag.
+//! *Premises moved (draft 4, round 8, F407): the standing offer is gone
+//! from the core; where this test read it (`AgreementsView::offer`), it
+//! reads the publication and the tag (`publication`, `tag_under`).* Ana pays it
 //! 30,000 over Lightning to have 29,500 paid on the chain to the owners'
 //! split service. Before Ana pays, the service signs an order under the
-//! offer binding that forward; Ana's client checks it. The service receipts
+//! publication binding that forward; Ana's client checks it. The service receipts
 //! Ana's payment declaring the forward, pays it on the chain from its own
 //! coins, and the owners' receipt names the service's. A third party reads
 //! the home: every receipt verifies on its rail, the route reads as one
@@ -17,7 +22,7 @@
 //! **Step 4b:** Ben pays 20,000 the same way; the service receipts it,
 //! declaring the forward, and forwards nothing. Once the order's deadline
 //! is buried six blocks deep, the forward is the service's open obligation
-//! under its offer (Money rule 27), and the route stops at the service's
+//! under its publication (Money rule 27), and the route stops at the service's
 //! receipt, naming that hop and its agreement (rule 28).
 //!
 //! It starts one btcd node on regtest itself, from the btcd release in
@@ -335,6 +340,20 @@ struct Bought {
     receipt: Act,
 }
 
+/// The service's offer as a reader reads it (conversion cMIP draft 4,
+/// item 1): the publication `first` and the price tag `tag`, both held; the
+/// core's Agreements view says the publication counts, sells a proven
+/// delivery by its form, and the tag counts under it; read by the cMIP.
+fn offer_in(rd: &Reader, first: &Hash, tag: &Hash, service: &Hash) -> Offer {
+    let v = AgreementsView::new(&rd.v, mirs());
+    let e = v.publication(first).expect("a publication");
+    assert!(e.counts, "the publication counts: {:?}", e.problems);
+    assert!(matches!(e.publication.sold.as_ref().unwrap()[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_conversion::spec()), "a proven delivery, the access form");
+    assert_eq!(v.tag_under(tag).unwrap(), agreements::TagUnder::Counts { publication: *first, withdrawn: false }, "its price tag counts under it");
+    let Ok(Payload::PriceTag(t)) = Payload::decode(money::types::PRICE_TAG, &payload(rd, tag)) else { panic!("a price tag") };
+    Offer::from_publication(*first, e.drafter, &e.publication, *tag, *service, &t).expect("a conversion offer")
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_regtest() {
     let Some(bin) = btcd_dir() else {
@@ -367,13 +386,16 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
     put(&site, &owners_pointer_act).await;
     let held = Pointers(vec![(svc_pointer_act.id(), svc_pointer.clone()), (owners_pointer_act.id(), owners_pointer.clone())]);
 
-    // ------------------------------------------------ its standing offer: a rail swap, a proven offer
+    // ------------------------------------------------ its publication and price tag: a rail swap, a proven delivery
     let terms = Terms { out_rail: mor_onchain::spec(), out_unit: mor_onchain::unit(Network::Regtest), rate: Rate::Fixed { num: 1, den: 1 }, fee: 500, blocks: 6 };
-    let standing = terms.standing_offer(sat(100_000), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 500, paid on within 6 blocks of the order. Regtest only.".into()));
-    let offer_act = svc.act(mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
+    let publication = terms.publication(svc.id, sha256(b"a split cMIP, a test value"), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 500, paid on within 6 blocks of the order. Regtest only.".into()));
+    let offer_act = svc.act(mirs().agreements, agreements::types::PUBLICATION, publication.to_map(), None, None);
     put(&site, &offer_act).await;
+    let tag = terms.price_tag(offer_act.id(), sat(100_000), svc.id);
+    let tag_act = svc.act(money_spec(), money::types::PRICE_TAG, Payload::PriceTag(tag.clone()).to_map(), None, None);
+    put(&site, &tag_act).await;
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
-    eprintln!("the conversion service publishes its pointer (Lightning) and its standing offer (Agreements type 6, a lone seller's): Lightning in, regtest coins out, 1:1, a fee of 500, within 6 blocks");
+    eprintln!("the conversion service publishes its pointer (Lightning), its publication (Agreements type 6, a lone seller's, its own split service: Lightning in, regtest coins out, 1:1, a fee of 500, within 6 blocks) and its price tag (Money type 5: at most 100,000 a conversion)");
 
     // ------------------------------------------------ Ana and Ben each buy a conversion
     let lnm = Lightning;
@@ -381,17 +403,15 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
     let mut bought = vec![];
     for (name, paid) in [("ana", 30_000u64), ("ben", 20_000)] {
         let mut p = born(&site, &seed, name).await;
-        // The payer reads the offer from the home; the core says it counts,
-        // and that it is a proven offer, by its form.
+        // The payer reads the publication and its tag from the home; the
+        // core says the publication counts, that it sells a proven
+        // delivery, by its form, and that the tag counts under it.
         let rd = read(&site, &[svc.id]).await;
-        assert!(AgreementsView::new(&rd.v, mirs()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
-        let lo = agreements::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
-        assert!(matches!(lo.sold[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_conversion::spec()), "a proven offer, the access form");
-        let o = Offer::read(offer_act.id(), svc.id, &lo).expect("a conversion offer");
-        // The payment follows the offer, to the service's flow.
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: sat(paid), fulfils: offer_act.id(), payer: Some(Payer::Identity(p.id)), paid_to: PaidTo::Flow { pointer: svc_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
+        let o = offer_in(&rd, &offer_act.id(), &tag_act.id(), &svc.id);
+        // The payment pays the price tag, to the service's flow.
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: sat(paid), fulfils: tag_act.id(), payer: Some(Payer::Identity(p.id)), paid_to: PaidTo::Flow { pointer: svc_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
         // The service's endpoint hands back the order, an act it signs
-        // under the offer: the forward to the owners, following their
+        // under the publication: the forward to the owners, following their
         // pointer, by a deadline.
         let now = node.rpc.block_count().await.unwrap();
         let forward = money::Forward { next_payee: owners.id, amount: o.out(&commitment.amount, None).unwrap(), agreement: offer_act.id() };
@@ -406,16 +426,16 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         // Paid over Lightning, settled; the payer's claim.
         let proof = ln.pay(paid, &commitment.hash()).await;
         let rail = Proof { paid_to: commitment.paid_to, salt: commitment.salt, rail: proof.encode() }.encode();
-        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: offer_act.id(), disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: tag_act.id(), disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
         assert_eq!(verify(Record::Claim(&claim, p.id, &Citations::default()), &held, &ln_only).answer, Answer::Valid);
         let claim_act = p.act(money_spec(), money::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
         put(&site, &claim_act).await;
         // The service's receipt of the first hop, declaring the forward its
         // order promised (Money receipt field 7).
-        let r = Receipt { rail: commitment.rail, proof: rail, payer: commitment.payer.clone(), payee: svc.id, amount: commitment.amount, fulfils: offer_act.id(), previous: None, forward: Some(order.forward.clone()), batch: None, purchase: None };
+        let r = Receipt { rail: commitment.rail, proof: rail, payer: commitment.payer.clone(), payee: svc.id, amount: commitment.amount, fulfils: tag_act.id(), previous: None, forward: Some(order.forward.clone()), batch: None, purchase: None };
         let receipt_act = svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(r).to_map(), None, None);
         put(&site, &receipt_act).await;
-        eprintln!("{name} pays {paid} over Lightning to the conversion service, following its offer; the service's receipt declares the forward of its order: {} on the chain to the owners' split service, by block {}", order.forward.amount.value, order.deadline);
+        eprintln!("{name} pays {paid} over Lightning to the conversion service, paying its price tag; the service's receipt declares the forward of its order: {} on the chain to the owners' split service, by block {}", order.forward.amount.value, order.deadline);
         bought.push(Bought { name, payer: p.id, order_act, order, commitment, claim: claim_act, receipt: receipt_act });
     }
 
@@ -454,8 +474,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
     }
     assert_eq!(route::ending_at(&onward_act.id(), &receipts), Route::Complete { hops: vec![ana.receipt.id(), onward_act.id()] }, "one chain of receipts (Money rule 24)");
     eprintln!("a third party reads the home: every receipt verifies on its rail, and the route from ana's Lightning payment to the owners' coins reads as one chain of receipts (Money rule 24)");
-    let lo = agreements::Offer::decode(&eve.v.get(&offer_act.id()).unwrap().inside).unwrap().offer;
-    let offer = Offer::read(offer_act.id(), svc.id, &lo).unwrap();
+    let offer = offer_in(&eve, &offer_act.id(), &tag_act.id(), &svc.id);
     let orders: Vec<(Hash, Order)> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_conversion::spec() && a.inside.type_ == mor_conversion::ORDER).map(|a| (a.id, Order::from_map(&payload(&eve, &a.id)).unwrap())).collect();
     assert_eq!(orders.len(), 2);
     let claim_in = |id: &Hash| match Payload::decode(money::types::CLAIM, &payload(&eve, id)) {
@@ -485,7 +504,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         let mut v = AgreementsView::new(&eve.v, mirs());
         v.rail_valid = rail_valid.clone();
         for b in &bought {
-            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215)", b.name);
+            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase under the publication, by its price tag (Agreements rule 12)", b.name);
         }
     }
     eprintln!("ana: the forward placed at block {at}, by the deadline {}: delivered; the core, asking the conversion cMIP's checker, says proven (Agreements rule 11, F261)", ana.order.deadline);
@@ -504,7 +523,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
     assert_eq!(mor_conversion::judge(&offer, &ben.order_act.id(), &ben.order, &payments[1], first, &receipts, &bitcoin, &held), Judgment::Default { owed: owed.clone() });
     assert_eq!(route::from(&ben.receipt.id(), &receipts), Route::Stopped { hops: vec![ben.receipt.id()], owed: owed.clone(), near: vec![] }, "the receipts name the hop that failed and its agreement");
     assert!(matches!(verdict(&chain, None, &ben.order_act.id()), ProofVerdict::NotProven(_)));
-    eprintln!("ben: the service receipted ben's payment, declaring a forward of {}, and paid nothing on; block {} buried six deep: the route stops at the service's receipt, and the forward is the service's open obligation under its offer (Money rule 27)", owed.forward.amount.value, ben.order.deadline);
+    eprintln!("ben: the service receipted ben's payment, declaring a forward of {}, and paid nothing on; block {} buried six deep: the route stops at the service's receipt, and the forward is the service's open obligation under its publication (Money rule 27)", owed.forward.amount.value, ben.order.deadline);
 
     // Every act counts for a reader.
     for b in &bought {

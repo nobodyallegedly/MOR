@@ -1,62 +1,78 @@
-//! The pooled anchoring service (anchoring cMIP draft 3, "The pooled
-//! service"; roadmap step 14a and its second pass): hashes paid for one by
-//! one, anchored in batches, with omission and late anchoring provable from
-//! what the service itself signed.
+//! The pooled anchoring service (anchoring cMIP draft 6, "The pooled
+//! service"; roadmap step 14a, its second pass, and the redesign of round
+//! 8, F407): hashes paid for one by one, anchored in batches, with omission
+//! and late anchoring provable from what the service itself signed.
 //!
-//! In plain words: the service publishes a **standing offer**, an
-//! Agreements offer of a lone seller (F215, F225: "Paying for anchoring is
-//! an agreement"), whose terms are this cMIP's: one line per urgency tier
-//! (a price per hash, or a price scheme tied to an on-chain measure, F228;
-//! and how many blocks the service may take). A payer pays for one hash by
-//! following that offer, over a rail (Lightning, in the tests), and gets a
-//! **ticket** the service signs under it: "your leaf goes into batch n,
-//! anchored by block D". For every batch the service publishes a signed
-//! **publication** under it: the batch's leaves, and the transaction whose
-//! output commits to their root. Then:
+//! In plain words: the service sells under a **publication** (Agreements
+//! type 6), a lone seller's: it names no ownership agreement and no
+//! partner, and the service is its own split service. What it sells is
+//! this cMIP's terms (`[2, [anchoring cMIP, terms]]`): one line per urgency
+//! tier (a price per hash, or a price scheme tied to an on-chain measure,
+//! F228; and how many blocks the service may take). Its price is a **price
+//! tag** (Money type 5) naming the publication, signed by the service and
+//! paid to it: the most one hash costs under the terms. A payer pays for one
+//! hash by paying that tag at its tier's price, over a rail (Lightning, in
+//! the tests), and gets a **ticket** the service signs under the
+//! publication: "your leaf goes into batch n, anchored by block D". For
+//! every batch the service signs a **batch notice** (this cMIP's type 3,
+//! which drafts 2 to 5 called its "publication"): the batch's leaves, and
+//! the transaction whose output commits to their root. Then:
 //!
-//! - a publication of batch n without the ticket's leaf is a **provable
+//! - a batch notice of batch n without the ticket's leaf is a **provable
 //!   omission**, from two acts the service signed;
 //! - no anchor of the leaf at or before D, once D is buried at the clock's
 //!   depth, is a **default**: non-delivery by a deadline on a named
 //!   reference (review section 9, item 2); an anchor after D is **late**,
 //!   which is a default too;
-//! - each is a refund owed **under the offer's terms** (F225): the price
-//!   paid, to the payer the payment committed to, claimable until the
-//!   offer's refund point if it sets one (F219). Money carries the
+//! - each is a refund owed **under the publication's terms** (F225): the
+//!   price paid, to the payer the payment committed to, claimable until the
+//!   publication's refund point if it sets one (F219). Money carries the
 //!   repayment, and shows it repaid ([`standing`]).
 //!
-//! The offer is an Agreements act (type 6) the core reads
-//! (`mor_core::agreements::Offer`); the ticket and the publication are this
-//! cMIP's acts (types 2 and 3) the service's identity signs, naming the
-//! offer. The caller checks them as acts, and this module reads their
-//! payloads. *Draft 2's own offer, type 1 of this cMIP, is retired: reading
-//! 3 of step 14a, a payment following the service's pointer as a tip does,
-//! is reversed by F225.*
+//! The publication and the tag are core acts (`mor_core::agreements::
+//! Publication`, `mor_core::money::PriceTag`), and the core judges whether
+//! the publication counts, whether the tag counts under it, and whether a
+//! payment of the tag is a purchase (`AgreementsView::publication`,
+//! `tag_under`, `purchase`); it does not check the amount, which this cMIP
+//! does ([`acceptable`], [`judge`]). The ticket and the batch notice are
+//! this cMIP's acts (types 2 and 3) the service's identity signs, naming
+//! the publication by its first version. The caller checks them as acts,
+//! and this module reads their payloads. *Draft 2's own offer, type 1 of
+//! this cMIP, stays retired.*
 //!
 //! *Mechanics, the build's (each respecting a decided rule): the act types
-//! and payloads; the terms carried as what the offer sells,
-//! `[2, [anchoring cMIP, terms]]`; the offer's one amount (field 2) read as
-//! the most one hash costs under it; the price scheme's shape and its one
-//! measure, the fee rate, quoted in the ticket; the ticket naming its batch,
-//! so that a publication without the leaf contradicts it; the leaves listed
-//! in the publication; the deadline as an absolute point the ticket names;
-//! the default, and the refund point's passing, read once buried at the
+//! and payloads; the terms carried as what the publication sells,
+//! `[2, [anchoring cMIP, terms]]`; the tag's price read as the most one hash
+//! costs under the terms; the price scheme's shape and its one measure, the
+//! fee rate, quoted in the ticket; the ticket naming its batch, so that a
+//! batch notice without the leaf contradicts it; the leaves listed in the
+//! batch notice; the deadline as an absolute point the ticket names; the
+//! default, and the refund point's passing, read once buried at the
 //! clock's depth on the chain the verifier follows; one block of slack in
 //! the payer's check.*
 
 use mor_core::cbor::{self, Value};
 use mor_core::envelopes::anchoring::Reference;
-use mor_core::money::{Amount, Payer, RefundTo};
+use mor_core::money::{Amount, Payer, PriceTag, Priced, RefundTo};
 use mor_core::hash::Hash;
-use mor_core::agreements::{self, RefundTerms, Sold};
+use mor_core::agreements::{self, RefundTerms, Sold, SplitPlan, Unfilled};
 use mor_payment::{Answer, Commitment, PaidTo};
 
 /// The act types of this cMIP. *Mechanic, the build's: the numbers.*
 pub const TICKET: u64 = 2;
-pub const PUBLICATION: u64 = 3;
-/// Draft 2's own offer act, retired by F225 (the offer is an Agreements
-/// standing offer), never reused.
+/// The batch notice (draft 6's word; drafts 2 to 5 called it this cMIP's
+/// "publication", which the Agreements publication is not): the type
+/// number, unchanged.
+pub const BATCH_NOTICE: u64 = 3;
+/// The batch notice's type under its former name, kept for callers.
+pub const PUBLICATION: u64 = BATCH_NOTICE;
+/// Draft 2's own offer act, retired by F225 (the offer was an Agreements
+/// standing offer, and is now an Agreements publication), never reused.
 pub const RETIRED_OFFER: u64 = 1;
+
+/// The anchoring task (Development's task table, task 11, F173): the task
+/// a service's publication names this cMIP for, in its field 9.
+pub const ANCHORING_TASK: u64 = 11;
 
 /// The one on-chain measure a price scheme names so far (F228): the fee
 /// rate, in satoshis per virtual byte, as the service reads it at the
@@ -106,7 +122,7 @@ pub struct Tier {
     pub blocks: u64,
 }
 
-/// The anchoring cMIP's terms, what the service's standing offer sells
+/// The anchoring cMIP's terms, what the service's publication sells
 /// (`[2, [anchoring cMIP, terms]]`): the time reference its anchors and
 /// deadlines are on, and its tiers, most urgent first.
 ///
@@ -166,47 +182,144 @@ impl Terms {
         self.tiers.iter().map(|t| t.price.most()).max().unwrap_or(0)
     }
 
-    /// The Agreements standing offer (type 6) the service signs selling
-    /// these terms: a lone seller's (no field 0, F215), paid to its signer,
-    /// its price (field 2) the most one hash costs, its own time reference
-    /// (field 6) the terms' reference, its own refund terms (field 7) where
-    /// it sets a refund point on it.
-    pub fn standing_offer(&self, unit: Hash, words: Option<String>, refund_until: Option<u64>) -> agreements::Offer {
-        agreements::Offer {
-            under: None,
-            sold: vec![Sold::Access(crate::spec(), cbor::encode(&self.to_value()))],
-            price: Amount { unit, value: self.most() },
-            paid: None,
+    /// The publication (Agreements type 6) the service signs selling these
+    /// terms (draft 6, item 9): a lone seller's (no field 1, no partner),
+    /// `service` its own split service (field 3), under a split plan with
+    /// no share off the top naming the split cMIP `split_cmip`; selling
+    /// exactly `[2, [anchoring cMIP, terms]]`; its time reference (field 6)
+    /// the terms' reference; its refund terms (field 8) where the service
+    /// sets a refund point on it; naming this cMIP for the anchoring task
+    /// (field 9).
+    pub fn publication(&self, service: Hash, split_cmip: Hash, words: Option<String>, refund_until: Option<u64>) -> agreements::Publication {
+        agreements::Publication {
+            sold: Some(vec![Sold::Access(crate::spec(), cbor::encode(&self.to_value()))]),
+            owners: None,
+            partners: vec![],
+            service,
+            plan: lone_plan(split_cmip),
             words,
-            until: None,
             time: Some((self.reference.cmip, self.reference.params.clone())),
+            until: None,
             refund: refund_until.map(|u| RefundTerms { until: Value::Uint(u) }),
+            cmips: vec![(ANCHORING_TASK, crate::spec())],
+            designated: None,
+            backups: vec![],
+            failed: None,
         }
+    }
+
+    /// The first version of the price tag (Money type 5) the service signs
+    /// under its publication `first` (its first version): its price the
+    /// most one hash costs under these terms, in `unit`, paid to `service`.
+    pub fn price_tag(&self, first: Hash, unit: Hash, service: Hash) -> PriceTag {
+        PriceTag { priced: Priced::Publication(first), version: 1, previous: None, price: Some(Amount { unit, value: self.most() }), payee: service }
     }
 }
 
-/// The service's standing offer, as this cMIP reads the Agreements offer
-/// it signed (F225).
+/// A lone seller's split plan: no share off the top, everything to the
+/// owners' line, which is the seller's own, under the split cMIP named.
+pub fn lone_plan(split_cmip: Hash) -> SplitPlan {
+    SplitPlan {
+        shares: vec![],
+        cmip: split_cmip,
+        unfilled: Unfilled::Stakes,
+        top: vec![],
+        service_bears_rail_fees: false,
+        max_rail_fee: None,
+        params: None,
+        metrics: vec![],
+        fees: vec![],
+    }
+}
+
+/// The service's offer, as this cMIP reads it (draft 6, item 9): its
+/// publication and the price tag version a payer pays.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Offer {
-    /// The offer act's id: what a payment buying under it follows.
+    /// The publication's first version: what tickets and batch notices
+    /// name, and what a refund is owed under.
     pub id: Hash,
-    /// Who is paid (its field 3, or the signer, the service).
+    /// The price tag's version read: what a payment buying an anchor
+    /// fulfils (Money rule 18).
+    pub tag: Hash,
+    /// Who is paid: the tag's payee, the service.
     pub payee: Hash,
-    /// Its field 2: the most one hash costs under it.
+    /// The tag's price: the most one hash costs under the terms.
     pub price: Amount,
     pub terms: Terms,
-    /// Its own refund terms (field 7): the point on the reference until
-    /// which a refund owed under it is claimable (F219).
+    /// The publication's refund terms (field 8): the point on the reference
+    /// until which a refund owed under it is claimable (F219).
     pub refund_until: Option<u64>,
 }
 
 impl Offer {
-    /// Read an Agreements standing offer, `id`, signed by `signer`, as this
-    /// cMIP's: a lone seller's (F215), selling exactly these terms, on its
-    /// own time reference the terms' own, its field 2 the most one hash
-    /// costs, in a unit, not withdrawn. Whether it counts as an offer
-    /// (public, valid) is Agreements' (`AgreementsView::offer`), checked beside.
+    /// Read a service's publication and its price tag as this cMIP's offer
+    /// (draft 6, item 9). `first` is the publication's first version, `p`
+    /// the version in force (the caller finds the latest, Agreements rule
+    /// 11), `drafter` its drafter; `tag` the tag version a payer would pay,
+    /// act `tag_id`, signed by `tag_signer`. The publication: a lone
+    /// seller's (no field 1, no partner), its drafter its own split service,
+    /// selling exactly this cMIP's terms, not ended; on its own time
+    /// reference, the terms' own; naming this cMIP for the anchoring task.
+    /// The tag: naming `first`, signed by the service (or the party the
+    /// publication designates), paid to the service, not withdrawn, its
+    /// price the most one hash costs under the terms. Whether the
+    /// publication counts and the tag counts under it is Agreements'
+    /// (`AgreementsView::publication`, `tag_under`), checked beside.
+    pub fn from_publication(first: Hash, drafter: Hash, p: &agreements::Publication, tag_id: Hash, tag_signer: Hash, tag: &PriceTag) -> Result<Offer, String> {
+        if p.owners.is_some() || !p.partners.is_empty() {
+            return Err("an anchoring publication is a lone seller's: no ownership agreement (field 1), no partner".into());
+        }
+        if p.service != drafter {
+            return Err("the service is its own split service (field 3): the publication's drafter".into());
+        }
+        let sold = match &p.sold {
+            None => return Err("a split agreement sells nothing".into()),
+            Some(s) if s.is_empty() => return Err("this version sells nothing: the publication has ended".into()),
+            Some(s) => s,
+        };
+        let [Sold::Access(cmip, params)] = sold.as_slice() else {
+            return Err("an anchoring publication sells exactly one thing: this cMIP's terms".into());
+        };
+        if cmip != &crate::spec() {
+            return Err("it sells another cMIP's access".into());
+        }
+        let terms = cbor::decode(params).ok().as_ref().and_then(Terms::decode).ok_or("its terms are not in this cMIP's format")?;
+        if p.time.as_ref().map(|(c, x)| (c, x)) != Some((&terms.reference.cmip, &terms.reference.params)) {
+            return Err("its time reference (field 6) is the clock its deadlines are points on, the terms' reference".into());
+        }
+        if p.cmip(ANCHORING_TASK) != Some(&crate::spec()) {
+            return Err("it names this cMIP for the anchoring task (field 9)".into());
+        }
+        let refund_until = match &p.refund {
+            None => None,
+            Some(RefundTerms { until: Value::Uint(u) }) => Some(*u),
+            Some(_) => return Err("its refund point is a point on the reference".into()),
+        };
+        if tag.priced != Priced::Publication(first) {
+            return Err("the price tag names another publication, or a bake".into());
+        }
+        if tag_signer != p.service && p.designated != Some(tag_signer) {
+            return Err("the price tag is signed neither by the service nor by the party the publication designates: nobody's offer (Money rule 18)".into());
+        }
+        if tag.payee != p.service {
+            return Err("the price tag is paid to the service, its own split service".into());
+        }
+        let Some(price) = tag.price else {
+            return Err("this version of the price tag carries no price: withdrawn (Money rule 18)".into());
+        };
+        if price.value != terms.most() {
+            return Err("the tag's price is the most one hash costs under the terms (mechanic, the build's)".into());
+        }
+        Ok(Offer { id: first, tag: tag_id, payee: tag.payee, price, terms, refund_until })
+    }
+
+    /// Read an Agreements standing offer as drafts 3 to 5 did. **Kept only
+    /// for the WebAssembly binding until the MOR lead moves it** to
+    /// [`Offer::from_publication`]: the core no longer reads standing
+    /// offers, and nothing else in this cMIP makes one. The offer is its
+    /// own price here: `tag` is `id`.
+    #[doc(hidden)]
     pub fn read(id: Hash, signer: Hash, o: &agreements::Offer) -> Result<Offer, String> {
         if o.under.is_some() {
             return Err("an anchoring offer is a lone seller's (F215, F225): no co-owners' agreement behind it".into());
@@ -230,7 +343,7 @@ impl Offer {
             Some(_) => return Err("its refund point is a point on the reference".into()),
         };
         let payee = o.payee(&signer).ok_or("a lone seller's offer is paid to a payee")?;
-        Ok(Offer { id, payee, price: o.price, terms, refund_until })
+        Ok(Offer { id, tag: id, payee, price: o.price, terms, refund_until })
     }
 
     /// The price of one hash at `tier`, given the ticket's `quote` of the
@@ -249,7 +362,8 @@ impl Offer {
 /// The ticket the service signs for one paid hash.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ticket {
-    /// The standing offer it sells under.
+    /// The publication it sells under, by its first version (drafts 3 to
+    /// 5: the standing offer; the wire key 0 is unchanged).
     pub offer: Hash,
     /// The leaf (the anchoring cMIP's tree: the act and the payer's blind);
     /// the service never learns the act.
@@ -266,9 +380,13 @@ pub struct Ticket {
     pub quote: Option<u64>,
 }
 
-/// What the service publishes for each batch it anchors.
+/// The batch notice the service signs for each batch it anchors (this
+/// cMIP's type 3; drafts 2 to 5 called it a "publication", which the
+/// Agreements publication it sells under is not).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Publication {
+    /// The Agreements publication it is signed under, by its first version
+    /// (the wire key 0 is unchanged).
     pub offer: Hash,
     pub batch: u64,
     /// The batch's leaves, in the tree's order.
@@ -306,7 +424,7 @@ fn uint(v: Option<&Value>) -> Option<u64> {
 }
 
 impl Ticket {
-    /// `{ 0: offer, 1: leaf, 2: commitment, 3: tier, 4: batch, 5: deadline, ? 6: quote }`
+    /// `{ 0: publication, 1: leaf, 2: commitment, 3: tier, 4: batch, 5: deadline, ? 6: quote }`
     pub fn to_map(&self) -> Vec<(Value, Value)> {
         let mut m = vec![
             (key(0), b(&self.offer)),
@@ -338,8 +456,11 @@ impl Ticket {
     }
 }
 
+/// The batch notice under its draft 6 name.
+pub type BatchNotice = Publication;
+
 impl Publication {
-    /// `{ 0: offer, 1: batch, 2: [ leaf, ... ], 3: tx, 4: output }`
+    /// `{ 0: publication, 1: batch, 2: [ leaf, ... ], 3: tx, 4: output }`
     pub fn to_map(&self) -> Vec<(Value, Value)> {
         vec![
             (key(0), b(&self.offer)),
@@ -391,10 +512,11 @@ pub struct Payment {
     pub answer: Answer,
 }
 
-/// A refund owed under the offer's terms (F225): the price paid, owed to
-/// the payer the payment committed to (Money rule 10a: an identity, a bare
-/// key, or nobody), claimable until the offer's refund point where it sets
-/// one (F219).
+/// A refund owed under the publication's terms (F225; Agreements, "A
+/// service sold under a cMIP's terms"): the price paid, owed to the payer
+/// the payment committed to (Money rule 19: an identity, a bare key, or
+/// nobody), claimable until the publication's refund point (field 8) where
+/// it sets one (F219).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Refund {
     pub amount: Amount,
@@ -411,7 +533,7 @@ pub enum Standing {
     /// Repaid in full: the service's claim, with the rail's proof that the
     /// money went back, naming the payment refunded.
     Repaid,
-    /// Past the offer's refund point, unpaid: ended, the service keeps
+    /// Past the publication's refund point, unpaid: ended, the service keeps
     /// `left` (F219; bad-faith terms stay public).
     Ended { left: u64 },
 }
@@ -435,7 +557,7 @@ pub enum Judgment {
     /// The deadline is buried at the clock's depth and no anchor at or
     /// before it is shown: non-delivery, a default, the price owed back.
     Default { refund: Refund },
-    /// This verifier cannot judge: it does not follow the offer's clock.
+    /// This verifier cannot judge: it does not follow the publication's clock.
     Unknown(String),
 }
 
@@ -445,15 +567,18 @@ pub enum Judgment {
 pub const SLACK: u64 = 1;
 
 /// Whether the payment committed to as `c` buys `ticket` under `offer`
-/// (F225): the ticket names the offer and the commitment; the payment
-/// follows the standing offer (not the service's pointer, as a tip does:
-/// reading 3 of step 14a reversed), to its payee, to a flow (which pointer
-/// counts is Money's, rules 14 and 15), naming no claim (a lone seller's
-/// offer, F215), for exactly the tier's price (or, under a scheme, the
-/// price the ticket's quote gives, F228). The refund it would be owed.
+/// (F225; draft 6, item 10): the ticket names the publication and the
+/// commitment; the payment pays the publication's price tag (its `fulfils`
+/// the tag's version; not the service's pointer, as a tip does: reading 3
+/// of step 14a reversed), to the tag's payee, to a flow (which pointer
+/// counts is Money's, rule 17), naming no ownership agreement (a lone
+/// seller's publication: its receipt carries no field 9), for exactly the
+/// tier's price (or, under a scheme, the price the ticket's quote gives,
+/// F228). The core does not check the amount: this does. The refund it
+/// would be owed.
 pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<Refund, String> {
     if ticket.offer != offer.id {
-        return Err("the ticket names another offer".into());
+        return Err("the ticket names another publication".into());
     }
     let Some(price) = offer.price(ticket.tier, ticket.quote) else {
         return Err("the offer has no such tier, or the ticket's quote does not fit its price".into());
@@ -461,14 +586,14 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
     if c.hash() != ticket.commitment {
         return Err("the payment's commitment is not the one the ticket names".into());
     }
-    if c.fulfils != offer.id {
-        return Err("the payment does not follow the service's standing offer (F225: a tip to its pointer buys no anchor)".into());
+    if c.fulfils != offer.tag {
+        return Err("the payment does not pay the publication's price tag (F225: a tip to the service's pointer buys no anchor)".into());
     }
     if c.payee != offer.payee || !matches!(c.paid_to, PaidTo::Flow { .. }) {
-        return Err("the payment is not to the offer's payee's flow".into());
+        return Err("the payment is not to the tag's payee's flow".into());
     }
     if c.purchase.is_some() {
-        return Err("a payment following a lone seller's offer names no claim (F215)".into());
+        return Err("a purchase under a lone seller's publication names no ownership agreement (Agreements rule 11)".into());
     }
     if c.amount != price {
         return Err("the payment is not the tier's price".into());
@@ -481,16 +606,16 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
     Ok(Refund { amount: price, to, until: offer.refund_until })
 }
 
-/// Judge a ticket (anchoring cMIP draft 3, "Omission and default"), under
-/// the service's standing offer (F225), from what the service signed
-/// (`offer`, `ticket`, `publications`), the
+/// Judge a ticket (anchoring cMIP draft 6, "Omission and default"), under
+/// the service's publication and price tag (`offer`), from what the
+/// service signed (`ticket`, its batch notices `publications`), the
 /// payment, an anchor shown (the clock Module's proof, for the ticket's
 /// leaf), and the clock as this verifier follows it. In order:
 ///
 /// 1. **Not paid:** the payment is not valid, or does not buy this ticket
-///    (another commitment or payee, not following the offer, or not the
-///    tier's price): nothing is owed.
-/// 2. **Omitted:** a publication of the ticket's batch, under its offer,
+///    (another commitment or payee, not paying the tag, or not the tier's
+///    price): nothing is owed.
+/// 2. **Omitted:** a batch notice of the ticket's batch, under its publication,
 ///    without its leaf (or whose leaves make no batch): a provable
 ///    omission, whatever else happened; the price is owed back.
 /// 3. **Anchored or late:** an anchor of the leaf at the clock's depth: at
@@ -498,7 +623,7 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
 ///    back.
 /// 4. **Default:** the clock stands at the deadline plus its depth less
 ///    one (a point at the deadline would now count), and no anchor at or
-///    before it is shown: non-delivery by the deadline on the offer's
+///    before it is shown: non-delivery by the deadline on the publication's
 ///    reference; the price is owed back.
 /// 5. Otherwise pending.
 pub fn judge(offer: &Offer, ticket: &Ticket, payment: &Payment, publications: &[Publication], anchor: Option<&[u8]>, clock: &dyn BatchClock) -> Judgment {
@@ -510,7 +635,7 @@ pub fn judge(offer: &Offer, ticket: &Ticket, payment: &Payment, publications: &[
         return Judgment::NotPaid(format!("the payment is not shown made: {}", payment.answer));
     }
     if clock.reference() != offer.terms.reference {
-        return Judgment::Unknown("this verifier's clock is not the offer's reference".into());
+        return Judgment::Unknown("this verifier's clock is not the publication's reference".into());
     }
     let omitted = publications
         .iter()
@@ -533,18 +658,20 @@ pub fn judge(offer: &Offer, ticket: &Ticket, payment: &Payment, publications: &[
 
 /// The anchoring cMIP's checker for the core (Agreements draft 11, rule
 /// 11, new in draft 11, F261): the pooled anchoring service is a proven
-/// offer, and this checker is the first the core asks for a proof's
+/// delivery (a publication selling this cMIP's access), and this checker is the first the core asks for a proof's
 /// verdict. It is [`judge`], unchanged: the hash is in the batch or it is
 /// not. What it reads beside the proof is what `judge` reads: the service's
-/// offers and publications, the payments as the caller verified them with
+/// offers (each a publication with a tag version) and batch notices, the payments as the caller verified them with
 /// the payment cMIP, and the clock as this verifier follows it.
 ///
 /// The proof, in this cMIP's encoding (mechanic, the build's): `[ ticket,
 /// anchor / null ]`, the ticket's map and the clock Module's proof for its
 /// leaf. Anchored at or before the deadline: proven. Omitted, late or a
-/// default: not proven, the refund owed under the offer's terms. Pending,
-/// a clock this verifier does not follow, or an offer or payment it does
-/// not hold: unknown.
+/// default: not proven, the refund owed under the publication's terms.
+/// Pending, a clock this verifier does not follow, or a publication or
+/// payment it does not hold: unknown. The core passes the publication; the
+/// offer read is the one under that publication whose tag version the
+/// payment pays.
 pub struct Checker<'c> {
     pub offers: Vec<Offer>,
     pub publications: Vec<Publication>,
@@ -561,9 +688,9 @@ impl agreements::ProofChecker for Checker<'_> {
 
     fn check(&self, offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
         use agreements::ProofVerdict as V;
-        let Some(o) = self.offers.iter().find(|o| &o.id == offer) else {
-            return V::Unknown("this checker does not hold the offer as an anchoring offer".into());
-        };
+        if !self.offers.iter().any(|o| &o.id == offer) {
+            return V::Unknown("this checker does not hold the publication as an anchoring offer".into());
+        }
         let (ticket, anchor) = match cbor::decode(proof) {
             Ok(Value::Array(x)) if x.len() == 2 => {
                 let Value::Map(m) = &x[0] else { return V::NotProven("not an anchoring proof: [ticket, anchor / null]".into()) };
@@ -580,6 +707,10 @@ impl agreements::ProofChecker for Checker<'_> {
         let Some(payment) = self.payments.iter().find(|p| p.commitment.hash() == ticket.commitment) else {
             return V::Unknown("the payment buying the ticket is not held".into());
         };
+        // The tag version the payment pays, under this publication; where
+        // it pays none of them, any, and the judgment says not paid.
+        let mut under = self.offers.iter().filter(|o| &o.id == offer);
+        let o = self.offers.iter().find(|o| &o.id == offer && o.tag == payment.commitment.fulfils).or_else(|| under.next()).expect("held");
         match judge(o, &ticket, payment, &self.publications, anchor.as_deref(), self.clock) {
             Judgment::Anchored { .. } => V::Proven,
             Judgment::Pending => V::Unknown("pending: not anchored yet, the deadline not yet buried".into()),
@@ -600,7 +731,7 @@ pub fn delivery_proof(ticket: &Ticket, anchor: Option<&[u8]>) -> Vec<u8> {
 /// Where a refund stands (F225, F219): repaid in full where Money shows
 /// `repaid` (what the service's claims, with the rail's proof, show paid
 /// back toward it) reach its amount; otherwise ended once the clock stands
-/// past the offer's refund point at its depth (a point after it would now
+/// past the publication's refund point at its depth (a point after it would now
 /// count); otherwise owed.
 pub fn standing(refund: &Refund, repaid: u64, clock: &dyn BatchClock) -> Standing {
     if repaid >= refund.amount.value {
@@ -614,9 +745,11 @@ pub fn standing(refund: &Refund, repaid: u64, clock: &dyn BatchClock) -> Standin
 }
 
 /// Client conformance: whether a payer's client accepts a ticket before
-/// paying, against the standing offer it chose and its own clock's point
-/// `now`: the tier exists, the ticket names the payer's commitment, the
-/// commitment follows the offer to its payee for the tier's price, and the
+/// paying, against the publication and price tag it chose (the latest
+/// versions of each, Agreements rule 11, Money rule 18) and its own clock's
+/// point `now`: the tier exists, the ticket names the publication and the
+/// payer's commitment, the commitment pays the tag to its payee for the
+/// tier's price, and the
 /// deadline is after `now` and no later than `now` plus the tier's blocks
 /// and [`SLACK`]. Under a price scheme (F228), the client reads the
 /// measure itself (`measure`) and refuses a quote above its own reading.
