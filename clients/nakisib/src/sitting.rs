@@ -693,7 +693,7 @@ mod tests {
         Rotation {
             prev: prev.id(),
             position,
-            signing_key: SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() },
+            signing_key: Some(SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() }),
             chain_key: ChainKeyCommit { scheme: sig::SLH_128S, commit: [0; 32] },
             kept: vec![],
             disowned: None,

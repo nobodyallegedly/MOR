@@ -125,6 +125,8 @@ export const WEB_OPS: readonly string[] = [
   'real register resignation',
   'real money prepare',
   'real money record',
+  'real keepers prepare',
+  'real keepers record',
   'real keepers',
   'real keep',
   'real collective post',
@@ -490,16 +492,19 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'real release standing':
         return real.releaseStanding(text(a.act));
       case 'real money prepare':
-        // Round 3, part C: the collective's stakes, split plan, split service and keepers, one clone.
+        // H101: where the collective's payments land: a split service (a split agreement reading its shares by reference) or one trusted pointer.
         return real.prepareMoney({
           collective: text(a.collective),
-          shares: Object.fromEntries(Object.entries((a.shares ?? {}) as Record<string, unknown>).map(([k, v]) => [readIdOr(k), Number(v)])),
+          way: a.way === 'pointer' ? 'pointer' : 'service',
           referral: Number(a.referral ?? 0),
-          service: text(a.service),
-          serviceKey: text(a.serviceKey),
-          keepers: list(a.keepers),
-          keepersNeeded: num(a.keepersNeeded ?? 1),
+          ...(a.service !== undefined ? { service: text(a.service) } : {}),
+          ...(a.wallet !== undefined ? { wallet: text(a.wallet) } : {}),
+          ...(a.by !== undefined ? { by: text(a.by) } : {}),
         });
+      case 'real keepers prepare':
+        return real.prepareKeepers({ collective: text(a.collective), keepers: list(a.keepers), keepersNeeded: Number(a.keepersNeeded ?? 1) });
+      case 'real keepers record':
+        return real.recordKeepers(text(a.act));
       case 'real money record':
         return real.recordMoney(text(a.act));
       case 'real keepers':
@@ -510,7 +515,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
         const c = real.collective(text(a.collective));
-        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
+        return { id: c.identity, members: c.f.members, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
       }
       case 'publishing':
         return publishing.state();

@@ -126,6 +126,24 @@ ${f('others', r.others, 'Other members who together judge absence', 'all the oth
 </div></fieldset>`;
 }
 
+/**
+ * Who acts for the collective in each of the five layers (Agreements rule
+ * 60), Money first: how many members together; empty, the number any other
+ * change needs. Text and Envelopes are two layers.
+ */
+function layerFields(): string {
+  const layers: [number, string, string][] = [
+    [3, 'Money', 'its payee pointer, receipts, price tags, debts'],
+    [1, 'Text', 'its posts'],
+    [2, 'Envelopes', 'its bakes (a release is one) and key deliveries'],
+    [4, 'Agreements', 'its publications, its split agreement among them, and grants'],
+    [5, 'Development', 'the extensions it adopts'],
+  ];
+  return `<fieldset><legend>Who acts for it, layer by layer: how many members together (empty: as for any other change)</legend><div class="grid">
+${layers.map(([l, name, what]) => `<label>${name}: ${what}</label><input name="layer-${l}" type="number" min="1" value="" placeholder="as any other change">`).join('\n')}
+</div><p class="small">With 1, any one member alone acts for the collective in that layer. Read the review, layer by layer, before signing.</p></fieldset>`;
+}
+
 type Col = State['collectives'][number];
 
 /** The release area, in plain words: who holds it, how many decide, whether it is frozen; stepping down; its words. */
@@ -194,7 +212,7 @@ ${declaredNote}
 ${owedNote}
 <dl class="facts"><dt>Collective</dt><dd>${fp(c.id)}</dd>
 <dt>Members</dt><dd>${c.members.map((m) => `${e(m.name)}${m.left ? ' <span class="tag">left: a party until the members refit the collective</span>' : ''}`).join('<br>')}</dd>
-<dt>Signing key</dt><dd>${e(c.holder)}</dd>
+<dt>Acts for it</dt><dd>Each member with their own key, naming the collective: it has no signing key, and there are no member keys</dd>
 <dt>Chain key</dt><dd>${c.shares.of} shares, any ${c.shares.threshold} rebuild it</dd>
 <dt>A change of members or rules needs</dt><dd>${c.rules.constitution ? `any ${c.rules.constitution} members` : 'every member whose voice remains'}</dd>
 <dt>Any other change needs</dt><dd>${c.rules.clone} members' signatures</dd>
@@ -266,8 +284,9 @@ ${c.debts.some((x) => x.creditorHeld) ? `<form class="debt-release row"><select 
 export function found(s: State): string {
   return `<form id="found">
 <div class="row"><input name="name" type="text" placeholder="A name, kept on this device" required></div>
-<fieldset><legend>Members (you first: you propose it and hold the signing key)</legend>${s.identities.map((i) => `<label class="check"><input type="checkbox" name="members" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make test identities first.</span>'}</fieldset>
+<fieldset><legend>Members (you first: you propose it; the collective has no signing key, each member acts for it with their own key)</legend>${s.identities.map((i) => `<label class="check"><input type="checkbox" name="members" value="${e(i.id)}"> ${e(nameOf(s, i.id))}</label>`).join('') || '<span class="small">Make test identities first.</span>'}</fieldset>
 ${rulesFields({ safety: 2, release: 2, clone: 2, others: '' })}
+${layerFields()}
 <label>The words everyone signs (empty: the standard words for these rules)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit">Review the founding</button></div></form>`;
 }

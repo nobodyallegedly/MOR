@@ -12,7 +12,7 @@ import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { serve, type Running } from '../src/server.ts';
-import { checkout, commit } from './setup.ts';
+import { checkout, commit, stopAll } from './setup.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 /** Set MOR_SCREENSHOTS to a folder to keep a picture of each review, for a person to look at. */
@@ -36,10 +36,10 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Part 4: everything started is stopped whatever the outcome, each within a bound (stopAll), so no
+// server keeps this file's process, and the CI job, waiting.
 after(async () => {
-  await browser?.close();
-  await app?.close();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  await stopAll([browser, app, ...(homes ?? []), relay]);
 });
 
 const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });

@@ -43,12 +43,20 @@ test('make-desktop.sh: a desktop entry named Kišib, running a launcher that sta
   // As the desktop runs it: the program starts in ~/mor-kishib, its link in the launcher's log.
   execFileSync(launch, [], { env, cwd: home });
   const dir = join(home, 'mor-kishib');
-  assert.ok(existsSync(join(dir, 'run.json')), 'the program runs in its default folder');
-  const run = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { port: number; pid: number };
-  assert.match(readFileSync(join(home, 'mor-kishib-launcher.log'), 'utf8'), new RegExp(`127\\.0\\.0\\.1:${run.port}/#pair=`));
-  const hello = (await (await fetch(`http://127.0.0.1:${run.port}/hello`)).json()) as { pid: number };
-  assert.equal(hello.pid, run.pid);
-  execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env, encoding: 'utf8' });
+  // Part 4: the program the launcher started stopped whatever the outcome.
+  try {
+    assert.ok(existsSync(join(dir, 'run.json')), 'the program runs in its default folder');
+    const run = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')) as { port: number; pid: number };
+    assert.match(readFileSync(join(home, 'mor-kishib-launcher.log'), 'utf8'), new RegExp(`127\\.0\\.0\\.1:${run.port}/#pair=`));
+    const hello = (await (await fetch(`http://127.0.0.1:${run.port}/hello`)).json()) as { pid: number };
+    assert.equal(hello.pid, run.pid);
+  } finally {
+    try {
+      execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env, encoding: 'utf8' });
+    } catch {
+      // not started, or stopped already
+    }
+  }
 });
 
 test('make-app.sh: Kishib.app carries its own icon, named in its Info.plist', () => {

@@ -185,9 +185,9 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: areas, member keys from D
 
   // 1. The areas, from the grid.
   const { collective, terms } = await foundCollective(e, A.id, [iPa.dub, iPh.dub], [
-    { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-    { name: 'Offers and deals', layer: 3, holders: [A.id, iPa.id], number: 1 },
-    { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
+    { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
+    { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 1 },
+    { name: 'Money', layer: 3, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
   ]);
 
   // 2a. A's own key, from Damgar: within the cap alone; above it, with iPa's key from Dub.

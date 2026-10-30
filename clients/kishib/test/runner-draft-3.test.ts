@@ -1,27 +1,23 @@
 // The Dubsar runner, draft 3 (`cmips/cmip-runner-draft-3.md`; decided by
 // Nobody, allegedly, 22 October 2026): opening chosen per identity, per app;
-// Kišib holding an identity's own keys for its collectives and signing with
-// them through its panel; the key of a payment made under the app's own lane
+// the key of a payment made under the app's own lane
 // delivered to the identity itself without a panel. Kišib's program, Dub's
 // and Damgar's talk as they do on the Mac, against real homes and a relay on
-// local ports.
+// local ports. Draft 3's member keys are gone (draft 5): see below.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
-import { asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, runnerOn, start, type Relay } from './world.ts';
+import { asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, runnerOn, start, type Relay, stopAll } from './world.ts';
 import { describeAct } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { idForm } from '../../genesis/src/forms.ts';
 import { closeAll as closeOthers, dub as dubOf, edubba, person, testLink } from '../../damgar/test/world.ts';
 import { TestNode } from '../../damgar/test/node.ts';
 import { SPEC } from '../../damgar/src/specs.ts';
-import { foundCollective } from '../../desk/test/cast.ts';
-import { readMemberKeys } from '../../grants/src/member.ts';
-import type { Done } from '../../desk/src/page/api.ts';
 import type { LaneShown, ToSign } from '../../damgar/src/shapes.ts';
 import { RUNNER_NO_OPEN_SAY } from '../../dub/src/dub.ts';
-import { NO_MEMBER_SAY, type RunnerView } from '../src/runner.ts';
+import type { RunnerView } from '../src/runner.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -32,9 +28,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  await closeOthers();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => closeOthers());
 });
 
 const secretForms = (b: Uint8Array) => [Buffer.from(b).toString('hex'), Buffer.from(b).toString('base64')];
@@ -78,86 +73,12 @@ test('opening per identity, per app: two identities used through Kišib by Dub, 
   assert.ok(boxB.messages.some((m) => m.text === 'For B, sealed.'));
 });
 
-test('member keys: an identity used through Kišib, a member of a collective; its key added in Kišib; a post as the collective from Dub signed through the panel with the member key; nothing of the key in the clear or in Dub', async () => {
-  const H = homes.map((h) => h.base);
-  const e = await edubba(H, [relay.base]);
-  const A = (await e.c.ask<Done>('identity', { name: 'A', linked: false })).acts[0];
-  const max = await dubOf(H, [relay.base]);
-  const pa = await dubOf(H, [relay.base]);
-  const { collective } = await foundCollective(e, A, [max, pa], [{ name: 'Posts', layer: 1, holders: [A, max.id, pa.id], number: 1 }], { name: 'Collective Y' });
-  // Max's own member key, sealed to Max at its homes.
-  const keys = await readMemberKeys(max.id, [encryptionSecret(fromWords(max.words))], H);
-  assert.equal(keys.length, 1);
-  const secret = keys[0].secret;
-
-  const k = await kishib();
-  await runnerOn(k.c);
-  await k.c.ask('runner give', { id: max.id, address: H[0], words: max.words });
-  const d = await dubBeside(k.dir);
-  await d.c.ask('runner pair');
-  const p = (await state(k.c)).apps[0];
-  await k.c.ask('runner approve', { pairing: p.id, identities: [max.id] });
-  await d.c.ask('runner take', { id: max.id });
-
-  // Dub asks Kišib to add the collective's key: waiting in Kišib.
-  const added = await d.c.ask<{ lines: { text: string }[] }>('collective add', { id: collective });
-  assert.match(added.lines[0].text, /asked Kišib to add it/);
-  await refused(d.c.ask('act as', { id: collective }), /asked Kišib to add it/);
-  let v = await state(k.c);
-  assert.equal(v.memberAsks.length, 1);
-  assert.equal(v.memberAsks[0].collective, collective);
-  // Approved in Kišib: Kišib opens it from Max's homes and keeps it with Max.
-  v = await k.c.ask<RunnerView>('runner member answer', { ask: v.memberAsks[0].id, yes: true });
-  assert.deepEqual(v.held[0].members.map((m) => m.collective), [collective]);
-
-  // Acting as the collective in Dub: a post, Kišib's panel, signed with the member key.
-  await d.c.ask('act as', { id: collective });
-  const posting = d.c.ask<{ post: { id: string }; lines: { text: string }[] }>('post', { text: 'From the collective, through Kišib.' });
-  const ask = await asking(d.c);
-  assert.equal(ask.title, 'Dub asks Kišib to sign a post as a collective');
-  const html = await (await fetch(ask.panel, { headers: { 'sec-fetch-dest': 'iframe' } })).text();
-  assert.match(html, /As the collective/);
-  assert.match(html, /own member key/);
-  // Which key signs, said plainly: Max's own member key for the collective, the collective's ID and Max's each a tap showing it whole.
-  assert.match(html, /signed with [^<]+’s own member key for it/);
-  assert.ok(html.includes(`<span class="k-whole">${idForm(collective)}</span>`), 'the collective’s ID, a tap');
-  assert.ok(html.includes(`<span class="k-whole">${idForm(max.id)}</span>`), 'the member’s ID, a tap');
-  const waits = (await state(k.c)).waiting;
-  assert.match(waits[0].as ?? '', new RegExp(`^As the collective .*${idForm(collective)}, signed with .*own member key for it \\(${idForm(max.id)}\\)`));
-  assert.ok(!/Always yes/.test(html), 'an act as a collective always shows the panel');
-  assert.match(await clickPanel(ask.panel, 'sign'), /Signed/);
-  const posted = await posting;
-  assert.match(posted.lines[0].text, /Posted as the collective/);
-  // The act at the relays: signed by the collective, bound to Max's signature naming the member key.
-  const bytes = await relayAt(relay.base).getAct(posted.post.id);
-  const dsc = describeAct(bytes!) as { signer: string; binding: string };
-  assert.equal(dsc.signer, collective);
-  assert.equal(dsc.binding, keys[0].signature);
-  v = await state(k.c);
-  assert.equal(v.signed[0].as, collective);
-
-  // Nothing of the member key in Kišib's folder in the clear, nor anywhere in Dub's.
-  for (const f of secretForms(secret)) {
-    assert.ok(!everything(k.dir).includes(f), 'no member key in Kišib’s folder in the clear');
-    assert.ok(!everything(d.dir).includes(f), 'no member key in Dub’s folder');
-  }
-});
-
-test('an act as a collective whose key Kišib does not hold is refused, said', async () => {
-  const H = homes.map((h) => h.base);
-  const a = await dub(H, [relay.base]);
-  const k = await kishib();
-  await runnerOn(k.c);
-  await k.c.ask('runner give', { id: a.id, address: H[0], words: (await a.c.ask<{ words: string[] }>('carry')).words.join(' ') });
-  const probe = k.app.runner.pair({ name: 'Probe', origin: 'http://127.0.0.1:1' });
-  k.app.runner.approve({ pairing: probe.pairing, identities: [a.id] });
-  const req = { identity: a.id, as: 'cd'.repeat(32), line: 'member' as const, binding: 'ef'.repeat(32), sequence: [], spec: 'ab'.repeat(32), type: 0, payload: new Uint8Array([0xa0]), public: true };
-  await assert.rejects(k.app.runner.ask(probe.token, req, 'http://127.0.0.1:1'), (e: Error) => e.message === NO_MEMBER_SAY);
-  // What it gives an app of the identity: never a secret.
-  const said = JSON.stringify(k.app.runner.paired(probe.token));
-  const seed = fromWords((await a.c.ask<{ words: string[] }>('carry')).words.join(' '));
-  for (const f of [...secretForms(seed), ...secretForms(encryptionSecret(seed))]) assert.ok(!said.includes(f));
-});
+// Draft 3's two member-key tests ("member keys: … signed through the panel with the member key" and
+// "an act as a collective whose key Kišib does not hold is refused") are replaced: their premise, a
+// member key per collective held in Kišib, no longer exists (the redesign: no member keys, Agreements
+// rule 58). Their new equivalents, asserting the new rule (the member's own key, the collective named in
+// the act's objects, the panel always; draft 3's member line and ask refused), are in
+// `runner-draft-5.test.ts`, the founding row kept as it was here.
 
 test('lanes through Kišib: a payment under Dub’s lane, its key delivered to the identity by Kišib with no panel, counted in Signed; Damgar keeping the record; any other key delivery still asking', async () => {
   const H = homes.map((h) => h.base);

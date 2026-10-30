@@ -2,7 +2,9 @@
 // no clock, so "latest" is read from the versions themselves: each names the
 // one before it, so from a version one knows, the later ones are those that
 // name it, then those that name them, and so on, each a version itself
-// (signed by the same identity, valid, not withdrawn where we looked). Two
+// (uploaded for the same identity, valid; for a collective's site, by any
+// member naming the collective, counting for it: website cMIP draft 12,
+// rules A and D; a bake is never withdrawn, F407). Two
 // versions naming the same one are a fork: following stops before it, and
 // says so. The same code runs on the gateway's server, which follows a
 // publisher's latest version, and in the visitor's browser, where the
@@ -11,7 +13,7 @@
 import { cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { decodeSite } from './manifest.ts';
-import { PUBLICATION, SITE_SPECS } from './specs.ts';
+import { BAKE, SITE_SPECS } from './specs.ts';
 import { openVersion, type Version } from './verify.ts';
 
 export interface Later {
@@ -29,13 +31,15 @@ interface Candidate {
 }
 
 /**
- * The site publications by `signer` that the relays hold, each with the
- * version it names as previous, read from its manifest. Nothing here is
- * judged yet: a candidate counts only once `openVersion` has checked it.
+ * The site bakes by each of `uploaders` that the relays hold, each with the
+ * version it names as previous, read from its manifest; for a collective's
+ * site (`collective`), only those naming the collective in their objects.
+ * Nothing here is judged yet: a candidate counts only once `openVersion` has
+ * checked it.
  */
-async function candidates(signer: string, places: string[], via: Via): Promise<Candidate[]> {
+async function candidates(uploaders: string[], collective: string | null, places: string[], via: Via): Promise<Candidate[]> {
   const found = new Map<string, Candidate>();
-  for (const h of places) {
+  for (const signer of uploaders) for (const h of places) {
     let after: number | undefined;
     for (;;) {
       let page;
@@ -46,14 +50,15 @@ async function candidates(signer: string, places: string[], via: Via): Promise<C
       }
       for (const it of page.items) {
         if (it.kind !== 'act') continue;
-        let d: { id: string; signer?: string; public: boolean; spec?: string; type?: number; payload?: Uint8Array };
+        let d: { id: string; signer?: string; public: boolean; spec?: string; type?: number; payload?: Uint8Array; objects?: [string, string][] };
         try {
           d = describeAct(it.item);
         } catch {
           continue;
         }
         if (found.has(d.id) || d.signer !== signer || !d.public || !d.payload) continue;
-        if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== BAKE) continue;
+        if (collective && d.objects?.[0]?.[0] !== collective) continue;
         const previous = await previousOf(d.payload, places, via);
         if (previous !== undefined) found.set(d.id, { id: d.id, previous });
       }
@@ -64,7 +69,7 @@ async function candidates(signer: string, places: string[], via: Via): Promise<C
   return [...found.values()];
 }
 
-/** The previous version a site publication's manifest names; undefined if it is not a site or cannot be read. */
+/** The previous version a site bake's manifest names; undefined if it is not a site or cannot be read. */
 async function previousOf(payload: Uint8Array, places: string[], via: Via): Promise<string | null | undefined> {
   try {
     const media = cborDecode(payload) as Map<number, unknown>;
@@ -98,7 +103,7 @@ async function previousOf(payload: Uint8Array, places: string[], via: Via): Prom
 export async function findLater(from: Version, via: Via = {}): Promise<Later> {
   const r: Later = { latest: from, after: [], fork: [] };
   if (!from.ok || !from.signer) return r;
-  const all = await candidates(from.signer, from.places, via);
+  const all = await candidates(from.collective ? [...new Set([from.signer, ...(from.members ?? [])])] : [from.signer], from.collective ?? null, from.places, via);
   const seen = new Set([from.version]);
   for (;;) {
     const named = all.filter((c) => c.previous === r.latest.version && !seen.has(c.id));

@@ -238,7 +238,13 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
       await inner.waitForSelector('.mor-post img');
       await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
-      await page.waitForTimeout(300);
+      // Waited for, not slept on (CI): the act's picture has arrived and been laid out.
+      await page.waitForFunction(() => {
+        const d = (document.getElementById('mor-page') as HTMLIFrameElement | null)?.contentDocument;
+        const a = (d?.querySelector('.mor-act iframe') as HTMLIFrameElement | null)?.contentDocument;
+        const img = a?.querySelector('.mor-post img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0 && img.getBoundingClientRect().width > 0;
+      });
       // H123: the checking bar in the suite's type, served by the gateway itself, loaded at a phone's width.
       const type = await page.evaluate(async () => {
         await document.fonts.ready;
@@ -297,7 +303,13 @@ test("on a phone's first screen (390 x 844): the photograph whole at the act's w
       const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
       await inner.waitForSelector('.mor-post img');
       await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
-      await page.waitForTimeout(300);
+      // Waited for, not slept on (CI): the act's picture has arrived and been laid out.
+      await page.waitForFunction(() => {
+        const d = (document.getElementById('mor-page') as HTMLIFrameElement | null)?.contentDocument;
+        const a = (d?.querySelector('.mor-act iframe') as HTMLIFrameElement | null)?.contentDocument;
+        const img = a?.querySelector('.mor-post img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0 && img.getBoundingClientRect().width > 0;
+      });
       const m = await page.evaluate(() => {
         const frame = document.getElementById('mor-page') as HTMLIFrameElement;
         const top = frame.getBoundingClientRect().top;

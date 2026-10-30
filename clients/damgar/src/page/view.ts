@@ -399,7 +399,7 @@ ${r.blocking.length ? note('error', lines(r.blocking.map((t) => ({ text: t, tone
 }
 
 /** For a collective (round 3, F353): its Money area, a promise to pay, and the promises signed here with how they stand. `name`: the collective as shown, markup (its names, `whoOf`). */
-export function collectivePane(c: { id: string; area: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] } | null, name: string): string {
+export function collectivePane(c: { id: string; area: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; limits?: string | null }[] } | null }[] } | null, name: string): string {
   if (!c) return `<h2>For ${name}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity’s menu (A collective under it).</p>`;
   const area = c.area;
   // H96, H121: whom each promise pays by its names, its act by its short ID, each a button.
@@ -413,7 +413,7 @@ export function collectivePane(c: { id: string; area: { name: string; holders: s
         .join('')}</ul>`
     : '<p class="k-small k-soft">No promise signed here yet.</p>';
   return `<h2>For ${name}</h2>
-${say('Damgar acts for it with your own key for it.', ['Made as you signed its founding and sealed to you at your homes. Within the area’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.'])}
+${say('Damgar acts for it with your own identity’s key, naming the collective.', ['A collective has no key of its own, and its members no member keys (Agreements rule 58). Within the area’s cap, your signature alone; above it, another holder’s signature too, as its constitution writes it.'])}
 ${area ? `<p class="k-small k-soft">Its Money area, “${e(area.name)}”: ${area.holders.length} holder${area.holders.length === 1 ? '' : 's'}, ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
 ${c.why ? note('error', e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h3>A promise to pay, from the collective</h3>
 <label>To whom (an ID)</label><div class="k-row"><input name="to" type="text" class="k-grow" required autocomplete="off" spellcheck="false">${contactsButtonFor('to')}</div>

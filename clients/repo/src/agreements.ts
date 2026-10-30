@@ -124,7 +124,7 @@ export interface CollectiveTerms {
   departed?: string[];
   /** Forked from (field 23): founding terms of a side of a fork, naming the original collective, a back-link (F124 N4). */
   forkedFrom?: string;
-  /** The finer areas, as the founding grid draws them (field 34, rules 60 and 62): where present, they replace the one Releases area. */
+  /** The finer areas, as the founding grid draws them (field 34, rules 60 and 62): where present, even empty, they replace the one Releases area. */
   areas?: AreaSpec[];
   /** Named keepers (field 3; round 3, part C): their operators, and what counts as recorded (any one, a number, or all). */
   keepers?: { ids: string[]; rule: Rule };
@@ -142,8 +142,8 @@ export interface SplitPlan {
   cmip: string;
 }
 
-/** The split cMIP's spec hash, draft 2's test value (`cmips/split`, `mor-split`): the one this client's plans name. */
-export const SPLIT_CMIP = sha256('split cMIP, draft 2, test value until publication');
+/** The split cMIP's spec hash, draft 4's test value (`cmips/split`, `mor_split::spec()`): the one this client's plans name, the cMIP the Rust computes. */
+export const SPLIT_CMIP = sha256('split cMIP, draft 4, test value until publication');
 
 /** The plan as `publicationPayload` takes it. */
 export const planIn = (p: SplitPlan) => ({ shares: p.roles.map(([role, part]) => ({ role, part })), cmip: p.cmip });
@@ -233,10 +233,12 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     [15, t.extensions.map(unhex)],
     [19, layers],
     [33, [1, null]],
-    [34, t.areas?.length ? [...t.areas].sort((a, b) => a.id - b.id).map(areaValue) : [area]],
   ]);
+  // Field 34, the finer areas: those given (none where an empty list is given), else the one Releases area.
+  const areas = t.areas ? [...t.areas].sort((a, b) => a.id - b.id).map(areaValue) : [area];
+  if (areas.length) m.set(34, areas);
   if (t.constitutional) m.set(18, ruleValue(t.constitutional));
-  if (t.areas?.length) {
+  if (t.areas) {
     const words = [...t.areas].sort((a, b) => a.id - b.id).filter((a) => a.words);
     if (words.length) m.set(20, new Map(words.map((a) => [a.id, a.words!])));
   } else if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));

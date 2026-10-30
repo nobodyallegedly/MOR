@@ -440,9 +440,9 @@ test('a collective’s work bought, a sale whose payment is not verified (S7e): 
   const [A, iPa, iPh] = [await sharer(H, RL, 'A'), await sharer(H, RL, 'iPa'), await sharer(H, RL, 'iPh')];
   const e = A.edubba;
   const { collective } = await foundCollective(e, A.id, [iPa.dub, iPh.dub], [
-    { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-    { name: 'Offers and deals', layer: 3, holders: [A.id, iPa.id], number: 1 },
-    { name: 'Money', layer: 2, holders: [A.id], number: 1 },
+    { name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 },
+    { name: 'Publications', layer: 4, holders: [A.id, iPa.id], number: 1 },
+    { name: 'Money', layer: 3, holders: [A.id], number: 1 },
   ]);
   const node = serviceNode();
   const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), node, { homes: H, relays: RL });

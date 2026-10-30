@@ -169,7 +169,7 @@ export class Releases {
           heading: 'Who signs',
           lines: [
             a.as
-              ? { text: `It is published by the collective, signed with your own key for it (F353): it counts as the collective’s release once its area “${a.as.area?.name ?? '?'}” is met, ${a.as.area?.number ?? '?'} key${a.as.area?.number === 1 ? '' : 's'} of ${a.as.area?.holders.length ?? '?'}${(a.as.area?.number ?? 1) > 1 ? '; its other holders are asked for theirs, in their own app' : ''} (Agreements rule 60).` }
+              ? { text: `It is published for the collective, uploaded with your own identity’s key, naming the collective (rule 58): it counts as the collective’s release once “${a.as.area?.name ?? '?'}” is met, ${a.as.area?.number ?? '?'} signature${a.as.area?.number === 1 ? '' : 's'} of ${a.as.area?.holders.length ?? '?'}${(a.as.area?.number ?? 1) > 1 ? '; its other holders are asked for theirs, in their own app' : ''} (Agreements rule 60).` }
               : { text: 'It is published under your own name, signed by this identity alone: a release as soon as it is published (release manifest cMIP, “What counts as a release”).' },
             { text: `The manifest and every new file go to ${a.relays.join(', ')}. Anyone can then fetch the release by its id and check every file against the list.` },
           ],

@@ -192,7 +192,7 @@ export function collectiveApi(actions: Actions, store: Store): (op: string, a: R
           case 'identity':
             return actions.prepareIdentity({ name: text(a.name), mine: a.mine === true });
           case 'release':
-            return actions.prepareRelease({ publisher: text(a.publisher), version: text(a.version), name: text(a.name) });
+            return actions.prepareRelease({ publisher: text(a.publisher), version: text(a.version), name: text(a.name), uploader: text(a.uploader) || undefined });
           case 'found': {
             const members = list(a.members);
             const shares: Record<string, number> = {};
@@ -310,5 +310,10 @@ function rulesOf(v: unknown, members: number) {
     others: n(r.others, Math.max(members - 1, 1)),
     ...(empty(r.constitution) ? {} : { constitution: Number(r.constitution) }),
     ...(Array.isArray(r.constitutionNamed) && r.constitutionNamed.length ? { constitutionNamed: r.constitutionNamed.map(String) } : {}),
+    // Who acts for it in each layer (Agreements rule 60), by layer number; a layer left empty takes the clone number.
+    ...((): { layers?: Record<number, number> } => {
+      const given = r.layers && typeof r.layers === 'object' ? Object.entries(r.layers as Record<string, unknown>).filter(([l, x]) => /^[1-5]$/.test(l) && !empty(x)) : [];
+      return given.length ? { layers: Object.fromEntries(given.map(([l, x]) => [Number(l), Number(x)])) } : {};
+    })(),
   };
 }

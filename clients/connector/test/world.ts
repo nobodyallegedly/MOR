@@ -22,7 +22,7 @@ export const governance: Governance = {
   releaseThreshold: 2,
   cloneThreshold: 2,
   abandonmentOthers: 2,
-  text: 'The connector test collective. It publishes releases of a test tree and nothing else. Its signing key is held by one member; its chain key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
+  text: 'The connector test collective. It publishes releases of a test tree and nothing else. It has no signing key: a member acts for it with their own key, naming it. Its chain key is split among the members, any two of whom rebuild it. A release counts only when two members have signed it, each with an act of their own. Members change by a clone of this agreement, signed by any two members and by each member who joins, and a rotation of the collective declaring it. The other two members together decide whether a member is absent; the outcome is that member losing their voice.',
 };
 
 export const files: FileIn[] = [
@@ -45,8 +45,27 @@ export interface World {
 }
 
 export async function world(): Promise<World> {
-  const homes = [await start('home'), await start('home'), await start('home')];
-  const relay = await start('relay');
+  // Every server started here is stopped if building the world fails, so no test leaves one running (CI).
+  const started: Running[] = [];
+  const stopAll = async () => {
+    for (const r of started) await r.stop().catch(() => {});
+  };
+  try {
+    return await build(started, stopAll);
+  } catch (e) {
+    await stopAll();
+    throw e;
+  }
+}
+
+async function build(started: Running[], stopAll: () => Promise<void>): Promise<World> {
+  const up = async (role: 'home' | 'relay') => {
+    const r = await start(role);
+    started.push(r);
+    return r;
+  };
+  const homes = [await up('home'), await up('home'), await up('home')];
+  const relay = await up('relay');
   const keys = mkdtempSync(join(tmpdir(), 'mor-connector-keys-'));
   const members: TestIdentity[] = [];
   const paths: string[] = [];
@@ -76,9 +95,7 @@ export async function world(): Promise<World> {
     collective,
     release: p.id,
     drafts: mkdtempSync(join(tmpdir(), 'mor-connector-drafts-')),
-    async stop() {
-      for (const r of [...homes, relay]) await r.stop();
-    },
+    stop: stopAll,
   };
 }
 

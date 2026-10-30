@@ -8,7 +8,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readCards } from '../../genesis/src/lines.ts';
-import { asking, clickPanel, closeAll, changeKeys, dub, dubBeside, kishib, refused, standing, start, runnerOn, type Relay } from './world.ts';
+import { asking, clickPanel, closeAll, changeKeys, dub, dubBeside, kishib, refused, standing, start, runnerOn, type Relay, stopAll } from './world.ts';
 import { SPECS } from '../../genesis/src/core.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { RUNNER_SPENT_SAY, type RunnerView } from '../src/runner.ts';
@@ -23,8 +23,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 type Line = { card: string | null; latest: string | null };

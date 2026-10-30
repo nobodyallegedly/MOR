@@ -23,9 +23,9 @@ export interface Served {
   bytes: Uint8Array;
   position: number;
   previous: string;
-  /** The new signing key it installs, and that key's fingerprint as the air-gapped Module writes it. */
-  signingKey: string;
-  signingFingerprint: string;
+  /** The new signing key it installs, and that key's fingerprint as the air-gapped Module writes it; null for a keyless collective's rotation (Identity rotation check 4). */
+  signingKey: string | null;
+  signingFingerprint: string | null;
   /** The chain key it reveals, by its commitment. */
   reveals: string;
   homeless: boolean;
@@ -69,17 +69,17 @@ export function served(id: string, bytes: Uint8Array, identitySpec: string): Ser
   }
   if (d.signer !== id || d.spec !== identitySpec || d.type !== IDENTITY_TYPES.rotation || !d.payload) return null;
   const m = cborDecode(d.payload) as Map<number, unknown>;
-  const key = m.get(2) as unknown[];
+  const key = m.get(2) as unknown[] | null | undefined;
   const commit = m.get(3) as unknown[];
   const succ = m.get(9);
-  const signingKey = hex(key[1] as Uint8Array);
+  const signingKey = Array.isArray(key) ? hex(key[1] as Uint8Array) : null;
   return {
     id: d.id,
     bytes,
     position: Number(m.get(1)),
     previous: hex(m.get(0) as Uint8Array),
     signingKey,
-    signingFingerprint: fingerprint(1, key[1] as Uint8Array),
+    signingFingerprint: Array.isArray(key) ? fingerprint(1, key[1] as Uint8Array) : null,
     reveals: hex(commit[1] as Uint8Array),
     homeless: m.get(11) === true,
     successor: succ === undefined ? undefined : succ === null ? null : hex((succ as unknown[])[1] as Uint8Array),
@@ -209,7 +209,7 @@ export function recordWords(rd: Read): { heading: string; lines: Line[] }[] {
   if (r.stop === 'pending' || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes’ receipts: ${r.waiting.join(', ') || 'one rotation'}.`, tone: 'warn' });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
-    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, installing the signing key ${s.signingFingerprint}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, ${s.signingFingerprint ? `installing the signing key ${s.signingFingerprint}` : 'installing no signing key (a collective’s)'}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
   }
   out.push({ heading: 'Its chain and receipts', lines: chain });
   const succ = rd.look.verifier.succession(rd.id) as { state: string; successor?: string; confirmation?: string };

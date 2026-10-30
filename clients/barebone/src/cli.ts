@@ -8,7 +8,8 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
-import { listPosts, post, readPost, withdraw, type ShownPost } from './post.ts';
+import { BAKE_NEVER_WITHDRAWN, listPosts, post, readPost, type ShownPost } from './post.ts';
+import { tagsOf, withdrawTag } from './tag.ts';
 import { renderPage } from './html.ts';
 import { POST_SPECS } from './specs.ts';
 
@@ -23,8 +24,10 @@ const HELP = `mor-post: post text with a picture, and show posts, verified.
         Fetch a post, verify it and its picture, and show it.
   feed IDENTITY --relay URL [--out page.html]
         Every post of an identity at a relay, verified, oldest first.
-  withdraw PUBLICATION --file F --relay URL [--relay URL ...]
-        Withdraw a picture you published: readers stop showing it.
+  untag BAKE --file F --relay URL [--relay URL ...]
+        Withdraw your price tag on a bake: a later version with no price
+        (Money rule 18). The bake itself is never withdrawn: its bytes stay
+        where they were uploaded unless homes and relays drop them.
 
 Every command takes --via URL=LOCAL to reach an address another way.`;
 
@@ -52,14 +55,14 @@ function summary(p: ShownPost): string {
     if (r.kind === 'picture') {
       lines.push(
         r.bytes && r.picture
-          ? `  picture ${r.publication}: JPEG ${r.picture.shownWidth} x ${r.picture.shownHeight}, verified` +
+          ? `  picture ${r.bake}: JPEG ${r.picture.shownWidth} x ${r.picture.shownHeight}, verified` +
               (r.signer !== p.signer ? `, by ${r.signer}` : '')
-          : `  picture ${r.publication}: not shown, ${r.problem}`,
+          : `  picture ${r.bake}: not shown, ${r.problem}`,
       );
     } else if (r.kind === 'film') {
-      lines.push(r.problem ? `  film ${r.publication}: not shown, ${r.problem}` : `  film ${r.publication}: ${r.size} bytes, its bytes checked when played`);
+      lines.push(r.problem ? `  film ${r.bake}: not shown, ${r.problem}` : `  film ${r.bake}: ${r.size} bytes, its bytes checked when played`);
     } else if (r.kind === 'recording') {
-      lines.push(r.problem ? `  recording ${r.publication}: not shown, ${r.problem}` : `  recording ${r.publication}: ${r.size} bytes, its bytes checked when played`);
+      lines.push(r.problem ? `  recording ${r.bake}: not shown, ${r.problem}` : `  recording ${r.bake}: ${r.size} bytes, its bytes checked when played`);
     } else lines.push(`  refers to ${r.id}: ${r.what}`);
   }
   return lines.join('\n');
@@ -118,13 +121,18 @@ async function main() {
       if (opts.out) writeFileSync(opts.out[0], renderPage(posts, `Posts by ${pos[0].slice(0, 8)}`));
       return;
     }
-    case 'withdraw': {
-      if (!pos[0] || !relays.length) throw new Error('usage: withdraw PUBLICATION --file F --relay URL');
+    case 'withdraw':
+      // The withdrawal is retired (Envelopes rule 24): said, nothing signed.
+      throw new Error(`${BAKE_NEVER_WITHDRAWN} To stop selling a bake, use untag. Nothing was signed.`);
+    case 'untag': {
+      if (!pos[0] || !relays.length) throw new Error('usage: untag BAKE --file F --relay URL');
       const file = need('file');
       const me = TestIdentity.load(file, via);
-      const r = await withdraw(me, pos[0], relays);
+      const { latest } = await tagsOf({ bake: pos[0] }, me.id, relays, via);
+      if (!latest) throw new Error('No price tag of yours on that bake was found at the relays given. Nothing was signed.');
+      const r = await withdrawTag(me, latest, relays);
       me.save(file);
-      console.log(`withdrawal ${r.id}`);
+      console.log(`price tag withdrawn: version ${r.version}, ${r.id}`);
       return;
     }
     default:

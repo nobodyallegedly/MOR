@@ -22,7 +22,7 @@ import { negotiate, readMessage } from '../../repo/src/proposals.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { Kishib } from '../src/kishib.ts';
 import { NOTICE_HEAD, ROTATION_NOTICE_FORMAT, noticeText, readNotice, type Listed } from '../src/collective.ts';
-import { closeAll, founded, kishib, refused, runnerOn, start, type Relay } from './world.ts';
+import { closeAll, founded, kishib, refused, runnerOn, start, type Relay, stopAll } from './world.ts';
 import type { Review, State } from '../src/shapes.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -37,9 +37,8 @@ before(async () => {
 });
 
 after(async () => {
-  await browser.close();
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => browser?.close());
 });
 
 type Notices = { notices: Listed[]; problem: string | null; by: string | null };

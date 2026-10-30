@@ -10,7 +10,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { hex } from '../../genesis/src/core.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { apps, asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, standing, start, PASS, type Relay } from './world.ts';
+import { apps, asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, standing, start, PASS, type Relay, stopAll } from './world.ts';
 import { OFF_SAY, RUNNER_SPENT_SAY, type RunnerView } from '../src/runner.ts';
 
 let homes: Relay[];
@@ -22,8 +22,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 test('the runner: off by default, the risk read first, Dub paired and approved, a post through its panel, a standing yes, money and agreements always asking, Waiting, Revoke, off with every key gone', async () => {

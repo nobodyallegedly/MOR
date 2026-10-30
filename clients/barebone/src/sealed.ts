@@ -1,29 +1,33 @@
-// A pay-per-view post (round 2, asked by Nobody, allegedly): an envelope
-// sealed until its terms are met, with an offer. The text is the media of a
-// public publication (Envelopes type 0) whose media key is absent, so the
-// publication is public (anyone sees the offer) and its bytes stay locked
-// (Envelopes, "Media": "for media on sale, the publication is public but the
-// media key is absent, and is delivered to each buyer"); its price in
-// field 7. A lone seller's standing offer (Agreements type 6) sells it, its
-// words stating the price and the referral share (F351: a promise in
-// words, not judged; the judged form, a one-party agreement with a split
-// plan, is round 3's). A post (a text act) names both, so it shows in a feed.
+// A pay-per-view post (round 2, asked by Nobody, allegedly; moved to the
+// bake and the price tag, round 8): an envelope sealed until it is paid. The
+// work is the media of a public bake (Envelopes type 0, "I uploaded this")
+// whose media key is absent, so the bake is public and its bytes stay locked
+// (Envelopes, "Media": "for media on sale, the bake is public but the media
+// key is absent, and is delivered to each buyer"). A bake carries no price
+// (its fields 7 and 8 are refused): the price is a price tag (Money type 5,
+// `tag.ts`), signed by the uploader, naming the bake. On a bare bake only
+// the uploader's tag counts, and paying it pays the uploader, unsplit
+// (Money rule 18). A post (a text act) names the bake and the tag, so it
+// shows in a feed. A work shared between owners is sold through a
+// publication instead (Agreements type 6), its tag signed by the
+// publication's side (`readPublication`).
 //
 // After a buyer pays, the seller's Damgar tells the seller's Dub (a sale,
 // sealed to oneself), which delivers the key: a key delivery (Envelopes
 // type 1), a private act sealed to the buyer. The buyer opens the bytes and
 // checks them against the work hash (Envelopes rule 21).
 //
-// A repost is a text act naming the publication and the offer (Envelopes
-// rule 20: "a repost is a reference to a publication"); the reposter's
-// client holds what it names (F272) and its locked bytes at its own relays,
-// so a reader who reads only those relays finds the work through it.
+// A repost is a text act naming the bake and the tag (Envelopes rule 20:
+// "a repost is a reference"); the reposter's client holds what it names
+// (F272) and its locked bytes at its own relays, so a reader who reads only
+// those relays finds the work through it.
 
 import { MIRS, cborDecode, cborEncode, describeAct, hex, lockMedia, openMedia, unhex, workHash } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { POST_SPECS, PUBLICATION, TEXT_ACT } from './specs.ts';
+import { BAKE, POST_SPECS, TEXT_ACT } from './specs.ts';
+import { putTag, readTag, type TagRead } from './tag.ts';
 import { textPayload } from './post.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { read as readFilm, strip as stripFilm, MAX_BYTES as FILM_MAX_BYTES, CARRIED_WORDS as FILM_CARRIED } from '../../../modules/video/src/video.ts';
@@ -54,14 +58,14 @@ export function checkPlayable(media: SealedMedia, bytes: Uint8Array): void {
 }
 
 /**
- * A work locked for sale (Envelopes, "Media": the publication public, its
- * media key absent, delivered to each buyer): the publication's payload,
- * its price in field 7, and the locked bytes. A picture is first stripped to
- * the picture alone (the JPEG Module, rule 6); what was stripped is said.
- * `forId`: field 8, the identity the publication is made for (its payment
- * goes to that one's payee pointer), where it is not the signer.
+ * A work locked for sale (Envelopes, "Media": the bake public, its media
+ * key absent, delivered to each buyer): the bake's payload and the locked
+ * bytes. A picture is first stripped to the picture alone (the JPEG Module,
+ * rule 6); what was stripped is said. A bake carries no price and no `for`
+ * (fields 7 and 8 are refused): `price` and `forId` are taken for callers
+ * from before and not written; the price is a price tag (`tag.ts`).
  */
-export function lockWork(a: { media: SealedMedia; bytes: Uint8Array; price: Amount; relays: string[]; forId?: string }): { payload: Uint8Array; locked: Uint8Array; key: string; work: string; size: number; removed: string[] } {
+export function lockWork(a: { media: SealedMedia; bytes: Uint8Array; price?: Amount; relays: string[]; forId?: string }): { payload: Uint8Array; locked: Uint8Array; key: string; work: string; size: number; removed: string[] } {
   let bytes = a.bytes;
   let removed: string[] = [];
   if (a.media === 'picture') {
@@ -92,14 +96,14 @@ export function lockWork(a: { media: SealedMedia; bytes: Uint8Array; price: Amou
     [3, bytes.length],
     [4, l.nonce],
     [6, a.relays],
-    [7, [unhex(a.price.unit), a.price.value]],
   ]);
-  if (a.forId) m.set(8, unhex(a.forId));
   return { payload: cborEncode(m), locked: l.locked, key: hex(l.key), work: l.workHash, size: bytes.length, removed };
 }
 
 /**
- * A standing offer's payload (Agreements type 6, "Standing offer"): what it
+ * Kept for callers from before, not read by the core any more: the standing
+ * offer is gone (Agreements type 6 is now the publication, and a price is a
+ * price tag). A standing offer's payload (the former "Standing offer"): what it
  * sells (a publication, or a vow by its name), its price, its words; for
  * co-owners, the agreement it is made under (field 0) and who is paid
  * (field 3: in a collective, the collective). A lone seller's offer names
@@ -115,8 +119,9 @@ export function offerPayload(a: { sells: { publication: string } | { vow: string
   return cborEncode(m);
 }
 
-/** Agreements' standing offer (type 6) and Envelopes' key delivery (type 1). */
-export const OFFER = 6;
+/** Agreements type 6: the publication (it replaced the standing offer; `OFFER` kept for callers from before). Envelopes' key delivery (type 1). */
+export const PUBLICATION_ACT = 6;
+export const OFFER = PUBLICATION_ACT;
 export const KEY_DELIVERY = 1;
 
 export interface Amount {
@@ -124,28 +129,33 @@ export interface Amount {
   value: number;
 }
 
-/** The offer's words: its price, said by the seller's app, and the referral share in the one sentence Damgar reads (F351). */
+/** The seller's words: its price, said by the seller's app, and the referral share in the one sentence Damgar reads (F351). A price tag carries no words: these go in the post's text, or a publication's words. */
 export function offerWords(price: string, referral: number | null): string {
   return `A sealed post, opened once paid: ${price}.${referral ? ` Referral: ${referral}% of the price to the repost the buyer names.` : ''}`;
 }
 
 /** What a seller keeps of a sealed post: the key that opens it. */
 export interface Sealed {
+  bake: string;
+  /** The price tag's first version. */
+  tag: string;
+  /** The same ids under their names from before (`publication` the bake, `offer` the tag). */
   publication: string;
   offer: string;
   post: string;
   key: string;
-  /** The publication and the offer, as signed: held, so a repost can carry them (F272). */
-  acts: { publication: Uint8Array; offer: Uint8Array; post: Uint8Array };
+  /** The bake, the tag and the post, as signed: held, so a repost can carry them (F272). `publication`/`offer` the same acts, named as before. */
+  acts: { bake: Uint8Array; tag: Uint8Array; publication: Uint8Array; offer: Uint8Array; post: Uint8Array };
 }
 
 /**
- * Seal a text with a price: the publication (key absent, price in field 7),
- * the lone seller's offer naming it, and a post naming both. The locked
+ * Seal a text (or a picture) with a price: the bake (its key absent), the
+ * uploader's price tag naming it (Money type 5, payee the uploader), and a
+ * post naming both, its text the teaser and the seller's words. The locked
  * bytes go to the relays. Save the identity after: its sequence has grown.
  */
 export async function postSealed(by: TestIdentity, a: { text?: string; picture?: Uint8Array; teaser: string; price: Amount; words: string; relays: string[] }): Promise<Sealed & { removed: string[] }> {
-  const w = lockWork(a.picture ? { media: 'picture', bytes: a.picture, price: a.price, relays: a.relays } : { media: 'text', bytes: new TextEncoder().encode(a.text ?? ''), price: a.price, relays: a.relays });
+  const w = lockWork(a.picture ? { media: 'picture', bytes: a.picture, relays: a.relays } : { media: 'text', bytes: new TextEncoder().encode(a.text ?? ''), relays: a.relays });
   for (const hint of a.relays) {
     for (const x of by.chainActs()) {
       try {
@@ -155,18 +165,23 @@ export async function postSealed(by: TestIdentity, a: { text?: string; picture?:
       }
     }
   }
-  const publication = await by.publish(POST_SPECS.envelopes, PUBLICATION, w.payload, { public: true, relays: a.relays });
+  const bake = await by.publish(POST_SPECS.envelopes, BAKE, w.payload, { public: true, relays: a.relays });
   for (const hint of a.relays) await relayAt(hint, by.via).putMedia(w.locked);
-  const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { publication: publication.id }, price: a.price, words: a.words }), { public: true, relays: a.relays });
-  const post = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.teaser), { public: true, relays: a.relays, refs: [referenceTo(publication.act), referenceTo(offer.act)] });
-  return { publication: publication.id, offer: offer.id, post: post.id, key: w.key, acts: { publication: publication.act, offer: offer.act, post: post.act }, removed: w.removed };
+  const tag = await putTag(by, { bake: bake.id }, { price: a.price, payee: by.id, relays: a.relays });
+  const text = a.words ? `${a.teaser}\n\n${a.words}` : a.teaser;
+  const post = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(text), { public: true, relays: a.relays, refs: [referenceTo(bake.act), referenceTo(tag.act)] });
+  return { bake: bake.id, tag: tag.id, publication: bake.id, offer: tag.id, post: post.id, key: w.key, acts: { bake: bake.act, tag: tag.act, publication: bake.act, offer: tag.act, post: post.act }, removed: w.removed };
 }
 
 export interface SealedRead {
+  /** The bake's act id; `publication` the same, its name from before. */
+  bake: string;
   publication: string;
   /** Text, or a JPEG picture: the media modules the apps carry. */
   media: SealedMedia;
+  /** Its uploader (the bake's signer): on a bare bake, the only seller whose tag counts. */
   seller: string;
+  /** Always null now: a bake carries no price; read its price tag. Kept for callers from before. */
   price: Amount | null;
   work: string;
   lockedHash: string;
@@ -176,20 +191,20 @@ export interface SealedRead {
   places: string[];
 }
 
-/** A publication read as a sealed text: null where it is not one (another media, or its key present). */
+/** A bake read as a sealed work: null where it is not one (another media, or its key present). */
 export function readSealed(act: Uint8Array): SealedRead | null {
   const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION || !d.payload || !d.signer) return null;
+  if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE || !d.payload || !d.signer) return null;
   const m = cborDecode(d.payload) as Map<number, unknown>;
   const media = m.get(0);
   const kind = media instanceof Uint8Array ? mediaOf(hex(media)) : null;
   if (!kind || m.has(5)) return null;
-  const price = m.get(7) as [Uint8Array, number] | undefined;
   return {
+    bake: d.id,
     publication: d.id,
     media: kind,
     seller: d.signer,
-    price: Array.isArray(price) && price[0] instanceof Uint8Array ? { unit: hex(price[0]), value: Number(price[1]) } : null,
+    price: null,
     work: hex(m.get(1) as Uint8Array),
     lockedHash: hex(m.get(2) as Uint8Array),
     nonce: m.get(4) as Uint8Array,
@@ -198,7 +213,7 @@ export function readSealed(act: Uint8Array): SealedRead | null {
   };
 }
 
-/** A lone seller's offer read: what it sells, its price, its words. Null where it is no offer of `seller` selling `publication`. With `coOwners`, an offer under an agreement (field 0) is read too, its agreement and payee given. */
+/** Kept for callers from before (a standing offer, which the core no longer reads; a publication is read by `readPublication`). A lone seller's offer read: what it sells, its price, its words. Null where it is no offer of `seller` selling `publication`. With `coOwners`, an offer under an agreement (field 0) is read too, its agreement and payee given. */
 export function readOffer(act: Uint8Array, seller: string, publication: string, coOwners = false): { offer: string; price: Amount; words: string | null; under?: string; payee?: string } | null {
   const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
   if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
@@ -222,7 +237,84 @@ export function readOffer(act: Uint8Array, seller: string, publication: string, 
   }
 }
 
-/** The key delivery's payload (Envelopes type 1): the publication whose media key this is. */
+/** A publication (Agreements type 6), as a buyer's app reads it before the core judges it. */
+export interface PublicationRead {
+  /** This version's act id. */
+  id: string;
+  /** Its first version: what a price tag under it names, and what later versions name first. */
+  first: string;
+  /** The version it replaces (null for a first version). */
+  previous: string | null;
+  /** Its drafter (this version's signer). */
+  drafter: string;
+  /** What it sells: bakes by id, vows by name. Empty in a later version that ends it. */
+  bakes: string[];
+  vows: string[];
+  /** It sells nothing: a later version that ends the publication (or a split agreement). */
+  ends: boolean;
+  /** The ownership agreement whose holders take the owners' line (field 1); null: its drafter, as the lone owner. */
+  owners: string | null;
+  /** The partners, paid off the top, each with its share in millionths and its label. */
+  partners: { identity: string; share: number; label: string | null }[];
+  /** The split service (field 3), which receives every payment under it and pays everyone. */
+  service: string;
+  /** The party it designates to sign its price tags beside the split service (field 10). */
+  designated: string | null;
+  words: string | null;
+}
+
+/** A publication's act read (Agreements, "Publication (type 6)"); null where it is none. */
+export function readPublication(act: Uint8Array): PublicationRead | null {
+  let d: { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array; objects?: [string, string][] };
+  try {
+    d = describeAct(act) as typeof d;
+  } catch {
+    return null;
+  }
+  if (d.spec !== MIRS.agreements || d.type !== PUBLICATION_ACT || !d.payload || !d.signer) return null;
+  try {
+    const m = cborDecode(d.payload) as Map<number, unknown>;
+    const service = m.get(3);
+    if (!(service instanceof Uint8Array)) return null;
+    const sold = (Array.isArray(m.get(0)) ? (m.get(0) as unknown[][]) : []).filter((x) => Array.isArray(x));
+    const bakes = sold.filter((x) => x[0] === 0 && x[1] instanceof Uint8Array).map((x) => hex(x[1] as Uint8Array));
+    const vows = sold.filter((x) => x[0] === 3 && x[1] instanceof Uint8Array).map((x) => hex(x[1] as Uint8Array));
+    const owners = m.get(1);
+    const designated = m.get(10);
+    const partners = (Array.isArray(m.get(2)) ? (m.get(2) as unknown[]) : [])
+      .map((p) => (p instanceof Map ? p : null))
+      .filter((p): p is Map<number, unknown> => !!p && p.get(0) instanceof Uint8Array)
+      .map((p) => ({ identity: hex(p.get(0) as Uint8Array), share: Number(p.get(1) ?? 0), label: typeof p.get(2) === 'string' ? (p.get(2) as string) : null }));
+    // A later version names [first, previous] first in its objects; a first
+    // version names its ownership agreement as [agreement, agreement]. (A
+    // first version naming no ownership agreement but citing a collective's
+    // chain would be read as a later one: pass its tag's `publication`,
+    // the founding version, where it matters.)
+    const o0 = (d.objects ?? [])[0];
+    const later = !!o0 && !(owners instanceof Uint8Array && o0[0] === hex(owners) && o0[1] === hex(owners));
+    return {
+      id: d.id,
+      first: later ? o0[0] : d.id,
+      previous: later ? o0[1] : null,
+      drafter: d.signer,
+      bakes,
+      vows,
+      ends: Array.isArray(m.get(0)) && sold.length === 0,
+      owners: owners instanceof Uint8Array ? hex(owners) : null,
+      partners,
+      service: hex(service),
+      designated: designated instanceof Uint8Array ? hex(designated) : null,
+      words: typeof m.get(5) === 'string' ? (m.get(5) as string) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** A price tag read from an act (Money type 5): see `tag.ts`. */
+export { readTag, type TagRead };
+
+/** The key delivery's payload (Envelopes type 1): the bake whose media key this is. */
 export function keyDeliveryPayload(publication: string, key: string): Uint8Array {
   return cborEncode(
     new Map<number, unknown>([
@@ -268,15 +360,16 @@ export async function openSealedBytes(s: SealedRead, key: string, hints: string[
   } catch {
     throw new Error('the key delivered does not open its bytes');
   }
-  if (workHash(plain) !== s.work || plain.length !== s.size) throw new Error('its bytes do not match the work hash and size it was published with');
+  if (workHash(plain) !== s.work || plain.length !== s.size) throw new Error('its bytes do not match the work hash and size it was uploaded with');
   return plain;
 }
 
 /**
- * A repost of a sealed post (Envelopes rule 20): a text act naming the
- * publication and the offer; what it names, the seller's identity chain
- * and the locked bytes held at the reposter's own relays, so a reader of
- * those relays alone finds the work through it (F272).
+ * A repost of a sealed post (Envelopes rule 20): a text act naming the bake
+ * and its price tag (`publication` and `offer`, their names from before);
+ * what it names, the seller's identity chain and the locked bytes held at
+ * the reposter's own relays, so a reader of those relays alone finds the
+ * work through it (F272).
  */
 export async function repost(by: TestIdentity, a: { publication: Uint8Array; offer: Uint8Array; seller: Uint8Array[]; text: string; relays: string[]; locked: Uint8Array | null; via?: Via }): Promise<{ id: string; act: Uint8Array }> {
   for (const hint of a.relays) {

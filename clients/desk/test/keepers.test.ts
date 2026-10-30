@@ -52,7 +52,7 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
   const [iPa, iPh] = [await dub(H, RL), await dub(H, RL)];
   const e = await edubba(H, RL);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0] });
-  const { collective } = await foundCollective(e, A.id, [iPa, iPh], [{ name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 }]);
+  const { collective } = await foundCollective(e, A.id, [iPa, iPh], [{ name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 }]);
 
   // An Edubba agent, owned by A: the keeper.
   const add = await e.c.ask<{ agent: string; terms: { digest: string } }>('agent add', { name: 'Keeper of the tablets', owner: A.id, key: OWN, own: true });

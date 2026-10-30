@@ -23,7 +23,7 @@ export interface Actor {
 
 /** Said where the chooser is shown, word for word (round 2: collectives, F353). */
 export const COLLECTIVES_LATER =
-  'A collective you belong to acts here with your own key for it, made as you signed its founding and sealed to you at your homes (F353): its act counts as your signature in the areas you hold; where an area asks more keys, its other holders are asked, and sign in their own apps (Dub’s Signing tab, Edubba). Add a collective by its ID.';
+  'A collective you belong to acts here through you: you sign with your own identity’s key, naming the collective (a collective has no key of its own, and its members no member keys; Agreements rule 58). Your act counts as your signature in the layers and areas you hold; where one asks more signatures, its other holders are asked, and sign in their own apps (Dub’s Signing tab, Edubba). Add a collective by its ID.';
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 

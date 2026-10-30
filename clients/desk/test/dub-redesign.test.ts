@@ -267,7 +267,7 @@ test('a collective under the identity: appended to a private message, checked by
   const pa = await dubOf(H, [relay.base]);
   await max.c.ask('name', { name: 'Max' });
   await pa.c.ask('name', { name: 'Pa' });
-  const { collective } = await foundCollective(e, A, [max, pa], [{ name: 'Posts', layer: 1, holders: [A, max.id, pa.id], number: 1 }], { name: 'Collective Y' });
+  const { collective } = await foundCollective(e, A, [max, pa], [{ name: 'Posts', layer: [1, 2], holders: [A, max.id, pa.id], number: 1 }], { name: 'Collective Y' });
 
   const page = await pageOf(max.app);
   const modal = page.locator('.k-modal');

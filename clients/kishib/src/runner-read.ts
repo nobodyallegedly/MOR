@@ -7,7 +7,11 @@ import { ENVELOPES_TYPES, IDENTITY_TYPES, MIRS, SPECS, cborDecode, hex, readKeyD
 import type { SignRequest } from '../../genesis/src/identity.ts';
 import { refAct, refSigner } from '../../genesis/src/lookup.ts';
 import { actForm, idForm } from '../../genesis/src/forms.ts';
-import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from '../../barebone/src/specs.ts';
+import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
+
+/** Envelopes type 0, a bake ("I uploaded this"); type 3, the withdrawal, retired (a bake is never withdrawn by the protocol). */
+const BAKE = 0;
+const WITHDRAWAL = 3;
 import { CORRECTIONS_SPEC } from '../../barebone/src/corrections.ts';
 import { NAME, NAME_WITHDRAWAL } from '../../dub/src/names.ts';
 import { FOLLOW_LIST, PEOPLE_SPEC, PEOPLE_SPEC_1, SEALED_LIST } from '../../dub/src/people.ts';
@@ -16,15 +20,21 @@ import { MESSAGES_SPECS, SPEC as MONEY_SPECS } from '../../damgar/src/specs.ts';
 import { TYPES as MONEY_TYPES, readDraft, readLaneRequest } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, say as sayAmount } from '../../damgar/src/units.ts';
 import { GRANT_LIMITS_SPEC } from '../../grants/src/limits.ts';
-import { MEMBER_KEYS_SPEC } from '../../grants/src/member.ts';
 
 /**
  * A request as the runner reads it (3.1): an everyday act of the identity,
- * on one of the app's lines or apart; or (draft 3, section 9) an act of a
- * collective the identity is a member of (`as`), signed with the member key
- * Kišib holds for it, on that key's own strand (`line: 'member'`).
+ * on one of the app's lines or apart. An act for a collective is one of
+ * these too (draft 5, 3.1a): the collective named only in its `objects`.
+ * Draft 3's `as` and `line: 'member'` (a member key's own strand) are read
+ * only to be refused: there are no member keys any more.
  */
 export type RunnerRequest = Omit<SignRequest, 'line'> & { line: SignRequest['line'] | 'member'; as?: string };
+
+/** Said where a request uses draft 3's member line or `as` (draft 5, 3.1a). */
+export const NO_MEMBER_KEYS_SAY = 'There are no member keys any more: an act for a collective is signed with the member’s own key, naming the collective. Nothing was signed.';
+
+/** Said where an app asks Kišib to hold a key for a collective (draft 5, 9.1). */
+export const NO_MEMBER_ASK_SAY = 'There are no member keys any more: Kišib signs for your collectives with your own key, through its panel. Nothing was kept.';
 
 /** The kinds of act (section 5.1). */
 export type Kind = 'posts' | 'messages' | 'names' | 'contacts' | 'money' | 'agreements' | 'keys' | 'other';
@@ -69,7 +79,7 @@ export function refusedOutright(r: RunnerRequest): string | null {
   if (r.line === 'public' && !r.public) return 'A private act on the public line: each app keeps its private acts on its private line. Nothing was signed.';
   if (r.line === 'private' && r.public) return 'A public act on the private line: each app keeps its public acts on its public line. Nothing was signed.';
   if (r.line === 'apart' && r.public) return 'An act on a line of its own is a private act. Nothing was signed.';
-  if ((r.line === 'member') !== (r.as !== undefined)) return 'An act of a collective goes on its member key’s own strand, and nothing else does. Nothing was signed.';
+  if (r.line === 'member' || r.as !== undefined) return NO_MEMBER_KEYS_SAY;
   return null;
 }
 
@@ -77,8 +87,9 @@ export function refusedOutright(r: RunnerRequest): string | null {
 export function kindOf(r: RunnerRequest): Kind {
   if (r.spec === POST_SPECS.text && r.type === TEXT_ACT) return r.public ? 'posts' : 'messages';
   if (r.spec === SPECS.envelopes) {
-    if (r.type === PUBLICATION) return r.public ? 'posts' : 'messages';
-    if (r.type === WITHDRAWAL) return 'posts';
+    // A bake (draft 5, 5.1): public, a post; private, a message. Never withdrawn: the retired withdrawal (type 3) is an act Kišib does not read.
+    if (r.type === BAKE) return r.public ? 'posts' : 'messages';
+    if (r.type === WITHDRAWAL) return 'other';
     return 'keys';
   }
   if (r.spec === SPECS.identity) {
@@ -89,7 +100,6 @@ export function kindOf(r: RunnerRequest): Kind {
   if (r.spec === PEOPLE_SPEC || r.spec === PEOPLE_SPEC_1) return 'contacts';
   if (MONEY.has(r.spec)) return 'money';
   if (r.spec === MIRS.agreements) return 'agreements';
-  if (r.spec === MEMBER_KEYS_SPEC) return 'keys';
   return 'other';
 }
 
@@ -131,13 +141,12 @@ export function wordsOf(r: RunnerRequest, app: string): string[] {
     else if (format === APPENDED_FORMAT) out.push('A message with a collective appended (it binds nothing):');
     else if (format) out.push(`A text in the format ${format}:`);
     out.push(`“${String(m.get(0) ?? '')}”`);
-  } else if (r.spec === SPECS.envelopes && r.type === PUBLICATION && m) {
+  } else if (r.spec === SPECS.envelopes && r.type === BAKE && m) {
+    // A bake: "I uploaded this" (Envelopes type 0), never withdrawn by the protocol.
     const module = m.get(0) instanceof Uint8Array ? hex(m.get(0) as Uint8Array) : '';
-    const what = module === POST_SPECS.jpeg ? 'A picture (JPEG)' : module === POST_SPECS.video ? 'A film (MP4)' : 'A publication';
+    const what = module === POST_SPECS.jpeg ? 'A picture (JPEG)' : module === POST_SPECS.video ? 'A film (MP4)' : 'A file';
     const work = m.get(1) instanceof Uint8Array ? hex(m.get(1) as Uint8Array) : '';
-    out.push(`${what}, ${Number(m.get(3) ?? 0).toLocaleString('en')} bytes, its work hash ${work}`);
-  } else if (r.spec === SPECS.envelopes && r.type === WITHDRAWAL) {
-    out.push('Withdraws a publication of its own.');
+    out.push(`${what} uploaded by this identity (a bake), ${Number(m.get(3) ?? 0).toLocaleString('en')} bytes, its work hash ${work}. A bake is never withdrawn.`);
   } else if (r.spec === SPECS.identity && r.type === NAME && m) {
     out.push(`The display name “${String(m.get(0) ?? '')}”.`);
   } else if (r.spec === SPECS.identity && r.type === NAME_WITHDRAWAL) {
@@ -178,6 +187,6 @@ export function wordsOf(r: RunnerRequest, app: string): string[] {
   const to = (r.to ?? []).filter((t) => t !== r.identity);
   if (to.length) out.push(`${r.public ? 'Addressed to' : 'Sealed to'} ${to.map(who).join(', ')}.`);
   if (!r.public && r.to?.length === 1 && r.to[0] === r.identity) out.push('Sealed to the identity itself, for its own apps.');
-  out.push(r.line === 'member' ? `As the collective ${who(r.as!)}, with this identity’s own member key, on that key’s strand, at position ${r.sequence.length + 1}.` : r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length + 1}.`);
+  out.push(r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length + 1}.`);
   return out;
 }

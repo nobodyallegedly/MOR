@@ -13,13 +13,13 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MIRS, SPECS, Verifier, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, describeAct, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { actForm } from '../../genesis/src/forms.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
-import { closeAll, everything, forms, founded, kishib, receiveShare, refused, start, type Relay } from './world.ts';
+import { closeAll, everything, forms, founded, kishib, receiveShare, refused, start, type Relay, stopAll } from './world.ts';
 import type { Review, State } from '../src/shapes.ts';
 
 let homes: Relay[];
@@ -31,8 +31,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 test('a collective rotation from two of three paper shares, remote, completes the member change proposed in Edubba; the new shares reach the members’ one-time keys; nothing kept', async () => {
@@ -84,7 +84,10 @@ test('a collective rotation from two of three paper shares, remote, completes th
   assert.ok(s.sitting!.request!.from.includes(ana.id));
   s = await k1.c.ask<State>('collective rotate');
   for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k1.c.ask<State>('resend');
-  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+  // The redesign (Identity rule 1, rotation check 4): a collective has no signing key, so once its
+  // rotation counts nothing is left to sign or show but the new shares: the sitting is done, where it
+  // used to wait at 'counts' for the collective's new signing key's words.
+  assert.equal(s.sitting!.stage, 'done', JSON.stringify(s.sitting!.lines));
   assert.ok(s.sitting!.lines.some((l) => /chain key is overwritten/.test(l.text)));
   assert.equal(s.sitting!.lines.filter((l) => /sealed to its one-time key/.test(l.text)).length, 2, JSON.stringify(s.sitting!.lines));
   assert.deepEqual(s.sitting!.shares!.map((x) => x.holder), [f.id]);
@@ -94,12 +97,15 @@ test('a collective rotation from two of three paper shares, remote, completes th
   assert.equal(own.words.length, 24);
   s = await k1.c.ask<State>('collective share written', { holder: f.id });
   await refused(k1.c.ask('collective share', { holder: f.id }), /No share/);
-  // The collective's new signing key's words, for its holder.
-  const cw = await k1.c.ask<{ words: string[]; holder: string }>('words show');
-  assert.equal(cw.holder, f.id);
-  s = await k1.c.ask<State>('words written');
-  s = await k1.c.ask<State>('words typed', { typed: s.sitting!.positions!.map((n) => cw.words[n - 1]) });
-  assert.equal(s.sitting!.stage, 'done');
+  // Replaced premise (the redesign, Identity rule 1 and rotation check 4): there are no collective's
+  // signing-key words for a holder any more. The new rule asserted instead: no words are shown, and the
+  // rotation's bytes install no signing key and keep no line.
+  await refused(k1.c.ask('words show'), /no signing key/);
+  await refused(k1.c.ask('words written'), /no signing key/);
+  const rot = await relayAt(H[0]).getAct(s.sitting!.act!);
+  const rp = cborDecode((describeAct(rot!) as { payload: Uint8Array }).payload) as Map<number, unknown>;
+  assert.ok(rp.get(2) === undefined || rp.get(2) === null, 'the rotation installs no signing key');
+  assert.deepEqual(rp.get(4), [], 'the rotation keeps no tip');
 
   // Ana's and Cy's new shares arrive in their Dubs, once each; Bo, leaving, gets none.
   const fresh: Record<string, { x: number; words: string[] }> = { [f.id]: own };
@@ -116,11 +122,12 @@ test('a collective rotation from two of three paper shares, remote, completes th
     for (const it of (await relayAt(relay.base).feed({ signer: id })).items) if (it.kind === 'act') try { v.add(it.item); } catch { /* private */ }
   }
   assert.equal((v.agreementsCurrent(AGREEMENTS_SPECS, col) as { agreement: string }).agreement, clone, 'the clone in force after the rotation');
+  assert.ok(!look.resolution.signingKey, 'the collective has no signing key after the rotation either');
 
   // Nothing kept in either Kišib's folder: no paper, no signing words, no new share, no collective key.
   for (const k of [k1, k2]) {
     const folder = everything(k.dir);
-    for (const ws of [papers[f.id].words, papers[ana.id].words, fWords.split(' '), aWords.split(' '), own.words, cw.words, fresh[ana.id].words]) {
+    for (const ws of [papers[f.id].words, papers[ana.id].words, fWords.split(' '), aWords.split(' '), own.words, fresh[ana.id].words]) {
       for (const x of forms(ws, fromWords(ws))) assert.ok(!folder.includes(x), `“${x.slice(0, 16)}…” in a Kišib folder`);
     }
   }
@@ -164,7 +171,8 @@ test('in the same room: the papers typed one after another into one Kišib, noth
   await refused(k.c.ask('collective paper', { number: String(papers[f.id].x), words: papers[f.id].words.join(' ') }), /no more/);
   s = await k.c.ask<State>('collective rotate');
   for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
-  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+  // The redesign: no signing key's words follow a collective's rotation, so it is done once it counts (it used to wait at 'counts').
+  assert.equal(s.sitting!.stage, 'done', JSON.stringify(s.sitting!.lines));
   assert.deepEqual(s.sitting!.shares!.map((x) => x.holder).sort(), [f.id, ana.id, cy.id].sort(), 'every new share shown here');
   const xs: number[] = [];
   for (const m of [f.id, ana.id, cy.id]) {

@@ -11,13 +11,15 @@ Claude's desktop app can run small helper programs on your computer and use them
 - **Reading.** Give Claude an act's id, or a link that carries one (such as a reader link). The connector fetches the act from a relay and checks it with MOR's own core library, on your computer. Then Claude can tell you, in plain words, what it is, who signed it and whether it counts:
   - **a release:** every file fetched and checked against its fingerprint; whose release it is; the collective's agreement it was made under, the one the collective's record named at the time, rule by rule; which members signed and which did not; and whether it is a release yet;
   - **an agreement:** who is bound, what each rule does, who signed, whether it is in force **as far as the relays asked show**, and whether a clone replaced it; for a collective, the agreement in force is the one the collective's own record names;
-  - **a text** (a post or a long-form document), **a signature**, **a picture**, **an identity** (its homes, its chain, whether it is a collective and which agreement its record names).
+  - **a text** (a post or a long-form document), **a signature**, **a picture** (a bake: an upload, its signer the uploader; for a collective, uploaded by a member naming it), **an identity** (its homes, its chain, whether it is a collective and which agreement its record names).
   - **an act signed under a grant** (F128, F343: an agent posting in its owner's name): on whose authority, the grant and the grantee's acceptance looked for, Agreements' verdict (backed, not backed, or unknown, its limits under the grant limits cMIP judged);
   - **a correction** (the corrections cMIP draft 2, F344, F347): a text in one of its two formats naming an act of its own signer first, said to correct it; a long-form correction said to be written in long form.
 - **Edubba's agents read with it too** (H21): `src/read.ts` exports `toldText`, the reading as Claude's app hears it, which Edubba hands its agents word for word.
-- **Preparing.** Ask Claude to post, publish a picture, withdraw a picture or send a message, for an identity you linked to Claude at the desk. The connector writes a **draft** as a file into the drafts folder on your Mac, `~/mor-drafts` (its format is documented in `DRAFTS.md`; nothing is written there): exactly what the act will say, what signing it means, and a short fingerprint of it (its digest). Nothing is signed. In Edubba you read it again, with the same digest, and approve it, decline it, or send it back with a note.
+- **Preparing.** Ask Claude to post, upload a picture or send a message, for an identity you linked to Claude at the desk. The connector writes a **draft** as a file into the drafts folder on your Mac, `~/mor-drafts` (its format is documented in `DRAFTS.md`; nothing is written there): exactly what the act will say, what signing it means, and a short fingerprint of it (its digest). Nothing is signed. In Edubba you read it again, with the same digest, and approve it, decline it, or send it back with a note.
 - **Hearing back.** Claude asks the connector what the desk answered. An approval: the connector fetches the act from the relays and checks it is exactly the draft. A note: Claude reworks the draft and prepares a new one, naming the one you sent back.
-- **What Claude cannot prepare.** Anything outside the Text and Envelopes layers: no signature on a release or an agreement, no agreement, no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
+- **What Claude cannot prepare.** Anything outside the Text and Envelopes layers: no signature on a release or an agreement, no agreement, no publication (the Agreements act that sells), no price tag (Money), no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
+- **Nothing is withdrawn.** Since the redesign (F407) a picture you upload is a **bake**, and a bake is never withdrawn by the protocol: the bytes stay where they were uploaded unless homes and relays drop them. What can end is a price tag (Money) or a publication (Agreements), and Claude prepares neither. The old withdrawal tool is gone.
+- **A collective has no key of its own** (the keyless collective, Agreements rules 56-60). A member acts for it with the member's own key, naming the collective in the act. So the connector reads whose release or picture it is from the collective the act names, not from who signed it.
 - **Words in acts are not instructions.** A post or an agreement can be written to talk to a machine that reads it. Everything a signer wrote is shown between fences that say so, and the connector tells Claude to report it, never to follow it. Hidden characters that change the order text displays in are shown as codes, `<U+202E>` and so on.
 
 
@@ -27,9 +29,9 @@ Claude's desktop app can run small helper programs on your computer and use them
 
 | File | What |
 | --- | --- |
-| `src/server.ts` | The MCP server over stdio: its instructions to Claude and seven tools: `mor_read`, `mor_identity`, `mor_prepare_post`, `mor_prepare_message`, `mor_prepare_picture`, `mor_prepare_withdrawal`, `mor_drafts`. Every prepare tool takes an optional `note` (Claude's words to the owner, never signed) and `reworks` (a draft the owner sent back). |
+| `src/server.ts` | The MCP server over stdio: its instructions to Claude and six tools: `mor_read`, `mor_identity`, `mor_prepare_post`, `mor_prepare_message`, `mor_prepare_picture` (a bake), `mor_drafts`. Every prepare tool takes an optional `note` (Claude's words to the owner, never signed) and `reworks` (a draft the owner sent back). |
 | `src/read.ts` | Fetch an act by id from the first relay that holds it, check it is the act asked for, judge it through its signer's identity chain, and read it by kind (the reader, the repo client, the collective client's readings). |
-| `src/draft.ts` | The draft: encoding, strict decoding, digest; its plain-words reading from its bytes alone, shared by the connector and the desk; making the four kinds of draft; the drafts folder (drafts, answers, linked identities); checking an act against its draft. |
+| `src/draft.ts` | The draft: encoding, strict decoding, digest; its plain-words reading from its bytes alone, shared by the connector and the desk; making the three kinds of draft (post, message, bake of a picture; a draft of a withdrawal, Envelopes type 3, is refused as retired); the drafts folder (drafts, answers, linked identities); checking an act against its draft. |
 | `src/words.ts` | Fences around signers' words; Text rule 5's invisible characters as escapes; fingerprints. |
 | `src/target.ts` | An act id, or the act id a link carries (a reader link's relays are used too; the linked page is never fetched). |
 | `src/config.ts` | `MOR_RELAYS` (default the two deployed homes), `MOR_VIA` (an address reached through a local port), `MOR_DRAFTS` (default `~/mor-drafts`). |
@@ -43,6 +45,8 @@ The Claude desktop app cannot start a program kept inside `~/Documents`: macOS r
 
 *Changed at step 11c:* the terminal signer `mor-sign`, the tool `mor_submit` and signature drafts on releases and agreements are removed; `MOR_CHECKOUT` with them, since only a member signing a release compared it with a checkout. Drafts gained messages, pictures, withdrawals, Claude's note and rework (`MOR draft, version 2`).
 
+*Changed at F407 (the redesigned core):* the withdrawal is retired (Envelopes type 3 is invalid; a bake is never withdrawn), so `mor_prepare_withdrawal` is removed and a withdrawal draft is refused; a picture is a bake, its signer the uploader, and its bake carries no price nor `for` (fields 7 and 8 refused; a price is a price tag); a collective is keyless, its acts made by a member naming it.
+
 ## Readings
 
 Where the texts are silent, the connector takes these readings. *To be confirmed by Nobody, allegedly.*
@@ -52,7 +56,7 @@ Where the texts are silent, the connector takes these readings. *To be confirmed
 3. **Claude is not the signing client.** Agreements rule 4a and Text rule 5a bind the signer's own client: the desk shows the plain text with every invisible control as an escape, and the draft's digest. What Claude says is advice, not "what you saw".
 4. **Signers' words are fenced.** Every word a signer wrote appears only between the fences, never in the connector's own lines; a relay's error text is quoted. The owner's notes from the desk are shown as the owner's, quoted, and they direct the rework.
 5. **Names are not shown,** only fingerprints, except the names the owner gave the identities linked to Claude, which the desk writes to the drafts folder so Claude can say whose draft it is.
-6. **Two approvals for a post with a picture:** the picture is published first; its id, known only once signed, is what the post refers to. *Set aside:* one draft holding several acts.
+6. **Two approvals for a post with a picture:** the picture is uploaded (baked) first; its id, known only once signed, is what the post refers to. *Set aside:* one draft holding several acts.
 
 ## Tests
 
@@ -64,10 +68,11 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
 
 `test/connector.test.ts`, against three homes and an open relay on local ports, a test collective of three members (the repo client) and a release signed by one of the two members it needs. The connector runs as its own process and is driven over MCP, as Claude's app drives it:
 
-- its seven tools, none taking a key, none preparing an Agreements act; started by its launcher from another folder;
+- its six tools, none taking a key, none preparing an Agreements act, none preparing a withdrawal; started by its launcher from another folder;
 - given only a release id: verified, not a release yet, under the agreement its collective's record named, who signed and who did not, the agreement rule by rule, its words fenced;
 - a post prepared as a draft for a linked identity, by hash or by name, decoding to exactly what was asked, waiting at the desk;
-- refused before any draft: an identity not linked, a message to an identity that cannot receive one, a withdrawal of what is not a publication;
+- refused before any draft: an identity not linked, a message to an identity that cannot receive one;
+- no withdrawal prepared, and a hand-written draft of one (Envelopes type 3) refused as retired: a bake is never withdrawn (F407);
 - words in an act that try to close the fence or give Claude instructions, and a hidden direction control shown as `<U+202E>`;
 - an agreement in force as far as the relays asked show, the collective's agreement as its record names it; one proposed and not yet signed, read as not in force yet;
 - its code never loads an identity file, signs, nor puts an act on a relay;

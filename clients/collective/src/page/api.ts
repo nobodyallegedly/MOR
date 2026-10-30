@@ -155,7 +155,6 @@ export interface State {
     departed: { id: string; name: string; record: string; stillParty: boolean }[];
     steppedDown: { id: string; name: string; area: number; record: string }[];
     records: number;
-    holder: string;
     agreement: string;
     agreements: number;
     rules: Rules;

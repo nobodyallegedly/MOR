@@ -1,28 +1,30 @@
-// Damgar for a collective (round 3; F353, decided by Nobody, allegedly, 18
-// and 19 October 2026; Agreements draft 16). A member holding a collective's
-// Money area acts for it here with their own key, made as they signed its
-// founding and sealed to them at their homes (the member keys cMIP): any of
-// their apps opens it, Damgar too. What Damgar signs for the collective is a
-// promise to pay (a Money obligation, the collective the debtor), signed with
-// that key: within the area's cap, as the constitution writes it (the grant
-// limits cMIP, draft 2, area key 6), it counts on that key alone; above it,
-// a second holder's key is asked, as a release's signatures are asked, in
-// their Dub, Edubba or this Damgar (an act of the collective waiting for
-// their key). Every count is Agreements', from what the collective's relays
-// and homes hold. Damgar still holds no wallet: paying the promise is done
-// as any payment is.
+// Damgar for a collective (round 3; F353; moved to the keyless collective,
+// Agreements draft 17, rules 56 to 60, F402). A collective has no signing
+// key, and its members no member keys: a member who acts for it in money
+// signs with their own identity's key, the act naming the collective and
+// citing its latest decision (rule 58). Who counts is the collective's Money
+// layer rule (field 19), or a finer area reaching Money obligations (field
+// 34). What Damgar signs for the collective is a promise to pay (a Money
+// obligation, the collective the debtor): within the area's cap, as the
+// constitution writes it (the grant limits cMIP, draft 2, area key 6), it
+// counts on that member's signature alone; above it, a second holder's
+// signature is asked, as a release's signatures are asked, in their Dub,
+// Edubba or this Damgar. Every count is Agreements', from what the
+// collective's relays and homes hold. Damgar still holds no wallet: paying
+// the promise is done as any payment is.
 //
 // TEST IDENTITIES ONLY.
 
-import { cborDecode, describeAct, hex, readTerms, sha256, unhex } from '../../genesis/src/core.ts';
+import { MIRS, cborDecode, describeAct, hex, readTerms, sha256, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS, obligationPayload } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
-import { collectiveNow, judgeCollective, memberKeyFor, readMemberKeys, signAndAsk, type ConsentRead, type MemberKey } from '../../grants/src/member.ts';
+import { areaReaching, collectiveNow, judgeCollective, signAndAsk, type ConsentRead } from '../../grants/src/member.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 
-const MONEY_LAYER = 2;
+/** A Money obligation (Money type 1): what Damgar signs for a collective. */
+const OBLIGATION = { spec: MIRS.money, type: 1 };
 
 /** The collective's Money area, as the agreement in force writes it. */
 export interface MoneyArea {
@@ -39,7 +41,6 @@ export interface CollectiveHere {
   id: string;
   agreement: string | null;
   area: MoneyArea | null;
-  key: MemberKey | null;
   /** Why this member cannot act for it in money, where they cannot. */
   why: string | null;
 }
@@ -56,7 +57,7 @@ function capOf(hexed: string | null | undefined): { unit: string; value: number 
   }
 }
 
-async function termsOf(id: string, hints: string[], via: Via): Promise<{ areas: { id: number; name: string; holders: string[]; threshold: number; kinds: { form: string; layer?: number | null; spec?: string | null }[]; limits?: string | null }[] } | null> {
+async function termsOf(id: string, hints: string[], via: Via): Promise<{ areas: { id: number; name: string; holders: string[]; threshold: number; kinds: { form: string; spec?: string | null; type?: number | null }[]; limits?: string | null }[] } | null> {
   for (const h of hints) {
     const a = await relayAt(h, via).getAct(id).catch(() => null);
     if (!a) continue;
@@ -67,20 +68,25 @@ async function termsOf(id: string, hints: string[], via: Via): Promise<{ areas: 
   return null;
 }
 
-/** Read a collective for this member: its Money area, and this member's own key for it. */
+/**
+ * Read a collective for this member: who acts for it on a Money obligation
+ * (rule 60): the finer area of its agreement in force reaching obligations,
+ * with its cap, else its Money layer's rule, read as an area.
+ */
 export async function readCollective(me: TestIdentity, id: string, hints: string[], via: Via): Promise<CollectiveHere> {
   const now = await collectiveNow(id, hints, via);
-  if (!now.agreement) return { id, agreement: null, area: null, key: null, why: 'Its agreement in force could not be read from its relays and homes.' };
+  if (!now.agreement) return { id, agreement: null, area: null, why: 'Its agreement in force could not be read from its relays and homes.' };
   const t = await termsOf(now.agreement, hints, via);
-  const a = t?.areas.find((x) => x.kinds.some((k) => (k.form === 'layer' && k.layer === MONEY_LAYER) || k.spec === AGREEMENTS_SPECS.money));
-  const area: MoneyArea | null = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
-  const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
-  const key = keys.length ? await memberKeyFor(keys, id, hints, via).catch(() => null) : null;
+  const a = t?.areas.find((x) => x.kinds.some((k) => k.spec === OBLIGATION.spec && (k.type === OBLIGATION.type || k.type === null || k.type === undefined)));
+  let area: MoneyArea | null = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
+  if (!area) {
+    const layer = (await areaReaching(id, hints, OBLIGATION, via).catch(() => null))?.area;
+    if (layer) area = { id: layer.id, name: layer.layer ? 'Money' : layer.name, holders: layer.holders, number: layer.number, cap: null };
+  }
   let why: string | null = null;
-  if (!area) why = 'Its constitution draws no Money area: the collective’s money acts count on its own key, held by its founder’s Edubba.';
-  else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (“${area.name}”): your key does not count there.`;
-  else if (!key) why = 'No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change.';
-  return { id, agreement: now.agreement, area, key, why };
+  if (!area) why = 'Its agreement names no rule for its Money layer: nobody acts for it in money.';
+  else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (“${area.name}”): you do not act for it in money.`;
+  return { id, agreement: now.agreement, area, why };
 }
 
 /** Whether an amount lies within the area's cap (the grant limits cMIP, 7.2): the same unit, at most its value. */
@@ -93,7 +99,7 @@ export function promiseSay(c: CollectiveHere, me: string, a: { to: string; amoun
   const need = area.number + (above ? 1 : 0);
   const others = area.holders.filter((h) => h !== me);
   const lines = [
-    `A promise to pay, by the collective ${names(c.id)}: it owes ${names(a.to)} ${a.amount.value.toLocaleString('en')} (a Money obligation, public, signed with your own key for the collective; F353).`,
+    `A promise to pay, by the collective ${names(c.id)}: it owes ${names(a.to)} ${a.amount.value.toLocaleString('en')} (a Money obligation, public, signed with your own identity’s key, naming the collective; rule 58: a collective has no key of its own, and its members no member keys).`,
     `What for: ${a.whatFor || 'nothing said'}.`,
     `Its Money area, “${area.name}”: ${area.holders.map(names).join(', ')}; ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more (the grant limits cMIP, draft 2)` : ''}.`,
     above
@@ -113,13 +119,13 @@ export const promiseDigest = (c: CollectiveHere, payload: Uint8Array) => sha256(
 export const promisePayload = (c: CollectiveHere, a: { to: string; amount: { unit: string; value: number }; pointer: string }) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
 
 /**
- * Sign the promise with the member's key, publish it where the collective's
+ * Sign the promise with the member's own key, naming the collective (rule 58), publish it where the collective's
  * acts are, and ask the area's other holders for their key where it needs
  * more than one: each sent a negotiation message naming the act and the
  * collective, sealed to them, as Edubba sends a release to sign.
  */
 export async function signPromise(me: TestIdentity, c: CollectiveHere, payload: Uint8Array, ask: string[], text: string, hints: string[], via: Via): Promise<{ act: string; places: string[]; asked: string[]; notAsked: string[] }> {
-  return signAndAsk(me, c.id, c.key!, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask, text, hints, via);
+  return signAndAsk(me, c.id, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask, text, hints, via);
 }
 
 /** Agreements' answer for a promise of the collective, the cap judged here (the grant limits cMIP, draft 2: Damgar implements it). */

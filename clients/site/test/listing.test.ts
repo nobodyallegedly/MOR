@@ -31,7 +31,7 @@ import { Gateway } from '../src/gateway.ts';
 import { KINDS, decodeSpec, linesOf, nameOf, readListing, roleWords, specHash, type Listed, type Listing } from '../src/listing.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { parseGatewaySettings } from '../src/settings.ts';
-import { PAYMENT_CMIP, PUBLICATION, RELEASE_MANIFEST } from '../src/specs.ts';
+import { PAYMENT_CMIP, BAKE, RELEASE_MANIFEST } from '../src/specs.ts';
 import { benign, SITE_DIR } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
@@ -45,6 +45,11 @@ let browser: Browser;
 let gateway: Gateway;
 let base: string;
 const running: Running[] = [];
+/** Start a home or relay, kept for `after` at once: stopped whatever happens next (CI). */
+const up = async (role: 'home' | 'relay') => {
+  const r = await start(role);
+  return r;
+};
 let relayA: string;
 let relayB: string;
 let places: string[];
@@ -105,7 +110,7 @@ async function publishSpec(by: TestIdentity, bytes: Uint8Array, relays: string[]
       [6, relays],
     ]),
   );
-  const made = await by.publish(SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const r of relays) await relayAt(r, by.via).putMedia(lm.locked);
   return { id: made.id, hash: specHash(bytes) };
 }
@@ -134,7 +139,7 @@ async function publishRelease(by: TestIdentity, name: string, version: string, n
       [6, relays],
     ]),
   );
-  const made = await by.publish(SPECS.envelopes, PUBLICATION, payload, { public: true, relays, refs: names ? [names] : undefined });
+  const made = await by.publish(SPECS.envelopes, BAKE, payload, { public: true, relays, refs: names ? [names] : undefined });
   for (const r of relays) await relayAt(r, by.via).putMedia(lm.locked);
   return made.id;
 }
@@ -147,9 +152,8 @@ async function useXtype(by: TestIdentity, spec: string, type: number, relays: st
 
 before(async () => {
   execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
-  const [home1, home2, home3] = [await start('home'), await start('home'), await start('home')];
-  const [site, a, b] = [await start('relay'), await start('relay'), await start('relay')];
-  running.push(home1, home2, home3, site, a, b);
+  const [home1, home2, home3] = [await up('home'), await up('home'), await up('home')];
+  const [site, a, b] = [await up('relay'), await up('relay'), await up('relay')];
   relayA = a.base;
   relayB = b.base;
   places = [site.base, home1.base, home2.base];
@@ -182,7 +186,8 @@ before(async () => {
   ({ id: pub.notes2, hash: hash.notes2 } = await publishSpec(carol, notes2, [relayB]));
 
   // A proof-of-delivery checker (field 12), declaring the layers it acts on as an extension (field 10).
-  const checker = content([[0, 0], [1, id(carol)], [9, '# cMIP: Test checker\n\nChecks proofs of delivery.'], [10, [2, 3]], [12, true]]);
+  // Field 10 [3, 4]: Money and Agreements, in Development draft 11's numbering (F407: Text 1 and Envelopes 2 are two layers; was [2, 3]).
+  const checker = content([[0, 0], [1, id(carol)], [9, '# cMIP: Test checker\n\nChecks proofs of delivery.'], [10, [3, 4]], [12, true]]);
   ({ id: pub.checker, hash: hash.checker } = await publishSpec(carol, checker, [relayB]));
   // F290: a specification's content published under another media spec is no publication of a specification.
   pub.otherMedia = (await publishSpec(carol, content([[0, 0], [1, id(carol)], [9, '# cMIP: Under another media spec']]), [relayB], 'f'.repeat(64))).id;
@@ -327,7 +332,7 @@ test('the listing reads the relays named, and only those a browser can reach', (
   assert.equal(a.address, relayA);
   assert.equal(a.name, 'the first relay');
   assert.ok(a.asked && b.asked);
-  assert.equal(a.specs, 13, 'publications of specifications, each relay its own');
+  assert.equal(a.specs, 13, 'bakes of specifications, each relay its own');
   assert.equal(b.specs, 7);
   assert.ok(a.read > a.specs, 'every act it serves is read, specifications picked out');
   assert.equal(onion.asked, false, 'an onion address over http is not asked from a browser');
@@ -396,7 +401,8 @@ test('field 12, the discovery field, and the layers an extension declares', () =
   assert.equal(w.layer, 'Development');
   assert.deepEqual(w.role, [
     'declares, for use as an extension, the layers it acts on beyond Development: Money, Agreements',
-    'checks proofs of delivery of proven offers (field 12)',
+    // "proven deliveries": Agreements draft 17's word (rule 11); there is no standing offer since the publication (F407).
+    'checks proofs of proven deliveries (field 12)',
   ]);
 });
 
@@ -666,7 +672,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
     })),
   );
   assert.equal(cards.length, 9);
-  assert.match(card0(cards, hash.mir).text, /No creator: a MIR names none\. Published by/);
+  assert.match(card0(cards, hash.mir).text, /No creator: a MIR names none\. Uploaded by/);
   assert.equal(card0(cards, hash.mics).kind, 'MICS document');
   assert.match((await f.textContent('#l-versions'))!, /Versions of one text \(1\)/);
   const card = (h: string) => cards.find((c) => c.spec === h)!;
@@ -676,7 +682,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.equal(pay.layer, 'Money');
   assert.match(pay.role!, /fills task 6, Payment/);
   assert.equal(pay.code, 'released');
-  assert.match(pay.text, /released by its creator: “test-payment” 0\.2 \(its publication refers to it\)/);
+  assert.match(pay.text, /released by its creator: “test-payment” 0\.2 \(its bake refers to it\)/);
   assert.match(card(hash.checker).text, /released by its creator: “test-checker” 3\.0 \(its manifest names it among what it implements\)/);
   assert.match(card(hash.notes2).text, /Use: 1 public act of its types found \(note 1\)\./);
   assert.equal(pay.claimed, 'yes');
@@ -707,9 +713,9 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   // The bar names the relays read, the one not asked, and the counts.
   await page.click('#mor-bar summary');
   const listed = (await page.textContent('#mor-listings'))!;
-  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 2 xtypes listed, 4 public acts of their types counted; private acts are not counted\. 6 MIPs listed, under 2 MIRs; 1 text found in versions\. 17 specifications verified, 2 publications not verified/);
-  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 13 publications of specifications/);
-  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 7 publications of specifications/);
+  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 2 xtypes listed, 4 public acts of their types counted; private acts are not counted\. 6 MIPs listed, under 2 MIRs; 1 text found in versions\. 17 specifications verified, 2 bakes not verified/);
+  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 13 bakes of specifications/);
+  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 7 bakes of specifications/);
   if (shots) await page.screenshot({ path: join(shots, 'listing-phone.png'), fullPage: true });
   assert.deepEqual(elsewhere, [], 'nothing fetched from anywhere but the gateway, the homes and the relays');
   assert.deepEqual(problems, []);

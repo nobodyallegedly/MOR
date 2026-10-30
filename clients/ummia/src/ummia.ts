@@ -37,7 +37,7 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { negotiate } from '../../repo/src/proposals.ts';
-import { chainFor, collectiveNow, judgeCollective, memberKeyFor, publishAt, readMemberKeys, signAsMember, type MemberKey } from '../../grants/src/member.ts';
+import { areaReaching, chainFor, judgeCollective, publishAt, signAsMember } from '../../grants/src/member.ts';
 import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
 import { actForm, readId } from '../../genesis/src/forms.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
@@ -189,18 +189,9 @@ const PLAN_FOR = 15 * 60 * 1000;
 
 /** The area of a collective reaching its releases (a publication, Envelopes type 0), as its agreement in force writes it. */
 export async function releaseArea(collective: string, places: string[], via: Via): Promise<{ name: string; holders: string[]; number: number } | null> {
-  const now = await collectiveNow(collective, places, via);
-  if (!now.agreement) return null;
-  for (const h of places) {
-    const a = await relayAt(h, via).getAct(now.agreement).catch(() => null);
-    if (!a) continue;
-    const d = describeAct(a) as { payload?: Uint8Array };
-    if (!d.payload) return null;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS) as { areas: { name: string; holders: string[]; threshold: number; kinds: { form: string; layer?: number | null; spec?: string | null; type?: number | null }[] }[] };
-    const a2 = t.areas.find((x) => x.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.spec === SPECS.envelopes && k.type === 0)));
-    return a2 ? { name: a2.name, holders: a2.holders, number: a2.threshold } : null;
-  }
-  return null;
+  // A release is a bake (Envelopes type 0): the finer area reaching bakes, else the Envelopes layer's rule (rule 60).
+  const r = await areaReaching(collective, places, { spec: SPECS.envelopes, type: 0 }, via).catch(() => null);
+  return r?.area ? { name: r.area.layer ? 'the Envelopes layer' : r.area.name, holders: r.area.holders, number: r.area.number } : null;
 }
 
 export class Ummia {
@@ -259,8 +250,8 @@ export class Ummia {
     return this.store.write(id, 'book', book);
   }
 
-  /** Who acts, from the chooser: oneself, or a collective this identity acts for, with its own key for it (round 2, F353). */
-  private async acting(me: TestIdentity, s: Settings): Promise<{ kind: 'self' } | { kind: 'collective'; id: string; key: MemberKey; places: string[] }> {
+  /** Who acts, from the chooser: oneself, or a collective this identity acts for, with this identity's own key, naming the collective (rule 58: a collective has no key, its members no member keys). */
+  private async acting(me: TestIdentity, s: Settings): Promise<{ kind: 'self' } | { kind: 'collective'; id: string; places: string[] }> {
     const who = chosen(actors(await this.store.held(), s.collectives ?? []), s.acting ?? me.id);
     if (!who) throw new Error('Choose who acts.');
     if (who.kind === 'self') {
@@ -268,10 +259,7 @@ export class Ummia {
       return { kind: 'self' };
     }
     const places = await this.placesOf(who.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
-    const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-    const key = keys.length ? await memberKeyFor(keys, who.id, places, s.via).catch(() => null) : null;
-    if (!key) throw new Error('No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change. Nothing was signed.');
-    return { kind: 'collective', id: who.id, key, places };
+    return { kind: 'collective', id: who.id, places };
   }
 
   private async placesOf(id: string, hints: string[], via: Via): Promise<string[]> {
@@ -285,8 +273,9 @@ export class Ummia {
 
   /**
    * Act for a collective here (round 2, F353), by its ID: kept where this
-   * identity holds a box in an area reaching its releases (a release is a
-   * publication, Envelopes type 0) and its own key for it is found.
+   * identity holds a box in the area, or the Envelopes layer's rule,
+   * reaching its releases (a release is a bake, Envelopes type 0; rule 60).
+   * It acts with its own key, naming the collective (rule 58).
    */
   collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
@@ -294,16 +283,13 @@ export class Ummia {
       const id = readId(typed);
       const places = await this.placesOf(id, [...hints, ...s.track], s.via);
       const area = await releaseArea(id, places, s.via);
-      const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-      const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
       let why: string | null = null;
-      if (!area) why = 'No area of its constitution reaches its releases (publications): they count on its own key, held by its founder’s Edubba.';
+      if (!area) why = 'Its agreement in force names nobody who uploads for it (no rule for its Envelopes layer, nor an area reaching bakes).';
       else if (!area.holders.includes(me.id)) why = `You hold no box in the area reaching its releases (“${area.name}”).`;
-      else if (!key) why = 'No key of yours for this collective was found sealed to you at your homes.';
       if (why) throw new Error(`${why} Nothing was kept.`);
       s.collectives = [...(s.collectives ?? []).filter((c) => c.id !== id), { id, available: true, why: null }];
       await this.store.write(me.id, 'settings', s);
-      return { lines: [{ text: `Ummia acts for ${short(id)} with your own key for it: its releases go through its area “${area!.name}”, ${area!.number} key${area!.number === 1 ? '' : 's'} of ${area!.holders.length}.`, tone: 'ok' }] };
+      return { lines: [{ text: `Ummia acts for ${short(id)} with your own identity’s key, naming the collective: its releases go through “${area!.name}”, ${area!.number} signature${area!.number === 1 ? '' : 's'} of ${area!.holders.length}.`, tone: 'ok' }] };
     });
   }
 
@@ -1006,11 +992,11 @@ export class Ummia {
    * sent a negotiation message naming it, sealed to them, to sign in their
    * own app; then how it stands, as anyone reads it.
    */
-  private async confirmCollectiveRelease(me: TestIdentity, s: Settings, book: Book, who: { id: string; key: MemberKey; places: string[] }, plan: string, digest: string): Promise<Done> {
+  private async confirmCollectiveRelease(me: TestIdentity, s: Settings, book: Book, who: { id: string; places: string[] }, plan: string, digest: string): Promise<Done> {
     const relays = [...new Set([...s.relays, ...who.places])];
-    const at = await chainFor(who.id, who.key, who.places, s.via);
+    const at = await chainFor(who.id, who.places, s.via);
     const sign = async (payload: Uint8Array) => {
-      const made = signAsMember(who.id, who.key, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
+      const made = await signAsMember(who.id, me, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
       if (!(await publishAt([made.act], relays, s.via)).length) throw new Error('No relay took the release. Nothing counts: try again.');
       return { id: made.id };
     };
@@ -1050,7 +1036,7 @@ export class Ummia {
     return {
       met: !!st?.met,
       lines: st?.met
-        ? [{ text: `It counts as the collective’s release: ${st.areas.map((x) => `${x.signers.length} of ${x.needed} keys, ${x.byKey.length} with their own key`).join('; ')}.`, tone: 'ok' }]
+        ? [{ text: `It counts as the collective’s release: ${st.areas.map((x) => `${x.signers.length} of ${x.needed} signatures, each with its member’s own key`).join('; ')}.`, tone: 'ok' }]
         : [{ text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') ?? st?.reason ?? 'not read'}.`, tone: 'warn' }],
     };
   }

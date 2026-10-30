@@ -8,7 +8,7 @@ This file only documents the format. Drafts are never written here: they are fil
 
 ## In plain words
 
-Claude never signs and never sends. When you ask it to post, publish a picture, withdraw one or send a message, the connector writes a **draft** into a folder: exactly what the act will say, and for which identity. The desk finds it there, reads it again for itself from the file's own bytes, and shows it to you with a short fingerprint, its **digest**, which Claude shows too. You approve it, decline it, or send it back with a note. The desk writes its **answer** into the same folder, and Claude reads it there: an approval with the act it made, or your note saying what to change. The desk also writes which identities you **linked** to Claude, so Claude can name them and prepares nothing for the others.
+Claude never signs and never sends. When you ask it to post, upload a picture or send a message, the connector writes a **draft** into a folder: exactly what the act will say, and for which identity. The desk finds it there, reads it again for itself from the file's own bytes, and shows it to you with a short fingerprint, its **digest**, which Claude shows too. You approve it, decline it, or send it back with a note. The desk writes its **answer** into the same folder, and Claude reads it there: an approval with the act it made, or your note saying what to change. The desk also writes which identities you **linked** to Claude, so Claude can name them and prepares nothing for the others.
 
 ## Precisely
 
@@ -34,7 +34,7 @@ draft = {
   ? 7 => [+ [hash, hash]],; objects: [chain, predecessor]
   8 => [* tstr],          ; relays a public act is sent to once signed (empty for a message)
   ? 9 => [+ hash],        ; a message: its one recipient; a public reply: the identities it answers
-  ? 10 => [+ bstr],       ; media: locked bytes put on the relays after a publication
+  ? 10 => [+ bstr],       ; media: locked bytes put on the relays after a bake
   ? 11 => tstr,           ; Claude's note to the owner: never signed, never part of the act
   ? 12 => hash,           ; the digest of the draft this one reworks
 }
@@ -50,10 +50,9 @@ Deterministic CBOR as the core defines it; a draft that does not re-encode to it
 | --- | --- | --- |
 | A post | Text, 0 | public; payload `{0: text, ? 1: long-form format}`; refs allowed, each to an act the connector and the desk hold, a public act named with its signer (`[act, signer]`, F272), a private one by its id alone; recipients (field 9) exactly the signers of the public acts it answers other than its own signer, each given a copy sealed to it in its inbox at approval (reading B1, `docs/f272-build.md`); no objects or media |
 | A message | Text, 0 | private; one recipient (field 9), who has an encryption key and an inbox; refs allowed, as for a post (a public act named with its signer); sealed to the recipient at the desk and left in its inbox |
-| A picture | Envelopes, 0 | public; a JPEG publication with its key (fields 0 to 6 of the media map, no price, no `for`); its locked bytes in field 10; the JPEG stripped to the picture alone |
-| A withdrawal | Envelopes, 3 | public; empty payload; objects `[[publication, publication]]`, a publication its signer made or that was made for it |
+| A picture | Envelopes, 0 | public; a JPEG bake (an upload) with its key (fields 0 to 6 of the media map; no price, no `for`: Envelopes refuse fields 7 and 8 in a bake, a price is a price tag); its locked bytes in field 10; the JPEG stripped to the picture alone |
 
-Anything else, an Agreements act above all, is refused: by the connector before any draft is written, and by the desk again if a draft arrives by another way.
+Anything else, an Agreements act above all, is refused. A withdrawal (Envelopes, 3) was a kind of draft until F407; it is retired (a bake is never withdrawn) and refused like anything else: by the connector before any draft is written, and by the desk again if a draft arrives by another way.
 
 ### The answer
 

@@ -18,7 +18,7 @@ import { chromium, type Browser } from 'playwright-core';
 import { DUB_NEEDS, RunnerLink, type RunnerNeeds } from '../../dub/src/runner.ts';
 import { RUNNER_NO_OPEN_SAY } from '../../dub/src/dub.ts';
 import { NEED_MAX, type RunnerView } from '../src/runner.ts';
-import { closeAll, dub, dubBeside, kishib, runnerOn, start, type Relay } from './world.ts';
+import { closeAll, dub, dubBeside, kishib, runnerOn, start, type Relay, stopAll } from './world.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 let browser: Browser;
@@ -32,9 +32,8 @@ before(async () => {
 });
 
 after(async () => {
-  await browser.close();
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => browser?.close());
 });
 
 const state = (c: { ask<T>(op: string, a?: unknown): Promise<T> }) => c.ask<RunnerView>('runner state');

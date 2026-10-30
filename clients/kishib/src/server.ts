@@ -136,10 +136,6 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
         return runner.revoke({ pairing: text(a.pairing) });
       case 'runner yes':
         return runner.setYes({ pairing: text(a.pairing), kind: text(a.kind), on: a.on === true });
-      case 'runner member answer':
-        return runner.memberAnswer({ ask: text(a.ask), yes: a.yes === true });
-      case 'runner member remove':
-        return runner.memberRemove({ identity: text(a.identity), collective: text(a.collective) });
       case 'runner opening':
         return runner.setOpen({ pairing: text(a.pairing), identity: text(a.identity), on: a.on === true });
       case 'runner answer':
@@ -216,7 +212,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
           return json(res, 200, runner.open(token, { identity: text(a.identity), sealed: (a.sealed as string[]).map((x) => Uint8Array.from(Buffer.from(x, 'base64'))) })), true;
         }
         case '/runner/member':
-          // Draft 3, section 9: an app asks Kišib to hold the identity's key for a collective; answered in Kišib.
+          // Draft 3's ask to hold a key for a collective: refused, said plainly (draft 5, 9.1: there are no member keys).
           return json(res, 200, runner.memberAsk(token, { identity: text(a.identity), collective: text(a.collective), places: list(a.places) })), true;
         case '/runner/drop':
           runner.drop(token, { request: text(a.request) });
@@ -234,7 +230,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
     const want = Buffer.from(sealToken);
     if (given.length !== want.length || !timingSafeEqual(given, want)) return json(res, 403, { error: 'Only Kišib’s seal on this computer opens this door.' });
     const v = runner.view();
-    const said = () => ({ state: v.state, waiting: v.waiting.length + v.memberAsks.length + v.apps.filter((a) => a.state === 'waiting').length, held: v.held.length });
+    const said = () => ({ state: v.state, waiting: v.waiting.length + v.apps.filter((a) => a.state === 'waiting').length, held: v.held.length });
     try {
       if (req.method === 'GET' && url.pathname === '/seal/state') return json(res, 200, said());
       if (req.method !== 'POST') return json(res, 405, { error: 'not allowed' });

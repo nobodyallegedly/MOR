@@ -23,15 +23,18 @@
 //     ? 9: [* recipient], ; a message: the one identity it is sealed to and delivered to;
 //                         ; a public reply: the identities whose acts it answers, each given
 //                         ; a sealed copy in its inbox (reading B1, docs/f272-build.md)
-//     ? 10: [* bstr],     ; media: locked bytes put on the relays after the act (a publication)
+//     ? 10: [* bstr],     ; media: locked bytes put on the relays after the act (a bake)
 //     ? 11: tstr,         ; Claude's note to the owner: not signed, never part of the act
 //     ? 12: digest,       ; the draft this one reworks (32 bytes)
 //   }
 //
 // What can be drafted is decided (Nobody, allegedly, 1 October 2026): acts
-// of the Text and Envelopes layers only, namely posts, publications,
-// withdrawals and messages. Anything else, an Agreements act above all, is refused
-// by the connector before any draft is written, and by the desk again.
+// of the Text and Envelopes layers only, namely posts, bakes of pictures
+// (the upload, Envelopes type 0, called a publication before F407) and
+// messages. The withdrawal (Envelopes type 3) is retired: a bake is never
+// withdrawn by the protocol, so none is drafted (F407). Anything else, an
+// Agreements act above all, is refused by the connector before any draft is
+// written, and by the desk again.
 //
 // The reading of a draft (`readDraft`) is made from these bytes alone, by
 // whichever program reads them: the connector before handing it over, the
@@ -44,13 +47,17 @@ import { SPECS, checkText, cborDecode, cborEncode, describeAct, hex, lockMedia, 
 import { lookUp, referTo, refAct, refSigner, type Reference } from '../../genesis/src/lookup.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
-import { POST_SPECS, PUBLICATION, WITHDRAWAL } from '../../barebone/src/specs.ts';
+import { POST_SPECS } from '../../barebone/src/specs.ts';
+
+/** Envelopes type 0: a bake (the upload). Type 3, the withdrawal, is retired (Envelopes rule 24, F407). */
+const BAKE = 0;
+const RETIRED_WITHDRAWAL = 3;
 import { parse, checkBound } from '../../longform/src/format.ts';
 import { compose } from '../../longform/src/text.ts';
 import { read as readJpeg, strip, CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { short, type Line, type Section } from '../../collective/src/explain.ts';
-import { readAct, fetchFirst, describeChecked, type Told } from './read.ts';
+import { readAct, type Told } from './read.ts';
 import { countControls, escapeControls, groups } from './words.ts';
 
 export const DRAFT_LABEL = 'MOR draft, version 2';
@@ -168,7 +175,7 @@ export const draftDigest = (bytes: Uint8Array): string => sha256(bytes);
 // ---------------------------------------------------------------- reading a draft
 
 /** The kinds Claude may prepare (decided by Nobody, allegedly, 1 October 2026). */
-export type DraftKind = 'post' | 'message' | 'picture' | 'withdrawal' | 'refused';
+export type DraftKind = 'post' | 'message' | 'picture' | 'refused';
 
 /** What signing a draft means, in plain words, from its bytes alone. */
 export interface DraftReading {
@@ -180,7 +187,7 @@ export interface DraftReading {
   quoted: { heading: string; text: string }[];
   /** Reasons not to sign it. While any remains, the desk refuses. */
   blocking: string[];
-  /** A picture to be published: the exact JPEG, once unlocked, to show before signing. */
+  /** A picture to be uploaded (a bake): the exact JPEG, once unlocked, to show before signing. */
   picture?: { jpeg: Uint8Array; width: number; height: number };
   /** The text to be signed, for comparing a rework with the draft it replaces. */
   text?: string;
@@ -189,16 +196,17 @@ export interface DraftReading {
 /** Words for an act outside what Claude may prepare. */
 export function notPreparable(spec: string, type: number): string {
   if (spec === REPO_SPECS.agreements) {
-    return 'It is an Agreements act (a signature, an agreement, a clone or the like). Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages (decided by Nobody, allegedly, 1 October 2026). An Agreements act is signed in the collective client, never from a draft.';
+    return 'It is an Agreements act (a signature, an agreement, a clone or the like). Claude prepares acts of the Text and Envelopes layers only: posts, bakes of pictures and messages (decided by Nobody, allegedly, 1 October 2026). An Agreements act is signed in the collective client, never from a draft.';
   }
-  if (spec === SPECS.identity) return 'It is an Identity act. Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages.';
-  if (spec === SPECS.envelopes) return `It is an Envelopes act of type ${type}. Of the Envelopes layer, Claude prepares publications and withdrawals only.`;
-  return `It is an act of a specification Claude does not prepare (${short(spec)}). Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages.`;
+  if (spec === SPECS.identity) return 'It is an Identity act. Claude prepares acts of the Text and Envelopes layers only: posts, bakes of pictures and messages.';
+  if (spec === SPECS.envelopes && type === RETIRED_WITHDRAWAL) return 'It is a withdrawal (Envelopes type 3), which is retired: a bake is never withdrawn by the protocol (F407). What can end is a price tag (Money) or a publication (Agreements), and Claude prepares neither.';
+  if (spec === SPECS.envelopes) return `It is an Envelopes act of type ${type}. Of the Envelopes layer, Claude prepares bakes of pictures only.`;
+  return `It is an act of a specification Claude does not prepare (${short(spec)}). Claude prepares acts of the Text and Envelopes layers only: posts, bakes of pictures and messages.`;
 }
 
 /**
  * Read a draft. Fail closed: what is not a public text, a private message
- * to one identity, a publication of a picture or a withdrawal is refused.
+ * to one identity or a bake of a picture is refused.
  */
 export async function readDraft(d: Draft, hints: string[], via: Via = {}): Promise<DraftReading> {
   const who: Line[] = [{ text: `The identity ${d.signer} signs it, at the desk, as the next act in its own sequence.` }];
@@ -206,12 +214,11 @@ export async function readDraft(d: Draft, hints: string[], via: Via = {}): Promi
   if (d.note !== null && d.note.length > MAX_NOTE) extra.push(`Claude's note is longer than ${MAX_NOTE} characters.`);
   let r: DraftReading;
   if (d.spec === POST_SPECS.text && d.type === 0) r = d.public ? await readPost(d, who, hints, via) : await readMessage(d, who, hints, via);
-  else if (d.spec === POST_SPECS.envelopes && d.type === PUBLICATION) r = await readPicture(d, who);
-  else if (d.spec === POST_SPECS.envelopes && d.type === WITHDRAWAL) r = await readWithdrawal(d, who, hints, via);
+  else if (d.spec === POST_SPECS.envelopes && d.type === BAKE) r = await readPicture(d, who);
   else r = { kind: 'refused', title: 'An act Claude does not prepare', summary: [], sections: [{ heading: 'Who signs', lines: who }], quoted: [], blocking: [notPreparable(d.spec, d.type)] };
   r.blocking.push(...extra);
   if (r.kind !== 'message' && r.kind !== 'post' && d.to.length) r.blocking.push('Only a message, or a public reply, names a recipient.');
-  if (r.kind !== 'picture' && d.media.length) r.blocking.push('Only a publication carries media.');
+  if (r.kind !== 'picture' && d.media.length) r.blocking.push('Only a bake carries media.');
   if (r.kind !== 'message' && r.kind !== 'refused' && !d.relays.length) r.blocking.push('It names no relay to send it to.');
   return r;
 }
@@ -304,7 +311,7 @@ async function readPost(d: Draft, who: Line[], hints: string[], via: Via): Promi
       what.push({ text: `It answers an act of the identity ${short(to)}, which cannot be given a copy in its inbox: ${err(e)}. It is published all the same.`, tone: 'warn' });
     }
   }
-  what.push({ text: 'It is public: anyone who fetches it can read it, and it cannot be unpublished; a later withdrawal only asks readers not to show it.' });
+  what.push({ text: 'It is public: anyone who fetches it can read it, and it cannot be unpublished.' });
   return {
     kind: 'post',
     title: 'A post, to be published',
@@ -367,8 +374,8 @@ async function readPicture(d: Draft, who: Line[]): Promise<DraftReading> {
   } catch (e) {
     blocking.push(`Its payload is not deterministic CBOR: ${err(e)}.`);
   }
-  if (!d.public) blocking.push('A publication is public: the offer is seen by all.');
-  if (d.refs.length || d.objects.length) blocking.push('A publication of a picture refers to nothing and names no chain.');
+  if (!d.public) blocking.push('A bake prepared here is public: the picture is seen by all.');
+  if (d.refs.length || d.objects.length) blocking.push('A bake of a picture refers to nothing and names no chain.');
   const b = (k: number) => m?.get(k);
   const spec = b(0);
   const lockedHash = b(2);
@@ -376,92 +383,42 @@ async function readPicture(d: Draft, who: Line[]): Promise<DraftReading> {
   const nonce = b(4);
   const key = b(5);
   if (m) {
-    for (const k of m.keys()) if (![0, 1, 2, 3, 4, 5, 6].includes(k as number)) blocking.push(`Its publication has field ${String(k)}, which a picture prepared here never has (a price or a "for" are not prepared by Claude).`);
-    if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) blocking.push('It publishes media of a kind other than a JPEG picture.');
-    if (!(key instanceof Uint8Array)) blocking.push('Its media key is absent: the desk publishes public pictures only.');
+    for (const k of m.keys()) if (![0, 1, 2, 3, 4, 5, 6].includes(k as number)) blocking.push(`Its bake has field ${String(k)}, which a picture prepared here never has (a bake carries no price nor "for": Envelopes refuse fields 7 and 8; a price is a price tag, a Money act Claude does not prepare).`);
+    if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) blocking.push('It uploads media of a kind other than a JPEG picture.');
+    if (!(key instanceof Uint8Array)) blocking.push('Its media key is absent: the desk uploads public pictures only.');
   }
   if (d.media.length !== 1) blocking.push('It carries no picture, or more than one.');
   else if (m && key instanceof Uint8Array && nonce instanceof Uint8Array && lockedHash instanceof Uint8Array) {
     const locked = d.media[0];
     if (locked.length > MAX_MEDIA) blocking.push('The picture is larger than the desk accepts.');
-    if (sha256(locked) !== hex(lockedHash)) blocking.push('The picture carried is not the one the publication names: its fingerprint differs.');
+    if (sha256(locked) !== hex(lockedHash)) blocking.push('The picture carried is not the one the bake names: its fingerprint differs.');
     try {
       const jpeg = new Uint8Array(openMedia(locked, key, nonce));
       // The size of the stripped picture, as the JPEG Module and the barebone client have it (Envelopes say "of those bytes": see the README, flaw 1).
-      if (size !== jpeg.length) blocking.push('The publication states another size than the picture carried.');
+      if (size !== jpeg.length) blocking.push('The bake states another size than the picture carried.');
       const work = b(1);
       const p = readJpeg(jpeg);
       if (p.carries.length) blocking.push(`The picture still carries ${p.carries.map((c) => CARRIED_WORDS[c]).join(', ')}: it was not stripped to the picture alone (JPEG Module, rule 6).`);
       picture = { jpeg, width: p.width, height: p.height };
       lines.push({ text: `A JPEG picture, ${p.width}×${p.height}, stripped to the picture alone: no location, camera data, preview or hidden picture.`, tone: p.carries.length ? 'bad' : 'ok' });
-      if (!(work instanceof Uint8Array) || hex(work) !== workHash(jpeg)) blocking.push("The publication's work hash is not the picture's.");
+      if (!(work instanceof Uint8Array) || hex(work) !== workHash(jpeg)) blocking.push("The bake's work hash is not the picture's.");
     } catch (e) {
-      blocking.push(`The picture does not open with the key in the publication, or is not a JPEG: ${err(e)}.`);
+      blocking.push(`The picture does not open with the key in the bake, or is not a JPEG: ${err(e)}.`);
     }
   }
-  lines.push({ text: 'It is public: anyone who fetches it can see the picture, and it cannot be unpublished; a later withdrawal only asks readers not to show it.' });
+  lines.push({ text: 'It is public: anyone who fetches it can see the picture. A bake is never withdrawn: once uploaded, the bytes stay where they were put unless homes and relays drop them (F407).' });
   const hints = b(6);
   return {
     kind: 'picture',
-    title: 'A picture, to be published',
-    summary: [`Signing publishes this picture, publicly, as the identity ${short(d.signer)}. A post can then show it by referring to the publication.`],
+    title: 'A picture, to be uploaded',
+    summary: [`Signing uploads this picture (a bake), publicly, as the identity ${short(d.signer)}: its uploader. A post can then show it by referring to the bake.`],
     sections: [
-      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}, then the picture's locked bytes${Array.isArray(hints) ? `; the publication says they are found at ${hints.join(', ')}` : ''}.` }] },
+      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}, then the picture's locked bytes${Array.isArray(hints) ? `; the bake says they are found at ${hints.join(', ')}` : ''}.` }] },
       { heading: 'What it is', lines },
     ],
     quoted: [],
     blocking,
     picture,
-  };
-}
-
-async function readWithdrawal(d: Draft, who: Line[], hints: string[], via: Via): Promise<DraftReading> {
-  const blocking: string[] = [];
-  const lines: Line[] = [];
-  if (!d.public) blocking.push('A withdrawal is public.');
-  if (d.refs.length) blocking.push('A withdrawal refers to nothing else.');
-  let p: Map<number, unknown> | null = null;
-  try {
-    p = cborDecode(d.payload) as Map<number, unknown>;
-  } catch (e) {
-    blocking.push(`Its payload is not deterministic CBOR: ${err(e)}.`);
-  }
-  if (p && p.size) blocking.push('A withdrawal carries an empty payload.');
-  const pub = d.objects[0]?.[0];
-  if (d.objects.length !== 1 || !pub || d.objects[0][1] !== pub) {
-    blocking.push('A withdrawal names exactly one publication, as both chain and predecessor (Envelopes, "Withdrawal").');
-  } else {
-    const t = await readAct(pub, [...new Set([...hints, ...d.relays])], via, 0);
-    const act = await fetchFirst(pub, [...new Set([...hints, ...d.relays])], via);
-    let authority = false;
-    let isPublication = false;
-    if (act) {
-      try {
-        const x = describeChecked(act, pub);
-        isPublication = x.spec === SPECS.envelopes && x.type === PUBLICATION;
-        const media = x.payload ? (cborDecode(x.payload) as Map<number, unknown>) : null;
-        const forWhom = media?.get(8);
-        authority = x.signer === d.signer || (forWhom instanceof Uint8Array && hex(forWhom) === d.signer);
-      } catch {
-        // judged below as not a publication
-      }
-    }
-    lines.push({ text: `It withdraws ${t.title.replace(/^A /, 'a ').replace(/^An /, 'an ')} (${short(pub)}): ${t.verdict}` });
-    if (!act) blocking.push('The publication it withdraws was not found at the relays asked.');
-    else if (!isPublication) blocking.push('What it names is not a publication: only a publication can be withdrawn (Envelopes, "Withdrawal"). To stop showing a post, withdraw the picture it shows; a text act itself is not withdrawn.');
-    else if (!authority) blocking.push(`The identity ${short(d.signer)} did not sign that publication and is not the one it was made for, so its withdrawal has no authority.`);
-  }
-  lines.push({ text: 'Readers stop presenting the publication as available, and relays are asked, not forced, to stop serving it. Copies already taken remain.' });
-  return {
-    kind: 'withdrawal',
-    title: 'A withdrawal',
-    summary: [`Signing withdraws a publication of the identity ${short(d.signer)}: it is no longer offered.`],
-    sections: [
-      { heading: 'Who signs', lines: [...who, { text: `Once signed, it is sent to ${d.relays.join(', ')}.` }] },
-      { heading: 'What it does', lines },
-    ],
-    quoted: [],
-    blocking,
   };
 }
 
@@ -537,8 +494,8 @@ export async function messageDraft(o: Common & { to: string; text: string; refs?
 
 /**
  * A picture (the JPEG Module), stripped to the picture alone and locked with
- * its own key, as the barebone client publishes it; the key is public, in
- * the publication. Its locked bytes travel in the draft.
+ * its own key, as the barebone client uploads it (a bake, Envelopes type 0);
+ * the key is public, in the bake. Its locked bytes travel in the draft.
  */
 export async function pictureDraft(o: Common & { jpeg: Uint8Array }, hints: string[], via: Via = {}): Promise<{ draft: Draft; removed: string[] }> {
   await checkSigner(o.signer, hints, via);
@@ -557,14 +514,7 @@ export async function pictureDraft(o: Common & { jpeg: Uint8Array }, hints: stri
       [6, o.relays],
     ]),
   );
-  return { draft: { ...base(o), spec: POST_SPECS.envelopes, type: PUBLICATION, payload, public: true, media: [l.locked] }, removed: s.removed.map((c) => CARRIED_WORDS[c]) };
-}
-
-/** A withdrawal of one of the signer's publications (Envelopes type 3). */
-export async function withdrawalDraft(o: Common & { publication: string }, hints: string[], via: Via = {}): Promise<Draft> {
-  await checkSigner(o.signer, hints, via);
-  if (!HEX64.test(o.publication)) throw new Error('the publication is an act id: 64 hex digits');
-  return { ...base(o), spec: POST_SPECS.envelopes, type: WITHDRAWAL, payload: cborEncode(new Map()), public: true, objects: [[o.publication, o.publication]] };
+  return { draft: { ...base(o), spec: POST_SPECS.envelopes, type: BAKE, payload, public: true, media: [l.locked] }, removed: s.removed.map((c) => CARRIED_WORDS[c]) };
 }
 
 // ---------------------------------------------------------------- the drafts folder (DRAFTS.md)
