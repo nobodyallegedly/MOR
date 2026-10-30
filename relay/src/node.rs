@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 pub struct Specs {
     /// `IDENTITY`: receipts, routes, log summaries, objections...
     pub identity: Hash,
-    /// `ENVELOPES`: publications, encryption keys.
+    /// `ENVELOPES`: bakes, encryption keys.
     pub envelopes: Hash,
     /// `AGREEMENTS`: grants, whose keys sign acts in their grantor's name
     /// (relay transport draft 5, F346).
@@ -948,7 +948,10 @@ impl Node {
         // Identity rule 2: an act signed with a chain key must be a rotation
         // or a chain signature (F132), or a collective's genesis, which
         // declares no signing key and is signed by its first chain key
-        // (rule 1); the core's genesis check below verifies that key.
+        // (rule 1): the core's genesis check, applied above when the payload is
+        // read, refuses one that declares nothing in its place or is signed by
+        // any other kind of key, and the signature is verified against the key
+        // it reveals.
         let keyless_genesis = matches!(&payload, Some(Payload::Genesis(g)) if g.signing_key.is_none());
         if sig::is_slh(&act.signature.scheme) && !keyless_genesis && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
             return wire(
@@ -1687,7 +1690,7 @@ impl Node {
         {
             return wire(
                 code::NOT_ACCEPTED,
-                "this relay keeps media only for publications it holds",
+                "this relay keeps media only for bakes it holds",
             );
         }
         let path = self.media_file(&h);

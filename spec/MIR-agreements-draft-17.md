@@ -1273,7 +1273,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 **How it is counted.** The holders' rule is counted among the stake's holders, members and holders who are no members alike, each by its share; the share asked for is of the whole stake, since no holder loses its say on the owners' matters by leaving the membership. A holder whose share is gone for good still counts against the rule until its stake moves (rule 85). The holders whose signatures meet it are named in the clone's mark under `[5, stake]`, and a false mark sinks the clone (rule 46). A proxy may cast a holder's vote as rule 97 says.
 
-**Who holds what at the vote.** For the owners' matters, a transfer counts only where the collective's line placed it: an act of the collective on its chain acknowledges it (Envelopes, `acks`), or a record names it in field 3. Until then the seller holds, for the collective, what field 7 and the transfers already placed say. A vote counts **the roster at the line that puts the version in force**: the holders the version in force there and the transfers placed before that line name. So a seller and a buyer never both count: the line moves the share once. A transfer the line placed that the verifier does not hold leaves the vote **unknown**, never silently short. Money follows transfers as rule 10 says, unchanged: this is a vote, not money.
+**Who holds what at the vote.** For the owners' matters, a transfer counts only where the collective's line placed it: an act of the collective on its chain acknowledges it (Envelopes, `acks`), or a record names it in field 3. Until then the seller holds, for the collective, what field 7 and the transfers already placed say. A vote counts **the roster at the line that puts the version in force**: the holders the version in force there and the transfers placed before that line name. **A version of the collective's split agreement**, a publication, is put in force by no line: it counts once every party has signed it, so its own history is its line, the transfers placed there counted, and each holder's signature act naming it, held and valid, its vote. So a seller and a buyer never both count: the line moves the share once. A transfer the line placed that the verifier does not hold leaves the vote **unknown**, never silently short. Money follows transfers as rule 10 says, unchanged: this is a vote, not money.
 
 **A holders' vote registered by the collective's line is kept.** The signature acts completing an owners' matter are named by the record or rotation putting it in force (record field 2), and placed there; a holder's later rotation shows a dispute on the line and changes nothing. Owner votes are signed by signature acts, never by chain key.
 
@@ -1354,7 +1354,7 @@ A holder the offer did not reach had no period: an issuance naming that offer st
 - the collective's line placed the proxy (an act of the collective acknowledging it, or a record naming it in field 3) before the line that puts the version in force;
 - no revocation of it was placed before that line;
 - it is the holder's latest proxy on the stake so placed: one proxy per owner per stake at a time, a new one replacing the old;
-- **the holder placed no signature act of its own on that version at or before that line: the owner's own vote always beats the proxy's.** A signature of the holder's the line does not reach is no vote there, and leaves the proxy's standing.
+- **the holder placed no signature act of its own on that version at or before that line: the owner's own vote always beats the proxy's.** A signature of the holder's the line does not reach is no vote there, and leaves the proxy's standing. **On a version of the collective's split agreement**, whose own history is its line (rule 94), the proxy is placed in that history, and the holder's own signature act naming the version, held and valid, always beats its proxy.
 
 **A proxy is revocable by the holder at any time**, by a revocation of the proxy (type 28), placed as the proxy was.
 
@@ -1500,6 +1500,8 @@ One rule covers every act for the collective, with no exception by type. That in
 A collective keeps two chains, both made of acts that name it: a decisions chain and an actions chain.
 
 **A member acts for the collective with their own key, the act naming the collective in `objects`**: the collective's identity as chain, once for each act it cites on the collective's chain. **An act that does not name it is the member's own.** An act naming it counts for the collective only where Agreements finds its signer a party who may act there: a member meeting, with the others who signed it, the rule of the layer the act falls in, or of the area within it, under the agreement in force at the decision it cites (rule 60); or a grantee whose grant backs it (rule 80). **A stranger's act naming a collective counts for nothing, and is shown as nobody's**, as a stranger's act naming a grant is. *Anyone can write a collective's name in `objects`; it counts only where Agreements finds the signer acting within a power. And a member cannot later say "that was mine" of an act whose bytes name the collective, nor the collective claim a member's act that does not: the attribution is in the signed bytes.*
+
+**A member's act for a collective is judged where the reader holds the collective's own chain**: its identity chain and the acts on its chain the act cites, found through the act's `objects`, which name the collective. *A collective publishes no routes of its own; a reader finds its chain from the act.*
 
 **The decisions chain** holds its genesis, rotations and records (which write its clones and register who joins and leaves), its grants and revocations, and its fork or closing. **Each decision names the previous decision in `objects`, as an action names the decision it acts under**, with the other acts on the chain it knows:
 
@@ -3110,6 +3112,8 @@ partner = {
 ```
 
 `[ 1, work ]` (any bake carrying a work) is not defined.
+
+**Field 9 naming a judicial task** names the publication's judge for it, as terms field 2 does: task 11 (anchoring) names the anchoring cMIP whose anchors show an act made by a point on the publication's time reference (its deadline, field 7, and its refund terms, field 8), read as rule 33 reads them.
 
 *A partner's label is shown to every reader the same way, and nothing reads it: no rule and no payment turns on it. It is here, in the core, because naming who takes what is the legible part of distribution, and a label in a cMIP would be one client showing a word another does not; its cost is one optional field that decides nothing.*
 

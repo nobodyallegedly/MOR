@@ -2309,11 +2309,18 @@ fn a_declaration_is_the_authoritys_judgment_with_no_anchors() {
     let e = lab.view().record(&lab.col.id, &line).unwrap();
     assert!(e.line, "{:?}", e.not_a_line);
     assert_eq!(e.registers.len(), 1, "the record registers it, no anchor stated");
-    // Cy's signature counts for nothing after the line.
+    // Cy's act for the label after the line counts for nothing, however
+    // many current members sign it (rule 58, F409).
     let x = lab.cmip_act(0, pay());
     lab.sign(BEN, &x);
-    lab.sign(CY, &x);
-    assert_eq!(areas(&lab.consent(&x))[0].3, vec![lab.m[BEN].id]);
+    lab.sign(ANA, &x);
+    assert!(matches!(lab.consent(&x), Consent::Invalid { .. }), "{:?}", lab.consent(&x));
+    // Cy's signature counts for nothing after the line.
+    lab.hand_over(ANA);
+    let y = lab.cmip_act(0, pay());
+    lab.sign(BEN, &y);
+    lab.sign(CY, &y);
+    assert!(!areas(&lab.consent(&y))[0].3.contains(&lab.m[CY].id));
 }
 
 /// The reference absence-proof module, a period on the time reference

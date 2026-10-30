@@ -138,6 +138,28 @@ fn decisions(out: &mut Out) {
     out.case(&mut w, "a platform's publication of a worker's vow, no ownership agreement claiming it: a purchase, its drafter the owners' side", "Agreements rule 14, \"A vow has an owner\"; rule 11",
         "A publication selling a vow no ownership agreement claims is a lone seller's: its drafter is its owners' side, and the worker, no party of it, is paid nothing by it (the stated cost).", facts, ask("purchase", &rec), json!("purchase"), None);
 
+    // Rule 17: a backup the publication lists, paid with the payment still
+    // naming the tag, receipts in its own name: a purchase.
+    let mut w = World::new();
+    let mut seller = w.genesis("a lone seller", vec![own_home()], None, None);
+    let mut svc = w.genesis("the seller's split service", vec![own_home()], None, None);
+    let mut bk = w.genesis("the split service's backup", vec![own_home()], None, None);
+    let buyer = w.genesis("a buyer", vec![own_home()], None, None);
+    let (sid, bid) = (svc.id, bk.id);
+    let work = spec("a work sold with a backup service");
+    let bake = { let a = w.everyday_act(&mut seller, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None); w.add(&a) };
+    let p = Publication { sold: Some(vec![agreements::Sold::Bake(bake)]), owners: None, partners: vec![], service: sid, plan: test_plan(), words: Some("A work, its service backed up.".into()), time: None, until: None, refund: None, cmips: vec![], designated: None, backups: vec![bid], failed: None };
+    let pb = ag_act(&mut w, &mut seller, agreements::types::PUBLICATION, p.to_map(), None);
+    sign(&mut w, &mut svc, &pb);
+    sign(&mut w, &mut bk, &pb);
+    let tag = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 200, spec(UNIT), sid);
+    let proof = b"a payment the first service could not take";
+    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(Payer::Identity(buyer.id)), payee: bid, amount: Amount { unit: spec(UNIT), value: 200 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
+    let rec = { let a = w.everyday_act(&mut bk, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+    let facts = Facts { rail_valid: vec![(rec, bid)], rail_payments: vec![(proof.to_vec(), b"the backed-up payment".to_vec())], ..Default::default() };
+    out.case(&mut w, "a payment to a backup the publication lists, still naming the tag, receipted by the backup in its own name: a purchase", "Agreements rule 17; rule 12",
+        "Every payer tries the services in order, the payment still naming the tag; a backup receipts in its own name and splits by the same plan.", facts, ask("purchase", &rec), json!("purchase"), None);
+
     // Rules 64 and 83: Ben's plan passes his seat to Dee; the rule for Text
     // names Ben alone.
     let mut w = World::new();
@@ -297,6 +319,14 @@ fn walk_2(out: &mut Out) {
     out.case(&mut w, "9.2 the same pointer once Ben signs it too: it counts", "Agreements rules 58 and 60", "Ana and Ben, two members.", Facts::default(), ask("consent counts", &ptr2), json!(true), None);
     out.case(&mut w, "9.2 Cy's own post after he left: valid, untouched", "Agreements rule 70; \"Made before, made after\", 3",
         "His own key continues to sign his own acts: the post names no collective.", Facts::default(), ask_status(&own_post), json!("valid"), None);
+    // An act Cy drafts for the band after the line, Ana and Ben both
+    // signing it: it counts for nothing.
+    let mut w3 = replay(&w.log.clone(), &[]);
+    let ptr3 = pointer_act(&mut w3, &mut col.m[2].acting_for(cid, vec![rec]), b"the band's third address");
+    sign(&mut w3, &mut col.m[0], &ptr3);
+    sign(&mut w3, &mut col.m[1], &ptr3);
+    out.case(&mut w3, "9.2 a pointer after the line drafted by Cy, Ana and Ben both signing it: it counts for nothing", "Agreements rule 58",
+        "A member's power ends at the line that registers their departure: an act they draft for the collective after it counts for nothing, however many current members sign it.", Facts::default(), ask("consent counts", &ptr3), json!(false), None);
 }
 
 /// A genesis with no signing key, signed by a chain key revealed in its

@@ -264,6 +264,20 @@ pub fn genesis(
     )
 }
 
+/// A collective's genesis (Identity rule 1): no signing key, a declaration
+/// in its place (here `declares`, any held as a founding), signed by its
+/// first chain key, revealed in its signature, its field 1 committing the
+/// next. `first_key_signs: false` signs it with a Schnorr key instead.
+pub fn keyless_genesis(name: &str, homes: Vec<Home>, declares: bool, first_key_signs: bool) -> Act {
+    let first = slh(name, 0);
+    let next = slh(name, 1);
+    let declarations = declares.then(|| vec![mor_core::identity::Declaration { spec: sha256(b"LAW, test value until the freeze"), kind: 0, value: Some(Value::Bytes(sha256(name.as_bytes()).to_vec())) }]);
+    let g = Payload::Genesis(Genesis { signing_key: None, chain_key: commit(&next), homes, rule: None, declarations, audit: None });
+    let i = inside(specs().identity, 0, g.to_map());
+    let other = schnorr(name, 0);
+    seal(&i, None, None, true, None, &random::<32>(), |id| if first_key_signs { first.sign(id, Some(&[0; 16])) } else { other.sign(id, &[0; 32]) })
+}
+
 /// What a rotation changes, besides the keys.
 #[derive(Clone, Default)]
 pub struct Rot {

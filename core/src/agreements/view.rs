@@ -46,7 +46,7 @@ pub mod reference_absence_proof;
 /// The publication (rules 11 to 17): publications judged, their price
 /// tags, purchases by tag, and shares by reference.
 mod publishing;
-pub use publishing::{PublicationEval, TagUnder};
+pub use publishing::{PublicationEval, PublicationTip, TagUnder};
 /// Client conformance on a deal's versions (F221, F222).
 mod deals;
 pub use deals::SuccessorCheck;
@@ -4484,6 +4484,20 @@ impl<'a> AgreementsView<'a> {
         }
         if reaching.is_empty() {
             return Ok(Consent::Unadopted { agreement: ag });
+        }
+        // Rule 58: a member's power ends at the line that registers their
+        // departure. An act they draft for the collective after it counts
+        // for nothing, however many current members also sign it. (Their
+        // signature acts are counted with the area's, where a departed
+        // voice is never among the signers.)
+        if t.parties.contains(&signer) && !self.is_agreements(x, types::SIGNATURE) {
+            let (voices, _) = self.voices(&col, Point::Act(x), &ag, &[signer], None, &BTreeMap::new(), &[])?;
+            if voices.is_empty() {
+                return Ok(Consent::Invalid {
+                    agreement: ag,
+                    reason: "its drafter's voice was removed at a line its history holds: a member's power ends at the line that registers their departure, and the act counts for nothing, however many current members sign it (rule 58)".into(),
+                });
+            }
         }
         self.count_areas(&col, act, Point::Act(x), ag, reaching)
     }

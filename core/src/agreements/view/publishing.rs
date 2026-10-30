@@ -8,6 +8,17 @@ use crate::agreements::open_formats::Sold;
 use crate::agreements::publication::{Publication, PublicationAct};
 use crate::money::{self as fin, Payload as Fin, Priced};
 
+/// What a client pays against ([`AgreementsView::publication_tip`]): the
+/// publication's latest versions (two or more: the parties' fork, shown),
+/// the latest version of each price tag line that counts under it, and the
+/// ownership agreement it names with its latest version.
+#[derive(Clone, Debug)]
+pub struct PublicationTip {
+    pub latest: Vec<Hash>,
+    pub tags: Vec<Hash>,
+    pub owners: Option<(Hash, Hash)>,
+}
+
 /// A publication, judged (Agreements type 6, rule 11).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PublicationEval {
@@ -324,6 +335,35 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
+    /// What a client pays against (F409: "Clients need to provide the
+    /// tip"): a publication's latest versions, its price tags' latest
+    /// versions that count under it, and the latest version of the
+    /// ownership agreement it names (rule 12), each found by following its
+    /// line. `first` is the publication's first version.
+    pub fn publication_tip(&self, first: &Hash) -> R<PublicationTip> {
+        let latest = self.pub_tips(first);
+        let mut tags: Vec<Hash> = vec![];
+        let under: Vec<(&Held, fin::PriceTag)> = self
+            .v
+            .held_acts()
+            .filter_map(|h| self.tag_of(&h.id))
+            .filter(|(_, t)| t.priced == fin::Priced::Publication(*first))
+            .collect();
+        for (h, t) in &under {
+            let followed = under.iter().any(|(g, u)| u.previous.as_ref() == Some(&h.id) && g.act.outside.signer == h.act.outside.signer && self.valid(&g.id));
+            let _ = t;
+            if !followed && self.valid(&h.id) && matches!(self.tag_under(&h.id)?, TagUnder::Counts { .. }) {
+                tags.push(h.id);
+            }
+        }
+        tags.sort();
+        let owners = match self.publication(first).ok().and_then(|e| e.publication.owners) {
+            Some(o) => Some((o, self.version_in_force(&o)?)),
+            None => None,
+        };
+        Ok(PublicationTip { latest, tags, owners })
+    }
+
     /// The tips of a publication's line: versions no other version follows.
     pub(super) fn pub_tips(&self, first: &Hash) -> Vec<Hash> {
         let all = self.pub_versions(first);
@@ -609,8 +649,17 @@ impl<'a> AgreementsView<'a> {
         if tag.withdrawn() {
             return no(e, "it names a version of the price tag carrying no price: the tag is withdrawn, no purchase, owed back (Money rule 18)");
         }
-        if tag.payee != payee {
-            return no(e, "paid to another identity than the tag's payee: no purchase of it (Money rule 18)");
+        // A backup the publication lists (field 11) is paid with the payment
+        // still naming the tag, and receipts in its own name (rule 17).
+        let backup = match tag.priced {
+            Priced::Publication(first) if tag.payee != payee => {
+                let v = self.pub_version_for(&first, &tag_h.id);
+                self.publication(&v).is_ok_and(|pe| pe.publication.backups.contains(&payee))
+            }
+            _ => false,
+        };
+        if tag.payee != payee && !backup {
+            return no(e, "paid to another identity than the tag's payee, nor to a backup the publication lists: no purchase of it (Money rule 18; Agreements rule 17)");
         }
         match tag.priced {
             Priced::Bake(b) => {
@@ -698,7 +747,9 @@ impl<'a> AgreementsView<'a> {
                 if !self.is_push_rail(&rail) {
                     return Ok(Some(e));
                 }
-                let service = pe.publication.service;
+                // The service that receipts it: the split service, or the
+                // backup it was paid to, which receipts in its own name.
+                let service = if backup { payee } else { pe.publication.service };
                 let endings = self.pub_endings(&first);
                 let receipts: Vec<&Held> = if is_receipt && signer == service {
                     vec![x]

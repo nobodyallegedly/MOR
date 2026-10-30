@@ -850,3 +850,21 @@ async fn a_home_keeps_and_serves_carried_proofs() {
     assert!(rec.carried.contains(&summary));
     assert!(rec.carried.contains(&op.chain[0]));
 }
+
+/// Identity rules 1 and 7: a collective's genesis declares no signing key
+/// and is signed by its first chain key, revealed in its signature; a home
+/// it names takes it and receipts it. Declaring nothing in place of the
+/// key, or signed by any other key, it is refused as invalid.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_home_takes_a_collectives_keyless_genesis() {
+    let hs = homes(1).await;
+    let g = keyless_genesis("a band", vec![hs[0].home()], true, true);
+    let put = hs[0].client.put_act(&g.encode()).await.unwrap();
+    let r = receipt_of(put.receipt.as_ref().expect("a receipt for the collective's genesis"));
+    assert_eq!((r.identity, r.act, r.position), (g.id(), g.id(), 0));
+    for (name, declares, first) in [("declaring nothing", false, true), ("signed by a Schnorr key", true, false)] {
+        let bad = keyless_genesis(&format!("a band {name}"), vec![hs[0].home()], declares, first);
+        let e = wire_err(hs[0].client.put_act(&bad.encode()).await);
+        assert_eq!(e.code, mor_relay::wire::code::INVALID, "{name}: {e:?}");
+    }
+}

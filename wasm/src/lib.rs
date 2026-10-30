@@ -39,6 +39,7 @@ type R<T> = Result<T, JsError>;
 
 mod money_js;
 mod publication_js;
+mod tip_js;
 
 fn err(s: impl std::fmt::Display) -> JsError {
     JsError::new(&s.to_string())
@@ -2253,9 +2254,9 @@ pub(crate) struct PlanOut {
     max_rail_fee: Option<MaxFeeOut>,
     /// The metrics' modules and measurers (key 8, rule 28).
     metrics: Vec<(String, String)>,
-}
     /// The fees it names (key 9), as `publicationPayload` takes them.
     fees: Vec<publication_js::FeeIn>,
+}
 
 /// Refund terms (field 17, F219): the fixed point on the time reference past
 /// which a refund owed is ended; a number where the point is one, else null
@@ -2482,8 +2483,8 @@ pub(crate) fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
             },
         }),
         metrics: p.metrics.iter().map(|m| (hx(&m.module), hx(&m.measurer))).collect(),
-    }
         fees: p.fees.iter().map(publication_js::FeeIn::of).collect(),
+    }
 }
 
 /// A grant (Agreements type 9) as the core decodes it: whom it names
