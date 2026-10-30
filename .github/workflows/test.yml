@@ -15,7 +15,7 @@ permissions:
 jobs:
   all:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       MOR_CHROMIUM: /usr/bin/google-chrome
     steps:
@@ -43,61 +43,99 @@ jobs:
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
       - name: clients/barebone
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/barebone && npm ci --no-audit --no-fund && npm test
       - name: clients/collective
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: cd clients/collective && npm ci --no-audit --no-fund && npm test
       - name: clients/connector
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/connector && npm ci --no-audit --no-fund && npm test
       - name: clients/desk
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 40
         if: success() || failure()
         # Edubba's tests run Dub, Damgar, Kišib, Ummia (with the site's listing and the reports mirror), the test wallet and the split and anchoring services beside it (round 3).
         run: for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar site longform connector reader reports ummia split-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/desk && npm ci --no-audit --no-fund && npm test
       - name: clients/genesis
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm test
       - name: clients/grants
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/grants && npm ci --no-audit --no-fund && npm test
       - name: clients/longform
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/longform && npm ci --no-audit --no-fund && npm test
       - name: clients/manage
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/manage && npm ci --no-audit --no-fund && npm test
       - name: clients/kit
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/kit && npm ci --no-audit --no-fund && npm test
       - name: clients/dub
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: cd clients/desk && npm ci --no-audit --no-fund && cd ../dub && npm ci --no-audit --no-fund && npm test
       - name: clients/kishib
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/kishib && npm ci --no-audit --no-fund && npm test
       - name: clients/damgar
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && npm test
       - name: clients/ummia
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess kishib manage anchoring-service damgar site longform connector reader reports; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/ummia && npm ci --no-audit --no-fund && npm test
       - name: clients/anchoring-service
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/anchoring-service && npm ci --no-audit --no-fund && npm test
       - name: clients/testwallet
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/testwallet && npm ci --no-audit --no-fund && npm test
       - name: clients/reader
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/reader && npm ci --no-audit --no-fund && npm test
       - name: clients/repo
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd clients/repo && npm ci --no-audit --no-fund && npm test
       - name: clients/reports
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: for p in barebone connector desk reader site; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/reports && npm ci --no-audit --no-fund && npm test
       - name: clients/site
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         shell: bash
         run: |
@@ -108,18 +146,28 @@ jobs:
           grep -E 'not ok|Command failed|error\[|error:|stderr|differ|!=|wasm' ../../test-output.txt | grep -v '^ *at \|checkExecSync\|genericNode' | head -10 | while IFS= read -r l; do echo "::error::$l"; done
           exit $status
       - name: modules/jpeg
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd modules/jpeg && npm ci --no-audit --no-fund && npm test
       - name: modules/video
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd modules/video && npm ci --no-audit --no-fund && npm test
       - name: modules/audio
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd modules/audio && npm ci --no-audit --no-fund && npm test
       - name: modules/carry
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd modules/carry && npm ci --no-audit --no-fund && npm test
       - name: modules/timestamp
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 20
         if: success() || failure()
         run: cd modules/timestamp && npm ci --no-audit --no-fund && npm test
       - name: Reproducible build of the display client
@@ -193,12 +241,18 @@ jobs:
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
       - name: clients/testwallet on regtest
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: cd clients/testwallet && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/regtest.test.ts
       - name: clients/damgar on regtest
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess kishib manage anchoring-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/regtest.test.ts
       - name: clients/desk on regtest (round 3, end to end)
+        # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
+        timeout-minutes: 30
         if: success() || failure()
         run: for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar site longform connector reader reports ummia split-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/desk && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/round-3.test.ts
       - name: Stop the network
