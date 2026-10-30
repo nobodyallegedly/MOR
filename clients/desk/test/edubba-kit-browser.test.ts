@@ -266,7 +266,7 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   assert.equal(await page.inputValue('form#collective-post [name=text]'), '', 'the typing box is empty once the post is signed');
   await shot(page, 'mac-22-collective-act');
   await page.click('[data-action=constitution]');
-  await page.locator('.k-modal', { hasText: 'Areas: who decides which acts' }).waitFor({ timeout: 90_000 });
+  await page.locator('.k-modal', { hasText: 'The five layers: who acts for it' }).waitFor({ timeout: 90_000 });
   await shot(page, 'mac-23-constitution');
   await page.click('.k-modal [data-k-popup=close]');
   await col('+ Found a collective');

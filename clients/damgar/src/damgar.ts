@@ -3561,7 +3561,7 @@ export class Damgar {
     let why = role === 'app' ? `${this.opts.app ?? 'This app'} holds no lane: ask Damgar for one` : 'Damgar holds no lane for this';
     for (const l of keys.lanes ?? []) {
       if (l.role !== role) continue;
-      if (!reaches(l.kinds as Kind[], spec, type, (x) => (x === MONEY ? 2 : null))) {
+      if (!reaches(l.kinds as Kind[], spec, type, (x) => (x === MONEY ? 3 : null))) {
         why = `its lane “${l.label}” does not reach this act`;
         continue;
       }

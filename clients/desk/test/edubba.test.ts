@@ -283,7 +283,7 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const k = await c.ask<any>('collective constitution', { collective: col.id });
   assert.equal(k.inForce, true);
   assert.equal(k.kind, 'collective');
-  assert.ok(k.sections.some((s: any) => s.heading === 'Areas: who decides which acts'));
+  assert.ok(k.sections.some((s: any) => s.heading === 'The five layers: who acts for it'));
 });
 
 test('H19: the release folder of a test collective, pasted from the Terminal (“\\ ” a space, quotes, a space at the end), is read as the folder', async () => {

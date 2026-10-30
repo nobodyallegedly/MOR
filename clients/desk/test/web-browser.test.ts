@@ -426,26 +426,34 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('#real-found [data-action="member-add"]');
   await ed.fill('#real-found input[name=member-3]', shownId(boId));
   await ed.locator('#real-found input[name=member-3]').dispatchEvent('change');
-  // Round 3: the grid. Members are its columns, the founder first; three bands, the constitution first.
+  // The grid (F402): members are its columns, the founder first; what one member may do alone said above it, Money first; then its bands.
   const grid = ed.locator('#e-grid-real-found table.grid');
   await grid.waitFor({ timeout: 30_000 });
   assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
-  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The areas: operations']);
+  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'Who acts for the collective, layer by layer', 'Finer areas (optional): some kinds of act within a layer', 'Shares: who owns the collective']);
+  assert.match(await ed.locator('#e-grid-real-found [data-alone] li').first().innerText(), /^Money: no member alone/);
+  // Money, Nobody and Ana together (Bo's box emptied): said at once.
+  await grid.locator(`tr[data-layer="3"] button[data-grid-cell="layer:3"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-layer="3"] td.say', { hasText: 'together' }).waitFor({ timeout: 10_000 });
+  // A finer area of Money, its pointers and receipts, any one of them up to 10,000 an act.
   await ed.click('[data-grid-add=real-found]');
-  const money = grid.locator('tr[data-area="1"]');
-  await money.locator('input.areaname').fill('Money');
-  await money.locator('select[data-grid-layer]').selectOption('2');
-  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${id}"]`).click();
-  await grid.locator('tr[data-area="1"] input[data-grid-cap]').fill('10000');
-  await grid.locator('tr[data-area="1"] input[data-grid-cap]').press('Tab');
-  await grid.locator('tr[data-area="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
-  // A second area over all of Money is refused in plain words, then removed.
+  const money = grid.locator('tr[data-area="0"]');
+  await money.locator('input.areaname').fill('Day to day money');
+  await money.locator('select[data-grid-layer]').selectOption('3');
+  for (const t of [0, 2]) await grid.locator(`input[data-grid-kind="0"][value$=":${t}"]`).first().check();
+  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="0"] button[data-grid-cell="area:0"][data-m="${id}"]`).click();
+  await grid.locator('tr[data-area="0"] input[data-grid-cap]').fill('10000');
+  await grid.locator('tr[data-area="0"] input[data-grid-cap]').press('Tab');
+  await grid.locator('tr[data-area="0"] td.say', { hasText: 'above 10,000, 2' }).waitFor({ timeout: 10_000 });
+  // A second area over one of the same kinds is refused in plain words, then removed.
   await ed.click('[data-grid-add=real-found]');
-  await grid.locator('tr[data-area="2"] input.areaname').fill('More money');
-  await grid.locator(`tr[data-area="2"] button[data-grid-cell="area:2"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-area="1"] input.areaname').fill('More money');
+  await grid.locator('tr[data-area="1"] select[data-grid-layer]').selectOption('3');
+  await grid.locator(`input[data-grid-kind="1"][value$=":0"]`).first().check();
+  await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${boId}"]`).click();
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review', { hasText: 'reach the same acts' }).waitFor({ timeout: 90_000 });
-  await grid.locator('[data-grid-remove="2"]').click();
+  await grid.locator('[data-grid-remove="1"]').click();
   // At a phone's width the grid scrolls in its own box; the page does not.
   await ed.setViewportSize({ width: 390, height: 844 });
   assert.ok(await ed.locator('#e-grid-real-found .gridbox').evaluate((b) => b.scrollWidth > b.clientWidth), 'the grid scrolls sideways in its own box');
@@ -454,7 +462,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   await shot(ed, 'found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
-  assert.match(await ed.locator('#e-real-review').innerText(), /“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(await ed.locator('#e-real-review').innerText(), /“Day to day money”, within Money: only [\s\S]*above 10,000 regtest satoshis an act, 2 of them/);
   await ed.click('#e-real-review [data-action=confirm]');
   await done(ed, '#e-status .k-note.k-done', 'The founding of “The tablet house” is proposed');
 
