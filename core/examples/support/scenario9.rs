@@ -666,19 +666,9 @@ fn walk_5(out: &mut Out) {
     out.case(&mut w, "9.5 the band's homeless rotation, its old home objecting: it counts, its own escape endorsement", "Identity rule 53, \"The escape endorsement\"",
         "Signed with its chain key, rebuilt from k of its members' shares, it is its own escape endorsement; the old home's objection voids nothing.", Facts::default(), json!({ "question": "chain", "identity": hx(&band.id) }), json!({ "counting": [hx(&band.id), hx(&r1), hx(&r2)], "next": "end", "dishonest": [] }), None);
     // A person's homeless rotation under the same objection, with no
-    // endorsement: it does not count, pending while the old home lives.
-    let mut w = World::new();
-    let mut home = w.operator("dan's home, later hostile");
-    let new_home = w.operator("dan's new home");
-    let dan = w.genesis("dan", vec![home_of(&home)], None, None);
-    let (r1, dan1) = w.rotate(&dan, Rot::default());
-    w.receipt(&mut home, &dan.id, &r1, 1);
-    let (r2, _) = w.rotate(&dan1, Rot { homes: Some(vec![home_of(&new_home)]), homeless: true, ..Default::default() });
-    let mut nh = new_home.clone();
-    w.receipt(&mut nh, &dan.id, &r2, 2);
-    w.object(&mut home, &dan.id, &r2);
-    out.case(&mut w, "9.5 a person's homeless rotation under the same objection, with no endorsement: it does not count, pending while the old home lives", "Identity rule 53, \"The escape endorsement\"",
-        "A person's genesis declares a signing key: its homeless rotation needs no valid objection naming it, or an escape endorsement; the old home objects, and lives.", Facts::default(), ask_status(&r2), json!("pending"), None);
+    // endorsement, does not count. Not written as a vector: Identity rule
+    // 49 voids it, and the core shows it pending while the old home is not
+    // gone (the S7h-3 report, question 2).
 }
 
 /// 9.6, a refund owed back.

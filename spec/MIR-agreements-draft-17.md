@@ -435,7 +435,7 @@ It counts, and sells, once every party has signed it: its drafter by drafting it
 
 **A publication changes by versions on its own chain**, each a later version signed by every party of that version. A purchase under any version counts. Two versions of one previous are the parties' fork, shown.
 
-**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it. Past sales stand. **A payment racing the ending** (one its split service receipts that the ending's history does not hold, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **On the owners' line, each holder paid owes back their own payout**: the party is the ownership agreement, and what it received is what its holders were paid.
+**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it. Past sales stand. **A payment racing the ending** (one its split service receipts that the ending's history does not hold, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout**: what the agreement received is what its holders were paid, and a holder that is itself an ownership agreement owes it back through its own holders in turn. This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication.
 
 **Two stops, two different people's.** A publication's ending is a version every party signs, so no party ends a publication alone. **A price tag's withdrawal is its signer's alone** (Money rule 18): the publication's split service, or the party it designates to sign its tags. Withdrawing the tag stops sales at that price, and is the one-sided stop, held by the publication's side; ending the publication stops it for everyone, and needs everyone. *So a co-owner, or the uploader of a bake the publication sells, cannot stop the publication's sales alone; the publication's side can stop selling at once, and the parties together end it.*
 
@@ -494,7 +494,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 **On a push rail**, the payer pays an address with no request. There, **the split service settles it on its own chain**: a receipt it records before its own signature on the version ending the publication is a sale under the publication; a receipt recorded after that signature, its own history holding it, is not, and is owed back as a payment racing the ending (rule 11). Until the split service has signed its receipt, the payment is **pending.**
 
-**A sale before a price tag's withdrawal is a payment naming the tag's earlier version, the one carrying a price**; a payment naming the version with no price is no purchase, owed back as a payment naming a tag the publication does not count. **The payment decides**, as for wrong receipts below: the version a payment names is the one its commitment names. Past sales stand.
+**A sale before a price tag's withdrawal is a payment naming the tag's earlier version, the one carrying a price, settled as above.** On a request rail, the tag version the seller's request committed to decides. On a push rail, the split service settles it on its own chain: a receipt it records whose history does not hold the version with no price is a sale; a receipt whose history holds it is no purchase, owed back as a payment naming a tag the publication does not count, and so is a payment naming the version with no price. Past sales stand.
 
 *The clock is when the split service records, the only one MOR has, and it belongs to the one answering for it. A receipt on another of the service's sequences than its signature is not after it: the service answers for its own devices.*
 
@@ -594,12 +594,12 @@ A publication, or a bare bake's price tag, for a work whose claim an ownership a
 
 "Signed under that ownership agreement" is read as a publication naming a version of that agreement's line (its field 1), the agreement having signed it as a party (rule 11). A lone seller's publication is under none.
 
-**A vow has an owner: its signer.** An ownership agreement whose target is a claim on a vow's name gives the vow's signer the whole stake in its founding version; its terms giving it otherwise are invalid, signed by every party or not, where the verifier holds the vow. Under such an agreement the overhead (a platform's share as a partner, a helper's share, a fee) comes off the top (rule 22), what is left is the owner's, and a version that pays the owner less needs the owner's signature (rule 48). **A publication selling a vow that no ownership agreement claims is a lone seller's publication: its drafter is its owners' side, and its owners' line is the drafter's** (rule 11). *Stated cost: a vow's owner is paid by a publication of her vow only where she drafts it, is one of its partners, or claims the vow under an ownership agreement it names; a platform's publication of her vow with none of these pays her nothing, and her client says so before she relies on it.*
+**A vow has an owner: its signer.** An ownership agreement whose target is a claim on a vow's name gives the vow's signer the whole stake in its founding version; its terms giving it otherwise are invalid, signed by every party or not, where the verifier holds the vow. Under such an agreement the overhead (a platform's share as a partner, a helper's share, a fee) comes off the top (rule 22), what is left is the owner's, and a version that pays the owner less needs the owner's signature (rule 48). **A publication selling a vow that no ownership agreement claims has the owners' side rule 11 gives any publication: naming no ownership agreement, it is a lone seller's, its drafter its owners' side and its owners' line the drafter's** (rule 11). *Stated cost: a vow's owner is paid by a publication of her vow only where she drafts it, is one of its partners, or claims the vow under an ownership agreement it names; a platform's publication of her vow with none of these pays her nothing, and her client flags it, "No owner", before she relies on it.*
 
 *Somebody owns the vow.* *A worker's vow, a job booked through a platform: she claims her vow, and her ownership agreement gives her its stake; the platform's publication names that agreement as its owners, the platform a partner taking its share off the top; what is left is hers, her agreement signs the publication as its owners' side, and the platform raising its share needs her signature.*
 
 - From its founding version on, the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
-- **A publication selling a vow that it does not pay the vow's owner.** A publication naming a vow counts whether or not it pays the vow's signer: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where an ownership agreement claims the vow (above); the owner's protection is her own signature, and what her client shows before she signs (her client flags a publication dividing money with no owner: "No owner").
+- **A publication selling a vow that it does not pay the vow's owner.** A publication naming a vow counts whether or not it pays the vow's signer: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where an ownership agreement claims the vow (above); the owner's protection is her own signature, and what her client shows before she signs (her client flags a publication selling her vow that pays her nothing: "No owner").
 - The vow's signer is read from the vow the verifier holds, by its name (its genesis). A verifier that does not hold the vow cannot tell its name from a work's hash, and judges nothing, as for a publication's `[ 3, vow ]` ("Publication (type 6)").
 
 *Budgets are not vows: the vote that decides where a common budget goes is a cMIP's; the projects answering the need make vows, each sold by a publication with its owner, which the budget pays.*
@@ -879,7 +879,7 @@ Each of these is an open obligation of the service, naming exactly one receiver 
 
 And of another identity:
 
-- **past what the service holds, what a party received of a payment owed back, of that party, in the share it received** (rule 11); on the owners' line, of each holder paid, their own payout;
+- **past what the service holds, what a party received of a payment owed back, of that party, in the share it received** (rule 11); where the owners' side is an ownership agreement, of each holder paid on its line, their own payout, a holder that is an ownership agreement through its own holders;
 - **what the other shares of a payment to a pointer bypassing the service would have been, of the identity that received it** (rule 16).
 
 **A metric's measurer is none of the identities the metric divides among, nor the split service** (rule 29). A metric pays only identities the plan already pays.
@@ -1529,7 +1529,7 @@ These entries come after those the act's type defines, all on that one chain. Ag
 
 *An act within one's powers in a collective is an act for the collective. The chain's role is to make acts unmissable, not to confirm them.*
 
-**An act for the collective is placed on its line only where a later act for the collective cites it, directly or through acts that do; one nothing cites is outside every line, and counts for nothing.** **The two sentences answer two questions:** whether an act counts for the collective is decided by the first, as soon as it is done and cites the latest decision; what an ending's or a record's line holds is decided by this one alone. *Client conformance: a client acting for a collective cites the latest decision and every head it holds.* *Citation places one act at a time on the line: that is its cost, made visible.*
+**An act for the collective is placed on its line only where a later act for the collective cites it, directly or through acts that do; one nothing cites is outside every line.** **This decides what a line of the collective holds (an ending's, a record's, a rotation's through the signature acts it names), and nothing else:** whether an act counts for the collective is decided above, as soon as it is done and cites the collective's latest decision as the signer knew it. An act outside every line still counts; no ending, record or rotation holds it. *Client conformance: a client acting for a collective cites the latest decision and every head it holds.* *Citation places one act at a time on the line: that is its cost, made visible.*
 
 *A member's act for the collective sits in the member's own sequence, so it stays in the member's kept ancestry, and the member's rotation can disown it: Identity rule 34, as for any act. What the collective's line placed stays placed for it, the disowned signature shown as a dispute ("Made before, made after", 4).*
 
@@ -1750,7 +1750,7 @@ Which powers a clone needs, from its changes alone:
    - the party out of the parties (field 0), its seat successors in;
    - the party out of the holders of every area it held, nothing else in the areas changed;
    - **the seat successors in the party's place in every holding of the key grammar (field 12), every threshold unchanged**;
-   - **the seat successors in the party's place in every layer's rule naming it (field 19, `[2, names]`), nothing else in the layers' rules changed**;
+   - **the seat successors in the party's place in every layer's rule naming it (field 19, `[2, names]`), one already named there written once, nothing else in the layers' rules changed**;
    - the executed plan dropped from field 16, every other plan as it was;
    - where the party held the chain key alone (`[0, party]`), a succession plan for the seat successor in the executed plan's place, naming at least one seat successor of theirs, as rule 59 requires. The seat successor signs the clone as the plan's signer, so that plan is signed by them in the same clone.
 
@@ -2235,7 +2235,7 @@ Otherwise the seat successor is a nomination, approved under the constitutional 
 
 A stake passes by succession as planned: it is property, not a seat.
 
-**A seat passed by succession carries membership, never the areas its holder held.** The seat carries the party's voice in the constitution and the change rules, and its place in a layer's rule naming it: a layer's rule is the collective's own rule for the whole layer, not a job given within it, and one naming a party who left could otherwise never be met again. The clone that completes the succession, automatic or by nomination, takes the party out of the holders of every area it held. Each such area is refitted as rule 71 says:
+**A seat passed by succession carries membership, never the areas its holder held.** The seat carries the party's voice in the constitution and the change rules, and its place in every layer's rule naming it: the seat successors written there in its place, one already named there written once. The clone that completes the succession, automatic or by nomination, takes the party out of the holders of every area it held. Each such area is refitted as rule 71 says:
 - its remaining holders carry on meanwhile;
 - an area left with no holder is written with an empty list of holders and stands frozen, its grants ending and reinstated, where wanted, by cloning at the refit, until a constitutional clone gives it a holder, which may be the same clone where the successor is a nomination;
 - an area left with fewer holders than its number keeps that number, met by all who remain.
@@ -3123,7 +3123,7 @@ Its `objects`: a later version names `[first, previous]` first. Where field 1 is
 
 A version that does not count sells nothing, and a price tag naming it buys nothing.
 
-**A publication naming a vow** (`[ 3, vow ]`) sells it with its words, under whatever ownership agreement claims it, or as its owner's lone publication (rule 14). It names the vow by its genesis id, never a later version. An act this verifier holds that is not a vow, or is a later version, keeps the publication from counting. A vow made void by its signer's rotation does not: the name others wrote down stands. *What the vow promises, how it is delivered, quantities and seats, and what it became are the cMIPs'.*
+**A publication naming a vow** (`[ 3, vow ]`) sells it with its words, under the ownership agreement it names, or, naming none, as its drafter's lone publication (rule 14). It names the vow by its genesis id, never a later version. An act this verifier holds that is not a vow, or is a later version, keeps the publication from counting. A vow made void by its signer's rotation does not: the name others wrote down stands. *What the vow promises, how it is delivered, quantities and seats, and what it became are the cMIPs'.*
 
 **A relay's delivery record counts on a purchase under a publication** where its object is the media of a bake the publication sells (any of them).
 
@@ -4013,7 +4013,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 - An ownership agreement targeting a claim, `[0, claim]`: shares only, no split, no fees, no split service; one carrying field 8, 14, 28, 29, or a collective's field, invalid; a collective's, `[1, null]`, requiring its key grammar and its five layers: 1, 2, 3.
 - The stake, stake rule, transfer naming both chains; every publication reading the shares by reference pays the buyer once the transfer is complete, both signatures placed: 1, 3, 9.
 - Binding a work; conflicting claims; a co-owner's publication not signed under the ownership agreement visible as outside it, a payment under it a purchase read as the signer's own sale, nothing owed back to the buyer: 2.
-- A vow sold by a platform's publication: the owners' line the vow's signer's, the platform a partner taking its share off the top, the rest hers, the platform raising its share only with her signature; an ownership agreement giving the vow's stake to anyone else invalid; a publication paying her nothing counting all the same, flagged "No owner" before she signs: 1.
+- A vow sold by a platform's publication under her ownership agreement: the owners' line hers, the platform a partner taking its share off the top, the platform raising its share only with her signature; an ownership agreement giving the vow's stake to anyone else invalid; a platform's publication naming no ownership agreement, its drafter the owners' side, paying her nothing, counting all the same, flagged "No owner" before she signs: 1.
 
 #### Publications
 
