@@ -24036,7 +24036,7 @@ var Real = class {
     const reading2 = {
       title: `The money of \u201C${cname}\u201D: where its payments land`,
       summary: way === "service" ? [
-        `A split agreement of the collective, made by ${names2(founder)} with their own key for it, naming its ownership: its shares are read from its constitution in force at each payment, never copied here. The split service ${service ? names2(service) : "\u2026"} signs it too.`,
+        `A split agreement of the collective, made by ${names2(founder)} with their own key for it, naming its ownership: its shares are read from its constitution in force at each payment, never copied here. Every member signs it (its judicial tier: it decides how the money of all is divided), and the split service ${service ? names2(service) : "\u2026"} too.`,
         "Once it counts, the collective\u2019s payee pointer names the service\u2019s own rails: a buyer\u2019s payment goes to the service, which receives it in its own name, pays each holder their share and publishes the split (Agreements rules 12, 15 to 23)."
       ] : [
         `One trusted pointer: the collective\u2019s payee pointer names ${wallet ? names2(wallet) : "\u2026"}\u2019s own wallet. ${wallet ? names2(wallet) : "That member"} receives everything and divides it by the shares; the others rely on them.`,
