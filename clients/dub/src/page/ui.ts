@@ -1588,7 +1588,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       }
       case 'collective': {
-        const r = await busy('Reading the collective and your member key…', () => b.ask<Lines>('collective add', { id: text(d.get('id')) }));
+        const r = await busy('Reading the collective and your place in it…', () => b.ask<Lines>('collective add', { id: text(d.get('id')) }));
         if (r) (await refresh(), say('done', v.lines(r.lines)));
         return;
       }

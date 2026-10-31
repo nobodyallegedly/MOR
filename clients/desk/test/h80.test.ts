@@ -120,7 +120,7 @@ test('H80: after a change of keys in Kišib, every path of Edubba that signs wit
   await refusedChanged(c.ask('money pay', { identity: g.id, to: other.id, value: '5', unit, whatFor: '' }), 'a payment prepared for Damgar');
   // Publishing as itself: a protected work, and a vow.
   await c.ask('publishing act as', { id: g.id });
-  const work = await c.ask<{ plan: string; digest: string; reading: { blocking: string[] } }>('publishing work read', { media: 'text', data: Buffer.from('A recipe, sealed.').toString('base64'), title: 'A recipe', price: '1000' });
+  const work = await c.ask<{ plan: string; digest: string; reading: { blocking: string[] } }>('publishing upload read', { media: 'text', data: Buffer.from('A recipe, sealed.').toString('base64'), title: 'A recipe', then: 'price', price: '1000' });
   assert.deepEqual(work.reading.blocking, []);
   await refusedChanged(c.ask('publishing confirm', { plan: work.plan, digest: work.digest }), 'a protected work published as itself');
   const vow = await c.ask<{ plan: string; digest: string; reading: { blocking: string[] } }>('publishing vow read', { words: 'I will read your tablet aloud.', title: 'A reading', price: '500' });

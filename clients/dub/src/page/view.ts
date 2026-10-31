@@ -711,7 +711,7 @@ export function collectiveForm(s: State): string {
   const cs = s.identity!.collectives;
   return `${cs.length ? `<ul class="k-small">${cs.map((c) => `<li>${e(c.name ?? shortForm(c.form))} · ${c.available ? 'usable' : e(c.why ?? 'not usable')} <button type="button" class="k-btn k-q" data-action="collective-remove" data-id="${e(c.id)}">Remove</button></li>`).join('')}</ul>` : ''}
 <form id="collective" class="dub-modal-form"><label>A collective this identity is a member of: its ID</label><input name="id" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Add it under this identity</button></div></form>
-${say('Acting as a collective is the same gesture as switching.', ['It is listed under this identity in the identity panel: choose it to post as it, with your own member key (made when you signed its founding). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba.'])}`;
+${say('Acting as a collective is the same gesture as switching.', ['It is listed under this identity in the identity panel: choose it to post for it, with your own key, naming it (a collective has no key of its own, and there are no member keys). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba.'])}`;
 }
 
 /** The panel's foot, for the app itself: paired browsers (the Mac), the clock feeds are ordered by, homes and relays. */
