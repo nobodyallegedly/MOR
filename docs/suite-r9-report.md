@@ -121,7 +121,15 @@ Run on this machine (Linux x86-64; Chromium for the browser tests, named with `M
 - **The four media Modules, red on the first run:** they could not start, because their packages were not installed on this machine (`tsx` not found). Installed and run again: all green, as above.
 - **The Rust workspace was not run here:** this round changed no Rust. GitHub's "all" job runs it.
 
-**On GitHub** (pull request 115): regtest, release, mac, linux, seal and browsers green at the first push of the code; "all" is reported in the pull request once it ends.
+**On GitHub at `6b36616`** (pull request 115): **all green**: "all" (every app, Assess in its new step, the Rust workspace), "regtest" (round 3 on regtest Lightning with the new hop-by-hop check: every hop's receipt found), release, seal, mac, browsers, and Nakišib's Mac and Linux jobs.
+
+- **One check failed on one run only:** Nakišib's Linux job.
+  - *What failed:* its "every screen by clicks" test waited 30 seconds for "Written again to", failed, and then its process did not exit, so the job ran to its 60-minute limit.
+  - *Seen before:* the same test, the same wait and the same hang were recorded in round 8b, on a loaded machine.
+  - *Elsewhere:* it passed on GitHub at the earlier push of the same Kišib code (3 minutes), and here, 10 of 10.
+  - *The one re-run:* green, in 46 seconds.
+  - *Why:* a fixed 30-second wait on a busy runner, and a test that does not stop its program when that wait fails. Nakišib's code was not touched this round.
+  - *Lean, for a later round:* the test waits until the words show, and stops the program in `after` whatever the outcome.
 
 ## 3. For the MOR lead
 
