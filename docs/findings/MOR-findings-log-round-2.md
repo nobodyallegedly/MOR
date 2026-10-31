@@ -188,6 +188,8 @@ And the verb: "Plainer verb is upload" for putting any act on relays.
 
 **Decided by Nobody, allegedly, 24 October 2026, Q-A3** (a payment to a pointer that bypasses the split service), "If possible, yes please": Fable's sentence: the payment is still a purchase; the pointer is shown as bypassing; what the other owners' shares of that payment would have been under the split plan is an open obligation of the identity that received it (rule 30), shown beside the pointer. The amounts are the plan's and the receipt's, both held.
 
+*Why routes, in his words (31 October 2026): "the idea was to consider the pay in LN pool, anchor in BTC" case: an anchoring pool paid in Lightning, its anchors on-chain, the money moved through a conversion service as a Money route. S7i builds and tests that scenario first (route checked hop by hop, the pool's custody followed across it, a converter that takes the Lightning and never pays on-chain left owing).*
+
 **Still open:** Q-M2 (a claim's batch, a one-way door), after routes are built. **Everything else** is taken by the MOR lead under delegation, Fable's sentence each. The rest is taken by the MOR lead under delegation, Fable's sentence each, written into S7h.
 ## F394. Nakišib, Kišib's offline companion: the chain key used only on a Mac that never connects (23 October 2026; the Nakišib round) (Dubsar Suite)
 
