@@ -431,11 +431,11 @@ Its split service signs its price tag (Money rule 18). A buyer's client finds th
 
 It counts, and sells, once every party has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1). *Partners are any identity: the core does not define a publisher; it may be a curated relay, a client, a label.*
 
-**Self-publishing** is a publication with no partners whose split service is the owner, or one the owners chose. **A lone seller's publication**, naming no ownership agreement, sells what its drafter owns alone: its owners' line is its drafter's. **Its split service's receipt carries no field 9**, there being no shares to read, and it belongs to itself ("Belongs to"). It carries its own words, its deadline and, if the drafter sets any, its own refund terms on its own time reference.
+**Self-publishing** is a publication with no partners whose split service is the owner, or one the owners chose. **A lone seller's publication**, naming no ownership agreement, has its drafter as its owners' side: its owners' line is its drafter's. It sells what its drafter owns alone, or a vow no ownership agreement claims, whoever signed the vow (rule 14, "A vow has an owner: its signer"). **Its split service's receipt carries no field 9**, there being no shares to read, and it belongs to itself ("Belongs to"). It carries its own words, its deadline and, if the drafter sets any, its own refund terms on its own time reference.
 
 **A publication changes by versions on its own chain**, each a later version signed by every party of that version. A purchase under any version counts. Two versions of one previous are the parties' fork, shown.
 
-**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it. Past sales stand. **A payment racing the ending** (one its split service receipts that the ending's history does not hold, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout**: what the agreement received is what its holders were paid, and a holder that is itself an ownership agreement owes it back through its own holders in turn. This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication.
+**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it. Past sales stand. **A payment racing the ending** (on a push rail, one its split service receipts after its own signature on the version ending it, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout**: what the agreement received is what its holders were paid, and a holder that is itself an ownership agreement owes it back through its own holders in turn. This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication.
 
 **Two stops, two different people's.** A publication's ending is a version every party signs, so no party ends a publication alone. **A price tag's withdrawal is its signer's alone** (Money rule 18): the publication's split service, or the party it designates to sign its tags. Withdrawing the tag stops sales at that price, and is the one-sided stop, held by the publication's side; ending the publication stops it for everyone, and needs everyone. *So a co-owner, or the uploader of a bake the publication sells, cannot stop the publication's sales alone; the publication's side can stop selling at once, and the parties together end it.*
 
@@ -496,7 +496,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 **A sale before a price tag's withdrawal is a payment naming the tag's earlier version, the one carrying a price, settled as above.** On a request rail, the tag version the seller's request committed to decides. On a push rail, the split service settles it on its own chain: a receipt it records whose history does not hold the version with no price is a sale; a receipt whose history holds it is no purchase, owed back as a payment naming a tag the publication does not count, and so is a payment naming the version with no price. Past sales stand.
 
-*The clock is when the split service records, the only one MOR has, and it belongs to the one answering for it. A receipt on another of the service's sequences than its signature is not after it: the service answers for its own devices.*
+*The clock is when the split service records, the only one MOR has, and it belongs to the one answering for it. A receipt on another of the service's sequences than its signature is not after it: the service answers for its own devices. A withdrawal signed by the party the publication designates stops sales on a push rail once the split service's own history holds it: until then, a receipt the service records is a sale.*
 
 *The rare cases, in detail.*
 
@@ -813,7 +813,7 @@ Several fillers of one role divide it equally.
 
 #### Rule 23. Pay out
 
-Each payout is paid as a simple Money payment to the current holder of the share, or the partner, with its own receipt naming the split.
+Each payout is paid as a simple Money payment to the current holder of the share, or the partner, with its own receipt naming the split in its field 5, what it fulfils (Money, "What a payment fulfils"). A receipt naming the split elsewhere, in its `objects` alone, does not name it.
 
 **A share held by a collective is paid to the collective's own payee pointer**, which leads to its split service (rule 15); **a share held by another ownership agreement is paid through it**, to its holders by their shares (rule 15). A share held by an agreement that names no holder cannot be paid until it does.
 
@@ -2204,7 +2204,7 @@ A party may attach a succession plan to an agreement, as part of its signed term
 
 Stake and seat successors may be the same identity or different ones.
 
-**A seat successor carries no voting weight**: plan key 2 lists the seat successors alone; a plan writing a weight beside a successor is invalid, as field 24's head count is. Where a rule counts by share, a seat successor weighs what it holds of the stake, read from field 7, which the plan's stake part gives it; a weight written as a free number is refused.
+**A seat successor carries no voting weight**: plan key 2 lists the seat successors alone; a plan writing a weight beside a successor is invalid, as field 24's head count is. Where a rule counts by share, a seat successor weighs what it holds of the stake, read from field 7, which the plan's stake part gives it; a weight written as a free number is refused. *A successor already a party holds two seats and counts once for each wherever seats are counted (rule 83): two seats, never a weight the plan writes.*
 
 Changing a plan takes a clone, which needs every member's signature, the party's included (rule 67).
 
@@ -3299,7 +3299,7 @@ A holder that is a collective receives at its own payee pointer (rule 23). A hol
 
 Every fee, partner's, role and metric share is taken before the owners' line divides, so it falls alike on every owner. Any deviation, either way, breaks the plan, and is shown so. *No holder is paid a whole smallest unit or more below its exact share, and none above it by as many units as the stake has holders or more, which leaves room for the leftovers of rounding going to one holder (rule 21).*
 
-Each payout is then paid as a simple Money payment, with its own receipt naming the split. A fee taken off the top, and an app's share for the client that brought the sale (a partner, or a role share), are both expressed in the publication.
+Each payout is then paid as a simple Money payment, with its own receipt naming the split in its field 5 (rule 23). A fee taken off the top, and an app's share for the client that brought the sale (a partner, or a role share), are both expressed in the publication.
 
 **What a verifier checks against the plan:**
 

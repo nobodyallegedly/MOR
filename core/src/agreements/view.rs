@@ -10501,7 +10501,9 @@ impl<'a> AgreementsView<'a> {
                             continue;
                         }
                         let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
-                        let names = x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id);
+                        // A payout's receipt names the split in its field 5, what it fulfils
+                        // (rule 23; Money, "What a payment fulfils"; F412).
+                        let names = x.fulfils == sh.id;
                         if &x.payee != who || !names || !self.consent(&r.id)?.counts() {
                             continue;
                         }
@@ -10638,7 +10640,7 @@ impl<'a> AgreementsView<'a> {
             if mine > 0 {
                 out.due = out.due.saturating_add(mine);
                 let before = out.received;
-                self.cut_arrived(me, mine, |r, x| x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id), out);
+                self.cut_arrived(me, mine, |_, x| x.fulfils == sh.id, out);
                 if out.received.saturating_sub(before) < mine {
                     out.stops.push(format!("a payout of the split {} has no receipt of yours at your flow address or vault yet (rules 23, 29)", hex_of(&sh.id)));
                 }
@@ -10651,7 +10653,7 @@ impl<'a> AgreementsView<'a> {
                     .signed_by(&p.receiver)
                     .filter(|r| r.inside.spec == self.mirs.money && self.key_grant(r).is_none() && self.valid(&r.id))
                     .filter(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
-                        Ok(Fin::Receipt(x)) => x.payee == p.receiver && (x.fulfils == sh.id || r.inside.objects.iter().flatten().any(|o| o.chain == sh.id || o.predecessor == sh.id)),
+                        Ok(Fin::Receipt(x)) => x.payee == p.receiver && x.fulfils == sh.id,
                         _ => false,
                     })
                     .map(|r| r.id)
