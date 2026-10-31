@@ -82,7 +82,7 @@ Verdicts an app may see change:
 | none | `Verifier.agreementsPublicationTip(specs, first)` → `{ latest, tags, owners, ownersLatest }`: a publication's latest versions, the latest version of each price tag line that counts under it (one per price), the ownership agreement it names and its latest version | F409: every app that pays follows the line to its tip first |
 | `anchoringOffer(network, tiers, words)`, refused | `anchoringOffer(network, tiers, words, service, splitCmip, refundUntil?)` → `{ type: 6, payload }`, a lone seller's publication (anchoring draft 6) | the anchoring cMIP moved to a publication |
 | none | `anchoringPriceTags(network, tiers, publication, service)` → `[{ tier, type: 5, payload }]`, one tag per tier, each priced exactly at its tier | F409: one price tag per price |
-| `anchoringReadOffer(act)`, refused | `anchoringReadOffer(publicationAct, tagActs?)` → `{ id, payee, unit, network, tiers, words, refundUntil, tags: [{ tier, tag }] }` | draft 6 |
+| `anchoringReadOffer(act)`, refused | `anchoringReadOffer(publicationAct, tagActs?)` (the tags optional: without them the publication is read alone) → `{ id, payee, unit, network, tiers, words, refundUntil, tags: [{ tier, tag }] }` | draft 6 |
 | `anchoringCheckTicket(offerAct, ticket, commitment, leaf, now)` | `anchoringCheckTicket(publicationAct, tagAct, ticket, commitment, leaf, now)`: the tag paid must be the ticket's tier's | draft 6; a payment naming the publication is a tip and buys no ticket |
 | `publicationPayload({ plan })`, no fees | `plan.fees: [{ module, part, scope?: "bake" or "rail", of? }]`, read back the same | F409 |
 

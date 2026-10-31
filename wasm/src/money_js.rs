@@ -1451,7 +1451,7 @@ fn acts_of(v: JsValue) -> R<Vec<Vec<u8>>> {
 /// of each (Agreements rule 11, Money rule 18). Throws where it is no
 /// anchoring publication, saying why.
 #[wasm_bindgen(js_name = anchoringReadOffer)]
-pub fn anchoring_read_offer(publication: &[u8], tags: JsValue) -> R<JsValue> {
+pub fn anchoring_read_offer(publication: &[u8], tags: Option<JsValue>) -> R<JsValue> {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct TagOut {
@@ -1470,7 +1470,13 @@ pub fn anchoring_read_offer(publication: &[u8], tags: JsValue) -> R<JsValue> {
         refund_until: Option<u64>,
         tags: Vec<TagOut>,
     }
-    let (o, _, p, network, matched) = read_anchor(publication, &acts_of(tags)?)?;
+    // The service's tag acts are optional: without them the publication is
+    // read alone, each tier's tag unknown.
+    let tags = match tags {
+        Some(t) if !t.is_undefined() && !t.is_null() => acts_of(t)?,
+        _ => vec![],
+    };
+    let (o, _, p, network, matched) = read_anchor(publication, &tags)?;
     to_js(&Out {
         id: hx(&o.id),
         payee: hx(&o.payee),

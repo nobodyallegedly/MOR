@@ -1,4 +1,4 @@
-**Not yet ready to merge: the anchoring tests stay red until the suite moves four call sites in its apps** (listed below and in `wasm/README.md`). Everything else this session asked for is done; once the suite has moved them, the pull request is ready.
+**Not yet ready to merge.** The anchoring tests, and Nakišib's Linux job, stay red until the suite moves four anchoring call sites in its apps (listed below and in `wasm/README.md`). Everything else this session asked for is done; once the suite has moved them, the pull request is ready.
 
 # S7h-5, the last core points before the merge: report
 
@@ -85,4 +85,10 @@ Also for the suite: the anchoring cMIP's Rust (`Offer::from_publication`) and dr
 - **Rust:** `mor-core`, `mor-relay` and `mor-wasm` pass every test, the relay's new keyless-genesis test among them.
 - **Vectors:** they regenerate byte for byte, and the Python check passes.
 - **The six web releases are rebuilt** (e1a0fba1) with the pinned tools: rustc 1.97.0, wasm-bindgen 0.2.129, esbuild 0.25.12. The display client's and Kišib's rebuild checks pass here.
-- **GitHub:** GITHUB_PLACEHOLDER
+- **GitHub:** Nakišib's Linux job ("Nakišib, with Kišib and real homes") has failed on every commit since 77fc0a57, the anchoring binding. It passed on 3ce73ff4, just before. This report missed it at first.
+  - **The cause:** its typecheck (`tsc --noEmit` in `clients/nakisib`) compiles the shared app code against the binding's new TypeScript signatures. Three anchoring call sites no longer matched:
+    - `clients/desk/src/money.ts:164` and `clients/ummia/src/anchor.ts:89` call `anchoringReadOffer` with one argument;
+    - `clients/damgar/src/damgar.ts:1935` calls `anchoringCheckTicket` with five.
+  - **Fixed in the binding:** `anchoringReadOffer`'s tag acts are now optional, as intended. The publication is read alone where none are given.
+  - **The suite's:** `anchoringCheckTicket` needs the tag act paid, by draft 6, so Damgar's call is one of the four sites the suite moves. Until it does, Nakišib's typecheck fails on that one line, and the anchoring tests in the "all" job and Damgar's regtest anchoring test stay red.
+  - The other jobs are as above.

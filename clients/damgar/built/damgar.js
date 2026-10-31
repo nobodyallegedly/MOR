@@ -1518,7 +1518,7 @@ function anchoringLeaf(act, blind) {
 function anchoringReadOffer(publication, tags) {
   const ptr0 = passArray8ToWasm0(publication, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringReadOffer(ptr0, len0, tags);
+  const ret = wasm.anchoringReadOffer(ptr0, len0, isLikeNone(tags) ? 0 : addToExternrefTable0(tags));
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
