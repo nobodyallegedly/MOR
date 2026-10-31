@@ -10374,8 +10374,8 @@ var ACCEPTABLE = [
     key: "anchoring",
     name: "Anchoring",
     kind: "cMIP",
-    text: "cmips/cmip-anchoring-draft-5.md",
-    draft: 5,
+    text: "cmips/cmip-anchoring-draft-7.md",
+    draft: 7,
     hashes: [SPEC.anchoring],
     does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
     here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
@@ -10463,8 +10463,8 @@ function draftPayload(d) {
   if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
   m.set(4, text(d.app, "the app"));
   if (d.what === "anchor") {
-    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
-    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier, the leaf and the tier\u2019s price tag.");
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf), unhex(d.anchor.tag)]);
   }
   if (d.what === "confirm") {
     if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
@@ -10481,8 +10481,8 @@ function readDraft(payload) {
   let anchor = null;
   if (what === "anchor") {
     const a = m.get(5);
-    if (!Array.isArray(a) || a.length !== 3 || typeof a[1] !== "number") throw new Error("a draft for an anchor: its anchor");
-    anchor = { offer: h322(a[0], "the offer"), tier: a[1], leaf: h322(a[2], "the leaf") };
+    if (!Array.isArray(a) || a.length !== 4 || typeof a[1] !== "number") throw new Error("a draft for an anchor: its anchor (the publication, the tier, the leaf and the tier\u2019s price tag)");
+    anchor = { offer: h322(a[0], "the offer"), tier: a[1], leaf: h322(a[2], "the leaf"), tag: h322(a[3], "the price tag") };
   } else if (m.has(5)) throw new Error("a draft: an anchor on a draft that pays for none");
   let confirm2 = null;
   if (m.get(0) === 3) {
@@ -25167,22 +25167,36 @@ async function placesOf(service, hints, via) {
 }
 async function offers(service, hints, via = {}) {
   const { l, places } = await placesOf(service, hints, via);
-  const out = /* @__PURE__ */ new Map();
+  const pubs = /* @__PURE__ */ new Map();
+  const tags = /* @__PURE__ */ new Map();
   for (const h of places) {
     try {
-      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
-        if (it.kind !== "act") continue;
-        try {
-          const o = anchoringReadOffer(it.item);
-          l.verifier.add(it.item);
-          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
-        } catch {
-        }
-      }
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) if (it.kind === "act") pubs.set(describeAct(it.item).id, it.item);
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.money, type: 5 })).items) if (it.kind === "act") tags.set(describeAct(it.item).id, it.item);
+    } catch {
+    }
+  }
+  for (const a of [...pubs.values(), ...tags.values()]) {
+    try {
+      l.verifier.add(a);
+    } catch {
+    }
+  }
+  const valid = [...tags.entries()].filter(([id]) => l.verifier.status(id) === "valid").map(([, a]) => a);
+  const out = /* @__PURE__ */ new Map();
+  for (const a of pubs.values()) {
+    try {
+      const o = anchoringReadOffer(a, valid);
+      if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
     } catch {
     }
   }
   return [...out.values()];
+}
+function tagFor(o, tier) {
+  const t = o.tags.find((x) => x.tier === tier)?.tag;
+  if (!t) throw new Error("The service signed no price tag for that tier: it cannot be bought (anchoring draft 7, one price tag per tier).");
+  return t;
 }
 
 // ../damgar/src/accepted.ts
@@ -26840,15 +26854,17 @@ var Damgar = class {
   async checkTicket(me2, s, book, p, ticket) {
     const { acts } = await this.payee(p.other, me2, s);
     const t = acts.get(ticket);
-    const o = acts.get(p.fulfils);
-    if (!t || !o || t.signer !== p.other) return "the ticket or the offer was not found at the service\u2019s places";
+    const tag = acts.get(p.fulfils);
+    if (!t || !tag || t.signer !== p.other) return "the ticket or the price tag paid was not found at the service\u2019s places";
     const tk = anchoringReadTicket(t.payload);
     if (!tk) return "not a ticket";
+    const o = acts.get(tk.offer);
+    if (!o) return "the service\u2019s publication the ticket names was not found at its places";
     const ir = readInvoiceRequest(this.opened(book, p.invoiceRequest).payload);
     if (!ir.ticket) return "no anchor was asked";
     const chain = this.opts.chain ? await this.opts.chain.headers().catch(() => null) : null;
     const nowPoint = chain ? chain.start + chain.headers.length - 1 : null;
-    const why = anchoringCheckTicket(o.bytes, t.payload, b647(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1)));
+    const why = anchoringCheckTicket(o.bytes, tag.bytes, t.payload, b647(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1)));
     if (why) return why;
     book.acts[ticket] = { act: base64(t.bytes), from: p.other };
     p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier, checked: nowPoint !== null };
@@ -27033,7 +27049,7 @@ var Damgar = class {
           lines4.push({ text: message4(e3), tone: "warn" });
         }
       }
-      if (dr.what === "anchor" && dr.anchor) lines4.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short10(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
+      if (dr.what === "anchor" && dr.anchor) lines4.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s publication ${short10(dr.anchor.offer)}, tier ${dr.anchor.tier}, paying that tier\u2019s price tag ${short10(dr.anchor.tag)}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
     }
     return { id, kind: "draft", from: this.who(me2.id, me2.id), app: dr.app, title: dr.what === "ask" ? "A request to send" : dr.what === "anchor" ? "A payment for an anchor" : "A payment to make", lines: lines4, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ["decline"] : ["sign", "decline"], found: x.found };
   }
@@ -27171,7 +27187,8 @@ var Damgar = class {
     if (!tier) throw new Error("The offer has no such tier. Nothing was signed.");
     const blind = new Uint8Array(randomBytes(32));
     const leaf = anchoringLeaf(id, blind);
-    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short10(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const tag = tagFor(offer, a.tier);
+    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short10(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf, tag } };
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
@@ -27212,7 +27229,8 @@ var Damgar = class {
       const p = await this.bind(me2, s, book, {
         payee: dr.other,
         amount: dr.amount,
-        fulfils: dr.what === "anchor" ? dr.anchor.offer : await this.followsOf(me2, s, book, id, dr),
+        // An anchor's payment fulfils its tier's own price tag (anchoring draft 7, Money rule 18), never the publication: that would be a tip, buying no ticket.
+        fulfils: dr.what === "anchor" ? dr.anchor.tag : await this.followsOf(me2, s, book, id, dr),
         whatFor: dr.whatFor,
         answers: null,
         draft: id,
@@ -31925,7 +31943,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       await this.current(me2);
       const blind = new Uint8Array(randomBytes(32));
       const leaf = anchoringLeaf(id, blind);
-      const r = await sendDraft(me2, { what: "anchor", other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: "Dub", anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me2) });
+      const r = await sendDraft(me2, { what: "anchor", other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: "Dub", anchor: { offer: offer.act, tier: a.tier, leaf, tag: tagFor(offer, a.tier) } }, { via: s.via, save: () => this.store.saveIdentity(me2) });
       const kept2 = await this.store.money(me2.id, "anchors") ?? [];
       kept2.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now9() });
       await this.store.saveMoney(me2.id, "anchors", kept2);

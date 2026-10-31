@@ -7170,8 +7170,8 @@ var ACCEPTABLE = [
     key: "anchoring",
     name: "Anchoring",
     kind: "cMIP",
-    text: "cmips/cmip-anchoring-draft-5.md",
-    draft: 5,
+    text: "cmips/cmip-anchoring-draft-7.md",
+    draft: 7,
     hashes: [SPEC.anchoring],
     does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
     here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
@@ -10056,8 +10056,8 @@ function draftPayload(d) {
   if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
   m.set(4, text(d.app, "the app"));
   if (d.what === "anchor") {
-    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
-    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier, the leaf and the tier\u2019s price tag.");
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf), unhex(d.anchor.tag)]);
   }
   if (d.what === "confirm") {
     if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
@@ -10112,29 +10112,43 @@ async function placesOf(service, hints, via) {
 }
 async function offers(service, hints, via = {}) {
   const { l, places } = await placesOf(service, hints, via);
-  const out = /* @__PURE__ */ new Map();
+  const pubs = /* @__PURE__ */ new Map();
+  const tags = /* @__PURE__ */ new Map();
   for (const h of places) {
     try {
-      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
-        if (it.kind !== "act") continue;
-        try {
-          const o = anchoringReadOffer(it.item);
-          l.verifier.add(it.item);
-          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
-        } catch {
-        }
-      }
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) if (it.kind === "act") pubs.set(describeAct(it.item).id, it.item);
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.money, type: 5 })).items) if (it.kind === "act") tags.set(describeAct(it.item).id, it.item);
+    } catch {
+    }
+  }
+  for (const a of [...pubs.values(), ...tags.values()]) {
+    try {
+      l.verifier.add(a);
+    } catch {
+    }
+  }
+  const valid = [...tags.entries()].filter(([id]) => l.verifier.status(id) === "valid").map(([, a]) => a);
+  const out = /* @__PURE__ */ new Map();
+  for (const a of pubs.values()) {
+    try {
+      const o = anchoringReadOffer(a, valid);
+      if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
     } catch {
     }
   }
   return [...out.values()];
+}
+function tagFor(o, tier) {
+  const t = o.tags.find((x) => x.tier === tier)?.tag;
+  if (!t) throw new Error("The service signed no price tag for that tier: it cannot be bought (anchoring draft 7, one price tag per tier).");
+  return t;
 }
 async function ask(me, a) {
   const tier = a.offer.tiers[a.tier];
   if (!tier) throw new Error("The offer has no such tier.");
   const blind = new Uint8Array(randomBytes(32));
   const leaf = anchoringLeaf(a.act, blind);
-  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf } }, { via: a.via, save: a.save });
+  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf, tag: tagFor(a.offer, a.tier) } }, { via: a.via, save: a.save });
   const asked = { act: a.act, label: a.label, blind: hex(blind), leaf, service: a.service, offer: a.offer.act, tier: a.tier, draft: r.id, at: Math.floor(Date.now() / 1e3) };
   return {
     asked,
