@@ -24,17 +24,17 @@ import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
-import { MIRS, publicationPayload } from '../../genesis/src/core.ts';
+import { MIRS, cborDecode, describeAct, hex, publicationPayload } from '../../genesis/src/core.ts';
 import { referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { lockWork, readPublication } from '../../barebone/src/sealed.ts';
 import { publishVow, readVowOffer, vowOffer, vowOfferWords, vowSales } from '../src/vows.ts';
 import { BAKE, POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
-import { putTag } from '../../barebone/src/tag.ts';
+import { putTag, readTag } from '../../barebone/src/tag.ts';
 import { SPLIT_CMIP, planIn, sign } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
-import { claimPayload, dealTermsPayload } from '../../grants/src/deal.ts';
+import { claimPayload, dealClonePayload, dealTermsPayload } from '../../grants/src/deal.ts';
 import { UNITS_MODULES } from '../../damgar/src/units.ts';
 import { serve, type Running } from '../src/server.ts';
 import type { Item, PayWays } from '../src/shapes.ts';
@@ -327,4 +327,28 @@ test('a vow sold by a publication and its price tag: a lone seller as its own sp
   assert.ok(seen, JSON.stringify(look.problems));
   assert.deepEqual(seen!.offers, [lone.publication]);
   assert.deepEqual(seen!.sales, []);
+});
+
+test('the tip, always (round 9, F411): the owners sign a newer version of their ownership agreement, and the split service a new price, after the buyer found the work; the purchase follows both lines to their latest versions', async () => {
+  const { owners } = await sales();
+  assert.equal(owners.sealed!.tag, w.tag, 'found under the older versions');
+  const R = [relay!.base];
+  // The founding version, signed by Ada too (each party by a signature act of its own, rule 1); then a newer version,
+  // 50% and 50%, every owner signing it (Agreements rule 47).
+  await sign(ada!, w.agreement, R);
+  const deal = { title: 'Two voices', what: 'a picture', shares: [[ada!.id, 500_000], [bo!.id, 500_000]] as [string, number][], claim: '', referral: 0, service: svc!.id };
+  const founding = describeAct((await relayAt(relay!.base).getAct(w.agreement))!) as { payload: Uint8Array };
+  deal.claim = hex(((cborDecode(founding.payload) as Map<number, unknown>).get(33) as [number, Uint8Array])[1]);
+  const v2 = await ada!.publish(MIRS.agreements, AGREEMENTS_TYPES.terms, dealClonePayload(deal, '“Two voices”: Ada and Bo own this picture, half each now.', w.agreement), { public: true, relays: R, objects: [[w.agreement, w.agreement]] });
+  for (const x of [ada!, bo!]) await sign(x, v2.id, R);
+  // A newer price: the split service's tag, its second version.
+  const tag2 = await putTag(svc!, { publication: w.publication }, { price: { unit: SATS, value: 2500 }, relays: R, after: readTag((await relayAt(relay!.base).getAct(w.tag))!)! });
+  const { publicationTip } = await import('../../grants/src/deal.ts');
+  const me = app!.dub;
+  const ctx = await (me as unknown as { ctx(): Promise<{ me: TestIdentity }> }).ctx();
+  const x = await me.money.purchaseOf(ctx.me, [relay!.base, ...homes.map((h) => h.base)], {}, { publication: w.bake, seller: ada!.id, post: w.post });
+  assert.deepEqual(x.purchase, [w.agreement, v2.id], 'the purchase names the ownership agreement’s latest version, as the core finds it (agreementsPublicationTip)');
+  assert.equal(x.fulfils, tag2.id, 'following the price tag’s latest version');
+  assert.deepEqual(x.amount, { unit: SATS, value: 2500 });
+  assert.match(x.said.join(' '), /50%\).*50%\)/, 'the shares said are the latest version’s');
 });

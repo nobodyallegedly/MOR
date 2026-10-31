@@ -118,6 +118,16 @@ The kit's (`clients/kit`, decided 20–21 October 2026): dominantly black, Dub's
 
 Tests: `test/notes.test.ts` (H122, by clicks: a note, a new version, Earlier drafts, Retire; another Dub holding the identity reading the same notes; nothing in the clear at the homes); `../desk/test/every-app.test.ts` (H93 across Dub, Edubba and Ummia; H102, H82, H83, H105 in every app).
 
+## Round 9 (F411): the tip, always
+
+### In plain words
+
+Before you pay for a work sold through a publication, Dub checks that it pays the newest version of everything: the publication, its price tag, and the owners' agreement. If the owners signed a new version of who owns what after you found the work, your payment names the new one, and the shares Dub shows you are the new ones. If the price changed, you pay the new price.
+
+### Precisely
+
+Nobody, allegedly, on Q5: "Yes, absolutely. Clients need to provide the tip." Before a purchase, `priceOf` (and `vowPurchaseOf` for a vow) asks the core for the publication's tip, `agreementsPublicationTip`, through the shared `publicationTip` (`clients/grants/src/deal.ts`): the publication's latest versions, its price tags' latest versions that count under it, and the ownership agreement's latest version, read from every act its parties published. The purchase's claim names `[agreement, latest version]` (Money claim field 9, Agreements rule 12); a tag the tip does not list is replaced by the tip's. The anchoring reader shared by Ummia, Damgar, Edubba and Dub (`clients/ummia/src/anchor.ts`, `offers`) keeps only the latest version of a service's publication and the latest version of each tier's tag the same way. Test: `test/sales.test.ts`, "the tip, always".
+
 ## Tests
 
 ```
