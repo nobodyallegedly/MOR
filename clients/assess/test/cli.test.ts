@@ -12,9 +12,10 @@ import { short } from '../../collective/src/explain.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
-import { proposePayload, sign } from '../../repo/src/agreements.ts';
+import { carryChain, proposePayload, sign } from '../../repo/src/agreements.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { answering, failing, fakeApi } from './fake-api.ts';
-import { encode, id } from './terms.ts';
+import { encode, encodePub, id } from './terms.ts';
 
 const run = promisify(execFile);
 const cli = (...args: string[]) => cliIn(process.env, ...args);
@@ -38,14 +39,14 @@ async function person(): Promise<TestIdentity> {
   return t;
 }
 
-test('mor-assess reads a deal from the relay: who signed, whether it is in force, its risks', async () => {
+test('mor-assess reads a work’s ownership agreement from the relay: who signed, whether it is in force, its risks', async () => {
   const [ana, ben] = [await person(), await person()];
   const relays = [relay.base];
   const payload = encode({
     parties: [ana.id, ben.id],
     text: 'Ana and Ben share a song, half each.',
-    stakes: [[id('the song'), [[ana.id, 500_000], [ben.id, 500_000]]]],
-    payeeGrants: [id('a grant no relay holds'), id('another grant no relay holds')],
+    target: { claim: id('the song’s claim') },
+    owners: [[ana.id, 500_000], [ben.id, 500_000]],
   });
   const deal = (await proposePayload(ana, payload, undefined, relays)).id;
   await sign(ana, deal, relays);
@@ -57,15 +58,36 @@ test('mor-assess reads a deal from the relay: who signed, whether it is in force
   assert.match(one, /## Risks\n/);
   assert.match(one, /cannot be declared absent.*Rests on: Agreements rule 47/);
   assert.match(one, /No judge of forks/);
-  assert.match(one, /payee grant .* is not on the relays asked/);
+  assert.match(one, /An ownership agreement, assessed/);
   assert.match(one, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nAna and Ben share a song, half each\.\n----- END/);
 
   await sign(ben, deal, relays);
   const both = JSON.parse((await cli(deal, '--at', relay.base, '--json')).stdout) as { flags: { code: string }[]; sections: { heading: string; lines: { text: string }[] }[] };
   const signed = both.sections.find((s) => s.heading === 'Who signed')!.lines.map((l) => l.text).join(' ');
   assert.match(signed, /It exists/);
-  assert.match(signed, new RegExp(`version of this deal in force is ${deal.slice(0, 8)}`));
-  assert.deepEqual(both.flags.map((f) => f.code).sort(), ['no-exit', 'no-fork-judge', 'split-service-window']);
+  assert.match(signed, new RegExp(`version of this agreement in force is ${deal.slice(0, 8)}`));
+  assert.deepEqual(both.flags.map((f) => f.code).sort(), ['no-exit', 'no-fork-judge']);
+});
+
+test('mor-assess reads a publication from the relay: its owners by reference, its price tag, who has not signed, its risks', async () => {
+  const [ana, ben, svc] = [await person(), await person(), await person()];
+  const relays = [relay.base];
+  const terms = encode({ parties: [ana.id, ben.id], text: 'Ana and Ben share a song, half each.', target: { claim: id('a song’s claim') }, owners: [[ana.id, 500_000], [ben.id, 500_000]] });
+  const owners = (await proposePayload(ana, terms, undefined, relays)).id;
+  await sign(ana, owners, relays);
+  await sign(ben, owners, relays);
+  await carryChain(ana, relays);
+  const payload = encodePub({ sold: [{ bake: id('a bake') }], owners, partners: [{ identity: svc.id, share: 100_000, label: 'client' }], service: svc.id, cmip: id('a split cMIP'), words: 'Our song, sold by its service.' });
+  const pub = (await ana.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.publication, payload, { public: true, relays, objects: [[owners, owners]] })).id;
+  const out = (await cli(pub, '--at', relay.base)).stdout;
+  assert.match(out, /# A publication, assessed/);
+  assert.match(out, /## The owners\n/);
+  assert.match(out, new RegExp(`${short(ana.id)} 50%`));
+  assert.match(out, new RegExp(`labelled “client”: 10% of each payment`));
+  assert.match(out, /It does not count yet/);
+  assert.match(out, /Uncapped fee/);
+  assert.match(out, /No party can change or end it alone/);
+  assert.match(out, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nOur song, sold by its service\.\n----- END/);
 });
 
 test('mor-assess says plainly when there is nothing to assess', async () => {
@@ -80,7 +102,7 @@ test('mor-assess --ask: the deal read from the relay, its reading and quoted rul
   const api = await fakeApi();
   try {
     const [ana, ben] = [await person(), await person()];
-    const payload = encode({ parties: [ana.id, ben.id], text: 'Ana and Ben share a song, half each.', stakes: [[id('the song'), [[ana.id, 500_000], [ben.id, 500_000]]]], payeeGrants: [id('g1'), id('g2')] });
+    const payload = encode({ parties: [ana.id, ben.id], text: 'Ana and Ben share a song, half each.', target: { claim: id('a claim') }, owners: [[ana.id, 500_000], [ben.id, 500_000]] });
     const deal = (await proposePayload(ana, payload, undefined, [relay.base])).id;
     const env = { ...process.env, ANTHROPIC_API_KEY: KEY, ANTHROPIC_BASE_URL: api.url, MOR_ASK_MODEL: 'claude-test-model' };
     api.reply = answering({ answer: 'If Ben goes silent, nothing can change the deal (Agreements rule 47).', restsOn: ['Agreements rule 47'], notClaimed: [] });
@@ -88,7 +110,7 @@ test('mor-assess --ask: the deal read from the relay, its reading and quoted rul
     assert.equal(api.seen.length, 1);
     const body = api.seen[0].body;
     assert.equal(body.model, 'claude-test-model');
-    assert.match(body.messages[0].content, /<rule name="Agreements rule 47" quoted-from="spec\/MIR-agreements-draft-\d+\.md">\n#### Rule 47 /);
+    assert.match(body.messages[0].content, /<rule name="Agreements rule 47" quoted-from="spec\/MIR-agreements-draft-\d+\.md">\n#### Rule 47\. /);
     assert.match(body.messages[0].content, new RegExp(`${short(ben.id)} has not signed`));
     assert.match(body.messages[0].content, /<question>\nWhat if Ben goes silent\?\n<\/question>/);
     assert.match(out.stdout, /## Answer\nIf Ben goes silent/);

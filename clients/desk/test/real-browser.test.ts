@@ -344,7 +344,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   const card = wed.locator('#e-signing .proposal').first();
   await card.locator('h3', { hasText: 'Found a collective' }).waitFor({ timeout: 90_000 });
   const read = await card.innerText();
-  for (const h of ['What each party is bound to', 'Who decides what', 'Shares and fees', 'How it ends', 'Risks']) assert.ok(read.includes(h), h);
+  for (const h of ['What each party is bound to', 'Who decides what', 'Who owns what', 'How it ends', 'Risks']) assert.ok(read.includes(h), h);
   assert.match(await wed.locator('#pane .experimental').innerText(), /Even more experimental/);
   await shot(wed, 'web-proposal');
   await card.getByRole('button', { name: 'Sign it' }).click();

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { AskError, DEFAULT_MAX_TOKENS, DEFAULT_MODEL, KEY_FILE, READING, answerText, ask, findKey, material, readingText, redact, request, settings } from '../src/ask.ts';
 import { assess, type Flag } from '../src/assess.ts';
 import { SPEC, currentDraft, quoteRules, ruleText } from '../src/rules.ts';
-import { FREEZE, STUDIES, clean, names } from './deals.ts';
+import { FREEZE, STUDIES, clean, cleanPub, names } from './deals.ts';
 import { answering, failing, fakeApi, type Fake } from './fake-api.ts';
 
 const KEY = 'sk-ant-api03-FAKE-never-a-real-key-0123456789';
@@ -21,9 +21,9 @@ const REPO = fileURLToPath(new URL('../../../', import.meta.url));
 const ID = 'ab'.repeat(32);
 const S = { model: DEFAULT_MODEL, maxTokens: DEFAULT_MAX_TOKENS };
 
-/** The label deal of case study 08: no exit, no judge of forks, the split service's window. */
+/** The label deal of case study 08, a publication: no exit, an uncapped fee, partners first, the split service's window. */
 const label = STUDIES.find((d) => d.name === 'The label deal')!;
-const labelRead = () => assess(label.payload(), names);
+const labelRead = () => label.read();
 
 let api: Fake;
 before(async () => {
@@ -38,15 +38,15 @@ const scratch = () => mkdtempSync(join(tmpdir(), 'mor-ask-'));
 test('each cited rule is quoted exactly, from the newest draft of its MIR in spec/', () => {
   assert.equal(currentDraft('Agreements'), readdirSync(SPEC).filter((f) => /^MIR-agreements-draft-\d+\.md$/.test(f)).sort((a, b) => Number(b.match(/\d+/)![0]) - Number(a.match(/\d+/)![0]))[0]);
   const rules = quoteRules(labelRead().flags);
-  assert.deepEqual(rules.map((r) => r.label), ['Agreements rule 10', 'Agreements rule 32', 'Agreements rule 47', 'Agreements rule 89']);
+  assert.deepEqual(rules.map((r) => r.label), ['Agreements rule 10', 'Agreements rule 11', 'Agreements rule 22', 'Agreements rule 25', 'Agreements rule 32', 'Money rule 18', 'Money rule 21']);
   for (const r of rules) {
     const file = readFileSync(join(SPEC, r.source), 'utf8');
     assert.ok(file.includes(r.text), `${r.label}: word for word from ${r.source}`);
-    assert.match(r.text, new RegExp(`^#### Rule ${r.rule} \\(was [^)]+\\)\\. `), `${r.label}: from its heading`);
+    assert.match(r.text, new RegExp(`^#### Rule ${r.rule}[.( ]`), `${r.label}: from its heading`);
     assert.doesNotMatch(r.text.split('\n').slice(1).join('\n'), /^#{1,4} /m, `${r.label}: up to the next heading, no further`);
   }
-  // Rule 47 is long: it is quoted whole, its stated cost included.
-  assert.match(rules.find((r) => r.rule === 47)!.text, /one silent party blocks every change/);
+  // Rule 11 is long: it is quoted whole, its two stops included.
+  assert.match(rules.find((r) => r.rule === 11 && r.mir === 'Agreements')!.text, /Two stops, two different people/);
 });
 
 test('the newest draft is chosen by number, not by spelling; a missing rule stops the question', () => {
@@ -81,15 +81,15 @@ function numbersIn(rests: string): string[] {
 
 test('every rule a flag names in its words is among the rules it cites, and no other', () => {
   let flags = 0;
-  for (const d of [...FREEZE, ...STUDIES, clean]) {
-    for (const f of assess(d.payload(), names).flags) {
+  for (const d of [...FREEZE, ...STUDIES, clean, cleanPub]) {
+    for (const f of d.read().flags) {
       flags++;
       const cited = [...new Set(f.cites.map((c) => `${c.mir} rule ${c.rule}`))].sort();
       assert.deepEqual(cited, numbersIn(f.rests), `${d.name}: ${f.code}`);
       assert.doesNotThrow(() => quoteRules([f]), `${d.name}: ${f.code}: every cited rule is in the current drafts`);
     }
   }
-  assert.ok(flags > 40, `flags checked: ${flags}`);
+  assert.ok(flags > 30, `flags checked: ${flags}`);
 });
 
 // --- The request ------------------------------------------------------------
@@ -170,8 +170,8 @@ test('an answer: the request reaches the API with the key as its header only; th
   const m = material(ID, 'What happens if the band goes silent?', labelRead());
   api.seen = [];
   api.reply = answering({
-    answer: 'Neither party can be declared absent, so if the band goes silent no version can change the deal (Agreements rule 47). Not claimed: whether the label may stop paying.',
-    restsOn: ['Agreements rule 47', READING, 'Agreements rule 47'],
+    answer: 'No party can end the publication alone, so if the band goes silent it stands as it is (Agreements rule 11). Not claimed: whether the label may stop paying.',
+    restsOn: ['Agreements rule 11', READING, 'Agreements rule 11'],
     notClaimed: ['Whether the label may stop paying.'],
   });
   const a = await ask(m, KEY, S, { baseURL: api.url, maxRetries: 0 });
@@ -183,11 +183,11 @@ test('an answer: the request reaches the API with the key as its header only; th
   assert.deepEqual(seen.body, JSON.parse(JSON.stringify(request(m, S))), 'what is sent is the request, nothing added');
   assert.ok(!JSON.stringify(seen.body).includes(KEY), 'the key is not in the request body');
   for (const r of m.rules) assert.ok(seen.body.messages[0].content.includes(r.text), `${r.label} sent`);
-  assert.deepEqual(a.restsOn, ['Agreements rule 47', READING]);
+  assert.deepEqual(a.restsOn, ['Agreements rule 11', READING]);
   assert.deepEqual(a.notClaimed, ['Whether the label may stop paying.']);
   const out = answerText(m, a);
-  assert.match(out, /## Answer\nNeither party can be declared absent/);
-  assert.match(out, /## Rests on\n- Agreements rule 47 \(quoted from spec\/MIR-agreements-draft-\d+\.md\)\n- the tool’s reading/);
+  assert.match(out, /## Answer\nNo party can end the publication alone/);
+  assert.match(out, /## Rests on\n- Agreements rule 11 \(quoted from spec\/MIR-agreements-draft-\d+\.md\)\n- the tool’s reading/);
   assert.match(out, /## Not claimed\n- Whether the label may stop paying\./);
   assert.match(out, /does not advise signing or not signing/);
   assert.ok(!out.includes(KEY) && !JSON.stringify(a).includes(KEY));
