@@ -995,15 +995,19 @@ impl<'a> AgreementsView<'a> {
             if !self.valid(&x.id) || x.id == *act {
                 return false;
             }
+            // A later version cloning it relies on it only once it is itself
+            // complete, every party of it having signed it: a draft nobody
+            // else signed is nobody's reliance (rule 47; Fable's Q-A8).
             if self.is_agreements(x, types::TERMS) {
-                return Terms::decode(&x.inside.payload).is_ok_and(|t| t.parent == Some(*act));
+                return Terms::decode(&x.inside.payload).is_ok_and(|t| t.parent == Some(*act) && !t.parties.is_empty() && self.signers(&x.id, &t.parties).len() == t.parties.len());
             }
-            // A split relies on the version its receipt names in field 9
-            // (rule 12): the receipt itself, below, says so.
+            // A split relies on the version its service's receipt names in
+            // field 9 (rule 12): the receipt itself, signed by its payee, the
+            // split service, says so. A payer's claim naming a version is
+            // information, never reliance: the payer is no party.
             if x.inside.spec == self.mirs.money {
                 return match Fin::decode(x.inside.type_, &x.inside.payload) {
-                    Ok(Fin::Receipt(r)) => r.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
-                    Ok(Fin::Claim(c)) => c.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
+                    Ok(Fin::Receipt(r)) => self.author(x) == Some(r.payee) && r.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
                     _ => false,
                 };
             }

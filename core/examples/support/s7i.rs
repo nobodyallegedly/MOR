@@ -509,3 +509,28 @@ fn buyer_routes(out: &mut Out) {
         "The first service's forward names the second service as next payee; the swap's receipt of the onward payment names the first hop's receipt.",
         f2(&[(b1, c1_ptr), (b2x, sw_ptr)]), ask_route("route to", &b2x), json!({ "route": "broken", "hops": [hx(&b1), hx(&b2x)], "at": hx(&b2x), "agreement": hx(&pub1) }), None);
 }
+
+/// A self-hosted identity's homeless rotation (Identity rule 4; the
+/// homeless procedure, steps 4 and 5; section 11): it re-homes by a
+/// rotation counting on its own signatures; a homeless rotation there
+/// counts only with an escape endorsement.
+pub fn identity(out: &mut Out) {
+    let mut w = World::new();
+    let mut new = w.operator("a new home for a self-hosted identity");
+    let mut p = w.genesis("a self-hosted identity", vec![own_home()], None, None);
+    let (hr, mut p1) = w.rotate(&p, Rot { homeless: true, homes: Some(vec![home_of(&new)]), ..Default::default() });
+    w.receipt(&mut new, &p.id, &hr, 1);
+    let after = w.post(&mut p1, "posted after the homeless rotation");
+    let base = w.log.clone();
+    let rule = "Identity rule 4; the homeless procedure, step 4 (a self-hosted home is never gone); section 11";
+    out.case(&mut w, "a self-hosted identity's homeless rotation, receipted by its new home, no escape endorsement: pending", rule,
+        "Its old home is the identity itself, never gone: step 4 is never met, so the rotation does not count without an escape endorsement, and waits for one.",
+        Facts::default(), ask_status(&hr), json!("pending"), None);
+    out.case(&mut fresh(&base), "the same: an act bound to it, pending", rule,
+        "Everyday check 2: bound to a rotation that does not count yet.", Facts::default(), ask_status(&after), json!("pending"), None);
+    let mut w2 = fresh(&base);
+    w2.endorse(&mut p, &hr, None);
+    out.case(&mut w2, "the same rotation with the owner's escape endorsement: it counts, once the new home's receipt meets its rule", "Identity rule 4; section 11, \"The escape endorsement\"; step 5",
+        "The owner's escape endorsement, signed with the key bound before it, skips steps 3 and 4; the new home's receipt meets the home rule the rotation declares.",
+        Facts::default(), ask_status(&hr), json!("valid"), None);
+}

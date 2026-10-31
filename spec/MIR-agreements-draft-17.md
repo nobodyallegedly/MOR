@@ -1104,7 +1104,9 @@ Majorities, areas and tiers belong to collectives. Rules 62 to 66, 67, 68, 90 an
 - a split service's receipt naming it in field 9 (rule 12);
 - a split dividing by it (rule 20);
 - a keeper's record of it (rule 37);
-- a later version cloning it (rule 45).
+- a later version cloning it (rule 45), once that version is itself complete: a draft nobody else signed is nobody's reliance.
+
+The split service's receipt relies as the publication's party; a payer's claim naming a version in its field 9 is information, never reliance.
 
 *Checkable: the relying act names the version. Without it, a party who rotates and disowns its signature on a completed version would uncomplete it for everyone, the parent coming back into force under purchases and splits already made under the version.* A version nothing relies on yet is judged by its signatures as Identity judges them.
 

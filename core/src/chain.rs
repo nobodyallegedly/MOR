@@ -1388,13 +1388,18 @@ impl Verifier {
         // 1. Under the home rule in effect. A rotation that counts under the
         //    old home rule always beats a homeless rotation at the same
         //    position, final or not (rule 31; F92).
+        // A self-hosted home's own signature stands in for its receipt of
+        // a rotation, never of a homeless one: a self-hosted home is never
+        // gone (homeless procedure, step 4), so a homeless rotation there
+        // counts only through an escape endorsement (Identity rule 4).
+        let pool_old: Vec<&Cand> = pool.iter().copied().filter(|c| !c.homeless).collect();
         let t = self.tally(
             cx,
             id,
             n,
             ps,
             &cands,
-            &pool,
+            &pool_old,
             &|c| !abandoned.contains(c),
             dishonest,
         );

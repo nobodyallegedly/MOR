@@ -1136,6 +1136,7 @@ pub fn identity(out: &mut Out) {
     s7g_identity(out);
     scenario9::identity(out);
     s7g_development_identity(out);
+    s7i::identity(out);
 }
 
 pub fn text(out: &mut Out) {
@@ -3538,6 +3539,16 @@ fn s7g_agreements_b(out: &mut Out) {
     out.case(&mut w1, "a later complete version cloning a deal's version, then a signer's rotation disowning its signature on that version: the later version in force", "Agreements rule 47, \"What others relied on stands\": a later version cloning it (rule 45)",
         "Both parties signed version two, a clone of version one; Ada then rotates, disowning her signature act on version one. Version two relies on it, so version one keeps its completeness for everyone, the disowned signature shown as a dispute, and version two, complete on a complete parent, is in force.",
         Facts::default(), ask("version in force", &d), json!(hx(&v2)), None);
+    // A later version cloning it that only its drafter signed: a draft, which
+    // relies on nothing; the disowned signature uncompletes version one.
+    let (mut ada2, _, mut home2) = people.clone();
+    let mut w2 = replay(&base, &[]);
+    let v2d = clone_of(&mut w2, &mut ada2, v1, "Ada's draft of version two, Bram never signing.", &both);
+    sign(&mut w2, &mut ada2, &v2d);
+    rotate(&mut w2, &ada2, &mut home2);
+    out.case(&mut w2, "a later version cloning a deal's version, signed by its drafter alone, then a signer's rotation disowning its signature on that version: nothing relied on it, the founding in force", "Agreements rule 47, \"What others relied on stands\": a clone relies on a version only once it is itself complete",
+        "Ada drafts version two and signs it; Bram never does. A draft only one party signed is nobody's reliance: Ada's rotation disowns her signature on version one, which is judged by its signatures, so the founding stays in force.",
+        Facts::default(), ask("version in force", &d), json!(hx(&d)), None);
 
     // ---- Agreements 1036 with 1271 and 3611 (rule 35; settlement request, type 22): standing to start a judge's period.
     let mut w = World::new();

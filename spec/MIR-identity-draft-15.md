@@ -105,7 +105,7 @@ An owner who relies on a single home or an authoritative home SHOULD be told pla
 
 #### Rule 4. Self-hosting is a trust model
 
-A self-hosted identity is trusted on its own signatures: its rotation counts with no receipt and no first-held-wins. A thief holding its chain key can serve a rotation of its own, and a verifier that holds only that rotation at its position counts it, as at a single lax home.
+A self-hosted identity is trusted on its own signatures: its rotation counts with no receipt and no first-held-wins. A thief holding its chain key can serve a rotation of its own, and a verifier that holds only that rotation at its position counts it, as at a single lax home. **A self-hosted identity re-homes by a rotation that counts on its own signatures; a homeless rotation at a self-hosted identity counts only with an escape endorsement (section 11), and then only once the new homes' receipts meet the rule it declares** (the homeless procedure, step 5): its old home, the identity itself, is never gone (step 4).
 
 Two rotations served at one position of a self-hosted identity, by a thief and the owner, are a conflict nobody can settle: the position is contested for good, and the owner leaves it by the escape (section 11; rule 29's second exception).
 
