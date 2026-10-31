@@ -1,7 +1,7 @@
 // A post with a picture, end to end: a test identity posts a text with a
 // JPEG on a relay, and another client, knowing only the post's id and the
 // relay, fetches it, verifies the post and the picture through the signer's
-// identity chain and the publication's hashes, and shows it. Real homes and a
+// identity chain and the bake's hashes, and shows it. Real homes and a
 // real relay on local ports, run from the relay program of step 4.
 
 import { after, before, test } from 'node:test';
@@ -11,15 +11,16 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import jpegjs from 'jpeg-js';
-import { cborEncode, describeAct, lockMedia, unhex, workHash } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborEncode, describeAct, lockMedia, sha256, unhex, workHash } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { read } from '../../../modules/jpeg/src/jpeg.ts';
 import { strip as stripSound } from '../../../modules/audio/src/audio.ts';
 import { renderPage, renderPost } from '../src/html.ts';
-import { listPosts, post, readPost, soundBytes, withdraw, type ShownPicture, type ShownRecording } from '../src/post.ts';
-import { POST_SPECS, PUBLICATION, TEXT_ACT } from '../src/specs.ts';
+import { Judge, listPosts, post, readPost, soundBytes, withdraw, type ShownPicture, type ShownRecording } from '../src/post.ts';
+import { BAKE, POST_SPECS, RETIRED_WITHDRAWAL, TEXT_ACT } from '../src/specs.ts';
+import { putTag, tagsOf, withdrawTag } from '../src/tag.ts';
 
 const fixture = (name: string) =>
   new Uint8Array(readFileSync(new URL(`../../../modules/jpeg/test/fixtures/${name}`, import.meta.url)));
@@ -42,13 +43,14 @@ before(async () => {
   for (const a of other.chainActs()) await relayAt(relay.base).putAct(a);
 });
 
+// Every server stopped whatever the outcome: one that fails to stop does not keep the others running.
 after(async () => {
-  for (const r of [...homes, relay]) await r.stop();
+  for (const r of [...homes, relay]) await r?.stop().catch(() => undefined);
 });
 
 const pictureOf = (refs: unknown[]) => refs.find((r) => (r as ShownPicture).kind === 'picture') as ShownPicture;
 
-/** A publication made by hand, as another client might: for the cases this client must refuse or flag. */
+/** A bake made by hand, as another client might: for the cases this client must refuse or flag. */
 async function publishRaw(
   by: TestIdentity,
   bytes: Uint8Array,
@@ -63,7 +65,7 @@ async function publishRaw(
     [4, l.nonce],
   ]);
   if (opts.publicKey !== false) m.set(5, l.key);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, cborEncode(m), { public: true, relays: [relay.base] });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, cborEncode(m), { public: true, relays: [relay.base] });
   await relayAt(relay.base).putMedia(l.locked);
   return made.id;
 }
@@ -90,11 +92,11 @@ test('a test identity posts text with a picture, and another client shows it, ve
   assert.equal(got.text, 'Thank you for the shower…\nA test post.');
   assert.equal(got.refs.length, 1);
   const pic = pictureOf(got.refs);
-  assert.equal(pic.publication, r.picture.id);
+  assert.equal(pic.bake, r.picture.id);
+  assert.equal(pic.publication, r.picture.id, 'the same id under its name from before');
   assert.equal(pic.signer, author.id);
   assert.equal(pic.standing, 'valid');
   assert.equal(pic.problem, null);
-  assert.equal(pic.withdrawn, null);
   assert.ok(pic.bytes && pic.picture);
 
   // What arrived is the picture alone: no location, no camera, no preview, turned as the camera said.
@@ -176,22 +178,83 @@ test("a post showing someone else's picture shows it under that picture's signer
   assert.match(renderPost(got), /A picture by <code>[0-9a-f]{8}…[0-9a-f]{4}<\/code>, not by the poster\./);
 });
 
-test('a withdrawn picture is no longer shown; a withdrawal by anyone else changes nothing', async () => {
-  const r = await post(author, { text: 'Soon gone.', jpeg: fixture('cmyk.jpg'), relays: [relay.base] });
+// The premise changed (decided 28 October 2026; Envelopes rule 24, the
+// withdrawal retired): a bake is never withdrawn by the protocol. This test
+// used to withdraw the picture and see it hidden. Now an act of the retired
+// type 3, by its uploader or anyone, is invalid and changes nothing: the
+// picture stays shown wherever its bytes are, and stops being shown only
+// where homes and relays no longer hold its bytes, which is said.
+test('a bake is never withdrawn: the retired withdrawal is invalid and changes nothing; a picture is not shown only where its bytes are gone', async () => {
+  const r = await post(author, { text: 'Never gone by an act.', jpeg: fixture('cmyk.jpg'), relays: [relay.base] });
   assert.ok(pictureOf((await readPost(r.id, [relay.base])).refs).bytes);
 
-  await withdraw(other, r.picture!.id, [relay.base]);
-  const still = pictureOf((await readPost(r.id, [relay.base])).refs);
-  assert.ok(still.bytes, "another identity's withdrawal is no withdrawal");
+  // This client refuses to sign one, saying why, and signs nothing.
+  const before = (await relayAt(relay.base).feed({ signer: author.id })).items.length;
+  await assert.rejects(withdraw(author, r.picture!.id, [relay.base]), /A bake is never withdrawn by the protocol: its bytes stay where they were uploaded unless homes and relays drop them\. .*Nothing was signed\./);
+  assert.equal((await relayAt(relay.base).feed({ signer: author.id })).items.length, before, 'nothing signed');
 
-  const w = await withdraw(author, r.picture!.id, [relay.base]);
+  // Another client, careless, signs one anyway, by its uploader and by someone else: both invalid; the picture stays shown.
+  const judge = new Judge([relay.base], {});
+  for (const by of [author, other]) {
+    const w = await by.publish(POST_SPECS.envelopes, RETIRED_WITHDRAWAL, cborEncode(new Map()), { public: true, relays: [relay.base], objects: [[r.picture!.id, r.picture!.id]] });
+    assert.equal(await judge.standing(w.act, w.id, by.id), 'invalid', 'an act of type 3 is invalid (Envelopes rule 24)');
+  }
   const got = await readPost(r.id, [relay.base]);
   const pic = pictureOf(got.refs);
-  assert.equal(pic.withdrawn, w.id);
-  assert.equal(pic.bytes, null);
-  assert.equal(pic.problem, 'withdrawn by its signer');
-  assert.equal(got.standing, 'valid', 'the post itself stands');
-  assert.match(renderPost(got), /Picture not shown: withdrawn by its signer\./);
+  assert.ok(pic.bytes, 'still shown');
+  assert.equal(pic.problem, null);
+  assert.equal(got.standing, 'valid');
+
+  // Its bytes uploaded only to a relay that is gone (it dropped them): the post and the bake are still read elsewhere; the picture is not shown, and why is said.
+  const gone = await start('relay');
+  let p2;
+  try {
+    p2 = await post(author, { text: 'Uploaded to one relay only.', jpeg: fixture('cmyk.jpg'), relays: [gone.base] });
+  } finally {
+    await gone.stop();
+  }
+  for (const a of [p2.picture!.act, p2.act]) await relayAt(relay.base).putAct(a);
+  const lost = await readPost(p2.id, [relay.base]);
+  assert.equal(lost.standing, 'valid');
+  assert.equal(pictureOf(lost.refs).standing, 'valid', 'the bake stands');
+  assert.equal(pictureOf(lost.refs).problem, 'its bytes were not found');
+  assert.match(renderPost(lost), /Picture not shown: its bytes were not found\./);
+});
+
+// What can end is named by its layer (decided 28 October 2026): a price tag
+// on a bare bake is withdrawn by its signer, a version with no price (Money
+// rule 18). It replaces "withdrawn by its signer", which a bake no longer is.
+test('a price tag is withdrawn by its signer: a later version with no price; another identity’s tag on the bake is nobody’s offer; the picture is shown throughout', async () => {
+  const r = await post(author, { text: 'For sale, then not.', jpeg: fixture('cmyk.jpg'), relays: [relay.base] });
+  const bake = r.picture!.id;
+  const unit = sha256('a test unit');
+  const t1 = await putTag(author, { bake }, { price: { unit, value: 300 }, relays: [relay.base] });
+  assert.equal(t1.version, 1);
+  assert.equal(t1.payee, author.id);
+  const theirs = await putTag(other, { bake }, { price: { unit, value: 5 }, relays: [relay.base] });
+  let read = await tagsOf({ bake }, author.id, [relay.base]);
+  assert.equal(read.latest?.id, t1.id);
+  assert.deepEqual(read.latest?.price, { unit, value: 300 });
+
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  for (const a of [...author.chainActs(), ...other.chainActs(), r.picture!.act, t1.act, theirs.act]) v.add(a);
+  assert.equal(v.bakeUploader(bake), author.id, 'its uploader is its signer');
+  assert.equal(v.priceTag(t1.id), 'counts', 'the uploader’s tag counts on a bare bake');
+  assert.equal(v.priceTag(theirs.id), "nobody's offer", 'a tag by anyone else is nobody’s offer');
+
+  // Only its signer may withdraw it; this client refuses another's, signing nothing.
+  await assert.rejects(withdrawTag(other, read.latest!, [relay.base]), /signed by another identity/);
+  const w = await withdrawTag(author, read.latest!, [relay.base]);
+  assert.equal(w.version, 2);
+  assert.equal(w.price, null);
+  v.add(w.act);
+  assert.equal(v.status(w.id), 'valid', 'a later version naming [first, previous]');
+  read = await tagsOf({ bake }, author.id, [relay.base]);
+  assert.equal(read.latest?.id, w.id, 'the latest version counts');
+  assert.equal(read.latest?.price, null, 'withdrawn: no price');
+  await assert.rejects(withdrawTag(author, read.latest!, [relay.base]), /withdrawn already/);
+  // The bake is untouched: still shown.
+  assert.ok(pictureOf((await readPost(r.id, [relay.base])).refs).bytes);
 });
 
 test('a picture from a client that did not strip it is shown, and what it still carries is said', async () => {
@@ -309,9 +372,12 @@ test('a recording is stripped before it is locked, shown by reference, and its b
   assert.equal(played.sound.type, 'audio/mp4; codecs="mp4a.40.2"');
   const out = execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'show', r.id, '--relay', relay.base, '--out', join(mkdtempSync(join(tmpdir(), 'mor-post-')), 'post.html')], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
   assert.match(out, new RegExp(`recording ${rec.id}: ${rec.size} bytes, its bytes checked when played`));
-  // Withdrawn: no longer shown.
-  await withdraw(author, rec.id, [relay.base]);
-  assert.equal(recordingOf((await readPost(r.id, [relay.base])).refs).problem, 'withdrawn by its signer');
+  // The premise changed (Envelopes rule 24, the withdrawal retired): this
+  // used to withdraw the recording and see it hidden. A bake is never
+  // withdrawn: an act of the retired type 3 is invalid, and it stays shown.
+  const w = await author.publish(POST_SPECS.envelopes, RETIRED_WITHDRAWAL, cborEncode(new Map()), { public: true, relays: [relay.base], objects: [[rec.id, rec.id]] });
+  assert.equal(await new Judge([relay.base], {}).standing(w.act, w.id, author.id), 'invalid');
+  assert.equal(recordingOf((await readPost(r.id, [relay.base])).refs).problem, null, 'still shown');
 });
 
 test('a file the audio Module refuses is refused in plain words, and nothing is published', async () => {

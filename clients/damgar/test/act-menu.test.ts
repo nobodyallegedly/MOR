@@ -32,10 +32,14 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  await closeKishib();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+    await closeKishib();
+  } finally {
+    for (const h of [...(homes ?? []), relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 /** Anchor an act from Damgar's menu, in one step; the service's ticket; paid; the service's receipt. */

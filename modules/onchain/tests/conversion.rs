@@ -1,13 +1,13 @@
-//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`): a
-//! rail swap sold as a proven offer, with receipts per hop, offline.
+//! The conversion cMIP, draft 4 (`cmips/cmip-conversion-draft-4.md`): a
+//! rail swap sold as a proven delivery, with receipts per hop, offline.
 //! Lightning in (real BOLT 11 invoices signed by a test node key, each
 //! committing to its payment commitment, checked by the Lightning rail
 //! Module through the payment cMIP), on-chain out (a regtest chain built
 //! with rust-bitcoin, each onward payment checked by the on-chain rail
 //! Module on the chain followed, and placed by the Bitcoin clock Module).
 //!
-//! The route: Ana pays the conversion service over Lightning, following
-//! its standing offer; the service's receipt declares the forward its
+//! The route: Ana pays the conversion service over Lightning, paying the
+//! price tag of its publication; the service's receipt declares the forward its
 //! order promised; the service pays the forward on the chain to the next
 //! payee, whose receipt names the service's. Freeze suite, scenario 2,
 //! steps 4 (the route reads as one chain of receipts) and 4b (the
@@ -15,6 +15,14 @@
 //! agreement). End to end on regtest: `harness/tests/conversion.rs`.
 //!
 //! Test identities and regtest units only.
+//!
+//! *Premises moved (draft 4, round 8, F407): the Agreements standing offer
+//! is gone from the core. The service's offer is now a publication, a lone
+//! seller's, the service its own split service, selling the cMIP's terms in
+//! the access form, and a price tag naming it, paid to the service, its
+//! price the most one conversion takes in. Where a test followed the
+//! offer, it pays the tag; where it read the offer, it reads the
+//! publication and the tag.*
 
 #[path = "../../../core/tests/common/mod.rs"]
 mod common;
@@ -29,7 +37,7 @@ use mor_conversion::{acceptable, delivery_proof, judge, ordered, Checker, Hop, J
 use mor_core::act::{Object, Ref};
 use mor_core::agreements::{self, AgreementsView, Mirs, ProofChecker, ProofVerdict};
 use mor_core::hash::Hash;
-use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payer, Payload, PriceTag, Priced, Rail, Receipt, VaultEntry};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::chain::HeaderChain;
@@ -112,8 +120,8 @@ impl Held for Pointers {
 // ---------------------------------------------------------------- the story
 
 /// The conversion service, Ana who pays it, and the owners' split service
-/// it pays on to; the service's standing offer, held by a verifier; a
-/// regtest chain.
+/// it pays on to; the service's publication and price tag, held by a
+/// verifier; a regtest chain.
 struct Story {
     w: World,
     service: Hash,
@@ -151,14 +159,18 @@ impl Story {
         let service_pointer = w.add(&a);
         let a = w.everyday_act(&mut owners, mirs().money, fin::types::PAYEE_POINTER, Payload::PayeePointer(op.clone()).to_map(), None, None);
         let owners_pointer = w.add(&a);
-        // The service's standing offer: public, citing its latest pointer
-        // (Money rule 17's client conformance for an act that can pay its
-        // signer).
-        let standing = terms.standing_offer(sat(100_000), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 100, within 6 blocks.".into()));
-        let a = w.everyday_act_refs(&mut service, mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
-        let offer_id = w.add(&a);
-        let lo = agreements::Offer::decode(&w.v.get(&offer_id).unwrap().inside).expect("an offer in Agreements' format").offer;
-        let offer = Offer::read(offer_id, service.id, &lo).expect("a conversion offer");
+        // The service's publication, public, a lone seller's, the service
+        // its own split service; and its price tag, citing its latest
+        // pointer (Money rule 17's client conformance for an act that can
+        // pay its signer).
+        let p = terms.publication(service.id, h("a split cMIP"), &clock::reference(Network::Regtest), Some("Lightning in, Bitcoin regtest out, 1:1, a fee of 100, within 6 blocks.".into()));
+        let a = w.everyday_act(&mut service, mirs().agreements, agreements::types::PUBLICATION, p.to_map(), None, None);
+        let first = w.add(&a);
+        let tag = terms.price_tag(first, sat(100_000), service.id);
+        let a = w.everyday_act_refs(&mut service, mirs().money, fin::types::PRICE_TAG, Payload::PriceTag(tag.clone()).to_map(), None, None, Some(vec![Ref::Act(service_pointer)]));
+        let tag_id = w.add(&a);
+        let lp = agreements::Publication::decode(&w.v.get(&first).unwrap().inside).expect("a publication in Agreements' format").publication;
+        let offer = Offer::from_publication(first, service.id, &lp, tag_id, service.id, &tag).expect("a conversion offer");
         Story {
             service: service.id,
             node,
@@ -178,11 +190,11 @@ impl Story {
         self.chain.tip()
     }
 
-    /// Ana's payment of `paid` to the service, following its offer, and
+    /// Ana's payment of `paid` to the service, paying its price tag, and
     /// the order the service signs for it: the forward to the owners'
     /// split service, following its pointer, by `deadline`.
     fn order(&self, label: &str, paid: u64, quote: Option<(u64, u64)>, deadline: u64) -> (Commitment, Order) {
-        let c = Commitment { rail: mor_lightning::spec(), payee: self.service, amount: sat(paid), fulfils: self.offer.id, payer: Some(Payer::Identity(self.ana)), paid_to: PaidTo::Flow { pointer: self.service_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
+        let c = Commitment { rail: mor_lightning::spec(), payee: self.service, amount: sat(paid), fulfils: self.offer.tag, payer: Some(Payer::Identity(self.ana)), paid_to: PaidTo::Flow { pointer: self.service_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
         let out = self.offer.out(&c.amount, quote).unwrap_or(sat(paid));
         let order = Order { offer: self.offer.id, commitment: c.hash(), forward: Forward { next_payee: self.owners, amount: out, agreement: self.offer.id }, onward: self.owners_pointer, deadline, quote };
         (c, order)
@@ -276,8 +288,8 @@ fn valid(c: &Commitment) -> Payment {
 // ---------------------------------------------------------------- delivered: scenario 2, step 4
 
 /// Freeze suite, scenario 2, step 4 (the route): Ana pays 10,000 regtest
-/// satoshis over Lightning to the conversion service, following its
-/// standing offer; the order promises 9,900 on the chain to the owners'
+/// satoshis over Lightning to the conversion service, paying its
+/// publication's price tag; the order promises 9,900 on the chain to the owners'
 /// split service within 6 blocks. The service receipts the first hop with
 /// that forward, pays it on the chain, and the owners' receipt names the
 /// service's. The route reads as one chain of receipts (Money rule 24);
@@ -287,8 +299,11 @@ fn valid(c: &Commitment) -> Payment {
 #[test]
 fn a_rail_swap_lightning_in_onchain_out_delivered_by_its_deadline_is_proven() {
     let mut s = Story::new(swap_terms());
-    let lo = agreements::Offer::decode(&s.w.v.get(&s.offer.id).unwrap().inside).unwrap().offer;
-    assert!(matches!(lo.sold[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_conversion::spec()), "the access form: a proven offer");
+    let lp = agreements::Publication::decode(&s.w.v.get(&s.offer.id).unwrap().inside).unwrap().publication;
+    assert!(matches!(lp.sold.as_ref().unwrap()[0].class(), agreements::OfferClass::Proven { cmip, .. } if cmip == mor_conversion::spec()), "the access form: a proven delivery");
+    let view = AgreementsView::new(&s.w.v, mirs());
+    assert!(view.publication(&s.offer.id).unwrap().counts, "the publication counts");
+    assert_eq!(view.tag_under(&s.offer.tag).unwrap(), agreements::TagUnder::Counts { publication: s.offer.id, withdrawn: false }, "its price tag counts under it");
     let (c, order) = s.order("ana's swap", 10_000, None, s.now() + 6);
     assert_eq!(order.forward.amount, sat(9_900), "1:1, less the fee of 100");
     acceptable(&s.offer, &order, &c, s.now()).expect("ana's client accepts the order before paying");
@@ -433,9 +448,9 @@ fn the_services_receipt_contradicting_its_order_is_shown() {
 // ---------------------------------------------------------------- the order and the terms
 
 /// The order binds the forward before the money moves, and the payer's
-/// client checks it against the offer: the payment follows the offer, to
-/// the service, in its unit, at most its field 2; the forward is the
-/// terms' rate less the fee, under the offer; the deadline within the
+/// client checks it against the offer: the payment pays the price tag, to
+/// the service, in its unit, at most the tag's price; the forward is the
+/// terms' rate less the fee, under the publication; the deadline within the
 /// terms' blocks. A tip to the service's pointer buys no conversion.
 #[test]
 fn the_order_binds_the_forward_before_the_money_moves() {
@@ -479,19 +494,36 @@ fn a_quoted_rate_no_worse_than_the_floor() {
     assert!(acceptable(&s.offer, &order, &c, now).unwrap_err().contains("names its quote"));
 }
 
-/// Read as this cMIP's: a lone seller's offer selling exactly these terms,
-/// on its own time reference, paid to its signer.
+/// Read as this cMIP's: a lone seller's publication selling exactly these
+/// terms, on its time reference, the service its own split service, naming
+/// the cMIP for the conversion task; its price tag signed by the service
+/// and paid to it.
+///
+/// *Premises moved (draft 4): "a co-owners' offer" is now a publication
+/// naming an ownership agreement or a partner; "paid to another" a tag
+/// paying anyone but the service. New refusals: another split service, an
+/// ended publication, no conversion task, a withdrawn tag, a tag signed by
+/// someone else.*
 #[test]
-fn a_conversion_offer_is_a_lone_sellers_selling_these_terms() {
+fn a_conversion_offer_is_a_lone_sellers_publication_selling_these_terms() {
     let s = Story::new(swap_terms());
-    let good = swap_terms().standing_offer(sat(100_000), &clock::reference(Network::Regtest), None);
-    assert!(Offer::read(h("x"), s.service, &good).is_ok());
-    assert!(Offer::read(h("x"), s.service, &agreements::Offer { under: Some(h("a deal")), ..good.clone() }).is_err(), "co-owners' offer");
-    assert!(Offer::read(h("x"), s.service, &agreements::Offer { time: None, ..good.clone() }).is_err(), "no time reference");
-    assert!(Offer::read(h("x"), s.service, &agreements::Offer { paid: Some(agreements::Paid::Payee(h("someone else"))), ..good.clone() }).is_err(), "paid to another");
+    let good = swap_terms().publication(s.service, h("a split cMIP"), &clock::reference(Network::Regtest), None);
+    let tag = swap_terms().price_tag(h("x"), sat(100_000), s.service);
+    let read = |p: &agreements::Publication, t: &PriceTag| Offer::from_publication(h("x"), s.service, p, h("the tag"), s.service, t);
+    assert!(read(&good, &tag).is_ok());
+    assert!(read(&agreements::Publication { owners: Some(h("a deal")), ..good.clone() }, &tag).is_err(), "co-owners' publication");
+    assert!(read(&agreements::Publication { partners: vec![agreements::Partner { identity: h("a partner"), share: 10, label: None }], ..good.clone() }, &tag).is_err(), "with a partner");
+    assert!(read(&agreements::Publication { service: h("another split service"), ..good.clone() }, &tag).is_err(), "another split service");
+    assert!(read(&agreements::Publication { time: None, ..good.clone() }, &tag).is_err(), "no time reference");
+    assert!(read(&agreements::Publication { cmips: vec![], ..good.clone() }, &tag).is_err(), "no conversion task");
+    assert!(read(&agreements::Publication { sold: Some(vec![]), ..good.clone() }, &tag).is_err(), "ended");
+    assert!(read(&good, &PriceTag { payee: h("someone else"), ..tag.clone() }).is_err(), "paid to another");
+    assert!(read(&good, &PriceTag { price: None, ..tag.clone() }).is_err(), "a withdrawn tag");
+    assert!(read(&good, &PriceTag { priced: Priced::Publication(h("another")), ..tag.clone() }).is_err(), "a tag on another publication");
+    assert!(Offer::from_publication(h("x"), s.service, &good, h("the tag"), h("a stranger"), &tag).is_err(), "a tag signed by someone else");
     let mut two = good.clone();
-    two.sold.push(agreements::Sold::Vow(h("a vow")));
-    assert!(Offer::read(h("x"), s.service, &two).is_err(), "sells something else too");
+    two.sold.as_mut().unwrap().push(agreements::Sold::Vow(h("a vow")));
+    assert!(read(&two, &tag).is_err(), "sells something else too");
 }
 
 // ---------------------------------------------------------------- what the clock cannot place

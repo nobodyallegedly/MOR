@@ -13,7 +13,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
-import { closeAll, damgar, dub, start, type Relay } from './world.ts';
+import { closeAll, damgar, dub, start, type Relay, shows } from './world.ts';
 import { TestNode } from './node.ts';
 import { ACCEPTABLE, SPEC } from '../src/specs.ts';
 
@@ -31,10 +31,14 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  try {
+    await browser?.close().catch(() => undefined);
+    await closeAll();
+  } finally {
+    for (const r of [...(homes ?? []), relay]) await r?.stop().catch(() => undefined);
+  }
 });
 
 async function open(url: string, init?: string): Promise<{ context: BrowserContext; page: Page }> {
@@ -161,7 +165,7 @@ test('H92, H100, H117: the rail chosen first; the rails taken on the profile; an
   await pay.click();
   const ok = wp.locator('#status .k-note.k-done');
   await ok.waitFor({ timeout: 60_000 });
-  assert.match(await ok.innerText(), /says valid/);
+  await shows(ok, /says valid/);
   await wc.close();
   assert.deepEqual(problems, []);
 });

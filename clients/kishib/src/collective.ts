@@ -22,8 +22,8 @@
 //   3. Once exactly the threshold is in (no more), the starter's Kišib, in
 //      one sitting: rebuilds the chain key from the papers, checks it
 //      against the commitment the collective's chain holds, creates the next
-//      chain key and the new signing key, signs the rotation, deals the new
-//      shares (each sealed to its member's one-time key, signed as the
+//      chain key, signs the rotation (keyless: no signing key, no tip kept,
+//      Identity rotation check 4), deals the new shares (each sealed to its member's one-time key, signed as the
 //      founder, as at the founding; the starter's own, and any member's
 //      without a one-time key, shown here once), and overwrites the key.
 //      It keeps the signed bytes to send again, never the key.
@@ -46,7 +46,6 @@ import {
   lockMedia,
   makeRotation,
   newEncryptionSecret,
-  newSigningSecret,
   openMedia,
   openSealed,
   pickupTag,
@@ -55,7 +54,6 @@ import {
   rebuildChainKeyFromPaper,
   sha256,
   shareOnPaper,
-  signingPublic,
   unhex,
   verifyShare,
   workHash,
@@ -64,8 +62,8 @@ import {
 import { TestIdentity, sealFor } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { actsBy, checkWarned, planLines, type LinePlan } from '../../genesis/src/lines.ts';
-import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { actsBy } from '../../genesis/src/lines.ts';
+import { toWords } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, carriedKey, servedChain } from '../../dub/src/carryin.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -75,7 +73,10 @@ import { readChanges } from '../../collective/src/explain.ts';
 import { readIdentity, recordWords, type Read } from './read.ts';
 import { paperOf, seedOf, wipe, Refused, type Paper } from './words.ts';
 import { grouped, type Line, type Review, type Section, type Sitting } from './shapes.ts';
-import { addresses, holding, put, FORGOTTEN_SAY, NEW_WORDS_SAY } from './common.ts';
+import { addresses, holding, put, FORGOTTEN_SAY } from './common.ts';
+
+/** Said where a collective's signing key's words are asked for: there are none. */
+export const NO_WORDS_SAY = 'A collective has no signing key (Identity rule 1): its rotation installs none, so there are no words to show. Its members act for it with their own keys, naming it.';
 
 /** How long a waiting one-time key lives (F337: "an hour, say"; stands). */
 export const EXPIRY = 60 * 60;
@@ -96,7 +97,7 @@ export const DEALER_SAY: Line[] = [
   { text: 'If this device were compromised, or the person holding it dishonest, they could keep the new key and later act alone, past the threshold the members agreed. Nothing can prove a device forgot a key (F97). Founding has the same moment, on the founder’s device.', tone: 'bad' },
   { text: 'So choose the cleanest device available: the app rather than the web page; ideally a device used for nothing else. The air-gapped way (an offline device, the bytes carried by QR code) is the gold standard, and comes later.', tone: 'warn' },
   { text: 'The practices Kišib follows: the key alive only in memory, the rotation signed at once, the new shares dealt, the key overwritten, never written anywhere; the signed bytes kept to send again, not the key; exactly the threshold of papers collected, no more; the waiting one-time key expiring after an hour, shares sealed to it unopenable after; rebuild, rotate and deal in one sitting.' },
-  { text: 'Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); the new signing key’s words go to whoever holds that key (Edubba); every member’s Dub and Edubba show the rotation.' },
+  { text: 'Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); every member’s Dub and Edubba show the rotation. There are no signing-key words to carry: a collective has no signing key, and its members act for it with their own keys, naming it.' },
 ];
 
 export interface CollectiveDeps {
@@ -245,13 +246,17 @@ interface Change {
   proposer: string;
   members: string[];
   threshold: number;
-  holder: string;
   signers: string[];
   signatures: Record<string, string>;
   missing: string[];
 }
 
-/** The request members consent to: everything the rotation says, but the keys it creates (as the air-gapped Module's request hash leaves out the next commitment). */
+/**
+ * The request members consent to: everything the rotation says, but the keys
+ * it creates (as the air-gapped Module's request hash leaves out the next
+ * commitment). `kept` is always empty: a collective's rotation keeps no tip
+ * (Identity rotation check 4); a request naming one is refused when read.
+ */
 interface Request {
   collective: string;
   previous: string;
@@ -359,8 +364,21 @@ async function readCollective(id: string, address: string[], via: Via): Promise<
   const t = readTerms(agreementPayload, AGREEMENTS_SPECS) as { parties: string[]; grammar?: { chainKey: { form: string; threshold?: number; members?: string[] } } };
   const ck = t.grammar?.chainKey;
   if (!ck || ck.form !== 'shares' || !ck.threshold) throw new Error('Its agreement does not split the chain key into members’ shares: Kišib rotates only collectives whose key is on their members’ paper.');
+  // A collective publishes no routes (it signs no everyday act, Identity rule 1): its acts are its members', found
+  // where each member publishes (their homes and routes), beside the collective's own homes.
+  for (const p of t.parties) {
+    try {
+      const l = await lookUp(p, rd.places, via);
+      for (const h of [...l.resolution.homes.map((x) => x.hint), ...l.routes.routes.flatMap((x) => x.hints)]) if (!rd.places.includes(h)) rd.places.push(h);
+    } catch {
+      // that member not found: their acts are looked for where the others are
+    }
+  }
   const latest = r.links[r.links.length - 1];
-  return { rd, agreement, agreementPayload, holders: ck.members ?? t.parties, threshold: ck.threshold, scheme: r.chainKeyScheme!, index: latest.position, commit: r.chainKeyCommit!, latest };
+  // A keyless collective (Identity rule 1): its genesis was signed by chain key 0, revealed, and committed key 1, dealt to the members; its rotation at position p reveals key p. Any other identity's genesis commits key 0.
+  const keyless = !r.signingKey;
+  if (!keyless) throw new Error(`${short(id)} declares a signing key: it is not a collective as MOR now makes them (a collective has no signing key, Identity rule 1), and Kišib rotates it no more from members’ papers.`);
+  return { rd, agreement, agreementPayload, holders: ck.members ?? t.parties, threshold: ck.threshold, scheme: r.chainKeyScheme!, index: latest.position + 1, commit: r.chainKeyCommit!, latest };
 }
 
 /** Whether `a` is `signer`'s Agreements signature naming `act`. */
@@ -398,7 +416,7 @@ async function changesOf(c: ReadCollective, via: Via): Promise<Change[]> {
         continue;
       }
       if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) continue;
-      let t: { parties: string[]; parent?: string; mark?: { signers: string[] }[]; grammar?: { signing: { holder?: string }; chainKey: { threshold?: number } } };
+      let t: { parties: string[]; parent?: string; mark?: { signers: string[] }[]; grammar?: { chainKey: { threshold?: number } } };
       try {
         t = readTerms(d.payload, AGREEMENTS_SPECS) as typeof t;
       } catch {
@@ -419,7 +437,6 @@ async function changesOf(c: ReadCollective, via: Via): Promise<Change[]> {
         proposer: d.signer!,
         members: t.parties,
         threshold: t.grammar?.chainKey.threshold ?? c.threshold,
-        holder: t.grammar?.signing.holder ?? t.parties[0],
         signers,
         signatures,
         missing: signers.filter((s) => !signatures[s]),
@@ -476,7 +493,6 @@ function contributionBytes(fingerprint: string, p: Paper): Uint8Array {
 export class CollectiveSitting {
   private c: ReadCollective | null = null;
   private change: Change | null = null;
-  private plan: LinePlan | null = null;
   private room = false;
   private request: Request | null = null;
   private fingerprint = '';
@@ -488,15 +504,13 @@ export class CollectiveSitting {
   private lines: Line[] = [];
   private bytes: Uint8Array | null = null;
   private act: string | null = null;
-  private signing: Uint8Array | null = null;
-  private positions: number[] | undefined;
   /** New shares to show here once, by holder (the starter's own, and members without a one-time key). */
   private toShow = new Map<string, { share: Uint8Array; x: number; shown: boolean; fingerprint: string }>();
   private sharePositions = new Map<string, number[]>();
 
   constructor(readonly deps: CollectiveDeps) {}
 
-  /** Whether nothing is left to do: the shares shown, the words typed back, or the request expired. */
+  /** Whether nothing is left to do: it counts and every new share is shown, or the request expired. (No signing key's words: a collective has none.) */
   over(): boolean {
     return this.stage === 'expired' || (this.stage === 'done' && [...this.toShow.values()].every((s) => s.shown));
   }
@@ -525,7 +539,6 @@ export class CollectiveSitting {
           }
         : {}),
       ...(this.toShow.size ? { shares: [...this.toShow.entries()].map(([holder, s]) => ({ holder, x: s.x, shown: s.shown })) } : {}),
-      ...(this.positions ? { positions: this.positions } : {}),
     };
   }
 
@@ -539,9 +552,8 @@ export class CollectiveSitting {
   }
 
   wipe(): void {
-    wipe(this.oneTime, this.signing, ...this.papers.map((p) => p.value), ...[...this.toShow.values()].map((s) => s.share));
+    wipe(this.oneTime, ...this.papers.map((p) => p.value), ...[...this.toShow.values()].map((s) => s.share));
     this.oneTime = null;
-    this.signing = null;
     this.papers = [];
     this.toShow.clear();
     if (this.founder) this.founder.f.signingSecret = '';
@@ -570,7 +582,7 @@ export class CollectiveSitting {
       this.change = ch;
       if (ch.missing.length) blocking.push(`The member change ${actForm(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short).join(', ')}.`);
       if (changes.filter((x) => !x.missing.length).length > 1) blocking.push('Several member changes are fully signed under the same agreement: Kišib cannot tell which one the members mean. Say which in Edubba.');
-      this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
+      void a.leaveOut;
       const names = (m: string) => (m === id ? 'the collective' : short(m));
       const shown: Line[] = [];
       if (!this.room) {
@@ -605,7 +617,8 @@ export class CollectiveSitting {
             collective: id,
             previous: c.latest.act,
             position: c.latest.position + 1,
-            kept: this.plan.kept.map((k) => [k.act, k.position, k.summary]),
+            // Identity rotation check 4: a collective's rotation keeps no tip.
+            kept: [],
             clone: ch.clone,
             signatures: ch.signers.map((s) => ch.signatures[s]).filter(Boolean),
             members: ch.members,
@@ -622,12 +635,12 @@ export class CollectiveSitting {
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith('Its lines')),
         { heading: 'The member change it completes', lines: [{ text: `Clone ${actForm(ch.clone)}, proposed by ${short(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short(s)} ${ch.signatures[s] ? '✓' : '(not yet)'}`).join(', ')}.`, tone: ch.missing.length ? 'warn' : 'ok' }] },
         { heading: 'The papers', lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members’ paper shares rebuild the chain key (its agreement’s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: 'In the same room: the others type theirs into this Kišib, one after another. Nothing is sent.' } : { text: `Remote: each other member gives theirs in their own Kišib, sealed to a one-time key made here, within an hour (until ${when(this.request!.expires)} by this device’s clock; MOR has no clock).` }] },
-        { heading: 'Its lines of acts: what the rotation keeps (Identity rule 35)', lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
+        { heading: 'Its acts: no line to keep (Identity rotation check 4)', lines: [{ text: 'A collective signs no act of its own: each member acts for it with their own key, naming it, on their own lines. So its rotation keeps no line, and nothing it did is lost by this change of keys.' }] },
         { heading: 'The new shares', lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] },
       ];
       const signs = [
         `Kišib signs one rotation of the collective ${short(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
-        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective’s lines, installs a new signing key (its words shown once, for ${short(ch.holder)}, who holds it) and commits a new chain key.`,
+        `The rotation declares the member change (clone ${actForm(ch.clone)}) with its ${ch.signers.length} signatures and commits a new chain key. It installs no signing key and keeps no line: a collective has neither (Identity rule 1, rotation check 4).`,
         this.room ? 'Nothing is signed with anyone’s signing key.' : `As ${short(this.founder!.id)}: one message in each member’s thread announcing the rotation, and, after it, each new share sealed to its member’s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`,
       ];
       const s0 = founderSeed;
@@ -639,7 +652,7 @@ export class CollectiveSitting {
         summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
         sections,
         signs,
-        warning: this.plan.warning,
+        warning: null,
         blocking,
       };
     } catch (e) {
@@ -783,7 +796,6 @@ export class CollectiveSitting {
     if (this.stage === 'waiting' && this.request && this.deps.now() > this.request.expires) this.expire();
     if (this.stage !== 'waiting') throw new Error('No rotation waits here.');
     if (this.papers.length !== c.threshold) throw new Error(`${this.papers.length} of ${c.threshold} shares are in: exactly ${c.threshold} are needed.`);
-    checkWarned(this.plan!, this.plan!.warning ?? undefined);
     let rebuilt: { scheme: number; seeds: Uint8Array; commit: string };
     try {
       rebuilt = rebuildChainKeyFromPaper({ seedModule: 'words', scheme: c.scheme, index: c.index, commit: c.commit, papers: this.papers.map((p) => ({ x: p.x, value: p.value })) }) as typeof rebuilt;
@@ -799,9 +811,9 @@ export class CollectiveSitting {
     for (const s of dealt.shares) if ((verifyShare(s) as { fingerprint: string }).fingerprint !== dealt.fingerprint) throw new Error('A new share does not lie on its dealing: nothing was signed.');
     const check = rebuildChainKey(dealt.shares.slice(0, ch.threshold)) as { commit: string };
     if (check.commit !== dealt.commit) throw new Error('The new shares do not rebuild the new key: nothing was signed.');
-    const signing = newSigningSecret();
     let bytes: Uint8Array;
     try {
+      // Identity rotation check 4: a collective's rotation carries no signing key and keeps no tip.
       bytes = makeRotation({
         identitySpec: SPECS.identity,
         identity: c.rd.id,
@@ -809,10 +821,9 @@ export class CollectiveSitting {
         position: c.latest.position + 1,
         chainKeyScheme: rebuilt.scheme,
         chainKeySeeds: rebuilt.seeds,
-        newSigningPublic: signingPublic(signing),
         nextChainKeyScheme: dealt.scheme,
         nextChainKeyCommit: dealt.commit,
-        kept: this.plan!.kept,
+        kept: [],
         declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: ch.clone, signatures: ch.signers.map((s) => ch.signatures[s]) }],
       });
     } finally {
@@ -823,7 +834,6 @@ export class CollectiveSitting {
     this.oneTime = null;
     this.bytes = bytes;
     this.act = actId(bytes);
-    this.signing = signing;
     const lines: Line[] = [{ text: `Signed: rotation ${this.act}. The chain key is overwritten; the papers are forgotten; the one-time key is destroyed.`, tone: 'ok' }];
     const chain = orderedChain(c.rd);
     for (const h of c.rd.look.resolution.homes) lines.push(await put(h.hint, bytes, chain));
@@ -849,7 +859,7 @@ export class CollectiveSitting {
     if (this.founder) this.founder.f.signingSecret = '';
     this.founder = null;
     lines.push({ text: `The new dealing’s fingerprint, for every member to compare: ${grouped(dealt.fingerprint.slice(0, 32))}.` });
-    lines.push({ text: 'Keep Kišib open until the new shares and the collective’s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members’ Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.', tone: 'warn' });
+    lines.push({ text: 'Keep Kišib open until the new shares are shown. Closed now, what is not yet shown is lost (the shares sealed to members’ Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.', tone: 'warn' });
     this.lines = lines;
     this.stage = 'sent';
     await this.refresh();
@@ -875,33 +885,14 @@ export class CollectiveSitting {
     } catch {
       counts = false;
     }
-    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text)), counts ? { text: 'It counts: the homes’ receipts are in. The member change is in force.', tone: 'ok' } : { text: 'It does not count yet: send it again (the same bytes).', tone: 'warn' }];
-    if (counts) this.stage = 'counts';
+    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text)), counts ? { text: 'It counts: the homes’ receipts are in. The member change is in force. No signing key’s words follow: a collective has none.', tone: 'ok' } : { text: 'It does not count yet: send it again (the same bytes).', tone: 'warn' }];
+    // Nothing more to sign or show but the new shares: a collective has no signing key whose words would follow.
+    if (counts) this.stage = 'done';
   }
 
-  showWords(): { words: string[]; say: string[]; holder?: string } {
-    if (!this.signing) throw new Error('No new signing key is held here.');
-    if (this.stage === 'sent' || this.stage === 'waiting') throw new Error('Not yet: the collective’s new words are shown once the homes’ receipts are in.');
-    this.stage = 'counts';
-    this.positions = undefined;
-    return { words: toWords(this.signing), holder: this.change!.holder, say: [`These are the collective’s new signing key’s words, for ${short(this.change!.holder)}, who holds that key under the agreement: carry them to Edubba (the collective’s page, “take the new words”).`, ...NEW_WORDS_SAY.slice(1)] };
-  }
-
-  written(): void {
-    if (!this.signing || this.stage !== 'counts') throw new Error('No words are shown.');
-    this.positions = threePositions((n) => crypto.getRandomValues(new Uint8Array(1))[0] % n);
-    this.stage = 'shown';
-  }
-
-  typed(t: string[]): void {
-    if (!this.signing || this.stage !== 'shown' || !this.positions) throw new Error('No words are asked back.');
-    if (!typedBack(toWords(this.signing), this.positions, t)) throw new Error('Not the words asked for. Check the paper: they are shown again with “Show them again”.');
-    wipe(this.signing);
-    this.signing = null;
-    this.bytes = null;
-    this.positions = undefined;
-    this.stage = 'done';
-    this.lines = [...this.lines, { text: 'The collective’s new signing key is forgotten here.', tone: 'ok' }];
+  /** A collective has no signing key (Identity rule 1): no words to show, write or type back. */
+  showWords(): never {
+    throw new Error(NO_WORDS_SAY);
   }
 
   shareShow(holder: string): { x: number; words: string[]; fingerprint: string; say: string[] } {
@@ -943,12 +934,13 @@ export class CollectiveSitting {
     if (q.collective !== id) throw new Error('This request is for another collective.');
     if (now > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
     if (q.previous !== c.latest.act) throw new Error('The collective’s keys changed since this request was made: it is stale, and its rotation could never count.');
+    if (q.kept.length) throw new Error('This request asks the rotation to keep a line of acts: a collective’s rotation keeps none (Identity rotation check 4), so it could never count. Nothing is signed.');
     const change = (await changesOf(c, via)).find((x) => x.clone === q.clone) ?? null;
     const names = (m: string) => (m === id ? 'the collective' : short(m));
     const sections: Section[] = [
       { heading: 'The rotation you are asked to give your share to', lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter’s message, character by character.`, tone: 'warn' }, { text: `It expires at ${when(q.expires)} (this device’s clock).` }] },
       { heading: 'The member change it completes', lines: change ? [{ text: `Clone ${actForm(q.clone)}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${actForm(q.clone)}, not found here: Kišib cannot read it back to you. Do not give your share unless you know it.`, tone: 'bad' }] },
-      { heading: 'What it keeps and creates', lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? '' : 's'} of the collective’s acts.` }, { text: `A new chain key, created on the starter’s device and dealt to ${q.members.length} members (${q.members.map(short).join(', ')}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
+      { heading: 'What it creates', lines: [{ text: 'No signing key and no line kept: a collective has neither (Identity rule 1, rotation check 4); its members act for it with their own keys.' }, { text: `A new chain key, created on the starter’s device and dealt to ${q.members.length} members (${q.members.map(short).join(', ')}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
       { heading: 'What the starter’s device will hold (F337)', lines: DEALER_SAY.slice(0, 2) },
     ];
     return { q, c, sections, change };

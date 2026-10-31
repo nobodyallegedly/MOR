@@ -1,218 +1,28 @@
-// Members' own keys (F353, decided by Nobody, allegedly, 18 and 19 October
-// 2026; Agreements draft 16, rule 73; the member keys cMIP, draft 1).
+// A member acting for a collective (Agreements rules 56 to 60, the
+// redesign; decided by Nobody, allegedly, 29 October 2026, F402).
 //
-// When a member signs a collective's founding, or a member change's clone,
-// their app makes a key of their own and names its public half in that
-// signature (signature field 1). The founding or clone is its grant, the
-// signature its naming and acceptance; it counts once the founding or clone
-// is complete, within the areas it gives the member, each act it signs
-// counted as that member's signature there (rule 60). The private half is
-// left as a private act sealed to the member themself, at their homes (the
-// member keys cMIP): any of their apps holding their identity opens it
-// (Dub, Edubba, Damgar, Ummia, on the Mac or the web). It stays the same
-// through the member's own change of keys; Kišib seals it again to the new
-// encryption key then. *Stated cost:* the key sits encrypted at the member's
-// homes.
+// A collective has no signing key, and its members have no member keys:
+// the member keys of F353 (signature field 1, the member keys cMIP) are
+// gone. A member acts for the collective with their own key, the act naming
+// the collective in `objects`, its identity as chain, citing the decision
+// it acts under (the collective's latest record, grant or revocation, else
+// its latest chain link); Agreements count it under the rule of the layer it
+// falls in, or of the finer area within it (rule 60). Another member meets
+// a rule of two with an ordinary signature act naming it (rule 6).
 //
 // Nothing here uses Node: the web clients use it as they are.
 
-import { leaveAtHomes, ownActs } from '../../genesis/src/private.ts';
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, makeEveryday, openSealed, pickupTag, readTerms, sha256, unhex, withGrantLimits, xwingPublic } from '../../genesis/src/core.ts';
-import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, readTerms, unhex, withGrantLimits } from '../../genesis/src/core.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { chainOf, lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, FOUNDING_AGREEMENT, REPO_SPECS } from '../../repo/src/specs.ts';
-import { allBy, makeGrantKey } from './grant.ts';
+import { allBy } from './grant.ts';
 import { negotiate } from '../../repo/src/proposals.ts';
 
-/** The member keys cMIP, draft 1 (`cmips/cmip-member-keys-draft-1.md`): a test value until publication. */
-export const MEMBER_KEYS_SPEC = sha256('Member keys cMIP, draft 1, test value until publication');
-
-/** Its one act type: a member key, sealed to its holder. */
-export const MEMBER_KEY = 0;
-
-/** A member key as its holder's apps read it. */
-export interface MemberKey {
-  /** The sealed act holding it. */
-  act: string;
-  /** The founding or clone its holder signed, naming it. */
-  terms: string;
-  /** That signature act: what acts made with it name as their binding. */
-  signature: string;
-  public: [number, Uint8Array];
-  secret: Uint8Array;
-  /** Its place in the holder's sequence: the latest key is the one in force. */
-  position: number;
-}
-
-/** A fresh member key: made by the member's app as it signs (scheme 1, as a grant key). */
-export const makeMemberKey = makeGrantKey;
-
-export function memberKeyPayload(k: { terms: string; signature: string; public: [number, Uint8Array]; secret: Uint8Array }): Uint8Array {
-  return cborEncode(
-    new Map<number, unknown>([
-      [0, unhex(k.terms)],
-      [1, unhex(k.signature)],
-      [2, [k.public[0], k.public[1]]],
-      [3, k.secret],
-    ]),
-  );
-}
-
-function readPayload(p: Uint8Array): Omit<MemberKey, 'act' | 'position'> | null {
-  try {
-    const m = cborDecode(p) as Map<number, unknown>;
-    if (!(m instanceof Map) || [...m.keys()].some((k) => ![0, 1, 2, 3].includes(k))) return null;
-    const [t, s, pub, sec] = [m.get(0), m.get(1), m.get(2) as unknown[], m.get(3)];
-    if (!(t instanceof Uint8Array) || t.length !== 32 || !(s instanceof Uint8Array) || s.length !== 32) return null;
-    if (!Array.isArray(pub) || typeof pub[0] !== 'number' || !(pub[1] instanceof Uint8Array) || !(sec instanceof Uint8Array)) return null;
-    return { terms: hex(t), signature: hex(s), public: [pub[0], pub[1]], secret: sec };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Seal a member key to its holder (the member keys cMIP, 2): a private act
- * of theirs, `to` themself, sealed to their current encryption key and left
- * at each of their homes. Returns the act's id.
- */
-export async function sealMemberKey(me: TestIdentity, k: { terms: string; signature: string; public: [number, Uint8Array]; secret: Uint8Array }, save: () => Promise<void> | void): Promise<string> {
-  const homes = me.f.homes.map((h) => h.hint);
-  const look = await lookUp(me.id, homes, me.via);
-  // The public half is enough to seal: an identity used through Kišib's runner holds no secret here, and Kišib, letting this app's identity open, reads it back.
-  if (!look.encryptionKey || !me.f.encryption.some((e) => (e.secret ? hex(xwingPublic(unhex(e.secret))) : e.public) === hex(look.encryptionKey!))) {
-    throw new Error('The encryption key this identity publishes is not one this app holds: your member key cannot be sealed to you. Your signature stands; the key stays in this app only.');
-  }
-  let made: { act: Uint8Array; id: string; key: Uint8Array };
-  try {
-    made = await me.signNow(MEMBER_KEYS_SPEC, MEMBER_KEY, memberKeyPayload(k), { public: false, to: [me.id] });
-  } finally {
-    await save();
-  }
-  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
-  let left = 0;
-  for (const h of homes) {
-    try {
-      await relayAt(h, me.via).putSealed(sealed);
-      left++;
-    } catch {
-      // that home is away
-    }
-  }
-  // Its locked act beside it (H80's question 2): the latest act of this app's line, which Kišib must find at the homes.
-  await leaveAtHomes(me, made, { sealed: left > 0 });
-  if (!left) throw new Error('No home took your member key. Your signature stands; the key stays in this app only until it is sent again.');
-  return made.id;
-}
-
-/**
- * Every member key sealed to `identity` at its homes, opened with the
- * encryption keys an app holds (newest last, by position). Judged with every
- * act of the identity its apps can read (H80's question 2): after a change
- * of keys, a member key counts only where a reader can follow its line to
- * the latest act the change kept, so the line's other acts are read too.
- */
-export async function readMemberKeys(identity: string, secrets: Uint8Array[], homes: string[], via: Via = {}): Promise<MemberKey[]> {
-  const out = new Map<string, MemberKey>();
-  if (!secrets.length) return [];
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  let l: Awaited<ReturnType<typeof lookUp>>;
-  try {
-    l = await lookUp(identity, homes, via, v);
-  } catch {
-    return [];
-  }
-  const at = [...new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const x of await ownActs(identity, secrets, [...new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
-    try {
-      if (x.key) l.verifier.addWithKey(x.act, x.key);
-      else l.verifier.add(x.act);
-    } catch {
-      // malformed: proves nothing
-    }
-  }
-  for (const h of at) {
-    let after: number | undefined;
-    try {
-      for (;;) {
-        const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== 'sealed') continue;
-          type Opened = { act: Uint8Array; key?: Uint8Array; described: { id: string; signer?: string; public: boolean; spec?: string; type?: number; position?: number; payload?: Uint8Array } };
-          let o = null as Opened | null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s) as Opened;
-              break;
-            } catch {
-              // the next key
-            }
-          }
-          const d = o?.described;
-          if (!o || !d || out.has(d.id) || d.public || d.signer !== identity || d.spec !== MEMBER_KEYS_SPEC || d.type !== MEMBER_KEY || !d.payload) continue;
-          if (o.key) l.verifier.addWithKey(o.act, o.key);
-          else l.verifier.add(o.act);
-          // Valid under Identity, or void by a later change of keys that kept it (F57): the key itself is unchanged.
-          const st = l.verifier.status(d.id);
-          if (st !== 'valid' && st !== 'disputed') continue;
-          const x = readPayload(d.payload);
-          if (x) out.set(d.id, { ...x, act: d.id, position: d.position ?? 0 });
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch {
-      // that home is away
-    }
-  }
-  return [...out.values()].sort((a, b) => a.position - b.position);
-}
-
-/**
- * Kišib's part (F353): after the member's own change of keys, every member
- * key sealed to them is sealed again to their new encryption key, the same
- * act, so their apps holding only the new key still open it. Every other act
- * of theirs sealed to themselves is sealed again too (H80's question 2):
- * their apps follow their lines through them. Returns how many member keys
- * were sealed again.
- */
-export async function resealMemberKeys(identity: string, oldSecrets: Uint8Array[], newKey: Uint8Array, homes: string[], via: Via = {}): Promise<number> {
-  let n = 0;
-  // Addressed to the identity, and left under its old keys' pickup tags (`leaveAtHomes`): each sealed again the same way.
-  const queries: { q: { to?: string; pickup?: string }; me?: string }[] = [{ q: { to: identity }, me: identity }, ...oldSecrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
-  for (const h of homes) {
-    for (const { q, me } of queries) {
-      let after: number | undefined;
-      try {
-        for (;;) {
-          const page = await relayAt(h, via).feed({ ...q, after });
-          for (const it of page.items) {
-            if (it.kind !== 'sealed') continue;
-            for (const s of oldSecrets) {
-              try {
-                const o = openSealed(it.item, me, s) as { act: Uint8Array; key?: Uint8Array; described: { spec?: string; type?: number; signer?: string } };
-                if (o.described.signer !== identity) break;
-                if (me) await relayAt(h, via).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
-                else await relayAt(h, via).putSealed(sealFor(o.act, o.key, [{ key: newKey }]), [pickupTag(newKey)]);
-                if (o.described.spec === MEMBER_KEYS_SPEC && o.described.type === MEMBER_KEY) n++;
-                break;
-              } catch {
-                // the next key
-              }
-            }
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-        // that home is away
-      }
-    }
-  }
-  return n;
-}
+/** The decisions on a collective's chain (Agreements rule 58): grant, revocation, record. */
+const DECISIONS: number[] = [AGREEMENTS_TYPES.grant, AGREEMENTS_TYPES.revocation, AGREEMENTS_TYPES.record];
 
 /** The founding agreement a collective's genesis declares (key 4, Agreements' kind 0), and its chain's counted links, read from its homes. */
 async function foundingOf(collective: string, hints: string[], via: Via): Promise<{ founding: string; links: string[] }> {
@@ -228,97 +38,58 @@ async function foundingOf(collective: string, hints: string[], via: Via): Promis
   throw new Error('The collective’s genesis declares no founding agreement.');
 }
 
-/** The terms an act's lineage starts from: its founding. */
-async function rootOf(terms: string, hints: string[], via: Via): Promise<string | null> {
-  let cur = terms;
-  for (let i = 0; i < 64; i++) {
-    let a: Uint8Array | null = null;
-    for (const h of hints) {
-      a = await relayAt(h, via).getAct(cur).catch(() => null);
-      if (a) break;
-    }
-    if (!a) return null;
-    const d = describeAct(a) as { payload?: Uint8Array; spec?: string; type?: number };
-    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) return null;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS) as { parent: string | null };
-    if (!t.parent) return cur;
-    cur = t.parent;
-  }
-  return null;
-}
-
-/** The member key a member's app holds for `collective`: their latest whose founding or clone is that collective's. */
-export async function memberKeyFor(keys: MemberKey[], collective: string, hints: string[], via: Via = {}): Promise<MemberKey | null> {
-  const { founding } = await foundingOf(collective, hints, via);
-  for (const k of [...keys].reverse()) if ((await rootOf(k.terms, hints, via)) === founding) return k;
-  return null;
-}
-
 /**
  * Where a member's act for the collective stands on its chain (rule 58): the
- * decision it acts under, the collective's latest (its latest record under
- * its latest key, else that key's link), and the strand of this member key
- * (the acts already bound to its signature, in order).
+ * decision it acts under, the collective's latest (followed from its latest
+ * chain link through each decision citing the one before), read from what
+ * its members published. `strand` is kept for callers that pass it along:
+ * a member's acts are on their own line, so it starts empty.
  */
-export async function chainFor(collective: string, k: MemberKey, hints: string[], via: Via = {}): Promise<{ decision: string; strand: string[] }> {
+export async function chainFor(collective: string, hints: string[], via: Via = {}): Promise<{ decision: string; strand: string[] }> {
   const { links } = await foundingOf(collective, hints, via);
-  const latest = links[links.length - 1];
-  let decision = latest;
-  let best = -1;
-  const strand: { id: string; position: number }[] = [];
-  for (const a of await allBy(collective, hints, via)) {
-    const d = describeAct(a) as { id: string; binding?: string; spec?: string; type?: number; position?: number };
-    if (d.binding === latest && d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.record && (d.position ?? 0) > best) {
-      best = d.position ?? 0;
-      decision = d.id;
-    }
-    if (d.binding === k.signature && !strand.some((x) => x.id === d.id)) strand.push({ id: d.id, position: d.position ?? 0 });
+  const { acts } = await collectiveVerifier(collective, hints, via);
+  const cites = new Map<string, string[]>();
+  for (const a of acts) {
+    const d = describeAct(a) as { id: string; spec?: string; type?: number; objects?: [string, string][] };
+    if (d.spec !== REPO_SPECS.agreements || !DECISIONS.includes(d.type ?? -1)) continue;
+    for (const [chain, cited] of d.objects ?? []) if (chain === collective) cites.set(cited, [...(cites.get(cited) ?? []), d.id]);
   }
-  return { decision, strand: strand.sort((a, b) => a.position - b.position).map((x) => x.id) };
+  let decision = links[links.length - 1];
+  for (let i = 0; i < 1024; i++) {
+    const next = cites.get(decision);
+    if (!next?.length) break;
+    decision = next[next.length - 1];
+  }
+  return { decision, strand: [] };
 }
 
 /**
- * An act of the collective signed with a member's key (F353): its signer
- * the collective, its binding the member's signature naming the key, citing
- * the collective's latest decision (rule 58; for a text, its one object is
- * the version that named the key, Text rule 14), on the key's own strand.
+ * An act for the collective made by a member with their own key (rule 58):
+ * its signer the member, naming the collective and citing its latest
+ * decision after the entries the act's type defines (for a text, its one
+ * object, Text rule 14). Signed by the member's app, or by Kišib's runner
+ * where the app holds no key.
  */
-export function signAsMember(
+export async function signAsMember(
   collective: string,
-  k: MemberKey,
+  me: TestIdentity,
   at: { decision: string; strand: string[] },
   a: { spec: string; type: number; payload: Uint8Array; public: boolean; to?: string[]; objects?: [string, string][]; refs?: (string | [string, string])[] },
-): { act: Uint8Array; id: string; key: Uint8Array } {
-  const made = makeEveryday({
-    signingSecret: k.secret,
-    signer: collective,
-    binding: k.signature,
-    spec: a.spec,
-    type: a.type,
-    payload: a.payload,
-    sequence: at.strand,
+): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+  const objects: [string, string][] = a.spec === MIRS.text && a.type === 0 ? [[collective, at.decision]] : [...(a.objects ?? []), [collective, at.decision]];
+  const made = await me.signNow(a.spec, a.type, a.payload, {
     public: a.public,
-    to: a.to?.length ? a.to : undefined,
-    // A text act carries exactly one object (Text rule 14): for a member
-    // key, the founding or clone that named the key, the version that is
-    // its grant, which Agreements reads as the decision it acts under
-    // (Agreements rules 58 and 73). Every other act cites the latest decision.
-    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...(a.objects ?? []), [collective, at.decision]],
-    refs: a.refs?.length ? a.refs : undefined,
-  }) as { act: Uint8Array; id: string; key: Uint8Array };
+    ...(a.to?.length ? { to: a.to } : {}),
+    objects,
+    ...(a.refs?.length ? { refs: a.refs as never } : {}),
+  });
   at.strand.push(made.id);
   return made;
 }
 
-/** A signature act of the collective, made with a member's key, naming `act`: the second key an area of two asks for (rule 60, F353). */
-export function cosignAsMember(collective: string, k: MemberKey, at: { decision: string; strand: string[] }, act: string): { act: Uint8Array; id: string; key: Uint8Array } {
-  return signAsMember(collective, k, at, {
-    spec: REPO_SPECS.agreements,
-    type: AGREEMENTS_TYPES.signature,
-    payload: cborEncode(new Map<number, unknown>([[0, unhex(act)]])),
-    public: true,
-    objects: [[act, act]],
-  });
+/** A member's signature act naming `act`, with their own key: the second signer a rule of two asks for (rules 6, 60). */
+export async function cosignAsMember(me: TestIdentity, act: string): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+  return me.signNow(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, cborEncode(new Map<number, unknown>([[0, unhex(act)]])), { public: true, objects: [[act, act]] });
 }
 
 /** Publish acts at places; returns where they were taken. */
@@ -335,25 +106,28 @@ export async function publishAt(acts: Uint8Array[], places: string[], via: Via =
   return ok;
 }
 
-/** Agreements' answer for an act of a collective (`agreementsConsent`), with each area's count: who signed, who with their own key (F353), the limits' verdict. */
+/** Agreements' answer for an act of a collective (`agreementsConsent`), with each area's or layer's count: who signed, the limits' verdict. */
 export interface ConsentRead {
   kind: string;
   agreement?: string | null;
   reason?: string | null;
   met: boolean;
-  areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; byKey: string[]; limits?: string | null; met: boolean }[];
+  areas: { area: number; name: string; frozen: boolean; voices: string[]; needed: number; signers: string[]; limits?: string | null; met: boolean }[];
 }
 
 /**
  * A verifier holding what a collective's relays and homes hold, as anyone
- * reads them: its chain and acts, the terms of its agreement chain, its
- * parties' acts (their signatures, resignations), and `acts`.
+ * reads them: its chain, the terms of its agreement chain, its parties'
+ * acts (their acts for it, signatures, resignations: a collective signs
+ * none itself), and `acts`; with every act it took.
  */
-export async function collectiveVerifier(collective: string, hints: string[], via: Via = {}, acts: string[] = []): Promise<{ v: Verifier; founding: string; parties: string[] }> {
+export async function collectiveVerifier(collective: string, hints: string[], via: Via = {}, acts: string[] = []): Promise<{ v: Verifier; founding: string; parties: string[]; acts: Uint8Array[] }> {
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const held: Uint8Array[] = [];
   const add = (a: Uint8Array) => {
     try {
       v.add(a);
+      held.push(a);
     } catch {
       // private, or held already
     }
@@ -406,7 +180,7 @@ export async function collectiveVerifier(collective: string, hints: string[], vi
       }
     }
   }
-  return { v, founding, parties: [...parties] };
+  return { v, founding, parties: [...parties], acts: held };
 }
 
 /** The agreement in force for a collective, who left, and the resignations its parties published (registered or not: rule 70, F187). */
@@ -423,25 +197,24 @@ export async function collectiveNow(collective: string, hints: string[], via: Vi
 }
 
 /**
- * Sign an act of the collective with this member's own key for it, publish
- * it where the collective's acts are, and ask the other holders of the area
- * reaching it for their key where it needs more than one: each sent a
- * negotiation message naming the act and the collective, sealed to them, as
- * Edubba sends a release to sign (F353). Their apps (Dub's Signing tab,
- * Edubba's To sign) sign it with their own keys.
+ * Make an act for the collective with this member's own key, publish it
+ * where the collective's acts are, and ask the other members the layer's
+ * or area's rule needs for their signature: each sent a negotiation message
+ * naming the act and the collective, sealed to them, as Edubba sends a
+ * release to sign. Their apps (Dub's Signing tab, Edubba's To sign) sign it
+ * with their own keys.
  */
 export async function signAndAsk(
   me: TestIdentity,
   collective: string,
-  key: MemberKey,
   act: { spec: string; type: number; payload: Uint8Array },
   ask: string[],
   text: string,
   hints: string[],
   via: Via = {},
 ): Promise<{ act: string; places: string[]; asked: string[]; notAsked: string[] }> {
-  const at = await chainFor(collective, key, hints, via);
-  const made = signAsMember(collective, key, at, { ...act, public: true });
+  const at = await chainFor(collective, hints, via);
+  const made = await signAsMember(collective, me, at, { ...act, public: true });
   const places = await publishAt([made.act], hints, via);
   if (!places.length) throw new Error('No relay took the act: nothing counts. Try again.');
   const asked: string[] = [];
@@ -475,8 +248,9 @@ export interface CollectiveChoice {
 /**
  * A collective's payee pointer in force, as Agreements judge it (Money
  * draft 10, rule 7, F358, decided by Nobody, allegedly, 19 October 2026):
- * signed with the member keys of its area reaching Money type 0, it is
- * scoped and counts where that area's holders and threshold are met. A
+ * made by a member with their own key, naming the collective, it counts
+ * where the rule of the Money layer, or of a finer area reaching payee
+ * pointers, is met (Agreements rule 60). A
  * pointer moves no amount, so the grant limits cMIP (draft 2, 2.2) finds
  * each within an area's cap: stated so for every pointer the collective's
  * places hold. With `pay`, where a payer pays this amount (`agreementsChoose`).
@@ -492,9 +266,9 @@ export async function collectivePointer(
   const { v, founding } = await collectiveVerifier(collective, places, via).catch(() => ({ v: null, founding: null }));
   if (!v || !founding) return null;
   const pointers: [string, boolean][] = [];
-  for (const a of await allBy(collective, places, via)) {
-    const d = describeAct(a) as { id: string; spec?: string; type?: number };
-    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+  for (const a of (await collectiveVerifier(collective, places, via)).acts) {
+    const d = describeAct(a) as { id: string; spec?: string; type?: number; objects?: [string, string][] };
+    if (d.spec === MIRS.money && d.type === 0 && d.objects?.some(([c]) => c === collective)) pointers.push([d.id, true]);
   }
   const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
   const p = v.agreementsPointer(specs, collective) as { act: string | null; version: number; why: string | null };
@@ -531,21 +305,26 @@ export async function collectivePlaces(collective: string, hints: string[], via:
   }
 }
 
-/** The layer of an act, as Agreements read it from its spec (Agreements, "Layer"): Envelopes and Text 1, Money 2, Agreements 3, Development 4. */
-const LAYER_OF: Record<string, number> = { [MIRS.text]: 1, [MIRS.envelopes]: 1, [MIRS.money]: 2, [MIRS.agreements]: 3, [MIRS.development]: 4 };
+/** The layer of an act, as Agreements read it from its spec (MICS, "Structure"): Text 1, Envelopes 2, Money 3, Agreements 4, Development 5. */
+const LAYER_OF: Record<string, number> = { [MIRS.text]: 1, [MIRS.envelopes]: 2, [MIRS.money]: 3, [MIRS.agreements]: 4, [MIRS.development]: 5 };
+const LAYER_NAME: Record<number, string> = { 1: 'Text', 2: 'Envelopes', 3: 'Money', 4: 'Agreements', 5: 'Development' };
 
-/** An area of a collective's agreement in force, as an app shows it. */
+/** An area of a collective's agreement in force, or a layer's rule read as one (its lane), as an app shows it. */
 export interface AreaHere {
   id: number;
   name: string;
   holders: string[];
   number: number;
+  /** Where it is a layer's rule (field 19), not a finer area: that layer. */
+  layer?: number;
 }
 
 /**
- * The area of a collective's agreement in force reaching an act of `spec`
- * and `type` (rule 60: a whole layer, or that kind of act); null where none
- * does, or the agreement is not read. With the agreement's id.
+ * Who acts for the collective on an act of `spec` and `type` (rule 60): the
+ * finer area of its agreement in force reaching that kind of act, else the
+ * rule of the act's layer, read as an area (its holders the parties the rule
+ * counts among, its number what it asks). Null where the agreement is not
+ * read. With the agreement's id.
  */
 export async function areaReaching(collective: string, places: string[], kind: { spec: string; type: number }, via: Via = {}): Promise<{ agreement: string | null; area: AreaHere | null }> {
   const now = await collectiveNow(collective, places, via);
@@ -555,9 +334,21 @@ export async function areaReaching(collective: string, places: string[], kind: {
     if (!a) continue;
     const d = describeAct(a) as { payload?: Uint8Array };
     if (!d.payload) break;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS) as { areas: { id: number; name: string; holders: string[]; threshold: number; kinds: { form: string; layer?: number | null; spec?: string | null; type?: number | null }[] }[] };
-    const x = t.areas.find((r) => r.kinds.some((k) => (k.form === 'layer' && k.layer === LAYER_OF[kind.spec]) || (k.spec === kind.spec && k.type === kind.type)));
-    return { agreement: now.agreement, area: x ? { id: x.id, name: x.name, holders: x.holders, number: x.threshold } : null };
+    type RuleRead = { form: string; threshold?: number | null; named?: string[] | null };
+    const t = readTerms(d.payload, AGREEMENTS_SPECS) as {
+      parties: string[];
+      layers: [number, RuleRead][];
+      areas: { id: number; name: string; holders: string[]; threshold: number; kinds: { form: string; spec?: string | null; type?: number | null }[] }[];
+    };
+    const x = t.areas.find((r) => r.kinds.some((k) => k.spec === kind.spec && k.type === kind.type));
+    if (x) return { agreement: now.agreement, area: { id: x.id, name: x.name, holders: x.holders, number: x.threshold } };
+    const layer = LAYER_OF[kind.spec];
+    const r = t.layers.find(([l]) => l === layer)?.[1];
+    if (!r) return { agreement: now.agreement, area: null };
+    const voices = t.parties.filter((p) => !now.departed.includes(p));
+    const holders = r.form === 'named' ? (r.named ?? []) : voices;
+    const number = r.form === 'threshold' ? (r.threshold ?? 1) : holders.length;
+    return { agreement: now.agreement, area: { id: -layer, name: `the ${LAYER_NAME[layer]} layer`, holders, number, layer } };
   }
   return { agreement: now.agreement, area: null };
 }
@@ -579,27 +370,21 @@ export async function termsAt(agreement: string, places: string[], via: Via = {}
 }
 
 /**
- * The split service an agreement names (terms field 14; the money messages
- * cMIP, draft 4, 4.4, F357): in a collective, the grantee of its one grant;
- * in a deal, the grantee of the grant `payee` gave (one per payee). Null
- * where it names none, or the grant is not found.
+ * The split service of a publication (Agreements type 6, field 3) and its
+ * backups (field 11): the publication carries them now; terms fields 14 and
+ * 29 are withdrawn. Null where the publication is not found.
  */
-export async function splitServiceOf(agreement: string, payee: string, places: string[], via: Via = {}): Promise<{ service: string; grant: string } | null> {
-  const t = (await termsAt(agreement, places, via)) as { splitGrant?: string | null; payeeGrants?: string[] | null } | null;
-  if (!t) return null;
-  const grants = t.splitGrant ? [t.splitGrant] : (t.payeeGrants ?? []);
-  for (const g of grants) {
-    for (const h of places) {
-      const a = await relayAt(h, via).getAct(g).catch(() => null);
-      if (!a) continue;
-      const d = describeAct(a) as { signer?: string; payload?: Uint8Array };
-      if (!d.payload) break;
-      // In a deal, each payee's own grant; in a collective, the collective's one.
-      if (!t.splitGrant && d.signer !== payee) break;
-      const grantee = (cborDecode(d.payload) as Map<number, unknown>).get(0);
-      if (grantee instanceof Uint8Array) return { service: hex(grantee), grant: g };
-      break;
-    }
+export async function splitServiceOf(publication: string, places: string[], via: Via = {}): Promise<{ service: string; backups: string[] } | null> {
+  for (const h of places) {
+    const a = await relayAt(h, via).getAct(publication).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
+    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.publication || !d.payload) return null;
+    const m = cborDecode(d.payload) as Map<number, unknown>;
+    const service = m.get(3);
+    if (!(service instanceof Uint8Array)) return null;
+    const backups = ((m.get(11) as Uint8Array[] | undefined) ?? []).filter((x) => x instanceof Uint8Array).map(hex);
+    return { service: hex(service), backups };
   }
   return null;
 }

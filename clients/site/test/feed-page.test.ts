@@ -39,6 +39,12 @@ let browser: Browser;
 let gateway: Gateway;
 let base: string;
 const running: Running[] = [];
+/** Start a home or relay, kept for `after` at once: stopped whatever happens next (CI). */
+const up = async (role: 'home' | 'relay') => {
+  const r = await start(role);
+  running.push(r);
+  return r;
+};
 let nobody: TestIdentity;
 let machine: TestIdentity;
 let out1: Running;
@@ -50,10 +56,9 @@ const ids: Record<string, string> = {};
 
 before(async () => {
   execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
-  [home1, home2] = [await start('home'), await start('home')];
-  const site = await start('relay');
-  [out1, out2] = [await start('relay'), await start('relay')];
-  running.push(home1, home2, site, out1, out2);
+  [home1, home2] = [await up('home'), await up('home')];
+  const site = await up('relay');
+  [out1, out2] = [await up('relay'), await up('relay')];
 
   // Each on its own home; each posts and receives at its own relay.
   nobody = TestIdentity.create({ homes: [home1.home] });

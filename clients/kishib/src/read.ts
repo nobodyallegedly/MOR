@@ -23,9 +23,9 @@ export interface Served {
   bytes: Uint8Array;
   position: number;
   previous: string;
-  /** The new signing key it installs, and that key's fingerprint as the air-gapped Module writes it. */
-  signingKey: string;
-  signingFingerprint: string;
+  /** The new signing key it installs, and that key's fingerprint as the air-gapped Module writes it; null for a keyless collective's rotation (Identity rotation check 4). */
+  signingKey: string | null;
+  signingFingerprint: string | null;
   /** The chain key it reveals, by its commitment. */
   reveals: string;
   homeless: boolean;
@@ -69,17 +69,17 @@ export function served(id: string, bytes: Uint8Array, identitySpec: string): Ser
   }
   if (d.signer !== id || d.spec !== identitySpec || d.type !== IDENTITY_TYPES.rotation || !d.payload) return null;
   const m = cborDecode(d.payload) as Map<number, unknown>;
-  const key = m.get(2) as unknown[];
+  const key = m.get(2) as unknown[] | null | undefined;
   const commit = m.get(3) as unknown[];
   const succ = m.get(9);
-  const signingKey = hex(key[1] as Uint8Array);
+  const signingKey = Array.isArray(key) ? hex(key[1] as Uint8Array) : null;
   return {
     id: d.id,
     bytes,
     position: Number(m.get(1)),
     previous: hex(m.get(0) as Uint8Array),
     signingKey,
-    signingFingerprint: fingerprint(1, key[1] as Uint8Array),
+    signingFingerprint: Array.isArray(key) ? fingerprint(1, key[1] as Uint8Array) : null,
     reveals: hex(commit[1] as Uint8Array),
     homeless: m.get(11) === true,
     successor: succ === undefined ? undefined : succ === null ? null : hex((succ as unknown[])[1] as Uint8Array),
@@ -136,6 +136,21 @@ export async function readIdentity(id: string, address: string[], via: Via, iden
   for (const b of chainActs.values()) {
     const s = served(id, b, identitySpec);
     if (s && s.position === latest.position + 1 && s.previous === latest.act) next.push(s);
+  }
+  // A homeless rotation that does not count: the old homes are handed it again, and any objection one gives back is
+  // held, so the verdict is the core's (Identity rule 49, S7h-4): a live old home's objection voids a person's homeless
+  // rotation that no escape endorsement backs.
+  const oldHomes = (r2.homes ?? []).map((x) => x.hint);
+  for (const s of next) {
+    if (!s.homeless) continue;
+    for (const hint of oldHomes) {
+      try {
+        const o = (await relayAt(hint, via).putAct(s.bytes)).objection;
+        if (o) look.verifier.add(o);
+      } catch {
+        // that home did not answer, or held nothing to give back: silence proves nothing
+      }
+    }
   }
   const binding = bindingOf(look, chainActs);
   const lines = linesOf({ identity: id, binding, own: [], acts });
@@ -206,10 +221,23 @@ export function recordWords(rd: Read): { heading: string; lines: Line[] }[] {
     return { text: `${what}: act ${actForm(l.act)}${how}; ${n} receipt${n === 1 ? '' : 's'} held.`, tone: 'ok' as const };
   });
   if (r.stop === 'contested') chain.push({ text: `Contested at position ${r.links.length}: two rotations revealing one chain key are served there, and no rule settles them. Until it ends, no change of its keys counts.`, tone: 'bad' });
-  if (r.stop === 'pending' || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes’ receipts: ${r.waiting.join(', ') || 'one rotation'}.`, tone: 'warn' });
+  // A void rotation waits for nothing: said once, below, as void.
+  const isVoid = (x: string) => {
+    try {
+      return rd.look.verifier.status(x) === 'void';
+    } catch {
+      return false;
+    }
+  };
+  const waiting = r.waiting.filter((x) => !isVoid(x));
+  if ((r.stop === 'pending' && !r.waiting.some(isVoid)) || waiting.length) chain.push({ text: `A change of its keys waits for its homes’ receipts: ${waiting.join(', ') || 'one rotation'}.`, tone: 'warn' });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
-    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, installing the signing key ${s.signingFingerprint}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
+    if (!counted && s.homeless && isVoid(s.id)) {
+      chain.push({ text: `Void: the homeless change of its keys at position ${s.position}, act ${actForm(s.id)}. A home of its old set, still alive, objected to it, and no escape endorsement signed with its signing key backs it (Identity rule 49): it can never count.`, tone: 'bad' });
+      continue;
+    }
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, ${s.signingFingerprint ? `installing the signing key ${s.signingFingerprint}` : 'installing no signing key (a collective’s)'}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
   }
   out.push({ heading: 'Its chain and receipts', lines: chain });
   const succ = rd.look.verifier.succession(rd.id) as { state: string; successor?: string; confirmation?: string };

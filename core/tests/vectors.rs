@@ -317,6 +317,11 @@ fn verdict_vectors() {
             let got = match ask["question"].as_str().unwrap() {
                 "status" | "verdict, implementing the MIRs only" if refused.contains(&h(&ask["act"])) => json!("invalid"),
                 "status" => json!(name(v.status(&h(&ask["act"])))),
+                "price tag" => json!(match v.price_tag(&h(&ask["act"])).map(|(_, c)| c) {
+                    Some(mor_core::chain::TagCount::Counts) => "counts",
+                    Some(mor_core::chain::TagCount::Nobodys(_)) => "nobody's offer",
+                    Some(mor_core::chain::TagCount::Unknown(_)) | None => "unknown",
+                }),
                 "verdict, implementing the MIRs only" => {
                     let id = h(&ask["act"]);
                     let mir = [mirs.identity, mirs.envelopes, mirs.text, mirs.money, mirs.agreements, mirs.development].contains(&v.get(&id).unwrap().inside.spec);
@@ -412,7 +417,7 @@ fn verdict_vectors() {
                 "liveness" => json!(with_facts(&v, &mirs, facts).liveness(&h(&ask["act"])).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" })),
                 // Whether terms are invalid against their parent and lineage (a false mark...).
                 "agreement invalid" => json!(match with_facts(&v, &mirs, facts).agreement(&h(&ask["act"])).map(|a| a.invalid.is_some()) {
-                    Ok(true) => "invalid",
+                    Ok(true) | Err(mor_core::agreements::AgreementsError::Check(_) | mor_core::agreements::AgreementsError::Shape(_)) => "invalid",
                     Ok(false) => "not invalid",
                     Err(_) => "unknown",
                 }),
@@ -464,6 +469,21 @@ fn verdict_vectors() {
                     mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
                     mor_core::chain::SpecClaim::Unknown => "unknown",
                 }),
+                "transfer" => with_facts(&v, &mirs, facts)
+                    .transfer(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| json!({ "effective": e.effective, "wrong_receipts": e.wrong_receipts.iter().map(hex::encode).collect::<Vec<_>>() })),
+                "split" => with_facts(&v, &mirs, facts).split(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hex::encode(x.holder)).collect();
+                    m.sort();
+                    m.dedup();
+                    json!({ "mismatched": m })
+                }),
+                "record" => with_facts(&v, &mirs, facts)
+                    .record(&h(&ask["collective"]), &h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(hex::encode) })),
+                "owed back by" => with_facts(&v, &mirs, facts)
+                    .owed_back_by(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -489,7 +509,8 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 327);
+    let total: usize = f["cases"].as_object().unwrap().values().map(|v| v.as_array().unwrap().len()).sum();
+    assert_eq!(n, total, "every case is judged");
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

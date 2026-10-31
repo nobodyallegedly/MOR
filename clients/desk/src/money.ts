@@ -23,7 +23,7 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { anchoringBatch, anchoringLeaf, anchoringReadOffer, anchoringReadPublication, anchoringReadTicket, batchAnchor, batchAnchorCheck, describeAct, hex, merkleBranch, randomBytes } from '../../genesis/src/core.ts';
+import { anchoringBatch, anchoringLeaf, anchoringReadPublication, anchoringReadTicket, batchAnchor, batchAnchorCheck, describeAct, hex, merkleBranch, randomBytes } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readId } from '../../genesis/src/forms.ts';
@@ -31,6 +31,7 @@ import { sendDraft } from '../../damgar/src/messages.ts';
 import { SPEC } from '../../damgar/src/specs.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';
 import type { ChainSource } from '../../damgar/src/chain.ts';
+import { offers as anchorOffers, tagFor, type Offer as AnchorOffer } from '../../ummia/src/anchor.ts';
 import type { Line } from '../../collective/src/explain.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Real } from './real.ts';
@@ -149,30 +150,10 @@ export class EdubbaMoney {
     return out;
   }
 
-  /** A service's standing offers under the anchoring cMIP, read from its public acts. */
-  async offers(service: string): Promise<{ act: string; tiers: { price: number; blocks: number }[]; unit: string; network: number | null; words: string | null }[]> {
-    const id = readId(service);
+  /** A service's offers under the anchoring cMIP (draft 7): its publications, each with a price tag per tier (the reader Ummia and Damgar share). */
+  async offers(service: string): Promise<AnchorOffer[]> {
     const s = this.store.settings();
-    const l = await lookUp(id, [...s.relays, ...s.homes.map((h) => h.hint)], this.via);
-    const places = [...new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...s.relays])];
-    const out = new Map<string, { act: string; tiers: { price: number; blocks: number }[]; unit: string; network: number | null; words: string | null }>();
-    for (const h of places) {
-      try {
-        for (const it of (await relayAt(h, this.via).feed({ signer: id })).items) {
-          if (it.kind !== 'act') continue;
-          try {
-            const o = anchoringReadOffer(it.item) as { id: string; tiers: { price: number; blocks: number }[]; unit: string; network: number | null; words: string | null };
-            l.verifier.add(it.item);
-            if (l.verifier.status(o.id) === 'valid') out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
-          } catch {
-            // not an anchoring offer
-          }
-        }
-      } catch {
-        // that place is away
-      }
-    }
-    return [...out.values()];
+    return anchorOffers(readId(service), [...s.relays, ...s.homes.map((h) => h.hint)], this.via);
   }
 
   /**
@@ -194,7 +175,7 @@ export class EdubbaMoney {
       const blind = new Uint8Array(randomBytes(32));
       const leaf = anchoringLeaf(a.act, blind) as string;
       await this.desk.keyCurrent(me.id);
-      const r = await sendDraft(me, { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${act.label.toLowerCase()}`, app: 'Edubba', anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: this.via, save: async () => this.store.saveIdentity(me) });
+      const r = await sendDraft(me, { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${act.label.toLowerCase()}`, app: 'Edubba', anchor: { offer: offer.act, tier: a.tier, leaf, tag: tagFor(offer, a.tier) } }, { via: this.via, save: async () => this.store.saveIdentity(me) });
       this.keep([...this.asked(), { collective: a.collective, act: a.act, label: act.label, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, identity: me.id, draft: r.id, at: Math.floor(Date.now() / 1000) }]);
       return {
         title: 'An anchor asked',

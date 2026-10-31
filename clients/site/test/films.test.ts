@@ -25,6 +25,11 @@ import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { benign, gatewayFor, siteCopy, world, type World } from './world.ts';
 
+// A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
+const LIMIT = { timeout: 240_000 };
+/** A page's context closed, fifteen seconds at most: WebKit can hang closing one that holds a film; the browser closes it at the end anyway. */
+const closeSoon = (c: { close(): Promise<void> }) => Promise.race([c.close().catch(() => undefined), new Promise<void>((r) => void setTimeout(r, 15_000).unref())]);
+
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const WEBKIT = process.env.MOR_BROWSER === 'webkit';
@@ -76,14 +81,14 @@ before(async () => {
   bareAt = await bare.listen('127.0.0.1', 0);
   filmedAt = await filmed.listen('127.0.0.1', 0);
   browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
-});
+}, LIMIT);
 
 after(async () => {
   await browser?.close();
   bare?.close();
   filmed?.close();
   await w?.stop();
-});
+}, LIMIT);
 
 const shot = async (page: Page, name: string) => {
   if (shots) await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true });
@@ -141,7 +146,7 @@ async function closedAndStopped(page: Page, opener: string) {
   assert.equal(await page.evaluate((s) => document.activeElement === document.querySelector(s), opener), true, 'the focus back on its button');
 }
 
-test('without the films, the front page shows no film and no button', async () => {
+test('without the films, the front page shows no film and no button', LIMIT, async () => {
   const { page, ctx, problems } = await open(bareAt, '/');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified: this page is exactly what was signed/);
   const f = await pageFrame(page);
@@ -149,10 +154,10 @@ test('without the films, the front page shows no film and no button', async () =
   assert.equal(await page.locator('.mor-player, .mor-film-open').count(), 0);
   assert.equal(await page.locator('#mor-films').count(), 0, 'no film in the bar');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('with the films, two small buttons sit under the main film, labelled, side by side; nothing of their films is fetched', async () => {
+test('with the films, two small buttons sit under the main film, labelled, side by side; nothing of their films is fetched', LIMIT, async () => {
   const { page, ctx, fetched, elsewhere, problems } = await open(filmedAt, '/');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified: this page is exactly what was signed/);
   const f = await pageFrame(page);
@@ -191,10 +196,10 @@ test('with the films, two small buttons sit under the main film, labelled, side 
   assert.deepEqual(elsewhere, []);
   assert.deepEqual(problems, []);
   await shot(page, 'films-buttons');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('pressed, a button opens the pop-up, which plays its film with the same player and rules; the close control closes it and stops the film', async () => {
+test('pressed, a button opens the pop-up, which plays its film with the same player and rules; the close control closes it and stops the film', LIMIT, async () => {
   const { page, ctx, fetched, problems } = await open(filmedAt, '/');
   await pageFrame(page);
   const plays = await playsH264(page);
@@ -232,10 +237,10 @@ test('pressed, a button opens the pop-up, which plays its film with the same pla
   }));
   assert.match((await page.textContent('#mor-standing'))!, /^Verified/, 'the page stays verified');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('a browser told it plays H.264 fetches and checks the film in the pop-up; the Escape key closes it, and a press outside it', async () => {
+test('a browser told it plays H.264 fetches and checks the film in the pop-up; the Escape key closes it, and a press outside it', LIMIT, async () => {
   const { page, ctx, fetched, problems } = await open(filmedAt, '/', { canPlay: true });
   await pageFrame(page);
   await page.click(button(UNWRITTEN));
@@ -257,10 +262,10 @@ test('a browser told it plays H.264 fetches and checks the film in the pop-up; t
   await page.mouse.click(5, 5);
   await closedAndStopped(page, button(UNWRITTEN));
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('closed while its film is still being fetched, the pop-up leaves nothing to play later', async () => {
+test('closed while its film is still being fetched, the pop-up leaves nothing to play later', LIMIT, async () => {
   const { page, ctx, problems } = await open(filmedAt, '/', { canPlay: true });
   await pageFrame(page);
   let release!: () => void;
@@ -278,10 +283,10 @@ test('closed while its film is still being fetched, the pop-up leaves nothing to
   assert.equal(await page.locator('video').count(), 0, 'no film made after closing');
   assert.match((await page.textContent('#mor-films'))!, /“MOR use cases”\): not fetched/);
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('a listed film the gateway altered is not played, and the bar says so; the page stays as signed', async () => {
+test('a listed film the gateway altered is not played, and the bar says so; the page stays as signed', LIMIT, async () => {
   const at = filmed.sites.get('127.0.0.1')!;
   const original = at.files.get(USE_CASES)!;
   const altered = original.slice();
@@ -297,13 +302,13 @@ test('a listed film the gateway altered is not played, and the bar says so; the 
     assert.match((await page.textContent('#mor-films'))!, /“MOR use cases”\): failing: not played, what this gateway served is not what was signed/);
     assert.match((await page.textContent('#mor-standing'))!, /^Verified: this page/);
     assert.deepEqual(problems, []);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at.files.set(USE_CASES, original);
   }
 });
 
-test('a page cannot list a film from outside its version: from elsewhere, a picture, a film it does not hold, or a place it made itself', async () => {
+test('a page cannot list a film from outside its version: from elsewhere, a picture, a film it does not hold, or a place it made itself', LIMIT, async () => {
   const { page, ctx, elsewhere, fetched } = await open(filmedAt, '/tries.html');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified/);
   const f = await pageFrame(page);
@@ -317,10 +322,10 @@ test('a page cannot list a film from outside its version: from elsewhere, a pict
   assert.equal(await page.locator('.mor-popup .mor-player img').count(), 0, 'no poster from elsewhere');
   assert.deepEqual(elsewhere, [], 'nothing asked of anyone else');
   assert.ok(!fetched.includes('films/absent.mp4'));
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test("on a phone, the buttons fit side by side, the pop-up fits the screen with a close control big enough to tap, and a tap outside closes it", async () => {
+test("on a phone, the buttons fit side by side, the pop-up fits the screen with a close control big enough to tap, and a tap outside closes it", LIMIT, async () => {
   const { page, ctx, problems } = await open(filmedAt, '/', { phone: true, canPlay: true });
   await pageFrame(page);
   await page.waitForFunction(() => (document.querySelector<HTMLImageElement>('.mor-player img')?.naturalWidth ?? 0) > 0);
@@ -340,5 +345,5 @@ test("on a phone, the buttons fit side by side, the pop-up fits the screen with 
   await page.touchscreen.tap(195, 835);
   await closedAndStopped(page, button(USE_CASES));
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });

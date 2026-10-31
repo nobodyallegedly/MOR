@@ -32,16 +32,15 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { cardText, ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, type Home, type IdentityFile, type SignRequest } from '../../genesis/src/identity.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { idForm, idWhere, readId } from '../../genesis/src/forms.ts';
+import { actForm, idForm, idWhere, readId } from '../../genesis/src/forms.ts';
 import type { Opener } from '../../kit/src/engine/people.ts';
 import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
-import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
-import { memberKeyFor, readMemberKeys } from '../../grants/src/member.ts';
+import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
 
 export type { Kind, RunnerRequest };
-export { KIND_NAME, KINDS, ALWAYS_ASKS };
+export { KIND_NAME, KINDS, ALWAYS_ASKS, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY };
 
 /** Said before the runner is turned on, and read (6.2; draft 2: the passphrase). */
 export const RISK_SAY = [
@@ -68,8 +67,11 @@ export const WRONG_SAY = 'That passphrase does not open Kišib’s runner: nothi
 /** Said where an app may not open what is sealed to an identity (draft 2, section 8). Its first words are how an app knows it. */
 export const NO_OPEN_SAY = 'Kišib does not open what is sealed to this identity for this app: it may send, not read. To allow it, in Kišib: Runner, Apps, the app, “may open what is sealed to this identity” beside the identity. Nothing was opened.';
 
-/** Said where an app asks to sign as a collective whose key Kišib does not hold for the identity (draft 3, 9.2). */
-export const NO_MEMBER_SAY = 'Kišib holds no key of this identity for that collective: ask Kišib to add it (from the app: the collective, Add it in Kišib), then approve it in Kišib (Identities, Held here). Nothing was signed.';
+/** Said once where a draft 3 or 4 file held member keys (draft 5, 9.3): dropped, the file sealed again without them. */
+export const MEMBER_KEYS_ERASED_SAY = 'Kišib held keys for your collectives; there are no such keys any more, and they were erased. You act for your collectives with your own key.';
+
+/** Said beside an act for a collective (draft 5, 5.5). */
+export const FOR_COLLECTIVE_SAY = 'Agreements decides whether this counts for the collective: only where you may act for it in this layer.';
 
 /** Said when a lane's key delivery is signed without a panel (draft 3, 7.5). */
 const LANE_WORDS = (app: string) => `The key of a payment ${app} signed under its own lane, delivered to the identity itself, so that Damgar keeps its record. It moves no money, and gives nothing to anyone else.`;
@@ -109,37 +111,11 @@ interface HeldId {
   given: number;
   /** Its homes now serve another key: nothing is signed until the new words are given (3.5). */
   spent?: boolean;
-  /** Draft 3: its own keys for its collectives, opened from its homes, kept with it (decided: "kišib should be able to hold your key and the keys you hold for your collectives"). */
-  members?: HeldMember[];
-}
-
-/** A member key held for an identity (draft 3, section 9): the member keys cMIP's, its secret kept here only. */
-interface HeldMember {
-  collective: string;
-  /** The sealed act it came in. */
-  act: string;
-  /** The founding or clone that named it, and the identity's signature act naming it (the binding of the acts it signs). */
-  terms: string;
-  signature: string;
-  public: [number, string];
-  /** Its private half, hex: never returned to an app. */
-  secret: string;
-  position: number;
-  added: number;
-  /** The collective's published name, as read when the key was added: said in the panel beside its ID. */
-  name?: string | null;
-}
-
-/** An app's ask that Kišib hold a collective's key for an identity (draft 3, 9.1): waiting for the person, in Kišib. */
-interface MemberAsk {
-  id: string;
-  app: string;
-  appName: string;
-  identity: string;
-  collective: string;
-  /** Where the app reads the collective: its places, to find which founding names the key. */
-  places: string[];
-  at: number;
+  /**
+   * Draft 3's member keys for its collectives, read only from a draft 3 or 4
+   * file to be dropped (draft 5, 9.3): there are no member keys any more.
+   */
+  members?: unknown[];
 }
 
 /** A pairing (2.3). */
@@ -214,8 +190,8 @@ interface Signed {
   /** For an opening: the sealed container's ID, and how many times the app had it opened. */
   sealed?: string;
   times?: number;
-  /** Draft 3: signed as this collective, with the identity's member key. */
-  as?: string;
+  /** Draft 5 (5.5): an act for this collective, signed with the identity's own key, naming it in its objects. */
+  for?: string;
   /** Draft 3: the key of an act signed under the app's own lane, delivered to the identity itself, without a panel. */
   lane?: boolean;
 }
@@ -237,8 +213,8 @@ interface RunnerFile {
   apps: Pairing[];
   log: Signed[];
   lines: LineKept[];
-  /** Draft 3: the collectives' keys apps asked Kišib to hold, waiting for the person. */
-  memberAsks?: MemberAsk[];
+  /** Draft 3's asks to hold a member key: read only from an old file, to be dropped (draft 5, 9.3). */
+  memberAsks?: unknown[];
 }
 
 /** The runner's file on disk (draft 2, 6.3): everything sealed under the passphrase's key. */
@@ -269,6 +245,8 @@ interface Waiting {
   kind: Kind;
   words: string[];
   req: RunnerRequest;
+  /** Draft 5 (5.5): the collectives it acts for, read from its objects, each with the decision it cites first. */
+  for: { collective: string; decision: string }[];
   at: number;
   /** The single-use value written into the panel last drawn (4.4). */
   nonce: string | null;
@@ -298,11 +276,11 @@ export interface RunnerView {
   since: number | null;
   risk: string[];
   /** Each identity held: its ID, its ID link (H88: one of its homes, for Share your ID link), the name it published as read when given. */
-  held: { id: string; form: string; link: string; name: string | null; spent: boolean; apps: string[]; homes: string[]; members: { collective: string; form: string; added: number }[] }[];
-  /** Draft 3: the collectives' keys apps asked Kišib to hold, waiting for an answer here. */
-  memberAsks: { id: string; app: string; identity: string; name: string | null; collective: string; form: string; at: number }[];
+  held: { id: string; form: string; link: string; name: string | null; spent: boolean; apps: string[]; homes: string[] }[];
+  /** Draft 5 (9.3): said once, where an old file's member keys were erased. */
+  notice: string | null;
   apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; opens: string[]; asked: number; approved: number | null; needs: Needs }[];
-  /** `as`: for an act as a collective (draft 3, 9.2), which key signs, said plainly, the IDs whole. */
+  /** `as`: for an act for a collective (draft 5, 5.5), for which collective, under which decision, and with whose own key, said plainly, the IDs whole. */
   waiting: { request: string; app: string; identity: string; name: string | null; as: string | null; kind: Kind; title: string; words: string[]; at: number; always: boolean }[];
   signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number; opened: boolean; sealed: string | null; times: number; as: string | null; lane: boolean }[];
   kinds: { kind: Kind; name: string; always: boolean }[];
@@ -336,8 +314,7 @@ export function requestPrint(r: RunnerRequest): string {
       r.acks ?? null,
       r.binding,
       r.sequence,
-      // Draft 3: an act of a collective names it; draft 2's requests keep their fingerprint.
-      ...(r.as !== undefined ? [r.as] : []),
+      // Draft 5: draft 3's collective appended is gone (the collective is in `objects`).
     ]),
   );
 }
@@ -363,6 +340,8 @@ export class Runner {
   /** Locked, with draft 1's file in the clear: read, to be sealed under a passphrase chosen now. */
   private legacy: RunnerFile | null = null;
   private waiting = new Map<string, Waiting>();
+  /** Draft 5 (9.3): an old file's member keys were erased when it was opened; said once. */
+  private erased = false;
 
   constructor(
     readonly dir: string,
@@ -457,6 +436,7 @@ export class Runner {
       this.f = { ...this.legacy, label: LABEL };
       this.legacy = null;
       erase(join(this.dir, FILE));
+      this.dropMemberKeys();
       this.save();
       return this.view();
     }
@@ -478,7 +458,35 @@ export class Runner {
     this.key = key;
     this.kdf = env.kdf;
     this.env = null;
+    this.dropMemberKeys();
     return this.view();
+  }
+
+  /**
+   * Draft 5 (9.3): a draft 3 or 4 file holding member keys, or asks for
+   * them, opened: they are overwritten and dropped, the file sealed again
+   * without them, and the page says so once.
+   */
+  private dropMemberKeys(): void {
+    const f = this.f;
+    if (!f) return;
+    let dropped = !!f.memberAsks?.length;
+    for (const h of f.held) {
+      if (!h.members?.length) continue;
+      dropped = true;
+      for (const m of h.members as { secret?: string }[]) if (typeof m.secret === 'string') m.secret = '0'.repeat(m.secret.length);
+    }
+    for (const h of f.held) delete h.members;
+    delete f.memberAsks;
+    for (const x of f.log as (Signed & { as?: string })[]) {
+      if (x.as === undefined) continue;
+      x.for = x.as;
+      delete x.as;
+    }
+    if (dropped) {
+      this.erased = true;
+      this.save();
+    }
   }
 
   /**
@@ -561,7 +569,6 @@ export class Runner {
     const f = this.file();
     const h = f.held.find((x) => x.id === a.id);
     if (h) wipe(h);
-    f.memberAsks = (f.memberAsks ?? []).filter((x) => x.identity !== a.id);
     f.held = f.held.filter((x) => x.id !== a.id);
     f.log = f.log.filter((x) => x.identity !== a.id);
     f.lines = f.lines.filter((x) => x.identity !== a.id);
@@ -608,8 +615,7 @@ export class Runner {
     name: string;
     code: string;
     opens: string[];
-    identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[]; members: { collective: string; terms: string; signature: string; position: number }[] }[];
-    asked: { identity: string; collective: string }[];
+    identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[];
   } {
     const p = this.pairingOf(token, false);
     const f = this.file();
@@ -622,10 +628,9 @@ export class Runner {
         p.state === 'approved'
           ? f.held
               .filter((h) => p.identities.includes(h.id))
-              // Draft 3: the member keys held for it, their public parts only (never a secret).
-              .map((h) => ({ id: h.id, name: h.name, binding: h.binding, key: hex(signingPublic(unhex(h.secret))), spent: !!h.spent, homes: h.homes.map((x) => x.hint), members: (h.members ?? []).map((m) => ({ collective: m.collective, terms: m.terms, signature: m.signature, position: m.position })) }))
+              // Draft 5 (2.4): its own key's public part only; draft 3's member keys are gone.
+              .map((h) => ({ id: h.id, name: h.name, binding: h.binding, key: hex(signingPublic(unhex(h.secret))), spent: !!h.spent, homes: h.homes.map((x) => x.hint) }))
           : [],
-      asked: (f.memberAsks ?? []).filter((x) => x.app === p.id).map((x) => ({ identity: x.identity, collective: x.collective })),
     };
   }
 
@@ -726,7 +731,6 @@ export class Runner {
     if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was signed.');
     const outright = refusedOutright(req);
     if (outright) throw new RunnerRefusal(400, outright);
-    if (req.as !== undefined) return this.askAsMember(p, h, req, panelBase);
     await this.keyCheck(h);
     if (req.binding !== h.binding) throw new RunnerRefusal(409, 'The request names the identity’s key before its last change: the app reads the identity again and starts new lines. Nothing was signed.');
     this.sweep();
@@ -746,9 +750,11 @@ export class Runner {
       if (await this.underOwnLane(h, own)) return { signed: wire(this.sign(h, p, req, 'keys', [LANE_WORDS(p.name)], { standing: true, of: own.target, lane: true })) };
     }
     const kind = kindOf(req);
-    const words = wordsOf(req, p.name);
-    if (!ALWAYS_ASKS.includes(kind) && p.yes.includes(kind)) return { signed: wire(this.sign(h, p, req, kind, words, { standing: true })) };
-    const w: Waiting = { fp, app: p.id, identity: req.identity, kind, words, req, at: this.now(), nonce: null, wake: [] };
+    // Draft 5 (5.5): an act for a collective always asks, whatever its kind; the panel says for which.
+    const forC = await this.collectivesNamed(req, h);
+    const words = [...wordsOf(req, p.name), ...forC.flatMap((c) => [forWords(c, h), FOR_COLLECTIVE_SAY])];
+    if (!forC.length && !ALWAYS_ASKS.includes(kind) && p.yes.includes(kind)) return { signed: wire(this.sign(h, p, req, kind, words, { standing: true })) };
+    const w: Waiting = { fp, app: p.id, identity: req.identity, kind, words, req, for: forC, at: this.now(), nonce: null, wake: [] };
     this.waiting.set(fp, w);
     return this.asks(w, p, panelBase);
   }
@@ -793,113 +799,55 @@ export class Runner {
   }
 
   /**
-   * An act of a collective, as one of its members (draft 3, section 9;
-   * decided: Kišib "signs with them itself through its panel"): signed with
-   * the member key Kišib holds for the identity, after the panel, always.
-   * The key never leaves Kišib; the app has the signed act, as for any act.
+   * The collectives a request acts for (draft 5, 5.5): each identity its
+   * `objects` name as chain, other than its signer, whose chain declares no
+   * signing key (a keyless genesis, Identity rule 1), as read at the places
+   * the runner knows (the identity's homes and the relays its routes name);
+   * one that cannot be read there is treated as a collective all the same.
+   * With the decision it cites first (Agreements rule 58).
    */
-  private askAsMember(p: Pairing, h: HeldId, req: RunnerRequest, panelBase: string): Answer {
-    const k = h.members?.find((m) => m.collective === req.as);
-    if (!k) throw new RunnerRefusal(403, NO_MEMBER_SAY);
-    if (req.binding !== k.signature) throw new RunnerRefusal(409, 'The request names another member key than the one Kišib holds for this collective: the app reads the collective again. Nothing was signed.');
-    this.sweep();
-    const fp = requestPrint(req);
-    const was = this.waiting.get(fp);
-    if (was && was.app === p.id) {
-      if (was.made) return { signed: wire(was.made) };
-      if (!was.declined) return this.asks(was, p, panelBase);
-      this.waiting.delete(fp);
+  private async collectivesNamed(req: RunnerRequest, h: HeldId): Promise<{ collective: string; decision: string }[]> {
+    const out: { collective: string; decision: string }[] = [];
+    let places: string[] | null = null;
+    for (const [chain, cited] of req.objects ?? []) {
+      if (chain === req.identity || out.some((x) => x.collective === chain)) continue;
+      if (!places) {
+        places = h.homes.map((x) => x.hint);
+        try {
+          places = [...new Set([...places, ...(await lookUp(h.id, places, this.via)).routes.routes.flatMap((r) => r.hints)])];
+        } catch {
+          // its homes only
+        }
+      }
+      let keyless = true;
+      try {
+        const r = (await lookUp(chain, places, this.via)).resolution;
+        keyless = !r.links.length || !r.signingKey;
+      } catch {
+        keyless = true;
+      }
+      if (keyless) out.push({ collective: chain, decision: cited });
     }
-    const w: Waiting = { fp, app: p.id, identity: h.id, kind: kindOf(req), words: wordsOf(req, p.name), req, at: this.now(), nonce: null, wake: [] };
-    this.waiting.set(fp, w);
-    return this.asks(w, p, panelBase);
+    return out;
   }
 
-  // ------------------------------------------------------------ member keys (draft 3, section 9)
+  // ------------------------------------------------------------ member keys: none (draft 5, section 9)
 
-  /** An app asks Kišib to hold the identity's key for a collective (9.1): waiting for the person, here. */
-  memberAsk(token: string | undefined, a: { identity: string; collective: string; places: string[] }): { held: boolean; asked: boolean } {
-    const p = this.pairingOf(token);
-    const f = this.file();
-    if (!p.identities.includes(a.identity)) throw new RunnerRefusal(403, `Kišib’s runner does not hold ${idForm(a.identity)} for ${p.name}. Nothing was asked.`);
-    const h = f.held.find((x) => x.id === a.identity);
-    if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was asked.');
-    const collective = readId(a.collective);
-    if (h.members?.some((m) => m.collective === collective)) return { held: true, asked: false };
-    f.memberAsks = (f.memberAsks ?? []).filter((x) => !(x.app === p.id && x.identity === h.id && x.collective === collective));
-    if (f.memberAsks.length >= 10) throw new RunnerRefusal(429, 'Too many keys wait to be added in Kišib: answer them first.');
-    const places = [...new Set(a.places.map((x) => x.trim()).filter((x) => /^https?:\/\//.test(x)))].slice(0, 8);
-    f.memberAsks.push({ id: randomBytes(8).toString('hex'), app: p.id, appName: p.name, identity: h.id, collective, places, at: Math.floor(this.now() / 1000) });
-    this.save();
-    return { held: false, asked: true };
-  }
-
-  /**
-   * Answer an app's ask (9.1). Yes: Kišib, holding the identity's words,
-   * opens the member keys sealed to it at its homes (the member keys cMIP,
-   * as any app holding the words does), takes the one for this collective,
-   * and keeps it with the identity, encrypted under the passphrase.
-   */
-  async memberAnswer(a: { ask: string; yes: boolean }): Promise<RunnerView> {
-    const f = this.file();
-    const x = (f.memberAsks ?? []).find((m) => m.id === a.ask);
-    if (!x) throw new Error('This ask waits no more.');
-    f.memberAsks = (f.memberAsks ?? []).filter((m) => m.id !== a.ask);
-    if (!a.yes) {
-      this.save();
-      return this.view();
-    }
-    const h = f.held.find((m) => m.id === x.identity);
-    if (!h) throw new Error('Kišib does not hold this identity any more.');
-    const seed = unhex(h.secret);
-    const enc = encryptionSecret(seed);
-    seed.fill(0);
-    const homes = h.homes.map((m) => m.hint);
-    let k;
-    try {
-      const keys = await readMemberKeys(h.id, [enc], homes, this.via);
-      k = keys.length ? await memberKeyFor(keys, x.collective, [...new Set([...x.places, ...homes])], this.via) : null;
-    } finally {
-      enc.fill(0);
-    }
-    if (!k) {
-      this.save();
-      throw new Error(`No key of ${h.name ?? 'this identity'} for that collective was found sealed to it at its homes: one is made when it signs the collective’s founding (in Edubba). Nothing was kept.`);
-    }
-    let cname: string | null = null;
-    try {
-      cname = (await namesOf(x.collective, [...new Set([...x.places, ...homes])], this.via)).pop()?.name ?? null;
-    } catch {
-      // no name read: its ID is said
-    }
-    h.members = [...(h.members ?? []).filter((m) => m.collective !== x.collective), { collective: x.collective, act: k.act, terms: k.terms, signature: k.signature, public: [k.public[0], hex(k.public[1])], secret: hex(k.secret), position: k.position, added: Math.floor(this.now() / 1000), name: cname }];
-    k.secret.fill(0);
-    this.save();
-    return this.view();
-  }
-
-  /** Forget a member key held for an identity (9.4). */
-  memberRemove(a: { identity: string; collective: string }): RunnerView {
-    const f = this.file();
-    const h = f.held.find((m) => m.id === a.identity);
-    const k = h?.members?.find((m) => m.collective === a.collective);
-    if (!h || !k) throw new Error('Kišib holds no such key.');
-    k.secret = '0'.repeat(k.secret.length);
-    h.members = (h.members ?? []).filter((m) => m.collective !== a.collective);
-    this.save();
-    return this.view();
+  /** An app asks Kišib to hold a key for a collective (draft 3's 9.1): refused, said plainly; nothing kept, nothing waiting (draft 5, 9.1). */
+  memberAsk(token: string | undefined, _a: { identity: string; collective: string; places: string[] }): never {
+    this.pairingOf(token);
+    throw new RunnerRefusal(410, NO_MEMBER_ASK_SAY);
   }
 
   /** Sign, keep what is signed, and the line's act for its card. */
-  private sign(h: HeldId, p: Pairing, req: RunnerRequest, kind: Kind, words: string[], o: { standing?: boolean; of?: string; lane?: boolean } = {}) {
+  private sign(h: HeldId, p: Pairing, req: RunnerRequest, kind: Kind, words: string[], o: { standing?: boolean; of?: string; lane?: boolean; for?: string } = {}) {
     const f = this.file();
-    // Draft 3: as a collective, with the member key held for the identity (9.2).
-    const member = req.as !== undefined ? h.members?.find((m) => m.collective === req.as) : undefined;
-    if (req.as !== undefined && !member) throw new RunnerRefusal(403, NO_MEMBER_SAY);
+    // Draft 5: always the identity's own key, an act for a collective among them (the collective named in its objects).
+    if (req.as !== undefined || req.line === 'member') throw new RunnerRefusal(400, NO_MEMBER_KEYS_SAY);
     const made = makeEveryday({
-      signingSecret: unhex(member ? member.secret : h.secret),
-      signer: member ? member.collective : h.id,
-      binding: member ? member.signature : h.binding,
+      signingSecret: unhex(h.secret),
+      signer: h.id,
+      binding: h.binding,
       spec: req.spec,
       type: req.type,
       payload: req.payload,
@@ -910,8 +858,8 @@ export class Runner {
       refs: req.refs,
       acks: req.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
-    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}), ...(member ? { as: member.collective } : {}), ...(o.lane ? { lane: true } : {}) };
-    if (!req.public && req.line !== 'apart' && !member) entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
+    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}), ...(o.for ? { for: o.for } : {}), ...(o.lane ? { lane: true } : {}) };
+    if (!req.public && req.line !== 'apart') entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
     f.log.push(entry);
     if (req.line === 'public' || req.line === 'private') {
       const line = req.line;
@@ -933,8 +881,8 @@ export class Runner {
       throw new Error('This app or this identity is no longer paired here. Nothing was signed.');
     }
     if (!yes) return this.settle(w, { declined: true });
-    if (always && !ALWAYS_ASKS.includes(w.kind)) p.yes = [...new Set([...p.yes, w.kind])];
-    this.settle(w, { made: this.sign(h, p, w.req, w.kind, w.words) });
+    if (always && !ALWAYS_ASKS.includes(w.kind) && !w.for.length) p.yes = [...new Set([...p.yes, w.kind])];
+    this.settle(w, { made: this.sign(h, p, w.req, w.kind, w.words, w.for.length ? { for: w.for[0].collective } : {}) });
   }
 
   private settle(w: Waiting, o: { made?: Waiting['made']; declined?: boolean }) {
@@ -1078,10 +1026,10 @@ export class Runner {
     return {
       title: titleOf(app.name, w),
       // H121: IDs whole here; the panel shows each short, its tap showing it whole.
-      // Draft 3, 9.2: as a collective, which key signs said plainly: the identity's own member key for that collective, held here; never the collective's key, nor the identity's signing key.
-      as: w.req.as !== undefined ? memberWords(w.req.as, held.members?.find((m) => m.collective === w.req.as)?.name ?? null, held) + ` · ${w.req.public ? 'public' : 'private'}` : `As ${held.name ?? 'this identity'} · ${idForm(held.id)} · ${w.req.public ? 'public' : 'private'}`,
+      // Draft 5, 5.5: for a collective, which collective, under which decision, and whose own key signs, said plainly (a collective has no key; its members none for it).
+      as: w.for.length ? `${w.for.map((c) => forWords(c, held)).join('; ')} · ${w.req.public ? 'public' : 'private'}` : `As ${held.name ?? 'this identity'} · ${idForm(held.id)} · ${w.req.public ? 'public' : 'private'}`,
       words: w.words,
-      always: ALWAYS_ASKS.includes(w.kind) || w.req.as !== undefined ? null : `Always yes for ${app.name}’s ${KIND_NAME[w.kind]}`,
+      always: ALWAYS_ASKS.includes(w.kind) || w.for.length ? null : `Always yes for ${app.name}’s ${KIND_NAME[w.kind]}`,
     };
   }
 
@@ -1177,29 +1125,28 @@ export class Runner {
       upgrade: !!this.legacy,
       since: f?.since ?? null,
       risk: RISK_SAY,
-      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), link: idWhere(h.id, h.homes.map((x) => x.hint).slice(0, 1)), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name), members: (h.members ?? []).map((m) => ({ collective: m.collective, form: idForm(m.collective), added: m.added })) })),
-      memberAsks: (f?.memberAsks ?? []).map((x) => ({ id: x.id, app: x.appName, identity: x.identity, name: name(x.identity), collective: x.collective, form: idForm(x.collective), at: x.at })),
+      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), link: idWhere(h.id, h.homes.map((x) => x.hint).slice(0, 1)), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name) })),
+      notice: this.erased ? MEMBER_KEYS_ERASED_SAY : null,
       apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, opens: opensOf(p), asked: p.asked, approved: p.approved ?? null, needs: p.needs ?? {} })),
       waiting: [...this.waiting.values()]
         .filter((w) => !w.made && !w.declined)
         .map((w) => {
           const app = f?.apps.find((p) => p.id === w.app);
           const h = f?.held.find((x) => x.id === w.identity);
-          return { request: w.fp, app: app?.name ?? 'an app', identity: w.identity, name: name(w.identity), as: w.req.as !== undefined && h ? memberWords(w.req.as, h.members?.find((m) => m.collective === w.req.as)?.name ?? null, h) : null, kind: w.kind, title: titleOf(app?.name ?? 'An app', w), words: w.words, at: Math.floor(w.at / 1000), always: ALWAYS_ASKS.includes(w.kind) || w.req.as !== undefined };
+          return { request: w.fp, app: app?.name ?? 'an app', identity: w.identity, name: name(w.identity), as: w.for.length && h ? w.for.map((c) => forWords(c, h)).join('; ') : null, kind: w.kind, title: titleOf(app?.name ?? 'An app', w), words: w.words, at: Math.floor(w.at / 1000), always: ALWAYS_ASKS.includes(w.kind) || w.for.length > 0 };
         }),
       signed: (f?.log ?? [])
         .slice()
         .reverse()
-        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position, opened: !!s.opened, sealed: s.sealed ?? null, times: s.times ?? 1, as: s.as ?? null, lane: !!s.lane })),
+        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position, opened: !!s.opened, sealed: s.sealed ?? null, times: s.times ?? 1, as: s.for ?? null, lane: !!s.lane })),
       kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAME[k], always: ALWAYS_ASKS.includes(k) })),
     };
   }
 }
 
-/** An identity's secrets overwritten in memory, its member keys' with them. */
+/** An identity's secret overwritten in memory. */
 function wipe(h: HeldId) {
   h.secret = '0'.repeat(h.secret.length);
-  for (const m of h.members ?? []) m.secret = '0'.repeat(m.secret.length);
 }
 
 /** A file overwritten, as far as software can (a copy the system made elsewhere is out of reach), then removed. */
@@ -1217,12 +1164,12 @@ function erase(x: string) {
 }
 
 
-/** Which key signs an act as a collective (draft 3, 9.2), in plain words, the IDs whole (the panel shows each short, a tap showing it whole). */
-const memberWords = (collective: string, cname: string | null, h: { id: string; name: string | null }) =>
-  `As the collective ${cname ? `${cname} ` : ''}${idForm(collective)}, signed with ${h.name ?? 'this identity'}’s own member key for it (${idForm(h.id)}), held here in Kišib`;
+/** An act for a collective (draft 5, 5.5), in plain words, the IDs whole (the panel shows each short, a tap showing it whole). */
+const forWords = (c: { collective: string; decision: string }, h: { id: string; name: string | null }) =>
+  `For the collective ${idForm(c.collective)}, under its decision ${actForm(c.decision)}, signed with ${h.name ?? 'this identity'}’s own key (${idForm(h.id)})`;
 
 /** A request's title, as the panel and Waiting say it. */
-const titleOf = (app: string, w: { kind: Kind; req: RunnerRequest }) => `${app} asks Kišib to sign ${KIND_ONE[w.kind]}${w.req.as !== undefined ? ' as a collective' : ''}`;
+const titleOf = (app: string, w: { kind: Kind; for: unknown[] }) => `${app} asks Kišib to sign ${KIND_ONE[w.kind]}${w.for.length ? ' for a collective' : ''}`;
 
 /** At most this many sealed containers opened in one request. */
 export const OPEN_MAX = 100;

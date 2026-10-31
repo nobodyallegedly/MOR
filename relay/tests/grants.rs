@@ -23,21 +23,18 @@ fn wire_err<T: std::fmt::Debug>(r: Result<T, ClientError>) -> mor_relay::wire::W
     }
 }
 
-/// A grant of `grantor` to `grantee`, its key `key` (field 9); `by_this`: a
-/// collective's founding grant (field 8), signed by a founder.
-fn grant(grantor: &mut Person, grantee: Hash, key: &mor_core::sig::SchnorrKey, by_this: bool) -> Act {
+/// A person's grant of `grantor` to `grantee`, its key `key` (field 9).
+fn grant(grantor: &mut Person, grantee: Hash, key: &mor_core::sig::SchnorrKey) -> Act {
     let g = Grant {
         grantee,
         scope: 2,
         agreements: None,
-        this_agreement: false,
         limits: None,
         limits_cmip: None,
         area: None,
         kinds: None,
         reinstates: None,
-        by_this,
-        key: SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() },
+        key: Some(SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() }),
     };
     everyday(grantor, specs().agreements, 9, g.to_map(), None, None, true)
 }
@@ -77,7 +74,7 @@ async fn an_agents_act_under_a_persons_grant_is_stored_by_relays_and_the_grantor
         r.client.put_act(&ag.encode()).await.unwrap();
     }
     let key = schnorr("agent's grant key", 0);
-    let g = grant(&mut owner, agent.id, &key, false);
+    let g = grant(&mut owner, agent.id, &key);
     for r in [&home, &relay] {
         r.client.put_act(&g.encode()).await.unwrap();
     }
@@ -99,45 +96,12 @@ async fn an_agents_act_under_a_persons_grant_is_stored_by_relays_and_the_grantor
     let (sg, mut stranger) = genesis("stranger", vec![home.home()], None, None);
     relay.client.put_act(&sg.encode()).await.unwrap();
     let k2 = schnorr("stranger's grant key", 0);
-    let g2 = grant(&mut stranger, agent.id, &k2, false);
+    let g2 = grant(&mut stranger, agent.id, &k2);
     relay.client.put_act(&g2.encode()).await.unwrap();
     let mut s2 = strand(&owner, g2.id(), k2);
     let other = under(&mut s2, owner.id, g2.id(), "Under a grant the owner never made.");
     let e = wire_err(relay.client.put_act(&other.encode()).await);
     assert!(e.reason.as_deref().unwrap_or("").contains("not the signer's"), "{:?}", e.reason);
-}
-
-/// A split service's act under a collective's grant, and under a grant its
-/// founding terms carry (field 8, signed by a founder): both stored by a
-/// relay and by the collective's home.
-#[tokio::test(flavor = "multi_thread")]
-async fn a_split_services_act_under_a_collectives_grant_is_stored() {
-    let home = Running::start(Role::Home, Policy::Open).await;
-    let relay = Running::start(Role::Relay, Policy::Open).await;
-    let (cg, mut collective) = genesis("collective", vec![home.home()], None, None);
-    let (fg, mut founder) = genesis("founder", vec![home.home()], None, None);
-    let (sg, service) = genesis("split service", vec![home.home()], None, None);
-    for r in [&home, &relay] {
-        for a in [&cg, &fg, &sg] {
-            r.client.put_act(&a.encode()).await.unwrap();
-        }
-    }
-    let key = schnorr("service's grant key", 0);
-    let g = grant(&mut collective, service.id, &key, false);
-    let kf = schnorr("service's founding grant key", 0);
-    let founding = grant(&mut founder, service.id, &kf, true);
-    for r in [&home, &relay] {
-        r.client.put_act(&g.encode()).await.unwrap();
-        r.client.put_act(&founding.encode()).await.unwrap();
-    }
-    let mut s = strand(&collective, g.id(), key);
-    let receipt = under(&mut s, collective.id, g.id(), "A receipt, as far as relays care.");
-    let mut sf = strand(&collective, founding.id(), kf);
-    let early = under(&mut sf, collective.id, founding.id(), "Under the founding grant.");
-    for r in [&relay, &home] {
-        r.client.put_act(&receipt.encode()).await.expect("stored under the collective's grant");
-        r.client.put_act(&early.encode()).await.expect("stored under the founding grant, its key checked");
-    }
 }
 
 /// The grantor's home that does not hold the grant asks for it first, as
@@ -148,7 +112,7 @@ async fn a_home_asks_for_the_grant_first() {
     let (og, mut owner) = genesis("owner", vec![home.home()], None, None);
     home.client.put_act(&og.encode()).await.unwrap();
     let key = schnorr("a grant key", 0);
-    let g = grant(&mut owner, sha256(b"an agent"), &key, false);
+    let g = grant(&mut owner, sha256(b"an agent"), &key);
     let mut s = strand(&owner, g.id(), key);
     let post = under(&mut s, owner.id, g.id(), "Before the grant arrived.");
     let e = wire_err(home.client.put_act(&post.encode()).await);
@@ -156,44 +120,4 @@ async fn a_home_asks_for_the_grant_first() {
     assert!(e.reason.as_deref().unwrap_or("").contains("or the grant"), "{:?}", e.reason);
     home.client.put_act(&g.encode()).await.unwrap();
     home.client.put_act(&post.encode()).await.expect("stored once the grant is held");
-}
-
-/// A member's own key (F353; relay transport cMIP draft 6): an act in the
-/// collective's name bound to the member's signature of its founding, the
-/// signature naming the key (field 1): stored by a relay and by the
-/// collective's home, its key checked; signed with another key, refused;
-/// bound to a signature naming no key, refused.
-#[tokio::test(flavor = "multi_thread")]
-async fn an_act_under_a_members_own_key_is_stored() {
-    let home = Running::start(Role::Home, Policy::Open).await;
-    let relay = Running::start(Role::Relay, Policy::Open).await;
-    let (cg, collective) = genesis("collective", vec![home.home()], None, None);
-    let (mg, mut member) = genesis("member", vec![home.home()], None, None);
-    for r in [&home, &relay] {
-        r.client.put_act(&cg.encode()).await.unwrap();
-        r.client.put_act(&mg.encode()).await.unwrap();
-    }
-    let founding = sha256(b"the founding terms");
-    let key = schnorr("member's key", 0);
-    let k = SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() };
-    let o = Some(vec![Object { chain: founding, predecessor: founding }]);
-    let with_key = everyday(&mut member, specs().agreements, 1, mor_core::agreements::signature_payload_with_key(&founding, &k), o.clone(), None, true);
-    let plain = everyday(&mut member, specs().agreements, 1, mor_core::agreements::signature_payload(&founding), o, None, true);
-    for r in [&home, &relay] {
-        r.client.put_act(&with_key.encode()).await.unwrap();
-        r.client.put_act(&plain.encode()).await.unwrap();
-    }
-    let mut s = strand(&collective, with_key.id(), key);
-    let act = under(&mut s, collective.id, cg.id(), "Published by a member, with their own key.");
-    for r in [&relay, &home] {
-        r.client.put_act(&act.encode()).await.expect("stored under the member's key, its key checked");
-    }
-    let mut forged = strand(&collective, with_key.id(), schnorr("someone else", 0));
-    let bad = under(&mut forged, collective.id, cg.id(), "Not the member's key.");
-    let e = wire_err(relay.client.put_act(&bad.encode()).await);
-    assert!(e.reason.as_deref().unwrap_or("").contains("not the member key"), "{:?}", e.reason);
-    let mut none = strand(&collective, plain.id(), schnorr("member's key", 0));
-    let bad = under(&mut none, collective.id, cg.id(), "Bound to a signature naming no key.");
-    let e = wire_err(relay.client.put_act(&bad.encode()).await);
-    assert!(e.reason.as_deref().unwrap_or("").contains("names no member key"), "{:?}", e.reason);
 }

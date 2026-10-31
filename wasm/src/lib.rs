@@ -38,6 +38,8 @@ use wasm_bindgen::prelude::*;
 type R<T> = Result<T, JsError>;
 
 mod money_js;
+mod publication_js;
+mod tip_js;
 
 fn err(s: impl std::fmt::Display) -> JsError {
     JsError::new(&s.to_string())
@@ -629,8 +631,17 @@ fn public_addr(signer: Option<Hash>) -> Addressing {
 #[serde(rename_all = "camelCase")]
 struct GenesisIn {
     identity_spec: String,
-    #[serde(with = "serde_bytes")]
-    signing_secret: Vec<u8>,
+    /// The first signing key's secret; absent for a collective, whose
+    /// genesis declares none and is signed by the chain key below
+    /// (Identity rule 1).
+    #[serde(default, with = "serde_bytes")]
+    signing_secret: Option<Vec<u8>>,
+    /// For a collective: the first chain key, which signs the genesis and
+    /// is revealed in its signature; `chainKeyCommit` then commits the next.
+    #[serde(default, with = "serde_bytes")]
+    first_chain_key_seeds: Option<Vec<u8>>,
+    #[serde(default)]
+    first_chain_key_scheme: Option<u8>,
     chain_key_scheme: u8,
     chain_key_commit: String,
     homes: Vec<HomeIn>,
@@ -742,17 +753,23 @@ fn declarations_of(d: &Option<Vec<DeclIn>>) -> R<Option<Vec<identity::Declaratio
         .transpose()
 }
 
-/// A genesis (Identity type 0), signed by its first signing key, and checked
-/// with the core's genesis checks before it is returned.
+/// A genesis (Identity type 0), signed by its first signing key, or, for a
+/// collective, which declares none, by its first chain key (Identity rule
+/// 1), and checked with the core's genesis checks before it is returned.
 #[wasm_bindgen(js_name = makeGenesis)]
 pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
     let g: GenesisIn = from_js(input)?;
-    let key = schnorr(&g.signing_secret)?;
+    let key = g.signing_secret.as_deref().map(schnorr).transpose()?;
+    let first = match (&key, &g.first_chain_key_seeds, g.first_chain_key_scheme) {
+        (Some(_), None, None) => None,
+        (None, Some(seeds), Some(scheme)) => Some(slh(scheme, seeds)?),
+        _ => return Err(err("a genesis is signed by its first signing key, or, for a collective, by its first chain key: give one")),
+    };
     let payload = Genesis {
-        signing_key: SigningKey {
+        signing_key: key.as_ref().map(|k| SigningKey {
             scheme: sig::SCHNORR,
-            key: key.public().to_vec(),
-        },
+            key: k.public().to_vec(),
+        }),
         chain_key: ChainKeyCommit {
             scheme: Scheme::Founding(g.chain_key_scheme),
             commit: unhex(&g.chain_key_commit)?,
@@ -772,7 +789,11 @@ pub fn make_genesis(input: JsValue) -> R<Vec<u8>> {
         &random::<32>(),
         &random::<24>(),
         &public_addr(None),
-        |id| key.sign(id, &random::<32>()),
+        |id| match (&key, &first) {
+            (Some(k), _) => k.sign(id, &random::<32>()),
+            (None, Some(c)) => c.sign(id, Some(&random::<16>())),
+            (None, None) => unreachable!("checked above"),
+        },
     );
     identity::check_genesis(&a, &inside, &payload).map_err(err)?;
     Ok(a.encode())
@@ -797,8 +818,10 @@ struct RotationIn {
     chain_key_scheme: u8,
     #[serde(with = "serde_bytes")]
     chain_key_seeds: Vec<u8>,
-    #[serde(with = "serde_bytes")]
-    new_signing_public: Vec<u8>,
+    /// The new signing key; absent for a collective, which has none
+    /// (Identity rule 1, rotation check 4).
+    #[serde(default, with = "serde_bytes")]
+    new_signing_public: Option<Vec<u8>>,
     next_chain_key_scheme: u8,
     next_chain_key_commit: String,
     kept: Vec<TipIn>,
@@ -832,10 +855,11 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
     let payload = Rotation {
         prev: unhex(&r.previous)?,
         position: r.position,
-        signing_key: SigningKey {
-            scheme: sig::SCHNORR,
-            key: arr::<32>(&r.new_signing_public, "a signing public key")?.to_vec(),
-        },
+        signing_key: r
+            .new_signing_public
+            .as_deref()
+            .map(|k| Ok::<_, JsError>(SigningKey { scheme: sig::SCHNORR, key: arr::<32>(k, "a signing public key")?.to_vec() }))
+            .transpose()?,
         chain_key: ChainKeyCommit {
             scheme: Scheme::Founding(r.next_chain_key_scheme),
             commit: unhex(&r.next_chain_key_commit)?,
@@ -1484,7 +1508,7 @@ impl Verifier {
             contested: res.contested.clone(),
             signing_key: latest
                 .as_ref()
-                .map(|s| serde_bytes::ByteBuf::from(s.signing_key.key.clone())),
+                .and_then(|s| s.signing_key.as_ref().map(|k| serde_bytes::ByteBuf::from(k.key.clone()))),
             chain_key_scheme: latest.as_ref().map(|s| match s.chain_key.scheme {
                 Scheme::Founding(n) => n,
                 Scheme::Spec(_) => 0,
@@ -1523,6 +1547,32 @@ impl Verifier {
             }),
             effective: latest.as_ref().map(|s| format!("{:?}", s.effective())),
         })
+    }
+
+    /// Whose offer a price tag is (Money rule 18), as a verifier reading
+    /// Money and Envelopes tells it: "counts" (on a bare bake, its
+    /// uploader's), "nobody's offer", or "unknown" (not held, or under a
+    /// publication, which Agreements judges). `null` for no price tag held.
+    #[wasm_bindgen(js_name = priceTag)]
+    pub fn price_tag(&self, act: &str) -> R<Option<String>> {
+        Ok(self.inner.price_tag(&unhex(act)?).map(|(_, c)| match c {
+            mor_core::chain::TagCount::Counts => "counts".into(),
+            mor_core::chain::TagCount::Nobodys(_) => "nobody's offer".into(),
+            mor_core::chain::TagCount::Unknown(_) => "unknown".into(),
+        }))
+    }
+
+    /// Who uploaded a bake, as a verifier reading Money and Envelopes tells
+    /// it (Money, "Only identities have payee pointers"): the signer's
+    /// identity hash, or "unknown" where the bake names another chain, a
+    /// collective's perhaps, which a Money-only wallet refuses to tip.
+    /// `null` for no bake held.
+    #[wasm_bindgen(js_name = bakeUploader)]
+    pub fn bake_uploader(&self, bake: &str) -> R<Option<String>> {
+        Ok(self.inner.bake_uploader(&unhex(bake)?).map(|u| match u {
+            mor_core::chain::Uploader::Signer(h) => hx(&h),
+            mor_core::chain::Uploader::Unknown(_) => "unknown".into(),
+        }))
     }
 
     /// The standing of an act held: "valid", "disputed", "void", "pending",
@@ -1957,7 +2007,6 @@ struct RecoveryOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GrammarOut {
-    signing: HoldingOut,
     chain_key: HoldingOut,
     recovery: Option<RecoveryOut>,
 }
@@ -2065,6 +2114,8 @@ fn power_out(p: &agreements::Power) -> PowerOut {
         agreements::Power::Judicial => ("judicial", None, None),
         // The stake's holders' rule (F307): `area` carries the stake's index.
         agreements::Power::Holders(s) => ("holders", Some(*s), None),
+        // A layer's rule (field 19): `area` carries the layer.
+        agreements::Power::Layer(l) => ("layer", Some(*l), None),
     };
     PowerOut {
         form: form.into(),
@@ -2109,6 +2160,10 @@ struct TermsOut {
     clone: RuleOut,
     /// The constitutional change rule (field 18); null: every party.
     constitutional: Option<RuleOut>,
+    /// Who acts for the collective in each layer (field 19): layer 1 to 5,
+    /// each with its rule.
+    layers: Vec<(u64, RuleOut)>,
+    /// The areas finer than a layer (field 34).
     areas: Vec<AreaOut>,
     /// Each area's own words, by id.
     area_words: Vec<(u64, String)>,
@@ -2118,9 +2173,9 @@ struct TermsOut {
     parent: Option<String>,
     grammar: Option<GrammarOut>,
     arbitrators: Option<Vec<String>>,
-    split_grant: Option<String>,
-    /// Field 14 in a deal: each payee's grant to the split service (F129, H4).
-    payee_grants: Option<Vec<String>>,
+    /// The target (field 33): `["claim", hash]` or `["collective", null]`;
+    /// null for terms that own nothing.
+    target: Option<(String, Option<String>)>,
     extensions: Option<Vec<String>>,
     succession: Option<Vec<SuccessionOut>>,
     /// Stakes (field 7): each object, and its holders' shares in millionths;
@@ -2133,8 +2188,6 @@ struct TermsOut {
     /// hash in a one-element list. The split service left the chain (F249,
     /// F250): its backups are `backups`.
     chain: Vec<(String, Vec<(Vec<String>, u64)>)>,
-    /// The split service's backups (field 29, F249, F250), or null.
-    backups: Option<BackupsOut>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
     /// The release rule (field 24); null: every holder. Counted by share
@@ -2152,12 +2205,8 @@ struct TermsOut {
     /// In a deal, the judge that settles its forks, one of field 13 (field
     /// 27, QF2, F190); null: none does.
     fork_judge: Option<String>,
-    /// The split plan (field 8), as the core decodes it; null if absent.
-    plan: Option<PlanOut>,
     /// The refund terms (field 17, F219); null if absent.
     refund: Option<RefundOut>,
-    /// The fees (field 28, F213, F214); null if absent.
-    fees: Option<Vec<FeeOut>>,
     /// Why the terms fail the checks that need no other act, or null.
     problem: Option<ProblemOut>,
 }
@@ -2189,7 +2238,7 @@ struct MaxFeeOut {
 /// The split plan (terms field 8) as `readTerms` shows it.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PlanOut {
+pub(crate) struct PlanOut {
     shares: Vec<PlanShareOut>,
     /// The split cMIP that computes the amounts (key 1).
     cmip: String,
@@ -2205,6 +2254,8 @@ struct PlanOut {
     max_rail_fee: Option<MaxFeeOut>,
     /// The metrics' modules and measurers (key 8, rule 28).
     metrics: Vec<(String, String)>,
+    /// The fees it names (key 9), as `publicationPayload` takes them.
+    fees: Vec<publication_js::FeeIn>,
 }
 
 /// Refund terms (field 17, F219): the fixed point on the time reference past
@@ -2214,30 +2265,6 @@ struct PlanOut {
 #[serde(rename_all = "camelCase")]
 struct RefundOut {
     until: Option<u64>,
-}
-
-/// A fee entry (field 28): the Module it is owed to, its part, and when it
-/// applies: "every" payment, payments for a "publication", or by a "rail".
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FeeOut {
-    module: String,
-    part: u64,
-    scope: String,
-    of: Option<String>,
-}
-
-/// Terms field 29 as `readTerms` shows it (F249, F250): each backup split
-/// service after field 14's, in order, by its grants (one in a collective,
-/// one per payee in a deal); the split cMIP whose fields they are; and
-/// whether the terms carry that cMIP's failure condition (key 1, which the
-/// core never reads).
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct BackupsOut {
-    services: Vec<Vec<String>>,
-    split_cmip: Option<String>,
-    failure: bool,
 }
 
 /// A stake as `readTerms` shows it: its object and holders, null for this
@@ -2277,6 +2304,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         clone: rule_out(&t.clone),
         constitutional: t.constitutional.as_ref().map(rule_out),
+        layers: t.layers.iter().flatten().map(|(l, r)| (*l, rule_out(r))).collect(),
         areas: t
             .areas()
             .iter()
@@ -2322,7 +2350,6 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         parent: t.parent.as_ref().map(hx),
         grammar: t.grammar.as_ref().map(|g| GrammarOut {
-            signing: holding_out(&g.signing),
             chain_key: holding_out(&g.chain_key),
             recovery: g.recovery.as_ref().map(|r| match r {
                 agreements::Recovery::Custodian { custodian, grant } => RecoveryOut {
@@ -2340,8 +2367,10 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             }),
         }),
         arbitrators: t.arbitrators.as_ref().map(hs),
-        split_grant: t.split_grant.as_ref().map(hx),
-        payee_grants: t.payee_grants.as_ref().map(|g| g.iter().map(hx).collect()),
+        target: t.target.map(|x| match x {
+            agreements::Target::Claim(c) => ("claim".to_string(), Some(hx(&c))),
+            agreements::Target::Collective => ("collective".to_string(), None),
+        }),
         extensions: t.extensions.as_ref().map(hs),
         succession: t.succession.as_ref().map(|s| {
             s.iter()
@@ -2372,11 +2401,6 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 (j, l.next.iter().map(|(t, p)| (vec![hx(t)], *p)).collect())
             })
             .collect(),
-        backups: t.backups.as_ref().map(|b| BackupsOut {
-            services: b.services.iter().map(|e| e.hashes().iter().map(hx).collect()).collect(),
-            split_cmip: t.split_cmip().as_ref().map(hx),
-            failure: b.failure.is_some(),
-        }),
         forked_from: t.forked_from.as_ref().map(hx),
         release_rule: t.release_rule.as_ref().map(release_rule_out),
         holders_rules: t.holders_rules.as_ref().map(|v| {
@@ -2395,35 +2419,17 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
         }),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
         fork_judge: t.fork_judge.as_ref().map(hx),
-        plan: t.plan.as_ref().map(plan_out),
         refund: t.refund.as_ref().map(|r| RefundOut {
             until: match &r.until {
                 Value::Uint(n) => Some(*n),
                 _ => None,
             },
         }),
-        fees: t.fees.as_ref().map(|f| {
-            f.iter()
-                .map(|x| {
-                    let (scope, of) = match &x.scope {
-                        agreements::FeeScope::Every => ("every", None),
-                        agreements::FeeScope::Publication(h) => ("publication", Some(hx(h))),
-                        agreements::FeeScope::Rail(h) => ("rail", Some(hx(h))),
-                    };
-                    FeeOut {
-                        module: hx(&x.module),
-                        part: x.part,
-                        scope: scope.into(),
-                        of,
-                    }
-                })
-                .collect()
-        }),
         problem: t.check(&s.mirs()?).err().map(|e| problem(&e)),
     })
 }
 
-fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
+pub(crate) fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
     let share = |kind: &str, part: u64| PlanShareOut {
         kind: kind.into(),
         stake: None,
@@ -2477,6 +2483,7 @@ fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
             },
         }),
         metrics: p.metrics.iter().map(|m| (hx(&m.module), hx(&m.measurer))).collect(),
+        fees: p.fees.iter().map(publication_js::FeeIn::of).collect(),
     }
 }
 
@@ -2489,7 +2496,6 @@ fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
 struct GrantOut {
     grantee: String,
     scope: u64,
-    this_agreement: bool,
     agreements: Option<Vec<String>>,
 }
 
@@ -2502,7 +2508,6 @@ pub fn read_grant(payload: &[u8]) -> R<JsValue> {
     to_js(&GrantOut {
         grantee: hx(&g.grantee),
         scope: g.scope,
-        this_agreement: g.this_agreement,
         agreements: g.agreements.as_ref().map(|v| v.iter().map(hx).collect()),
     })
 }
@@ -2734,7 +2739,6 @@ pub fn declaration_payload(agreement: &str, clause: &str, party: &str, outcomes:
 struct RecordIn {
     clone: Option<String>,
     signatures: Option<Vec<String>>,
-    kept: Vec<TipIn>,
     registers: Option<Vec<String>>,
 }
 
@@ -2752,17 +2756,6 @@ pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
     let rec = agreements::Record {
         clone: r.clone.as_deref().map(unhex).transpose()?,
         signatures: hs(&r.signatures)?,
-        kept: r
-            .kept
-            .iter()
-            .map(|t| {
-                Ok(KeptTip {
-                    act: unhex(&t.act)?,
-                    position: t.position,
-                    summary: unhex(&t.summary)?,
-                })
-            })
-            .collect::<R<_>>()?,
         registers: hs(&r.registers)?,
     };
     if rec.clone.is_some() != rec.signatures.is_some() {
@@ -2832,14 +2825,16 @@ struct AgreementOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AreaCountOut {
-    area: u64,
+    /// A finer area's id (field 34); a layer's rule (field 19) as minus its
+    /// layer, a JavaScript number either way.
+    area: i64,
+    /// The layer whose rule this is, where it is a layer's rule.
+    layer: Option<u64>,
     name: String,
     frozen: bool,
     voices: Vec<String>,
     needed: usize,
     signers: Vec<String>,
-    /// Among the signers, those who signed with their member key (F353).
-    by_key: Vec<String>,
     /// "within", "above" or "unknown" where the area carries limits (F353).
     limits: Option<String>,
     met: bool,
@@ -3120,13 +3115,13 @@ impl Verifier {
                 o.areas = areas
                     .iter()
                     .map(|a| AreaCountOut {
-                        area: a.area,
+                        area: agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)),
+                        layer: agreements::lane_of(a.area),
                         name: a.name.clone(),
                         frozen: a.frozen,
                         voices: a.voices.iter().map(hx).collect(),
                         needed: a.needed,
                         signers: a.signers.iter().map(hx).collect(),
-                        by_key: a.by_key.iter().map(hx).collect(),
                         limits: a.limits.map(|l| match l {
                             agreements::AreaLimits::Within => "within".into(),
                             agreements::AreaLimits::Above => "above".into(),
@@ -3521,39 +3516,27 @@ impl Verifier {
         })
     }
 
-    /// What a fork of `collective` must hand out (F127), its line drawn at
-    /// `chain_act` and `tips` (`[{ act, position, summary }]`) with
-    /// `agreement` in force there: every obligation in the history it would
-    /// cite, its own and those an earlier fork handed to it. Null where the
-    /// line does not hold.
+    /// What a fork of `collective` must hand out, its line the acts `line`
+    /// it would cite on the collective's chain, with `agreement` in force
+    /// there: every obligation in that history, its own and those an
+    /// earlier fork handed to it. Null where the line does not hold.
     #[wasm_bindgen(js_name = agreementsHandOut)]
-    pub fn agreements_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, chain_act: &str, tips: JsValue) -> R<Option<Vec<String>>> {
+    pub fn agreements_hand_out(&self, specs: JsValue, collective: &str, agreement: &str, line: Vec<String>) -> R<Option<Vec<String>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let tips: Vec<TipIn> = from_js(tips)?;
-        let tips = tips
-            .iter()
-            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
-            .collect::<R<Vec<_>>>()?;
-        Ok(view
-            .hand_out(&unhex(collective)?, &unhex(agreement)?, &unhex(chain_act)?, &tips)
-            .map_err(lerr)?
-            .map(|v| v.iter().map(hx).collect()))
+        let line = line.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        Ok(view.hand_out(&unhex(collective)?, &unhex(agreement)?, &line).map_err(lerr)?.map(|v| v.iter().map(hx).collect()))
     }
 
-    /// The acts the history a line at `chain_act` and `tips` would cite
-    /// that this verifier does not hold (F127): a member's client signs no
-    /// fork or closing while any is missing (F131 IT2b, client conformance).
+    /// The acts the history of a line citing `line` on the collective's
+    /// chain names that this verifier does not hold: a member's client signs
+    /// no fork or closing while any is missing (client conformance).
     #[wasm_bindgen(js_name = agreementsLineUnheld)]
-    pub fn agreements_line_unheld(&self, specs: JsValue, collective: &str, chain_act: &str, tips: JsValue) -> R<Vec<String>> {
+    pub fn agreements_line_unheld(&self, specs: JsValue, collective: &str, line: Vec<String>) -> R<Vec<String>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let tips: Vec<TipIn> = from_js(tips)?;
-        let tips = tips
-            .iter()
-            .map(|t| Ok(KeptTip { act: unhex(&t.act)?, position: t.position, summary: unhex(&t.summary)? }))
-            .collect::<R<Vec<_>>>()?;
-        Ok(view.line_unheld(&unhex(collective)?, &unhex(chain_act)?, &tips).iter().map(hx).collect())
+        let line = line.iter().map(|x| unhex(x)).collect::<R<Vec<_>>>()?;
+        Ok(view.line_unheld(&unhex(collective)?, &line).iter().map(hx).collect())
     }
 
     /// Every fork and closing of `collective` held, complete or not: what a
@@ -3594,27 +3577,6 @@ impl Verifier {
         Ok(view.collective_of(&unhex(agreement)?).map_err(lerr)?.map(|h| hx(&h)))
     }
 
-    /// Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-    /// each holder for `amount` on the stake in `object` (hex, or null for
-    /// the collective itself), or why it cannot. Leftovers by largest
-    /// remainder; a tied unit is the payer's to decide, at most one per tie
-    /// (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-    /// with the smallest identity hash, a choice, not a rule.
-    #[wasm_bindgen(js_name = agreementsPayerSplit)]
-    pub fn agreements_payer_split(&self, specs: JsValue, agreement: &str, object: Option<String>, amount: u64) -> R<JsValue> {
-        let s = specs_of(specs)?;
-        let view = s.view(&self.inner)?;
-        let o = match object {
-            Some(x) => agreements::Who::Id(unhex(&x)?),
-            None => agreements::Who::This,
-        };
-        let r = view.payer_split(&unhex(agreement)?, &o, amount).map_err(lerr)?;
-        to_js(&match r {
-            Ok(v) => PayerSplitOut { pays: v.iter().map(|(h, n)| (hx(h), *n)).collect(), why: None },
-            Err(w) => PayerSplitOut { pays: vec![], why: Some(w) },
-        })
-    }
-
     /// Rule 15a's turns (F165, F171): for `stake` (its index) of
     /// `agreement`'s version in force, the leftover units each holder has
     /// received so far from `service`'s splits, as `previous` (the
@@ -3624,13 +3586,12 @@ impl Verifier {
     /// `previous` is not held, not one of the service's splits for the
     /// stake, or carries no count.
     #[wasm_bindgen(js_name = agreementsSplitTurns)]
-    pub fn agreements_split_turns(&self, specs: JsValue, service: &str, agreement: &str, stake: u64, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
+    pub fn agreements_split_turns(&self, specs: JsValue, service: &str, owners: &str, holders: Vec<String>, previous: Option<String>) -> R<Option<Vec<f64>>> {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
-        let in_force = view.version_in_force(&unhex(agreement)?).map_err(lerr)?;
         let holders = holders.iter().map(|h| Ok((unhex(h)?, 0))).collect::<R<Vec<_>>>()?;
         let previous = previous.map(|p| unhex(&p)).transpose()?;
-        let t = view.turns(&unhex(service)?, &in_force, stake, &holders, previous.as_ref()).map_err(lerr)?;
+        let t = view.turns(&unhex(service)?, &unhex(owners)?, &holders, previous.as_ref()).map_err(lerr)?;
         Ok(t.map(|v| v.into_iter().map(|n| n as f64).collect()))
     }
 
@@ -3853,7 +3814,7 @@ impl Verifier {
         let view = s.view(&self.inner)?;
         let e = view.split(&unhex(id)?).map_err(lerr)?;
         to_js(&SplitOut {
-            agreement: hx(&e.split.agreement),
+            publication: hx(&e.split.publication),
             sums: e.sums,
             payouts: e
                 .split
@@ -4070,13 +4031,6 @@ struct DebtReleaseOut {
     against: Vec<String>,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PayerSplitOut {
-    pays: Vec<(String, u64)>,
-    why: Option<String>,
-}
-
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct PointerOut {
@@ -4091,7 +4045,8 @@ struct PointerOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SplitOut {
-    agreement: String,
+    /// The publication it follows (split field 3), by its first version.
+    publication: String,
     sums: Option<bool>,
     payouts: Vec<(String, u64, Option<u64>, Option<String>)>,
     fees: Vec<(String, String, u64)>,

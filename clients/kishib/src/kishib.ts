@@ -52,6 +52,9 @@ export { NAKISIB_LOST_SAY, NAKISIB_SAY, NAKISIB_WAIT_SAY };
 export { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY };
 
 /** Said where words given are an earlier paper of the identity, spent by a later change of its keys (H79). */
+
+/** Said where a person's change of keys is asked for a keyless identity (a collective: Identity rule 1, rotation check 4). */
+export const KEYLESS_SAY = 'This identity has no signing key: it is a collective, whose rotation installs none and keeps no line. Change its keys from its members’ paper shares, in Collectives (Start a rotation). Nothing was signed.';
 export const SPENT_PAPER_SAY = (position: number) =>
   `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key’s words Kišib showed at the last change. Nothing was signed, and the words are forgotten.`;
 
@@ -391,6 +394,8 @@ export class Kishib {
     let seed: Uint8Array | null = seedOf(a.words);
     try {
       const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      // A collective has no signing key (Identity rule 1): its keys change from its members' papers, in Collectives, never here.
+      if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
       const r = rd.look.resolution;
       const latest = r.links[r.links.length - 1];
       const blocking: string[] = [];
@@ -654,10 +659,8 @@ export class Kishib {
 
   /** Hide the words; three positions to type back. */
   written(): State {
-    if (this.col) {
-      this.col.written();
-      return this.state();
-    }
+    // A collective has no signing key: no words of one are shown (Identity rule 1).
+    if (this.col) this.col.showWords();
     const h = this.held;
     if (!h || (!h.signing && !h.chain) || (h.stage !== 'counts' && h.stage !== 'paper')) throw new Error('No words are shown.');
     h.positions = threePositions((n) => randomBytes(1)[0] % n);
@@ -671,10 +674,7 @@ export class Kishib {
    * the sitting is done.
    */
   async typed(a: { typed: string[] }): Promise<State> {
-    if (this.col) {
-      this.col.typed(a.typed);
-      return this.state();
-    }
+    if (this.col) this.col.showWords();
     const h = this.held;
     if (!h || (!h.signing && !h.chain) || h.stage !== 'shown' || !h.positions) throw new Error('No words are asked back.');
     if (!typedBack(toWords(h.chain ?? h.signing!), h.positions, a.typed)) throw new Error('Not the words asked for. Check the paper: they are shown again with “Show them again”.');
@@ -721,6 +721,8 @@ export class Kishib {
     const via = a.via ?? {};
     const id = readId(a.id);
     const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+    // A collective has no signing key (Identity rule 1): its keys change from its members' papers, in Collectives, never here.
+    if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
     const r = rd.look.resolution;
     const latest = r.links[r.links.length - 1];
     const blocking: string[] = [];
@@ -1049,6 +1051,8 @@ export class Kishib {
     try {
       signingSeed = seedOf(a.signingWords);
       const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      // A collective has no signing key (Identity rule 1): its keys change from its members' papers, in Collectives, never here.
+      if (!rd.look.resolution.signingKey) throw new Error(KEYLESS_SAY);
       const r = rd.look.resolution;
       // Which position the owner holds: the act that bound the signing key these words give.
       const pub = hex(signingPublic(signingSeed));

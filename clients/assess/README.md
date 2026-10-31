@@ -2,6 +2,8 @@
 
 Roadmap step 14, defined by Nobody, allegedly, on 12 October 2026: "something to assess deals". A client feature, never core. TypeScript, with the core library through WebAssembly. **Test identities only.**
 
+**Round 8 (F407): not moved.** Assess judges the old money terms (fields 8, 14, 28 and 29, withdrawn by the redesign); 12 of its 39 tests fail on the new core. Whether it should judge publications is a question in `docs/suite-r8-report.md`.
+
 ## In plain words
 
 Give it an agreement and it tells you, in plain words, what you would be signing: who has signed, what each party is bound to, the shares and the fees, who judges and in what order, how it ends, and what is still owed. Then it **flags the obvious risks**, each with the rule it rests on:

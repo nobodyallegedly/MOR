@@ -82,10 +82,28 @@ pub struct Person {
     /// As a home operator: the receipts signed, in log order.
     pub log: Vec<Hash>,
     pub last_summary: Option<Hash>,
-    /// For a collective's device (F127): the collective's chain, and the
-    /// decisions every everyday act it signs cites there, unless the act
-    /// already names that chain.
+    /// For a member's device acting for a collective (Agreements rule 58):
+    /// the collective's chain, and the acts every everyday act it signs
+    /// cites there (the decision it acts under, the heads it joins), unless
+    /// the act already names that chain.
     pub cite: Option<(Hash, Vec<Hash>)>,
+    /// An identity whose genesis declares no signing key (a collective,
+    /// Identity rule 1): its rotations install none and keep no tip, and it
+    /// signs no everyday act.
+    pub keyless: bool,
+}
+
+impl Person {
+    /// A device of this member acting for the collective `col`, citing
+    /// `decisions` on its chain (Agreements rule 58): its own key, a
+    /// sequence of its own.
+    pub fn acting_for(&self, col: Hash, decisions: Vec<Hash>) -> Person {
+        let mut d = self.clone();
+        d.seq = vec![];
+        d.last_summary = None;
+        d.cite = Some((col, decisions));
+        d
+    }
 }
 
 /// The objects of an everyday act, with the collective's chain cited where
@@ -93,9 +111,9 @@ pub struct Person {
 fn cited(p: &Person, spec: &Hash, type_: u64, objects: Option<Vec<Object>>) -> Option<Vec<Object>> {
     let Some((chain, ds)) = &p.cite else { return objects };
     // Identity's own everyday acts (a witness act...) carry no objects:
-    // they are not on the actions chain (reading, F127). A record (Agreements
-    // type 17) is a decision, citing by its kept tips.
-    if spec == &identity_spec() || (spec == &agreements_spec() && type_ == 17) {
+    // they are on neither of a collective's chains.
+    let _ = type_;
+    if spec == &identity_spec() {
         return objects;
     }
     if objects.iter().flatten().any(|o| &o.chain == chain) {
@@ -284,8 +302,12 @@ impl World {
     ) -> Person {
         let sign = schnorr(name, 0);
         let chain_key = slh(name, 0, scheme);
+        // A collective's genesis (Identity rule 1): it declares its founding
+        // agreement in place of a signing key, and is signed by a chain key
+        // revealed in its signature, committing the next.
+        let keyless = declarations.iter().flatten().any(|d| d.spec == agreements_spec() && d.kind == 0 && d.value.is_some());
         let g = Payload::Genesis(Genesis {
-            signing_key: signing_key(&sign),
+            signing_key: (!keyless).then(|| signing_key(&sign)),
             chain_key: commit(&chain_key),
             homes,
             rule,
@@ -293,7 +315,12 @@ impl World {
             audit,
         });
         let inside = self.inside(0, &g);
-        let a = self.seal(&inside, None, None, |id| sign.sign(id, &[0; 32]));
+        let first = slh(&format!("{name}/genesis"), 0, scheme);
+        let a = if keyless {
+            self.seal(&inside, None, None, |id| first.sign(id, None))
+        } else {
+            self.seal(&inside, None, None, |id| sign.sign(id, &[0; 32]))
+        };
         let id = self.add(&a);
         Person {
             name: name.into(),
@@ -309,6 +336,7 @@ impl World {
             log: vec![],
             last_summary: None,
             cite: None,
+            keyless,
         }
     }
 
@@ -339,13 +367,13 @@ impl World {
                 })
                 .unwrap_or_default()
         });
+        // A collective's rotation installs no signing key and keeps no tip
+        // (rotation check 4).
+        let kept = if p.keyless { vec![] } else { kept };
         let payload = Payload::Rotation(Rotation {
             prev: p.tip,
             position: p.position + 1,
-            signing_key: r
-                .raw_signing_key
-                .clone()
-                .unwrap_or_else(|| signing_key(&next_sign)),
+            signing_key: (!p.keyless).then(|| r.raw_signing_key.clone().unwrap_or_else(|| signing_key(&next_sign))),
             chain_key: commit(&next_chain_key),
             kept,
             disowned: r.disowned,
@@ -717,4 +745,120 @@ pub fn stand_in_answers(mut v: mor_core::agreements::AgreementsView<'_>) -> mor_
         }
     }
     v
+}
+
+/// A lone seller's publication (Agreements type 6, rule 11): `seller` sells
+/// `sold`, with its words, naming no ownership agreement and no partner, and
+/// is its own split service, under a test split cMIP. Held; its id.
+pub fn lone_publication(w: &mut World, seller: &mut Person, mirs: &mor_core::agreements::Mirs, sold: Vec<mor_core::agreements::Sold>, words: Option<&str>) -> Hash {
+    let p = mor_core::agreements::Publication {
+        sold: Some(sold),
+        owners: None,
+        partners: vec![],
+        service: seller.id,
+        plan: test_plan(),
+        words: words.map(String::from),
+        time: None,
+        until: None,
+        refund: None,
+        cmips: vec![],
+        designated: None,
+        backups: vec![],
+        failed: None,
+    };
+    let a = w.everyday_act(seller, mirs.agreements, mor_core::agreements::types::PUBLICATION, p.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A split plan with no share off the top, under a test split cMIP.
+pub fn test_plan() -> mor_core::agreements::SplitPlan {
+    mor_core::agreements::SplitPlan {
+        shares: vec![],
+        cmip: sha256(b"mor test data: a split cMIP"),
+        unfilled: mor_core::agreements::Unfilled::Stakes,
+        top: vec![],
+        service_bears_rail_fees: false,
+        max_rail_fee: None,
+        params: None,
+        metrics: vec![],
+        fees: vec![],
+    }
+}
+
+/// Every layer's rule (terms field 19, Agreements rule 60) the same.
+pub fn layers_all(rule: mor_core::agreements::Rule) -> Vec<(u64, mor_core::agreements::Rule)> {
+    (1..=5).map(|l| (l, rule.clone())).collect()
+}
+
+/// A first price tag (Money type 5) signed by `signer`, pricing the
+/// publication `first` (or, with `bake`, a bare bake) at `price` of `unit`,
+/// payable to `payee`. Held; its id.
+pub fn price_tag(w: &mut World, signer: &mut Person, money: Hash, priced: mor_core::money::Priced, price: u64, unit: Hash, payee: Hash) -> Hash {
+    let t = mor_core::money::Payload::PriceTag(mor_core::money::PriceTag {
+        priced,
+        version: 1,
+        previous: None,
+        price: Some(mor_core::money::Amount { unit, value: price }),
+        payee,
+    });
+    let a = w.everyday_act(signer, money, mor_core::money::types::PRICE_TAG, t.to_map(), None, None);
+    w.add(&a)
+}
+
+/// A deal's terms between `parties` with `text`, every party signing and
+/// changing it, naming one payment cMIP, and nothing else: the base other
+/// terms are written from.
+pub fn deal_terms(parties: &[Hash], text: &str) -> mor_core::agreements::Terms {
+    use mor_core::agreements::{Field4, Rule, Terms};
+    Terms {
+        parties: parties.to_vec(),
+        text: text.into(),
+        cmips: vec![(6, sha256(b"a payment cMIP"))],
+        keepers: None,
+        field4: Field4::Rule(Rule::All),
+        clone: Rule::All,
+        time: None,
+        abandonment: None,
+        parent: None,
+        grammar: None,
+        arbitrators: None,
+        extensions: None,
+        succession: None,
+        constitutional: None,
+        layers: None,
+        areas: None,
+        area_words: None,
+        chain: None,
+        departed: None,
+        stakes: None,
+        target: None,
+        forked_from: None,
+        release_rule: None,
+        settles: None,
+        fork_judge: None,
+        plan: None,
+        fees: None,
+        refund: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
+    }
+}
+
+/// A work's ownership agreement (rule 8): a deal among `holders`' identities
+/// targeting the claim `claim`, its one stake their shares.
+pub fn ownership_terms(claim: Hash, holders: &[(Hash, u64)], text: &str) -> mor_core::agreements::Terms {
+    use mor_core::agreements::{Stake, Target, Who};
+    let parties: Vec<Hash> = holders.iter().map(|(h, _)| *h).collect();
+    let mut t = deal_terms(&parties, text);
+    t.target = Some(Target::Claim(claim));
+    t.stakes = Some(vec![Stake { object: Who::Id(claim), holders: holders.iter().map(|(h, n)| (Who::Id(*h), *n)).collect() }]);
+    t
+}
+
+/// A claim (Agreements type 3) of `work` by `p` alone, public. Held; its id.
+pub fn claim_alone(w: &mut World, p: &mut Person, mirs: &mor_core::agreements::Mirs, work: Hash) -> Hash {
+    let c = mor_core::agreements::WorkClaim { work, creators: vec![p.id], commitment: None };
+    let a = w.everyday_act(p, mirs.agreements, mor_core::agreements::types::CLAIM, c.to_map(), None, None);
+    w.add(&a)
 }

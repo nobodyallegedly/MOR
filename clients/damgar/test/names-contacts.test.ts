@@ -15,7 +15,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
-import { closeAll, damgar, dub, start, type Relay } from './world.ts';
+import { closeAll, damgar, dub, start, type Relay, shows } from './world.ts';
 import { TestNode } from './node.ts';
 import { ACCEPTABLE, SPEC } from '../src/specs.ts';
 import { idForm } from '../../genesis/src/forms.ts';
@@ -34,10 +34,14 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  try {
+    await browser?.close().catch(() => undefined);
+    await closeAll();
+  } finally {
+    for (const r of [...(homes ?? []), relay]) await r?.stop().catch(() => undefined);
+  }
 });
 
 async function open(url: string): Promise<{ context: BrowserContext; page: Page }> {
@@ -172,7 +176,7 @@ test('H88, H96, H100, H106, H109, H119, H121: Damgar shows names, keeps the one 
   await page.locator('[data-k-open="identity"]').click();
   const panel = page.locator('[data-k-panel="identity"]');
   await panel.waitFor();
-  assert.match(await panel.locator('.k-idrow.k-on').innerText(), /Alice Test/);
+  await shows(panel.locator('.k-idrow.k-on'), /Alice Test/);
   assert.equal(await panel.locator('[data-k-ownid] .k-idwhole').innerText(), idForm(alice.id));
   await panel.locator('[data-k-ownid] [data-k-copy-id]').click();
   await page.waitForFunction(() => document.querySelector('[data-k-panel="identity"] [data-k-copy-id]')?.textContent === 'Copied');
@@ -230,9 +234,17 @@ test('H88, H96, H100, H106, H109, H119, H121: Damgar shows names, keeps the one 
   await scan('Waiting, To pay');
   let taps = await tapsShowWhole(page, 'Waiting, To pay');
   // A second tap copies it, "Copied" said.
+  // The pane may redraw between taps (a fresh button only expands, the first tap again): tapped until it says "Copied",
+  // a few times at most (round 8's follow-up: a single read once timed out on GitHub).
   const first = page.locator(`#pane [data-k-who="${bob.id}"] .k-idbtn`).first();
-  await first.click();
-  await page.waitForFunction((id) => document.querySelector(`#pane [data-k-who="${id}"] .k-idbtn`)?.textContent === 'Copied', bob.id);
+  let copied = false;
+  for (let i = 0; i < 4 && !copied; i++) {
+    await first.click();
+    copied = await page
+      .waitForFunction((id) => [...document.querySelectorAll(`#pane [data-k-who="${id}"] .k-idbtn`)].some((b) => b.textContent === 'Copied' || (b as HTMLElement).dataset.kCopied === 'yes'), bob.id, { timeout: 5_000 })
+      .then(() => true, () => false);
+  }
+  assert.ok(copied, 'a second tap copies the ID, "Copied" said');
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), idForm(bob.id));
   for (const [tab, part] of [
     ['account', 'summary'],

@@ -367,6 +367,10 @@ struct Previous {
     vault: Option<Option<Value>>,
     /// The homes the previous act sets, where it sets them.
     homes: Option<Vec<identity::Home>>,
+    /// The identity has no signing key (a collective, Identity rule 1): its
+    /// genesis was signed by chain key 0 and committed key 1, so the key
+    /// the previous act commits to is numbered one above its position.
+    keyless: bool,
 }
 
 fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
@@ -407,6 +411,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
                 commit: g.chain_key.clone(),
                 vault: vault_of(&g.declarations),
                 homes: Some(g.homes.clone()),
+                keyless: g.signing_key.is_none(),
                 genesis: Some(g),
             })
         }
@@ -422,6 +427,7 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
                 commit: r.chain_key.clone(),
                 vault: vault_of(&r.declarations),
                 homes: r.homes.clone(),
+                keyless: r.signing_key.is_none(),
                 genesis: None,
             })
         }
@@ -873,7 +879,15 @@ impl Signer {
                 asked.position, prev.position
             )));
         }
-        if pending.index != prev.position {
+        // Rotation check 4: a new signing key exactly when the genesis
+        // declares one; a collective's rotation names no kept tip.
+        if prev.keyless && (asked.signing_key.is_some() || !asked.kept.is_empty()) {
+            return Err(bad("a collective's rotation carries no signing key and names no kept tip (Identity rule 1)".into()));
+        }
+        if !prev.keyless && asked.signing_key.is_none() {
+            return Err(bad("a rotation of an identity with a signing key carries the new one (rotation check 4)".into()));
+        }
+        if pending.index != prev.position + u64::from(prev.keyless) {
             return Err(bad(format!(
                 "key index {} is not the number of the key the previous act commits to ({})",
                 pending.index, prev.position
@@ -1312,25 +1326,61 @@ impl Signer {
     }
 }
 
-/// A collective's first dealing, at genesis: a fresh seed dealt to the
-/// holders, and the commitment for the collective's genesis. The dealing
-/// device forgets the seed; nothing can check that it did.
+/// A collective's genesis (Identity rule 1), on the dealing device: a fresh
+/// seed; the genesis, declaring no signing key, signed by the seed's chain
+/// key 0, revealed in its signature, and committing key 1; and key 1 dealt
+/// to the holders, the key its first rotation reveals. The dealing device
+/// forgets the seed; nothing can check that it did.
 pub fn deal_genesis(
+    identity_spec: Hash,
     plan: &DealPlan,
+    genesis: crate::online::GenesisPlan,
     rng: &mut (impl RngCore + CryptoRng),
-) -> (Message, Vec<Share>) {
+) -> (Act, Vec<Share>) {
     let seed = shares::fresh_dealable_seed(plan.seed_module, rng);
     let dealt = shares::deal(
         &seed,
         plan.scheme,
-        0,
+        1,
         plan.threshold,
         plan.holders.clone(),
         rng,
     );
-    let export = Message::CommitmentExport(CommitmentExport {
+    let first = seed.key(plan.scheme, 0);
+    drop(seed);
+    let g = Payload::Genesis(Genesis {
+        signing_key: None,
         chain_key: dealt[0].dealing.chain_key,
-        index: 0,
+        homes: genesis.homes,
+        rule: genesis.rule,
+        declarations: genesis.declarations,
+        audit: genesis.audit,
     });
-    (export, dealt)
+    let inside = Inside {
+        spec: identity_spec,
+        type_: identity::types::GENESIS,
+        prev: None,
+        objects: None,
+        payload: g.to_map(),
+        position: None,
+        summary: None,
+        acks: None,
+        refs: None,
+        hint: None,
+        salt: random(rng),
+    };
+    let opt_rand: [u8; 16] = random(rng);
+    let a = act::make(
+        &inside,
+        &random(rng),
+        &random(rng),
+        &Addressing {
+            public: true,
+            ..Default::default()
+        },
+        |id| first.sign(id, Some(&opt_rand)),
+    );
+    drop(first);
+    assert_eq!(sig::verify(&a.signature, &a.id()), Verdict::Valid);
+    (a, dealt)
 }

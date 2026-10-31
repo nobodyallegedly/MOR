@@ -19,7 +19,7 @@ import type { Corrections } from './corrections.ts';
 import type { Desk } from './desk.ts';
 import type { AfterKishib } from './kishib.ts';
 import type { Publishing } from './publishing.ts';
-import type { SharesIn } from './deals.ts';
+import type { PeopleIn } from './deals.ts';
 import type { Member } from './member.ts';
 import type { EdubbaMoney } from './money.ts';
 import type { Real } from './real.ts';
@@ -68,9 +68,15 @@ export const WEB_OPS: readonly string[] = [
   'publishing',
   'publishing act as',
   'publishing collective add',
+  'publishing upload read',
   'publishing work read',
-  'publishing post read',
-  'publishing deals gather',
+  'publishing tag read',
+  'publishing tag withdraw read',
+  'publishing claim read',
+  'publishing ownership read',
+  'publishing publication read',
+  'publishing publication end read',
+  'publishing gather',
   'publishing shared sales',
   'publishing confirm',
   'publishing deliver',
@@ -125,6 +131,8 @@ export const WEB_OPS: readonly string[] = [
   'real register resignation',
   'real money prepare',
   'real money record',
+  'real keepers prepare',
+  'real keepers record',
   'real keepers',
   'real keep',
   'real collective post',
@@ -152,13 +160,10 @@ const readIdOr = (k: string): string => {
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
-/** "Who shares in it", as the page sends it; null where it names nobody. */
-const sharesIn = (v: unknown): SharesIn | null => {
-  if (!v || typeof v !== 'object') return null;
-  const o = v as Record<string, unknown>;
-  const w = Array.isArray(o.with) ? (o.with as unknown[]).map((x) => ({ who: text((x as Record<string, unknown>)?.who), share: text((x as Record<string, unknown>)?.share) })) : [];
-  return { with: w, mine: text(o.mine), referral: text(o.referral), service: text(o.service), serviceKey: text(o.serviceKey) };
-};
+/** Rows of people as the page sends them (H98: the first is the identity in use): each a name, a share, a label. */
+const rowsIn = (v: unknown): { who: string; share: string; label: string }[] =>
+  Array.isArray(v) ? (v as unknown[]).map((x) => ({ who: text((x as Record<string, unknown>)?.who), share: text((x as Record<string, unknown>)?.share), label: text((x as Record<string, unknown>)?.label) })) : [];
+const peopleIn = (v: unknown): PeopleIn => ({ rows: rowsIn(v) });
 
 /** Edubba's operations: `web` answers only `WEB_OPS`. */
 export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Record<string, unknown>, key: string) => Promise<unknown> {
@@ -332,6 +337,8 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         }
         for (const x of real.collectives()) {
           const c = real.collective(x.id);
+          // Round 8: a collective holds no signing key (Agreements rule 56), so none can have changed under Edubba.
+          if (!c.f.identity.signingSecret) continue;
           try {
             await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c.f.identity.signingSecret, homes: c.f.identity.homes, relays: c.f.relays });
           } catch (e) {
@@ -419,7 +426,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'identity renew':
         return after.renewIdentity(text(a.identity), text(a.words));
       case 'real collective renew':
-        return after.renewCollective(text(a.collective), text(a.words));
+        return after.renewCollective(text(a.collective));
       case 'real lists':
         // Read again where asked: the one list as every app sees it, its nicknames too (H100).
         known.forget();
@@ -490,16 +497,19 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'real release standing':
         return real.releaseStanding(text(a.act));
       case 'real money prepare':
-        // Round 3, part C: the collective's stakes, split plan, split service and keepers, one clone.
+        // H101: where the collective's payments land: a split service (a split agreement reading its shares by reference) or one trusted pointer.
         return real.prepareMoney({
           collective: text(a.collective),
-          shares: Object.fromEntries(Object.entries((a.shares ?? {}) as Record<string, unknown>).map(([k, v]) => [readIdOr(k), Number(v)])),
+          way: a.way === 'pointer' ? 'pointer' : 'service',
           referral: Number(a.referral ?? 0),
-          service: text(a.service),
-          serviceKey: text(a.serviceKey),
-          keepers: list(a.keepers),
-          keepersNeeded: num(a.keepersNeeded ?? 1),
+          ...(a.service !== undefined ? { service: text(a.service) } : {}),
+          ...(a.wallet !== undefined ? { wallet: text(a.wallet) } : {}),
+          ...(a.by !== undefined ? { by: text(a.by) } : {}),
         });
+      case 'real keepers prepare':
+        return real.prepareKeepers({ collective: text(a.collective), keepers: list(a.keepers), keepersNeeded: Number(a.keepersNeeded ?? 1) });
+      case 'real keepers record':
+        return real.recordKeepers(text(a.act));
       case 'real money record':
         return real.recordMoney(text(a.act));
       case 'real keepers':
@@ -510,7 +520,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
         const c = real.collective(text(a.collective));
-        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
+        return { id: c.identity, members: c.f.members, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
       }
       case 'publishing':
         return publishing.state();
@@ -518,12 +528,26 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return publishing.actAs(text(a.id));
       case 'publishing collective add':
         return publishing.collectiveAdd(text(a.id));
+      // The four ways in (F407): each read back, then signed by 'publishing confirm' with its digest.
+      case 'publishing upload read':
+        return publishing.prepareUpload({ media: text(a.media), data: text(a.data), title: text(a.title), then: text(a.then), price: text(a.price), creators: rowsIn(a.creators) });
+      // Kept for callers from before round 8: a protected file with a price is now an upload with a price tag on the bare bake (its acts, the bake, the tag and the post, in the same places as the publication, the offer and the post were).
       case 'publishing work read':
-        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? ''), shares: sharesIn(a.shares) });
-      case 'publishing post read':
-        return publishing.preparePost({ text: text(a.text), shares: sharesIn(a.shares) ?? { with: [], mine: '', referral: '', service: '', serviceKey: '' } });
-      case 'publishing deals gather':
-        return publishing.gatherDeals();
+        return publishing.prepareUpload({ media: text(a.media), data: text(a.data), title: text(a.title), then: text(a.price) ? 'price' : 'none', price: text(a.price) });
+      case 'publishing tag read':
+        return publishing.prepareTag({ bake: text(a.bake), price: text(a.price) });
+      case 'publishing tag withdraw read':
+        return publishing.prepareTagWithdrawal({ on: text(a.on) });
+      case 'publishing claim read':
+        return publishing.prepareClaim({ work: text(a.work), title: text(a.title), creators: rowsIn(a.creators) });
+      case 'publishing ownership read':
+        return publishing.prepareOwnership({ claim: text(a.claim), title: text(a.title), people: peopleIn(a.people) });
+      case 'publishing publication read':
+        return publishing.preparePublication({ owners: text(a.owners), sold: list(a.sold), partners: rowsIn(a.partners), service: text(a.service), referral: text(a.referral), price: text(a.price), tagBy: text(a.tagBy), words: text(a.words), title: text(a.title) });
+      case 'publishing publication end read':
+        return publishing.preparePublicationEnd({ publication: text(a.publication) });
+      case 'publishing gather':
+        return publishing.gather();
       case 'publishing shared sales':
         return publishing.sharedSales();
       case 'publishing confirm':
@@ -531,7 +555,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'publishing deliver':
         return publishing.deliver();
       case 'publishing vow read':
-        return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price), shares: sharesIn(a.shares) });
+        return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
       case 'publishing sales contests':
         return publishing.salesContests();
       case 'publishing vow sales':

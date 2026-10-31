@@ -43,26 +43,65 @@ export function commit(dir: string, path: string, text: string): void {
   git('-c', 'user.name=test', '-c', 'user.email=test@example.invalid', 'commit', '-q', '-m', path);
 }
 
+/**
+ * Stop whatever was started, whatever the outcome, each within a bound: a
+ * server left running keeps the test file's process alive, and the CI job
+ * waits for it until its time limit (Part 4). A relay process that already
+ * exited never says so again, so its stop is not waited for past the bound.
+ */
+export async function stopAll(things: ({ stop?: () => Promise<void>; close?: () => Promise<void> } | null | undefined)[]): Promise<void> {
+  const errors: unknown[] = [];
+  for (const t of things) {
+    if (!t) continue;
+    try {
+      const done = t.close ? t.close() : t.stop!();
+      await Promise.race([done, new Promise<void>((ok) => setTimeout(ok, 10_000).unref())]);
+    } catch (e) {
+      errors.push(e);
+    }
+    // A relay still running past the bound is killed.
+    const proc = (t as unknown as { proc?: { kill(sig: string): void } | null }).proc;
+    if (proc) proc.kill('SIGKILL');
+  }
+  if (errors.length) throw errors[0];
+}
+
+/** Every lossy relay still open, closed by the world's `stop` whatever the outcome of the test that opened it. */
+const lossyOpen = new Set<{ close(): Promise<void> }>();
+
 export async function world(): Promise<World> {
-  const homes = [await start('home'), await start('home'), await start('home')];
-  const relay = await start('relay');
-  const dir = mkdtempSync(join(tmpdir(), 'mor-collective-'));
-  const app = await serve({ dir, port: 0 });
-  const client = await Client.open(await newKey(), app.base);
-  await client.ask('pair', { code: app.access.newCode(), label: 'test' });
-  const co = checkout();
-  await client.ask('settings', { homes: homes.map((h) => h.base), relays: [relay.base, homes[0].base], via: [], checkout: co });
-  return {
-    homes,
-    relay,
-    app,
-    client,
-    checkout: co,
-    async stop() {
-      await app.close();
-      for (const h of [...homes, relay]) await h.stop();
-    },
-  };
+  const started: Parameters<typeof stopAll>[0] = [];
+  try {
+    const homes: Relay[] = [];
+    for (let i = 0; i < 3; i++) {
+      const h = await start('home');
+      started.push(h);
+      homes.push(h);
+    }
+    const relay = await start('relay');
+    started.push(relay);
+    const dir = mkdtempSync(join(tmpdir(), 'mor-collective-'));
+    const app = await serve({ dir, port: 0 });
+    started.unshift(app);
+    const client = await Client.open(await newKey(), app.base);
+    await client.ask('pair', { code: app.access.newCode(), label: 'test' });
+    const co = checkout();
+    await client.ask('settings', { homes: homes.map((h) => h.base), relays: [relay.base, homes[0].base], via: [], checkout: co });
+    return {
+      homes,
+      relay,
+      app,
+      client,
+      checkout: co,
+      async stop() {
+        await stopAll([...lossyOpen, ...started]);
+      },
+    };
+  } catch (e) {
+    // Started before the failure: stopped now, so nothing is left running.
+    await stopAll(started).catch(() => undefined);
+    throw e;
+  }
 }
 
 /** Everything the page shows of a reading, as one text, to look for words in. */
@@ -107,13 +146,25 @@ export async function lossy(target: string): Promise<{ base: string; drop: boole
         return;
       }
     }
-    const r = await fetch(target + req.url, { method: req.method, headers: { 'content-type': req.headers['content-type'] ?? 'application/cbor' }, body: req.method === 'GET' ? undefined : body });
-    res.writeHead(r.status, { 'content-type': r.headers.get('content-type') ?? 'application/cbor' });
-    res.end(Buffer.from(await r.arrayBuffer()));
+    try {
+      const r = await fetch(target + req.url, { method: req.method, headers: { 'content-type': req.headers['content-type'] ?? 'application/cbor' }, body: req.method === 'GET' ? undefined : body });
+      res.writeHead(r.status, { 'content-type': r.headers.get('content-type') ?? 'application/cbor' });
+      res.end(Buffer.from(await r.arrayBuffer()));
+    } catch {
+      // The relay behind it is away: say so, never leave the request hanging.
+      res.writeHead(502);
+      res.end();
+    }
   });
   await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
   const port = (server.address() as { port: number }).port;
-  return {
+  const close = () =>
+    new Promise<void>((ok) => {
+      lossyOpen.delete(out);
+      server.close(() => ok());
+      server.closeAllConnections();
+    });
+  const out = {
     base: `http://127.0.0.1:${port}`,
     get drop() {
       return state.drop;
@@ -127,10 +178,8 @@ export async function lossy(target: string): Promise<{ base: string; drop: boole
     set types(x: number[]) {
       state.types = x;
     },
-    close: () =>
-      new Promise<void>((ok) => {
-        server.close(() => ok());
-        server.closeAllConnections();
-      }),
+    close,
   };
+  lossyOpen.add(out);
+  return out;
 }

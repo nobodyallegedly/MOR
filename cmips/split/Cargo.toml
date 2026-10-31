@@ -1,7 +1,7 @@
 [package]
 name = "mor-split"
 version = "0.1.0"
-description = "The split cMIP, draft 2 (Agreements task 8, roadmap step 13): which signed split service receives a payment, attempt by attempt, and how a payment is divided by the plan, exactly."
+description = "The split cMIP, draft 4 (Agreements task 8): which split service the publication names receives a payment, attempt by attempt, and how a payment is divided under the publication, exactly: partners, roles, metric shares and fees off the top, the owners' line by the one stake of the ownership agreement."
 edition.workspace = true
 license.workspace = true
 

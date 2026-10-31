@@ -55,11 +55,15 @@ before(async () => {
   wallet = { base: s.base, close: () => s.server.close() };
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
   if (!run) return;
-  wallet?.close();
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    wallet?.close();
+    await closeAll();
+  } finally {
+    for (const h of [...(homes ?? []), relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 const chain = () => btcd({ url: 'https://127.0.0.1:18334', user: 'u', pass: 'p', cert: join(run!, 'btcd/rpc.cert') });

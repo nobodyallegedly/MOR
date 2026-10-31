@@ -1,12 +1,15 @@
 //! Roadmap step 14a, end to end on regtest, as its second pass left it
-//! (F225, F228): a pooled anchoring service on Bitcoin, selling under an
-//! Agreements standing offer. Test identities buy anchors by following
-//! that offer; the service anchors them in one batch by pay-to-contract
-//! (no OP_RETURN) and publishes the batch in an act it signs under the
-//! offer; anyone verifies inclusion from the chain; a hash paid for and
-//! left out of its batch is a provable omission; a hash whose batch never
-//! comes is a default once its deadline is buried six blocks deep. Each
-//! default owes the price back under the offer's terms, and **the refund
+//! (F225, F228), moved to the redesign by the anchoring cMIP's draft 6
+//! (round 8, F407): a pooled anchoring service on Bitcoin, selling under
+//! an Agreements **publication**, a lone seller's, the service its own
+//! split service, priced by a **price tag** naming it. Test identities buy
+//! anchors by paying that tag at their tier's price; the service anchors
+//! them in one batch by pay-to-contract (no OP_RETURN) and signs a batch
+//! notice under the publication; anyone verifies inclusion from the chain;
+//! a hash paid for and left out of its batch is a provable omission; a
+//! hash whose batch never comes is a default once its deadline is buried
+//! six blocks deep. Each default owes the price back under the
+//! publication's terms, and **the refund
 //! is paid**: the service pays it back over Lightning to the payer's own
 //! pointer and signs its claim naming the payment refunded, and the core's
 //! Agreements view shows it repaid.
@@ -20,7 +23,12 @@
 //! the output, and what the service kept, here a loss, the service's
 //! (F228), shown.
 //!
-//! The acts (the pointers, the standing offer, tickets and publications,
+//! *Premises moved (draft 6): the standing offer is gone from the core;
+//! where this test read it (`AgreementsView::offer`), it reads the
+//! publication (`AgreementsView::publication`) and its tag
+//! (`AgreementsView::tag_under`), and the payments pay the tag.*
+//!
+//! The acts (the pointers, the publication and its price tag, tickets and batch notices,
 //! the claims, the acts anchored) are real acts on a throwaway home, read
 //! back and checked by a reader and the core's Agreements view.
 //!
@@ -408,12 +416,25 @@ impl Pool {
     }
 }
 
+/// The service's offer as a reader reads it (anchoring cMIP draft 6, item
+/// 9): the publication `first` and the price tag `tag`, both held, the
+/// core's Agreements view saying the publication counts and the tag counts
+/// under it; read by the cMIP as its offer.
+fn offer_in(rd: &Reader, first: &Hash, tag: &Hash, service: &Hash) -> Offer {
+    let v = AgreementsView::new(&rd.v, mirs());
+    let e = v.publication(first).expect("a publication");
+    assert!(e.counts, "the publication counts: {:?}", e.problems);
+    assert_eq!(v.tag_under(tag).unwrap(), agreements::TagUnder::Counts { publication: *first, withdrawn: false }, "its price tag counts under it");
+    let Ok(Payload::PriceTag(t)) = Payload::decode(money::types::PRICE_TAG, &payload(rd, tag)) else { panic!("a price tag") };
+    Offer::from_publication(*first, e.drafter, &e.publication, *tag, *service, &t).expect("an anchoring offer")
+}
+
 fn lightning(node: [u8; 33]) -> Vec<Rail> {
     vec![Rail { module: mor_lightning::spec(), address: LnAddress { network: LnNetwork::Regtest, node, endpoint: Some("in-process, for this test".into()) }.encode() }]
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_refunded_on_regtest() {
+async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refunded_on_regtest() {
     let Some(bin) = btcd_dir() else {
         eprintln!("MOR_BTCD is not set: the regtest anchoring test did not run (see modules/onchain/README.md)");
         return;
@@ -433,7 +454,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let lnm = Lightning;
     let modules = Modules::new().adopt(&lnm);
 
-    // ------------------------------------------------ the service: pointer and standing offer
+    // ------------------------------------------------ the service: pointer, publication and price tag
     let mut svc = born(&site, &seed, "the anchoring service").await;
     // Its pointer: Lightning (rail 0), where buyers pay; on-chain (rail 1),
     // where its own coins for the pool sit.
@@ -444,13 +465,21 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let pointer_act = svc.act(money_spec(), money::types::PAYEE_POINTER, Payload::PayeePointer(pointer.clone()).to_map(), None, None);
     put(&site, &pointer_act).await;
     let terms = Terms { reference: clock::reference(Network::Regtest), tiers: vec![Tier { price: Price::Fixed(50), blocks: 2 }, Tier { price: Price::Fixed(20), blocks: 6 }, Tier { price: Price::Fixed(5), blocks: 144 }] };
-    let standing = terms.standing_offer(mor_onchain::unit(Network::Regtest), Some("Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.".into()), None);
-    let offer_act = svc.act(mirs().agreements, agreements::types::STANDING_OFFER, standing.to_map(), None, None);
+    let words = "Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.";
+    let publication_of = terms.publication(svc.id, mor_core::hash::sha256(b"a split cMIP, a test value"), Some(words.into()), None);
+    let offer_act = svc.act(mirs().agreements, agreements::types::PUBLICATION, publication_of.to_map(), None, None);
     put(&site, &offer_act).await;
+    // One price tag per tier (anchoring draft 7, F409), each at exactly its tier's price.
+    let mut tag_acts = vec![];
+    for (_, t) in terms.price_tags(offer_act.id(), mor_onchain::unit(Network::Regtest), svc.id) {
+        let a = svc.act(money_spec(), money::types::PRICE_TAG, Payload::PriceTag(t).to_map(), None, None);
+        put(&site, &a).await;
+        tag_acts.push(a);
+    }
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
     let pool_key_sk = secret("the anchoring service's batch key");
     let pool_key = bitcoin::key::Keypair::from_secret_key(&Secp256k1::new(), &pool_key_sk).x_only_public_key().0.serialize();
-    eprintln!("the service publishes its pointer and its standing offer (Agreements type 6, a lone seller's): tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash");
+    eprintln!("the service publishes its pointer, its publication (Agreements type 6, a lone seller's, its own split service) and its price tags (Money type 5, one per tier: 50, 20 and 5 satoshis): tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash");
 
     // ------------------------------------------------ four payers buy one hash each
     let now = node.rpc.block_count().await.unwrap();
@@ -466,23 +495,25 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let own_act = p.act(money_spec(), money::types::PAYEE_POINTER, Payload::PayeePointer(own.clone()).to_map(), None, None);
         put(&site, &own_act).await;
         pointers.push((own_act.id(), own));
-        // The payer reads the service's standing offer from the home; the
-        // core's Agreements view says it counts.
+        // The payer reads the service's publication and price tag from the
+        // home; the core's Agreements view says the publication counts and
+        // the tag counts under it.
         let rd = read(&site, &[svc.id]).await;
-        assert!(AgreementsView::new(&rd.v, mirs()).offer(&offer_act.id()).unwrap().counts, "the standing offer counts");
-        let lo = agreements::Offer::decode(&rd.v.get(&offer_act.id()).unwrap().inside).expect("an offer in Agreements' format").offer;
-        let o = Offer::read(offer_act.id(), svc.id, &lo).expect("an anchoring offer");
+        // The tier's own tag (draft 7): what the payment fulfils, and the offer read with it.
+        let tag_act = &tag_acts[tier as usize];
+        let o = offer_in(&rd, &offer_act.id(), &tag_act.id(), &svc.id);
         // The act it anchors, and a random blind: the service sees only the leaf.
         let act = p.post(&format!("{name}'s act, to be anchored"));
         put(&site, &act).await;
         let blind = random::<32>();
         let leaf = tree::leaf(&act.id(), &blind);
         let price = o.price(tier, None).unwrap();
-        // The payment follows the standing offer (F225), to the service's flow.
+        // The payment pays the price tag (F225; Money rule 18), at the
+        // tier's price, to the service's flow.
         let paid_to = PaidTo::Flow { pointer: pointer_act.id(), rail: 0 };
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: price, fulfils: offer_act.id(), payer: Some(Payer::Identity(p.id)), paid_to, salt: random::<16>(), purchase: None };
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: price, fulfils: tag_act.id(), payer: Some(Payer::Identity(p.id)), paid_to, salt: random::<16>(), purchase: None };
         // The service's endpoint hands back the ticket, an act it signs
-        // under the offer.
+        // under the publication.
         let ticket = Ticket { offer: offer_act.id(), leaf, commitment: commitment.hash(), tier, batch, deadline: now + o.terms.tiers[tier as usize].blocks, quote: None };
         let ticket_act = svc.act(mor_anchoring::spec(), service::TICKET, ticket.to_map(), under_offer.clone(), None);
         // The payer's client checks the ticket before paying.
@@ -501,7 +532,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         put(&site, &ticket_act).await;
         let receipt_act = svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(receipt_of(&commitment, &proof)).to_map(), None, None);
         put(&site, &receipt_act).await;
-        eprintln!("{name} pays {} satoshis over Lightning, following the standing offer, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
+        eprintln!("{name} pays {} satoshis over Lightning, paying its tier's price tag, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
         buyers.push(Buyer { name, p, act: act.id(), blind, pointer: own_act.id(), commitment, claim: claim_act, ticket_act, ticket });
     }
 
@@ -523,7 +554,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let txid = node.rpc.send(&consensus::serialize(&t)).await.expect("the node takes the batch's transaction");
     node.rpc.generate(1).await.unwrap();
     let publication = Publication { offer: offer_act.id(), batch: 0, leaves, tx: txid, output: 0 };
-    let pub_act = svc.act(mor_anchoring::spec(), service::PUBLICATION, publication.to_map(), under_offer.clone(), None);
+    let pub_act = svc.act(mor_anchoring::spec(), service::BATCH_NOTICE, publication.to_map(), under_offer.clone(), None);
     put(&site, &pub_act).await;
     node.rpc.generate(CONFIRMATIONS as u64 - 1).await.unwrap();
     for (c, raw, output) in [(&deposit, stripped(&t0), 0u64), (&change, stripped(&t), 1)] {
@@ -531,7 +562,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let r = Receipt { rail: c.rail, proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: rail.encode() }.encode(), payer: c.payer.clone(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, previous: None, forward: None, batch: None, purchase: None };
         put(&site, &svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(r).to_map(), None, None)).await;
     }
-    eprintln!("batch 0 anchored: two leaves, one output of 330 satoshis to the service's key tweaked by the root, no OP_RETURN, funded by a coin the service paid itself and paying its change back to itself, each shown by its receipt; its publication signed under the offer and on the home");
+    eprintln!("batch 0 anchored: two leaves, one output of 330 satoshis to the service's key tweaked by the root, no OP_RETURN, funded by a coin the service paid itself and paying its change back to itself, each shown by its receipt; its batch notice signed under the publication and on the home");
 
     // ------------------------------------------------ anyone verifies, from the chain and the acts
     let mut who = vec![svc.id];
@@ -540,9 +571,8 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     for b in &buyers {
         eve.add_act(&b.ticket_act);
     }
-    let lo = agreements::Offer::decode(&eve.v.get(&offer_act.id()).unwrap().inside).unwrap().offer;
-    let offer = Offer::read(offer_act.id(), svc.id, &lo).unwrap();
-    let ids: Vec<Hash> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_anchoring::spec() && a.inside.type_ == service::PUBLICATION).map(|a| a.id).collect();
+    let offer = offer_in(&eve, &offer_act.id(), &tag_acts[0].id(), &svc.id);
+    let ids: Vec<Hash> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_anchoring::spec() && a.inside.type_ == service::BATCH_NOTICE).map(|a| a.id).collect();
     let published: Vec<Publication> = ids.iter().map(|id| Publication::from_map(&payload(&eve, id)).unwrap()).collect();
     assert_eq!(published, vec![publication.clone()]);
     // What an Agreements client states of each claim it checked: the rail's answer.
@@ -560,7 +590,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         let mut v = AgreementsView::new(&eve.v, mirs());
         v.rail_valid = rail_valid.clone();
         for b in &buyers {
-            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase accepted under the offer's terms (F215, F225)", b.name);
+            assert_eq!(v.purchase(&b.claim.id()).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "{}: a purchase under the publication, by its price tag (Agreements rule 12, F225)", b.name);
         }
     }
     let chain = node.rpc.chain(Network::Regtest).await.expect("the node's headers");
@@ -582,7 +612,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let cal = &buyers[2];
     let Judgment::Omitted { refund: cal_refund } = service::judge(&offer, &cal.ticket, &pay_of(cal), &published, None, &bitcoin) else { panic!("cal's leaf omitted") };
     assert_eq!(cal_refund.amount, sat(20));
-    eprintln!("cal: batch 0 published without cal's leaf; the ticket and the publication, both signed by the service under its offer, show the omission: 20 owed back under the offer's terms");
+    eprintln!("cal: batch 0 published without cal's leaf; the ticket and the batch notice, both signed by the service under its publication, show the omission: 20 owed back under the publication's terms");
     let dan = &buyers[3];
     let deadline_buried = dan.ticket.deadline + CONFIRMATIONS as u64 - 1;
     if chain.tip() < deadline_buried {
@@ -593,7 +623,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     let bitcoin = BitcoinClock { chain: &chain };
     let Judgment::Default { refund: dan_refund } = service::judge(&offer, &dan.ticket, &pay_of(dan), &published, None, &bitcoin) else { panic!("dan's batch never came") };
     assert_eq!(dan_refund.amount, sat(50));
-    eprintln!("dan: batch 1 never published nor anchored; block {} buried six deep: a default, 50 owed back under the offer's terms", dan.ticket.deadline);
+    eprintln!("dan: batch 1 never published nor anchored; block {} buried six deep: a default, 50 owed back under the publication's terms", dan.ticket.deadline);
 
     // ------------------------------------------------ the refunds, paid for real
     ln.refund_liquidity().await;
@@ -679,8 +709,8 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     eprintln!("custody, batch 0: {} in over Lightning (each payment shown by the service's receipt), {} paid back; its transaction spent a coin of {} (a receipt), paid the batch's output {} and change {} back (a receipt): fee {}; kept {}, a loss the service bears", l0.paid_in(), l0.paid_back, spent[0].1, output, back[0].1, fee, l0.kept().unwrap());
     eprintln!("custody, batch 1: {} in, {} paid back, never published: kept {}; the pool holds {} on the chain", l1.paid_in(), l1.paid_back, l1.kept().unwrap(), account.unspent());
 
-    // The tickets and publication are acts the service signed under the
-    // offer; each counts for a reader.
+    // The tickets and the batch notice are acts the service signed under
+    // the publication; each counts for a reader.
     for b in &buyers {
         let mut rd = read(&site, &[svc.id, b.p.id]).await;
         rd.add_act(&b.ticket_act);

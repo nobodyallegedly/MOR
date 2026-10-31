@@ -161,11 +161,14 @@ export interface IdentityFile {
   encryption: { version: number; act: string; secret: string; /** Its public half, hex, where the secret is not held here (an identity held by Kišib's runner): `secret` is then empty. */ public?: string }[];
   pending: Pending | null;
   /**
-   * For a collective (Agreements, F127): the decision its next action cites on its
-   * chain, the collective's own identity as chain: its genesis, its latest
-   * rotation, or its latest record. Absent for anyone else. Every everyday
-   * act it signs cites it, except Identity's own acts (which carry no
-   * objects) and records, decisions that cite by their kept tips.
+   * For a collective (Agreements rule 58): the decision its next action cites on its
+   * chain, the collective's own identity as chain (its genesis, its latest
+   * rotation, record, grant or revocation), then the last act made for it
+   * from this device since, so that the next act joins the heads. Absent
+   * for anyone else. Every act made for it cites them, except Identity's
+   * own acts (which carry no objects). A collective has no signing key
+   * (rule 56): a member makes each act for it with their own key
+   * (`TestIdentity.actor`).
    */
   cites?: string[];
   /**
@@ -256,8 +259,11 @@ export type Signer = (r: SignRequest) => Promise<{ act: Uint8Array; id: string; 
 /** Said where an act would be signed here for an identity whose key this app does not hold. */
 export const HELD_ELSEWHERE_SAY = 'This identity’s signing key is not held by this app: it is signed for by Kišib’s runner, and this act cannot be signed that way here. Nothing was signed.';
 
-/** Agreements' record (type 17): a decision, which cites by its kept tips (F127). */
-const AGREEMENTS_RECORD = 17;
+/** Agreements' decisions on a collective's chain (rule 58): grant (9), revocation (10), record (17). */
+const AGREEMENTS_DECISIONS = [9, 10, 17];
+
+/** Said where an act would be made for a collective with no member to make it: a collective signs no act of its own. */
+export const NO_ACTOR_SAY = 'A collective has no signing key (Agreements rule 56): a member acts for it with their own key, naming it. No member was given to act here, and nothing was signed.';
 
 // No Buffer: Dub's web client runs this file in a browser (clients/dub/src/web).
 const b64 = (b: Uint8Array) => base64(b);
@@ -274,6 +280,12 @@ export interface Submitted {
 export class TestIdentity {
   /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
   signer?: Signer;
+  /**
+   * For a collective (no signing key, Agreements rule 56): the member who
+   * makes its next acts, each with their own key, naming the collective in
+   * `objects` (rule 58). Never saved with the file.
+   */
+  actor?: TestIdentity;
 
   constructor(
     public f: IdentityFile,
@@ -401,9 +413,10 @@ export class TestIdentity {
     if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error('only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act');
     }
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
+    if (this.f.cites && spec !== SPECS.identity && !objects?.some((o) => o[0] === this.f.identity)) {
+      // A text act carries one object (Text rule 14): the decision it acts under, no head beside it.
+      const cited = spec === MIRS.text ? this.f.cites.slice(0, 1) : this.f.cites;
+      objects = [...(objects ?? []), ...cited.map((d): [string, string] => [this.f.identity, d])];
     }
     return objects;
   }
@@ -413,18 +426,41 @@ export class TestIdentity {
     line.push(made.id);
     // A private act waits to be left at the homes, locked and sealed to this identity (`private.ts`): a member's line, not a collective's.
     if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    // A record is the collective's latest decision: its next actions cite it.
-    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    // A decision is the collective's latest: its next acts cite it; any
+    // other act is the head the next one joins (rule 58).
+    if (this.f.cites) this.f.cites = spec === MIRS.agreements && AGREEMENTS_DECISIONS.includes(type) ? [made.id] : [this.f.cites[0], made.id];
     return made;
   }
 
-  private everyday(
+  /** Whether this file is a collective's, keyless: its acts are made by a member (`actor`). */
+  get keyless(): boolean {
+    return !!this.f.cites && !this.f.signingSecret;
+  }
+
+  /** An act for this keyless collective, made by its `actor` with their own key, naming the collective (rule 58). */
+  private async byActor(
     spec: string,
     type: number,
     payload: Uint8Array,
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
-  ) {
-    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+  ): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    if (!this.actor) throw new Error(NO_ACTOR_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const made = await this.actor.everydayNow(spec, type, payload, { ...opts, objects });
+    return this.everydayMade(spec, type, true, this.f.sequence, made);
+  }
+
+  everyday(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
+  ): { act: Uint8Array; id: string; key: Uint8Array } {
+    if (this.keyless && this.actor) {
+      const made: { act: Uint8Array; id: string; key: Uint8Array } = this.actor.everyday(spec, type, payload, { ...opts, objects: this.everydayObjects(spec, type, opts.objects, opts.acks) });
+      return this.everydayMade(spec, type, true, this.f.sequence, made);
+    }
+    if (!this.f.signingSecret) throw new Error(this.f.cites ? NO_ACTOR_SAY : HELD_ELSEWHERE_SAY);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     // F376: a member's public and private acts on two lines; a collective's on its one.
     const line = lineFor(this.f, opts.public);
@@ -453,12 +489,13 @@ export class TestIdentity {
    * The line is the same either way. One act at a time: the caller keeps
    * signing serial, as every app does.
    */
-  private async everydayNow(
+  async everydayNow(
     spec: string,
     type: number,
     payload: Uint8Array,
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
   ): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    if (this.keyless) return this.byActor(spec, type, payload, opts);
     if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);

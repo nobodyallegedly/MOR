@@ -30,7 +30,7 @@ A payment to a work or a person, such as a tip, needs only this MIR and the paye
 
 ## Dependencies
 
-Identity, Envelopes and Text; and, of Development, the specification format alone: a Money client decodes a rail Module's specification as Development's Part three says ("How the content is decoded", "Not in the format: no specification", rule 10), to know whether it is one and to read its fields 5, 11 and 13, and reads nothing more of Development. Money never depends on Agreements: a Money-only client, such as a wallet that sends tips, is a complete client. Where a Money state depends on Agreements, a Money-only client shows it as unknown. *A purchase names an Agreements claim (rule 18): a Money-only client cannot make one, and shows the claim a receipt names as unknown; buying a work under an Agreements claim needs a client that reads Agreements.* **An obligation's states are shown by clients that read Agreements; a Money-only client shows them as unknown** (rule 15).
+Identity, Envelopes and Text; and, of Development, the specification format alone: a Money client decodes a rail Module's specification as Development's Part three says ("How the content is decoded", "Not in the format: no specification", rule 10), to know whether it is one and to read its fields 5, 11 and 13, and reads nothing more of Development. Money never depends on Agreements: a Money-only client, such as a wallet that sends tips, is a complete client. Where a Money state depends on Agreements, a Money-only client shows it as unknown. *A purchase is a payment naming a publication's price tag (rule 18): a Money-only wallet can pay one, and its purchase is valid; whether a payment is a purchase is Agreements' to judge, and a Money-only client shows that unknown.* **An obligation's states are shown by clients that read Agreements; a Money-only client shows them as unknown** (rule 15).
 
 ## Words used in this MIR
 
@@ -53,19 +53,20 @@ Identity, Envelopes and Text; and, of Development, the specification format alon
 - **Settlement receipt.** The common proof of one hop, signed by its receiver, the same for every rail: who paid whom, how much, in what unit, under which agreement.
 - **Payment claim.** A payer's record of a payment, carrying the rail's proof. Evidence on equal footing with a receipt.
 - **Verification answer.** The result of checking a receipt or claim against its rail: valid, invalid, pending or unknown, with the hash of the rail Module whose rule computed it, and the trusted party it relied on, if any.
-- **Batch.** A set of payouts a split service pays with one rail payment, as its grant allows (Agreements).
+- **Batch.** A set of payouts a split service pays with one rail payment, as its publication allows (Agreements).
 
 ### Debts and purchases
 
 - **Obligation.** A signed statement by a debtor that it owes a creditor an amount, in a unit.
 - **Discharge.** A complete route, or several, that bring the owed amount to the creditor's payee pointer.
 - **Creditor's release.** A signed statement by a creditor that it lets an obligation owed to it go, wholly, without full payment (type 4; Agreements rule 92).
-- **Purchase.** A payment for a work under an Agreements claim, naming the claim it pays under (receipt and claim field 9, rule 18).
+- **Price tag.** A Money act (type 5), signed by a seller: what it prices (a bake, or a publication), the price and the payee. Versioned: the latest version counts, and one with no price withdraws it (rule 18).
+- **Purchase.** A payment naming a publication's price tag: a purchase under that publication (rule 18; Agreements rule 12).
 
 ### Routes
 
 - **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one; where the next payee signs no receipt, the paying hop's claim may also name it.
-- **Conversion service.** An identity that receives on one rail or unit and pays on another, at the rate of its own offer: it signs a receipt as receiver, with a forward, and is the payer of the next hop. A party, not a specification.
+- **Conversion service.** An identity that receives on one rail or unit and pays on another, at a rate it states: it signs a receipt as receiver, with a forward, and is the payer of the next hop. A party, not a specification.
 
 ## Part one: a payment as it runs most of the time
 
@@ -114,12 +115,11 @@ An agreement names its payment cMIP (Agreements, terms field 2, task 6). The pay
 A receipt or claim counts only if all of these hold:
 
 - the rail Module its field 0 names is the one named by the rail of the payee's pointer, or the entry of the payee's vault, that the payment was paid to;
-- that pointer is the payee's own and counts for that payment by rules 1 and 17, or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee (field 14's, the agreement's designated pointer; field 29's, a backup: Agreements rules 15 and 17), judged by Agreements as rule 7 judges a collective's pointer, a Money-only client showing it unknown;
+- that pointer is the payee's own and counts for that payment by rules 1 and 17;
 - that pointer and vault are the ones rule 29 selects for that payment, as the chain stood for it (rules 3 and 29);
   - **except that a collective's pointer that a fork or closing of the collective left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it** (Agreements rule 91);
 - where the payment falls under an agreement, that rail Module implements the payment cMIP the agreement names (Development, field 5).
 
-For a payment to such a grantee's pointer, the first and third conditions read the grantee's own pointer chain and vault in force: the pointer counts where rule 1 counts it on that chain.
 
 A receipt or claim naming any other rail Module counts for nothing, whatever its rail's proof shows.
 
@@ -138,7 +138,7 @@ When a receiver has no payee pointer, or no rail the payer shares, or the vault 
 *Client conformance: whether a notice arrived can never be checked, so these are not validity rules; the inbox already carries them.*
 
 - **No clock.** Before genesis, or a rotation, that leaves the identity with no declared clock, the owner's client SHOULD say plainly that a theft's loss will be the owner's whatever it anchors (rule 29).
-- **Before signing.** The owner's client SHOULD warn before the owner publishes a standing offer, or signs terms, priced in a unit the owner's declared vault does not cover: nobody could pay it.
+- **Before signing.** The owner's client SHOULD warn before the owner signs a price tag, a publication or terms priced in a unit the owner's declared vault does not cover: nobody could pay it.
 - **Debts.** The owner's client SHOULD show an obligation owed to the owner in a unit the vault does not cover as "owed in a unit your vault cannot receive", with the way to add it (a rotation).
 - **Spontaneous payers.** A payer's wallet that refuses a payment under rule 3, or finds nowhere to pay under rule 5, SHOULD send the payee an ordinary message to its inbox route (Identity; Envelopes, "How acts reach people"), saying what it tried to pay, in which unit, for what, and why it could not. The message is a text act like any other: it creates no obligation and no act type.
 
@@ -150,19 +150,16 @@ Receipts and claims on every rail use the formats of this MIR (Part three). The 
 
 A receipt is signed by the receiver of the hop:
 
-- with its own key, or with a grant key it granted whose grant reaches receipts (a person's or a collective's);
-- for a collective, with its own key or a grant key of its, its split service's among them;
-- for a payee of a deal naming a split service, with its own key or the grant key it granted the service, or a backup the split cMIP's fields name (Agreements field 29);
-- a split service's grant key, a collective's as a payee's, signs only receipts for money coming in under the grantor's own claims and offers, never one whose payer is the service nor a payout the grantor is owed, save a layer's incoming share on the owner's behalf with the rail's proof behind it (Agreements rule 16);
-- each such receipt is judged by Agreements (Identity's scoped key, Agreements rule 80); a Money-only client shows such a receipt's standing as unknown.
+- with its own key, or with a grant key it granted whose grant reaches receipts (a person's grant, Agreements rule 73);
+- **a receipt of a collective is signed by a member or grantee for it, judged by Agreements** (below);
+- a receipt signed with a grant key is judged by Agreements (Identity's scoped key, Agreements rule 80); a Money-only client shows its standing as unknown.
 
-**A collective's Money acts and its holders' member keys.** Every Money act a collective signs, its payee pointer (type 0), an obligation it owes (type 1), a receipt it gives (type 2), a claim it makes (type 3) and a release it grants as creditor (type 4), is signed with the collective's own key, or with the member key of a holder of an area whose reach includes that act type: the key the holder's signature of the collective's founding or of a clone names, counting as Agreements rule 73 says.
+**A collective's Money acts.** A collective has no signing key (Identity rule 1). Every Money act of a collective, its payee pointer (type 0), an obligation it owes (type 1), a receipt it gives (type 2), a claim it makes (type 3), a release it grants as creditor (type 4) and a price tag it signs (type 5), is signed by a member or a grantee for it, with their own key, the act naming the collective (Agreements rule 58), and judged by Agreements under the rule its founding names for Money (Agreements rule 60). A Money-only client shows the standing of every such act unknown, and pays no collective through a pointer it cannot judge.
 
-Each such act is judged by Agreements (a member key's act as scoped, Identity rule 8), under the area that reaches its type and that area's holders and threshold, as every act of an area is (Agreements rule 60): it counts where the holders of that area meet its threshold as Agreements rule 65 counts it, the other holders signing it as Agreements rule 60 says, its limits judged as for every act of the area (a pointer moves no amount). An act of the collective that no area reaches counts on the collective's own signature, and one signed with a member key there counts for nothing (Agreements rules 60 and 73). A split service's grant key signs for a collective under its grant, judged under the area that issued it (Agreements rule 74). A Money-only client shows the standing of every such act unknown, and pays no collective through a pointer it cannot judge.
 
-*Why: money matters belong to the area the constitution gives money to, and nobody holds a special position the constitution does not give. Stated cost: a Money-only wallet shows a collective's Money acts unknown, and cannot pay a collective whose pointer its Money area signed; it needs a client that reads Agreements.*
+*Why: money matters belong to whom the constitution gives money to, and nobody holds a special position the constitution does not give. Stated cost: a Money-only wallet shows a collective's Money acts unknown, and cannot pay a collective; it needs a client that reads Agreements.*
 
-A claim is signed by the payer, or, for a payer that committed to a bare key, by any identity carrying that key's signature in key 8. **The payer may sign it with a grant key it granted whose grant reaches claims** (a person's or a collective's), judged as scoped, by Agreements, a Money-only client showing its standing unknown.
+A claim is signed by the payer, or, for a payer that committed to a bare key, by any identity carrying that key's signature in key 8. **The payer may sign it with a grant key it granted whose grant reaches claims** (a person's grant), judged as scoped, by Agreements, a Money-only client showing its standing unknown; a collective's claim is signed by a member or grantee for it, as above.
 
 *Why: a grant key's act is its grantor's own (Agreements rule 73), so an application holding a person's grant to itself signs that person's claims, and a payee's application its receipts, within the grant's reach and limits, and every reader sees on whose authority. A receipt or claim under a grant that does not reach its type, that the grant's revocation does not hold, or that lies past its limits, counts for nothing (Agreements rule 80), save as the next paragraph says.*
 
@@ -174,7 +171,7 @@ A claim's key 8 MUST verify under the key it names, over the bytes shown, or the
 
 #### Rule 8. Checked by the rail Module's rule
 
-A receipt or claim is verified by running the published rule of the rail Module named in its field 0 against the rail's proof. The answer is valid, invalid, pending or unknown, with that Module's hash. Anyone can run the same rule independently.
+A receipt or claim is verified by running the rule of the rail Module named in its field 0, as its specification gives it, against the rail's proof. The answer is valid, invalid, pending or unknown, with that Module's hash. Anyone can run the same rule independently.
 
 A receipt or claim whose verification answer is not valid counts toward no purchase and no sale: where its answer is invalid, it counts for nothing; where its answer is pending or unknown, or the verifier holds none, whether its payment is a purchase or a sale is unknown.
 
@@ -190,7 +187,7 @@ A client MUST NOT treat a receipt or claim as valid unless its verification answ
 
 *In short: the payer's claim is evidence as good as the receiver's receipt; where they disagree, the greater amount counts until the receiver signs a matching receipt, and the payment's own commitment decides who and what it was for; where the rail binds no payee or purpose, the payer's claim decides what it fulfils.*
 
-A payment claim is admitted as evidence on equal footing with a receipt. A payer MAY publish one at any time.
+A payment claim is admitted as evidence on equal footing with a receipt. A payer MAY make one public at any time.
 
 Where a claim and a receipt are of the same payment (rule 12) and disagree in amount, payee, what the payment fulfils, or, on a route, the previous hop's receipt it passes on (rule 24), the disagreement is shown as an open question on the receiver, and the greater amount counts as received until the receiver signs a receipt matching the payment.
 
@@ -221,7 +218,7 @@ A receiver's identity is always public. The visibility of its incoming flows is 
 
 #### Rule 14. A sender is never required
 
-The core never requires a sender's identity. A receipt's payer field MAY be absent; delivery then goes to a key the payer supplies (Envelopes: a bare device or application key). A payer's claim, when published, is the payer's own choice of disclosure.
+The core never requires a sender's identity. A receipt's payer field MAY be absent; delivery then goes to a key the payer supplies (Envelopes: a bare device or application key). A payer's claim, when made public, is the payer's own choice of disclosure.
 
 ### 4. Debts
 
@@ -250,10 +247,10 @@ An obligation's states are:
 An obligation is released when a creditor's release (type 4) names it, valid under Identity and signed by the creditor the obligation names; a release signed by anyone else ends nothing.
 
 - A release ends the whole obligation, whatever was paid toward it. To forgive part, the debtor signs a new obligation for the rest and the creditor releases the old one.
-- It counts wherever a verifier holds it, published or not, and ends an obligation whether or not that obligation binds yet.
+- It counts wherever a verifier holds it, public or not, and ends an obligation whether or not that obligation binds yet.
 - What it names in field 1 is a record only, never checked.
 
-*Where the creditor is a collective, its release counts by its own rules, and is reached by the area reaching Money alone (Agreements rule 92); a Money-only client cannot check that, and shows such a release's standing as unknown.*
+*Where the creditor is a collective, its release counts by its own rules, under the rule its founding names for Money alone (Agreements rule 92); a Money-only client cannot check that, and shows such a release's standing as unknown.*
 
 #### Rule 17. Which pointer a debt is paid to
 
@@ -262,7 +259,7 @@ An obligation is released when a creditor's release (type 4) names it, valid und
 **The rule.** A payment to an identity's flow pointer counts only toward what has, as its version that counts, that flow pointer's version or a later one:
 
 - for an obligation, the version selected below;
-- for a payment under an agreement or offer, the version rule 29 selects;
+- for a payment under an agreement, a publication or a price tag, the version rule 29 selects;
 - for a tip, the version of the payee pointer it follows.
 
 Toward anything whose version that counts is earlier, it counts only if paid to the vault.
@@ -270,14 +267,14 @@ Toward anything whose version that counts is earlier, it counts only if paid to 
 **The version that counts for an obligation** is the latest of the payee's pointer chain held by an act of the payee's own. The payee's acts are its acts on the agreement:
 
 - its signature acts;
-- its offer, where the payee signed the offer (an offer another identity signed is not the payee's act; the payee's act is then its signature accepting it);
+- its price tag, or its signature act on a publication (a tag another identity signed is not the payee's act);
 - any later act of the payee's on the agreement.
 
 The latest pointer any of them holds counts.
 
 An act holds what is reachable through its citations (`prev`, `objects`, `acks`, `refs`, directly or through what they cite), never a hash merely written in its payload. For selecting the payee's pointer, the walk passes only through the payee's own acts, never through an act another identity signed, so what a drafter's terms or a debtor's IOU cite never reaches it. A forked pointer chain counts only up to the fork (rule 1).
 
-**A payee's client signing an act that can pay its signer (its signature act on terms, its offer) MUST cite in `refs` the latest of the payee's pointers it can find where the payee's routes act says its Money acts are found, whichever device published it** (client conformance). *During a theft window this can cite a thief's pointer, as the stolen key can sign any of the payee's acts: the owner's cost until the lock change.* *An identity keeps one sequence per device, and its own acts cite only their own device's line; citing the latest pointer directly lets a deal signed on one device find a wallet published from another. Where the pointers are published is Money's business, not Identity's: homes stay the layer for keys.*
+**A payee's client signing an act that can pay its signer (its signature act on terms or on a publication, its price tag) MUST cite in `refs` the latest of the payee's pointers it can find where the payee's routes act says its Money acts are found, whichever device uploaded it** (client conformance). *During a theft window this can cite a thief's pointer, as the stolen key can sign any of the payee's acts: the owner's cost until the lock change.* *An identity keeps one sequence per device, and its own acts cite only their own device's line; citing the latest pointer directly lets a deal signed on one device find a wallet uploaded from another. Where the pointers are uploaded is Money's business, not Identity's: homes stay the layer for keys.*
 
 The version an obligation names is informative only: where it differs, the obligation is read as naming the version so selected.
 
@@ -294,32 +291,37 @@ A payment to the payer's vault always counts, and the payer's own receipt counts
 
 *Why the limit: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; the vault exists partly to protect large debts.*
 
-*A repayment to any pointer the payer ever published would let a debtor repay a thief's pointer and be cleared; this rule and rule 29 stop that for every debt.*
+*A repayment to any pointer the payer ever uploaded would let a debtor repay a thief's pointer and be cleared; this rule and rule 29 stop that for every debt.*
 
 ### 5. Buying, refunds and referrals
 
-#### Rule 18. A purchase names the claim it pays under
+#### Rule 18. The price tag, and a purchase under a publication
 
-*In short: a payment for a work under an Agreements claim names that claim, except one following a lone seller's standing offer, which names none; whether it is a purchase, and what is owed when it is not, Agreements say; any refund is paid as rule 19 says.*
+*In short: a price is its own act, a price tag, signed by the seller: what it prices, the price, and the payee. On a bare bake only its uploader's tag counts, and paying it pays the uploader, unsplit. Under a publication only a tag of the publication's side counts, and a payment naming it is a purchase under the publication, whichever wallet pays it; whether it is, and what is owed when it is not, Agreements say; any refund is paid as rule 19 says.*
 
-A receipt or claim of a payment for a work under an Agreements claim (a standing offer, or a publication carrying a work an agreement claims) names, in field 9, the claim it pays under: the claiming agreement, and the line at which the payer's client read it current (Agreements rule 12). The payment commitment carries it on the rail (payment cMIP).
+**A price tag** (type 5) names what it prices, the price (an amount), and its payee: the identity whose payee pointer and vault a payment of it goes to (rule 4). It names either a bake (field 0) or a publication (field 1), never both.
 
-**Whether the payment is a purchase, and what is owed when it is not, Agreements say** (rule 12, which also reads which claim a purchase may name); **a refund they owe is paid as rule 19 says.**
+- **On a bare bake**, a tag counts only when signed by the bake's uploader (Envelopes rule 23). A tag on a bake signed by anyone else is nobody's offer: a payment naming it buys nothing, and is a payment to its payee like any other.
+- **Under a publication**, a tag counts only when signed by the publication's split service, or by the party the publication designates to sign its tags (Agreements, "Publication (type 6)"), and names that publication. A tag naming a publication signed by anyone else is nobody's offer under it. *So the uploader cannot end a collective's sales alone by withdrawing a tag that is not theirs: under a publication the tag is the publication's side's.*
+- **A tag is versioned**, as a payee pointer is (rule 1): each version names the one it replaces and carries its version plus one, signed by the same signer, naming the same bake or publication. The latest version counts; two versions naming the same previous one are contested, and clients use the last before the fork. **A version with no price withdraws the tag.**
 
-**Which claim the payment buys under is settled where the payment takes place** (Agreements rule 12):
+**A payment of a tag** names that tag's version in its field 5, what it fulfils ("What a payment fulfils"), and pays the price it states to the tag's payee. A payment naming a version that carries no price, or a tag that counts for nothing, buys nothing.
 
-- **on a request rail** (the payee's side commits to each payment before it is made, as the payment cMIP's commitment does), the claim a purchase names is the one the seller's request committed to;
-- **on a push rail** (the payer pays an address with no request), **each holder of the work's stake in the claim named settles on its own chain whether its receipt is a sale** (Agreements rule 12, which says what each holder owes otherwise); a refund owed is paid by rule 19.
+- **On a bare bake**, a payment of its uploader's tag is a sale of that bake by its uploader, paid to the uploader, unsplit (Envelopes rule 23); its delivery is the media key the uploader delivers, and what is owed when none is delivered, Agreements say (rule 11), a Money-only client showing it unknown.
+- **Under a publication**, **a payment naming a tag the publication counts is a purchase under that publication** (Agreements rule 12). A Money-only wallet can pay it, and its purchase is valid: whether a payment is a purchase, under which version of the publication, and what is owed when it is not, Agreements say (rule 12, which also says what a payment racing the publication's ending is owed). **The split service's receipt names, in field 9, the ownership agreement whose shares it pays and the version of it on its line that it read current** (Agreements rule 12); a payer's claim may name the version its own client read, as information.
 
-**Where the seller is a collective, Agreements say when a payment becomes a sale** (once the collective's actions chain records it) **and what is owed when it does not** (Agreements rule 12); a refund owed is paid by rule 19.
+**Which version of a publication a payment buys is settled where the payment takes place** (Agreements rule 12):
 
-**The payment decides.** Where the receipts or claims of one payment (one rail proof) name different claims, the claim is the one the payment's commitment names. **A receipt naming another claim is a wrong receipt, shown as such, counting for nothing**: its commitment, recomputed from it, is not the one the rail proof carries, and the rail Module's rule refuses it (payment cMIP). The rest are judged as above. Until a verifier has the rail's answer, such a payment is **pending** (rule 8). *No payment is left undetermined.* **Which rails are request rails and which push rails, the rail Module's specification says, in field 11 (0 a request rail, 1 a push rail), required on every Module whose field 5 names a payment cMIP (a cMIP whose field 2 lists this MIR's task 6); a verifier reads it there, never from the Module's code** (Development's specification format). **A request rail binds payee and purpose: Development's format requires field 13 to hold both wherever field 11 is 0, or the specification is no specification.** *So on a request rail the proof always shows which claim the seller's request committed to.*
+- **on a request rail** (the payee's side commits to each payment before it is made, as the payment cMIP's commitment does), the tag and the publication's version a purchase names are those the seller's request committed to;
+- **on a push rail** (the payer pays an address with no request), the version is settled on the split service's own chain, by its receipt (Agreements rule 12).
 
-A payment to an identity's own pointer (a tip) or toward an obligation is no purchase and names nothing. *Stated cost: a Money-only wallet can pay a claimed work's publication, but cannot tell whether it bought it; what is owed when it did not, Agreements say (rule 12), and a Money-only wallet can still receive the refund (rule 19).*
+**The payment decides.** Where the receipts or claims of one payment (one rail proof) name different tags, or different versions of the ownership agreement, the one the payment's commitment names counts. **A receipt naming another is a wrong receipt, shown as such, counting for nothing**: its commitment, recomputed from it, is not the one the rail proof carries, and the rail Module's rule refuses it (payment cMIP). Until a verifier has the rail's answer, such a payment is **pending** (rule 8). *No payment is left undetermined.* **Which rails are request rails and which push rails, the rail Module's specification says, in field 11 (0 a request rail, 1 a push rail), required on every Module whose field 5 names a payment cMIP (a cMIP whose field 2 lists this MIR's task 6); a verifier reads it there, never from the Module's code** (Development's specification format). **A request rail binds payee and purpose: Development's format requires field 13 to hold both wherever field 11 is 0, or the specification is no specification.** *So on a request rail the proof always shows which tag the seller's request committed to.*
 
-**A payment following a lone seller's standing offer** (one naming no co-owners' agreement, Agreements rule 11) **names no claim**: the offer is itself the agreement with the buyer, and Agreements say what the payment accepts (rule 11).
+A payment to an identity's own pointer (a tip), toward an obligation, or naming a bake without a tag (a tip to its uploader), is no purchase. A payment naming a publication itself, without a tag, is a tip through the publication (Agreements rule 12): no purchase, and divided as the publication's split says.
 
 **A payment for a stake transfer** (Agreements rule 10) fulfils the transfer (field 5), or is named in its field 4; what it buys, and what the seller owes when the transfer is an over-sale, Agreements rule 10 says; a refund owed is paid by rule 19.
+
+**Stated cost: whoever uploads a bake receives the tips and tag payments sent to that bake**, a fan who re-uploads someone else's work included. The owners' defence is their claim and their own publication: a client reading Agreements shows the re-uploader's sale outside the claim's ownership agreement (Agreements rule 14). *In Nobody, allegedly's words: "Absolutely, piracy cannot be stopped. But truly rewarding creators can be made easy."*
 
 #### Rule 19. Refunds to the committed key
 
@@ -333,7 +335,7 @@ Presenting the rail proof proves nothing about who paid: on some rails the payee
 
 A payment that committed to no key leaves its refund unclaimable: the obligation stays open and visible, and nobody can take it (what that means for a broken collective's closing, Agreements rule 93 says).
 
-Until claimed and discharged, the obligation stays open and visible. Whether an unclaimed refund ever lapses is for the offer's terms (Agreements); the core sets no lapse.
+Until claimed and discharged, the obligation stays open and visible. Whether an unclaimed refund ever lapses is for the publication's terms (Agreements); the core sets no lapse.
 
 *The payer's wallet supplies the key when it asks for the receiving address, and recomputes the commitment from what the payee's side signed before paying, so the payee's side cannot swap the key (payment cMIP).*
 
@@ -347,7 +349,7 @@ The evidence that a rail Module carried a payment is the receipt or claim naming
 
 #### Rule 21. Payouts net of fees
 
-A payout (Agreements) counts as discharged when its receipt shows the amount minus the rail fee the split plan says the receiver bears, and no more than the plan's maximum fee per payout, where the plan states one (a plan stating none sets no cap: Agreements rule 25); what the split service owes for a shortfall beyond it, Agreements say (the split plan, rule 25).
+A payout (Agreements) counts as discharged when its receipt shows the amount minus the rail fee the publication's split says the receiver bears, and no more than the split's maximum fee per payout, where it states one (a split stating none sets no cap: Agreements rule 25); what the split service owes for a shortfall beyond it, Agreements say (rule 25).
 
 Amounts below a rail's minimum cannot be moved until they reach it (what the split service holds meanwhile, Agreements rule 24 says).
 
@@ -393,19 +395,19 @@ In every case, the receipts and claims name the exact hop and agreement that fai
 
 #### Rule 29. Good faith
 
-*In short: a payer who followed the payee's published pointer and vault is protected. When the owner, after a theft, changes the locks by a rotation and anchors that change on the clock it declared, a payment the change affects still counts if the payee's own receipt shows it, or if the payer's claim was anchored no later than the lock change's point (when its home quorum is anchored; before the first, where several lock changes affect it). Until the change is anchored, the owner bears the loss.*
+*In short: a payer who followed the payee's pointer and vault as uploaded is protected. When the owner, after a theft, changes the locks by a rotation and anchors that change on the clock it declared, a payment the change affects still counts if the payee's own receipt shows it, or if the payer's claim was anchored no later than the lock change's point (when its home quorum is anchored; before the first, where several lock changes affect it). Until the change is anchored, the owner bears the loss.*
 
-**Which pointer a payment followed.** A receipt or payment claim names the payee-pointer act it followed, directly or through the obligation or agreement. For a payment under an agreement or offer with no obligation between, the pointer followed is selected as rule 17 selects it; rule 17 then applies to it as to an obligation's.
+**Which pointer a payment followed.** A receipt or payment claim names the payee-pointer act it followed, directly or through the obligation, agreement or price tag. For a payment under an agreement, a publication or a price tag with no obligation between, the pointer followed is selected as rule 17 selects it; rule 17 then applies to it as to an obligation's.
 
 **Theft: anchor or bear the loss.**
 
-A **lock change** is a rotation after which a payment that followed the payee's chain as published before it no longer follows the chain as published after it: a voided pointer, a vault limit lowered or removed, an entry or source replaced.
+A **lock change** is a rotation after which a payment that followed the payee's chain as uploaded before it no longer follows the chain as uploaded after it: a voided pointer, a vault limit lowered or removed, an entry or source replaced.
 
-**Where the lock change is not anchored** (its home quorum not anchored on the payee's declared clock, below), a payment that followed the pointer and vault published before it counts as made: the owner bears the theft window.
+**Where the lock change is not anchored** (its home quorum not anchored on the payee's declared clock, below), a payment that followed the pointer and vault uploaded before it counts as made: the owner bears the theft window.
 
-**Where it is anchored**, a payment it affects (one that followed the chain as published immediately before it and no longer follows it after) counts as made only if:
+**Where it is anchored**, a payment it affects (one that followed the chain as uploaded immediately before it and no longer follows it after) counts as made only if:
 
-- (a) **the payee's own receipt shows it**: a receipt on a line of the payee's that the rotation kept, or signed with a key the payee's chain binds after it, or signed by the payee's split service with a grant key whose grant still stands; or
+- (a) **the payee's own receipt shows it**: a receipt on a line of the payee's that the rotation kept, or signed with a key the payee's chain binds after it, or signed with a grant key of the payee's whose grant still stands; or
 - (b) **the payer's claim is anchored before or at the lock change's point**, each act judged by its earliest anchor.
 
 **Which claims, and which anchors**: the payer's claims of the same payment as the rail Module says.
@@ -446,7 +448,7 @@ The loss from a theft window falls on the owner until the lock change is anchore
 
 ## Part three: act formats
 
-All acts are Envelopes MIR acts. Payee pointers are public; obligations, receipts, payment claims and creditor's releases are private by default, visible to their parties.
+All acts are Envelopes MIR acts. Payee pointers and price tags are public; obligations, receipts, payment claims and creditor's releases are private by default, visible to their parties.
 
 ```cddl
 amount = [ unit: hash, value: uint ]      ; unit: the unit's specification; value in its smallest part
@@ -458,7 +460,7 @@ rail   = [ module: hash, address: bstr ]  ; a rail Module and the rail-specific 
 ```cddl
 payee-pointer-payload = {
   0 => hash,               ; payee: the identity this pointer is for, which is also its only signer (for a
-                           ;   collective, signed with its own key or the member keys of its area reaching Money, rule 7)
+                           ;   collective, signed by a member or grantee for it, judged by Agreements, rule 7)
   1 => uint,               ; version: 1, then the previous version plus one
   ? 2 => hash,             ; the previous payee pointer for this payee (absent for version 1)
   3 => [+ rail]            ; rails in order of preference
@@ -467,13 +469,7 @@ payee-pointer-payload = {
 
 For an identity, this is the **flow pointer.** Pointers form a chain: each names the one it replaces and carries its version plus one, so nobody can jump ahead, and a fork is visible and contested. A fork behind an act the owner's later rotation kept is settled by that rotation.
 
-**Only identities have payee pointers.** A payee pointer is valid only if signed by the identity it is for, with that identity's own key; collectives sign their own, **with their own key or with the member keys of the area reaching Money, judged by Agreements as rule 7 says.** A publication has no pointer of its own: it carries a price, and payment goes to the pointer of the identity named in its `for` field, or, if none, of its signer (Envelopes). *A Money-only wallet needs nothing else: it reads `for`, follows that identity's pointer, and pays. Whether a grant backs the `for` is Agreements' business.* Where there are splits, that identity's pointer leads to its split service (Agreements).
-
-```cddl
-price = amount   ; carried in a publication's media entry (Envelopes, key 7)
-```
-
-The publication's price is the plain-payment price, for Money-only clients. Where the owners also publish a standing offer, the offer governs deals made under Agreements.
+**Only identities have payee pointers.** A payee pointer is valid only if signed by the identity it is for, with that identity's own key; a collective's is signed by a member or grantee for it, **judged by Agreements as rule 7 says.** A bake has no pointer of its own: money sent to a bare bake goes to its uploader's pointer (Envelopes rule 23), and a price tag names its payee (rule 18). *A Money-only wallet needs nothing else: it reads the bake's signer, or the tag's payee, follows that identity's pointer, and pays.* **A Money-only wallet refuses to tip a bake naming a collective**: whether such a bake is the collective's is Agreements' to judge (Agreements rule 58), and the signer's pointer is a member's. Where there are splits, a publication names its split service, and its tags pay the service's own pointer (Agreements).
 
 ### The vault
 
@@ -506,7 +502,7 @@ obligation-payload = {
   1 => hash,               ; creditor: an identity
   2 => amount,
   3 => hash,               ; the creditor's payee-pointer act the debtor names; informative only: the version that counts is the one rule 17 selects
-  ? 4 => hash              ; the agreement or offer it arises from (Agreements)
+  ? 4 => hash              ; the agreement or publication it arises from (Agreements)
 }
 ```
 
@@ -521,26 +517,27 @@ receipt-payload = {
   ? 2 => payer,            ; payer: identity or collective, or an anonymous payer's bare key (rule 19); absent if the payer stays anonymous and committed no key
   3 => hash,               ; payee: who received on this hop
   4 => amount,             ; how much was received, in this hop's unit
-  5 => hash,               ; fulfils: the act this hop follows (an obligation, agreement, offer or payee pointer, for instance)
+  5 => hash,               ; fulfils: the act this hop follows (an obligation, agreement, price tag, publication or payee pointer, for instance)
   ? 6 => hash,             ; the previous hop's receipt (absent on the first hop)
   ? 7 => forward,          ; conversion hops only: what is passed on to the next hop
   ? 8 => hash,             ; batch: the batch this receipt belongs to, when one rail proof covers several payouts (Agreements)
-  ? 9 => purchase          ; a purchase: the claim it pays under (rule 18)
+  ? 9 => purchase          ; a purchase: the ownership agreement whose shares it pays, and its version (rule 18)
 }
 
-purchase = [ agreement: hash, line: hash ]   ; the work's claiming agreement (Agreements), and the line at which the payer's client read it current
+purchase = [ agreement: hash, line: hash ]   ; the ownership agreement a publication names (Agreements), by its founding version, and the
+                                             ; version on its line that the split service, or the payer's client, read current
 
 forward = [ next-payee: hash, amount, agreement: hash ]   ; amount in the next hop's unit
 payer   = hash / signing-key                              ; signing-key as Identity defines it: [ scheme, key ]
 ```
 
-**What a payment fulfils.** Field 5 names the act the payment follows. Money judges it only where it names an act to which a rule of Money or Agreements gives a payment following it a meaning: an obligation to discharge, an agreement or offer to follow, a payee pointer, a stake transfer (Agreements rule 10), a receipt or claim of a payment it repays or refunds (rule 19; Agreements rule 93), a take-up of an issuance (Agreements rule 96), a split (Agreements rule 23), for instance. A payment whose field 5 names any other act fulfils nothing in Money's sense: its field 5 discharges nothing and changes no verdict of this MIR; the receipt is otherwise judged as any receipt is. *An act Money reads for another purpose, such as a vault's declaration, is not thereby an act a payment fulfils.* *A payment cMIP may give such a payment a meaning of its own, judged from the act alone; Money does not read it. The examples in the field's comment are not a closed list.* The same holds for a claim's field 4.
+**What a payment fulfils.** Field 5 names the act the payment follows. Money judges it only where it names an act to which a rule of Money or Agreements gives a payment following it a meaning: an obligation to discharge, an agreement, publication or price tag to follow, a payee pointer, a stake transfer (Agreements rule 10), a receipt or claim of a payment it repays or refunds (rule 19; Agreements rule 93), a take-up of an issuance (Agreements rule 96), a split (Agreements rule 23), for instance. A payment whose field 5 names any other act fulfils nothing in Money's sense: its field 5 discharges nothing and changes no verdict of this MIR; the receipt is otherwise judged as any receipt is. *An act Money reads for another purpose, such as a vault's declaration, is not thereby an act a payment fulfils.* *A payment cMIP may give such a payment a meaning of its own, judged from the act alone; Money does not read it. The examples in the field's comment are not a closed list.* The same holds for a claim's field 4.
 
 **An anonymous payer's key.** A payer who stays unnamed but wants a refund to remain claimable puts a bare signing key of its own, in Identity's `signing-key` form and used for this payment only, where the payment names its payer: in the payment commitment the payment cMIP defines, and so in the receipt's field 2. *It names no identity: the key is fresh, and links to nothing else the payer signs. It is not the delivery key of rule 14, which is an encryption key and cannot sign; a payer who wants both supplies both.*
 
 A receipt is signed by the **payee of the hop**: the party that received the money. The previous hop's receipt is also named in `objects`, so a route is a chain in the Envelopes MIR's sense. *No receipt carries bytes nobody checks, and a referral is evidence only when the payer signs it (rule 20).*
 
-A receipt carries no split. The final payee is the payee pointer; if that pointer belongs to a split service, the split and each payout are defined by the owners' agreement, in Agreements, and each payout is itself a simple Money payment with its own receipt.
+A receipt carries no split. The final payee is the payee pointer; if that pointer belongs to a split service, the split and each payout are defined by the publication or split agreement naming that service, in Agreements, and each payout is itself a simple Money payment with its own receipt.
 
 ### Payment claim (type 3)
 
@@ -555,7 +552,7 @@ claim-payload = {
   ? 6 => referral,         ; referral: who led the payer to this payment, signed here by the payer (Agreements, role shares)
   ? 7 => rail,             ; where a refund owed on this payment is to be paid (rules 17 and 19)
   ? 8 => anonymous,        ; an anonymous payer's claim: the key the payment committed to as payer, and its signature (rule 19)
-  ? 9 => purchase,         ; a purchase: the claim it pays under, as in the receipt (rule 18)
+  ? 9 => purchase,         ; a purchase: the ownership agreement and the version the payer's client read, as information (rule 18)
   ? 10 => hash             ; the previous hop's receipt, where this payment passes on a forward, as receipt field 6
                            ;   (rules 24 and 27)
 }
@@ -566,7 +563,7 @@ anonymous = [ key: signing-key, sig: bstr ]       ; sig: by key, over tagged_has
 
 A claim carrying key 8 is the claim of the payer that committed to that key. Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key, and the signature in key 8 binds it to this claim's rail, proof, payee, amount, purpose, disputed receipt, referral, refund rail, purchase and previous hop, so nobody can lift it onto another claim. The signed bytes are the array shown, encoded in deterministic CBOR, with null where key 5, 6, 7, 9 or 10 is absent; the signature also covers the act's own citations, its `objects`, `acks` and `refs` (inside keys 3, 7 and 8, null where absent), so nobody can re-wrap the payer's claim with other citations or acknowledgements. For an anonymous payer's claim, its history for rules 17 and 29 is only what those covered citations hold; its `prev`, which belongs to whoever signed the act, is not the payer's and does not count. The signature scheme is the key's, as Identity defines it.
 
-A payment claim is the payer's side of the record. It carries the rail's proof, so anyone can verify that the money reached the payee's rail address. It is private by default like every act; publishing it, to a counterparty or more widely, is the payer's choice and reveals the payer only to whom the payer chooses.
+A payment claim is the payer's side of the record. It carries the rail's proof, so anyone can verify that the money reached the payee's rail address. It is private by default like every act; making it known, to a counterparty or more widely, is the payer's choice and reveals the payer only to whom the payer chooses.
 
 ### Creditor's release (type 4)
 
@@ -579,23 +576,41 @@ release-payload = {
 
 Signed by the creditor the obligation names, alone; nobody else's signature counts, and none is needed. Field 1 names each act once. *Forgiving a sum only gives up money, a simple money decision, so the release is a Money act (Agreements' type 21 is retired). A release given against future terms (a share of income, stakes) is also a deal, an Agreements agreement signed on its own, which field 1 names (Agreements rule 92).*
 
+### Price tag (type 5)
+
+```cddl
+price-tag-payload = {
+  ? 0 => hash,             ; the bake it prices, by its act id: a tag on a bare bake
+  ? 1 => hash,             ; the publication it prices, by its founding version (Agreements, type 6): a tag under a publication
+  2 => uint,               ; version: 1, then the previous version plus one
+  ? 3 => hash,             ; the version it replaces (absent for version 1)
+  ? 4 => amount,           ; the price; absent: the tag is withdrawn
+  5 => hash                ; payee: the identity whose payee pointer and vault a payment of it goes to (rule 4)
+}                          ; exactly one of fields 0 and 1
+```
+
+Signed by the seller: on a bare bake its uploader, under a publication its split service or the party it designates (rule 18). Public. A later version names the first and the one it replaces in `objects`, `[first, previous]`, and is signed by the same signer, naming the same bake or publication; a version breaking either, or carrying both field 0 and field 1, or neither, is invalid. *Field 1 is optional so that a tag on a bare bake and a tag under a publication are one format.*
+
+A payment of it names the version it pays in its field 5 (receipt) or field 4 (claim): "What a payment fulfils".
+
 ## Part four: tasks, reasoning and freeze scenarios
 
 ### Tasks
 
-- **Payment.** One payment cMIP per agreement fills this task. It accepts an act it follows (an obligation, offer or payee pointer, for instance; "What a payment fulfils"), an amount, and the payee's flow pointer or vault entry the payment goes to. It defines how rail Modules plug in under it, one per rail; how a payment on a rail carries what the receipt and claim will say (who is paid, how much, for what, by whom); how a receipt and a claim carry a rail's proof; and how a verifier checks them, by running the named rail Module's rule (valid, invalid, pending, unknown, and the trusted party relied on, if any). Each rail Module defines its rail's address and vault-source formats, how a fresh receiving address is obtained under a vault entry's source, its proof format, and its verification rule; **its specification states the rail's kind (Development, field 11) and what its proof binds (Development, field 13), and the payment cMIP reads both from the specification, never from code.** The receiver signs the receipt; the payer signs the claim; the cMIP and its Modules sign nothing.
-- **Conversion.** A cMIP defining how a conversion is offered and evidenced: a conversion service, an identity, receives on one rail or unit and pays on the next at the rate of its own offer, and signs a receipt with a forward in the next unit; its onward payment is a hop like any other, under the payment cMIP.
+- **Payment.** One payment cMIP per agreement or publication fills this task. It accepts an act it follows (an obligation, a price tag or payee pointer, for instance; "What a payment fulfils"), an amount, and the payee's flow pointer or vault entry the payment goes to. It defines how rail Modules plug in under it, one per rail; how a payment on a rail carries what the receipt and claim will say (who is paid, how much, for what, by whom); how a receipt and a claim carry a rail's proof; and how a verifier checks them, by running the named rail Module's rule (valid, invalid, pending, unknown, and the trusted party relied on, if any). Each rail Module defines its rail's address and vault-source formats, how a fresh receiving address is obtained under a vault entry's source, its proof format, and its verification rule; **its specification states the rail's kind (Development, field 11) and what its proof binds (Development, field 13), and the payment cMIP reads both from the specification, never from code.** The receiver signs the receipt; the payer signs the claim; the cMIP and its Modules sign nothing.
+- **Conversion.** A cMIP defining how a conversion is priced and evidenced: a conversion service, an identity, receives on one rail or unit and pays on the next at a rate it states, and signs a receipt with a forward in the next unit; its onward payment is a hop like any other, under the payment cMIP.
 
 Splits are an Agreements task. A custodial flow service, which holds an identity's hot pointer and enforces a rate off-protocol, is an identity, a party the owner points the flow at; it may run any Module it likes, and it is not one.
 
 ### Reasoning
 
-- **Money ends at the payee pointer.** *A payment goes to the pointer set by the owners of what is paid for. How it is then divided is the owners' agreement, which is Agreements. That keeps Money simple enough for any wallet, and keeps every rule about sharing in one place.*
+- **Money ends at the payee pointer.** *A payment goes to the pointer the seller names. How it is then divided is the publication's split, which is Agreements. That keeps Money simple enough for any wallet, and keeps every rule about sharing in one place.*
+- **The price is its own act.** *A price on the upload made one act two things, a store and an offer. A price tag is a price and a pointer, signed by the seller: on a bare bake its uploader's, under a publication the publication's side's. Any wallet can pay it; under a publication, paying it is a purchase, which Agreements judges.*
 - **One receipt, every rail.** *Rails come and go; the core must outlive them. If every rail speaks the same receipt, a route across Lightning, a stablecoin and a bank transfer reads as one chain. Only the rail's proof differs.*
 - **Rails are Modules under one payment cMIP.** *An agreement names one cMIP per task; if each rail were a cMIP, every agreement would be confined to one rail. So the payment cMIP is the common language of an agreement's payments, and the rails plug in beneath it, as many as the parties use. A text cannot sign: receipts are signed by the people who received, claims by the people who paid. Services that convert or hold money are parties with their own offers, not specifications.*
 - **The owner is told what the vault refuses.** *Fail closed protects the owner from a thief, at the cost of payments that cannot arrive. A failed payment leaves no act behind, so nothing can make its absence a rule; the owner's own client and the payer's wallet tell the owner instead, through the inbox that already exists.*
 - **Honest about fiat.** *Card and bank rails cannot give proofs anyone can check. Naming the trusted party in the verification answer keeps that visible instead of pretending otherwise.*
-- **Double entry.** *The receiver signs the receipt, and the receiver is the party that benefits from silence. A payer's claim is the other half of the ledger: private by default, published by choice, and admitted as equal evidence. A mismatch between the two is itself the alarm. The measured promise is this: hiding income requires the payer's silence or collusion. Nothing more can be promised by a protocol that cannot see payments made outside it, and payer-side splitting cMIPs, where each owner is paid directly, are the models that need no service's honesty.*
+- **Double entry.** *The receiver signs the receipt, and the receiver is the party that benefits from silence. A payer's claim is the other half of the ledger: private by default, made public by choice, and admitted as equal evidence. A mismatch between the two is itself the alarm. The measured promise is this: hiding income requires the payer's silence or collusion. Nothing more can be promised by a protocol that cannot see payments made outside it, and payer-side splitting cMIPs, where each owner is paid directly, are the models that need no service's honesty.*
 - **Chained hops name where things break.** *When a route breaks, the last valid receipt and the missing next one point at exactly one hop and one agreement. Money says where; Agreements say what follows.*
 - **The vault is a grammar for safer pointers.** *The flow is easy to change and easy to steal; the vault is where a thief with the phone cannot point payments. Three ways a thief takes money through the flow: the backlog, closed after the lock change because the version that counts for a debt is the latest the payee's own acts on a kept line hold, and only the debtor signs a debt, though during the window the stolen key can sign the payee's acts and re-point its deals, the owner's cost; the large payment, closed by a per-unit limit; and the stream between theft and rotation, which no clockless rule can cap. So the core gives the two ends of the range, per-payment limits and flow off, and leaves the middle to services that hold the hot pointer and enforce a rate for owners who need one. Detection is shortened by the payer's claim and the inbox: the owner's client sees money land where it did not point.*
 - **Per unit, fail closed.** *A limit in one unit cannot be compared with a payment in another, and a thief with the signing key chooses the unit. So every unit has its own limit, and a unit with none goes to the vault. Where several entries cover one unit, the smallest limit applies: a limit per rail would let the payer's, or a thief's, choice of rail pick the laxer one.*
@@ -603,7 +618,7 @@ Splits are an Agreements task. A custodial flow service, which holds an identity
 - **A refund goes to a key, not to a proof.** *On Lightning the payee and every node on the route learn the preimage, so "whoever presents the proof" could be any of them. A key the payer committed to before paying is held by the payer alone.*
 - **A rail's costs, stated.** *A rail Module states what its rail costs its users, and clients show it. A Lightning rail Module, for instance, names the payee's node in its pointer or vault: a public node exposes its channels and the coins behind them, may expose its network address, links identities that share it, and a Lightning vault stops a thief with the signing key, not one who takes the node.*
 - **One name per unit.** *A satoshi is a satoshi on every rail that carries it, Lightning or on-chain. Naming units by their own small specification stops every hop between two rail Modules from looking like a conversion. A test network's coin is a unit of its own: a regtest satoshi is not a satoshi.*
-- **Good faith protects payers.** *A payer who followed the published pointer and vault did everything right. Theft is the owner's risk, and protection against it is a market.*
+- **Good faith protects payers.** *A payer who followed the pointer and vault as uploaded did everything right. Theft is the owner's risk, and protection against it is a market.*
 - **Private by default.** *Receipts and claims are acts like any other, locked, and disclosed only as far as the route, or the payer's choice, requires.*
 - **Payments, not attention.** *Rewards attach to settlements, never to attention: MOR's iron law.*
 
@@ -622,10 +637,10 @@ The unit specification: a specification of kind 2 (Development, Part three, "A u
 
 #### Where a payment goes
 
-- Payment for a publication to the identity in `for`; a Money-only wallet and a full client pay the same identity; the wallet checks the vault; for a work under an Agreements claim, only the full client's payment, naming the claim, is a purchase: 2, 3.
+- A tip and a price tag's payment on a bare bake go to its uploader's pointer, unsplit; a Money-only wallet and a full client pay the same identity; the wallet checks the vault; a payment naming a publication's price tag is a purchase under the publication, whichever wallet pays it: 2, 3.
 - Flow and vault; a thief changing the flow pointer cannot collect obligations that name an earlier version, nor re-issue them; a unit switch goes to the vault; a dead vault rail is covered by another; flow off: 1, 5.
 - Several vault entries for one unit: the smallest limit applies: 1, 5.
-- A receipt on a rail the payee's pointer names counts; one on a rail it never named counts for nothing; in a collective, the holders of the area reaching Money choose the rails: 3.
+- A receipt on a rail the payee's pointer names counts; one on a rail it never named counts for nothing; in a collective, the members its founding names for Money choose the rails: 3.
 - A payment refused under rule 3 or 5: the payer's wallet sends the payee an ordinary inbox message; the debt stays open: 5.
 
 #### Proving a payment
@@ -638,16 +653,17 @@ The unit specification: a specification of kind 2 (Development, Part three, "A u
 
 #### Receivers and senders
 
-- Receiver visibility dial; sender never required; a payer's claim published by choice: 2, 5.
+- Receiver visibility dial; sender never required; a payer's claim made public by choice: 2, 5.
 
 #### Debts
 
 - Obligation signed by the debtor, and discharge, unit-agnostic, possibly by several routes: 1.
-- A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts only with the area reaching Money: 3.
+- A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts only under the rule its founding names for Money: 3.
 
 #### Buying, refunds and referrals
 
-- A payment for a claimed work naming no claim is no purchase, and is owed back to the payer; one naming the current claim is a purchase, a collective seller's once its actions chain records it; one naming a collective's claim a fork superseded, never recorded by the original's chain before the fork, is owed back; on a request rail, the claim the seller's request committed to is bought whatever came after; on a push rail, a payment two holders received is a purchase where both receipts came before their signatures on the new version, and refunded by both where one came after: 3.
+- A price tag on a bare bake counts only signed by the bake's uploader; under a publication, only signed by its split service or the party it designates, naming it; a version with no price withdraws it; a payment naming a counted tag of a publication is a purchase under it, its split service's receipt naming the ownership agreement's version whose shares it pays; a payment naming another's tag on a bake buys nothing: 2, 3.
+- On a request rail, the publication's version the seller's request committed to is bought whatever came after; a re-uploader receives the tips and tag payments on their own bake (stated cost): 2, 3.
 - Two clients built with different readings of a rail Module read its kind (field 11) and what its proof binds (field 13) from its specification, and give the same answer on a push-rail purchase and on a disagreement in purpose; a rail Module's specification implementing a payment cMIP without them is no specification, and a receipt naming it is unknown: 2, 3.
 - A request rail Module (field 11 0) whose field 13 lacks the payee or the purpose: no specification, and a receipt naming it unknown: 2, 3.
 - Undeliverable payment kept as an open obligation; refund to an anonymous payer claimed by a signature with the key the payment committed to, which a routing node holding the rail's proof cannot make: 2, 5.

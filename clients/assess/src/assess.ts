@@ -102,7 +102,7 @@ const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (n: number): string => `${Number((n / 10_000).toFixed(4))}%`;
 
 /** The sections of the collective client's reading this tool shows as they are. */
-const SHARED = ["The collective's keys", 'Areas: who decides which acts', 'Who decides what', 'If someone disappears', 'Hidden characters'];
+const SHARED = ["The collective's keys", 'The five layers: who acts for it', 'Finer areas: who decides which act types', 'Who decides what', 'If someone disappears', 'Hidden characters'];
 
 /** Explain and flag the terms whose exact payload is `payload`. `found`: what the relays show, if they were asked. Throws if the payload is not terms in Agreements' format. */
 export function assess(payload: Uint8Array, names: Names, found?: Found | null): Assessment {

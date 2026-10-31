@@ -14,7 +14,7 @@ import { encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readSealedList } from '../../dub/src/people.ts';
 import { RUNNER_NO_OPEN_SAY, RUNNER_OPENS_SAY } from '../../dub/src/dub.ts';
-import { asking, clickPanel, closeAll, dub, dubBeside, everything, forms, kishib, kishibAgain, PASS, refused, runnerOn, standing, start, type Relay } from './world.ts';
+import { asking, clickPanel, closeAll, dub, dubBeside, everything, forms, kishib, kishibAgain, PASS, refused, runnerOn, standing, start, type Relay, stopAll } from './world.ts';
 import { LOCKED_SAY, NO_OPEN_SAY, Runner, WRONG_SAY, type RunnerView } from '../src/runner.ts';
 
 let homes: Relay[];
@@ -26,8 +26,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 const state = (c: { ask<T>(op: string, a?: unknown): Promise<T> }) => c.ask<RunnerView>('runner state');

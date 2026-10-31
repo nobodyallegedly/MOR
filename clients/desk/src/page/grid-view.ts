@@ -1,15 +1,16 @@
 // The founding grid, drawn (round 3; `../grid.ts` for what it means). Members
-// are the columns; three bands of rows, strongest first, each behind a line
-// with its tier's name: the constitution, the judges, the areas. A filled box
-// means that member's key counts there; a row's end says how many keys out
-// of its holders, and in words; a column's foot what that member holds. A
-// area picks a whole layer; "Only some kinds of act", ticked, opens its kinds
-// (decided by Nobody, allegedly: "as an expandable option opened with a tick,
-// to not crowd the UI"). At a phone's width the grid scrolls sideways in its
-// own box, the row names fixed on the left.
+// are the columns; bands of rows, strongest first, each behind a line with
+// its name: what one member may do alone (said layer by layer, Money first,
+// before anyone signs: Agreements rule 60), the constitution, the judges, the
+// five layers (each named, every one: rule 60), the finer areas (optional,
+// some kinds of act within one layer), other operations, and the shares
+// (H101: required, even until touched). A filled box means that member acts
+// there; a row's end says how many of them together, and in words; a
+// column's foot what that member holds. At a phone's width the grid scrolls
+// sideways in its own box, the row names fixed on the left.
 
 import { e } from '../../../manage/src/view.ts';
-import { LAYERS, choiceOf, kindsFor, reachSay, type Grid, type AreaRow } from '../grid.ts';
+import { LAYERS, aloneSay, kindsFor, layerWho, reachSay, sharesOf, type Grid, type AreaRow } from '../grid.ts';
 
 /** The grid's own look, added to the page's (`view.ts`, STYLE). */
 export const GRID_STYLE = `
@@ -26,6 +27,9 @@ table.grid span.locked{display:inline-block;width:30px;height:30px;line-height:3
 table.grid input[type=number]{width:4em}
 table.grid input.cap{width:7em}
 table.grid input.areaname{width:9em}
+table.grid input.share{width:5.5em}
+.alone{margin:10px 0;padding:10px 14px;border:1px solid var(--line);border-radius:10px}
+.alone li{margin:2px 0}
 table.grid tr.kinds td{text-align:left;white-space:normal}
 table.grid tfoot td{vertical-align:top;font-size:12px;color:var(--soft);white-space:normal;text-align:left;min-width:6em}
 table.grid .areamore{display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:12px}`;
@@ -37,40 +41,42 @@ const box = (on: boolean, row: string, m: string, label: string) =>
   `<td><button type="button" class="box${on ? ' on' : ''}" data-grid-cell="${e(row)}" data-m="${e(m)}" aria-pressed="${on}" title="${e(label)}">${on ? '■' : ''}</button></td>`;
 const locked = (label: string) => `<td><span class="locked" title="${e(label)}">■</span></td>`;
 // No min or max: a browser would refuse the form silently; Edubba's refusals say why, in words (`../grid.ts`).
-const num = (field: string, value: number, _min: number, _max: number) => `<input type="number" data-grid-num="${e(field)}" value="${value}" inputmode="numeric">`;
+const num = (field: string, value: number) => `<input type="number" data-grid-num="${e(field)}" value="${value}" inputmode="numeric">`;
 
 function areaRows(g: Grid, l: AreaRow, i: number, name: (id: string) => string): string {
   const holders = g.members.filter((m) => l.holders.includes(m));
-  const layer = `<select data-grid-layer="${i}">${LAYERS.map((x) => `<option value="${x.value}"${x.value === choiceOf(l) ? ' selected' : ''}>${e(x.name)}</option>`).join('')}</select>`;
-  // The Development MIR defines no act type of its own: chosen whole.
-  const some = l.kinds !== undefined && kindsFor(l.layer, l.part).length > 0;
-  const money = l.layer === 2
-    ? `<label title="Above this amount an act, one more key: the grant limits cMIP, draft 2, judges it on each act (a cMIP's rule; the core counts keys).">ⓘ Above <input type="number" data-grid-cap="${i}" value="${l.cap ?? ''}" placeholder="no cap" class="cap"> regtest sats, one more key</label>`
+  const layer = `<select data-grid-layer="${i}" aria-label="Within which layer">${LAYERS.map((x) => `<option value="${x.layer}"${x.layer === l.layer ? ' selected' : ''}>${e(x.name)}</option>`).join('')}</select>`;
+  const money = l.layer === 3
+    ? `<label title="Above this amount an act, one more holder: the grant limits cMIP judges it on each act (a cMIP's rule; the core counts signatures).">ⓘ Above <input type="number" data-grid-cap="${i}" value="${l.cap ?? ''}" placeholder="no cap" class="cap"> regtest sats, one more</label>`
     : '';
-  const keysSay = holders.length ? `${l.number === 1 ? (holders.length === 1 ? `${name(holders[0])} alone` : `any one of ${list(holders.map(name))}`) : `any ${l.number} of ${list(holders.map(name))}`}` : 'nobody: frozen';
-  const capSay = l.cap ? `; above ${l.cap.toLocaleString('en')}, ${l.number + 1} keys` : '';
-  const row = `<tr data-area="${i}"><th class="rowname"><input class="areaname" type="text" data-grid-name="${i}" value="${e(l.name)}" aria-label="The area's name" placeholder="Its name">
-<div class="areamore">${layer}${kindsFor(l.layer, l.part).length ? `<label class="check"><input type="checkbox" data-grid-some="${i}"${some ? ' checked' : ''}> Only some kinds of act</label>` : ''}${money}<button type="button" class="quiet" data-grid-remove="${i}">Remove this area</button></div></th>
-${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}’s key counts in “${l.name}”`)).join('')}
-<td>${num(`area:${i}`, l.number, 1, Math.max(1, holders.length))} <span class="small">of ${holders.length}</span></td>
-<td class="say">${e(reachSay(l))}: ${e(keysSay)}${e(capSay)}.</td></tr>`;
-  if (!some) return row;
-  // H120: every kind the layer's MIR defines, from the core's own type tables.
-  const kinds = kindsFor(l.layer, l.part);
-  return `${row}<tr class="kinds"><td></td><td colspan="${g.members.length + 2}">${kinds
+  const who = holders.length ? `${l.number === 1 ? (holders.length === 1 ? `${name(holders[0])} alone` : `any one of ${list(holders.map(name))}`) : `any ${l.number} of ${list(holders.map(name))}`}` : 'nobody: frozen';
+  const capSay = l.cap ? `; above ${l.cap.toLocaleString('en')}, ${l.number + 1}` : '';
+  const kinds = kindsFor(l.layer);
+  return `<tr data-area="${i}"><th class="rowname"><input class="areaname" type="text" data-grid-name="${i}" value="${e(l.name)}" aria-label="The area's name" placeholder="Its name">
+<div class="areamore">${layer}${money}<button type="button" class="quiet" data-grid-remove="${i}">Remove this area</button></div></th>
+${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)} acts in “${l.name}”`)).join('')}
+<td>${num(`area:${i}`, l.number)} <span class="small">of ${holders.length}</span></td>
+<td class="say">${e(l.kinds.length ? reachSay(l) : 'choose its kinds of act')}: ${e(who)}${e(capSay)}.</td></tr>
+<tr class="kinds"><td></td><td colspan="${g.members.length + 2}">${kinds.length ? kinds
     .map((k) => {
       const v = `${k.spec}:${k.type}`;
-      return `<label class="check"><input type="checkbox" data-grid-kind="${i}" value="${e(v)}"${l.kinds!.includes(v) ? ' checked' : ''}> ${e(k.name)}</label>`;
+      return `<label class="check"><input type="checkbox" data-grid-kind="${i}" value="${e(v)}"${l.kinds.includes(v) ? ' checked' : ''}> ${e(k.name)}</label>`;
     })
-    .join(' ')}</td></tr>`;
+    .join(' ') : '<span class="small">This layer’s MIR defines no kind of act of its own: it is chosen whole, in its row above.</span>'}</td></tr>`;
+}
+
+/** What one member may do alone, layer by layer, Money first: shown above the grid, before anyone signs (Agreements rule 60, client conformance). */
+export function aloneBox(g: Grid, name: (id: string) => string): string {
+  return `<div class="alone" data-alone><p><strong>What one member may do alone</strong>, layer by layer, Money first:</p><ul>${aloneSay(g, name).map((x) => `<li>${e(x)}</li>`).join('')}</ul></div>`;
 }
 
 /**
  * The grid of a founding or a member change. `form`: the form it belongs to.
  * `name`: a member in words, in the sentences; `head`: a member as its
  * column shows it, its names and its short ID as a button (H106, H121).
+ * `joining`: members a change adds, whose share is required (H101).
  */
-export function gridTable(form: string, g: Grid, name: (id: string) => string, head?: (id: string) => string): string {
+export function gridTable(form: string, g: Grid, name: (id: string) => string, head?: (id: string) => string, joining: string[] = []): string {
   const n = g.members.length;
   const cols = g.members.map((m) => `<th scope="col">${head ? head(m) : e(name(m))}</th>`).join('');
   const span = `colspan="${n}"`;
@@ -78,26 +84,40 @@ export function gridTable(form: string, g: Grid, name: (id: string) => string, h
   const c = g.constitution;
   const all = g.members.every((m) => c.holders.includes(m));
   const constSay = all ? (c.number >= n ? 'every member whose voice remains (the default)' : `any ${c.number} of the ${n} members`) : `${list(g.members.filter((m) => c.holders.includes(m)).map(name))}, every one of them`;
+  const layerRows = [...LAYERS].sort((a, b) => a.layer - b.layer).map((l) => {
+    const row = g.layers[l.layer];
+    const allOn = g.members.every((m) => row.holders.includes(m));
+    const count = allOn ? `${num(`layer:${l.layer}`, row.number)} <span class="small">of ${n}</span>` : `${row.holders.filter((m) => g.members.includes(m)).length} <span class="small">together</span>`;
+    return `<tr data-layer="${l.layer}"><th class="rowname">${e(l.name)}<div class="small">${e(l.say)}</div></th>${g.members.map((m) => box(row.holders.includes(m), `layer:${l.layer}`, m, `${name(m)} acts for the collective in ${l.name}`)).join('')}
+<td>${count}</td><td class="say">${e(layerWho(row, g.members, name))}.</td></tr>`;
+  });
+  const total = sharesOf(g).reduce((t, [, v]) => t + v, 0) / 10_000;
+  const shareCell = (m: string) => `<td><input class="share" type="number" step="any" data-grid-share="${e(m)}" value="${g.shares[m] ?? ''}" aria-label="${e(name(m))}’s share, in percent"${joining.includes(m) ? ' required' : ''}>%</td>`;
+  const departed = (g.departed ?? []).map((x) => `${e(name(x))} (left, keeps ${g.shares[x] ?? 0}%)`);
   const holds = (m: string) => {
     const areas = g.areas.filter((l) => l.holders.includes(m)).map((l) => e(l.name || 'unnamed'));
-    return `${c.holders.includes(m) ? 'Constitution<br>' : ''}A share of the chain key<br>${areas.length ? areas.join('<br>') : 'No area'}`;
+    return `${c.holders.includes(m) ? 'Constitution<br>' : ''}A share of the chain key<br>${g.shares[m] ?? 0}% of the collective${areas.length ? `<br>${areas.join('<br>')}` : ''}`;
   };
-  return `<div class="gridbox" data-grid-form="${e(form)}"><table class="grid">
-<thead><tr><th class="rowname"></th>${cols}<th>Keys needed</th><th>In words</th></tr></thead>
+  return `${aloneBox(g, name)}<div class="gridbox" data-grid-form="${e(form)}"><table class="grid">
+<thead><tr><th class="rowname"></th>${cols}<th>How many</th><th>In words</th></tr></thead>
 <tbody>
 ${band('The constitution')}
 <tr><th class="rowname">Change members and areas</th>${g.members.map((m) => box(c.holders.includes(m), 'const', m, `${name(m)} has a voice in changing the constitution`)).join('')}
-<td>${all ? num('const', c.number, 1, n) : `${c.holders.length} <span class="small">of ${c.holders.length}</span>`}</td><td class="say">${e(constSay)}.</td></tr>
+<td>${all ? num('const', c.number) : `${c.holders.length} <span class="small">of ${c.holders.length}</span>`}</td><td class="say">${e(constSay)}.</td></tr>
 <tr><th class="rowname">Rebuild the chain key</th>${g.members.map((m) => locked(`${name(m)} holds a share, on paper`)).join('')}
-<td>${num('chain', g.chainKey, 1, n)} <span class="small">of ${n}</span></td><td class="say">One share per member, on paper; any ${g.chainKey} rebuild it. Fewer than every member, so the loss of one never freezes it.</td></tr>
+<td>${num('chain', g.chainKey)} <span class="small">of ${n}</span></td><td class="say">One share per member, on paper; any ${g.chainKey} rebuild it. Fewer than every member, so the loss of one never freezes it. The collective has no signing key: each member acts with their own.</td></tr>
 ${band('The judges')}
-<tr><th class="rowname">Judge absence</th><td ${span} class="span">the other members</td><td>${num('absence', g.absence, 1, Math.max(1, n - 1))}</td><td class="say">Any ${g.absence} of the other members may declare a member absent: that member loses their voice.</td></tr>
-<tr><th class="rowname">Change the judges</th>${g.members.map((m) => locked('Every member, always (rule 67)')).join('')}<td>${n} <span class="small">of ${n}</span></td><td class="say">Always every member: one version of the judges for everyone (rule 67). Keepers and the split service join this band later.</td></tr>
-${band('The areas: operations')}
+<tr><th class="rowname">Judge absence</th><td ${span} class="span">the other members</td><td>${num('absence', g.absence)}</td><td class="say">Any ${g.absence} of the other members may declare a member absent: that member loses their voice.</td></tr>
+<tr><th class="rowname">Change the judges</th>${g.members.map(() => locked('Every member, always (rule 67)')).join('')}<td>${n} <span class="small">of ${n}</span></td><td class="say">Always every member: one version of the judges for everyone (rule 67).</td></tr>
+${band('Who acts for the collective, layer by layer')}
+${layerRows.join('\n')}
+${band('Finer areas (optional): some kinds of act within a layer')}
 ${g.areas.map((l, i) => areaRows(g, l, i, name)).join('')}
-<tr><td class="rowname" colspan="${n + 3}"><button type="button" data-grid-add="${e(form)}">+ Add an area</button></td></tr>
-<tr><th class="rowname">Other operations</th><td ${span} class="span">every member</td><td>${num('clone', g.clone, 1, n)} <span class="small">of ${n}</span></td><td class="say">Changes no area reaches: any ${g.clone} of the ${n} members (the clone rule).</td></tr>
+<tr><td class="rowname" colspan="${n + 3}"><button type="button" data-grid-add="${e(form)}">+ Add a finer area</button></td></tr>
+<tr><th class="rowname">Other operations</th><td ${span} class="span">every member</td><td>${num('clone', g.clone)} <span class="small">of ${n}</span></td><td class="say">Changes no layer or area reaches: any ${g.clone} of the ${n} members (the clone rule).</td></tr>
+${band('Shares: who owns the collective')}
+<tr data-shares><th class="rowname">Each member’s share</th>${g.members.map(shareCell).join('')}<td>${total.toLocaleString('en')}%</td><td class="say">Adding up to 100%: even until touched${departed.length ? `; ${departed.join(', ')}` : ''}.${joining.length ? ' A joining member’s share is required.' : ''}</td></tr>
 </tbody>
-<tfoot><tr><th class="rowname">Each member holds</th>${g.members.map((m) => `<td>${holds(m)}</td>`).join('')}<td colspan="2" class="say">Each member signs with a key of their own, made as they sign.</td></tr></tfoot>
+<tfoot><tr><th class="rowname">Each member holds</th>${g.members.map((m) => `<td>${holds(m)}</td>`).join('')}<td colspan="2" class="say">Each member signs with their own key.</td></tr></tfoot>
 </table></div>`;
 }

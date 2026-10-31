@@ -137,11 +137,16 @@ fn a_text_act_outside_its_format_is_invalid_f295_f296() {
         assert_eq!(w.v.status(&id), Status::Invalid, "{label}");
     }
     // A text act naming an agreement's head in `objects` is no fork of that
-    // agreement: it is not a valid act at all (F296).
+    // agreement. Its one object is of the second shape, `[collective,
+    // decision]` (rule 14): naming a chain this verifier does not hold, it
+    // is unknown; naming an act held that is no identity, invalid.
     let head = sha256(b"an agreement's head");
     let fork_like = next(&mut p, text_spec(), 0, text("a reply"), Some(vec![Object { chain: head, predecessor: head }]), None, "fork-like");
     let fork_like = w.add(&fork_like);
-    assert_eq!(w.v.status(&fork_like), Status::Invalid);
+    assert_eq!(w.v.status(&fork_like), Status::Unknown);
+    let held_head = next(&mut p, text_spec(), 0, text("a reply"), Some(vec![Object { chain: good, predecessor: good }]), None, "naming a held act");
+    let held_head = w.add(&held_head);
+    assert_eq!(w.v.status(&held_head), Status::Invalid);
 }
 
 /// A verifier that does not know which specification is Text's cannot apply
@@ -176,10 +181,10 @@ fn an_envelopes_act_outside_its_format_is_invalid_f294_f295() {
     let pubn = next(&mut p, env, 0, publication_payload(), None, None, "publication");
     let pubn = w.add(&pubn);
     assert_eq!(w.v.status(&pubn), Status::Valid);
-    // A withdrawal in its format: `{}` with the entry [publication, publication].
+    // Type 3, the withdrawal, is retired: a bake is never withdrawn.
     let wd = next(&mut p, env, 3, vec![], Some(vec![Object { chain: pubn, predecessor: pubn }]), None, "withdrawal");
     let wd = w.add(&wd);
-    assert_eq!(w.v.status(&wd), Status::Valid);
+    assert_eq!(w.v.status(&wd), Status::Invalid);
     let mut extra = publication_payload();
     extra.push((Value::Uint(9), Value::Uint(1)));
     let mut no_nonce = publication_payload();
@@ -466,7 +471,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     let sig = unknown_scheme_signature();
     let chain_key = slh("newcomer", 0, 3);
     let g = mor_core::identity::Payload::Genesis(mor_core::identity::Genesis {
-        signing_key: mor_core::identity::SigningKey { scheme: sig.scheme.clone(), key: sig.key.clone() },
+        signing_key: Some(mor_core::identity::SigningKey { scheme: sig.scheme.clone(), key: sig.key.clone() }),
         chain_key: commit(&chain_key),
         homes: vec![own_home()],
         rule: None,
@@ -489,7 +494,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     let ga = act::make(&inside, &[1; 32], &[2; 24], &Addressing { signer: None, binding: None, public: true, to: None }, |_| sig.clone());
     let gid = w.add(&ga);
     assert_eq!(w.v.resolve(&gid).stop, Stop::GenesisUnknown);
-    let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None };
+    let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None, keyless: false };
     let (r, mut q) = w.rotate(&p, Rot::default());
     assert_eq!(w.v.status(&r), Status::Unknown, "a rotation the client can verify, of a chain it cannot resolve");
     let post = w.post(&mut q, "under the new key");
@@ -592,7 +597,7 @@ fn identity_routes_names_and_links_outside_their_format_are_invalid_f295() {
 /// publication's signer or by the identity its `for` names; while the
 /// publication is not held, unknown (F298).
 #[test]
-fn a_withdrawal_counts_only_by_the_publications_signer_or_for() {
+fn no_act_withdraws_a_bake_and_its_fields_7_and_8_are_reserved() {
     let mut w = World::new();
     let mut publisher = w.operator("publisher");
     let mut creator = w.operator("creator");
@@ -609,10 +614,16 @@ fn a_withdrawal_counts_only_by_the_publications_signer_or_for() {
     let by_publisher = next(&mut publisher, env, 3, vec![], naming(), None, "publisher's");
     let ids: Vec<Hash> = [&by_stranger, &by_creator, &by_publisher].iter().map(|a| w.add(a)).collect();
     for id in &ids {
-        assert_eq!(w.v.status(id), Status::Unknown, "the publication not held");
+        assert_eq!(w.v.status(id), Status::Invalid, "type 3 is retired, whatever it names");
     }
-    w.add(&pubn);
-    assert_eq!(w.v.status(&ids[0]), Status::Invalid);
-    assert_eq!(w.v.status(&ids[1]), Status::Valid, "by the identity its for names");
-    assert_eq!(w.v.status(&ids[2]), Status::Valid, "by its signer");
+    let pid = w.add(&pubn);
+    assert_eq!(w.v.status(&pid), Status::Invalid, "a bake carrying field 8, reserved");
+    let mut priced = publication(vec![]);
+    priced.push((Value::Uint(7), Value::Uint(100)));
+    let priced = next(&mut creator, env, 0, priced, None, None, "priced");
+    let priced = w.add(&priced);
+    assert_eq!(w.v.status(&priced), Status::Invalid, "a bake carrying field 7, reserved");
+    for id in &ids {
+        assert_eq!(w.v.status(id), Status::Invalid);
+    }
 }

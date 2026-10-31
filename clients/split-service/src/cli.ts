@@ -1,14 +1,15 @@
 #!/usr/bin/env -S node --import tsx
 // mor-split-service: a TEST split service, on regtest only (round 3, part C).
 // It makes its identity and payee pointer on first start, then, every few
-// seconds, accepts the grants naming its keys, answers invoice requests for
-// the collectives and deals it divides for, signs their receipts with their
-// grant keys, publishes each split and pays each holder. Its folder holds its
-// test identity's keys and the grant keys it made.
+// seconds, signs the publications sealed to it that name it, answers invoice
+// requests made to it under them, signs their receipts in its own name,
+// publishes each split and pays each receiver. Its folder holds its test
+// identity's keys.
 //
-// `key GRANTOR` asks the running service for a new grant key for a collective
-// (or a deal's payee): it leaves the ask in the service's folder and prints
-// the key the service makes, to give in Edubba ("Its money").
+// `accept PUBLICATION` asks the running service to sign a publication naming
+// it (rule 11), and `tag PUBLICATION VALUE UNIT` to put its price tag on one
+// (Money rule 18; no VALUE withdraws it): each leaves the ask in the
+// service's folder and prints the answer.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -22,14 +23,16 @@ import { LABEL, SplitService } from './service.ts';
 const HELP = `mor-split-service: ${LABEL}
 
   run --regtest RUN_DIR --homes URL[,URL] --relays URL[,URL] [--node carol] [--payer alice] [--dir DIR] [--every SECONDS]
-  key GRANTOR [--dir DIR]
+  accept PUBLICATION [--dir DIR]
+  tag PUBLICATION [VALUE UNIT] [--dir DIR]
 
 Its Lightning node is one of the regtest network's (default carol, at its REST port from
 RUN_DIR/nodes.json, or 18082); its payouts are paid from the same node, or from --payer's (on the
 regtest network only alice holds spendable funds: carol's few thousand received sit below its channel's
 reserve, as human test 14 found). The folder defaults to ~/mor-split-service. "run" prints its
-identity: give it to Edubba ("Its money", in the collective's page). "key", while the service
-runs, prints a new key of the service for that collective (or a deal's payee): give it there too.`;
+identity: name it as a publication's split service (field 3) or a backup (field 11). "accept", while
+the service runs, has it sign such a publication; "tag" has it sign its price tag on one, its payee
+the service itself (a buyer pays the service, which pays everyone).`;
 
 function parse(argv: string[]) {
   const o: Record<string, string> = {};
@@ -41,17 +44,24 @@ function parse(argv: string[]) {
   return { o, rest };
 }
 
-/** Asks for grant keys, left in the folder by `key` and answered by the running service. */
-function asked(dir: string, svc: SplitService): string[] {
+/** Asks left in the folder by `accept` and `tag`, answered by the running service. */
+async function asked(dir: string, svc: SplitService): Promise<string[]> {
   const ask = join(dir, 'ask');
   if (!existsSync(ask)) return [];
   const said: string[] = [];
-  for (const f of readdirSync(ask).filter((x) => /^[0-9a-f]{64}$/.test(x))) {
-    const key = svc.grantKey(f);
-    writeFileSync(join(ask, `${f}.tmp`), key + '\n');
-    renameSync(join(ask, `${f}.tmp`), join(ask, `${f}.key`));
+  for (const f of readdirSync(ask).filter((x) => /^[0-9a-z-]+\.ask$/.test(x))) {
+    const a = JSON.parse(readFileSync(join(ask, f), 'utf8')) as { cmd: 'accept' | 'tag'; publication: string; value?: number; unit?: string };
+    let answer: string;
+    try {
+      answer = a.cmd === 'accept' ? await svc.accept(a.publication) : `Its price tag: ${await svc.tag(a.publication, a.value !== undefined && a.unit ? { unit: a.unit, value: a.value } : null)}`;
+    } catch (e) {
+      answer = `Refused: ${e instanceof Error ? e.message : e}`;
+    }
+    const out = join(ask, f.replace(/\.ask$/, '.answer'));
+    writeFileSync(`${out}.tmp`, answer + '\n');
+    renameSync(`${out}.tmp`, out);
     rmSync(join(ask, f));
-    said.push(`A grant key made for ${f.slice(0, 8)}…: ${key}`);
+    said.push(answer);
   }
   return said;
 }
@@ -60,22 +70,23 @@ async function main() {
   const [cmd, ...argv] = process.argv.slice(2);
   const { o, rest } = parse(argv);
   const dir = resolve(o.dir ?? join(homedir(), 'mor-split-service'));
-  if (cmd === 'key' && rest[0]) {
-    const grantor = readId(rest[0]);
+  if ((cmd === 'accept' || cmd === 'tag') && rest[0]) {
+    const publication = readId(rest[0]);
     const ask = join(dir, 'ask');
     mkdirSync(ask, { recursive: true });
-    writeFileSync(join(ask, grantor), '');
+    const name = `${cmd}-${publication}-${Date.now()}`;
+    const value = cmd === 'tag' && rest[1] ? Number(rest[1]) : undefined;
+    writeFileSync(join(ask, `${name}.ask`), JSON.stringify({ cmd, publication, ...(value !== undefined ? { value, unit: rest[2] } : {}) }));
     for (let i = 0; i < 60; i++) {
-      const got = join(ask, `${grantor}.key`);
+      const got = join(ask, `${name}.answer`);
       if (existsSync(got)) {
-        const key = readFileSync(got, 'utf8').trim();
+        console.log(readFileSync(got, 'utf8').trim());
         rmSync(got);
-        console.log(`The service’s key for ${shownId(grantor)}:\n${key}`);
         return;
       }
       await new Promise((r) => setTimeout(r, 1000));
     }
-    rmSync(join(ask, grantor), { force: true });
+    rmSync(join(ask, `${name}.ask`), { force: true });
     throw new Error('The service did not answer within a minute: start it first (mor-split-service run …), with the same --dir.');
   }
   if (cmd !== 'run' || !o.regtest || !o.homes || !o.relays) {
@@ -99,7 +110,7 @@ async function main() {
   const every = Number(o.every ?? 5) * 1000;
   for (;;) {
     try {
-      for (const line of asked(dir, svc)) console.log(line);
+      for (const line of await asked(dir, svc)) console.log(line);
       for (const line of await svc.tick()) console.log(line);
     } catch (e) {
       console.log(`(a round failed: ${e instanceof Error ? e.message : e})`);

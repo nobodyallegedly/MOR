@@ -37,6 +37,10 @@ pub mod types {
     /// The creditor's release (F126, from Agreements type 21): the creditor an
     /// obligation names ends it without full payment.
     pub const RELEASE: u64 = 4;
+    /// The price tag (Money rule 18): a price and a payee, on a bare bake
+    /// or under a publication, versioned; a version with no price withdraws
+    /// it.
+    pub const PRICE_TAG: u64 = 5;
 }
 
 /// The vault's kind in the Identity declarations slot (Money, "The vault").
@@ -332,6 +336,54 @@ pub enum Payload {
     Receipt(Receipt),
     Claim(Claim),
     Release(Release),
+    PriceTag(PriceTag),
+}
+
+/// What a price tag prices (fields 0 and 1, exactly one).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Priced {
+    /// 0: a bake, by its act id: a tag on a bare bake.
+    Bake(Hash),
+    /// 1: a publication, by its founding version (Agreements type 6).
+    Publication(Hash),
+}
+
+/// The price tag (type 5, rule 18): signed by the seller, on a bare bake its
+/// uploader, under a publication its split service or the party it
+/// designates (Agreements judges the latter). A later version names
+/// `[first, previous]` first in `objects`, by the same signer, pricing the
+/// same bake or publication.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PriceTag {
+    pub priced: Priced,
+    pub version: u64,
+    pub previous: Option<Hash>,
+    /// 4: the price; absent, the tag is withdrawn.
+    pub price: Option<Amount>,
+    /// 5: the payee, whose pointer and vault a payment of it goes to.
+    pub payee: Hash,
+}
+
+impl PriceTag {
+    /// Whether this version withdraws the tag (no price).
+    pub fn withdrawn(&self) -> bool {
+        self.price.is_none()
+    }
+
+    /// For a later version, `(first, previous)` as its `objects` name them
+    /// first: the chain is the first version, the predecessor the version
+    /// it replaces (field 3).
+    pub fn follows(&self, cited: &Citations) -> Option<(Hash, Hash)> {
+        let o = cited.objects.as_ref()?.first()?;
+        Some((o.chain, o.predecessor))
+    }
+
+    /// Whether `self`, signed by `signer`, is a valid next version of
+    /// `prev`, signed by `prev_signer`: the same signer, the same bake or
+    /// publication, its version one more, its field 3 naming `prev_id`.
+    pub fn continues(&self, signer: &Hash, prev: &PriceTag, prev_id: &Hash, prev_signer: &Hash) -> bool {
+        signer == prev_signer && self.priced == prev.priced && self.version == prev.version + 1 && self.previous.as_ref() == Some(prev_id)
+    }
 }
 
 /// The claim a purchase pays under (receipt and claim field 9, F126): the
@@ -624,6 +676,26 @@ impl Payload {
                     against,
                 })
             }
+            PRICE_TAG => {
+                let f = fields(p, 6, "price tag: unknown key")?;
+                let priced = match (get(&f, 0), get(&f, 1)) {
+                    (Some(v), None) => Priced::Bake(hash(v, "price tag 0: the bake")?),
+                    (None, Some(v)) => Priced::Publication(hash(v, "price tag 1: the publication")?),
+                    _ => return Err(FinError::Check("a price tag names exactly one of a bake (field 0) and a publication (field 1)")),
+                };
+                let version = uint(req(&f, 2, "price tag 2: version")?, "price tag 2")?;
+                let previous = get(&f, 3).map(|v| hash(v, "price tag 3: previous")).transpose()?;
+                if version == 0 || (version == 1) != previous.is_none() {
+                    return Err(FinError::Check("a price tag's version is 1 without a predecessor, or more with one"));
+                }
+                Payload::PriceTag(PriceTag {
+                    priced,
+                    version,
+                    previous,
+                    price: get(&f, 4).map(Amount::decode).transpose()?,
+                    payee: hash(req(&f, 5, "price tag 5: payee")?, "price tag 5")?,
+                })
+            }
             t => return Err(FinError::UnknownType(t)),
         })
     }
@@ -635,6 +707,7 @@ impl Payload {
             Payload::Receipt(_) => types::RECEIPT,
             Payload::Claim(_) => types::CLAIM,
             Payload::Release(_) => types::RELEASE,
+            Payload::PriceTag(_) => types::PRICE_TAG,
         }
     }
 
@@ -716,6 +789,20 @@ impl Payload {
                     put(&mut m, 1, Value::Array(r.against.iter().map(b).collect()));
                 }
             }
+            Payload::PriceTag(t) => {
+                match &t.priced {
+                    Priced::Bake(h) => put(&mut m, 0, b(h)),
+                    Priced::Publication(h) => put(&mut m, 1, b(h)),
+                }
+                put(&mut m, 2, Value::Uint(t.version));
+                if let Some(x) = &t.previous {
+                    put(&mut m, 3, b(x));
+                }
+                if let Some(x) = &t.price {
+                    put(&mut m, 4, x.to_value());
+                }
+                put(&mut m, 5, b(&t.payee));
+            }
         }
         m
     }
@@ -751,14 +838,25 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
         }
         return Ok(());
     }
+    // A collective's Money act is signed by a member or grantee for it,
+    // naming the collective as chain in `objects`; Agreements judges it
+    // (rule "A collective's Money acts").
+    let names = |who: &Hash| cited.objects.iter().flatten().any(|o| &o.chain == who);
     let ok = match payload {
-        Payload::PayeePointer(p) => &p.payee == signer,
-        Payload::Obligation(o) => &o.debtor == signer,
-        Payload::Receipt(r) => &r.payee == signer,
+        Payload::PayeePointer(p) => &p.payee == signer || names(&p.payee),
+        Payload::Obligation(o) => &o.debtor == signer || names(&o.debtor),
+        Payload::Receipt(r) => &r.payee == signer || names(&r.payee),
         Payload::Claim(_) => true,
         // Its signer must be the obligation's creditor: checked where the
         // obligation is held (Agreements' view, `debt_release`).
         Payload::Release(_) => true,
+        // A later version names `[first, previous]` first in `objects`, its
+        // predecessor the version its field 3 names; who may sign is read
+        // where the bake or publication is held (rule 18).
+        Payload::PriceTag(t) => match &t.previous {
+            None => true,
+            Some(p) => matches!(cited.objects.as_ref().and_then(|o| o.first()), Some(o) if &o.predecessor == p),
+        },
     };
     if ok {
         Ok(())
@@ -766,6 +864,7 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
         Err(FinError::Check(match payload {
             Payload::PayeePointer(_) => "a payee pointer is signed by the identity it is for (F46)",
             Payload::Obligation(_) => "an obligation is signed by the debtor (F66)",
+            Payload::PriceTag(_) => "a later price tag names [first, previous] first in objects, its predecessor the version its field 3 names (rule 18)",
             _ => "a receipt is signed by the payee of the hop",
         }))
     }

@@ -290,7 +290,7 @@ fn clean_device_mode_loads_an_offline_signing_key_onto_a_fresh_device() {
         acc.rotation.signing_key, plan.signing_key,
         "not the online device's key"
     );
-    assert_eq!(fresh.public().to_vec(), acc.rotation.signing_key.key);
+    assert_eq!(fresh.public().to_vec(), acc.rotation.signing_key.clone().unwrap().key);
     assert_eq!(
         mor_core::sig::SchnorrKey::from_secret(&secret)
             .unwrap()

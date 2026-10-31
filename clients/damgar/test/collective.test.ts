@@ -1,14 +1,23 @@
-// Damgar for a collective (round 3; F353, Agreements draft 16, the grant
-// limits cMIP draft 2): a real collective founded in Edubba from the grid,
-// its Money area held by A and iPa, one key, two above 10,000. A's Damgar
-// acts for it with A's own key, found sealed to A at A's homes: a promise
-// within the cap counts alone; one above it counts only once iPa signs it
-// with iPa's own key, in Dub's Signing tab. A member holding no box in the
-// Money area is refused, and so is a collective added by someone else's ID.
+// Damgar for a collective (round 3; F353; moved to the keyless collective,
+// Agreements draft 17, rules 56 to 60, F402; the grant limits cMIP draft 2):
+// a real collective founded in Edubba from the grid, its Money layer and a
+// finer Money area (obligations) held by A and iPa, one signature, two above
+// 10,000. A's Damgar acts for it with A's own identity's key, naming the
+// collective: a promise within the cap counts alone; one above it counts
+// only once iPa signs it with iPa's own key, in Dub's Signing tab. A member
+// holding no box in the Money area is refused.
+//
+// Premises replaced (round 8, in plain words): the layers are renumbered
+// (Text 1, Envelopes 2, Money 3, Agreements 4, Development 5), so the grid
+// names Money as layer 3, a whole layer is the grid's layer row and a finer
+// area names its kinds of act; and there are no member keys (rule 58), so
+// where this test checked "each a member's own key" (byKey) and that the
+// member key's secret never reached the page, it now checks two members'
+// signatures and that the page is shown no key at all.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apps, closeAll, damgar, dub, edubba, everything, kishib, refused, start, type Relay } from './world.ts';
+import { apps, closeAll, damgar, dub, edubba, everything, kishib, moneyGrid, refused, start, type Relay } from './world.ts';
 import { changeKeys } from '../../kishib/test/world.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
@@ -22,9 +31,13 @@ before(async () => {
   relay = await start('relay');
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, relay]) await h?.stop().catch(() => undefined);
+  }
 });
 
 test('a member acts for the collective from Damgar with their own key: within the Money area’s cap alone, above it with a second key', async () => {
@@ -36,18 +49,7 @@ test('a member acts for the collective from Damgar with their own key: within th
   const iPa = await dub(H, R);
   const iPh = await dub(H, R);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
-  const grid = {
-    members: [A.id, iPa.id, iPh.id],
-    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
-    chainKey: 2,
-    absence: 2,
-    areas: [
-      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-      { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
-      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
-    ],
-    clone: 2,
-  };
+  const grid = moneyGrid(A.id, iPa.id, iPh.id);
   const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
   const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   for (const m of [iPa, iPh]) {
@@ -97,9 +99,9 @@ test('a member acts for the collective from Damgar with their own key: within th
   const shown = await g.c.ask<any>('collectives');
   const acts = shown.collectives[0].acts;
   assert.deepEqual(acts.map((a: any) => [a.amount.value, a.standing.met]).sort(), [[2000, true], [50000, true]].sort());
-  assert.ok(acts.find((a: any) => a.amount.value === 50000).standing.areas[0].byKey.length === 2, 'two keys, each a member’s own');
-  // The key's secret never leaves Damgar's program: the page is shown none of it.
-  assert.equal(Object.keys(shown.collectives[0].key.secret).length, 0);
+  assert.equal(acts.find((a: any) => a.amount.value === 50000).standing.areas[0].signers.length, 2, 'two signatures, each with a member’s own key (rule 58)');
+  // No member keys: the page is shown no key of the collective's at all.
+  assert.equal(shown.collectives[0].key, undefined);
 
   // H80: A's keys changed in Kišib, every line placed by the cards Dub, Edubba and Damgar show (H80's question 2: each
   // private act left at A's homes, so each card names an act they hold, and the counts add up). A's own key asks the
@@ -128,7 +130,7 @@ test('a member acts for the collective from Damgar with their own key: within th
   assert.equal(await atHomes(), before3, 'nothing signed reached A’s homes');
   await g.c.ask('renew', { words: fresh.signing.join(' ') });
   assert.equal((await g.c.ask<any>('check')).current, true, 'the new words taken: Damgar signs again');
-  // The member key lived on Edubba's line, kept by its card: still A's, and Damgar signs for the collective with it.
+  // A's own key, the new one: Damgar signs for the collective with it, naming the collective.
   const p3 = await g.c.ask<any>('collective promise', { ...big, digest: s2.digest });
   assert.ok(p3.lines.some((l: any) => /Signed for the collective with your own key/.test(l.text)), JSON.stringify(p3.lines));
   void everything;

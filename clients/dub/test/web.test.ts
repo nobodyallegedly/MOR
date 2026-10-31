@@ -24,6 +24,7 @@ import { INDEX, SCHEME, keySeeds, newChainKey } from '../src/chainwords.ts';
 import { serve, type Running } from '../src/server.ts';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
 import type { IdentityFile } from '../../genesis/src/identity.ts';
+import { stopAll } from './stop.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -98,12 +99,7 @@ before(async () => {
   mac = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-mac-')), port: 0 });
 });
 
-after(async () => {
-  await browser?.close();
-  await mac?.close();
-  await new Promise((r) => site?.close(r));
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
-});
+after(() => stopAll(() => browser?.close(), () => mac?.close(), () => new Promise((r) => (site ? site.close(r) : r(undefined))), ...[...(homes ?? []), relay].map((r) => () => r?.stop())));
 
 const done = (page: Page, words: string | RegExp) => page.locator('#status .k-note.k-done', { hasText: words }).waitFor({ timeout: 60_000 });
 

@@ -44,13 +44,15 @@ test('found by four, one removed with the release rule set to one, then set back
   // A release under the rule of one, signed by one member; a second is not asked for; the removed member is refused.
   commit(w.checkout, 'src/lib.rs', 'pub fn test3() -> u8 { 3 }\n');
   const r3 = await sign(c, { kind: 'release', publisher: col.id, version: 'test3' });
-  await sign(c, { kind: 'sign', member: ada, release: r3.done.acts[0] });
+  // A collective has no signing key: Ada uploaded it with her own key, and her upload is her act for the
+  // Releases area (Agreements rules 58, 60): under the rule of one it is a release already (was: Ada signed it).
   const r3b = await prepare(c, { kind: 'sign', member: one, release: r3.done.acts[0] });
   console.log('R3B', JSON.stringify(r3b.reading.blocking));
   const r3c = await prepare(c, { kind: 'sign', member: three, release: r3.done.acts[0] });
   console.log('R3C', JSON.stringify(r3c.reading.blocking));
   const v3 = await verifyRelease(r3.done.acts[0], [w.relay.base]);
   console.log('V3', JSON.stringify(v3.problems));
+  assert.equal(v3.ok, true, `under the rule of one, the upload alone makes it a release: ${v3.problems.join('; ')}`);
 
   // The release rule set back to two.
   const back = await prepare(c, { kind: 'change', collective: col.id, rules: { ...after1.rules, release: 2 }, words: after1.words });
@@ -66,8 +68,8 @@ test('found by four, one removed with the release rule set to one, then set back
   commit(w.checkout, 'src/lib.rs', 'pub fn test4() -> u8 { 4 }\n');
   const rel = await sign(c, { kind: 'release', publisher: col.id, version: 'test4' });
   const relId = rel.done.acts[0];
-  const s1 = await sign(c, { kind: 'sign', member: ada, release: relId });
-  assert.doesNotMatch(words(s1.review.reading), /not a collective's release/);
+  // Ada uploaded it, with her own key, naming the collective: her act, one of the two (Agreements rules
+  // 58, 60; was: Ada signed it first). Sim One signs the second.
   const s2 = await prepare(c, { kind: 'sign', member: one, release: relId });
   assert.deepEqual(s2.reading.blocking, [], words(s2.reading));
   await c.ask('confirm', { plan: s2.plan, digest: s2.digest });

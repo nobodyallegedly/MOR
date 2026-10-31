@@ -25,7 +25,6 @@ import { keeperLog } from '../../grants/src/keeper.ts';
 import { closeAll, dub, edubba, start, type Relay } from '../../damgar/test/world.ts';
 import { changeKeys, dubBringing, kishib } from '../../kishib/test/world.ts';
 import { closeAll as closeKishib } from '../../kishib/test/world.ts';
-import { SplitService } from '../../split-service/src/service.ts';
 import { foundCollective } from './cast.ts';
 import type { Done } from '../src/page/api.ts';
 
@@ -52,17 +51,15 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
   const [iPa, iPh] = [await dub(H, RL), await dub(H, RL)];
   const e = await edubba(H, RL);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0] });
-  const { collective } = await foundCollective(e, A.id, [iPa, iPh], [{ name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 }]);
+  const { collective } = await foundCollective(e, A.id, [iPa, iPh], [{ name: 'Publishing', layer: [1, 2], holders: [A.id, iPa.id, iPh.id], number: 1 }]);
 
   // An Edubba agent, owned by A: the keeper.
   const add = await e.c.ask<{ agent: string; terms: { digest: string } }>('agent add', { name: 'Keeper of the tablets', owner: A.id, key: OWN, own: true });
   const keeper = add.agent;
   await e.c.ask('machine publish', { agent: keeper, owner: A.id, digest: add.terms.digest, own: true });
 
-  // The money terms, naming the agent as keeper, signed by every member, recorded.
-  const svc = new SplitService(join(mkdtempSync(join(tmpdir(), 'split-')), 'svc'), { nodeKey: async () => '02'.padEnd(66, '1'), addInvoice: async () => ({ invoice: '', hash: '' }), settled: async () => null, pay: async () => '' }, { homes: H, relays: RL });
-  await svc.start();
-  const review = await e.c.ask<any>('real money prepare', { collective, shares: { [A.id]: 50, [iPa.id]: 25, [iPh.id]: 25 }, referral: 0, service: svc.id, serviceKey: svc.grantKey(collective), keepers: [keeper], keepersNeeded: 1 });
+  // The keepers, a clone naming the agent, signed by every member, recorded (H101: keepers are their own change, apart from where payments land).
+  const review = await e.c.ask<any>('real keepers prepare', { collective, keepers: [keeper], keepersNeeded: 1 });
   assert.deepEqual(review.reading.blocking, []);
   assert.match(JSON.stringify(review.reading), /Keeper of the tablets.*an act counts as recorded once every one of them recorded it/);
   const clone = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
@@ -73,7 +70,7 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
     await m.c.ask('accept', { thread: p.thread });
   }
   await e.c.ask('real gather', { act: clone });
-  await e.c.ask<Done>('real money record', { act: clone });
+  await e.c.ask<Done>('real keepers record', { act: clone });
 
   // The agent keeps: every act around the collective, each party's rotations first; a second round records nothing new.
   let k = await e.c.ask<any>('real keepers', { collective });

@@ -68,19 +68,21 @@ fn vow(w: &mut World, p: &mut Person, words: &str) -> Hash {
 
 
 
-/// A lone seller's standing offer (F215) naming `name`, with its words.
+/// A lone seller's publication naming the vow `name`, with its words, and
+/// its price tag at 300 by the seller, its own split service: the tag,
+/// which payments name.
 fn lone_offer(w: &mut World, p: &mut Person, name: Hash, words: &str) -> Hash {
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Vow(name)],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: None,
-        words: Some(words.into()),
-        until: None,
-        time: None,
-        refund: None,
-    };
-    agreements_act(w, p, agreements::types::STANDING_OFFER, o.to_map(), None)
+    let pubn = common::lone_publication(w, p, &mirs(), vec![agreements::Sold::Vow(name)], Some(words));
+    let id = p.id;
+    common::price_tag(w, p, mirs().money, mor_core::money::Priced::Publication(pubn), 300, spec("a unit"), id)
+}
+
+/// The publication a tag prices.
+fn pub_of(w: &World, tag: &Hash) -> Hash {
+    match view(w).tag_under(tag).unwrap() {
+        agreements::TagUnder::Counts { publication, .. } => publication,
+        x => panic!("{x:?}"),
+    }
 }
 
 /// A receipt in `payee`'s name for `payer`'s payment following `fulfils`,
@@ -257,12 +259,12 @@ fn only_the_buyer_confirms_or_contests_and_a_contest_prevails() {
     assert_eq!(c.state(), vec![(fid, SaleState::Confirmed { by: vec![ack] })]);
     let k = contest(&mut c.w, &mut c.fan, name, sale);
     assert_eq!(c.state(), vec![(fid, SaleState::Contested { by: vec![k] })], "the buyer's contest marks the sale contested, and voids nothing");
-    assert!(view(&c.w).offer(&offer).unwrap().counts, "the offer stands");
+    assert!(view(&c.w).publication(&pub_of(&c.w, &offer)).unwrap().counts, "the publication stands");
 }
 
-/// F240: "at any price, including none". An offer at no price is signed
-/// onto by a signature act naming it; the buyer then confirms by any act
-/// of theirs acknowledging an act about the vow, or contests. The
+/// F240: "at any price, including none". A publication with no price tag
+/// is signed onto by a signature act naming it; the buyer then confirms by
+/// any act of theirs acknowledging an act about the vow, or contests. The
 /// seller's own signature is not a sign-on.
 #[test]
 fn a_free_offer_is_signed_onto_by_a_signature_act() {
@@ -270,18 +272,8 @@ fn a_free_offer_is_signed_onto_by_a_signature_act() {
     let mut town = w.genesis("the town", vec![own_home()], None, None);
     let mut citizen = w.genesis("a citizen", vec![own_home()], None, None);
     let name = vow(&mut w, &mut town, "A bench in the square, by spring");
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Vow(name)],
-        price: Amount { unit: spec("a unit"), value: 0 },
-        paid: None,
-        words: Some("Sign on to follow the bench.".into()),
-        until: None,
-        time: None,
-        refund: None,
-    };
-    let offer = agreements_act(&mut w, &mut town, agreements::types::STANDING_OFFER, o.to_map(), None);
-    assert!(view(&w).offer(&offer).unwrap().counts);
+    let offer = common::lone_publication(&mut w, &mut town, &mirs(), vec![agreements::Sold::Vow(name)], Some("Sign on to follow the bench."));
+    assert!(view(&w).publication(&offer).unwrap().counts);
     assert!(view(&w).vow(&name).unwrap().sales.is_empty(), "nobody signed on: no state (F240)");
     sign(&mut w, &mut town, &offer);
     assert!(view(&w).vow(&name).unwrap().sales.is_empty(), "the seller's own signature is no sign-on");
@@ -289,7 +281,7 @@ fn a_free_offer_is_signed_onto_by_a_signature_act() {
     let e = view(&w).vow(&name).unwrap();
     assert_eq!(e.sales.iter().map(|x| (x.act, x.buyer, x.state.clone())).collect::<Vec<_>>(), vec![(s, citizen.id, SaleState::Pending)]);
     let built = about(&mut w, &mut town, name, "the bench is in");
-    let seen = w.ack(&mut citizen, built);
+    let _seen = w.ack(&mut citizen, built);
     assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Pending, "draft 11, rule 13: a confirmation names the sale, and this one names only the act about the vow");
     let seen = w.everyday_act(&mut citizen, common::identity_spec(), mor_core::identity::types::WITNESS, vec![], None, Some(vec![built, s]));
     let seen = w.add(&seen);
@@ -312,7 +304,7 @@ fn a_payment_nobody_signed_onto_carries_no_state() {
     let e = common::stand_in_answers(view(&w)).vow(&name).unwrap();
     assert!(e.sales.is_empty(), "the payer a receipt names is the seller's word, never the buyer (F193)");
     assert_eq!(e.unsigned, vec![r]);
-    assert_eq!(e.offers, vec![offer]);
+    assert_eq!(e.offers, vec![pub_of(&w, &offer)]);
     // Without the rail's answer for the receipt, whether the payment is a
     // purchase at all is unknown (Money rules 8 and 10).
     let e = view(&w).vow(&name).unwrap();
@@ -327,24 +319,14 @@ fn an_offer_naming_a_vow_carries_its_words_and_names_a_vow() {
     let mut w = World::new();
     let mut club = w.genesis("the club", vec![own_home()], None, None);
     let name = vow(&mut w, &mut club, "A concert");
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Vow(name)],
-        price: Amount { unit: spec("a unit"), value: 300 },
-        paid: None,
-        words: None,
-        until: None,
-        time: None,
-        refund: None,
-    };
-    let x = agreements_act(&mut w, &mut club, agreements::types::STANDING_OFFER, o.to_map(), None);
-    assert!(view(&w).offer(&x).is_err(), "no words: not in the offer's format (F237)");
+    let x = common::lone_publication(&mut w, &mut club, &mirs(), vec![agreements::Sold::Vow(name)], None);
+    assert!(view(&w).publication(&x).is_err(), "no words: not in the publication's format");
     let post = w.post(&mut club, "not a vow");
-    let y = lone_offer(&mut w, &mut club, post, "A seat at a post.");
-    let e = view(&w).offer(&y).unwrap();
+    let y = common::lone_publication(&mut w, &mut club, &mirs(), vec![agreements::Sold::Vow(post)], Some("A seat at a post."));
+    let e = view(&w).publication(&y).unwrap();
     assert!(!e.counts && e.problems.iter().any(|p| p.contains("not one")), "{:?}", e.problems);
-    let z = lone_offer(&mut w, &mut club, spec("a vow this verifier does not hold"), "A seat.");
-    assert!(view(&w).offer(&z).unwrap().counts, "a vow not held is not judged, as a publication is not");
+    let z = common::lone_publication(&mut w, &mut club, &mirs(), vec![agreements::Sold::Vow(spec("a vow this verifier does not hold"))], Some("A seat."));
+    assert!(view(&w).publication(&z).unwrap().counts, "a vow not held is not judged, as a bake is not");
     // The vow's format is closed.
     let bad = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, vec![(Value::Uint(0), Value::Text("x".into())), (Value::Uint(9), Value::Null)], None, None);
     let bad = w.add(&bad);
@@ -521,20 +503,11 @@ fn draft_11_f261_a_proven_offer_is_judged_by_its_cmips_checker() {
     let mut seller = w.genesis("a seller", vec![own_home()], None, None);
     let cmip = spec("a test cMIP whose deliveries prove themselves");
     let params = mor_core::cbor::encode(&Value::Uint(7));
-    let o = agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Access(cmip, params.clone())],
-        price: Amount { unit: spec("a unit"), value: 10 },
-        paid: None,
-        words: None,
-        until: None,
-        time: None,
-        refund: None,
-    };
-    assert_eq!(o.sold[0].class(), agreements::OfferClass::Proven { cmip, params });
-    let proven = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let sold = agreements::Sold::Access(cmip, params.clone());
+    assert_eq!(sold.class(), agreements::OfferClass::Proven { cmip, params });
+    let proven = common::lone_publication(&mut w, &mut seller, &mirs(), vec![sold], None);
     let name = vow(&mut w, &mut seller, "A table, made to order");
-    let promised = lone_offer(&mut w, &mut seller, name, "One table.");
+    let promised = common::lone_publication(&mut w, &mut seller, &mirs(), vec![agreements::Sold::Vow(name)], Some("One table."));
     assert_eq!(agreements::Sold::Vow(name).class(), agreements::OfferClass::Promised(name));
     let v = view(&w);
     assert!(matches!(v.proven_delivery(&proven, b"delivered", &[]).unwrap(), agreements::ProofVerdict::Unknown(_)), "no checker held: not proven here");
@@ -556,18 +529,8 @@ fn f268_only_a_cmip_declaring_it_checks_proofs_of_delivery() {
     let mut w = World::new();
     let mut seller = w.genesis("a seller", vec![own_home()], None, None);
     let (declared, silent) = (spec("a cMIP declaring it checks deliveries"), spec("a cMIP declaring nothing"));
-    let offer = |cmip: Hash| agreements::Offer {
-        under: None,
-        sold: vec![agreements::Sold::Access(cmip, mor_core::cbor::encode(&Value::Uint(7)))],
-        price: Amount { unit: spec("a unit"), value: 10 },
-        paid: None,
-        words: None,
-        until: None,
-        time: None,
-        refund: None,
-    };
-    let a = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, offer(declared).to_map(), None);
-    let b = agreements_act(&mut w, &mut seller, agreements::types::STANDING_OFFER, offer(silent).to_map(), None);
+    let a = common::lone_publication(&mut w, &mut seller, &mirs(), vec![agreements::Sold::Access(declared, mor_core::cbor::encode(&Value::Uint(7)))], None);
+    let b = common::lone_publication(&mut w, &mut seller, &mirs(), vec![agreements::Sold::Access(silent, mor_core::cbor::encode(&Value::Uint(7)))], None);
     let held: [(Hash, &dyn agreements::ProofChecker); 2] = [(declared, &TestChecker), (silent, &Undeclared)];
     assert_eq!(agreements::delivery_checkers(&held), vec![declared], "listed: only the declared checker");
     let v = view(&w);

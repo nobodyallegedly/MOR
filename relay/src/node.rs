@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 pub struct Specs {
     /// `IDENTITY`: receipts, routes, log summaries, objections...
     pub identity: Hash,
-    /// `ENVELOPES`: publications, encryption keys.
+    /// `ENVELOPES`: bakes, encryption keys.
     pub envelopes: Hash,
     /// `AGREEMENTS`: grants, whose keys sign acts in their grantor's name
     /// (relay transport draft 5, F346).
@@ -53,7 +53,7 @@ impl Specs {
 
 /// Envelopes types a relay reads.
 pub mod envelopes_types {
-    pub const PUBLICATION: u64 = 0;
+    pub const BAKE: u64 = 0;
     pub const ENCRYPTION_KEY: u64 = 4;
 }
 
@@ -285,7 +285,7 @@ fn check_operator(keys: &Keys, chain: &[Vec<u8>], specs: &Specs) -> R<()> {
         Payload::Rotation(r) if a.outside.signer == Some(keys.identity) => &r.signing_key,
         _ => return bad("the binding is not a genesis or rotation of the identity"),
     };
-    if *set != keys.signing_key() {
+    if set.as_ref() != Some(&keys.signing_key()) {
         return bad("the signing key is not the one its binding set");
     }
     Ok(())
@@ -807,10 +807,10 @@ impl Node {
         let r = Payload::Rotation(Rotation {
             prev: *prev,
             position: states.len() as u64,
-            signing_key: SigningKey {
+            signing_key: Some(SigningKey {
                 scheme: sig::SCHNORR,
                 key: key.public().to_vec(),
-            },
+            }),
             chain_key: ChainKeyCommit {
                 scheme: next.scheme(),
                 commit: next.commitment(),
@@ -866,7 +866,7 @@ impl Node {
         }
         self.put_act(rotation)?;
         match self.held_identity_payload(&act.id())? {
-            Payload::Rotation(r) if r.signing_key == keys.signing_key() => {}
+            Payload::Rotation(r) if r.signing_key == Some(keys.signing_key()) => {}
             _ => {
                 return Err(Fail::Internal(
                     "the key file's signing key is not the one the rotation set".into(),
@@ -946,8 +946,14 @@ impl Node {
             _ => None,
         };
         // Identity rule 2: an act signed with a chain key must be a rotation
-        // or a chain signature (F132).
-        if sig::is_slh(&act.signature.scheme) && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
+        // or a chain signature (F132), or a collective's genesis, which
+        // declares no signing key and is signed by its first chain key
+        // (rule 1): the core's genesis check, applied above when the payload is
+        // read, refuses one that declares nothing in its place or is signed by
+        // any other kind of key, and the signature is verified against the key
+        // it reveals.
+        let keyless_genesis = matches!(&payload, Some(Payload::Genesis(g)) if g.signing_key.is_none());
+        if sig::is_slh(&act.signature.scheme) && !keyless_genesis && !matches!(payload, Some(Payload::Rotation(_) | Payload::ChainSignature(_))) {
             return wire(
                 code::INVALID,
                 "an act signed with a chain key must be a rotation or a chain signature",
@@ -1361,7 +1367,9 @@ impl Node {
                     "the binding names no identity-chain act nor grant this home holds for the signer: send the chain acts, or the grant (for a member's key, the signature naming it), first",
                 );
             };
-            if !s.signing_key.made(&act.signature) {
+            // A collective (Identity rule 1) has no signing key: it signs
+            // no everyday act.
+            if !s.signing_key.as_ref().is_some_and(|k| k.made(&act.signature)) {
                 return wire(
                     code::INVALID,
                     "the signature's key is not the signing key its binding set",
@@ -1388,7 +1396,7 @@ impl Node {
                 )
             }
         };
-        if !key.made(&act.signature) {
+        if !key.as_ref().is_some_and(|k| k.made(&act.signature)) {
             return wire(
                 code::INVALID,
                 "the signature's key is not the signing key its binding set",
@@ -1407,35 +1415,18 @@ impl Node {
         let Some((gact, inside)) = self.held_opened(binding)? else {
             return Ok(None);
         };
-        if inside.spec == self.specs.agreements && inside.type_ == mor_core::agreements::types::SIGNATURE {
-            // F353 (relay transport draft 6): a member's key, named by its
-            // holder's signature of the collective's founding or clone. Only
-            // the key is checked, as for a founding grant: which collective
-            // the founding is the signer's is Agreements', at every verifier.
-            let Ok((_, key)) = mor_core::agreements::decode_signature_key(&inside) else {
-                return Ok(Some(wire(code::INVALID, "the binding names a signature act that is not in its format")));
-            };
-            let Some(key) = key else {
-                return Ok(Some(wire(code::INVALID, "the binding names a signature act that names no member key")));
-            };
-            if gact.outside.signer == Some(*signer) {
-                return Ok(Some(wire(code::INVALID, "a member's key acts for the collective, never for the member who named it")));
-            }
-            if !key.made(&act.signature) {
-                return Ok(Some(wire(code::INVALID, "the signature's key is not the member key its binding names")));
-            }
-            return Ok(Some(Ok(())));
-        }
         if inside.spec != self.specs.agreements || inside.type_ != mor_core::agreements::types::GRANT {
             return Ok(None);
         }
         let Ok(g) = mor_core::agreements::Grant::decode(&inside.payload) else {
             return Ok(Some(wire(code::INVALID, "the binding names a grant that is not in its format")));
         };
-        if !g.by_this && gact.outside.signer != Some(*signer) {
+        if gact.outside.signer != Some(*signer) {
             return Ok(Some(wire(code::INVALID, "the binding names a grant that is not the signer's")));
         }
-        if !g.key.made(&act.signature) {
+        // A person's grant key (Agreements rule 73); a collective's grant
+        // carries none.
+        if !g.key.as_ref().is_some_and(|k| k.made(&act.signature)) {
             return Ok(Some(wire(code::INVALID, "the signature's key is not the key its grant bound")));
         }
         Ok(Some(Ok(())))
@@ -1541,7 +1532,7 @@ impl Node {
                 _ => {}
             }
         }
-        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::PUBLICATION {
+        if inside.spec == self.specs.envelopes && inside.type_ == envelopes_types::BAKE {
             out.extend(as_hash(field(2)));
         }
         out.sort();
@@ -1695,11 +1686,11 @@ impl Node {
         if self.cfg.policy == Policy::Allowlist
             && !self
                 .store
-                .any_about(&h, &self.specs.envelopes, envelopes_types::PUBLICATION)?
+                .any_about(&h, &self.specs.envelopes, envelopes_types::BAKE)?
         {
             return wire(
                 code::NOT_ACCEPTED,
-                "this relay keeps media only for publications it holds",
+                "this relay keeps media only for bakes it holds",
             );
         }
         let path = self.media_file(&h);

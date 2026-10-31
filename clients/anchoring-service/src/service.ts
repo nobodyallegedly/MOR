@@ -5,8 +5,9 @@
 // the key its output is tweaked from), and the money messages cMIP:
 //
 // - its identity, with an inbox and an encryption key; its payee pointer
-//   naming its own Lightning node; its **standing offer** (an Agreements
-//   standing offer, a lone seller's, F225): tiers of 2, 6 and 144 blocks;
+//   naming its own Lightning node; its **offer**, a lone seller's
+//   publication with one price tag per tier (anchoring draft 7, F409; it
+//   was a standing offer, F225): tiers of 2, 6 and 144 blocks;
 // - an **invoice request** asking for an anchor (the money messages cMIP,
 //   type 3, with the leaf and the tier) is checked, then answered with an
 //   invoice its own node issued for the commitment, and a **ticket** (the
@@ -28,6 +29,7 @@ import {
   MIRS,
   anchoringBatch,
   anchoringOffer,
+  anchoringPriceTags,
   anchoringPublication,
   anchoringTicket,
   base64,
@@ -82,7 +84,10 @@ interface Ticketed {
 interface State {
   identity: string;
   pointer: string;
+  /** Its publication's first version (anchoring draft 7): what tickets and batch notices name. */
   offer: string;
+  /** Its price tags, one per tier (F409: one price tag per price), by tier: what a payment for that tier fulfils. */
+  tags: string[];
   /** The x-only secret its batches' outputs are tweaked from, hex. */
   key: string;
   after: Record<string, number>;
@@ -149,8 +154,11 @@ export class Service {
     const node = await this.lnd.nodeKey();
     const pointer = moneyPayload({ type: 'pointer', payee: this.me.id, version: 1, rails: [{ module: SPEC.lightning.hash, address: lightningAddress({ network: 3, node }) }] }) as { type: number; payload: Uint8Array };
     const p = this.me.sign(MIRS.money, pointer.type, pointer.payload, { public: true });
-    const offer = anchoringOffer(3, TIERS, `${LABEL} Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 regtest satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.`) as { type: number; payload: Uint8Array };
+    // Its offer (anchoring draft 7): a lone seller's publication, the service its own split service under the split cMIP;
+    // then one price tag per tier, each priced exactly at its tier (F409), signed by the service and kept.
+    const offer = anchoringOffer(3, TIERS, `${LABEL} Anchoring on Bitcoin regtest: tiers of 2, 6 and 144 blocks at 50, 20 and 5 regtest satoshis a hash. A hash left out of its batch, or not anchored by its deadline, is refunded.`, this.me.id, SPEC.split) as { type: number; payload: Uint8Array };
     const o = this.me.sign(MIRS.agreements, offer.type, offer.payload, { public: true });
+    const tags = (anchoringPriceTags(3, TIERS, o.id, this.me.id) as { tier: number; type: number; payload: Uint8Array }[]).sort((x, y) => x.tier - y.tier).map((t) => this.me.sign(MIRS.money, t.type, t.payload, { public: true }));
     let key: Uint8Array;
     for (;;) {
       key = new Uint8Array(randomBytes(32));
@@ -161,10 +169,11 @@ export class Service {
         // out of range
       }
     }
-    this.s = { identity: this.me.id, pointer: p.id, offer: o.id, key: hex(key), after: {}, seen: [], tickets: [], batch: 1, published: [] };
+    this.s = { identity: this.me.id, pointer: p.id, offer: o.id, tags: tags.map((t) => t.id), key: hex(key), after: {}, seen: [], tickets: [], batch: 1, published: [] };
     this.save();
     await this.publish(p.act);
     await this.publish(o.act);
+    for (const t of tags) await this.publish(t.act);
   }
 
   /** A public act, at its relays and homes. */
@@ -243,7 +252,9 @@ export class Service {
     };
     if (!ir.ticket) return refuse('this service sells anchors only: no leaf was asked');
     if (f.payer !== signer || f.payee !== this.me.id) return refuse('the commitment names another payer or payee');
-    if (f.fulfils !== this.s.offer) return refuse('the payment does not follow this service’s standing offer');
+    // A payment buying an anchor fulfils its tier's own price tag (anchoring draft 7, Money rule 18); one naming the publication is a tip and buys no ticket.
+    if (f.fulfils === this.s.offer) return refuse('a payment naming the publication itself is a tip and buys no anchor: pay the tier’s price tag');
+    if (f.fulfils !== this.s.tags[ir.ticket.tier]) return refuse('the payment does not fulfil this tier’s price tag');
     const tier = TIERS[ir.ticket.tier];
     if (!tier || f.amount.unit !== SPEC.units.regtest || f.amount.value !== tier.price) return refuse('not the tier’s price, in regtest satoshis');
     if (f.rail !== SPEC.lightning.hash || f.paidTo.kind !== 'flow' || f.paidTo.pointer !== this.s.pointer || f.paidTo.rail !== 0) return refuse('not paid to this service’s pointer on Lightning');

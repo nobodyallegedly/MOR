@@ -112,7 +112,7 @@ test('paying from Dub three ways, Purchases, a vow confirmed and another contest
   // Edubba publishes a sealed picture and two vows, as the seller.
   const e = await edubba(H, [relay.base]);
   await e.c.ask('bring', { name: 'Seller', id: seller.id, words: seller.dub.words, address: H[0] });
-  const p = await e.c.ask<any>('publishing work read', { media: 'picture', data: b64(JPEG), title: 'A tablet, photographed', price: '2000' });
+  const p = await e.c.ask<any>('publishing upload read', { media: 'picture', data: b64(JPEG), title: 'A tablet, photographed', then: 'price', price: '2000' }); // Round 8: an upload with a price tag on the bare bake (was a protected file with an offer).
   const [publication, , picturePost] = (await e.c.ask<Done>('publishing confirm', { plan: p.plan, digest: p.digest })).acts;
   const vows: string[] = [];
   for (const words of ['A seat at the reading of the tablets.', 'A walk to the clay pits.']) {
@@ -144,7 +144,7 @@ test('paying from Dub three ways, Purchases, a vow confirmed and another contest
   await actMenu(picture, 'Buy');
   await modal.locator('form#pay').waitFor({ timeout: 60_000 });
   for (const w of ['lane', 'damgar', 'hand']) assert.ok(await modal.locator(`input[value=${w}]`).isDisabled(), `${w}: not open for a purchase without a lane`);
-  assert.match(await modal.innerText(), /A purchase names the seller’s offer/);
+  assert.match(await modal.innerText(), /A purchase follows the seller’s price tag/);
   await modal.locator('[data-k-popup="close"]').click();
 
   // A lane, asked from the identity's menu, granted in Damgar.
@@ -267,7 +267,7 @@ test('a collective under the identity: appended to a private message, checked by
   const pa = await dubOf(H, [relay.base]);
   await max.c.ask('name', { name: 'Max' });
   await pa.c.ask('name', { name: 'Pa' });
-  const { collective } = await foundCollective(e, A, [max, pa], [{ name: 'Posts', layer: 1, holders: [A, max.id, pa.id], number: 1 }], { name: 'Collective Y' });
+  const { collective } = await foundCollective(e, A, [max, pa], [{ name: 'Posts', layer: [1, 2], holders: [A, max.id, pa.id], number: 1 }], { name: 'Collective Y' });
 
   const page = await pageOf(max.app);
   const modal = page.locator('.k-modal');
@@ -300,14 +300,14 @@ test('a collective under the identity: appended to a private message, checked by
   const got = (await pa.c.ask<{ messages: { text: string; of: { id: string; checked: boolean } | null }[] }>('inbox')).messages.find((m) => m.text === 'Can Collective Y bring the tablets on Thursday?')!;
   assert.deepEqual([got.of?.id, got.of?.checked], [collective, true], 'the reader’s app checked the membership');
 
-  // Acting as the collective: the same gesture as switching; a post signed with Max's own member key.
+  // Acting as the collective: the same gesture as switching; a post signed with Max's own key, naming the collective (no member keys, rule 58).
   await page.locator('[data-k-part="public"]').click();
   await page.locator('[data-k-open="identity"]').click();
   await page.locator(`[data-k-use="${collective}"]`).click();
   await page.locator('.k-me .k-dot.k-c').waitFor({ timeout: 60_000 });
   await page.locator('#post textarea').fill('Collective Y’s first word.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
-  await done(page, /Posted as the collective, with your own member key/);
+  await done(page, /Posted for the collective, signed with your own key and naming the collective/);
   await page.locator('#feed .k-act', { hasText: 'Collective Y’s first word.' }).waitFor({ timeout: 90_000 });
   // A collective writes in public only from Dub: in Private, Max writes in its own name and appends it.
   await page.locator('[data-k-part="private"]').click();

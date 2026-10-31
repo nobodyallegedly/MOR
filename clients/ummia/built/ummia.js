@@ -445,26 +445,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
-   * What a fork of `collective` must hand out (F127), its line drawn at
-   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
-   * `agreement` in force there: every obligation in the history it would
-   * cite, its own and those an earlier fork handed to it. Null where the
-   * line does not hold.
+   * What a fork of `collective` must hand out, its line the acts `line`
+   * it would cite on the collective's chain, with `agreement` in force
+   * there: every obligation in that history, its own and those an
+   * earlier fork handed to it. Null where the line does not hold.
    * @param {any} specs
    * @param {string} collective
    * @param {string} agreement
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[] | undefined}
    */
-  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+  agreementsHandOut(specs, collective, agreement, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr2 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -497,21 +495,20 @@ var Verifier = class {
     return v2;
   }
   /**
-   * The acts the history a line at `chain_act` and `tips` would cite
-   * that this verifier does not hold (F127): a member's client signs no
-   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * The acts the history of a line citing `line` on the collective's
+   * chain names that this verifier does not hold: a member's client signs
+   * no fork or closing while any is missing (client conformance).
    * @param {any} specs
    * @param {string} collective
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[]}
    */
-  agreementsLineUnheld(specs, collective, chain_act, tips) {
+  agreementsLineUnheld(specs, collective, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -618,30 +615,6 @@ var Verifier = class {
     return BigInt.asUintN(64, ret[0]);
   }
   /**
-   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-   * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot. Leftovers by largest
-   * remainder; a tied unit is the payer's to decide, at most one per tie
-   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-   * with the smallest identity hash, a choice, not a rule.
-   * @param {any} specs
-   * @param {string} agreement
-   * @param {string | null | undefined} object
-   * @param {bigint} amount
-   * @returns {any}
-   */
-  agreementsPayerSplit(specs, agreement, object, amount) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
    * The pointer check (rule 18, F123): whether the payee pointer of
    * `owners` counts for Agreements under `agreement`: "no-split-service",
    * "ordinary", "bypasses" (with the addresses no service's own pointer
@@ -694,6 +667,44 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The tips a payment names (F409), for a publication by its first
+   * version: `latest`, its latest versions (two or more, the parties'
+   * fork); `tags`, the latest version of each price tag line that counts
+   * under it, one per price; `owners` and `ownersLatest`, the ownership
+   * agreement it names and that agreement's latest version, which a
+   * purchase names in field 9.
+   * @param {any} specs
+   * @param {string} first
+   * @returns {any}
+   */
+  agreementsPublicationTip(specs, first) {
+    const ptr0 = passStringToWasm0(first, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublicationTip(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A publication, judged (Agreements rule 11): its parties and who has
+   * not signed, whether it counts and why not, the latest versions of its
+   * line, whether this version ends it, and the ownership agreements
+   * claiming what it sells that it stands outside of (rule 14).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPublication(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublication(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -918,22 +929,21 @@ var Verifier = class {
    * stake, or carries no count.
    * @param {any} specs
    * @param {string} service
-   * @param {string} agreement
-   * @param {bigint} stake
+   * @param {string} owners
    * @param {string[]} holders
    * @param {string | null} [previous]
    * @returns {Float64Array | undefined}
    */
-  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
+  agreementsSplitTurns(specs, service, owners, holders, previous) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
     var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -957,6 +967,23 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether a price tag counts under its publication (Money rule 18;
+   * Agreements rule 12): "counts" (with the publication, and whether this
+   * version withdraws the tag), "nobody's offer" or "unknown", with why.
+   * @param {any} specs
+   * @param {string} tag
+   * @returns {any}
+   */
+  agreementsTagUnder(specs, tag) {
+    const ptr0 = passStringToWasm0(tag, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsTagUnder(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1023,6 +1050,29 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who uploaded a bake, as a verifier reading Money and Envelopes tells
+   * it (Money, "Only identities have payee pointers"): the signer's
+   * identity hash, or "unknown" where the bake names another chain, a
+   * collective's perhaps, which a Money-only wallet refuses to tip.
+   * `null` for no bake held.
+   * @param {string} bake
+   * @returns {string | undefined}
+   */
+  bakeUploader(bake) {
+    const ptr0 = passStringToWasm0(bake, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_bakeUploader(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
   }
   /**
    * The standing of an act for everything binding (keeper records,
@@ -1291,6 +1341,28 @@ var Verifier = class {
     return v2;
   }
   /**
+   * Whose offer a price tag is (Money rule 18), as a verifier reading
+   * Money and Envelopes tells it: "counts" (on a bare bake, its
+   * uploader's), "nobody's offer", or "unknown" (not held, or under a
+   * publication, which Agreements judges). `null` for no price tag held.
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  priceTag(act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_priceTag(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
    * The home quorum of a counting rotation (Money rule 15, F180): the
    * receipts the home rule in effect before it requires, each passing
    * the receipt checks, per home operator, and how many operators are
@@ -1430,10 +1502,10 @@ function anchoringLeaf(act, blind) {
     wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
   }
 }
-function anchoringReadOffer(act) {
-  const ptr0 = passArray8ToWasm0(act, wasm.__wbindgen_malloc);
+function anchoringReadOffer(publication2, tags) {
+  const ptr0 = passArray8ToWasm0(publication2, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringReadOffer(ptr0, len0);
+  const ret = wasm.anchoringReadOffer(ptr0, len0, isLikeNone(tags) ? 0 : addToExternrefTable0(tags));
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
@@ -3597,7 +3669,8 @@ function freshLines(f) {
   f.split = true;
 }
 var HELD_ELSEWHERE_SAY = "This identity\u2019s signing key is not held by this app: it is signed for by Ki\u0161ib\u2019s runner, and this act cannot be signed that way here. Nothing was signed.";
-var AGREEMENTS_RECORD = 17;
+var AGREEMENTS_DECISIONS = [9, 10, 17];
+var NO_ACTOR_SAY = "A collective has no signing key (Agreements rule 56): a member acts for it with their own key, naming it. No member was given to act here, and nothing was signed.";
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var TestIdentity = class _TestIdentity {
@@ -3607,6 +3680,12 @@ var TestIdentity = class _TestIdentity {
   }
   /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
   signer;
+  /**
+   * For a collective (no signing key, Agreements rule 56): the member who
+   * makes its next acts, each with their own key, naming the collective in
+   * `objects` (rule 58). Never saved with the file.
+   */
+  actor;
   get id() {
     return this.f.identity;
   }
@@ -3706,9 +3785,9 @@ var TestIdentity = class _TestIdentity {
     if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
     }
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
+    if (this.f.cites && spec !== SPECS.identity && !objects?.some((o) => o[0] === this.f.identity)) {
+      const cited = spec === MIRS.text ? this.f.cites.slice(0, 1) : this.f.cites;
+      objects = [...objects ?? [], ...cited.map((d) => [this.f.identity, d])];
     }
     return objects;
   }
@@ -3716,11 +3795,26 @@ var TestIdentity = class _TestIdentity {
   everydayMade(spec, type, isPublic, line, made) {
     line.push(made.id);
     if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    if (this.f.cites) this.f.cites = spec === MIRS.agreements && AGREEMENTS_DECISIONS.includes(type) ? [made.id] : [this.f.cites[0], made.id];
     return made;
   }
+  /** Whether this file is a collective's, keyless: its acts are made by a member (`actor`). */
+  get keyless() {
+    return !!this.f.cites && !this.f.signingSecret;
+  }
+  /** An act for this keyless collective, made by its `actor` with their own key, naming the collective (rule 58). */
+  async byActor(spec, type, payload, opts) {
+    if (!this.actor) throw new Error(NO_ACTOR_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const made = await this.actor.everydayNow(spec, type, payload, { ...opts, objects });
+    return this.everydayMade(spec, type, true, this.f.sequence, made);
+  }
   everyday(spec, type, payload, opts) {
-    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    if (this.keyless && this.actor) {
+      const made2 = this.actor.everyday(spec, type, payload, { ...opts, objects: this.everydayObjects(spec, type, opts.objects, opts.acks) });
+      return this.everydayMade(spec, type, true, this.f.sequence, made2);
+    }
+    if (!this.f.signingSecret) throw new Error(this.f.cites ? NO_ACTOR_SAY : HELD_ELSEWHERE_SAY);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
@@ -3748,6 +3842,7 @@ var TestIdentity = class _TestIdentity {
    * signing serial, as every app does.
    */
   async everydayNow(spec, type, payload, opts) {
+    if (this.keyless) return this.byActor(spec, type, payload, opts);
     if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
@@ -4343,49 +4438,6 @@ async function lineAtHomes(me, app2, via = me.via) {
     card: away ? null : cards.map((c) => cardText(c.card, app2)).join("; ")
   };
 }
-async function ownActs(identity, secrets, places, via = {}) {
-  const out = /* @__PURE__ */ new Map();
-  const locked = /* @__PURE__ */ new Map();
-  for (const a of await actsBy(identity, places, via)) {
-    const d = describeAct(a);
-    if (d.public) out.set(d.id, { act: a });
-    else locked.set(d.id, a);
-  }
-  const delivered = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [...out.values()];
-  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
-  for (const h of places) {
-    for (const { q, me } of queries) {
-      let after;
-      try {
-        for (; ; ) {
-          const page = await relayAt(h, via).feed({ ...q, after });
-          for (const it of page.items) {
-            if (it.kind !== "sealed") continue;
-            for (const s of secrets) {
-              try {
-                const o = openSealed(it.item, me, s);
-                const d = o.described;
-                if (d.signer !== identity) break;
-                if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
-                  const k = readKeyDelivery(d.payload);
-                  delivered.set(k.target, k.key);
-                } else if (!out.has(d.id)) out.set(d.id, { act: o.act, key: o.key });
-                break;
-              } catch {
-              }
-            }
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-      }
-    }
-  }
-  for (const [id, key] of delivered) if (!out.has(id) && locked.has(id)) out.set(id, { act: locked.get(id), key });
-  return [...out.values()];
-}
 function lineReader(app2) {
   const seen = /* @__PURE__ */ new Map();
   return async (me, via = me.via) => {
@@ -4418,10 +4470,13 @@ var REPO_SPECS = {
 var AGREEMENTS_TYPES = {
   terms: 0,
   signature: 1,
+  claim: 3,
   release: 5,
-  offer: 6,
+  /** The publication (rules 11 to 17): the offer, with its partners, split service and plan; its price a price tag (Money type 5). */
+  publication: 6,
   split: 8,
   grant: 9,
+  revocation: 10,
   /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
   liveness: 12,
   declaration: 13,
@@ -4442,10 +4497,6 @@ var AGREEMENTS_TYPES = {
 var TEST_RAIL = test("a test rail Module, no real rail");
 var TEST_TIME = test("a test time reference, no real clock");
 var FOUNDING_AGREEMENT = 0;
-
-// ../repo/src/agreements.ts
-var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
-var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
@@ -4474,6 +4525,10 @@ async function negotiate(by, to, o) {
   if (o.home !== false) await leaveAtHomes(by, made);
   return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
 }
+
+// ../repo/src/agreements.ts
+var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
+var SPLIT_CMIP = sha2562("split cMIP, draft 4, test value until publication");
 
 // ../../modules/timestamp/src/stamp.ts
 var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
@@ -4561,8 +4616,10 @@ var MESSAGES = { specs: [] };
 // ../grants/src/grant.ts
 var GRANTABLE = [
   { key: "posts", kind: { spec: SPECS.text, type: 0 }, words: "posts and messages (Text acts)" },
-  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "publications, a picture among them (Envelopes)" },
-  { key: "money", kind: { layer: 2 }, words: "money acts: promises to pay, claims and receipts (the Money layer)" }
+  // Key 'publications' kept for the apps that store it; what it reaches is a bake (Envelopes type 0, F407).
+  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "bakes (uploads), a picture among them (Envelopes)" },
+  // The six layers (F407): 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development.
+  { key: "money", kind: { layer: 3 }, words: "money acts: promises to pay, claims, receipts and price tags (the Money layer)" }
 ];
 async function allBy(signer, hints, via) {
   const out = [];
@@ -4582,70 +4639,7 @@ async function allBy(signer, hints, via) {
 }
 
 // ../grants/src/member.ts
-var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
-var MEMBER_KEY = 0;
-function readPayload(p) {
-  try {
-    const m = cborDecode(p);
-    if (!(m instanceof Map) || [...m.keys()].some((k) => ![0, 1, 2, 3].includes(k))) return null;
-    const [t, s, pub, sec] = [m.get(0), m.get(1), m.get(2), m.get(3)];
-    if (!(t instanceof Uint8Array) || t.length !== 32 || !(s instanceof Uint8Array) || s.length !== 32) return null;
-    if (!Array.isArray(pub) || typeof pub[0] !== "number" || !(pub[1] instanceof Uint8Array) || !(sec instanceof Uint8Array)) return null;
-    return { terms: hex(t), signature: hex(s), public: [pub[0], pub[1]], secret: sec };
-  } catch {
-    return null;
-  }
-}
-async function readMemberKeys(identity, secrets, homes, via = {}) {
-  const out = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [];
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  let l;
-  try {
-    l = await lookUp(identity, homes, via, v);
-  } catch {
-    return [];
-  }
-  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
-    try {
-      if (x.key) l.verifier.addWithKey(x.act, x.key);
-      else l.verifier.add(x.act);
-    } catch {
-    }
-  }
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "sealed") continue;
-          let o = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s);
-              break;
-            } catch {
-            }
-          }
-          const d = o?.described;
-          if (!o || !d || out.has(d.id) || d.public || d.signer !== identity || d.spec !== MEMBER_KEYS_SPEC || d.type !== MEMBER_KEY || !d.payload) continue;
-          if (o.key) l.verifier.addWithKey(o.act, o.key);
-          else l.verifier.add(o.act);
-          const st = l.verifier.status(d.id);
-          if (st !== "valid" && st !== "disputed") continue;
-          const x = readPayload(d.payload);
-          if (x) out.set(d.id, { ...x, act: d.id, position: d.position ?? 0 });
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch {
-    }
-  }
-  return [...out.values()].sort((a, b) => a.position - b.position);
-}
+var DECISIONS = [AGREEMENTS_TYPES.grant, AGREEMENTS_TYPES.revocation, AGREEMENTS_TYPES.record];
 async function foundingOf(collective, hints, via) {
   const l = await lookUp(collective, hints, via);
   const links = l.resolution.links.map((x) => x.act);
@@ -4658,61 +4652,30 @@ async function foundingOf(collective, hints, via) {
   }
   throw new Error("The collective\u2019s genesis declares no founding agreement.");
 }
-async function rootOf(terms, hints, via) {
-  let cur = terms;
-  for (let i = 0; i < 64; i++) {
-    let a = null;
-    for (const h of hints) {
-      a = await relayAt(h, via).getAct(cur).catch(() => null);
-      if (a) break;
-    }
-    if (!a) return null;
-    const d = describeAct(a);
-    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) return null;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS);
-    if (!t.parent) return cur;
-    cur = t.parent;
-  }
-  return null;
-}
-async function memberKeyFor(keys, collective, hints, via = {}) {
-  const { founding } = await foundingOf(collective, hints, via);
-  for (const k of [...keys].reverse()) if (await rootOf(k.terms, hints, via) === founding) return k;
-  return null;
-}
-async function chainFor(collective, k, hints, via = {}) {
+async function chainFor(collective, hints, via = {}) {
   const { links } = await foundingOf(collective, hints, via);
-  const latest = links[links.length - 1];
-  let decision = latest;
-  let best = -1;
-  const strand = [];
-  for (const a of await allBy(collective, hints, via)) {
+  const { acts: acts2 } = await collectiveVerifier(collective, hints, via);
+  const cites = /* @__PURE__ */ new Map();
+  for (const a of acts2) {
     const d = describeAct(a);
-    if (d.binding === latest && d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.record && (d.position ?? 0) > best) {
-      best = d.position ?? 0;
-      decision = d.id;
-    }
-    if (d.binding === k.signature && !strand.some((x) => x.id === d.id)) strand.push({ id: d.id, position: d.position ?? 0 });
+    if (d.spec !== REPO_SPECS.agreements || !DECISIONS.includes(d.type ?? -1)) continue;
+    for (const [chain, cited] of d.objects ?? []) if (chain === collective) cites.set(cited, [...cites.get(cited) ?? [], d.id]);
   }
-  return { decision, strand: strand.sort((a, b) => a.position - b.position).map((x) => x.id) };
+  let decision = links[links.length - 1];
+  for (let i = 0; i < 1024; i++) {
+    const next = cites.get(decision);
+    if (!next?.length) break;
+    decision = next[next.length - 1];
+  }
+  return { decision, strand: [] };
 }
-function signAsMember(collective, k, at, a) {
-  const made = makeEveryday({
-    signingSecret: k.secret,
-    signer: collective,
-    binding: k.signature,
-    spec: a.spec,
-    type: a.type,
-    payload: a.payload,
-    sequence: at.strand,
+async function signAsMember(collective, me, at, a) {
+  const objects = a.spec === MIRS.text && a.type === 0 ? [[collective, at.decision]] : [...a.objects ?? [], [collective, at.decision]];
+  const made = await me.signNow(a.spec, a.type, a.payload, {
     public: a.public,
-    to: a.to?.length ? a.to : void 0,
-    // A text act carries exactly one object (Text rule 14): for a member
-    // key, the founding or clone that named the key, the version that is
-    // its grant, which Agreements reads as the decision it acts under
-    // (Agreements rules 58 and 73). Every other act cites the latest decision.
-    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...a.objects ?? [], [collective, at.decision]],
-    refs: a.refs?.length ? a.refs : void 0
+    ...a.to?.length ? { to: a.to } : {},
+    objects,
+    ...a.refs?.length ? { refs: a.refs } : {}
   });
   at.strand.push(made.id);
   return made;
@@ -4730,9 +4693,11 @@ async function publishAt(acts2, places, via = {}) {
 }
 async function collectiveVerifier(collective, hints, via = {}, acts2 = []) {
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const held = [];
   const add = (a) => {
     try {
       v.add(a);
+      held.push(a);
     } catch {
     }
   };
@@ -4782,7 +4747,7 @@ async function collectiveVerifier(collective, hints, via = {}, acts2 = []) {
       }
     }
   }
-  return { v, founding, parties: [...parties] };
+  return { v, founding, parties: [...parties], acts: held };
 }
 async function collectiveNow(collective, hints, via = {}) {
   const { v, parties } = await collectiveVerifier(collective, hints, via);
@@ -4806,7 +4771,29 @@ async function judgeCollective(collective, acts2, hints, via = {}, limits = []) 
   }
   return out;
 }
-var LAYER_OF = { [MIRS.text]: 1, [MIRS.envelopes]: 1, [MIRS.money]: 2, [MIRS.agreements]: 3, [MIRS.development]: 4 };
+var LAYER_OF = { [MIRS.text]: 1, [MIRS.envelopes]: 2, [MIRS.money]: 3, [MIRS.agreements]: 4, [MIRS.development]: 5 };
+var LAYER_NAME = { 1: "Text", 2: "Envelopes", 3: "Money", 4: "Agreements", 5: "Development" };
+async function areaReaching(collective, places, kind, via = {}) {
+  const now4 = await collectiveNow(collective, places, via);
+  if (!now4.agreement) return { agreement: null, area: null };
+  for (const h of places) {
+    const a = await relayAt(h, via).getAct(now4.agreement).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a);
+    if (!d.payload) break;
+    const t = readTerms(d.payload, AGREEMENTS_SPECS);
+    const x = t.areas.find((r2) => r2.kinds.some((k) => k.spec === kind.spec && k.type === kind.type));
+    if (x) return { agreement: now4.agreement, area: { id: x.id, name: x.name, holders: x.holders, number: x.threshold } };
+    const layer = LAYER_OF[kind.spec];
+    const r = t.layers.find(([l]) => l === layer)?.[1];
+    if (!r) return { agreement: now4.agreement, area: null };
+    const voices = t.parties.filter((p) => !now4.departed.includes(p));
+    const holders = r.form === "named" ? r.named ?? [] : voices;
+    const number = r.form === "threshold" ? r.threshold ?? 1 : holders.length;
+    return { agreement: now4.agreement, area: { id: -layer, name: `the ${LAYER_NAME[layer]} layer`, holders, number, layer } };
+  }
+  return { agreement: now4.agreement, area: null };
+}
 
 // ../../modules/carry/src/english.ts
 var ENGLISH = [
@@ -7183,8 +7170,8 @@ var ACCEPTABLE = [
     key: "anchoring",
     name: "Anchoring",
     kind: "cMIP",
-    text: "cmips/cmip-anchoring-draft-5.md",
-    draft: 5,
+    text: "cmips/cmip-anchoring-draft-7.md",
+    draft: 7,
     hashes: [SPEC.anchoring],
     does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
     here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
@@ -8511,6 +8498,8 @@ var POST_SPECS = {
   text: LONGFORM_SPECS.text,
   /** The Envelopes MIR (`ENVELOPES`). */
   envelopes: SPECS.envelopes,
+  /** The Money MIR (`MONEY`): its price tags. */
+  money: MIRS.money,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
@@ -8521,7 +8510,7 @@ var POST_SPECS = {
   audio: test3("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT2 = 0;
-var PUBLICATION = 0;
+var BAKE = 0;
 
 // ../barebone/src/corrections.ts
 var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
@@ -8564,7 +8553,7 @@ async function publishPicture(by, jpeg, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
@@ -8597,7 +8586,7 @@ async function publishVideo(by, mp4, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
@@ -8625,7 +8614,7 @@ async function publishAudio(by, m4a, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
 }
@@ -8939,14 +8928,14 @@ async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new 
   return { cards: found, lines: lines2 };
 }
 var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
-var MICS_HASH = "647c5fcef155bde9878c5378dc57733006e2938d3b42b2cef2c9356eb9634439";
-var SUITE_HASH = "e0599d7d3588998ac4dcac0b159f7165ad101eeb81d605236db448a81fdc014b";
+var MICS_HASH = "30add49a7b90d0ff98971b136706ee399e41941481998363bc54f2ad3bf6f646";
+var SUITE_HASH = "4485bf65b1307db72ef37f2e33dfd60e8a3fd84c14ccf5216dfef8614be382d5";
 var BUILT_IN = [
   { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
   { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },
-  { hash: MIRS.envelopes, title: "MIR: Envelopes", kind: "MIR", summary: "The shape of every act: public and private acts, sequences, references, media, relays." },
+  { hash: MIRS.envelopes, title: "MIR: Envelopes", kind: "MIR", summary: "The shape of every act: public and private acts, sequences, references, bakes and vows, relays." },
   { hash: MIRS.money, title: "MIR: Money", kind: "MIR", summary: "Payments, claims and receipts, rails and units: how a payment is proven." },
-  { hash: MIRS.agreements, title: "MIR: Agreements", kind: "MIR", summary: "Agreements, collectives, vows and offers, splits, keepers and judgments." },
+  { hash: MIRS.agreements, title: "MIR: Agreements", kind: "MIR", summary: "Agreements, ownership, publications, collectives, splits, keepers and judgments." },
   { hash: MIRS.development, title: "MIR: Development", kind: "MIR", summary: "cMIPs and Modules: named by hash, frozen at publication, adopted by choice." },
   { hash: MICS_HASH, title: "The MICS: MOR Inscribed Core Spec", kind: "MICS document", summary: "The core in one document: what MOR is, its layers and the six MIRs it names." },
   { hash: SUITE_HASH, title: "MOR Freeze Test Suite", kind: "test suite", summary: "What must be tested before the freeze: every step, and what it shows." }
@@ -9059,9 +9048,9 @@ function relayAddress(s) {
 var test4 = (s) => sha2562(s);
 var SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
+  /** The Envelopes MIR (`ENVELOPES`): a version is a bake (an upload, Envelopes type 0; called a publication before F407). */
   envelopes: SPECS.envelopes,
-  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
+  /** The Agreements MIR (`AGREEMENTS`): to judge a collective's site (website cMIP draft 12, rule 3). */
   agreements: test4("LAW, test value until the freeze"),
   /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
    * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
@@ -9069,10 +9058,10 @@ var SITE_SPECS = {
    * published still verify. */
   site: test4("website cMIP, draft 2, test value until publication")
 };
-var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
-var PUBLICATION2 = 0;
+var BAKE2 = 0;
 var NUDGE = test4("nudge cMIP, draft 2, test value until publication");
 var RELEASE_MANIFEST = test4("release manifest cMIP, draft 1, test value until publication");
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements, extLayers: { [RELEASE_MANIFEST]: [] } };
 var PAYMENT_CMIP = test4("payment cMIP, draft 2, test value until publication");
 
 // ../site/src/listing.ts
@@ -9090,7 +9079,7 @@ var LAYERS = {
   [MIRS.agreements]: "Agreements",
   [MIRS.development]: "Development"
 };
-var EXTENSION_LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements"];
+var EXTENSION_LAYERS = ["Identity", "Text", "Envelopes", "Money", "Agreements"];
 var TASKS = {
   1: ["Identity", "Identity proofs and credentials"],
   2: ["Identity", "Naming"],
@@ -9152,7 +9141,7 @@ function nameOf(text3) {
   return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
 }
 function mediaOf(d) {
-  if (!d.public || !d.payload || d.type !== PUBLICATION2 || d.spec !== SPECS.envelopes) return null;
+  if (!d.public || !d.payload || d.type !== BAKE2 || d.spec !== SPECS.envelopes) return null;
   let m;
   try {
     m = cborDecode(d.payload);
@@ -9217,7 +9206,7 @@ async function openAt(m, places, via) {
   return null;
 }
 function queriesOf(f) {
-  return [{ spec: SPECS.envelopes, type: PUBLICATION2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+  return [{ spec: SPECS.envelopes, type: BAKE2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
 }
 async function readRelay(line, via, into, queries = [{}]) {
   for (const q of queries) {
@@ -9341,7 +9330,7 @@ async function readListing(relays, gatewayRelays, via = {}, filtered) {
         problem ??= field6.problem;
       }
       if (!named2.length) return;
-      const r = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
+      const r = { id: d.id, signer: d.signer, collective: d.objects?.[0]?.[0] ?? null, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
       if (!r.problem) {
         if (man) {
           r.name = man.get(0);
@@ -9535,7 +9524,7 @@ function roleWords(l, all) {
   }
   if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
   if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(", ") : "nothing"}`);
-  if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
+  if (s.checker) role.push("checks proofs of proven deliveries (field 12)");
   if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor) ? `\u201C${all.get(s.predecessor).name}\u201D` : `a specification not found here (${s.predecessor.slice(0, 12)}\u2026)`}`);
   if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
   if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
@@ -10067,8 +10056,8 @@ function draftPayload(d) {
   if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
   m.set(4, text(d.app, "the app"));
   if (d.what === "anchor") {
-    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
-    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier, the leaf and the tier\u2019s price tag.");
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf), unhex(d.anchor.tag)]);
   }
   if (d.what === "confirm") {
     if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
@@ -10123,29 +10112,43 @@ async function placesOf(service, hints, via) {
 }
 async function offers(service, hints, via = {}) {
   const { l, places } = await placesOf(service, hints, via);
-  const out = /* @__PURE__ */ new Map();
+  const pubs = /* @__PURE__ */ new Map();
+  const tags = /* @__PURE__ */ new Map();
   for (const h of places) {
     try {
-      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
-        if (it.kind !== "act") continue;
-        try {
-          const o = anchoringReadOffer(it.item);
-          l.verifier.add(it.item);
-          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
-        } catch {
-        }
-      }
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) if (it.kind === "act") pubs.set(describeAct(it.item).id, it.item);
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.money, type: 5 })).items) if (it.kind === "act") tags.set(describeAct(it.item).id, it.item);
+    } catch {
+    }
+  }
+  for (const a of [...pubs.values(), ...tags.values()]) {
+    try {
+      l.verifier.add(a);
+    } catch {
+    }
+  }
+  const valid = [...tags.entries()].filter(([id]) => l.verifier.status(id) === "valid").map(([, a]) => a);
+  const out = /* @__PURE__ */ new Map();
+  for (const a of pubs.values()) {
+    try {
+      const o = anchoringReadOffer(a, valid);
+      if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
     } catch {
     }
   }
   return [...out.values()];
+}
+function tagFor(o, tier) {
+  const t = o.tags.find((x) => x.tier === tier)?.tag;
+  if (!t) throw new Error("The service signed no price tag for that tier: it cannot be bought (anchoring draft 7, one price tag per tier).");
+  return t;
 }
 async function ask(me, a) {
   const tier = a.offer.tiers[a.tier];
   if (!tier) throw new Error("The offer has no such tier.");
   const blind = new Uint8Array(randomBytes(32));
   const leaf = anchoringLeaf(a.act, blind);
-  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf } }, { via: a.via, save: a.save });
+  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf, tag: tagFor(a.offer, a.tier) } }, { via: a.via, save: a.save });
   const asked = { act: a.act, label: a.label, blind: hex(blind), leaf, service: a.service, offer: a.offer.act, tier: a.tier, draft: r.id, at: Math.floor(Date.now() / 1e3) };
   return {
     asked,
@@ -10616,6 +10619,7 @@ var WORDS = new Set(ENGLISH);
 var NOTES_FORMAT = sha2562("Notes cMIP, draft 1, test value until publication");
 
 // ../kit/src/engine/rules.ts
+var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
 var holds = (r, set) => r.hashes.every((h) => set.has(h));
 async function readRules(app2, runs, me, here, o = {}) {
   const open = heldSecrets(me).length ? heldSecrets(me) : o.open ?? null;
@@ -10675,7 +10679,7 @@ var SUITE_RULES = {
   naming: { key: "naming", name: "Naming", kind: "cMIP", hashes: [NAMING_SPEC], does: "Display names: the name an identity publishes for itself, shown beside its ID.", text: "cmips/cmip-naming-draft-1.md" },
   corrections: { key: "corrections", name: "Corrections", kind: "cMIP", hashes: [CORRECTIONS_SPEC], does: "A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.", text: "cmips/cmip-corrections-draft-2.md" },
   appended: { key: "appended", name: "Appended collective", kind: "cMIP", hashes: [APPENDED_FORMAT], does: "A collective\u2019s posts whose members append, each signed by its member.", text: "cmips/cmip-appended-collective-draft-1.md" },
-  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "A member\u2019s own key for acting as a collective, granted and revoked by it.", text: "cmips/cmip-member-keys-draft-1.md" },
+  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired: there are no member keys now. A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-1.md" },
   "agent-memory": { key: "agent-memory", name: "Agent memory", kind: "cMIP", hashes: [MEMORY_SPEC], does: "What an agent keeps between its sessions, sealed to its owner.", text: "cmips/cmip-agent-memory-draft-2.md" },
   notes: { key: "notes", name: "Notes", kind: "cMIP", hashes: [NOTES_FORMAT], does: "Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.", text: "cmips/cmip-notes-draft-1.md" },
   "long-form": { key: "long-form", name: "Long form", kind: "cMIP", hashes: [LONGFORM_SPECS.longform], does: "Long documents with headings: drafts of MIPs, and their replies.", text: "cmips/cmip-long-form-draft-1.md" },
@@ -10803,18 +10807,8 @@ var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var now3 = () => Math.floor(Date.now() / 1e3);
 var PLAN_FOR = 15 * 60 * 1e3;
 async function releaseArea(collective, places, via) {
-  const now4 = await collectiveNow(collective, places, via);
-  if (!now4.agreement) return null;
-  for (const h of places) {
-    const a = await relayAt(h, via).getAct(now4.agreement).catch(() => null);
-    if (!a) continue;
-    const d = describeAct(a);
-    if (!d.payload) return null;
-    const t = readTerms(d.payload, AGREEMENTS_SPECS);
-    const a2 = t.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === 1 || k.spec === SPECS.envelopes && k.type === 0));
-    return a2 ? { name: a2.name, holders: a2.holders, number: a2.threshold } : null;
-  }
-  return null;
+  const r = await areaReaching(collective, places, { spec: SPECS.envelopes, type: 0 }, via).catch(() => null);
+  return r?.area ? { name: r.area.layer ? "the Envelopes layer" : r.area.name, holders: r.area.holders, number: r.area.number } : null;
 }
 var Ummia = class {
   /** `web`: the web client. `releases`: the program's (a folder). `chain`: the chain followed (program only). */
@@ -10864,7 +10858,7 @@ var Ummia = class {
   saveBook(id, book) {
     return this.store.write(id, "book", book);
   }
-  /** Who acts, from the chooser: oneself, or a collective this identity acts for, with its own key for it (round 2, F353). */
+  /** Who acts, from the chooser: oneself, or a collective this identity acts for, with this identity's own key, naming the collective (rule 58: a collective has no key, its members no member keys). */
   async acting(me, s) {
     const who2 = chosen(actors(await this.store.held(), s.collectives ?? []), s.acting ?? me.id);
     if (!who2) throw new Error("Choose who acts.");
@@ -10873,10 +10867,7 @@ var Ummia = class {
       return { kind: "self" };
     }
     const places = await this.placesOf(who2.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
-    const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-    const key = keys.length ? await memberKeyFor(keys, who2.id, places, s.via).catch(() => null) : null;
-    if (!key) throw new Error("No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change. Nothing was signed.");
-    return { kind: "collective", id: who2.id, key, places };
+    return { kind: "collective", id: who2.id, places };
   }
   async placesOf(id, hints, via) {
     try {
@@ -10888,8 +10879,9 @@ var Ummia = class {
   }
   /**
    * Act for a collective here (round 2, F353), by its ID: kept where this
-   * identity holds a box in an area reaching its releases (a release is a
-   * publication, Envelopes type 0) and its own key for it is found.
+   * identity holds a box in the area, or the Envelopes layer's rule,
+   * reaching its releases (a release is a bake, Envelopes type 0; rule 60).
+   * It acts with its own key, naming the collective (rule 58).
    */
   collectiveAdd(typed) {
     return this.serial(async () => {
@@ -10897,16 +10889,13 @@ var Ummia = class {
       const id = readId(typed);
       const places = await this.placesOf(id, [...hints, ...s.track], s.via);
       const area = await releaseArea(id, places, s.via);
-      const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-      const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
       let why = null;
-      if (!area) why = "No area of its constitution reaches its releases (publications): they count on its own key, held by its founder\u2019s Edubba.";
+      if (!area) why = "Its agreement in force names nobody who uploads for it (no rule for its Envelopes layer, nor an area reaching bakes).";
       else if (!area.holders.includes(me.id)) why = `You hold no box in the area reaching its releases (\u201C${area.name}\u201D).`;
-      else if (!key) why = "No key of yours for this collective was found sealed to you at your homes.";
       if (why) throw new Error(`${why} Nothing was kept.`);
       s.collectives = [...(s.collectives ?? []).filter((c) => c.id !== id), { id, available: true, why: null }];
       await this.store.write(me.id, "settings", s);
-      return { lines: [{ text: `Ummia acts for ${short4(id)} with your own key for it: its releases go through its area \u201C${area.name}\u201D, ${area.number} key${area.number === 1 ? "" : "s"} of ${area.holders.length}.`, tone: "ok" }] };
+      return { lines: [{ text: `Ummia acts for ${short4(id)} with your own identity\u2019s key, naming the collective: its releases go through \u201C${area.name}\u201D, ${area.number} signature${area.number === 1 ? "" : "s"} of ${area.holders.length}.`, tone: "ok" }] };
     });
   }
   // ------------------------------------------------------------ the identity
@@ -11549,9 +11538,9 @@ ${s.relays.join("\n")}`));
    */
   async confirmCollectiveRelease(me, s, book, who2, plan, digest) {
     const relays = [.../* @__PURE__ */ new Set([...s.relays, ...who2.places])];
-    const at = await chainFor(who2.id, who2.key, who2.places, s.via);
+    const at = await chainFor(who2.id, who2.places, s.via);
     const sign = async (payload) => {
-      const made = signAsMember(who2.id, who2.key, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
+      const made = await signAsMember(who2.id, me, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
       if (!(await publishAt([made.act], relays, s.via)).length) throw new Error("No relay took the release. Nothing counts: try again.");
       return { id: made.id };
     };
@@ -11589,7 +11578,7 @@ ${s.relays.join("\n")}`));
     const st = (await judgeCollective(r.collective, [id], places, s.via)).get(id);
     return {
       met: !!st?.met,
-      lines: st?.met ? [{ text: `It counts as the collective\u2019s release: ${st.areas.map((x) => `${x.signers.length} of ${x.needed} keys, ${x.byKey.length} with their own key`).join("; ")}.`, tone: "ok" }] : [{ text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") ?? st?.reason ?? "not read"}.`, tone: "warn" }]
+      lines: st?.met ? [{ text: `It counts as the collective\u2019s release: ${st.areas.map((x) => `${x.signers.length} of ${x.needed} signatures, each with its member\u2019s own key`).join("; ")}.`, tone: "ok" }] : [{ text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") ?? st?.reason ?? "not read"}.`, tone: "warn" }]
     };
   }
   /** Check it as anyone would: the release fetched by its id from the relays alone, every file checked. */

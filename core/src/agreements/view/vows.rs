@@ -17,7 +17,7 @@
 //! `docs/vow-grammar-build.md`.
 
 use super::*;
-use crate::agreements::open_formats::{Offer, Sold};
+use crate::agreements::open_formats::{Sold};
 use crate::envelopes::vow::{Vow, VowAct};
 
 /// Where a sale of a vow stands (F237).
@@ -102,7 +102,9 @@ impl<'a> AgreementsView<'a> {
         if h.inside.spec != self.mirs.envelopes || h.inside.type_ != crate::envelopes::types::VOW {
             return None;
         }
-        Vow::decode(&h.inside, h.act.outside.signer.as_ref()).ok().map(|v| (h, v))
+        // A collective's vow cites its chain, named by its identity: the
+        // collective the act names (rule 58), else its signer.
+        Vow::decode(&h.inside, self.author(h).as_ref()).ok().map(|v| (h, v))
     }
 
     /// A held vow act, valid under Identity.
@@ -139,7 +141,8 @@ impl<'a> AgreementsView<'a> {
         if v.follows.is_some() {
             return Ok(None);
         }
-        let Some(signer) = g.act.outside.signer else { return Ok(None) };
+        // A collective's vow is drawn by a member naming it (rule 58).
+        let Some(signer) = self.author(g) else { return Ok(None) };
         if t.is_collective() && self.collective_of(agreement)? == Some(signer) {
             return Ok(Some(Who::This));
         }
@@ -156,11 +159,13 @@ impl<'a> AgreementsView<'a> {
     /// verifier holds the vow.
     pub(super) fn vow_stake_problem(&self, id: &Hash, t: &Terms, parent: Option<&Terms>) -> R<Option<String>> {
         for s in t.stakes.iter().flatten() {
-            let Who::Id(name) = &s.object else { continue };
-            if parent.is_some_and(|p| p.stake_on(&s.object).is_some()) {
+            // An ownership agreement on a claim of a vow's name gives the
+            // vow's signer the whole stake at its founding (rule 14).
+            let Some(name) = self.target_work(t) else { continue };
+            if parent.is_some() {
                 continue;
             }
-            let Some(owner) = self.vow_owner(name, id, t)? else { continue };
+            let Some(owner) = self.vow_owner(&name, id, t)? else { continue };
             if s.holders != [(owner, crate::agreements::formats::MILLION)] {
                 return Ok(Some(
                     "a stake in a vow is held by the vow's signer, wholly, in the version that first writes it: a deal made on a vow has an owner, and what is left after the overhead is the owner's (Agreements draft 13, rule 14; F284)".into(),
@@ -263,34 +268,39 @@ impl<'a> AgreementsView<'a> {
         let offers: Vec<Hash> = self
             .v
             .held_acts()
-            .filter(|h| self.is_agreements(h, types::STANDING_OFFER))
-            .filter(|h| Offer::decode(&h.inside).is_ok_and(|o| o.offer.sold.contains(&Sold::Vow(*name))))
+            .filter(|h| self.pub_act(&h.id).is_some_and(|(_, a)| a.publication.sold.iter().flatten().any(|x| x == &Sold::Vow(*name))))
             .map(|h| h.id)
             .collect();
         let mut sales: Vec<VowSale> = vec![];
         let mut unsigned: Vec<Hash> = vec![];
         let mut seen_payments: Vec<(Hash, Payment)> = vec![];
         for o in &offers {
-            let Ok(oe) = self.offer(o) else { continue };
-            if !oe.counts {
+            let Ok(oe) = self.publication(o) else { continue };
+            if !oe.counts || oe.ends {
                 continue;
             }
-            // Paid: each payment following the offer that is a purchase.
+            // Paid: each payment of a tag under the publication that is a
+            // purchase.
+            let tagged = |f: &Hash| self.tag_of(f).is_some_and(|(_, t)| t.priced == crate::money::Priced::Publication(oe.first));
             for x in self.v.held_acts().filter(|x| x.inside.spec == self.mirs.money) {
                 let (fulfils, proof) = match crate::money::Payload::decode(x.inside.type_, &x.inside.payload) {
                     Ok(crate::money::Payload::Receipt(r)) => (r.fulfils, r.proof),
                     Ok(crate::money::Payload::Claim(c)) => (c.fulfils, c.proof),
                     _ => continue,
                 };
-                if &fulfils != o {
+                if !tagged(&fulfils) {
                     continue;
                 }
                 let payment = (x.id, self.record_payment(&x.id, &proof));
                 if seen_payments.iter().any(|(_, p)| self.same_payment_as(p, &payment.1)) {
                     continue;
                 }
-                if !matches!(self.purchase(&x.id), Ok(Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }))) {
-                    continue;
+                // Whether it is a purchase may rest on a payment or a rail
+                // answer not stated: the vow's answer rests on it too.
+                match self.purchase(&x.id) {
+                    Ok(Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. })) => {}
+                    Err(e @ (AgreementsError::PaymentUnstated | AgreementsError::RailUnanswered)) => return Err(e),
+                    _ => continue,
                 }
                 seen_payments.push(payment);
                 match self.committed_buyer(&x.id, &proof) {
@@ -302,10 +312,9 @@ impl<'a> AgreementsView<'a> {
                     None => unsigned.push(x.id),
                 }
             }
-            // Free: an offer at no price is signed onto by a signature act
-            // naming it, by anyone other than its own side (mechanic, the
-            // build's).
-            if oe.offer.price.value == 0 && !oe.withdraws {
+            // Free: a publication with no price tag is signed onto by a
+            // signature act naming it, by anyone other than its own side.
+            if !self.priced(&oe.first) {
                 let own = self.offer_side(&oe);
                 for s in self.v.held_acts().filter(|s| self.is_agreements(s, types::SIGNATURE) && self.valid(&s.id)) {
                     let Some(buyer) = s.act.outside.signer else { continue };
@@ -326,20 +335,29 @@ impl<'a> AgreementsView<'a> {
     /// The offer's own side, who cannot sign onto it (rule 13): its signer,
     /// its payee, the parties of the agreement it names and the collective
     /// that agreement founds (mechanic, the build's).
-    fn offer_side(&self, oe: &OfferEval) -> Vec<Hash> {
-        let mut own: Vec<Hash> = vec![oe.signer];
-        if let Some(p) = oe.offer.payee(&oe.signer) {
-            own.push(p);
-        }
-        if let Some(u) = &oe.offer.under {
-            if let Ok(t) = self.terms(u) {
-                own.extend(t.parties.iter().copied());
+    fn offer_side(&self, oe: &PublicationEval) -> Vec<Hash> {
+        let mut own: Vec<Hash> = vec![oe.drafter];
+        own.extend(oe.parties.iter().copied());
+        if let Some(u) = &oe.publication.owners {
+            if let Ok(v) = self.version_in_force(u) {
+                if let Ok(t) = self.terms(&v) {
+                    own.extend(t.parties.iter().copied());
+                }
             }
             if let Ok(Some(c)) = self.collective_of(u) {
                 own.push(c);
             }
         }
         own
+    }
+
+    /// Whether a publication's line has a counting price tag with a price
+    /// (rule 13: a publication with no price tag is signed onto for free).
+    fn priced(&self, first: &Hash) -> bool {
+        self.v.held_acts().any(|h| {
+            self.tag_of(&h.id).is_some_and(|(_, t)| t.priced == crate::money::Priced::Publication(*first) && !t.withdrawn())
+                && matches!(self.tag_under(&h.id), Ok(TagUnder::Counts { withdrawn: false, .. }))
+        })
     }
 
     /// The buyer of the purchase `act` names, where `act` is one (F386,
@@ -372,8 +390,8 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let Ok(o) = decode_signature(&h.inside) else { return Ok(None) };
-        let Ok(oe) = self.offer(&o) else { return Ok(None) };
-        if !oe.counts || oe.withdraws || oe.offer.price.value != 0 || self.offer_side(&oe).contains(&signer) {
+        let Ok(oe) = self.publication(&o) else { return Ok(None) };
+        if !oe.counts || oe.ends || oe.publication.sold.as_ref().is_none_or(|s| s.is_empty()) || self.priced(&oe.first) || self.offer_side(&oe).contains(&signer) {
             return Ok(None);
         }
         Ok(Some(signer))

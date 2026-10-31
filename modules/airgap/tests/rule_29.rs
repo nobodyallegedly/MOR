@@ -23,7 +23,7 @@ use mor_core::identity::{ChainState, HomeRule, Payload, Rotation};
 /// would serve.
 fn thiefs_rotation(o: &Owner, label: &str) -> Act {
     let mut r = o.plan();
-    r.signing_key.key = signing(&format!("{label}/thief"), 1).public().to_vec();
+    r.signing_key.as_mut().unwrap().key = signing(&format!("{label}/thief"), 1).public().to_vec();
     let s = &o.device.seeds[0];
     let key = s.seed.key(s.scheme, o.position);
     let next = s.seed.key(s.scheme, o.position + 1);

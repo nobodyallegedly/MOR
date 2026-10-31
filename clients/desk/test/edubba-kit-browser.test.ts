@@ -17,8 +17,9 @@
 //   screens), its Act tab (permissions as chips, a post reviewed and signed,
 //   shown as a card with the kit's two menus), its constitution in plain
 //   words, top right.
-// - Publishing: who acts, what (a text, a picture, a video, an audio); an
-//   audio stripped and read back, then signed; Published here; Sales.
+// - Publishing (way 1, Upload, round 8): who acts, what (a text, a picture,
+//   a video, an audio); an audio stripped, a price tag on it, read back, then
+//   signed; Published here; Sales.
 // - Vows: a vow read back and signed; Track pointing at its signer.
 // - The identity panel: identities, + Add's three ways, the menu, Remove
 //   said plainly; the foot, "This app".
@@ -235,7 +236,9 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   await c.ask('real contact add', { id: ana.id, name: 'Ana' });
   await c.ask('real contact add', { id: bo.id, name: 'Bo' });
   const all = [ME, ana.id, bo.id];
-  const grid = { members: all, constitution: { holders: all, number: 3 }, chainKey: 2, absence: 2, areas: [{ name: 'Publishing', layer: 1, holders: all, number: 1 }], clone: 2 };
+  // Text and Envelopes, any one member alone; Money, Agreements and Development, any two (F402: every layer named); shares even.
+  const row = (number: number) => ({ holders: all, number });
+  const grid = { members: all, constitution: { holders: all, number: 3 }, chainKey: 2, absence: 2, layers: { 1: row(1), 2: row(1), 3: row(2), 4: row(2), 5: row(2) }, areas: [], clone: 2, shares: { [all[0]]: 33.3334, [all[1]]: 33.3333, [all[2]]: 33.3333 } };
   const rv = await c.ask<any>('real found prepare', { name: 'Three tablets', founder: ME, members: [ana.id, bo.id], grid });
   const terms = (await c.ask<Done>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   for (const m of [ana, bo]) {
@@ -263,7 +266,7 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   assert.equal(await page.inputValue('form#collective-post [name=text]'), '', 'the typing box is empty once the post is signed');
   await shot(page, 'mac-22-collective-act');
   await page.click('[data-action=constitution]');
-  await page.locator('.k-modal', { hasText: 'Areas: who decides which acts' }).waitFor({ timeout: 90_000 });
+  await page.locator('.k-modal', { hasText: 'The five layers: who acts for it' }).waitFor({ timeout: 90_000 });
   await shot(page, 'mac-23-constitution');
   await page.click('.k-modal [data-k-popup=close]');
   await col('+ Found a collective');
@@ -273,41 +276,45 @@ test('Collectives: a real collective founded by Max; Act with its permissions as
   assert.equal(await page.locator('#real-found [data-member-row]').count(), 2);
   await page.fill('#real-found input[name=member-2]', 'cd'.repeat(32));
   await page.locator('#real-found input[name=member-2]').dispatchEvent('change');
+  // F402: five layer rows, every one named; a finer area, added, chooses one layer and its kinds, each the core defines, in words.
+  await page.locator('#e-grid-real-found tr[data-layer="3"]').waitFor({ timeout: 30_000 });
+  assert.equal(await page.locator('#e-grid-real-found tr[data-layer]').count(), 5);
+  await page.click('[data-grid-add=real-found]');
   const area = page.locator('#e-grid-real-found tr[data-area="0"]');
   await area.waitFor({ timeout: 30_000 });
-  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Text', 'Envelopes', 'Text and Envelopes, together', 'Money', 'Agreements', 'Development']);
-  await area.locator('select[data-grid-layer]').selectOption('3');
-  await page.locator('#e-grid-real-found tr[data-area="0"] [data-grid-some]').check();
+  assert.deepEqual(await area.locator('select[data-grid-layer] option').allInnerTexts(), ['Money', 'Text', 'Envelopes', 'Agreements', 'Development']);
+  await area.locator('select[data-grid-layer]').selectOption('4');
   const kinds = await page.locator('#e-grid-real-found tr.kinds').innerText();
-  for (const k of ['work claims', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
+  for (const k of ['claims: a work bound to its creators', 'keepers’ records', 'negotiation messages', 'issuance offers']) assert.ok(kinds.includes(k), k);
   await shot(page, 'mac-26-found-agreements-kinds');
 });
 
-test('Publishing: who acts, what; an audio (M4A) stripped by the audio Module, read back, signed; Published here', async () => {
+test('Publishing, way 1 (Upload, round 8): who acts, what; an audio (M4A) stripped by the audio Module, a price tag on it, read back, signed; Published here', async () => {
   await tabTo('Publishing');
-  await page.locator('h2', { hasText: 'A protected file' }).waitFor();
+  await page.locator('h2', { hasText: 'Upload' }).waitFor();
   await page.locator('button[data-media=audio]').click();
-  await page.locator('#pub-work[data-media=audio]').waitFor();
-  await page.locator('#pub-work input[name=file]').waitFor();
-  await page.setInputFiles('#pub-work input[name=file]', { name: 'reading-thursday.m4a', mimeType: 'audio/mp4', buffer: M4A });
-  await page.fill('#pub-work input[name=title]', 'The reading, recorded');
-  await page.fill('#pub-work input[name=price]', '1500');
+  await page.locator('#pub-upload[data-media=audio]').waitFor();
+  await page.locator('#pub-upload input[name=file]').waitFor();
+  await page.setInputFiles('#pub-upload input[name=file]', { name: 'reading-thursday.m4a', mimeType: 'audio/mp4', buffer: M4A });
+  await page.fill('#pub-upload input[name=title]', 'The reading, recorded');
+  await page.check('#pub-upload input[name=then][value=price]');
+  await page.fill('#pub-upload input[name=price]', '1500');
   await shot(page, 'mac-30-publishing-audio');
-  await page.click('#pub-work button[type=submit]');
-  await page.locator('#e-pub-review #reading', { hasText: 'A protected recording' }).waitFor({ timeout: 90_000 });
+  await page.click('#pub-upload button[type=submit]');
+  await page.locator('#e-pub-review #reading', { hasText: 'Upload a recording' }).waitFor({ timeout: 90_000 });
   await page.locator('#e-pub-review #reading', { hasText: 'Stripped from the recording before it is locked' }).waitFor();
   await shot(page, 'mac-31-publishing-review');
   await page.click('#e-pub-review [data-action=confirm]');
   await page.locator('#here-feed .k-act', { hasText: 'The reading, recorded' }).waitFor({ timeout: 90_000 });
   await shot(page, 'mac-32-published-here');
   // A file the Module refuses: refused in plain words, nothing signed.
-  await col('A protected file');
+  await col('1 · Upload');
   await page.locator('button[data-media=audio]').click();
-  await page.locator('#pub-work[data-media=audio]').waitFor();
-  await page.setInputFiles('#pub-work input[name=file]', { name: 'not.m4a', mimeType: 'audio/mp4', buffer: readFileSync(new URL('../../../modules/audio/test/fixtures/with-picture.m4a', import.meta.url)) });
-  await page.fill('#pub-work input[name=title]', 'A picture inside');
-  await page.fill('#pub-work input[name=price]', '10');
-  await page.click('#pub-work button[type=submit]');
+  await page.locator('#pub-upload[data-media=audio]').waitFor();
+  await page.setInputFiles('#pub-upload input[name=file]', { name: 'not.m4a', mimeType: 'audio/mp4', buffer: readFileSync(new URL('../../../modules/audio/test/fixtures/with-picture.m4a', import.meta.url)) });
+  await page.fill('#pub-upload input[name=title]', 'A picture inside');
+
+  await page.click('#pub-upload button[type=submit]');
   await page.locator('#e-pub-review #reading').waitFor({ timeout: 90_000 });
   await shot(page, 'mac-33-publishing-refused');
   assert.match(await page.locator('#e-pub-review').innerText(), /not a recording the audio Module plays/);

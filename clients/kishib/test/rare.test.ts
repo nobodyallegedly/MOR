@@ -20,7 +20,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { chainKeyAt } from '../src/words.ts';
-import { changeKeys, closeAll, dub, kishib, reader, refused, standing, start, type Relay } from './world.ts';
+import { changeKeys, closeAll, dub, kishib, reader, refused, standing, start, type Relay, stopAll } from './world.ts';
 import { LAST_OF_OLD_PAPER_SAY } from '../src/kishib.ts';
 import type { Review, State } from '../src/shapes.ts';
 
@@ -33,8 +33,8 @@ before(async () => {
 });
 
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll();
 });
 
 /** Rotate in a Kišib to the end: reviewed, signed, counting, the new words shown and typed back. Returns the new signing words. */
@@ -198,4 +198,51 @@ test('H79: an identity whose last change of keys reused its paper (as Kišib did
   await refused(k.c.ask('rotate plan', { id: g.id, address: H[0], words: toWords(seed).join(' ') }), /earlier chain-key paper of this identity: the change of its keys at position 2 used it/);
   const right = await k.c.ask<{ title: string }>('check words', { id: g.id, address: H[0], words: shown.chain.join(' ') });
   assert.equal(right.title, 'These are the right words');
+});
+
+test('S7h-4 (Identity rule 49): a homeless change of keys made with stolen paper alone, objected to by a live home of the old set, is read in Kišib as void, in plain words', async () => {
+  const H = homes.map((h) => h.base);
+  const a = await dub(H, [relay.base]);
+  const fresh = await start('home');
+  try {
+    // The thief holds only the paper: one homeless rotation to a home of its choosing, and no escape endorsement (it has no signing key).
+    const l = await lookUp(a.id, H);
+    const scheme = l.resolution.chainKeyScheme!;
+    const key = chainKeyAt(fromWords(a.chainWords), scheme, 0);
+    const next = chainKeyAt(crypto.getRandomValues(new Uint8Array(32)), scheme, 0);
+    const operator = Buffer.from((await relayAt(fresh.base).info()).get(0) as Uint8Array).toString('hex');
+    const bytes = makeRotation({
+      identitySpec: SPECS.identity,
+      identity: a.id,
+      previous: l.resolution.links.at(-1)!.act,
+      position: l.resolution.links.length,
+      chainKeyScheme: scheme,
+      chainKeySeeds: key.seeds,
+      newSigningPublic: signingPublic(newSigningSecret()),
+      nextChainKeyScheme: scheme,
+      nextChainKeyCommit: next.commit,
+      kept: [],
+      homes: [{ operator, hint: fresh.base }],
+      homeless: true,
+    });
+    const rotation = actId(bytes);
+    assert.ok(rotation);
+    // The new home takes the chain from its genesis, then the rotation.
+    for (const c of (await relayAt(H[0]).identity(a.id)).chain) await relayAt(fresh.base).putAct(c).catch(() => undefined);
+    await relayAt(fresh.base).putAct(bytes);
+    // An old home, alive, objects when it is handed the rotation (Identity, homeless procedure, step 4).
+    assert.ok((await relayAt(H[0]).putAct(bytes)).objection, 'the old home objects');
+    const k = await kishib();
+    const rec = await k.c.ask<{ sections: { heading: string; lines: { text: string; tone?: string }[] }[] }>('record', { id: a.id, address: H[0] });
+    const chain = rec.sections.find((s) => s.heading === 'Its chain and receipts')!;
+    const line = chain.lines.find((x) => /^Void/.test(x.text));
+    assert.ok(!chain.lines.some((x) => x.text.includes(rotation)), 'a void rotation waits for no receipts');
+    assert.ok(line, JSON.stringify(chain));
+    assert.match(line!.text, /^Void: the homeless change of its keys .* objected to it, .*Identity rule 49/);
+    assert.equal(line!.tone, 'bad');
+    // Its keys are unchanged: the owner's genesis still counts alone.
+    assert.deepEqual((await lookUp(a.id, H)).resolution.links.map((x) => x.act), [a.id]);
+  } finally {
+    await fresh.stop();
+  }
 });

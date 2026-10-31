@@ -238,16 +238,16 @@ pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
         decode_signature, types, AbsenceDeclaration, Closing, Contest, Fork, ForkSettlement, Grant, KeeperRecord, NegotiationMessage, Notice,
         Record, Release, Resignation, Revocation, SettlementRequest, Split, Terms,
     };
-    use super::open_formats::{new_types, JudgeRequest, Liveness, Offer, StakeTransfer, WorkClaim, RETIRED_TYPES};
+    use super::open_formats::{new_types, JudgeRequest, Liveness, StakeTransfer, WorkClaim, RETIRED_TYPES};
     let p = &inside.payload;
     match inside.type_ {
         types::TERMS => Terms::decode(p).map(|_| ()),
         types::SIGNATURE => decode_signature(inside).map(|_| ()),
         types::KEEPER_RECORD => KeeperRecord::decode(inside).map(|_| ()),
-        types::WORK_CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
+        types::CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
         new_types::STAKE_TRANSFER => StakeTransfer::decode(inside).map(|_| ()),
         types::RELEASE => Release::decode(inside).map(|_| ()),
-        types::STANDING_OFFER => Offer::decode(inside).map(|_| ()),
+        types::PUBLICATION => crate::agreements::Publication::decode(inside).map(|_| ()),
         types::SPLIT => Split::decode(p).map(|_| ()),
         types::GRANT => Grant::decode(p).map(|_| ()),
         types::REVOCATION => Revocation::decode(p).map(|_| ()),

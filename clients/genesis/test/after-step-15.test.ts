@@ -5,8 +5,11 @@
 // - Fable's E5, the clients' half: a client's verifier is told the Envelopes
 //   and Text hashes, which every client holds, so a text act carrying `acks`
 //   is invalid to it even without the Money and Agreements hashes.
-// - F295, F296: a text act outside its format, or carrying `objects`, is
-//   invalid to every client.
+// - F295, F296: a text act outside its format is invalid to every client.
+//   Text rule 14 (draft 11) since allows exactly one object, [grantor, grant]
+//   or [collective, decision]: a text act naming one chain in objects is
+//   unknown to a verifier that does not hold that chain or does not read
+//   Agreements, and any other objects (two of them) are invalid.
 // - Fable's T5: a client composes text with the pinned Unicode tables, the
 //   ones the core checks with (`nfc`).
 // - F293: a sealed container is `[to, locked-act]`, no one-time key.
@@ -72,7 +75,7 @@ test('E5: a text act carrying acks is invalid to a client told the Envelopes and
   assert.equal(blind.status(like.id), 'unknown', 'without the hashes it cannot tell');
 });
 
-test('F295, F296: a text act outside its format, or naming a chain in objects, is invalid to every client', async () => {
+test('F295, F296: a text act outside its format, or carrying more than one object, is invalid to every client; one object naming a chain not held is unknown (Text rule 14)', async () => {
   const v = verifier(true);
   const good = await writer.publish(SPECS.text, 0, text('fine', [1, new Uint8Array(32)]), { public: true, relays: [] });
   v.add(good.act);
@@ -82,13 +85,23 @@ test('F295, F296: a text act outside its format, or naming a chain in objects, i
     ['a field 2', 0, text('x', [2, 1]), undefined],
     ['field 0 not text', 0, cborEncode(new Map([[0, new Uint8Array([1])]])), undefined],
     ['a type Text does not define', 3, text('x'), undefined],
-    ['objects', 0, text('a reply in a thread'), [[good.id, good.id]]],
+    // The premise changed (Text rule 14, draft 11): one object is no longer
+    // invalid in itself, since a grantee's [grantor, grant] or a member's
+    // [collective, decision] is allowed. Two objects are no allowed shape,
+    // whatever they name, so they stay invalid to every client.
+    ['two objects', 0, text('a reply in a thread'), [[good.id, good.id], [writer.id, good.id]]],
   ];
   for (const [what, type, payload, objects] of cases) {
     const a = await writer.publish(SPECS.text, type, payload, { public: true, relays: [], objects });
     v.add(a.act);
     assert.equal(v.status(a.id), 'invalid', what);
   }
+  // One object naming a chain this verifier does not hold (and it reads no
+  // Agreements): it cannot tell a collective's decision from anything else,
+  // so it answers unknown, never valid (Text rule 14, the last sentences).
+  const one = await writer.publish(SPECS.text, 0, text('a reply in a thread'), { public: true, relays: [], objects: [[good.id, good.id]] });
+  v.add(one.act);
+  assert.equal(v.status(one.id), 'unknown', 'one object naming a chain not held');
 });
 
 test('T5: compose normalizes with the pinned tables, as the core checks', () => {

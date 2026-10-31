@@ -15,9 +15,8 @@ import { CORE_TYPES } from './core-types.ts';
 export const KIND_WORDS: Record<keyof typeof CORE_TYPES, Record<string, string>> = {
   text: { TEXT_ACT: 'posts and messages' },
   envelopes: {
-    PUBLICATION: 'publications: files baked (texts, pictures, films, recordings)',
+    BAKE: 'bakes: files published (texts, pictures, films, recordings)',
     KEY_DELIVERY: 'key deliveries: a file’s key to whoever bought it',
-    WITHDRAWAL: 'withdrawals of a publication',
     ENCRYPTION_KEY: 'its encryption key, published',
     VOW: 'vows: something to come, named',
   },
@@ -27,17 +26,18 @@ export const KIND_WORDS: Record<keyof typeof CORE_TYPES, Record<string, string>>
     RECEIPT: 'receipts',
     CLAIM: 'claims of a payment',
     RELEASE: 'a creditor’s releases of a debt',
+    PRICE_TAG: 'price tags: what a bake or a publication costs',
   },
   agreements: {
-    TERMS: 'agreements: their terms (collective, publishing and service agreements)',
+    TERMS: 'agreements: their terms (collective, ownership and service agreements)',
     SIGNATURE: 'signatures of an agreement',
     KEEPER_RECORD: 'keepers’ records',
-    WORK_CLAIM: 'work claims: a work bound to its creators',
+    CLAIM: 'claims: a work bound to its creators',
     STAKE_TRANSFER: 'stake transfers',
     RELEASE: 'public domain releases',
-    STANDING_OFFER: 'standing offers',
+    PUBLICATION: 'publications: a work offered for sale, and how its income splits',
     SPLIT: 'splits',
-    GRANT: 'grants: a key or a lane given',
+    GRANT: 'grants: a lane given to someone acting for it',
     REVOCATION: 'revocations of a grant',
     LIVENESS: 'liveness: still here',
     DECLARATION: 'abandonment declarations',
@@ -67,12 +67,12 @@ export interface Kind {
   name: string;
 }
 
-/** The layers the grid offers, one choice each (H120), in the core's numbering of areas (Agreements, "Layer": Envelopes and Text together are layer 1). */
+/** The layers the grid offers, one choice each (H120), in the core's numbering (MICS, "Structure": six layers, one per MIR; 0 Identity, a collective's chain acts, is not offered). */
 export const GRID_LAYERS: { key: keyof typeof CORE_TYPES | 'development'; layer: number; name: string; say: string; kinds: Kind[] }[] = [
   { key: 'text', layer: 1, name: 'Text', say: 'posts and messages (the Text layer)', kinds: CORE_TYPES.text.map((t) => ({ spec: MIRS.text, type: t.type, name: KIND_WORDS.text[t.constant] ?? plain(t.constant) })) },
-  { key: 'envelopes', layer: 1, name: 'Envelopes', say: 'media, their keys, vows (the Envelopes layer)', kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
-  { key: 'money', layer: 2, name: 'Money', say: 'money (the Money layer)', kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
-  { key: 'agreements', layer: 3, name: 'Agreements', say: 'collective, publishing and service agreements, claims of works (the Agreements layer)', kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
+  { key: 'envelopes', layer: 2, name: 'Envelopes', say: 'bakes, their keys, vows (the Envelopes layer)', kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
+  { key: 'money', layer: 3, name: 'Money', say: 'money (the Money layer)', kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
+  { key: 'agreements', layer: 4, name: 'Agreements', say: 'collectives, ownership agreements, publications, claims of works (the Agreements layer)', kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
   // The Development MIR defines no act type of its own: a specification is published as a publication. Chosen whole.
-  { key: 'development', layer: 4, name: 'Development', say: 'specifications (the Development layer)', kinds: [] },
+  { key: 'development', layer: 5, name: 'Development', say: 'specifications (the Development layer)', kinds: [] },
 ];

@@ -531,8 +531,13 @@ def py_verdict(case, pool, mirs):
     objs = ins.get(3)
     if objs is None:
         return "valid"
-    if len(objs) == 1 and objs[0][0] == signer:
-        return "unknown"  # a collective or a grant key cannot be told without Agreements
+    if len(objs) == 1:
+        # The chain an object names is an identity's, or the signer's own:
+        # an act held that is no genesis names neither.
+        c = acts.get(objs[0][0].hex())
+        if objs[0][0] != signer and c is not None and not (c[1] is not None and c[1].get(0) == H(mirs["identity"]) and c[1].get(1) == 0 and c[0].get(0) is None):
+            return "invalid"
+        return "unknown"  # [grantor, grant] or [collective, decision]: neither can be told without Agreements
     return "invalid"
 
 
@@ -560,7 +565,7 @@ def py_spec(content, money, held):
         4: lambda v: nonempty(v) and all(is_hash(x) for x in v),
         6: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 4 and is_hash(t[0]) and is_uint(t[1]) and is_uint(t[2]) and is_hash(t[3]) for t in v),
         7: lambda v: isinstance(v, list) and len(v) in (1, 2) and isinstance(v[0], list) and len(v[0]) == 2 and is_uint(v[0][0]) and v[0][0] in (0, 1) and (v[0][0] == 1 or is_uint(v[0][1])) and (len(v) == 1 or is_hash(v[1])),
-        10: lambda v: nonempty(v) and ascending(v, {0, 1, 2, 3}),
+        10: lambda v: nonempty(v) and ascending(v, {0, 1, 2, 3, 4}),
         13: lambda v: ascending(v, {0, 1, 2}),
         0: lambda v: is_uint(v) and v <= 8,
     }

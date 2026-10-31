@@ -37,7 +37,7 @@ function picture(p: ShownPicture, poster: string): string {
     ? ` It still carries ${p.picture.carries.map((c) => CARRIED_WORDS[c]).join('; ')}, not shown.`
     : '';
   return `<figure><img src="${src}" width="${p.picture.shownWidth}" height="${p.picture.shownHeight}" alt="">
-<figcaption>JPEG, ${p.picture.shownWidth} × ${p.picture.shownHeight}, publication <code>${short(p.publication)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
+<figcaption>JPEG, ${p.picture.shownWidth} × ${p.picture.shownHeight}, bake <code>${short(p.bake)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
 }
 
 /** One post, as an HTML fragment. */

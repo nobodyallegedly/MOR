@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Locator, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { post as barebonePost, readPost, soundBytes, type ShownPicture, type ShownRecording } from '../../barebone/src/post.ts';
-import { POST_SPECS, PUBLICATION } from '../../barebone/src/specs.ts';
+import { BAKE, POST_SPECS } from '../../barebone/src/specs.ts';
 import { strip as stripSound } from '../../../modules/audio/src/audio.ts';
 import { serve, type Running } from '../src/server.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
@@ -35,6 +35,7 @@ import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readCards } from '../../genesis/src/lines.ts';
 import { groupId, toWords } from '../../../modules/carry/src/carry.ts';
+import { stopAll } from './stop.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const PHONE = fileURLToPath(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
@@ -62,11 +63,7 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
-after(async () => {
-  await browser?.close();
-  for (const x of [app, peer, third]) await x?.close();
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
-});
+after(() => stopAll(() => browser?.close(), ...[app, peer, third].map((x) => () => x?.close()), ...[...(homes ?? []), relay].map((r) => () => r?.stop())));
 
 const done = async (page: Page, words: string | RegExp) => {
   try {
@@ -78,14 +75,28 @@ const done = async (page: Page, words: string | RegExp) => {
 const error = (page: Page, words: string | RegExp) => page.locator('#status .k-note.k-error', { hasText: words }).waitFor({ timeout: 60_000 });
 const cardOf = (page: Page, id: string, where = '#feed') => page.locator(`${where} [data-k-act="${id}"]`);
 /** Open a card's act menu (its short ID, bottom right) and choose. */
-const actMenu = async (c: Locator, item: string | RegExp) => {
-  await c.locator('.k-actid').click();
-  await c.page().getByRole('menuitem', { name: item, exact: typeof item === 'string' }).click();
+/**
+ * Open a menu and choose: the click is tried again until the item shows. The
+ * feed redraws as it reads (a card replaced while a click lands, or a menu
+ * closing as the next opens), so a single click was a read-once wait: it
+ * failed once on a merge (round 8, Part 4).
+ */
+const choose = async (opener: Locator, item: string | RegExp) => {
+  const it = opener.page().getByRole('menuitem', { name: item, exact: typeof item === 'string' });
+  // The menu can also close under the click (the feed redrawn as it opens): opening and choosing are tried again together.
+  for (let i = 0; ; i++) {
+    try {
+      await opener.click({ timeout: 10_000 });
+      await it.click({ timeout: 5_000 });
+      return;
+    } catch (e) {
+      if (i >= 5) throw e;
+      await opener.page().keyboard.press('Escape');
+    }
+  }
 };
-const signerMenu = async (c: Locator, item: string | RegExp) => {
-  await c.locator('.k-signer').click();
-  await c.page().getByRole('menuitem', { name: item, exact: typeof item === 'string' }).click();
-};
+const actMenu = (c: Locator, item: string | RegExp) => choose(c.locator('.k-actid'), item);
+const signerMenu = (c: Locator, item: string | RegExp) => choose(c.locator('.k-signer'), item);
 const noFindingNumber = async (page: Page) => assert.doesNotMatch(await page.locator('body').innerText(), /\b[FH]\d{1,3}\b/, 'no finding number on screen (H76)');
 /** Make an identity in another Dub, without a page. */
 async function made(r: Running, home: Relay, name: string) {
@@ -207,9 +218,22 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await audio.waitFor({ timeout: 60_000 });
   assert.match((await audio.getAttribute('src'))!, /^blob:/, 'played from bytes the Module checked');
   assert.equal(await audio.evaluate((x) => (x as HTMLAudioElement).controls && !(x as HTMLAudioElement).autoplay), true, 'played on the listener’s action, with its controls');
-  await cardOf(page, withRecording).locator('.k-actid').click();
-  await page.getByRole('menuitem', { name: 'Withdraw the recording', exact: true }).waitFor();
+  // The premise changed (decided 28 October 2026, one withdrawal per layer): a recording is a bake, never withdrawn.
+  // Its menu no longer offers "Withdraw the recording"; it says why, and what could end instead.
+  await actMenu(cardOf(page, withRecording), 'Why the recording can’t be withdrawn');
+  const kept = page.locator('.k-pop .dub-kept, .dub-kept').first();
+  await kept.waitFor();
+  // The menu it came from offered no withdrawal of the bake: opened again (its items drawn, waited for), then read.
   await page.keyboard.press('Escape');
+  await kept.waitFor({ state: 'detached' });
+  await cardOf(page, withRecording).locator('.k-actid').click();
+  await page.getByRole('menuitem', { name: 'Why the recording can’t be withdrawn', exact: true }).waitFor();
+  assert.equal(await page.getByRole('menuitem', { name: 'Withdraw the recording', exact: true }).count(), 0, 'no withdrawal of a bake');
+  await page.getByRole('menuitem', { name: 'Why the recording can’t be withdrawn', exact: true }).click();
+  await kept.waitFor();
+  assert.match(await kept.innerText(), /nothing to withdraw at the protocol level[\s\S]*bytes stay where they were uploaded unless homes and relays drop them[\s\S]*a price tag \(withdrawn by its signer\) or a publication \(ended by a later version selling nothing\)[\s\S]*a later profile simply names another picture/);
+  await page.keyboard.press('Escape');
+  await kept.waitFor({ state: 'detached' });
   // One the Module refuses: refused in plain words, nothing published.
   const postsBefore = (await app.dub.feed()).items.length;
   await ta.fill('Not a recording.');
@@ -234,22 +258,24 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   // A damaged recording, published by a client that did not check it: not played, said so.
   const damagedBytes = new Uint8Array(readFileSync(SOUND('truncated.m4a')));
   const l = lockMedia(damagedBytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
-  const damaged = await writer.publish(POST_SPECS.envelopes, PUBLICATION, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.audio)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, damagedBytes.length], [4, l.nonce], [5, l.key], [6, [relay.base]]])), { public: true, relays: [relay.base] });
+  const damaged = await writer.publish(POST_SPECS.envelopes, BAKE, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.audio)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, damagedBytes.length], [4, l.nonce], [5, l.key], [6, [relay.base]]])), { public: true, relays: [relay.base] });
   await relayAt(relay.base).putMedia(l.locked);
   const damagedPost = await barebonePost(writer, { text: 'A recording cut short.', relays: [relay.base], refs: [[damaged.id, writer.id]] });
 
   // Contacts, top left: one list, names first; add by ID with a name sealed to oneself.
   await page.locator('[data-k-open="contacts"]').click();
   const panel = page.locator('[data-k-panel="contacts"]');
-  for (const [id, name] of [
+  for (const [i, [id, name]] of [
     [groupId(them), 'River'],
     [writer.id, 'Pa'],
     [ph, 'Pa'],
-  ]) {
+  ].entries()) {
     await panel.locator('form#follow input[name=id]').fill(id);
     await panel.locator('form#follow input[name=name]').fill(name);
     await panel.getByRole('button', { name: 'Add to contacts' }).click();
     await done(page, 'Added to contacts');
+    // The same note stays a few seconds: the list itself is waited for, so the next add does not start on a stale "Added".
+    await page.locator('[data-k-panel="contacts"] [data-k-contact]').nth(i).waitFor({ timeout: 60_000 });
   }
   await page.locator('[data-k-panel="contacts"] [data-k-contact]').nth(2).waitFor();
   assert.deepEqual((await page.locator('[data-k-panel="contacts"] [data-k-contact] .k-n').allInnerTexts()).map((x) => x.trim()).sort(), ['Pa', 'Pa', 'River']);
@@ -308,7 +334,10 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await ta.fill('Welcome, River.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, /Left in the inbox of/);
-  const reply = cardOf(page, (await app.dub.feed()).items.find((x) => x.text === 'Welcome, River.')!.id);
+  // The note above may still be the first post's (it stays a few seconds): the reply's own card is waited for, never a single read of the feed.
+  const replyCard = page.locator('#feed > .k-act', { hasText: 'Welcome, River.' }).first();
+  await replyCard.waitFor({ timeout: 60_000 });
+  const reply = cardOf(page, (await replyCard.getAttribute('data-k-act'))!);
   await reply.locator('.k-label', { hasText: 'answers River' }).waitFor({ timeout: 60_000 });
 
   // The pop-up thread (H50): what the reply answers, a small feed box; Why it's valid inside replaces it, with a back arrow.
@@ -324,7 +353,8 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await modal.locator('[data-k-popup="back"]').click();
   await modal.locator('.k-act', { hasText: 'A first word from River.' }).first().waitFor();
   await modal.locator('[data-k-popup="close"]').click();
-  assert.equal(await page.locator('.k-modal').count(), 0);
+  // Waited for, not read once: the pop-up closes as the page redraws.
+  await page.locator('.k-modal').first().waitFor({ state: 'detached' });
 
   // Rely on it (H77): read back, RELY typed, the witness act signed.
   await actMenu(theirs, 'Rely on it');
@@ -358,9 +388,10 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   assert.ok(orig && latest && orig.y < latest.y, 'the original above the correction');
   await shot(page, '10b-corrected-unfolded');
   await corrected.locator('[data-k-corrected]').click();
-  assert.equal(await earlier.isVisible(), false, 'folded again');
-  // Correct it shows only on one's own acts.
+  await earlier.waitFor({ state: 'hidden' });
+  // Correct it shows only on one's own acts: the menu waited for (its Reply drawn), then read.
   await theirs.locator('.k-actid').click();
+  await page.getByRole('menuitem', { name: 'Reply', exact: true }).waitFor();
   assert.equal(await page.getByRole('menuitem', { name: 'Correct it' }).count(), 0);
   await page.keyboard.press('Escape');
 
@@ -484,6 +515,8 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await idp.locator('[data-k-use][aria-current]', { hasText: 'Ada' }).waitFor();
   await shot(page, '17-identity-panel');
   await idp.locator(`[data-k-idmenu="${me}"]`).click();
+  // The menu drawn before it is read (a read-once wait could read it empty).
+  await page.locator('.k-pop [data-k-item]').last().waitFor();
   assert.deepEqual((await page.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Name', 'Relays', 'Words', 'Line and homes', 'A lane from Damgar', 'A collective under it', 'Rules I follow', 'Remove from Dub…']);
   await shot(page, '18-identity-menu');
   await page.getByRole('menuitem', { name: /^Name/ }).click();
@@ -571,13 +604,15 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await page.keyboard.press('Escape');
   await page.locator('[data-k-part="private"]').click();
   // The conversation open before is open again, its back arrow first.
+  // The list or the open conversation, whichever the page drew: waited for, then chosen (no read-once look at a page still drawing).
+  await page.locator(`[data-conv="${them}"]:visible, [data-action="convs"]:visible`).first().waitFor();
   if (await page.locator('[data-action="convs"]').isVisible()) await page.locator('[data-action="convs"]').click();
   await page.locator(`[data-conv="${them}"]`).click();
   await page.locator('#thread .k-act').first().waitFor({ timeout: 60_000 });
-  assert.equal(await page.locator('.dub-convs').isVisible(), false, 'the conversations fold away once one is chosen');
+  await page.locator('.dub-convs').waitFor({ state: 'hidden' });
   await shot(page, '03-private', 'phone');
   await page.locator('[data-action="convs"]').click();
-  assert.equal(await page.locator('.dub-convs').isVisible(), true, 'the back arrow brings them again');
+  await page.locator('.dub-convs').waitFor({ state: 'visible' });
   await page.locator('[data-k-open="identity"]').click();
   await shot(page, '04-identity-panel', 'phone');
   await page.keyboard.press('Escape');

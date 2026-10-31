@@ -39,7 +39,7 @@ npm run cli -- render examples/sample.md --out sample.html
 
 Where the texts are silent, this implementation takes these readings. *Confirmed by Nobody, allegedly, 30 September 2026.*
 
-1. **A document is a text act.** A long-form document is a text act (Text MIR, type 0) whose format field names this cMIP, not a publication with the text as media. *Task 4 is about text acts; a text act is readable by every client. The cost is the act size limit (the cMIP's stated costs).*
+1. **A document is a text act.** A long-form document is a text act (Text MIR, type 0) whose format field names this cMIP, not a bake (an upload, Envelopes type 0; called a publication before F407) with the text as media. *Task 4 is about text acts; a text act is readable by every client. The cost is the act size limit (the cMIP's stated costs).*
 2. **"Adds no text" is read strictly.** A list marker is shown as written. A bullet glyph or a number of the browser's own would be a character not in the bytes, so the stylesheet turns the browser's markers off.
 3. **What a format may hide.** *Superseded by F149 (6 October 2026):* not "anything but letters and digits" (F140's Unicode categories L and N, which let a format hide a minus sign, a decimal point or a vowel sign), but only its own declared markup, in the positions it declares it. The cMIP's markup declaration lists them; `checkBound()` checks every hidden character against it, from the text itself, and `renderHtml()` shows the text plain, flagged, if a reading would break it.
 4. **A line break stays a line break.** Markdown joins the lines of a paragraph; this format shows each LF as a break, as the plain text does.

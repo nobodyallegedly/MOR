@@ -20,11 +20,20 @@ import { PEOPLE_SPEC, PEOPLE_SPEC_1 } from '../../../dub/src/people.ts';
 import { NAMING_SPEC } from '../../../dub/src/names.ts';
 import { APPENDED_FORMAT } from '../../../dub/src/appended.ts';
 import { CORRECTIONS_SPEC } from '../../../barebone/src/corrections.ts';
-import { MEMBER_KEYS_SPEC } from '../../../grants/src/member.ts';
+import { sha256 } from '../../../genesis/src/core.ts';
 import { MEMORY_SPEC } from '../../../desk/src/memory.ts';
 import { LONGFORM_SPECS } from '../../../longform/src/specs.ts';
 import { REPO_SPECS } from '../../../repo/src/specs.ts';
 import { NOTES_FORMAT } from '../../../dub/src/notes.ts';
+
+/**
+ * The member keys cMIP's test hash, kept here since `grants/src/member.ts`
+ * dropped it: there are no member keys any more (Agreements rule 58, the
+ * keyless collective; a member acts for a collective with their own key,
+ * naming it in objects). The rule stays listed under its key so that an
+ * app still naming 'member-keys' keeps working, said as retired.
+ */
+const MEMBER_KEYS_SPEC = sha256('Member keys cMIP, draft 1, test value until publication');
 
 /** One rule an app runs: a cMIP or a Module, by the spec hashes it stands for. */
 export interface Rule {
@@ -144,7 +153,7 @@ export const SUITE_RULES: Record<string, Rule> = {
   naming: { key: 'naming', name: 'Naming', kind: 'cMIP', hashes: [NAMING_SPEC], does: 'Display names: the name an identity publishes for itself, shown beside its ID.', text: 'cmips/cmip-naming-draft-1.md' },
   corrections: { key: 'corrections', name: 'Corrections', kind: 'cMIP', hashes: [CORRECTIONS_SPEC], does: 'A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.', text: 'cmips/cmip-corrections-draft-2.md' },
   appended: { key: 'appended', name: 'Appended collective', kind: 'cMIP', hashes: [APPENDED_FORMAT], does: 'A collective’s posts whose members append, each signed by its member.', text: 'cmips/cmip-appended-collective-draft-1.md' },
-  'member-keys': { key: 'member-keys', name: 'Member keys', kind: 'cMIP', hashes: [MEMBER_KEYS_SPEC], does: 'A member’s own key for acting as a collective, granted and revoked by it.', text: 'cmips/cmip-member-keys-draft-1.md' },
+  'member-keys': { key: 'member-keys', name: 'Member keys', kind: 'cMIP', hashes: [MEMBER_KEYS_SPEC], does: 'Retired: there are no member keys now. A member acts for a collective with their own key, naming the collective.', text: 'cmips/cmip-member-keys-draft-1.md' },
   'agent-memory': { key: 'agent-memory', name: 'Agent memory', kind: 'cMIP', hashes: [MEMORY_SPEC], does: 'What an agent keeps between its sessions, sealed to its owner.', text: 'cmips/cmip-agent-memory-draft-2.md' },
   notes: { key: 'notes', name: 'Notes', kind: 'cMIP', hashes: [NOTES_FORMAT], does: 'Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.', text: 'cmips/cmip-notes-draft-1.md' },
   'long-form': { key: 'long-form', name: 'Long form', kind: 'cMIP', hashes: [LONGFORM_SPECS.longform], does: 'Long documents with headings: drafts of MIPs, and their replies.', text: 'cmips/cmip-long-form-draft-1.md' },

@@ -44,7 +44,7 @@ fn sat(n: u64) -> Amount {
 // ---------------------------------------------------------------- the service
 
 /// The service: its pointer, with a Lightning rail (0) where buyers pay and
-/// an on-chain rail (1) where its own coins sit; its standing offer; the
+/// an on-chain rail (1) where its own coins sit; its offer (a publication and its price tag, draft 6); the
 /// key its batch outputs are tweaked from.
 struct Service {
     id: Hash,
@@ -101,16 +101,21 @@ fn service(tiers: &[(u64, u64)]) -> Service {
         ],
     };
     let terms = Terms { reference: clock::reference(Network::Regtest), tiers: tiers.iter().map(|&(p, b)| Tier { price: Price::Fixed(p), blocks: b }).collect() };
-    let offer = Offer::read(h("the service's offer act"), id, &terms.standing_offer(mor_onchain::unit(Network::Regtest), None, None)).unwrap();
+    // Its offer (draft 6): a lone seller's publication selling the terms,
+    // and its price tag, signed by the service and paid to it.
+    let first = h("the service's publication act");
+    let publication = terms.publication(id, h("a split cMIP"), None, None);
+    let tag = terms.price_tag(first, mor_onchain::unit(Network::Regtest), id);
+    let offer = Offer::from_publication(first, id, &publication, h("the service's price tag act"), id, &tag).unwrap();
     Service { id, pointer_id: h("the service's pointer act"), pointer, pool, offer, key: xonly(&secret("the anchoring service's batch key")) }
 }
 
 impl Service {
     /// A ticket for `who`'s hash in `batch` at `tier`, and the Lightning
-    /// payment buying it, following the offer: its answer `answer`.
+    /// payment buying it, paying the offer's price tag: its answer `answer`.
     fn paid(&self, who: &str, tier: u64, batch: u64, answer: Answer, repaid: u64) -> Paid {
         let price = self.offer.price(tier, None).unwrap();
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: self.id, amount: price, fulfils: self.offer.id, payer: Some(Payer::Identity(h(who))), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 0 }, salt: [batch as u8; 16], purchase: None };
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: self.id, amount: price, fulfils: self.offer.tag, payer: Some(Payer::Identity(h(who))), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 0 }, salt: [batch as u8; 16], purchase: None };
         let ticket = Ticket { offer: self.offer.id, leaf: h(&format!("{who}'s leaf")), commitment: commitment.hash(), tier, batch, deadline: 200, quote: None };
         Paid { ticket, payment: Payment { commitment, answer }, shown_by: h(&format!("the service's receipt of {who}'s payment")), repaid }
     }

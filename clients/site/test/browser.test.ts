@@ -21,6 +21,11 @@ import { publishSite, readFolder } from '../src/publish.ts';
 import { post } from '../../barebone/src/post.ts';
 import { benign, DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
+// A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
+const LIMIT = { timeout: 240_000 };
+/** A page's context closed, fifteen seconds at most: WebKit can hang closing one that holds a film; the browser closes it at the end anyway. */
+const closeSoon = (c: { close(): Promise<void> }) => Promise.race([c.close().catch(() => undefined), new Promise<void>((r) => void setTimeout(r, 15_000).unref())]);
+
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 /** WebKit is Safari's engine, which every browser on an iPhone uses: Playwright's own build of it, installed with `npx playwright-core install webkit`. */
@@ -86,14 +91,14 @@ before(async () => {
   hostileBase = await hostile.listen('127.0.0.1', 0);
 
   browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
-});
+}, LIMIT);
 
 after(async () => {
   await browser?.close();
   honest?.close();
   hostile?.close();
   await w?.stop();
-});
+}, LIMIT);
 
 /** A fresh browser context: no cache, no storage, as a fresh device. */
 async function open(url: string, refusals = csp) {
@@ -135,7 +140,7 @@ const shot = async (page: Page, name: string) => {
   if (shots) await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true });
 };
 
-test('a fresh browser shows each page of the site as verified, and signed by the owner', async () => {
+test('a fresh browser shows each page of the site as verified, and signed by the owner', LIMIT, async () => {
   const pages: [string, string, string][] = [
     ['/', 'dubsar.org · dubsar.org', 'front'],
     ['/read.html', 'Read · dubsar.org · dubsar.org', 'read'],
@@ -158,11 +163,11 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
     assert.deepEqual(sandbox, [], `${address}: the display client tries nothing the page's sandbox refuses`);
-    await ctx.close();
+    await closeSoon(ctx);
   }
 });
 
-test('the front page opens on the first act, shown as the act, verified, with its picture', async () => {
+test('the front page opens on the first act, shown as the act, verified, with its picture', LIMIT, async () => {
   const { page, ctx, problems } = await open(base + '/');
   const f = await pageFrame(page);
   const inner = await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame();
@@ -200,7 +205,7 @@ test('the front page opens on the first act, shown as the act, verified, with it
   assert.ok(acts.includes(w.firstAct) && acts.replace(/ /g, '').includes(w.owner.id), 'the bar names the act, its standing and signer');
   await shot(page, 'front-first-act');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 /** A large JPEG, as the photograph of the Earth is: drawn by the browser, stripped to the picture alone. */
@@ -217,11 +222,11 @@ async function largeJpeg(): Promise<Uint8Array> {
     const b: Blob = await new Promise((r) => c.toBlob((b) => r(b!), 'image/jpeg', 0.8));
     return [...new Uint8Array(await b.arrayBuffer())];
   });
-  await ctx.close();
+  await closeSoon(ctx);
   return strip(new Uint8Array(bytes)).bytes;
 }
 
-test("the first act's photograph scales to the page's width, whole, and nothing scrolls inside the page", async () => {
+test("the first act's photograph scales to the page's width, whole, and nothing scrolls inside the page", LIMIT, async () => {
   // "Image needs a better fit. Now it shows pixel per pixel in a scrollable box" (Nobody, allegedly, 7 October 2026).
   const act = (await post(w.owner, { text: 'Thank you for the shower… (a large picture)', jpeg: await largeJpeg(), relays: [w.relay.base] })).id;
   const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(siteCopy(act)), relays: [w.relay.base] });
@@ -238,7 +243,13 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
       await inner.waitForSelector('.mor-post img');
       await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
-      await page.waitForTimeout(300);
+      // Waited for, not slept on (CI): the act's picture has arrived and been laid out.
+      await page.waitForFunction(() => {
+        const d = (document.getElementById('mor-page') as HTMLIFrameElement | null)?.contentDocument;
+        const a = (d?.querySelector('.mor-act iframe') as HTMLIFrameElement | null)?.contentDocument;
+        const img = a?.querySelector('.mor-post img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0 && img.getBoundingClientRect().width > 0;
+      });
       // H123: the checking bar in the suite's type, served by the gateway itself, loaded at a phone's width.
       const type = await page.evaluate(async () => {
         await document.fonts.ready;
@@ -270,14 +281,14 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       assert.ok(m.pageScroll[0] <= m.pageScroll[1] && m.pageScroll[2] <= m.pageScroll[3] + 1, `the page's frame does not scroll: it is as tall as the page (${m.pageScroll})`);
       assert.ok(m.top[0] <= m.top[1], 'nothing wider than the window');
       await shot(page, `front-large-picture-${width}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   } finally {
     g.close();
   }
 });
 
-test("on a phone's first screen (390 x 844): the photograph whole at the act's width, both shortcuts side by side, and Read's first line through the gradient", async () => {
+test("on a phone's first screen (390 x 844): the photograph whole at the act's width, both shortcuts side by side, and Read's first line through the gradient", LIMIT, async () => {
   // Option B, decided by Nobody, allegedly, 9 October 2026: the first act's photograph stays whole at the act's
   // full width (7 October), and the room is made by the furniture instead: the checking bar briefer on a narrow
   // screen, the two shortcuts side by side at the top of the band, and below them a gradient behind the four
@@ -297,7 +308,13 @@ test("on a phone's first screen (390 x 844): the photograph whole at the act's w
       const inner = (await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame())!;
       await inner.waitForSelector('.mor-post img');
       await page.waitForFunction(() => /verified/.test(document.getElementById('mor-acts')?.textContent ?? ''));
-      await page.waitForTimeout(300);
+      // Waited for, not slept on (CI): the act's picture has arrived and been laid out.
+      await page.waitForFunction(() => {
+        const d = (document.getElementById('mor-page') as HTMLIFrameElement | null)?.contentDocument;
+        const a = (d?.querySelector('.mor-act iframe') as HTMLIFrameElement | null)?.contentDocument;
+        const img = a?.querySelector('.mor-post img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0 && img.getBoundingClientRect().width > 0;
+      });
       const m = await page.evaluate(() => {
         const frame = document.getElementById('mor-page') as HTMLIFrameElement;
         const top = frame.getBoundingClientRect().top;
@@ -362,14 +379,14 @@ test("on a phone's first screen (390 x 844): the photograph whole at the act's w
       assert.ok((await page.textContent('#mor-acts'))!.includes(act), 'the act shown is listed, with its standing and signer');
       await page.click('#mor-bar summary');
       await shot(page, `front-first-screen-${colorScheme}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   } finally {
     g.close();
   }
 });
 
-test('on a wide screen, the checking bar keeps its whole sentence', async () => {
+test('on a wide screen, the checking bar keeps its whole sentence', LIMIT, async () => {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   await page.goto(base + '/');
@@ -377,10 +394,10 @@ test('on a wide screen, the checking bar keeps its whole sentence', async () => 
   assert.ok(await page.locator('#mor-standing').isVisible());
   assert.match(await page.locator('#mor-standing').innerText(), /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\./);
   assert.ok(!(await page.locator('#mor-brief').isVisible()), 'the brief line is for narrow or short screens only');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', async () => {
+test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', LIMIT, async () => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {
       const ctx = await browser.newContext({ colorScheme });
@@ -424,12 +441,12 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
       assert.equal(await page.evaluate(() => (window as { morIconAtLoad?: string | null }).morIconAtLoad), icon, 'the icon set before the window finished loading');
       assert.equal(await page.locator('iframe[aria-hidden]').count(), 0, 'the hold is gone once released');
       if (path === '/') await shot(page, `footer-${colorScheme}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   }
 });
 
-test("a door opens its page through the display client, checked again", async () => {
+test("a door opens its page through the display client, checked again", LIMIT, async () => {
   const { page, ctx, problems, sandbox } = await open(base + '/');
   const f = await pageFrame(page);
   assert.equal(await f.getAttribute('.doors a:nth-child(3)', 'href'), '/run.html');
@@ -445,10 +462,10 @@ test("a door opens its page through the display client, checked again", async ()
   // Only the sandbox at work: the test's own helpers refused inside the page's frame, and WebKit reporting
   // its rule for leaving the page (only on a click) before it follows the click.
   assert.ok(sandbox.every((m) => /^Blocked script execution in 'about:srcdoc'|initiate navigation .* sandboxed/s.test(m)), sandbox.join('\n'));
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", async () => {
+test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", LIMIT, async () => {
   // Decided by Nobody, allegedly, 9 October 2026: a door of its own for each department, a folder within the
   // one site; every pitch sends both doors, so each door links back to the main door.
   for (const [folder, name] of DOORS) {
@@ -496,11 +513,11 @@ test("every department's door verifies, signed by the owner, with the main door'
     await shot(page, `door-${folder}`);
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
-    await ctx.close();
+    await closeSoon(ctx);
   }
 });
 
-test("the main door lists no department's door: unlisted, never hidden", async () => {
+test("the main door lists no department's door: unlisted, never hidden", LIMIT, async () => {
   const { page, ctx } = await open(base + '/');
   const f = await pageFrame(page);
   const hrefs = await f.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')!));
@@ -508,13 +525,13 @@ test("the main door lists no department's door: unlisted, never hidden", async (
   for (const [folder] of DOORS) {
     assert.ok(!hrefs.some((h) => h === `/${folder}/` || h.startsWith(`/${folder}/`)), `the main door does not link to /${folder}/ (${hrefs})`);
   }
-  await ctx.close();
+  await closeSoon(ctx);
   // Never hidden: each door is in the signed version's list of files, for anyone to see.
   const paths = at(honest).manifest!.files.map((x) => x.path);
   for (const [folder] of DOORS) assert.ok(paths.includes(`${folder}/index.html`), folder);
 });
 
-test("a department's door leads back to the main door, checked again", async () => {
+test("a department's door leads back to the main door, checked again", LIMIT, async () => {
   const { page, ctx, problems } = await open(base + '/law/');
   const f = await pageFrame(page);
   await f.locator('.back a').scrollIntoViewIfNeeded();
@@ -524,10 +541,10 @@ test("a department's door leads back to the main door, checked again", async () 
   assert.match((await standing(page))!, /^Verified/);
   assert.equal(await (await pageFrame(page)).locator('.doors a').count(), 4, 'the main door');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('an altered page is shown as failing, and not shown', async () => {
+test('an altered page is shown as failing, and not shown', LIMIT, async () => {
   const original = at(honest).files.get('run.html')!;
   const altered = new TextDecoder().decode(original).replace('<h1>Run</h1>', '<h1>Run: send your keys to the gateway</h1>');
   at(honest).files.set('run.html', new TextEncoder().encode(altered));
@@ -539,17 +556,17 @@ test('an altered page is shown as failing, and not shown', async () => {
     assert.equal(await fp(page), w.owner.id, 'who signed the real page is still said');
     assert.match((await page.textContent('#mor-reasons'))!, /do not match the work hash/);
     await shot(page, 'altered-page');
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at(honest).files.set('run.html', original);
   }
   // The other pages still verify.
   const { page, ctx } = await open(base + '/read.html');
   assert.match((await standing(page))!, /^Verified/);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('an altered stylesheet fails every page that uses it', async () => {
+test('an altered stylesheet fails every page that uses it', LIMIT, async () => {
   const original = at(honest).files.get('site.css')!;
   at(honest).files.set('site.css', new TextEncoder().encode('.placeholder{display:none}\n'));
   try {
@@ -557,13 +574,13 @@ test('an altered stylesheet fails every page that uses it', async () => {
     assert.match((await standing(page))!, /^Failing: a file this page uses is not what was signed/);
     assert.match((await page.textContent('#mor-reasons'))!, /site\.css/);
     assert.equal(await page.locator('#mor-page').count(), 0);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at(honest).files.set('site.css', original);
   }
 });
 
-test("a version signed by someone else is shown as failing, naming who did sign it", async () => {
+test("a version signed by someone else is shown as failing, naming who did sign it", LIMIT, async () => {
   const other = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
   await other.publishGenesis();
   const copy = await publishSite(other, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base] });
@@ -579,19 +596,19 @@ test("a version signed by someone else is shown as failing, naming who did sign 
     assert.match((await page.textContent('#mor-bar'))!, /Not the identity this gateway names as Nobody, allegedly/);
     assert.equal(await page.locator('#mor-page').count(), 0);
     await shot(page, 'other-signer');
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     g.close();
   }
 });
 
-test('an address the signed site does not hold says so', async () => {
+test('an address the signed site does not hold says so', LIMIT, async () => {
   const { page, ctx } = await open(base + '/nothing.html');
   assert.match((await standing(page))!, /^Failing: the signed site has no file at this address/);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('a page runs no code and loads nothing from elsewhere, whatever it tries; what is left is shown, verified', async () => {
+test('a page runs no code and loads nothing from elsewhere, whatever it tries; what is left is shown, verified', LIMIT, async () => {
   const { page, ctx, problems, elsewhere } = await open(hostileBase + '/', hostileCsp);
   assert.match((await standing(page))!, /^Verified/);
   const f = await pageFrame(page);
@@ -618,7 +635,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   assert.equal(await page.getAttribute('link[rel="icon"]', 'href'), 'data:,', 'an icon from elsewhere is not the tab icon');
   assert.deepEqual(problems, []);
   assert.ok(hostileCsp.every((m) => /base URI|inline style|inline event handler/.test(m)), hostileCsp.join('\n'));
-  await ctx.close();
+  await closeSoon(ctx);
 
   // Files that are not pages: a picture and text, each under the bar.
   const pic = await open(hostileBase + '/photo.jpg');
@@ -631,7 +648,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   await txt.ctx.close();
 });
 
-test('the display client always looks for later versions, and says when a newer one exists', async () => {
+test('the display client always looks for later versions, and says when a newer one exists', LIMIT, async () => {
   // Pinned by its operator to the first version.
   const pinned = new Gateway(gatewayFor(w, w.site.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
   assert.ok(await ok(pinned));
@@ -641,7 +658,7 @@ test('the display client always looks for later versions, and says when a newer 
     await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
     assert.equal(await page.locator('#mor-newer').count(), 0, 'nothing newer yet');
     assert.match((await page.textContent('#mor-bar'))!, /This gateway's operator chose this version, and serves no other/);
-    await ctx.close();
+    await closeSoon(ctx);
 
     // The owner publishes a second version, naming the first.
     const next = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base], previous: w.site.id });
@@ -652,7 +669,7 @@ test('the display client always looks for later versions, and says when a newer 
     assert.match((await page.textContent('#mor-newer'))!, /^A newer version of this site exists, signed by the same identity: [0-9a-f]{64}\. This gateway serves an earlier one\.$/);
     assert.equal(await page.textContent('#mor-latest'), next.id);
     await shot(page, 'newer-version');
-    await ctx.close();
+    await closeSoon(ctx);
 
     // A gateway following the owner's latest moves to it once it looks again.
     assert.ok(await ok(honest));
@@ -662,13 +679,13 @@ test('the display client always looks for later versions, and says when a newer 
     await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
     assert.equal(await page.locator('#mor-newer').count(), 0);
     assert.match((await page.textContent('#mor-bar'))!, /This gateway follows the owner's latest version/);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     pinned.close();
   }
 });
 
-test('a browser that blocks WebAssembly is told, in plain words, that the page cannot be checked there, and why; nothing is shown', async () => {
+test('a browser that blocks WebAssembly is told, in plain words, that the page cannot be checked there, and why; nothing is shown', LIMIT, async () => {
   // As Tor Browser's Safer level does (onion check, 1 October 2026), the
   // browser offers no WebAssembly at all; the checker used to wait for the
   // core library forever. (Chromium's own switch for it is ignored, so the
@@ -690,10 +707,10 @@ test('a browser that blocks WebAssembly is told, in plain words, that the page c
   assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
   assert.equal(await page.locator('#mor-view').innerHTML(), '');
   await shot(page, 'no-webassembly');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
-test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', async () => {
+test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', LIMIT, async () => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.route('**/_mor/mor_wasm_bg.wasm', (r) => r.abort('connectionfailed'));
@@ -704,7 +721,7 @@ test('when the core library does not start for another reason, the page says so,
   assert.match(why, /could not be started in this browser \(.+\)\./);
   assert.match(why, /Reload the page to try again/);
   assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('everything ran under the content security policy, with nothing refused', () => {

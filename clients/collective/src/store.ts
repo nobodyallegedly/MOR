@@ -74,6 +74,16 @@ const writeJson = (path: string, v: unknown) => {
 };
 
 export class Store {
+  /**
+   * Each identity file as last read or written here, with the one object
+   * holding it: every part of this program that acts as a member uses the
+   * same object, so that two copies of one member never sign two acts at
+   * the same place in its sequence. A collective has no signing key
+   * (Agreements rule 56): a member held here acts for it with their own key,
+   * and that member's file is the one saved with the collective's.
+   */
+  private live = new Map<string, { i: TestIdentity; text: string }>();
+
   constructor(readonly dir: string) {
     mkdirSync(join(dir, 'identities'), { recursive: true, mode: 0o700 });
     mkdirSync(join(dir, 'collectives'), { recursive: true, mode: 0o700 });
@@ -126,24 +136,58 @@ export class Store {
 
   identity(id: string): TestIdentity {
     if (!this.holds(id)) throw new Error(`this program does not hold ${id}`);
-    return TestIdentity.load(this.identityPath(id), this.settings().via);
+    const path = this.identityPath(id);
+    const text = readFileSync(path, 'utf8');
+    const via = this.settings().via;
+    const held = this.live.get(id);
+    // The file unchanged since it was last read or written here: the same object.
+    if (held && held.text === text) {
+      held.i.via = via;
+      return held.i;
+    }
+    const i = TestIdentity.load(path, via);
+    this.live.set(id, { i, text });
+    return i;
   }
 
   saveIdentity(i: TestIdentity): void {
-    i.save(this.identityPath(i.id));
+    const path = this.identityPath(i.id);
+    i.save(path);
+    this.live.set(i.id, { i, text: readFileSync(path, 'utf8') });
   }
 
   isCollective(id: string): boolean {
     return /^[0-9a-f]{64}$/.test(id) && existsSync(this.collectivePath(id));
   }
 
-  collective(id: string): TestCollective {
+  /**
+   * A collective held here, with the member who acts for it set (`by`): a
+   * collective has no signing key (Agreements rule 56), so a member makes
+   * each act for it with their own key, naming it (rule 58). `actor`: that
+   * member; otherwise a member held here whose voice remains, yours first.
+   */
+  collective(id: string, actor?: string): TestCollective {
     if (!this.isCollective(id)) throw new Error(`this program holds no collective ${id}`);
-    return TestCollective.load(this.collectivePath(id), this.settings().via);
+    const c = TestCollective.load(this.collectivePath(id), this.settings().via);
+    const who = actor ?? this.actorFor(c);
+    if (who && this.holds(who)) c.by(this.identity(who));
+    return c;
   }
 
+  /** The member held here who acts for a collective by default: one whose voice remains, yours first; else any member held here. */
+  actorFor(c: TestCollective, not: string[] = []): string | null {
+    const gone = new Set((c.f.departed ?? []).filter((d) => !d.returned).map((d) => d.member));
+    const mine = new Set(this.book().identities.filter((i) => i.mine).map((i) => i.id));
+    const held = c.f.members.filter((m) => this.holds(m) && !not.includes(m));
+    const voices = held.filter((m) => !gone.has(m));
+    return [...voices.filter((m) => mine.has(m)), ...voices, ...held][0] ?? null;
+  }
+
+  /** Saves the collective's file, and the file of the member who acted for it. */
   saveCollective(c: TestCollective): void {
     c.save(this.collectivePath(c.identity));
+    const actor = c.id.actor;
+    if (actor && this.holds(actor.id)) this.saveIdentity(actor);
   }
 
   /** A holder's kept tally chains (Agreements rule 15a, F171): its client's own record of every split delivered to it. */

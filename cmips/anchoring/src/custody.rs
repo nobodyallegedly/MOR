@@ -83,7 +83,7 @@ pub trait PoolChain {
 /// The chain side of one batch.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Anchoring {
-    /// No publication of the batch under the offer.
+    /// No batch notice of the batch under the publication.
     NotPublished,
     /// Published, but its money on the chain cannot be followed: why.
     NotShown(String),
@@ -134,7 +134,7 @@ impl Line {
     }
 }
 
-/// The pool, batch by batch, under one standing offer.
+/// The pool, batch by batch, under one publication and the price tag version read.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Custody {
     pub lines: Vec<Line>,
@@ -160,14 +160,15 @@ impl Custody {
     }
 }
 
-/// Follow the pool under `offer` (anchoring cMIP draft 4, "The pool as
+/// Follow the pool under `offer` (anchoring cMIP draft 4, kept in draft 6, "The pool as
 /// visible custody"), from what the service signed and published:
 ///
 /// - `paid`: its tickets with the payments buying them; a ticket counts
 ///   only where its payment is valid and buys it ([`service::judge`]'s own
-///   test: the offer, the commitment, following the offer, to its payee,
-///   the tier's price);
-/// - `publications`: its batches;
+///   test: the publication, the commitment, paying its price tag, to the
+///   tag's payee, the tier's price);
+/// - `publications`: its batch notices (draft 6's word for this cMIP's
+///   type 3);
 /// - `txs`: the anchoring transactions, as the clock carries them (from a
 ///   change receipt's proof, or any batch anchor), each matched to its
 ///   publication by id;

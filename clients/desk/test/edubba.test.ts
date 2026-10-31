@@ -219,7 +219,8 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   };
   const ids: string[] = [];
   for (const [name, mine] of [['Me', true], ['Ana', false], ['Bo', false]] as const) ids.push((await confirm({ kind: 'identity', name, mine })).acts[0]);
-  await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: {} });
+  // Its Text layer: any one member alone (rule 60); the other layers the clone rule's two.
+  await confirm({ kind: 'found', name: 'Tablet house', members: ids, rules: { layers: { 1: 1 } } });
   // The collective client's own collectives are no longer listed in Edubba's state (test collectives removed from Edubba, decided): found by its store.
   assert.ok(!(await c.ask<any>('state')).collectives.some((x: any) => x.name === 'Tablet house'), 'no test collective among Edubba’s collectives');
   const col = app.collectives.list().find((x) => x.name === 'Tablet house')!;
@@ -228,8 +229,10 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const text = p.items[0];
   assert.equal(text.what, 'Post a text for it');
   assert.equal(text.state, 'yes');
-  assert.ok(text.lines.some((l: any) => /No area reaches a text .*Agreements rule 60/.test(l.text)));
-  assert.ok(text.lines.some((l: any) => /rule 59/.test(l.text) && /You hold it/.test(l.text)));
+  // Before the redesign a text counted on the collective's own signature, its key held here (rule 59); a
+  // collective has no signing key now: a member makes it with their own key, under the Text layer's rule.
+  assert.ok(text.lines.some((l: any) => /No finer area reaches a text .*the Text layer's rule, any 1 of .*Agreements rule 60/.test(l.text)), JSON.stringify(text.lines));
+  assert.ok(text.lines.some((l: any) => /no signing key: a member acts for it with their own key/.test(l.text) && /You are a member whose voice remains/.test(l.text)));
   assert.ok(text.lines.some((l: any) => /Text rule 14, F334/.test(l.text)));
   const pic = p.items[1];
   assert.equal(pic.state, 'with others');
@@ -245,9 +248,10 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   assert.equal(app.collectives.store.collective(col.id).id.f.sequence.length, before);
   await assert.rejects(c.ask('collective confirm', { plan: r.plan, digest: '00'.repeat(32) }), /does not match/);
   const done = await c.ask<Done>('collective confirm', { plan: r.plan, digest: r.digest });
-  assert.ok(done.lines.some((l) => /The text: counts for the collective, on its own signature/.test(l.text)), JSON.stringify(done.lines));
+  assert.ok(done.lines.some((l) => /The text: counts for the collective, its area’s signatures met/.test(l.text)), JSON.stringify(done.lines));
   const posted = describeAct((await relayAt(relay.base).getAct(done.acts[0]))!) as { signer: string; public: boolean; objects: [string, string][] };
-  assert.equal(posted.signer, col.id);
+  // Signed by a member with their own key (no key of the collective's: Agreements rules 56 to 60), naming the collective.
+  assert.notEqual(posted.signer, col.id);
   assert.ok(posted.public);
   // F334: one object, the collective's pointer to its own decision (Text rule 14, Agreements rule 58).
   assert.equal(posted.objects.length, 1);
@@ -280,7 +284,7 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const k = await c.ask<any>('collective constitution', { collective: col.id });
   assert.equal(k.inForce, true);
   assert.equal(k.kind, 'collective');
-  assert.ok(k.sections.some((s: any) => s.heading === 'Areas: who decides which acts'));
+  assert.ok(k.sections.some((s: any) => s.heading === 'The five layers: who acts for it'));
 });
 
 test('H19: the release folder of a test collective, pasted from the Terminal (“\\ ” a space, quotes, a space at the end), is read as the folder', async () => {

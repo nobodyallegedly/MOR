@@ -314,9 +314,11 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.click('#real-found [data-k-pick-for="member-3"]');
   await ed.click(`[data-k-picker] [data-k-picked="${idForm(macId)}"]`);
   await ed.locator('#real-found input[name=member-3]').dispatchEvent('change');
-  // The grid (round 3): its one area, Publishing, asks two members' keys, as the Releases area did.
+  // The grid (F402): every layer named; its Envelopes row (uploads, releases among them) asks two members, as the Releases area did.
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(2).waitFor({ timeout: 30_000 });
-  await gridNumber(ed, 'area:0', '2');
+  await gridNumber(ed, 'layer:2', '2');
+  // What one member may do alone, said above the grid before anyone signs, Money first (rule 60).
+  assert.match(await ed.locator('#e-grid-real-found [data-alone] li').first().innerText(), /^Money: /);
   await shot(ed, 'edubba-found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
@@ -414,7 +416,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await shot(wed, 'web-release');
   await rel.getByRole('button', { name: 'Sign it' }).click();
   await done(wed, '#e-status .k-note.k-done', 'Signed');
-  assert.ok((await um.standing(relId)).met, 'it counts as the collective’s release');
+  { const st = await um.standing(relId); assert.ok(st.met, 'it counts as the collective’s release: ' + JSON.stringify(st.lines)); }
   await shot(ed, 'edubba-collective');
 
   // A member change, reviewed (its signing in members' apps and its rotation are in test/real.test.ts):
@@ -437,6 +439,13 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.click('#real-change [data-action="member-add"]');
   await ed.locator('#real-change input[data-member-id]').last().fill(nobody.replace(/./g, (ch, i) => (i === 0 ? (ch === 'a' ? 'b' : 'a') : ch)));
   await ed.locator('#real-change input[data-member-id]').last().dispatchEvent('change');
+  // H101: a member change carries the shares; each joining member's box is required (a quarter each here).
+  const changeShares = ed.locator('#e-grid-real-change input[data-grid-share]');
+  await changeShares.nth(3).waitFor({ timeout: 30_000 });
+  for (let i = 0; i < (await changeShares.count()); i++) {
+    await changeShares.nth(i).fill('25');
+    await changeShares.nth(i).dispatchEvent('change');
+  }
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await shot(ed, 'edubba-change-review');
@@ -461,7 +470,7 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await ed.fill('#real-found input[name=member-2]', dee);
   await ed.locator('#real-found input[name=member-2]').press('Tab');
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(1).waitFor({ timeout: 30_000 });
-  for (const [n, v] of [['chain', '1'], ['area:0', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
+  for (const [n, v] of [['chain', '1'], ['layer:2', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 90_000 });
   await ed.click('#e-real-review [data-action=confirm]');

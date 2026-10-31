@@ -1,8 +1,11 @@
-// A post with a picture, as MOR acts (F27): the picture is a public
-// publication (Envelopes type 0) of a JPEG (the JPEG Module); the post is a
-// text act (Text MIR, type 0) whose refs name that publication. Publishing
-// and reading go through the genesis client's identity and transport, and
-// every judgement through the core library.
+// A post with a picture, as MOR acts (F27): the picture is a public bake
+// (Envelopes type 0, "I uploaded this") of a JPEG (the JPEG Module); the
+// post is a text act (Text MIR, type 0) whose refs name that bake. Its
+// signer is its uploader. A bake is never withdrawn by the protocol (the
+// retired withdrawal, Envelopes rule 24): its bytes stay where they were
+// uploaded unless homes and relays drop them. Uploading and reading go
+// through the genesis client's identity and transport, and every judgement
+// through the core library.
 
 import {
   MIRS,
@@ -24,7 +27,7 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { NotFilm, read as readFilm, strip as stripFilm, MAX_BYTES as FILM_MAX_BYTES, type Carried as FilmCarried, type Film } from '../../../modules/video/src/video.ts';
 import { NotSound, read as readSound, strip as stripSound, MAX_BYTES as SOUND_MAX_BYTES, type Carried as SoundCarried, type Sound } from '../../../modules/audio/src/audio.ts';
-import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
+import { BAKE, POST_SPECS, TEXT_ACT } from './specs.ts';
 import { correctionFormatFor, formatOfPayload } from './corrections.ts';
 
 // ---------------------------------------------------------------- posting
@@ -43,9 +46,9 @@ async function carryChain(by: TestIdentity, relays: string[]): Promise<void> {
 }
 
 export interface PublishedPicture {
-  /** The publication's act id. */
+  /** The bake's act id. */
   id: string;
-  /** The publication itself, as signed: held, so a post can refer to it (F272). */
+  /** The bake itself, as signed: held, so a post can refer to it (F272). */
   act: Uint8Array;
   /** What was stripped out before publishing (JPEG Module, rule 6). */
   removed: Carried[];
@@ -55,10 +58,11 @@ export interface PublishedPicture {
 }
 
 /**
- * Publish a JPEG, public: stripped to the picture alone (JPEG Module, rule
+ * Upload a JPEG, public: stripped to the picture alone (JPEG Module, rule
  * 6), locked with its own key (Envelopes, "Media"), described by a public
- * publication, and its locked bytes sent to the relays after it, so that a
- * relay that keeps only media some publication names takes them.
+ * bake, and its locked bytes sent to the relays after it, so that a relay
+ * that keeps only media some bake names takes them. No price: a price is a
+ * price tag of its own (Money type 5, `tag.ts`).
  */
 export async function publishPicture(by: TestIdentity, jpeg: Uint8Array, relays: string[]): Promise<PublishedPicture> {
   const s = strip(jpeg);
@@ -75,7 +79,7 @@ export async function publishPicture(by: TestIdentity, jpeg: Uint8Array, relays:
     ]),
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
@@ -100,7 +104,7 @@ export interface PublishedFilm {
 /**
  * Publish a film (the video Module, draft 1), public, as a picture is: read
  * first (rules 2 to 9, its limits), stripped to the film alone, locked with
- * its own key, described by a public publication naming the Module, its
+ * its own key, described by a public bake naming the Module, its
  * locked bytes sent to the relays after it. Refused, saying why, before
  * anything is signed, if it is not a film the Module plays.
  */
@@ -128,7 +132,7 @@ export async function publishVideo(by: TestIdentity, mp4: Uint8Array, relays: st
     ]),
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
@@ -148,7 +152,7 @@ export interface PublishedRecording {
  * read first (rules 2 to 9, its limits), stripped to the sound alone (rule
  * 10: the work hash, the locked hash and the size published are the
  * stripped file's), locked with its own key, described by a public
- * publication naming the Module, its locked bytes sent to the relays after
+ * bake naming the Module, its locked bytes sent to the relays after
  * it. Refused, saying why, before anything is signed, if it is not a
  * recording the Module plays.
  */
@@ -176,7 +180,7 @@ export async function publishAudio(by: TestIdentity, m4a: Uint8Array, relays: st
     ]),
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, BAKE, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
 }
@@ -192,8 +196,7 @@ export interface Posted {
 }
 
 /**
- * Post a text, with a picture if one is given: the picture's publication
- * first, then the text act naming it in `refs`, with its signer (a public
+ * Post a text, with a picture if one is given: the picture's bake first, then the text act naming it in `refs`, with its signer (a public
  * act, held: Envelopes draft 9, rule 20, F272). The text must already be
  * canonical (compose it first); the core library refuses it otherwise.
  * `refs`: the acts it answers, as references (a reply).
@@ -248,17 +251,19 @@ export async function leaveInInbox(by: TestIdentity, act: Uint8Array, inbox: str
 }
 
 /**
- * Withdraw a publication (Envelopes, "Withdrawal"): an act of type 3 naming
- * it in `objects`, the publication being the root of its own chain. Only its
- * signer, or the identity in its `for`, can.
+ * A bake is never withdrawn by the protocol (decided 28 October 2026; the
+ * retired withdrawal, Envelopes rule 24: an act of type 3 is invalid). What
+ * ends is named by its layer: a price tag is withdrawn by its signer, a
+ * version with no price (`withdrawTag`, Money); a publication is ended by a
+ * later version selling nothing (Agreements). The bytes stay where they
+ * were uploaded unless homes and relays drop them. Kept so that a caller
+ * from before is told so, never given an act every verifier refuses.
  */
-export async function withdraw(by: TestIdentity, publication: string, relays: string[]): Promise<{ id: string }> {
-  const made = await by.publish(POST_SPECS.envelopes, WITHDRAWAL, cborEncode(new Map()), {
-    public: true,
-    relays,
-    objects: [[publication, publication]],
-  });
-  return { id: made.id };
+export const BAKE_NEVER_WITHDRAWN =
+  'A bake is never withdrawn by the protocol: its bytes stay where they were uploaded unless homes and relays drop them. What can end is a price tag (withdrawn by its signer) or a publication (ended by a later version selling nothing).';
+
+export async function withdraw(_by: TestIdentity, _bake: string, _relays: string[]): Promise<{ id: string }> {
+  throw new Error(`${BAKE_NEVER_WITHDRAWN} Nothing was signed.`);
 }
 
 // ---------------------------------------------------------------- reading
@@ -281,15 +286,17 @@ interface Described {
 /** A picture a post refers to, as this client shows it. */
 export interface ShownPicture {
   kind: 'picture';
+  /** The bake's act id. */
+  bake: string;
+  /** The same id, under its name from before the bake (kept for callers from before). */
   publication: string;
+  /** Its uploader (the bake's signer). */
   signer: string;
-  /** The publication's standing for its signer's chain, as the core library judges it. */
+  /** The bake's standing for its uploader's chain, as the core library judges it. */
   standing: string;
   /** Set when the picture is not shown, saying why. */
   problem: string | null;
-  /** A withdrawal by its signer (or its `for`) found at the relays asked; the picture is then not shown. */
-  withdrawn: string | null;
-  /** The JPEG, checked against the publication's hashes and size. */
+  /** The JPEG, checked against the bake's hashes and size. */
   bytes: Uint8Array | null;
   picture: Picture | null;
 }
@@ -298,11 +305,12 @@ export interface ShownPicture {
 /** A film a post shows (the video Module, rule 13): judged and described here; its bytes fetched only when asked to play (`filmBytes`). */
 export interface ShownFilm {
   kind: 'film';
+  /** The bake's act id; `publication` the same, its name from before. */
+  bake: string;
   publication: string;
   signer: string;
   standing: string;
   problem: string | null;
-  withdrawn: string | null;
   /** Its size in bytes, as published. */
   size: number;
 }
@@ -310,11 +318,12 @@ export interface ShownFilm {
 /** A recording a post plays (the audio Module, rule 13): judged and described here; its bytes fetched only when asked to play (`soundBytes`). */
 export interface ShownRecording {
   kind: 'recording';
+  /** The bake's act id; `publication` the same, its name from before. */
+  bake: string;
   publication: string;
   signer: string;
   standing: string;
   problem: string | null;
-  withdrawn: string | null;
   /** Its size in bytes, as published. */
   size: number;
 }
@@ -400,8 +409,8 @@ export class Judge implements Judging {
  * Read a post: fetch the text act by its id from the first place that has
  * it, check it is the act asked for and a text act, judge it through its
  * signer's identity chain, and read every act it refers to. A picture is
- * shown only if its publication is valid, public, of the JPEG Module, not
- * withdrawn, and its bytes match the publication's hashes and size and read
+ * shown only if its bake is valid, public, of the JPEG Module, and its
+ * bytes are found and match the bake's hashes and size and read
  * as a JPEG. With `judging`, several posts are judged together, each
  * signer looked up once (the site's feed, website cMIP draft 6).
  */
@@ -449,51 +458,47 @@ async function readRef(r: Reference, hints: string[], via: Via, judge: Judging):
   }
   if (!d.public) return { kind: 'act', id, signer, what: 'a private act', actSigner: d.signer };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, signer, what: 'a text act', actSigner: d.signer };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement', actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement', actSigner: d.signer };
   const media = (cborDecode(d.payload!) as Map<number, unknown>).get(0);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.audio) return readRecordingRef(act, d, hints, via, judge);
   return readPicture(act, d, hints, via, judge);
 }
 
-/** A film's publication, judged and checked for withdrawal; its bytes are not fetched here. */
+/** A film's bake, judged; its bytes are not fetched here. A bake is never withdrawn: no withdrawal is looked for. */
 async function readFilmRef(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownFilm> {
   const m = cborDecode(d.payload!) as Map<number, unknown>;
   const size = m.get(3);
-  const out: ShownFilm = { kind: 'film', publication: d.id, signer: d.signer ?? '', standing: 'unknown', problem: null, withdrawn: null, size: typeof size === 'number' ? size : 0 };
+  const out: ShownFilm = { kind: 'film', bake: d.id, publication: d.id, signer: d.signer ?? '', standing: 'unknown', problem: null, size: typeof size === 'number' ? size : 0 };
   const no = (why: string) => ((out.problem = why), out);
-  if (!d.signer) return no('the publication has no signer');
+  if (!d.signer) return no('the bake has no uploader');
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== 'valid') return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== 'valid') return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no('the film is locked: its key is not public');
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no('withdrawn by its signer');
   return out;
 }
 
-/** A recording's publication, judged and checked for withdrawal, as a film's is; its bytes are not fetched here. */
+/** A recording's bake, judged as a film's is; its bytes are not fetched here. */
 async function readRecordingRef(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownRecording> {
   const m = cborDecode(d.payload!) as Map<number, unknown>;
   const size = m.get(3);
-  const out: ShownRecording = { kind: 'recording', publication: d.id, signer: d.signer ?? '', standing: 'unknown', problem: null, withdrawn: null, size: typeof size === 'number' ? size : 0 };
+  const out: ShownRecording = { kind: 'recording', bake: d.id, publication: d.id, signer: d.signer ?? '', standing: 'unknown', problem: null, size: typeof size === 'number' ? size : 0 };
   const no = (why: string) => ((out.problem = why), out);
-  if (!d.signer) return no('the publication has no signer');
+  if (!d.signer) return no('the bake has no uploader');
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== 'valid') return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== 'valid') return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no('the recording is locked: its key is not public');
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no('withdrawn by its signer');
   return out;
 }
 
 /**
  * A film's bytes, when the reader asks to play it (the video Module, rule
- * 13): its publication fetched again, its locked bytes from the reader's
+ * 13): its bake fetched again, its locked bytes from the reader's
  * relays first, opened, checked against the work hash and size, and read by
  * the Module (rules 2 to 9) before anything plays. Throws, saying why.
  */
-export async function filmBytes(publication: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; film: Film }> {
-  const plain = await mediaBytes(publication, signer, hints, via, POST_SPECS.video, 'film');
+export async function filmBytes(bake: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; film: Film }> {
+  const plain = await mediaBytes(bake, signer, hints, via, POST_SPECS.video, 'film');
   try {
     return { bytes: plain, film: readFilm(plain) };
   } catch (e) {
@@ -504,14 +509,14 @@ export async function filmBytes(publication: string, signer: string | null, hint
 
 /**
  * A recording's bytes, when the reader asks to play it (the audio Module,
- * rule 13), as a film's are: its publication fetched again, its locked
+ * rule 13), as a film's are: its bake fetched again, its locked
  * bytes from the reader's relays first, opened, checked against the work
  * hash and size, and read by the Module (rules 2 to 9) before anything
  * plays. Throws, saying why: nothing of a recording the Module refuses is
  * given to a player (rule 12).
  */
-export async function soundBytes(publication: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; sound: Sound }> {
-  const plain = await mediaBytes(publication, signer, hints, via, POST_SPECS.audio, 'recording');
+export async function soundBytes(bake: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; sound: Sound }> {
+  const plain = await mediaBytes(bake, signer, hints, via, POST_SPECS.audio, 'recording');
   try {
     return { bytes: plain, sound: readSound(plain) };
   } catch (e) {
@@ -520,11 +525,11 @@ export async function soundBytes(publication: string, signer: string | null, hin
   }
 }
 
-/** A public publication's media, of the Module `spec`, fetched, opened and checked against its work hash and size; not yet read by the Module. */
-async function mediaBytes(publication: string, signer: string | null, hints: string[], via: Via, spec: string, what: 'film' | 'recording'): Promise<Uint8Array> {
-  const act = signer ? (await followRef([publication, signer], hints, via)).act : await fetchAct(publication, hints, via);
-  if (!act) throw new Error(`the ${what}’s publication was not found`);
-  const d = describeChecked(act, publication);
+/** A public bake's media, of the Module `spec`, fetched, opened and checked against its work hash and size; not yet read by the Module. */
+async function mediaBytes(bake: string, signer: string | null, hints: string[], via: Via, spec: string, what: 'film' | 'recording'): Promise<Uint8Array> {
+  const act = signer ? (await followRef([bake, signer], hints, via)).act : await fetchAct(bake, hints, via);
+  if (!act) throw new Error(`the ${what}’s bake was not found`);
+  const d = describeChecked(act, bake);
   const m = cborDecode(d.payload!) as Map<number, unknown>;
   const type = m.get(0);
   if (!(type instanceof Uint8Array) || hex(type) !== spec) throw new Error(`not a ${what}`);
@@ -534,7 +539,7 @@ async function mediaBytes(publication: string, signer: string | null, hints: str
   const nonce = m.get(4);
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) throw new Error(`the ${what} is locked: its key is not public`);
-  if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== 'number' || !(nonce instanceof Uint8Array)) throw new Error('the publication does not describe its media');
+  if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== 'number' || !(nonce instanceof Uint8Array)) throw new Error('the bake does not describe its media');
   const named = Array.isArray(m.get(6)) ? (m.get(6) as unknown[]).filter((x): x is string => typeof x === 'string') : [];
   const media = (places: string[]) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
   const locked = (await media(hints)) ?? (await media(named.filter((n) => !hints.includes(n))));
@@ -545,25 +550,25 @@ async function mediaBytes(publication: string, signer: string | null, hints: str
   } catch {
     throw new Error('its key does not open its bytes');
   }
-  if (workHash(plain) !== hex(work) || plain.length !== size) throw new Error('its bytes do not match the work hash and size it was published with');
+  if (workHash(plain) !== hex(work) || plain.length !== size) throw new Error('its bytes do not match the work hash and size it was uploaded with');
   return plain;
 }
 
 async function readPicture(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownPicture> {
   const out: ShownPicture = {
     kind: 'picture',
+    bake: d.id,
     publication: d.id,
     signer: d.signer ?? '',
     standing: 'unknown',
     problem: null,
-    withdrawn: null,
     bytes: null,
     picture: null,
   };
   const no = (why: string) => ((out.problem = why), out);
-  if (!d.signer) return no('the publication has no signer');
+  if (!d.signer) return no('the bake has no uploader');
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== 'valid') return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== 'valid') return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   const m = cborDecode(d.payload!) as Map<number, unknown>;
   const spec = m.get(0);
   if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) return no('media of a type this client does not implement');
@@ -574,14 +579,12 @@ async function readPicture(act: Uint8Array, d: Described, hints: string[], via: 
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) return no('the picture is locked: its key is not public');
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== 'number' || !(nonce instanceof Uint8Array)) {
-    return no('the publication does not describe its media');
+    return no('the bake does not describe its media');
   }
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no('withdrawn by its signer');
 
-  // The reader's own relays first; only then the places the publication names.
+  // The reader's own relays first; only then the places the bake names.
   const named = Array.isArray(m.get(6)) ? (m.get(6) as unknown[]).filter((x): x is string => typeof x === 'string') : [];
-  // Each group side by side (reading B4); the publication's places only if the reader's own relays hold nothing.
+  // Each group side by side (reading B4); the bake's places only if the reader's own relays hold nothing.
   const media = (places: string[]) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
   const locked = (await media(hints)) ?? (await media(named.filter((n) => !hints.includes(n))));
   if (!locked) return no('its bytes were not found');
@@ -591,7 +594,7 @@ async function readPicture(act: Uint8Array, d: Described, hints: string[], via: 
   } catch {
     return no('its key does not open its bytes');
   }
-  if (workHash(plain) !== hex(work) || plain.length !== size) return no('its bytes do not match the work hash and size it was published with');
+  if (workHash(plain) !== hex(work) || plain.length !== size) return no('its bytes do not match the work hash and size it was uploaded with');
   try {
     out.picture = read(plain);
   } catch (e) {
@@ -600,52 +603,6 @@ async function readPicture(act: Uint8Array, d: Described, hints: string[], via: 
   }
   out.bytes = plain;
   return out;
-}
-
-/**
- * Look for a withdrawal of a publication at the relays asked: an Envelopes
- * act of type 3, naming it in `objects`, valid, and signed by its signer or
- * by the identity in its `for`. Silence proves nothing (relay transport
- * cMIP): a picture is shown when none is found where the reader looked.
- */
-async function findWithdrawal(
-  publication: string,
-  signer: string,
-  forId: unknown,
-  hints: string[],
-  via: Via,
-  judge: Judging,
-): Promise<string | null> {
-  const who = [signer];
-  if (forId instanceof Uint8Array) who.push(hex(forId));
-  // Every relay and signer side by side (reading B4); the first valid withdrawal found counts.
-  const search = async (h: string, s: string): Promise<string | null> => {
-    let after: number | undefined;
-    for (;;) {
-      let page;
-      try {
-        page = await relayAt(h, via).feed({ signer: s, after });
-      } catch {
-        return null;
-      }
-      for (const it of page.items) {
-        if (it.kind !== 'act') continue;
-        let d: Described;
-        try {
-          d = describeAct(it.item) as Described;
-        } catch {
-          continue;
-        }
-        if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
-        if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-        if ((await judge.standing(it.item, d.id, d.signer)) === 'valid') return d.id;
-      }
-      if (!page.items.length || page.next === after) return null;
-      after = page.next;
-    }
-  };
-  const pairs = hints.filter((h) => !cannotReach(h, via)).flatMap((h) => who.map((s) => [h, s] as const));
-  return firstOf(pairs, ([h, s]) => search(h, s));
 }
 
 /** The posts an identity has published at a relay, newest last: text acts only. */

@@ -52,8 +52,12 @@ const short = (h: string) => `${h.slice(0, 8)}…${h.slice(-4)}`;
 const fp = (identity: string) => `<span class="l-fp">${fingerprint(identity)}</span>`;
 
 function releaseWords(r: Release, creator: string | null): string {
-  const by = r.signer === creator ? 'by its creator' : `by another identity, <span class="l-fp">${short(r.signer)}</span>`;
-  const how = r.by === 'implements' ? 'its manifest names it among what it implements' : 'its publication refers to it';
+  // A keyless collective's release is uploaded by a member naming the collective: it is the collective's (Agreements rule 58, F407).
+  const whose = r.collective ?? r.signer;
+  const by =
+    (whose === creator ? 'by its creator' : `by another identity, <span class="l-fp">${short(whose)}</span>`) +
+    (r.collective ? `, uploaded by its member <span class="l-fp">${short(r.signer)}</span>` : '');
+  const how = r.by === 'implements' ? 'its manifest names it among what it implements' : 'its bake refers to it';
   if (r.problem) return `<li data-release="${r.id}" data-by="${r.by}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${e(r.problem)}</li>`;
   return `<li data-release="${r.id}" data-by="${r.by}" data-verified="yes"><span class="l-ok">released</span> ${by}: “${e(r.name ?? '')}” ${e(r.version ?? '')} (${how})</li>`;
 }
@@ -72,13 +76,13 @@ function code(l: Listed): string {
 function creator(l: Listed): string {
   const c = l.spec.creator;
   if (!c || NO_CREATOR_KINDS.includes(l.spec.kind)) {
-    // A MIR, the MICS document and a test suite name none: who published it, never its creator (draft 11, F291).
+    // A MIR, the MICS document and a test suite name none: who uploaded it, never its creator (draft 11, F291; draft 12: "uploaded").
     const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join('; ');
-    return `<div class="l-row" data-claimed="none">No creator: a ${e(KINDS[l.spec.kind])} names none. Published by ${by}.</div>`;
+    return `<div class="l-row" data-claimed="none">No creator: a ${e(KINDS[l.spec.kind])} names none. Uploaded by ${by}.</div>`;
   }
-  if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who published it.</div>`;
+  if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who uploaded it.</div>`;
   const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join('; ');
-  return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's publication of it was not found. Published by ${by}.</div>`;
+  return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's bake of it was not found. Uploaded by ${by}.</div>`;
 }
 
 function draftItem(d: Draft): string {
@@ -108,7 +112,7 @@ ${code(l)}
 ${drafts}
 <details><summary>How it was checked</summary>
 <div>Spec hash <code>${e(l.hash)}</code></div>
-${l.publications.map((p) => `<div>Published in act <code>${e(p.id)}</code>, signed by ${fp(p.signer)}, verified through its identity chain in this browser; its content matches its work hash.</div>`).join('')}
+${l.publications.map((p) => `<div>Uploaded in a bake, act <code>${e(p.id)}</code>, by ${fp(p.signer)}, verified through its identity chain in this browser; its content matches its work hash.</div>`).join('')}
 </details></article>`;
 }
 
@@ -193,7 +197,7 @@ function unverifiedHtml(listing: Listing): string {
   const items = listing.unverified.map(
     (p) => `<article class="l-line l-bad" data-pub="${p.id}" data-verified="no">
 <div class="l-head"><span class="l-name">A specification?</span><span class="l-no">Not verified</span></div>
-<div class="l-row">A publication that could not be verified in this browser: ${e(p.problem ?? 'unknown')}. What it says is not shown.</div>
+<div class="l-row">A bake that could not be verified in this browser: ${e(p.problem ?? 'unknown')}. What it says is not shown.</div>
 <details><summary>Which act</summary><div>Act <code>${e(p.id)}</code>${p.signer ? `, naming as its signer ${fp(p.signer)}` : ''}</div></details></article>`,
   );
   return `<h3 class="l-section" id="l-unverified">Could not be verified (${listing.unverified.length})</h3>${items.join('\n')}`;

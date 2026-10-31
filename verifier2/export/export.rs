@@ -12,7 +12,10 @@
 // separated>" exports instead the story of that case (drawn with the same
 // seed) with only those steps applied: how verifier2 shrinks a disagreement.
 //
-// Nothing here changes the generator or the library.
+// Nothing here changes the generator or the library. The collective is keyless
+// (Agreements draft 17): its acts are drafted by member 0's devices and its
+// grantees, each with their own key, naming it in their objects; how they map
+// onto verifier2's terms is in verifier2/README.md.
 
 use super::*;
 use serde_json::{json, Map, Value as J};
@@ -57,8 +60,11 @@ fn story_json(cw: &ColWorld) -> J {
         names.insert(hx(&d[0].id), json!(["ana", "ben", "cy", "dee", "eli"][i]));
     }
     names.insert(hx(&col), json!("C"));
+    // A grantee's name: "service" where it holds the split service's grant.
+    let grantee_of = |g: &Hash| v.get(g).and_then(|h| agreements::Grant::decode(&h.inside.payload).ok()).map(|x| x.grantee);
     for (i, a) in cw.agents.iter().enumerate() {
-        names.insert(hx(&a.id), json!(if cw.grants.iter().any(|g| g.service && g.agent == i) { "service".to_string() } else { format!("agent{i}") }));
+        let service = cw.grants.iter().any(|g| g.service && grantee_of(&g.id) == Some(a.id));
+        names.insert(hx(&a.id), json!(if service { "service".to_string() } else { format!("agent{i}") }));
     }
     for (i, c) in cw.creditors.iter().enumerate() {
         names.insert(hx(&c.id), json!(format!("creditor{i}")));
@@ -70,16 +76,10 @@ fn story_json(cw: &ColWorld) -> J {
     for (i, g) in cw.grants.iter().enumerate() {
         names.insert(hx(&g.id), json!(format!("G{i}")));
     }
-    // Which grant an act was signed under: the generator's note, else its binding.
-    let grant_ids: BTreeSet<Hash> = cw.grants.iter().map(|g| g.id).collect();
-    let grant_of = |h: &Held| -> Option<Hash> {
-        if let Some(f) = cw.info.get(&h.id) {
-            if let Some(gi) = f.grant {
-                return Some(cw.grants[gi].id);
-            }
-        }
-        h.act.outside.binding.filter(|b| grant_ids.contains(b))
-    };
+    // Which grant an act for the collective was made under: the generator's
+    // note (a collective's grant carries no key: its grantee signs with its
+    // own, citing the grant; Agreements rule 73).
+    let grant_of = |h: &Held| -> Option<Hash> { cw.info.get(&h.id).and_then(|f| f.grant).map(|gi| cw.grants[gi].id) };
     // Signature acts (Agreements type 1): the act named -> its signers.
     let mut sigs_on: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
     for h in v.held_acts() {
@@ -106,7 +106,11 @@ fn story_json(cw: &ColWorld) -> J {
         let public = h.act.outside.content_key.is_some();
         let to: Vec<Hash> = h.act.outside.to.clone().unwrap_or_default();
         let sealed_to_all = ids.iter().all(|m| to.contains(m));
-        let prev: Option<String> = h.inside.prev.iter().flatten().next().map(hx);
+        // An act for a collective is signed by a member's or grantee's own
+        // key: its own `prev` is on the signer's chain, never followed for the
+        // collective (Agreements rule 58); its history is what it cites there.
+        let for_col = h.inside.objects.iter().flatten().any(|o| o.chain == col);
+        let prev: Option<String> = if for_col { None } else { h.inside.prev.iter().flatten().next().map(hx) };
         let cites: Vec<String> = h.inside.objects.iter().flatten().filter(|o| o.chain == col).map(|o| hx(&o.predecessor)).collect();
         let acks: Vec<String> = h.inside.acks.iter().flatten().map(hx).collect();
         let sigs: Vec<String> = sigs_on.get(&id).map(|s| hxs(s)).unwrap_or_default();
@@ -153,22 +157,31 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         }
         // Endings, signed by a member.
-        if signer != col && members.contains(&signer) && h.inside.spec == mirs().agreements && (h.inside.type_ == agreements::types::FORK || h.inside.type_ == agreements::types::CLOSING) {
+        if members.contains(&signer) && h.inside.spec == mirs().agreements && (h.inside.type_ == agreements::types::FORK || h.inside.type_ == agreements::types::CLOSING) {
             let objects: Vec<String> = h.inside.objects.iter().flatten().map(|o| o.predecessor).filter(|p| endings.contains(p) && *p != id).map(|p| hx(&p)).collect();
             if h.inside.type_ == agreements::types::FORK {
                 let Ok(f) = agreements::Fork::decode(&h.inside) else { continue };
                 let mut m = base("fork", hx(&signer));
                 m.remove("prev");
+                // Its line: what it cites on the collective's chain (rule 91).
                 m.insert("cites".into(), json!([]));
-                m.insert("tips".into(), json!(f.tips.iter().map(|t| hx(&t.act)).collect::<Vec<_>>()));
+                m.insert("tips".into(), json!(cites));
                 // Each side's successor: its founding terms' parties and departed
                 // holders (N4), read from the terms its genesis declares.
+                // A departed holder is kept only at their share of the
+                // successor's own stake (N4), as the library reads it: an input
+                // to verifier2, which does not read stakes.
                 let lv = cw.view();
+                let kept: Vec<(Hash, u64)> = lv.fork(&id).map(|e| e.kept).unwrap_or_default();
                 m.insert("sides".into(), json!(f.sides.iter().map(|s| {
                     let terms = founding_of(v, &s.successor).and_then(|ag| lv.terms(&ag).ok());
+                    let keeps = |t: &agreements::Terms| -> Vec<String> {
+                        let own = t.own_stake().map(|(_, st)| st);
+                        t.departed.iter().flatten().filter(|d| kept.iter().filter(|(h, _)| h == *d).all(|(_, n)| own.is_some_and(|st| st.share_of(&agreements::Who::Id(**d)) == *n))).map(hx).collect()
+                    };
                     json!({"successor": hx(&s.successor), "members": hxs(&s.members),
                            "parties": terms.as_ref().map(|t| hxs(&t.parties)),
-                           "keeps": terms.as_ref().map(|t| t.departed.as_ref().map(|d| hxs(d)).unwrap_or_default())})
+                           "keeps": terms.as_ref().map(keeps)})
                 }).collect::<Vec<_>>()));
                 m.insert("assigned".into(), json!(f.debts.iter().map(|(d, s)| json!({"obligation": hx(d), "sides": s})).collect::<Vec<_>>()));
                 m.insert("objects".into(), json!(objects));
@@ -190,19 +203,29 @@ fn story_json(cw: &ColWorld) -> J {
                 let mut m = base("closing", hx(&signer));
                 m.remove("prev");
                 m.insert("cites".into(), json!([]));
-                m.insert("tips".into(), json!(c.tips.iter().map(|t| hx(&t.act)).collect::<Vec<_>>()));
+                m.insert("tips".into(), json!(cites));
                 m.insert("objects".into(), json!(objects));
                 m.insert("agreement".into(), json!(hx(&c.agreement)));
-                // Out of verifier2's scope: whether the collective holds a stake (N9).
-                // The generator's collective holds its work where it owns one, and
-                // nothing in the stories releases it.
-                m.insert("holds_nothing".into(), json!(!cw.shape.owns_work));
+                // Out of verifier2's scope: whether the collective holds a stake (N9),
+                // read here as the library reads it at the closing's line (the
+                // complete transfers its history cites applied).
+                m.insert("holds_nothing".into(), json!(cw.view().closing(&id).map(|e| e.holds.is_empty()).unwrap_or(!cw.shape.owns_work)));
                 acts.push(J::Object(m));
             }
             continue;
         }
+        // Acts for the collective: a device of the drafter's, or a grantee
+        // acting under its grant, naming the collective (rule 58). Members'
+        // signature acts on its clones cite its chain too: not actions.
+        let grant = grant_of(h);
+        let device = devices.get(&id).copied();
+        let for_collective = for_col && (device.is_some() || grant.is_some());
+        if for_col && !for_collective && !(h.inside.spec == mirs().agreements && h.inside.type_ == agreements::types::SIGNATURE) {
+            skipped.push(json!({"id": hx(&id), "why": "names the collective, signed by neither a device of it nor a grantee", "signer": hx(&signer)}));
+            continue;
+        }
         // Creditors' receipts and releases.
-        if signer != col && h.inside.spec == mirs().money {
+        if !for_collective && h.inside.spec == mirs().money {
             match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Receipt(r)) if cw.debts.contains(&r.fulfils) => {
                     acts.push(json!({"id": hx(&id), "order": order.get(&id).copied().unwrap_or(0), "type": "payment", "signer": hx(&signer), "payee": hx(&r.payee), "obligation": hx(&r.fulfils), "amount": r.amount.value, "valid": valid}));
@@ -214,14 +237,13 @@ fn story_json(cw: &ColWorld) -> J {
             }
             continue;
         }
-        if signer != col {
+        if !for_collective {
             continue;
         }
-        // Acts in the collective's name: its own key's and its grant keys'.
-        let grant = grant_of(h);
+        // Acts in the collective's name: its devices' and its grantees'.
         let strand = match grant {
             Some(g) => format!("{}/key", hx(&g)),
-            None => format!("C/d{}", devices.get(&id).copied().unwrap_or(9)),
+            None => format!("C/d{}", device.unwrap_or(9)),
         };
         let info = cw.info.get(&id);
         let lane = cw.shape.lane.is_some();
@@ -234,12 +256,12 @@ fn story_json(cw: &ColWorld) -> J {
         } else if h.inside.spec == mirs().agreements {
             match h.inside.type_ {
                 agreements::types::RECORD => {
-                    // A record that does not decode (the generator's record signed with
-                    // a grant key names a departure that is no act): still an act on
-                    // its strand, with no tips and no clone.
-                    let r = agreements::Record::decode(&h.inside).unwrap_or(agreements::Record { clone: None, signatures: None, kept: vec![], registers: None });
+                    // A record that does not decode: still an act on its strand, with
+                    // no clone.
+                    let r = agreements::Record::decode(&h.inside).unwrap_or(agreements::Record { clone: None, signatures: None, registers: None });
+                    // A record keeps no tips: it cites the collective's line in
+                    // its objects (Agreements, "Record (type 17)").
                     let mut e = Map::new();
-                    e.insert("tips".into(), json!(r.kept.iter().map(|t| hx(&t.act)).collect::<Vec<_>>()));
                     if let Some(c) = r.clone {
                         e.insert("clone".into(), json!(hx(&c)));
                     }
@@ -280,6 +302,9 @@ fn story_json(cw: &ColWorld) -> J {
                 // the generator's acknowledgement of acts (Agreements draft 14,
                 // F303: what a closing relies on); exported as any action.
                 agreements::new_types::LIVENESS => ("publication", Map::new()),
+                // The collective's publication of its work (type 6): an
+                // action of the collective, exported as any action.
+                agreements::types::PUBLICATION => ("publication", Map::new()),
                 other => {
                     skipped.push(json!({"id": hx(&id), "why": format!("law type {other}"), "grant": grant.map(|g| hx(&g))}));
                     continue;
@@ -316,6 +341,16 @@ fn story_json(cw: &ColWorld) -> J {
             continue;
         };
         let mut m = base(type_, strand);
+        // A device's act is drafted by member 0 with their own key: the
+        // drafter's act is their signature (rule 58), counted beside the
+        // signature acts naming it.
+        if grant.is_none() {
+            let mut s: Vec<String> = m.get("sigs").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();
+            if !s.contains(&hx(&signer)) {
+                s.push(hx(&signer));
+            }
+            m.insert("sigs".into(), json!(s));
+        }
         for (k, val) in extra {
             m.insert(k, val);
         }
@@ -402,7 +437,9 @@ fn ref_json(cw: &ColWorld, story: &J) -> J {
         let counts = match t {
             "genesis" => true,
             "obligation" => lv.obligation_binds(&id).ok().flatten() == Some(true),
-            "record" => lv.record(&col, &id).map(|r| r.line).unwrap_or(false) && after.is_none() && a.get("grant").is_none(),
+            // `after_closing` reads the act's signer, a member for a keyless
+            // collective's record: the consent's `Closed` is the collective's.
+            "record" => lv.record(&col, &id).map(|r| r.line).unwrap_or(false) && after.is_none() && !matches!(consent, Ok(Consent::Closed { .. })) && a.get("grant").is_none(),
             _ if a.get("grant").is_some() => valid && c && backing.as_ref().map(|b| binds(b)).unwrap_or(false),
             _ => valid && c && after.is_none(),
         };

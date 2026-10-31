@@ -13,6 +13,7 @@ import type { ChainSource } from '../src/chain.ts';
 import type { InvoiceLink, LinkConfig } from '../src/link.ts';
 import { serve, DOMAIN, type Running } from '../src/server.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
+import { MIRS } from '../../genesis/src/core.ts';
 
 export { start, type Relay };
 
@@ -109,24 +110,35 @@ export async function founded(H: string[], R: string[], e: Awaited<ReturnType<ty
   return { f, ana, bo, col: fd.acts[0] as string };
 }
 
+/**
+ * The founding grid of a collective whose money A and iPa act for (round 8:
+ * the layers renumbered, Text 1, Envelopes 2, Money 3, Agreements 4,
+ * Development 5; a whole layer is the grid's layer row, a finer area names
+ * its kinds of act): the Money layer A and iPa together; a finer Money area
+ * of obligations, either alone up to 10 000 an act (the grant limits cMIP),
+ * two above; Development iPh alone; even shares.
+ */
+export function moneyGrid(A: string, iPa: string, iPh: string) {
+  const all = [A, iPa, iPh];
+  return {
+    members: all,
+    constitution: { holders: all, number: 3 },
+    chainKey: 2,
+    absence: 2,
+    layers: { 1: { holders: all, number: 1 }, 2: { holders: all, number: 1 }, 3: { holders: [A, iPa], number: 2 }, 4: { holders: all, number: 3 }, 5: { holders: [iPh], number: 1 } },
+    areas: [{ name: 'Money', layer: 3, kinds: [`${MIRS.money}:1`], holders: [A, iPa], number: 1, cap: 10_000 }],
+    clone: 2,
+    shares: { [A]: 34, [iPa]: 33, [iPh]: 33 },
+  };
+}
+
 /** A collective founded from Edubba's grid whose Money area its founder A holds (one key; above 10 000 an act, two), as the collective test founds one. */
 export async function moneyCollective(H: string[], R: string[], e: Awaited<ReturnType<typeof edubba>>) {
   const A = await dub(H, R);
   const iPa = await dub(H, R);
   const iPh = await dub(H, R);
   await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
-  const grid = {
-    members: [A.id, iPa.id, iPh.id],
-    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
-    chainKey: 2,
-    absence: 2,
-    areas: [
-      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
-      { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
-      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
-    ],
-    clone: 2,
-  };
+  const grid = moneyGrid(A.id, iPa.id, iPh.id);
   const rv = await e.c.ask<any>('real found prepare', { name: 'Collective Y', founder: A.id, members: [iPa.id, iPh.id], grid });
   const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   for (const m of [iPa, iPh]) {
@@ -171,4 +183,20 @@ export function testLink(node: { invoice(sat: number, hash: string): { invoice: 
     },
   });
   return { factory, preimages, made, config: { rest: 'https://127.0.0.1:1', macaroon: 'ab'.repeat(16), cert: 'test' } };
+}
+
+/**
+ * Wait until a page's element shows text matching `re` (Part 4: never a
+ * read-once look at a page that fills later): polled, failing after
+ * `timeout` with the last text read.
+ */
+export async function shows(l: { innerText(o?: { timeout?: number }): Promise<string> }, re: RegExp, timeout = 30_000): Promise<string> {
+  const end = Date.now() + timeout;
+  let last = '';
+  for (;;) {
+    last = await l.innerText({ timeout: 5_000 }).catch(() => last);
+    if (re.test(last)) return last;
+    if (Date.now() > end) assert.fail(`not shown within ${timeout / 1000} s: ${re}\nlast text: ${last.slice(-1500)}`);
+    await new Promise((r) => setTimeout(r, 200));
+  }
 }

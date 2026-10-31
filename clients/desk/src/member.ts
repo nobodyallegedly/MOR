@@ -26,7 +26,7 @@ import type { Store } from './store.ts';
 import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
 
 /** The rules Edubba runs (H93): money (purchases, drafts for Damgar, its agents' lanes), people, names, corrections, collectives, agents' memory. */
-export const EDUBBA_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys', 'agent-memory');
+export const EDUBBA_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'agent-memory');
 
 const HEX64 = /^[0-9a-f]{64}$/;
 

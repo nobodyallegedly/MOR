@@ -352,7 +352,7 @@ impl Spec {
         if kind == MIP && predecessor.is_none() {
             return no("field 8, the MIR or MIP a MIP forks, or the MICS document for a new layer, is required for a MIP (F325, F328 Q10)");
         }
-        let layers = get(10).map(|x| ascending(x, "field 10, the layers", &[0, 1, 2, 3], false)).transpose()?;
+        let layers = get(10).map(|x| ascending(x, "field 10, the layers", &[0, 1, 2, 3, 4], false)).transpose()?;
         let checks_delivery = match get(12) {
             None => false,
             Some(Value::Bool(true)) if kind == CMIP => true,

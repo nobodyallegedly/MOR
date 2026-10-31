@@ -111,11 +111,12 @@ test('the launcher starts the program and gives a link that pairs by itself', as
   const run = promisify(execFile);
   const env = { ...process.env, MOR_NO_BROWSER: '1' };
   const port = String(20000 + Math.floor(Math.random() * 20000));
-  const first = await run(process.execPath, ['--import', 'tsx', cli, 'open', '--dir', dir, '--port', port], { env });
-  const link = first.stdout.trim();
-  assert.match(link, new RegExp(`^http://127\\.0\\.0\\.1:${port}/#pair=[0-9A-Z]{5}(-[0-9A-Z]{5}){3}$`));
-  const pid = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')).pid as number;
+  // Part 4: the program it starts is stopped whatever the outcome, the first check included.
   try {
+    const first = await run(process.execPath, ['--import', 'tsx', cli, 'open', '--dir', dir, '--port', port], { env });
+    const link = first.stdout.trim();
+    assert.match(link, new RegExp(`^http://127\\.0\\.0\\.1:${port}/#pair=[0-9A-Z]{5}(-[0-9A-Z]{5}){3}$`));
+    const pid = JSON.parse(readFileSync(join(dir, 'run.json'), 'utf8')).pid as number;
     // A second launch finds it running and gives a fresh link.
     const second = await run(process.execPath, ['--import', 'tsx', cli, 'open', '--dir', dir, '--port', port], { env });
     assert.notEqual(second.stdout.trim(), link);
@@ -158,6 +159,7 @@ test('stop never stops a process this program did not start: a stale run file, o
     }
   } finally {
     other.close();
+    other.closeAllConnections();
     stranger.kill();
   }
 });

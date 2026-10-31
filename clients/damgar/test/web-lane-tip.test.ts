@@ -17,7 +17,7 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
-import { closeAll, damgar, dub, start, type Relay } from './world.ts';
+import { closeAll, damgar, dub, shows, start, type Relay } from './world.ts';
 import { TestNode } from './node.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
 
@@ -84,11 +84,15 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every browser, app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await browser?.close();
-  await closeAll();
-  for (const s of sites) await new Promise((r) => s.close(r));
-  for (const r of [...(homes ?? []), relay]) await r?.stop();
+  try {
+    await browser?.close().catch(() => undefined);
+    await closeAll();
+  } finally {
+    for (const s of sites) await new Promise((r) => s.close(r));
+    for (const r of [...(homes ?? []), relay]) await r?.stop().catch(() => undefined);
+  }
 });
 
 async function open(url: string, size: { width: number; height: number }): Promise<Page> {
@@ -215,14 +219,15 @@ test('H107: a tip under Dub’s lane, from Dub’s and Damgar’s web clients on
     console.error((await bp.locator('body').innerText()).slice(-2000));
     throw e;
   });
-  const received = await bp.locator('#pane').innerText();
+  const received = await shows(bp.locator('#pane'), /280 regtest satoshis/, 60_000);
   assert.match(received, /280 regtest satoshis/);
   await shot(bp, 'bob-to-receive');
 
   // Alice's Damgar: under the lanes, each card says its stage first; nothing reads as paid.
   await go(ap, 'account', 'under');
   await sees(ap, '#pane .k-act', 'under the lanes');
-  const under = await ap.locator('#pane').innerText();
+  // Waited for, not read once: the cards fill as the look answers (Part 4).
+  const under = await shows(ap.locator('#pane'), /Paid: none yet · Asked, not paid yet: 2, 560 regtest satoshis/, 60_000);
   assert.match(under, /Asked: waiting for Bob’s invoice/);
   assert.doesNotMatch(under, /Paid: its claim/);
   assert.match(under, /Paid: none yet · Asked, not paid yet: 2, 560 regtest satoshis/);

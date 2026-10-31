@@ -42,11 +42,9 @@ impl Change {
     pub fn tier(&self) -> Tier {
         match self {
             Change::Field(f) => match f {
-                // 25, the relays, is withdrawn (F128) and never reused.
-                0 | 1 | 5 | 12 | 18 | 19 | 22 => Tier::Constitutional,
-                // 29, the split service's backups (F250): judicial, as
-                // field 14, able to move money.
-                3 | 6 | 9 | 10 | 13 | 14 | 16 | 21 | 29 => Tier::Judicial,
+                // 19, the layers' rules, and 34, the areas: who decides.
+                0 | 1 | 5 | 12 | 18 | 19 | 22 | 34 => Tier::Constitutional,
+                3 | 6 | 9 | 13 | 16 | 21 => Tier::Judicial,
                 // 7, 8, 17; 24, the release rule, in no area: the clone
                 // rule, with every owner's signature besides (N8).
                 _ => Tier::Operational,
@@ -78,7 +76,7 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     // F307): the clone rule, and every holder of the stake whose entry
     // changes (rule 45). 31 and 32 each version states for itself, never
     // compared (F309, F316).
-    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD, super::formats::BACKUPS_FIELD, 30]) {
+    for n in (0..=24u64).filter(|n| *n != 23).chain([30, 34]) {
         if n == 16 && removal_only(parent, clone) {
             // M1 (F124): the seat part of a removed member's plan goes with
             // the removal, as their areas do; the stake part stays.
@@ -153,71 +151,72 @@ fn removal_only(parent: &Terms, clone: &Terms) -> bool {
     expected == got
 }
 
-/// Where an operational change lies: the parent's areas it lies in, and
-/// whether some part of it lies in no area.
+/// Where an operational change lies (rule 63): the parent's layer rules
+/// and areas it lies under, as the powers they are, and whether some part
+/// of it lies under neither.
 fn lies_in(
     parent: &Terms,
     clone: &Terms,
     change: &Change,
     ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>,
-) -> R<(Vec<u64>, bool)> {
-    let mut areas = vec![];
+) -> R<(Vec<Power>, bool)> {
+    let mut powers = vec![];
     let mut nowhere = false;
-    let lane = |layer: u64, areas: &mut Vec<u64>, nowhere: &mut bool| match parent.lane(layer)
-    {
-        Some(a) => areas.push(a.id),
-        None => *nowhere = true,
+    // A layer's rule (field 19), for layers 1 to 5; Identity's tasks lie
+    // under none, a collective's Identity acts being its chain acts (rule
+    // 60): the clone rule (reading).
+    let mut layer_rule = |l: u64, powers: &mut Vec<Power>| {
+        if (layers::TEXT..=layers::DEVELOPMENT).contains(&l) {
+            powers.push(Power::Layer(l));
+        } else {
+            nowhere = true;
+        }
     };
     match change {
         Change::Task(t) => {
             let layer = task_layer(*t).expect("tasks are checked");
-            // The task's lane, or an area naming the task by a field
-            // reference (reading B4, listed in the report).
-            let by_ref = parent.areas().iter().find(|a| {
-                a.fields
-                    .iter()
-                    .flatten()
-                    .any(|f| *f == FieldRef::Task(*t))
-            });
-            match (parent.lane(layer), by_ref) {
-                (Some(a), _) | (None, Some(a)) => areas.push(a.id),
-                (None, None) => nowhere = true,
+            // An area naming the task by a field reference, or else the
+            // task's layer rule.
+            let by_ref = parent.areas().iter().find(|a| a.fields.iter().flatten().any(|f| *f == FieldRef::Task(*t)));
+            match by_ref {
+                Some(a) => powers.push(Power::Area(a.id)),
+                None => layer_rule(layer, &mut powers),
             }
-            // R4: a specification the clone also names for a task of another
-            // layer answers to that layer's lane too.
+            // A specification the clone also names for a task of another
+            // layer answers to that layer's rule too.
             if let Some(spec) = clone.cmip(*t) {
                 for (t2, h) in &clone.cmips {
                     if h == spec {
                         let l2 = task_layer(*t2).expect("tasks are checked");
                         if l2 != layer {
-                            lane(l2, &mut areas, &mut nowhere);
+                            layer_rule(l2, &mut powers);
                         }
                     }
                 }
             }
         }
         Change::Extension(e) => {
-            lane(layers::DEVELOPMENT, &mut areas, &mut nowhere);
+            layer_rule(layers::DEVELOPMENT, &mut powers);
             for l in ext_layers(e)? {
-                lane(l, &mut areas, &mut nowhere);
+                layer_rule(l, &mut powers);
             }
         }
         Change::Words(id) => match parent.area(*id) {
-            Some(a) => areas.push(a.id),
-            None => nowhere = true,
+            Some(a) => powers.push(Power::Area(a.id)),
+            None => layer_rule(0, &mut powers),
         },
         Change::Field(f) => match parent
             .areas()
             .iter()
             .find(|a| a.fields.iter().flatten().any(|x| *x == FieldRef::Field(*f)))
         {
-            Some(a) => areas.push(a.id),
-            None => nowhere = true,
+            Some(a) => powers.push(Power::Area(a.id)),
+            None => layer_rule(0, &mut powers),
         },
     }
-    areas.sort();
-    areas.dedup();
-    Ok((areas, nowhere))
+    powers.sort_by_key(|p| p.encoding());
+    powers.dedup();
+    Ok((powers, nowhere))
 }
 
 /// The powers a rollback's mark names (rule 37d, F185): the constitutional
@@ -264,7 +263,7 @@ pub fn powers_needed(
         out.sort_by_key(|p| p.encoding());
         return Ok(out);
     }
-    let mut areas: Vec<u64> = vec![];
+    let mut areas: Vec<Power> = vec![];
     let mut clone_rule = ch.is_empty();
     let mut judicial = false;
     for c in &ch {
@@ -278,13 +277,13 @@ pub fn powers_needed(
             Tier::Constitutional => unreachable!(),
         }
     }
-    areas.sort();
+    areas.sort_by_key(|p| p.encoding());
     areas.dedup();
     let mut out: Vec<Power> = vec![];
     if clone_rule {
         out.push(Power::Clone);
     }
-    out.extend(areas.into_iter().map(Power::Area));
+    out.extend(areas);
     if judicial {
         out.push(Power::Judicial);
     }

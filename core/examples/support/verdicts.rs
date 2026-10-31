@@ -10,7 +10,7 @@
 use super::common::*;
 use mor_core::act::Object;
 use mor_core::agreements::{
-    self, outcomes, Abandonment, Area, Authority, AgreementsView, Backing, Field4, Grant, Holding, KeyGrammar, Keepers, Kind, Mirs, Recovery, Rule,
+    self, outcomes, Abandonment, Authority, AgreementsView, Backing, Field4, Grant, Holding, KeyGrammar, Keepers, Kind, Mirs, Recovery, Rule,
     Terms,
 };
 use mor_core::cbor::{self, Value};
@@ -31,6 +31,9 @@ fn spec(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
 
+#[path = "scenario9.rs"]
+mod scenario9;
+
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mirs {
@@ -47,10 +50,13 @@ fn home_of(p: &Person) -> Home {
     home(p)
 }
 
-/// A payee pointer of `p`, held.
+/// A payee pointer of `p`, held; for a member's device acting for a
+/// collective, the collective's pointer (Money, "A collective's Money
+/// acts").
 fn pointer_act(w: &mut World, p: &mut Person, address: &[u8]) -> Hash {
     let rail = spec("a rail Module");
-    let x = Fin::PayeePointer(money::PayeePointer { payee: p.id, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: address.to_vec() }] });
+    let payee = p.cite.as_ref().map(|(c, _)| *c).unwrap_or(p.id);
+    let x = Fin::PayeePointer(money::PayeePointer { payee, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: address.to_vec() }] });
     let a = w.everyday_act(p, mirs().money, 0, x.to_map(), None, None);
     w.add(&a)
 }
@@ -154,8 +160,6 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         parent: None,
         grammar: None,
         arbitrators: None,
-        split_grant: None,
-        payee_grants: None,
         extensions: None,
         succession: None,
         constitutional: None,
@@ -163,7 +167,9 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         area_words: None,
         chain: None,
         departed: None,
+        layers: None,
         stakes: None,
+        target: None,
         forked_from: None,
         release_rule: None,
         settles: None,
@@ -171,7 +177,6 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         plan: None,
         refund: None,
         fees: None,
-        backups: None,
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
@@ -188,28 +193,37 @@ fn collective_terms(ids: &[Hash], authority: Hash, keeper: Hash, money_holders: 
     t.clone = Rule::Threshold(2);
     t.abandonment = Some(Abandonment { authority: Authority::Named(authority), outcomes: vec![outcomes::VOICE_REMOVED], proof: None });
     t.grammar = Some(KeyGrammar {
-        signing: Holding::Shares { threshold: 2, members: ids.to_vec() },
         chain_key: Holding::Shares { threshold: ids.len() as u64, members: ids.to_vec() },
         recovery: Some(Recovery::Escrow { authority }),
     });
-    t.areas = Some(vec![
-        Area {
-            name: "Releases".into(),
-            holders: vec![ids[0]],
-            threshold: 1,
-            kinds: Some(vec![Kind::Type { spec: m.envelopes, type_: 0 }, Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT)]),
-            fields: None,
-            id: 1,
-            limits: None,
-        },
-        Area { name: "Money".into(), holders: money_holders, threshold: money, kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), fields: None, id: 2, limits: None },
+    // The collective's own stake (field 7, target [1, null]): its members'
+    // shares.
+    t.target = Some(agreements::Target::Collective);
+    let mut shares = vec![1_000_000 / ids.len() as u64; ids.len()];
+    shares[0] += 1_000_000 - shares.iter().sum::<u64>();
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: ids.iter().copied().zip(shares).map(|(h, n)| (agreements::Who::Id(h), n)).collect() }]);
+    // Who acts in each layer (rule 60): Ana in Text and Envelopes, the
+    // Money holders together, or any `money` of every party; any one
+    // member in Agreements and Development.
+    let _ = m;
+    let money_rule = if money_holders.len() as u64 == money { Rule::Named(money_holders) } else { Rule::Threshold(money) };
+    t.layers = Some(vec![
+        (agreements::layers::TEXT, Rule::Named(vec![ids[0]])),
+        (agreements::layers::ENVELOPES, Rule::Named(vec![ids[0]])),
+        (agreements::layers::MONEY, money_rule),
+        (agreements::layers::AGREEMENTS, Rule::Threshold(1)),
+        (agreements::layers::DEVELOPMENT, Rule::Threshold(1)),
     ]);
     t
 }
 
-/// A collective: its members, its devices (one), the founding signed by all.
+/// A collective: its members; its identity, keyless (Identity rule 1), for
+/// its rotations; a device of Cy's acting for it (Agreements rule 58), Cy
+/// holding nothing in particular; the founding signed by all.
 struct Col {
     m: Vec<Person>,
+    id: Hash,
+    chain: Person,
     c: Person,
     founding: Hash,
 }
@@ -224,27 +238,21 @@ fn collective(w: &mut World, money_holders: &[usize], money: u64) -> Col {
     for p in m.iter_mut() {
         sign(w, p, &founding);
     }
-    let mut c = w.genesis_with("a collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
-    c.cite = Some((c.id, vec![c.id]));
-    Col { m, c, founding }
+    let chain = w.genesis_with("a collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
+    let id = chain.id;
+    let c = m[2].acting_for(id, vec![id]);
+    Col { m, id, chain, c, founding }
 }
 
-/// A member's key, named by their signature of the founding.
-fn member_key(w: &mut World, col: &mut Col, by: usize, name: &str) -> Person {
-    let k = schnorr(&format!("{name}/member key"), 0);
-    let f = col.founding;
-    let s = ag_act(w, &mut col.m[by], agreements::types::SIGNATURE, agreements::signature_payload_with_key(&f, &signing_key(&k)), obj(f));
-    let mut p = col.c.clone();
-    p.binding = s;
-    p.sign = k;
-    p.seq = vec![];
-    p
+/// A member's device acting for the collective, citing its genesis.
+fn member_for(col: &Col, by: usize) -> Person {
+    col.m[by].acting_for(col.id, vec![col.id])
 }
 
 /// A grant key of a person: their grant naming the grantee and its key.
 fn grant_key_person(w: &mut World, grantor: &mut Person, grantee: &mut Person, kinds: Vec<Kind>) -> (Hash, Person) {
     let k = schnorr(&format!("{}/grant key", grantee.name), 0);
-    let grant = Grant { grantee: grantee.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: None, kinds: Some(kinds), reinstates: None, by_this: false, key: signing_key(&k) };
+    let grant = Grant { grantee: grantee.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(kinds), reinstates: None, key: Some(signing_key(&k)) };
     let g = ag_act(w, grantor, agreements::types::GRANT, grant.to_map(), None);
     sign(w, grantee, &g);
     let mut s = grantor.clone();
@@ -262,6 +270,55 @@ fn keep(w: &mut World, keeper: &mut Person, act: Hash, signer: Hash) -> Hash {
 fn text_act(w: &mut World, p: &mut Person, text: &str, objects: Option<Vec<Object>>) -> Hash {
     let a = w.everyday_act(p, mirs().text, 0, vec![(Value::Uint(0), Value::Text(text.into()))], objects, None);
     w.add(&a)
+}
+
+/// A claim (Agreements type 3) of `work` by its creators, drafted by
+/// `by` (the first creator); public. Its id.
+fn claim_act(w: &mut World, by: &mut Person, creators: &[Hash], work: Hash) -> Hash {
+    let mut creators = creators.to_vec();
+    creators.sort();
+    let c = agreements::WorkClaim { work, creators, commitment: None };
+    ag_act(w, by, agreements::types::CLAIM, c.to_map(), None)
+}
+
+/// A work's ownership agreement on `claim` (rule 8): the deal's terms with
+/// target [0, claim] (field 33) and its one stake.
+fn owning(t: &mut Terms, claim: Hash, holders: &[(Hash, u64)]) {
+    t.target = Some(agreements::Target::Claim(claim));
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(claim), holders: holders.iter().map(|(h, n)| (agreements::Who::Id(*h), *n)).collect() }]);
+}
+
+/// A publication (type 6) of the owners `owners` selling `sold`, `service`
+/// its split service, drafted by `drafter` (a party of the ownership
+/// agreement), with no partner. Its id; the other parties sign it apart.
+fn owners_publication(w: &mut World, drafter: &mut Person, owners: Hash, service: Hash, sold: Vec<agreements::Sold>, words: &str) -> Hash {
+    let p = agreements::Publication {
+        sold: Some(sold),
+        owners: Some(owners),
+        partners: vec![],
+        service,
+        plan: test_plan(),
+        words: Some(words.into()),
+        time: None,
+        until: None,
+        refund: None,
+        cmips: vec![],
+        designated: None,
+        backups: vec![],
+        failed: None,
+    };
+    let a = w.everyday_act(drafter, mirs().agreements, agreements::types::PUBLICATION, p.to_map(), obj(owners), None);
+    w.add(&a)
+}
+
+/// A lone seller's offer (Agreements rules 11 and 12): its publication
+/// selling `sold` with its words, the seller its own split service, and the
+/// price tag the seller signs naming it (Money rule 18). The tag's id: a
+/// payment follows the tag.
+fn lone_offer(w: &mut World, seller: &mut Person, sold: Vec<agreements::Sold>, price: Amount, words: &str) -> Hash {
+    let p = lone_publication(w, seller, &mirs(), sold, Some(words));
+    let id = seller.id;
+    price_tag(w, seller, mirs().money, money::Priced::Publication(p), price.value, price.unit, id)
 }
 
 // ---------------------------------------------------------------- facts and questions
@@ -478,8 +535,10 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             json!(v.liveness(&h("act")).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" }))
         }
         // Whether terms are invalid against their parent and lineage (a false mark...).
+        // Terms refused outside their shape or by a rule read act by act
+        // (a single chain-key holder with no successor, rule 59) are invalid.
         "agreement invalid" => json!(match view(w).agreement(&h("act")).map(|a| a.invalid.is_some()) {
-            Ok(true) => "invalid",
+            Ok(true) | Err(agreements::AgreementsError::Check(_) | agreements::AgreementsError::Shape(_)) => "invalid",
             Ok(false) => "not invalid",
             Err(_) => "unknown",
         }),
@@ -537,6 +596,44 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.disagreements(&h("receiver")).map_or(json!("unknown"), |x| json!(x.len()))
         }
+        "price tag" => json!(match w.v.price_tag(&h("act")).map(|(_, c)| c) {
+            Some(mor_core::chain::TagCount::Counts) => "counts",
+            Some(mor_core::chain::TagCount::Nobodys(_)) => "nobody's offer",
+            Some(mor_core::chain::TagCount::Unknown(_)) | None => "unknown",
+        }),
+        // A stake transfer (Agreements rule 10): whether it takes effect, and
+        // the seller's payout receipts after its place, wrong receipts.
+        "transfer" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.transfer(&h("act")).map_or(json!("unknown"), |e| json!({ "effective": e.effective, "wrong_receipts": e.wrong_receipts.iter().map(|x| hx(x)).collect::<Vec<_>>() }))
+        }
+        // A split (rules 15 and 30): the holders and partners it pays other
+        // than its plan says; any breaks the plan.
+        "split" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.split(&h("act")).map_or(json!("unknown"), |e| {
+                let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hx(&x.holder)).collect();
+                m.sort();
+                m.dedup();
+                json!({ "mismatched": m })
+            })
+        }
+        // A record of a collective (rule 69): whether it is a line, and the
+        // clone it puts in force.
+        "record" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.record(&h("collective"), &h("act")).map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(|x| hx(&x)) }))
+        }
+        // Who owes a payment back, and how much (rule 11): the split service
+        // from what it holds, then each party in the share it received.
+        "owed back by" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.owed_back_by(&h("act")).map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hx(who), n])).collect::<Vec<_>>()))
+        }
         q => panic!("no such question: {q}"),
     }
 }
@@ -563,7 +660,11 @@ impl Out {
             acts.push(id);
         }
         let got = answer(w, &facts, &ask);
-        assert_eq!(got, expect, "{name}");
+        if std::env::var("VECTORS_ALL").is_ok() && got != expect {
+            eprintln!("MISMATCH {name}\n   got {got}\n   expected {expect}");
+        } else {
+            assert_eq!(got, expect, "{name}");
+        }
         let mut fj = facts.to_json();
         if !keys.is_empty() {
             fj["content_keys"] = J::Object(keys);
@@ -1006,6 +1107,7 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w, "a rotation built on a rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
         "The rotation it builds on lost its position for good; nothing it waits on can make it count.", Facts::default(), ask_status(&on_rival), json!("invalid"), None);
     s7g_identity(out);
+    scenario9::identity(out);
     s7g_development_identity(out);
 }
 
@@ -1033,7 +1135,7 @@ pub fn text(out: &mut Out) {
     let mut p = w.genesis("tom", vec![own_home()], None, None);
     let other = w.genesis("another identity", vec![own_home()], None, None);
     let elsewhere = text_act(&mut w, &mut p, "Naming another's chain.", Some(vec![Object { chain: other.id, predecessor: other.id }]));
-    out.case(&mut w, "a text act naming another identity's chain: invalid", "Text rule 14", "Its one object must name its own signer as chain.", Facts::default(), ask_status(&elsewhere), json!("invalid"), Some("text act format and rule 14 at a Text-only verifier"));
+    out.case(&mut w, "a text act naming another identity's chain: invalid", "Text rule 14", "Its one object names neither its signer (a grant key's pointer) nor a collective (a member's): the other identity's genesis declares no founding agreement.", Facts::default(), ask_status(&elsewhere), json!("invalid"), Some("at a Text-only verifier: unknown"));
     let mut w = World::new();
     let mut p = w.genesis("tom", vec![own_home()], None, None);
     let pid = p.id;
@@ -1042,25 +1144,31 @@ pub fn text(out: &mut Out) {
     // A collective's text, its one pointer to its own decision.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let cid = col.c.id;
+    let cid = col.id;
     let t = text_act(&mut w, &mut col.c, "The collective's notice.", Some(vec![Object { chain: cid, predecessor: cid }]));
-    out.case(&mut w, "a collective's text naming its own latest decision: valid", "Text rule 14, first case; Agreements rule 58", "Exactly one object, [collective, decision]: its genesis, a link of its own chain.", Facts::default(), ask_status(&t), json!("valid"), Some("at a Text-only verifier: unknown"));
-    // A member key's text, naming its version.
+    out.case(&mut w, "a member's text for the collective naming its latest decision: valid", "Text rule 14, second case; Agreements rule 58", "Exactly one object, [collective, decision]: the collective's genesis, a link of its identity chain; signed by Cy with his own key.", Facts::default(), ask_status(&t), json!("valid"), Some("at a Text-only verifier: unknown"));
+    // A text for the collective counts under the rule for Text (Ana's).
     let mut w = World::new();
-    let mut col = collective(&mut w, &[1], 1);
-    let cid = col.c.id;
+    let col = collective(&mut w, &[1], 1);
+    let cid = col.id;
     let f = col.founding;
-    let mut a = member_key(&mut w, &mut col, 0, "ana");
-    let sig = a.binding;
-    let good = text_act(&mut w, &mut a, "A text of the collective, by Ana's key.", Some(vec![Object { chain: cid, predecessor: f }]));
-    let bad = text_act(&mut w, &mut a, "Naming the signature act.", Some(vec![Object { chain: cid, predecessor: sig }]));
+    let mut a = member_for(&col, 0);
+    let good = text_act(&mut w, &mut a, "A text of the collective, by Ana.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    let mut cy = col.c.clone();
+    let cys = text_act(&mut w, &mut cy, "A text of the collective, by Cy alone.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    let bad = text_act(&mut w, &mut a, "Naming the founding terms as its decision.", Some(vec![Object { chain: cid, predecessor: f }]));
     let log = w.log.clone();
-    out.case(&mut w, "a member key's text naming the version that named the key: scoped, and it counts", "Text rule 14; Agreements rules 58 and 73", "The one object is [collective, the founding its binding's signature names]; Ana's area reaches texts.", Facts::default(), ask("consent counts", &good), json!(true), None);
+    out.case(&mut w, "a member's text for the collective, the rule for Text naming her: it counts", "Text rule 14; Agreements rules 58 and 60", "Ana signs with her own key, naming the collective and its genesis; the rule for Text is [2, [ana]].", Facts::default(), ask("consent counts", &good), json!(true), None);
+    let mut w1 = World::new();
+    for (a, _) in &log {
+        w1.add(a);
+    }
+    out.case(&mut w1, "the same text by a member the rule for Text does not name: it does not count", "Agreements rule 60", "Cy signs with his own key, naming the collective: valid as his act, not counted for the collective, the rule for Text being Ana's.", Facts::default(), ask("consent counts", &cys), json!(false), None);
     let mut w2 = World::new();
     for (a, _) in &log {
         w2.add(a);
     }
-    out.case(&mut w2, "a member key's text naming the signature act itself: invalid", "Text rule 14", "For a member key the object names the version, never the signature act.", Facts::default(), ask_status(&bad), json!("invalid"), None);
+    out.case(&mut w2, "a member's text for the collective naming an act that is no decision of it: invalid", "Text rule 14", "The predecessor must be a decision of the collective: a link of its identity chain, a record or a grant for it; its founding terms are none.", Facts::default(), ask_status(&bad), json!("invalid"), None);
     s7g_text(out);
 }
 
@@ -1115,6 +1223,50 @@ fn reseal(w: &mut World, p: &Person, inside: &mor_core::act::Inside) -> mor_core
 }
 
 pub fn money(out: &mut Out) {
+    // Rule 18: the price tag (type 5), on a bare bake and under a publication.
+    {
+        use mor_core::money::{PriceTag, Priced};
+        let mut w = World::new();
+        let mut up = w.genesis("an uploader", vec![own_home()], None, None);
+        let mut fan = w.genesis("a fan who re-tags", vec![own_home()], None, None);
+        let mut svc = w.genesis("a split service", vec![own_home()], None, None);
+        let unit = spec("the sat unit, test value");
+        let tag = |priced: Priced, version: u64, previous: Option<Hash>, price: Option<u64>, payee: Hash| {
+            Fin::PriceTag(PriceTag { priced, version, previous, price: price.map(|v| money::Amount { unit, value: v }), payee }).to_map()
+        };
+        let bake = w.everyday_act(&mut up, mirs().envelopes, mor_core::envelopes::types::BAKE, publication(vec![]), None, None);
+        let bake_id = bake.id();
+        let (up_id, fan_id, svc_id) = (up.id, fan.id, svc.id);
+        let own = { let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 1, None, Some(100), up_id), None, None); w.add(&a) };
+        out.case(&mut w, "a price tag on a bare bake this verifier does not hold: unknown", "Money rule 18", "Only the bake's uploader's tag counts on a bare bake: who uploaded it is read from the bake.", Facts::default(), ask("price tag", &own), json!("unknown"), None);
+        w.add(&bake);
+        let other = { let a = w.everyday_act(&mut fan, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 1, None, Some(50), fan_id), None, None); w.add(&a) };
+        let under = { let a = w.everyday_act(&mut svc, mirs().money, money::types::PRICE_TAG, tag(Priced::Publication(spec("a publication's founding version, test value")), 1, None, Some(100), svc_id), None, None); w.add(&a) };
+        let v1 = own;
+        let v2 = { let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 2, Some(v1), None, up_id), Some(vec![Object { chain: v1, predecessor: v1 }]), None); w.add(&a) };
+        let stranger_v2 = { let a = w.everyday_act(&mut fan, mirs().money, money::types::PRICE_TAG, tag(Priced::Bake(bake_id), 2, Some(v1), Some(1), fan_id), Some(vec![Object { chain: v1, predecessor: v1 }]), None); w.add(&a) };
+        let both = {
+            let mut m = tag(Priced::Bake(bake_id), 1, None, Some(1), up_id);
+            m.push((Value::Uint(1), Value::Bytes(bake_id.to_vec())));
+            m.sort_by(|a, c| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&c.0)));
+            let a = w.everyday_act(&mut up, mirs().money, money::types::PRICE_TAG, m, None, None);
+            w.add(&a)
+        };
+        let log = w.log.clone();
+        let fresh = |log: &Vec<(mor_core::act::Act, Option<[u8; 32]>)>| {
+            let mut w = World::new();
+            for (a, _) in log {
+                w.add(a);
+            }
+            w
+        };
+        out.case(&mut w, "the uploader's price tag on its bare bake: counts", "Money rule 18", "On a bare bake, the uploader's tag is the offer: a payment naming it is a payment of the uploader's price.", Facts::default(), ask("price tag", &own), json!("counts"), None);
+        out.case(&mut fresh(&log), "another identity's price tag on someone's bare bake: nobody's offer", "Money rule 18", "Only the uploader's tag counts on a bare bake.", Facts::default(), ask("price tag", &other), json!("nobody's offer"), None);
+        out.case(&mut fresh(&log), "a price tag under a publication, to a verifier reading Money: unknown", "Money rule 18; Agreements rule 12", "Who may sign it, the publication's split service or the party it designates, is Agreements' to judge.", Facts::default(), ask("price tag", &under), json!("unknown"), None);
+        out.case(&mut fresh(&log), "the uploader's second version with no price, naming [first, previous]: valid, withdrawing the tag", "Money rule 18; \"Price tag (type 5)\"", "A version with no price withdraws the tag, by its signer alone.", Facts::default(), ask_status(&v2), json!("valid"), None);
+        out.case(&mut fresh(&log), "a second version by another signer: invalid", "Money, \"Price tag (type 5)\"", "A later version is signed by the same signer.", Facts::default(), ask_status(&stranger_v2), json!("invalid"), None);
+        out.case(&mut fresh(&log), "a price tag naming a bake and a publication: invalid", "Money, \"Price tag (type 5)\"", "Exactly one of fields 0 and 1.", Facts::default(), ask_status(&both), json!("invalid"), None);
+    }
     let unit = spec("a test unit (regtest satoshi)");
     let rail = spec("a rail Module");
     // Receipt and claim of one payment, agreeing; and disagreeing.
@@ -1183,8 +1335,7 @@ pub fn money(out: &mut Out) {
     let mut fan = w.genesis("a fan", vec![own_home()], None, None);
     let name = { let v = mor_core::envelopes::vow::Vow { words: "A concert in the hall, 12 December".into(), cmip: None };
         let a = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
-    let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Vow(name)], price: Amount { unit, value: 300 }, paid: None, words: Some("One seat.".into()), until: None, time: None, refund: None };
-    let offer = ag_act(&mut w, &mut club, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let offer = lone_offer(&mut w, &mut club, vec![agreements::Sold::Vow(name)], Amount { unit, value: 300 }, "One seat.");
     let seat = b"the fan pays for a seat".to_vec();
     let rec = { let r = Fin::Receipt(Receipt { rail, proof: seat.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
@@ -1272,11 +1423,11 @@ pub fn money(out: &mut Out) {
     // A member key's receipt for the collective.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let cid = col.c.id;
+    let cid = col.id;
     let ptr = pointer_act(&mut w, &mut col.c, b"the collective's address");
     sign(&mut w, &mut col.m[1], &ptr);
-    let mut ben = member_key(&mut w, &mut col, 1, "ben");
-    let mut cy = member_key(&mut w, &mut col, 2, "cy");
+    let mut ben = member_for(&col, 1);
+    let mut cy = member_for(&col, 2);
     let rec = |w: &mut World, k: &mut Person| {
         let r = Fin::Receipt(Receipt { rail, proof: b"q".to_vec(), payer: None, payee: cid, amount: Amount { unit, value: 7 }, fulfils: ptr, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(k, mirs().money, 2, r.to_map(), None, None);
@@ -1285,12 +1436,12 @@ pub fn money(out: &mut Out) {
     let by_ben = rec(&mut w, &mut ben);
     let by_cy = rec(&mut w, &mut cy);
     let log = w.log.clone();
-    out.case(&mut w, "a collective's receipt signed with the member key of its Money area's holder: counts", "Money rule 7; Agreements rules 60 and 73", "Ben holds the area reaching Money, at one signature.", Facts::default(), ask("consent counts", &by_ben), json!(true), None);
+    out.case(&mut w, "a collective's receipt signed by the member the rule for Money names, with his own key: counts", "Money, \"A collective's Money acts\"; Agreements rules 58 and 60", "Ben signs it with his own key, naming the collective; the rule for Money is [2, [ben]].", Facts::default(), ask("consent counts", &by_ben), json!(true), None);
     let mut w2 = World::new();
     for (a, _) in &log {
         w2.add(a);
     }
-    out.case(&mut w2, "the same signed with the member key of a member holding no Money area: does not count", "Money rule 7; Agreements rule 73", "Cy's key reaches no area that reaches Money.", Facts::default(), ask("consent counts", &by_cy), json!(false), None);
+    out.case(&mut w2, "the same signed by a member the rule for Money does not name: does not count", "Agreements rule 60", "Cy signs it with his own key, naming the collective; he is not counted for Money.", Facts::default(), ask("consent counts", &by_cy), json!(false), None);
     // A payment to oneself naming one's genesis: fulfils nothing in Money's sense.
     let mut w = World::new();
     let mut payee = w.genesis("a payee paying itself", vec![own_home()], None, None);
@@ -1305,39 +1456,33 @@ pub fn money(out: &mut Out) {
     out.case(&mut w, "a payment to oneself naming one's own genesis: valid, and it pays no obligation", "Money, \"What a payment fulfils\"", "Field 5 names the identity's genesis, an act to which no rule of Money or Agreements gives a payment following it a meaning, so the payment fulfils nothing in Money's sense; the debtor's obligation of the same amount stays unpaid.",
         facts, ask("paid toward", &oid), json!(0), None);
 
-    // A deal's payments go where the payee's own grant in the deal sends them (Money rule 4; Agreements rules 15 and 17).
+    // A publication's payments go to its split service, the tag's payee, at its own pointer (Money rule 4; Agreements rule 11).
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
-    let mut svc = w.genesis("the deal's split service", vec![own_home()], None, None);
-    let mut backup = w.genesis("the deal's backup service", vec![own_home()], None, None);
+    let mut svc = w.genesis("the publication's split service", vec![own_home()], None, None);
     let mut buyer = w.genesis("a buyer", vec![own_home()], None, None);
-    let to_service = |w: &mut World, grantor: &mut Person, service: &mut Person| {
-        let k = schnorr(&format!("{} for {}", service.name, grantor.name), 0);
-        let g = Grant { grantee: service.id, scope: 1, agreements: None, this_agreement: true, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this: false, key: signing_key(&k) };
-        let id = ag_act(w, grantor, agreements::types::GRANT, g.to_map(), None);
-        sign(w, service, &id);
-        id
-    };
-    let ga = to_service(&mut w, &mut ana, &mut svc);
-    let gb = to_service(&mut w, &mut ben, &mut svc);
-    let ga2 = to_service(&mut w, &mut ana, &mut backup);
-    let gb2 = to_service(&mut w, &mut ben, &mut backup);
     let svc_pointer = pointer_act(&mut w, &mut svc, b"the split service's address");
-    let backup_pointer = pointer_act(&mut w, &mut backup, b"the backup service's address");
+    let song = spec("ana and ben's song");
+    let owners = [ana.id, ben.id];
+    let sc = claim_act(&mut w, &mut ana, &owners, song);
+    let mut t = deal(&[ana.id, ben.id], None);
+    owning(&mut t, sc, &[(ana.id, 500_000), (ben.id, 500_000)]);
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let bake = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(song.to_vec()))]), None, None); w.add(&a) };
+    let sid = svc.id;
+    let pb = owners_publication(&mut w, &mut ana, d, sid, vec![agreements::Sold::Bake(bake)], "The song.");
+    sign(&mut w, &mut ben, &pb);
+    sign(&mut w, &mut svc, &pb);
+    // The service's tag cites its latest pointer in refs (Money rule 17,
+    // client conformance): the pointer its payments count at.
+    let tag = { let t = Fin::PriceTag(money::PriceTag { priced: money::Priced::Publication(pb), version: 1, previous: None, price: Some(Amount { unit, value: 200 }), payee: sid });
+        let a = w.everyday_act_refs(&mut svc, mirs().money, money::types::PRICE_TAG, t.to_map(), None, None, Some(vec![mor_core::act::Ref::Act(svc_pointer)])); w.add(&a) };
     let base = w.log.clone();
-    let deal_with = |w: &mut World, ana: &mut Person, ben: &mut Person, grants: Vec<Hash>, backups: Option<Vec<Hash>>| {
-        let mut t = deal(&[ana.id, ben.id], None);
-        t.payee_grants = Some(grants);
-        t.cmips.push((8, spec("a split cMIP")));
-        t.backups = backups.map(|b| agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(b)], failure: None });
-        let d = ag_act(w, ana, agreements::types::TERMS, t.to_map(), None);
-        sign(w, ana, &d);
-        sign(w, ben, &d);
-        d
-    };
-    let pay = |w: &mut World, buyer: &mut Person, payee: Hash, fulfils: Hash, proof: &[u8]| {
-        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: Amount { unit, value: 200 }, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let pay = |w: &mut World, buyer: &mut Person, payee: Hash, proof: &[u8]| {
+        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: Amount { unit, value: 200 }, fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
         let a = w.everyday_act(buyer, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
@@ -1348,35 +1493,17 @@ pub fn money(out: &mut Out) {
         }
         w
     };
-    let (mut a2, mut b2, mut buyer2) = (ana.clone(), ben.clone(), buyer.clone());
-    let (ana_d, ben_d, buyer_d) = (ana.clone(), ben.clone(), buyer.clone());
+    let mut buyer2 = buyer.clone();
     let mut w1 = world(&base);
-    let d = deal_with(&mut w1, &mut ana, &mut ben, vec![ga, gb], Some(vec![ga2, gb2]));
-    let paid = pay(&mut w1, &mut buyer, ana.id, d, b"the buyer pays ana's share of the deal at its split service");
-    let log1 = w1.log.clone();
-    out.case(&mut w1, "a buyer's payment under a deal to its split service's pointer, the payee's grant listed in field 14: counts", "Money rule 4; Agreements rules 15 and 17",
-        "Ana's own grant to the split service is listed in the deal's field 14, which she signed: the service's pointer is the deal's designated pointer, and a payment to it counts for Ana.",
+    let paid = pay(&mut w1, &mut buyer, sid, b"the buyer pays the song's price tag to the split service");
+    out.case(&mut w1, "a buyer's payment of a publication's price tag to its split service's own pointer: counts", "Money rule 4; Agreements rule 11",
+        "The tag's payee is the publication's split service; the buyer pays it at the service's own pointer, which counts for it.",
         Facts { rail_valid: vec![(paid, svc_pointer)], ..Default::default() }, ask("payment counts", &paid), json!("counts"), None);
-    let mut w3 = world(&log1);
-    let after = pay(&mut w3, &mut buyer, ana.id, d, b"the buyer pays the backup after the split service's attempt failed");
-    out.case(&mut w3, "a payment under the same deal to its backup's pointer (field 29): counts", "Money rule 4; Agreements rules 15 and 17",
-        "Ana's own grant to the backup service is listed in field 29: its pointer is a pointer Money rule 4 counts for Ana. Whether the attempt before it failed is the split cMIP's answer, which this case does not state and Money rule 4 does not ask.",
-        Facts { rail_valid: vec![(after, backup_pointer)], ..Default::default() }, ask("payment counts", &after), json!("counts"), None);
     let mut w2 = world(&base);
-    let d2 = deal_with(&mut w2, &mut a2, &mut b2, vec![gb], None);
-    let stray = pay(&mut w2, &mut buyer2, a2.id, d2, b"the buyer pays ana at a service her grant does not send the deal's money to");
-    out.case(&mut w2, "the same payment under a deal listing no grant of the payee's: counts for nothing", "Money rule 4",
-        "The deal lists only Ben's grant to the service; the service's pointer is not Ana's own, and no grant of hers in the deal sends her money there.",
+    let stray = pay(&mut w2, &mut buyer2, ana.id, b"the buyer names ana as payee and pays the split service's pointer");
+    out.case(&mut w2, "the same payment naming an owner as payee, paid to the split service's pointer: counts for nothing", "Money rule 4: the pointer is the payee's own",
+        "The claim names Ana as payee; the service's pointer is not hers, and no field of the publication makes another identity's pointer hers.",
         Facts { rail_valid: vec![(stray, svc_pointer)], ..Default::default() }, ask("payment counts", &stray), json!("does not count"), None);
-
-    // A deal whose payees' grants name different services designates no pointer (Agreements rule 15).
-    let mut w4 = world(&base);
-    let (mut a4, mut b4, mut buyer4) = (ana_d.clone(), ben_d.clone(), buyer_d.clone());
-    let d4 = deal_with(&mut w4, &mut a4, &mut b4, vec![ga, gb2], None);
-    let split = pay(&mut w4, &mut buyer4, a4.id, d4, b"the buyer pays ana where the deal's grants disagree");
-    out.case(&mut w4, "a payment under a deal whose payees' grants name different services: counts for nothing at either service", "Agreements rule 15: every grant field 14 lists names the same service, or the deal carries none of them; Money rule 4",
-        "Ana's grant names the split service, Ben's the backup: the deal carries neither, designates no pointer, and Ana's payment to the split service's pointer is not paid to her.",
-        Facts { rail_valid: vec![(split, svc_pointer)], ..Default::default() }, ask("payment counts", &split), json!("does not count"), None);
 
     // Which pointer a debt is paid to: the version the payee's own act holds (Money rule 17), never what the debtor drafts.
     let mut w = World::new();
@@ -1538,13 +1665,13 @@ pub fn agreements(out: &mut Out) {
     let ptr = pointer_act(&mut w, &mut col.c, b"x");
     sign(&mut w, &mut col.m[0], &ptr);
     let log = w.log.clone();
-    out.case(&mut w, "a collective's act its area needs two holders for, signed by one: does not count", "Agreements rules 60 and 65", "The area reaching Money has two holders and threshold 2.", Facts::default(), ask("consent counts", &ptr), json!(false), None);
+    out.case(&mut w, "a collective's act its layer's rule needs two members for, signed by one: does not count", "Agreements rules 60 and 65", "The rule for Money is [2, [ana, ben]]: Cy drafts the pointer, with his own key, naming the collective; Ana alone signs it.", Facts::default(), ask("consent counts", &ptr), json!(false), None);
     let mut w2 = World::new();
     for (x, _) in &log {
         w2.add(x);
     }
     sign(&mut w2, &mut col.m[1], &ptr);
-    out.case(&mut w2, "the same signed by both holders: counts", "Agreements rules 60 and 65", "Both holders' signature acts name it.", Facts::default(), ask("consent counts", &ptr), json!(true), None);
+    out.case(&mut w2, "the same signed by both members it names: counts", "Agreements rules 60 and 65", "Ana's and Ben's signature acts name it.", Facts::default(), ask("consent counts", &ptr), json!(true), None);
     // Grants and a revocation (rule 76).
     let mut w = World::new();
     let mut singer = w.genesis("a singer", vec![own_home()], None, None);
@@ -1718,29 +1845,29 @@ pub fn agreements(out: &mut Out) {
     let mut t1 = view(&w).terms(&f).unwrap();
     t1.parent = Some(f);
     t1.cmips = vec![(6, second)];
-    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Area(2), signers: vec![col.m[1].id] }]);
+    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Layer(agreements::layers::MONEY), signers: vec![col.m[1].id] }]);
     let clone = ag_act(&mut w, &mut col.m[1], agreements::types::TERMS, t1.to_map(), obj(f));
     let s1 = sign(&mut w, &mut col.m[1], &clone);
     let before = { let a = w.everyday_act(&mut col.c, second, 0, vec![(Value::Uint(0), Value::Uint(0))], None, None); w.add(&a) };
     sign(&mut w, &mut col.m[1], &before);
     let rec = {
-        let saved = col.c.cite.take();
-        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(vec![s1]), kept: vec![], registers: None }.to_map(), obj(clone), None);
-        col.c.cite = saved;
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(vec![s1]), registers: None }.to_map(), obj(clone), None);
         w.add(&a)
     };
-    { let e = view(&w).record(&col.c.id, &rec).unwrap(); assert_eq!(e.puts, Some(clone), "the record puts the clone in force: {:?}", e); }
+    { let e = view(&w).record(&col.id, &rec).unwrap(); assert_eq!(e.puts, Some(clone), "the record puts the clone in force: {:?}", e); }
+    // The collective's next act cites the record, its latest decision.
+    col.c.cite = Some((col.id, vec![rec]));
     let x = { let a = w.everyday_act(&mut col.c, second, 0, vec![(Value::Uint(0), Value::Uint(1))], None, None); w.add(&a) };
     sign(&mut w, &mut col.m[1], &x);
     out.case(&mut w, "a collective's act of the payment cMIP an operational clone names, after the record putting that clone in force: counts", "Agreements, record (type 17): an operational clone recorded is in force at once; rules 60 and 65",
-        "The founding names one payment cMIP for task 6; the clone, marked by the Money area's power, names another; the collective records it, and its next act, of that cMIP, falls in the Money area and has its holder's signature.", Facts::default(), ask("consent counts", &x), json!(true), None);
+        "The founding names one payment cMIP for task 6; the clone, marked by the power of the rule for Money, names another; Cy records it for the collective, and its next act, citing the record, of that cMIP, falls in Money and has Ben's signature, whom the rule for Money names.", Facts::default(), ask("consent counts", &x), json!(true), None);
     let log = w.log.clone();
     let mut w2 = World::new();
     for (a, _) in &log {
         w2.add(a);
     }
     out.case(&mut w2, "the same kind of act signed before the record: does not count", "Agreements, record (type 17); rule 60",
-        "Before the record the founding is in force, which names that cMIP for no task: the act falls in no area, and the collective has areas.", Facts::default(), ask("consent counts", &before), json!(false), None);
+        "Before the record the founding is in force, which names that cMIP for no task: the act falls in no layer the agreement names a rule for.", Facts::default(), ask("consent counts", &before), json!(false), None);
 
     // A record whose named signatures fall short of the clone's mark; a record naming a clone whose parent is not in force.
     let mut w = World::new();
@@ -1752,16 +1879,16 @@ pub fn agreements(out: &mut Out) {
     t1.cmips = vec![(6, second)];
     let mut holders = vec![col.m[1].id, col.m[2].id];
     holders.sort();
-    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Area(2), signers: holders }]);
+    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Layer(agreements::layers::MONEY), signers: holders }]);
     let clone = ag_act(&mut w, &mut col.m[1], agreements::types::TERMS, t1.to_map(), obj(f));
     let s1 = sign(&mut w, &mut col.m[1], &clone);
     let s2 = sign(&mut w, &mut col.m[2], &clone);
     let base = w.log.clone();
     let record = |w: &mut World, col: &mut Col, clone: Hash, sigs: Vec<Hash>| {
-        let saved = col.c.cite.take();
-        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(sigs), kept: vec![], registers: None }.to_map(), obj(clone), None);
-        col.c.cite = saved;
-        w.add(&a)
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(sigs), registers: None }.to_map(), obj(clone), None);
+        let r = w.add(&a);
+        col.c.cite = Some((col.id, vec![r]));
+        r
     };
     let act_of = |w: &mut World, col: &mut Col, cmip: Hash| {
         let x = { let a = w.everyday_act(&mut col.c, cmip, 0, vec![(Value::Uint(0), Value::Uint(1))], None, None); w.add(&a) };
@@ -1777,7 +1904,7 @@ pub fn agreements(out: &mut Out) {
     record(&mut w1, &mut col, clone, vec![s1, s2]);
     let x = act_of(&mut w1, &mut col, second);
     out.case(&mut w1, "a record naming the signatures that meet its clone's mark: the clone in force, a collective's act of the cMIP it names counts", "Agreements, record (type 17); rule 65",
-        "The Money area has two holders at threshold two; the clone is marked by that area's power; the record names both holders' signatures, so the clone is complete at the record and in force from it.", Facts::default(), ask("consent counts", &x), json!(true), None);
+        "The rule for Money names Ben and Cy, both; the clone is marked by that rule's power; the record names both their signatures, so the clone is complete at the record and in force from it.", Facts::default(), ask("consent counts", &x), json!(true), None);
     col.c = c_saved.clone();
     col.m = m_saved.clone();
     let mut w2 = World::new();
@@ -1787,7 +1914,7 @@ pub fn agreements(out: &mut Out) {
     record(&mut w2, &mut col, clone, vec![s1]);
     let x = act_of(&mut w2, &mut col, second);
     out.case(&mut w2, "a record naming valid signatures short of its clone's mark: the clone not in force", "Agreements, record (type 17): the clone complete at the record only if the signatures it names meet its mark; rule 65",
-        "The record names one of the two holders' signatures, though both signed: counted at the record, they fall short of the mark, so the clone is not put in force; the act of the cMIP it names falls in no area of the founding.", Facts::default(), ask("consent counts", &x), json!(false), None);
+        "The record names one of the two signatures the mark needs, though both signed: counted at the record, they fall short of the mark, so the clone is not put in force; the act of the cMIP it names falls in no layer of the founding.", Facts::default(), ask("consent counts", &x), json!(false), None);
     col.c = c_saved.clone();
     col.m = m_saved.clone();
     let mut w3 = World::new();
@@ -1806,26 +1933,27 @@ pub fn agreements(out: &mut Out) {
     record(&mut w3, &mut col, clone2, vec![u1, u2]);
     let x = act_of(&mut w3, &mut col, third);
     out.case(&mut w3, "a record naming a clone whose parent is not the agreement in force for it: the clone not in force", "Agreements, record (type 17): the clone's parent is the agreement in force for the record",
-        "A first record put a clone of the founding in force; a second record names another clone of the founding, complete, but its parent is no longer the agreement in force, so it is not put in force; the act of the cMIP it names falls in no area of the clone in force.", Facts::default(), ask("consent counts", &x), json!(false), None);
+        "A first record put a clone of the founding in force; a second record names another clone of the founding, complete, but its parent is no longer the agreement in force, so it is not put in force; the act of the cMIP it names falls in no layer of the clone in force.", Facts::default(), ask("consent counts", &x), json!(false), None);
 
     // The heavy rules, on one collective whose members sign with their chain keys (SLH-DSA-SHA2-128f):
     // every case below holds acts of this one family, so its chain signatures are paid once.
     // A collective's closing (rule 91): the closing, signed by every member with a chain signature.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let (f, cid) = (col.founding, col.c.id);
+    let (f, cid) = (col.founding, col.id);
     let before = text_act(&mut w, &mut col.c, "The collective's last notice before it closes.", None);
     sign(&mut w, &mut col.m[0], &before);
-    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
-    let closing = agreements::Closing { agreement: f, collective: cid, chain_act: col.c.binding, tips: vec![tip], open: vec![] };
-    let k = ag_act(&mut w, &mut col.m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    // Ana draws the closing for the collective; its line, the acts it
+    // cites on the collective's chain: the last notice.
+    let closing = agreements::Closing { agreement: f, collective: cid, open: vec![] };
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![before]), agreements::types::CLOSING, closing.to_map(), obj(f));
     let mut ends = vec![];
     for i in 0..3 {
         let (e, q) = w.chain_sign(&col.m[i], k);
         col.m[i] = q;
         ends.push(e);
     }
-    let after = text_act(&mut w, &mut col.c, "A notice signed with the collective's key after it closed.", None);
+    let after = text_act(&mut w, &mut col.c, "A notice for the collective after it closed.", None);
     sign(&mut w, &mut col.m[0], &after);
     let family = w.log.clone();
     let hold = |leave: &[Hash]| {
@@ -1842,24 +1970,21 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut hold(&[ends[2]]), "the same, one member's chain signature not held: not complete", "Agreements rule 91",
         "A closing needs every voice: the third member's chain signature is not among the acts held.", Facts::default(), ask("closing", &k), json!({ "complete": false }), None);
     out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 60 and 91",
-        "Closed: what the collective's keys sign afterwards counts for nothing, its area's holder signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
+        "Closed: what is signed for the collective afterwards counts for nothing, whoever the rule for Text names signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
     out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 60 and 91",
-        "What it signed before the closing, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
+        "What was signed for it before the closing, by the member the rule for Text names, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 
     // A closing signed by every remaining member after one member's registered resignation.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let (f, cid) = (col.founding, col.c.id);
+    let (f, cid) = (col.founding, col.id);
     let res = ag_act(&mut w, &mut col.m[2], agreements::types::RESIGNATION, agreements::Resignation { agreement: f, area: None, drafts: vec![] }.to_map(), obj(f));
-    {
-        let saved = col.c.cite.take();
-        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(f), None);
-        col.c.cite = saved;
-        w.add(&a);
-    }
-    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
-    let closing = agreements::Closing { agreement: f, collective: cid, chain_act: col.c.binding, tips: vec![tip], open: vec![] };
-    let k = ag_act(&mut w, &mut col.m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    let rec = {
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, registers: Some(vec![res]) }.to_map(), obj(f), None);
+        w.add(&a)
+    };
+    let closing = agreements::Closing { agreement: f, collective: cid, open: vec![] };
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![rec]), agreements::types::CLOSING, closing.to_map(), obj(f));
     for i in 0..2 {
         let (_, q) = w.chain_sign(&col.m[i], k);
         col.m[i] = q;
@@ -1880,12 +2005,9 @@ pub fn agreements(out: &mut Out) {
     for p in m.iter_mut() {
         sign(&mut w, p, &f);
     }
-    let mut c = w.genesis_with("a collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &f)]), 3);
-    c.cite = Some((c.id, vec![c.id]));
-    let tip = KeptTip { act: c.id, position: 0, summary: mor_core::mmr::summary(&[]) };
-    let _ = tip;
-    let closing = agreements::Closing { agreement: f, collective: c.id, chain_act: c.binding, tips: vec![], open: vec![] };
-    let k = ag_act(&mut w, &mut m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    let c = w.genesis_with("a collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &f)]), 3);
+    let closing = agreements::Closing { agreement: f, collective: c.id, open: vec![] };
+    let k = ag_act(&mut w, &mut m[0].acting_for(c.id, vec![c.id]), agreements::types::CLOSING, closing.to_map(), obj(f));
     let (_, q) = w.chain_sign(&m[0], k);
     m[0] = q;
     out.case(&mut w, "a collective's closing under a constitutional rule counted by shares, signed by a member holding more than the share: complete", "Agreements rules 65 and 91; \"Closing\"",
@@ -1894,7 +2016,7 @@ pub fn agreements(out: &mut Out) {
     // A collective's fork (rule 91): each side founds its successor first; the fork names them; every member signs it with a chain signature.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let (f, cid) = (col.founding, col.c.id);
+    let (f, cid) = (col.founding, col.id);
     let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
     let before = text_act(&mut w, &mut col.c, "The collective's last notice before it forks.", None);
     sign(&mut w, &mut col.m[0], &before);
@@ -1903,13 +2025,14 @@ pub fn agreements(out: &mut Out) {
         let mut t = view(w).terms(&f).unwrap();
         t.parties = members.clone();
         t.clone = Rule::Threshold(members.len().min(2) as u64);
-        if let Some(areas) = t.areas.as_mut() {
-            areas[0].holders = vec![members[0]];
-            areas[1].holders = vec![*members.last().unwrap()];
-            areas[1].threshold = 1;
-        }
+        t.layers = Some(vec![
+            (agreements::layers::TEXT, Rule::Named(vec![members[0]])),
+            (agreements::layers::ENVELOPES, Rule::Named(vec![members[0]])),
+            (agreements::layers::MONEY, Rule::Named(vec![*members.last().unwrap()])),
+            (agreements::layers::AGREEMENTS, Rule::Threshold(1)),
+            (agreements::layers::DEVELOPMENT, Rule::Threshold(1)),
+        ]);
         if let Some(g) = t.grammar.as_mut() {
-            g.signing = Holding::Shares { threshold: 1, members: members.clone() };
             g.chain_key = Holding::Shares { threshold: members.len() as u64, members: members.clone() };
         }
         t.forked_from = Some(cid);
@@ -1921,24 +2044,21 @@ pub fn agreements(out: &mut Out) {
     };
     let sa = successor(&mut w, &mut col, "side A", &[0]);
     let sb = successor(&mut w, &mut col, "side B", &[1, 2]);
-    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
     let fork = agreements::Fork {
         agreement: f,
         collective: cid,
-        chain_act: col.c.binding,
-        tips: vec![tip],
         sides: vec![agreements::Side { successor: sa, members: vec![ids[0]] }, agreements::Side { successor: sb, members: vec![ids[1], ids[2]] }],
         shares: vec![],
         debts: vec![],
     };
-    let k = ag_act(&mut w, &mut col.m[0], agreements::types::FORK, fork.to_map(), obj(f));
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![before]), agreements::types::FORK, fork.to_map(), obj(f));
     let mut ends = vec![];
     for i in 0..3 {
         let (e, q) = w.chain_sign(&col.m[i], k);
         col.m[i] = q;
         ends.push(e);
     }
-    let after = text_act(&mut w, &mut col.c, "A notice signed with the original's key after the fork.", None);
+    let after = text_act(&mut w, &mut col.c, "A notice for the original after the fork.", None);
     sign(&mut w, &mut col.m[0], &after);
     let family = w.log.clone();
     let hold = |leave: &[Hash]| {
@@ -2190,8 +2310,7 @@ pub fn agreements(out: &mut Out) {
     let mut fan = w.genesis("a fan", vec![own_home()], None, None);
     let mut other = w.genesis("another identity", vec![own_home()], None, None);
     let sold = agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("the concert's recording".into())));
-    let o = agreements::Offer { under: None, sold: vec![sold], price: Amount { unit, value: 300 }, paid: None, words: Some("The full concert, filmed in the hall.".into()), until: None, time: None, refund: None };
-    let offer = ag_act(&mut w, &mut club, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let offer = lone_offer(&mut w, &mut club, vec![sold], Amount { unit, value: 300 }, "The full concert, filmed in the hall.");
     let proof = b"the fan pays for the recording".to_vec();
     { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a); }
@@ -2264,7 +2383,7 @@ pub fn agreements(out: &mut Out) {
         "Every version of the fork the settlement saw, through the request's history and the versions' own, is on the line it keeps or a tip it names.",
         Facts::default(), ask("version in force", &d), json!(hx(&va)), None);
 
-    // A collective's sale under its offer: its own stake is a stake in every work it sells (the glossary, "Stake").
+    // A collective's sale under its publication: its own stake is a stake in every work it sells (the glossary, "Stake").
     let unit = spec("a test unit (regtest satoshi)");
     let rail = spec("a rail Module");
     let mut w = World::new();
@@ -2273,42 +2392,41 @@ pub fn agreements(out: &mut Out) {
     let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
     let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
     let mut svc = w.genesis("the collective's split service", vec![own_home()], None, None);
-    let g = Grant { grantee: svc.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: None, kinds: None, reinstates: None, by_this: true, key: signing_key(&schnorr("the collective's split service/grant key", 0)) };
-    let g = ag_act(&mut w, &mut m[0], agreements::types::GRANT, g.to_map(), None);
-    sign(&mut w, &mut svc, &g);
     let mut t = collective_terms(&ids, authority.id, keeper.id, vec![ids[1]], 1);
     t.text = "A test collective selling its works under its own stake.".into();
-    t.split_grant = Some(g);
     t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: vec![(agreements::Who::Id(ids[0]), 500_000), (agreements::Who::Id(ids[1]), 250_000), (agreements::Who::Id(ids[2]), 250_000)] }]);
     let founding = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
     for p in m.iter_mut() {
         sign(&mut w, p, &founding);
     }
-    let mut c = w.genesis_with("a collective that sells", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
-    c.cite = Some((c.id, vec![c.id]));
-    // The collective's own pointer, naming the rail, signed by Ben, who holds the area reaching Money.
-    let ptr = pointer_act(&mut w, &mut c, b"the collective's address at its split service");
-    sign(&mut w, &mut m[1], &ptr);
+    let c = w.genesis_with("a collective that sells", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
+    // The collective's own pointer, naming the rail, drafted by Ben, whom
+    // the rule for Money names, for the collective.
+    pointer_act(&mut w, &mut m[1].acting_for(c.id, vec![c.id]), b"the collective's address at its split service");
     let mut fan = w.genesis("a fan of the collective", vec![own_home()], None, None);
     let work_hash = spec("the collective's album");
-    let publ = { let a = w.everyday_act(&mut c, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work_hash.to_vec()))]), None, None); w.add(&a) };
-    let o = agreements::Offer { under: Some(founding), sold: vec![agreements::Sold::Publication(publ)], price: Amount { unit, value: 500 }, paid: Some(agreements::Paid::Payee(c.id)), words: Some("The album.".into()), until: None, time: None, refund: None };
-    let offer = { let a = w.everyday_act(&mut c, mirs().agreements, agreements::types::STANDING_OFFER, o.to_map(), obj(founding), None); w.add(&a) };
+    let mut ana = m[0].acting_for(c.id, vec![c.id]);
+    let publ = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work_hash.to_vec()))]), None, None); w.add(&a) };
+    // The collective's publication of its album, naming its own ownership
+    // agreement, drafted by Ana for it; its split service signs it and
+    // prices it.
+    let sid = svc.id;
+    let pb = owners_publication(&mut w, &mut ana, founding, sid, vec![agreements::Sold::Bake(publ)], "The album.");
+    sign(&mut w, &mut svc, &pb);
+    let offer = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 500, unit, sid);
     let proof = b"the fan pays for the collective's album".to_vec();
     let purchase = Some(money::Purchase { agreement: founding, line: founding });
-    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: c.id, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: purchase.clone(), previous: None });
+    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: purchase.clone(), previous: None });
         let a = w.everyday_act(&mut fan, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
-    let receipt = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: c.id, amount: Amount { unit, value: 500 }, fulfils: offer, previous: None, forward: None, batch: None, purchase });
-        let a = w.everyday_act(&mut c, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
-    // Ben holds the area reaching Money: his signature act gives the collective's receipt its consent.
-    sign(&mut w, &mut m[1], &receipt);
+    let receipt = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, previous: None, forward: None, batch: None, purchase });
+        let a = w.everyday_act(&mut svc, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
     let facts = || Facts { rail_valid: vec![(claim, offer), (receipt, offer)], rail_payments: vec![(proof.clone(), b"the album's payment".to_vec())], ..Default::default() };
     let mut w2 = World::new();
     for (a, _) in &w.log {
         w2.add(a);
     }
-    out.case(&mut w, "a sale of a collective's work under its offer, the collective's agreement staking only the collective itself: a purchase", "Agreements rule 12; the glossary, \"Stake\": a stake in the collective itself is a share of all its income",
-        "The offer is the collective's, under its agreement, selling its publication; the fan's claim names the agreement, and the collective's own receipt records the payment. The collective's stake in itself is a stake in every work it sells.",
+    out.case(&mut w, "a sale of a collective's work under its publication, naming the collective's own ownership agreement: a purchase", "Agreements rule 12; the glossary, \"Stake\": a stake in the collective itself is a share of all its income",
+        "The publication is the collective's, naming its ownership agreement, selling its album; its split service prices it and records the payment, and the fan's claim names the agreement (field 9). The collective's stake in itself is a stake in every work it sells.",
         facts(), json!({ "question": "purchase", "act": hx(&claim) }), json!("purchase"), None);
     let k = ag_act(&mut w2, &mut fan, agreements::types::CONTEST, agreements::Contest::of_purchase(claim, Some("Two tracks are missing.".into())).to_map(), obj(claim));
     out.case(&mut w2, "the fan's contest of that purchase: shown beside it", "Agreements rule 54; \"Contest (type 14)\"",
@@ -2319,7 +2437,7 @@ pub fn agreements(out: &mut Out) {
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
-    let mut j0 = w.genesis("the judge", vec![own_home()], None, None);
+    let j0 = w.genesis("the judge", vec![own_home()], None, None);
     let mut t = deal(&[ana.id, ben.id], None);
     t.text = "A deal its parties settle themselves.".into();
     t.arbitrators = Some(vec![j0.id]);
@@ -2412,7 +2530,7 @@ pub fn agreements(out: &mut Out) {
         out.case(&mut w, name, "Agreements rules 41 and 42; Identity rule 34", "The first keeper recorded the act before the rotation, the second only after it; the keepers' rule decides whether that is enough.", Facts::default(), ask("status after keepers", &x), json!(v), None);
     }
 
-    // Purchases (rule 12): a payment for a claimed work naming no claim; the same naming it; a lone seller's offer.
+    // Purchases (rule 12): a payment naming a claimed work's bake, no tag; the same naming its publication's tag; a lone seller's publication.
     let unit = spec("a test unit (regtest satoshi)");
     let rail = spec("a rail Module");
     let mut w = World::new();
@@ -2420,74 +2538,89 @@ pub fn agreements(out: &mut Out) {
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
     let cy = w.genesis("cy", vec![own_home()], None, None);
     let film = spec("ana and ben's film");
+    let owners = [ana.id, ben.id];
+    let fc = claim_act(&mut w, &mut ana, &owners, film);
     let mut t = deal(&[ana.id, ben.id], None);
-    t.text = "A deal over a film.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(film), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    t.text = "The ownership of a film.".into();
+    owning(&mut t, fc, &[(ana.id, 600_000), (ben.id, 400_000)]);
     let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &d);
     sign(&mut w, &mut ben, &d);
     let publ = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
+    let aid = ana.id;
+    let pb = owners_publication(&mut w, &mut ana, d, aid, vec![agreements::Sold::Bake(publ)], "The film.");
+    sign(&mut w, &mut ben, &pb);
+    let tag = price_tag(&mut w, &mut ana, mirs().money, money::Priced::Publication(pb), 400, unit, aid);
     let base = w.log.clone();
     let mut ana2 = ana.clone();
-    let rc = |w: &mut World, ana: &mut Person, purchase: Option<money::Purchase>, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 400 }, fulfils: publ, previous: None, forward: None, batch: None, purchase });
+    let rc = |w: &mut World, ana: &mut Person, fulfils: Hash, purchase: Option<money::Purchase>, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 400 }, fulfils, previous: None, forward: None, batch: None, purchase });
         let a = w.everyday_act(ana, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
-    let r1 = rc(&mut w, &mut ana, None, b"cy pays for the film, naming no claim");
-    out.case(&mut w, "a payment for a claimed work naming no claim: no purchase, owed back", "Agreements rule 12: a payment naming no claim is no purchase",
-        "The film's stake is written in Ana and Ben's deal; Ana's receipt of Cy's payment names no claim (field 9).",
-        Facts { rail_valid: vec![(r1, publ)], rail_payments: vec![(b"cy pays for the film, naming no claim".to_vec(), b"a payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r1) }), json!("no purchase"), None);
+    let r1 = rc(&mut w, &mut ana, publ, None, b"cy pays for the film, naming no claim");
+    out.case(&mut w, "a payment naming a claimed work's bake, no price tag: a tip to its uploader, no payment for a work", "Money rule 18: a payment naming a bake without a tag is a tip to its uploader, no purchase; Agreements rule 12",
+        "The film is owned by Ana and Ben's ownership agreement and sold by their publication's price tag; Cy's payment names the bake itself, no tag: a tip to Ana, its uploader, neither a purchase nor money owed back.",
+        Facts { rail_valid: vec![(r1, publ)], rail_payments: vec![(b"cy pays for the film, naming no claim".to_vec(), b"a payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r1) }), json!("not a payment for a work"), None);
     let mut w2 = World::new();
     for (a, _) in &base { w2.add(a); }
-    let r2 = rc(&mut w2, &mut ana2, Some(money::Purchase { agreement: d, line: d }), b"cy pays for the film under the deal");
-    out.case(&mut w2, "the same payment naming the deal as the claim it pays under: a purchase", "Agreements rule 12; Money rule 18",
-        "Field 9 names the claiming agreement and the version at which Cy's client read it current.",
-        Facts { rail_valid: vec![(r2, publ)], rail_payments: vec![(b"cy pays for the film under the deal".to_vec(), b"another payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r2) }), json!("purchase"), None);
+    let r2 = rc(&mut w2, &mut ana2, tag, Some(money::Purchase { agreement: d, line: d }), b"cy pays for the film under the deal");
+    out.case(&mut w2, "the same payment naming the publication's price tag, the receipt naming the ownership agreement: a purchase", "Agreements rule 12; Money rule 18",
+        "Ana, the publication's split service, receipts the payment of its tag; field 9 names the ownership agreement and its version.",
+        Facts { rail_valid: vec![(r2, tag)], rail_payments: vec![(b"cy pays for the film under the deal".to_vec(), b"another payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r2) }), json!("purchase"), None);
     let mut w = World::new();
     let mut sel = w.genesis("a lone seller", vec![own_home()], None, None);
     let buyer = w.genesis("a buyer of the lone seller", vec![own_home()], None, None);
-    let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a talk".into())))], price: Amount { unit, value: 90 }, paid: None, words: Some("A recorded talk.".into()), until: None, time: None, refund: None };
-    let offer = ag_act(&mut w, &mut sel, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let offer = lone_offer(&mut w, &mut sel, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a talk".into())))], Amount { unit, value: 90 }, "A recorded talk.");
     let r = { let x = Fin::Receipt(Receipt { rail, proof: b"the buyer pays the lone seller".to_vec(), payer: Some(Payer::Identity(buyer.id)), payee: sel.id, amount: Amount { unit, value: 90 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut sel, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
-    out.case(&mut w, "a payment following a lone seller's offer, naming no claim: a purchase", "Agreements rule 12: the offer itself is the agreement it pays under (rule 11; Money rule 18)",
-        "The offer names no agreement (field 0); a payment following it names no claim and is a purchase under the offer's terms.",
+    out.case(&mut w, "a payment of a lone seller's price tag, naming no ownership agreement: a purchase", "Agreements rules 11 and 12: a lone seller's publication; its split service's receipt carries no field 9",
+        "The publication names no ownership agreement (field 1); the seller is its own split service, and its receipt of a payment of the tag carries no field 9: a purchase under the publication's terms.",
         Facts { rail_valid: vec![(r, offer)], rail_payments: vec![(b"the buyer pays the lone seller".to_vec(), b"the talk's payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r) }), json!("purchase"), None);
 
-    // Only an agreement that exists claims a work (rule 12 with rule 1):
-    // terms nobody signed, or one party alone, claim nothing.
+    // Only an ownership agreement that exists signs a publication (rules 1,
+    // 11 and 15): terms nobody signed, or one party alone, sign nothing, and
+    // the publication naming them sells nothing.
     let mut w = World::new();
     let mut eve = w.genesis("eve, a filmmaker", vec![own_home()], None, None);
     let mut mal = w.genesis("mal, who drafts over her film", vec![own_home()], None, None);
     let fan = w.genesis("a fan of eve's film", vec![own_home()], None, None);
     let film = spec("eve's own film");
+    let eid = eve.id;
+    let fc = claim_act(&mut w, &mut eve, &[eid], film);
     let mut t = deal(&[mal.id, eve.id], None);
-    t.text = "Terms Mal drafts staking Eve's film.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(film), holders: vec![(agreements::Who::Id(mal.id), 1_000_000)] }]);
+    t.text = "Ownership terms Mal drafts over Eve's film.".into();
+    owning(&mut t, fc, &[(mal.id, 1_000_000)]);
     let drafted = ag_act(&mut w, &mut mal, agreements::types::TERMS, t.to_map(), None);
-    let publ = { let a = w.everyday_act(&mut eve, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
-    let proof = b"the fan pays eve for her film".to_vec();
-    let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: eve.id, amount: Amount { unit, value: 400 }, fulfils: publ, previous: None, forward: None, batch: None, purchase: None });
-        let a = w.everyday_act(&mut eve, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
-    let facts = || Facts { rail_valid: vec![(r, publ)], rail_payments: vec![(proof.clone(), b"the fan's payment".to_vec())], ..Default::default() };
+    let bake = { let a = w.everyday_act(&mut eve, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
+    // Mal's publication naming the terms, Mal its split service; Eve signs
+    // the publication, never the terms.
+    let mid = mal.id;
+    let pb = owners_publication(&mut w, &mut mal, drafted, mid, vec![agreements::Sold::Bake(bake)], "Eve's film.");
+    sign(&mut w, &mut eve, &pb);
+    let tag = price_tag(&mut w, &mut mal, mirs().money, money::Priced::Publication(pb), 400, unit, mid);
+    let proof = b"the fan pays mal's tag for eve's film".to_vec();
+    let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: mid, amount: Amount { unit, value: 400 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(money::Purchase { agreement: drafted, line: drafted }) });
+        let a = w.everyday_act(&mut mal, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
+    let facts = || Facts { rail_valid: vec![(r, tag)], rail_payments: vec![(proof.clone(), b"the fan's payment".to_vec())], ..Default::default() };
     let log = w.log.clone();
-    out.case(&mut w, "a Money-only payment for a work only terms nobody signed stake: not a payment for a claimed work", "Agreements rule 12 (\"a work some agreement claims\") with rule 1",
-        "Mal publishes terms staking Eve's film, signed by nobody: no agreement exists, so nothing claims the film, and Eve's receipt needs no claim.",
-        facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("not a payment for a work"), None);
+    out.case(&mut w, "a payment of a publication's tag, the ownership terms it names signed by nobody: no purchase", "Agreements rules 11 and 15 with rule 1: the owners' side signs only as an agreement that exists",
+        "Mal publishes ownership terms over Eve's film, signed by nobody, and a publication naming them, which Eve signs: no agreement exists, so the owners' side has not signed, the publication sells nothing, and the payment is owed back.",
+        facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("no purchase"), None);
     let mut w2 = World::new();
     for (a, _) in &log { w2.add(a); }
     sign(&mut w2, &mut mal, &drafted);
-    out.case(&mut w2, "the same terms signed by their drafter alone: still nothing claims the work", "Agreements rule 12 with rule 1: an agreement exists once every party signed",
-        "Mal signs his own draft; Eve, its other party, never does.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("not a payment for a work"), None);
+    out.case(&mut w2, "the same terms signed by their drafter alone: still no purchase", "Agreements rule 1: an agreement exists once every party signed",
+        "Mal signs his own draft; Eve, its other party, never does.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("no purchase"), None);
     let mut w3 = World::new();
     for (a, _) in &w2.log.clone() { w3.add(a); }
     sign(&mut w3, &mut eve, &drafted);
-    out.case(&mut w3, "the same terms once every party signed: the work is claimed, and the payment naming no claim is no purchase", "Agreements rule 12 with rule 1",
-        "Eve signs too: the agreement exists and claims the film; a payment for it naming no claim is no purchase, owed back.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("no purchase"), None);
+    out.case(&mut w3, "the same terms once every party signed: the agreement signs the publication, and the payment is a purchase", "Agreements rules 1, 11 and 12",
+        "Eve signs the terms too: the agreement exists, every party of it signed the publication, and the payment of its tag naming the agreement is a purchase.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("purchase"), None);
     s7g_agreements_a(out);
     s7g_agreements_b(out);
     s7g_agreements_c(out);
+    scenario9::agreements(out);
 }
 
 pub fn development(out: &mut Vec<J>) {
@@ -2796,50 +2929,53 @@ fn s7g_text(out: &mut Out) {
         out.case(&mut w, "a private text act whose text is not in NFC, its key held: invalid", "Text rule 1", "Those who hold its key check its text, and it is not canonical.", Facts::default(), ask_status(&a.id()), json!("invalid"), None);
     }
 
-    // Rule 14, the first case: a collective's decisions, records included.
+    // Rule 14, the second case: a member's text for a collective names a
+    // decision of its, records included.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let (fd, cid) = (col.founding, col.c.id);
+    let (fd, cid) = (col.founding, col.id);
     let res = ag_act(&mut w, &mut col.m[2], agreements::types::RESIGNATION, agreements::Resignation { agreement: fd, area: None, drafts: vec![] }.to_map(), obj(fd));
     let rec = {
-        let saved = col.c.cite.take();
-        let a = w.everyday_act(&mut col.c, m.agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(fd), None);
-        col.c.cite = saved;
+        let a = w.everyday_act(&mut col.c, m.agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, registers: Some(vec![res]) }.to_map(), obj(fd), None);
         w.add(&a)
     };
-    let on_rec = text_act(&mut w, &mut col.c, "The collective's notice, after its record.", Some(vec![Object { chain: cid, predecessor: rec }]));
-    let on_gen = text_act(&mut w, &mut col.c, "The collective's notice, naming its genesis after a record.", Some(vec![Object { chain: cid, predecessor: cid }]));
-    let on_text = text_act(&mut w, &mut col.c, "The collective's notice, naming its own text.", Some(vec![Object { chain: cid, predecessor: on_rec }]));
-    let on_res = text_act(&mut w, &mut col.c, "The collective's notice, naming a member's resignation.", Some(vec![Object { chain: cid, predecessor: res }]));
+    let mut ana = member_for(&col, 0);
+    let on_rec = text_act(&mut w, &mut ana, "The collective's notice, after its record.", Some(vec![Object { chain: cid, predecessor: rec }]));
+    let on_gen = text_act(&mut w, &mut ana, "The collective's notice, naming its genesis after a record.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    let on_text = text_act(&mut w, &mut ana, "The collective's notice, naming its own text.", Some(vec![Object { chain: cid, predecessor: on_rec }]));
+    let on_res = text_act(&mut w, &mut ana, "The collective's notice, naming a member's resignation.", Some(vec![Object { chain: cid, predecessor: res }]));
     let log = w.log.clone();
-    out.case(&mut w, "a collective's text naming a record of its own: valid", "Text rule 14, first case; Agreements rule 58", "A record of the collective is one of its decisions.", Facts::default(), ask_status(&on_rec), json!("valid"), Some("at a Text-only verifier: unknown"));
-    out.case(&mut w, "a collective's text naming its genesis though a later record is held: valid", "Text rule 14, first case",
-        "Client conformance names the latest decision; a verifier accepts any of the collective's own records or links of its identity chain.", Facts::default(), ask_status(&on_gen), json!("valid"), Some("at a Text-only verifier: unknown"));
-    out.case(&mut w, "a collective's text naming its own text act: invalid", "Text rule 14", "A predecessor that is no decision of its own: neither case.", Facts::default(), ask_status(&on_text), json!("invalid"), Some("at a Text-only verifier: unknown"));
-    out.case(&mut w, "a collective's text naming a member's act: invalid", "Text rule 14", "The predecessor is not the collective's own: no decision of its own.", Facts::default(), ask_status(&on_res), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a member's text for a collective naming a record of the collective: valid", "Text rule 14, second case; Agreements rule 58",
+        "Ana signs with her own key; the one object names the collective and a record for it, one of its decisions.", Facts::default(), ask_status(&on_rec), json!("valid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "the same, Ana holding the rule for Text: its consent counts", "Agreements rules 58 and 60",
+        "The act names the collective as chain, its signer a member; the rule for Text names Ana.", Facts::default(), ask("consent counts", &on_rec), json!(true), None);
+    out.case(&mut w, "a member's text for a collective naming its genesis though a later record is held: valid", "Text rule 14, second case",
+        "Client conformance names the latest decision; a verifier accepts any of the collective's records or links of its identity chain.", Facts::default(), ask_status(&on_gen), json!("valid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a member's text for a collective naming a text act: invalid", "Text rule 14", "A predecessor that is no decision of the collective: neither case.", Facts::default(), ask_status(&on_text), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a member's text for a collective naming a member's resignation: invalid", "Text rule 14", "A resignation is no record, grant or identity link of the collective: no decision of its.", Facts::default(), ask_status(&on_res), json!("invalid"), Some("at a Text-only verifier: unknown"));
     let mut w2 = World::new();
     for (a, _) in &log {
         if a.id() != rec {
             w2.add(a);
         }
     }
-    out.case(&mut w2, "a collective's text naming a record this verifier does not hold: unknown", "Text rule 14", "A verifier that does not yet hold the decision named answers unknown.", Facts::default(), ask_status(&on_rec), json!("unknown"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w2, "a member's text for a collective naming a record this verifier does not hold: unknown", "Text rule 14", "A verifier that does not yet hold the decision named answers unknown.", Facts::default(), ask_status(&on_rec), json!("unknown"), Some("at a Text-only verifier: unknown"));
 
-    // Rule 14: a "record" claiming the collective, signed with another key.
+    // Rule 14: a text naming a "collective" that is no collective, and one
+    // signed by a member the rule for Text does not name.
     let mut w = World::new();
-    let mut col = collective(&mut w, &[1], 1);
-    let (fd, cid) = (col.founding, col.c.id);
-    // Ben's resignation, so the forged act differs from any genuine record
-    // another case holds (an act's id leaves its signature out).
-    let res = ag_act(&mut w, &mut col.m[1], agreements::types::RESIGNATION, agreements::Resignation { agreement: fd, area: None, drafts: vec![] }.to_map(), obj(fd));
-    let mut forger = col.c.clone();
-    forger.cite = None;
-    forger.sign = schnorr("a forger of the collective's records", 0);
-    let a = w.everyday_act(&mut forger, m.agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(fd), None);
-    let forged = w.add(&a);
-    let t = text_act(&mut w, &mut col.c, "The collective's notice, naming a forged record.", Some(vec![Object { chain: cid, predecessor: forged }]));
-    out.case(&mut w, "a collective's text naming a record that claims the collective but another key signed: invalid", "Text rule 14; Agreements rule 58",
-        "The act named is invalid, so no decision of the collective's own: neither case.", Facts::default(), ask_status(&t), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    let col = collective(&mut w, &[1], 1);
+    let (fd, cid) = (col.founding, col.id);
+    let dee = w.genesis("dee", vec![own_home()], None, None);
+    let mut ana = col.m[0].clone();
+    let t = text_act(&mut w, &mut ana, "Ana's notice, naming Dee's genesis as a collective's.", Some(vec![Object { chain: dee.id, predecessor: dee.id }]));
+    out.case(&mut w, "a text naming as its collective an identity that declares no founding agreement: invalid", "Text rule 14",
+        "Dee's genesis declares no founding agreement: Dee is no collective, and the one object is neither case.", Facts::default(), ask_status(&t), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    let mut ben = member_for(&col, 1);
+    let t = text_act(&mut w, &mut ben, "Ben's notice for the collective.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    let _ = fd;
+    out.case(&mut w, "a member's text for a collective whose rule for Text names another member: valid, its consent does not count", "Text rule 14; Agreements rules 58 and 60",
+        "Valid under Text: the one object names the collective's genesis. The rule for Text names Ana only, so Ben's act does not count for the collective.", Facts::default(), ask("consent counts", &t), json!(false), None);
 
     // Rule 14, the second case: a person's grant key.
     let mut w = World::new();
@@ -2861,35 +2997,24 @@ fn s7g_text(out: &mut Out) {
     }
     out.case(&mut w2, "a grant key's text whose grant this verifier does not hold: unknown", "Text rule 14", "A verifier that does not yet hold the grant its binding names answers unknown.", Facts::default(), ask_status(&ok), json!("unknown"), None);
 
-    // Rule 14: a collective's grant key, the second case decides.
+    // Rule 14: a collective's grant carries no key; its grantee acts with its
+    // own, naming the collective and the grant, the second case.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
-    let cid = col.c.id;
+    let cid = col.id;
     let mut agent = w.genesis("the collective's agent", vec![own_home()], None, None);
-    let (g, mut s) = grant_key_person(&mut w, &mut col.c, &mut agent, vec![Kind::Type { spec: m.text, type_: 0 }]);
+    let grant = Grant { grantee: agent.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(vec![Kind::Type { spec: m.text, type_: 0 }]), reinstates: None, key: None };
+    let g = ag_act(&mut w, &mut col.c, agreements::types::GRANT, grant.to_map(), None);
+    sign(&mut w, &mut agent, &g);
+    let mut s = agent.acting_for(cid, vec![g]);
     let ok = text_act(&mut w, &mut s, "The agent's notice, naming its grant.", Some(vec![Object { chain: cid, predecessor: g }]));
-    let on_gen = text_act(&mut w, &mut s, "The agent's notice, naming the collective's genesis.", Some(vec![Object { chain: cid, predecessor: cid }]));
-    out.case(&mut w, "a collective's grant key's text naming its grant: scoped", "Text rule 14, second case", "Valid under Text; Agreements judge its backing.", Facts::default(), ask_status(&ok), json!("scoped"), None);
-    out.case(&mut w, "a collective's grant key's text naming a decision of the collective: invalid", "Text rule 14",
-        "Signed with a grant key, the second case decides, whoever the signer is: the one object names its grant; the first case is for the collective's own key.", Facts::default(), ask_status(&on_gen), json!("invalid"), None);
-
-    // Rule 14: a holder's member key, its signature act not held.
-    let mut w = World::new();
-    let mut col = collective(&mut w, &[1], 1);
-    let (cid, fd) = (col.c.id, col.founding);
-    let mut ana = member_key(&mut w, &mut col, 0, "ana");
-    let sig = ana.binding;
-    let good = text_act(&mut w, &mut ana, "A text of the collective, by Ana's member key.", Some(vec![Object { chain: cid, predecessor: fd }]));
-    let log = w.log.clone();
-    out.case(&mut w, "a member key's text naming the version that named the key: scoped", "Text rule 14; Agreements rule 73", "Valid under Text, judged by Agreements.", Facts::default(), ask_status(&good), json!("scoped"), None);
-    let mut w2 = World::new();
-    for (a, _) in &log {
-        if a.id() != sig {
-            w2.add(a);
-        }
-    }
-    out.case(&mut w2, "the same, the signature act that named the key not held: unknown", "Text rule 14",
-        "A verifier that does not yet hold, for a member key, the signature act its binding names answers unknown.", Facts::default(), ask_status(&good), json!("unknown"), None);
+    out.case(&mut w, "a collective's grantee's text, with its own key, naming its grant: valid", "Text rule 14, second case; Agreements rules 58 and 73",
+        "The one object names the collective and a grant for it, one of its decisions.", Facts::default(), ask_status(&ok), json!("valid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "the same: its consent counts", "Agreements rules 58 and 73", "The grant reaches texts and the agent accepted it.", Facts::default(), ask("consent counts", &ok), json!(true), None);
+    let keyed = Grant { key: Some(signing_key(&schnorr("a key for the agent", 0))), ..grant };
+    let kg = ag_act(&mut w, &mut col.c, agreements::types::GRANT, keyed.to_map(), None);
+    out.case(&mut w, "a grant for a collective naming a key: it does not count", "Agreements rule 73, field 7",
+        "A collective's grant carries no key: its grantee signs with its own. The act is invalid under Agreements.", Facts::default(), ask("consent counts", &kg), json!(false), None);
 
     // Rule 14 and the freeze scenarios: a text act naming a deal is no fork of it.
     let mut w = World::new();
@@ -2974,7 +3099,7 @@ fn s7g_envelopes(out: &mut Out) {
     let a = w.everyday_act(&mut q, mirs().text, 0, say("Received."), None, Some(vec![post]));
     let text_ack = w.add(&a);
     let like = w.like(&mut q, spec("a reaction cMIP, test value"), post);
-    let a = w.everyday_act(&mut q, env, et::PUBLICATION, publication(vec![]), None, Some(vec![post]));
+    let a = w.everyday_act(&mut q, env, et::BAKE, publication(vec![]), None, Some(vec![post]));
     let pub_ack = w.add(&a);
     let witness = w.ack(&mut q, post);
     let log = w.log.clone();
@@ -3020,28 +3145,34 @@ fn s7g_envelopes(out: &mut Out) {
     let private_routes = w.private_act(&mut p, identity_spec(), mor_core::identity::types::ROUTES, routes(1, None), None, vec![pid]);
     out.case(&mut w, "a private routes act: invalid", "Envelopes rule 8; Identity, \"Every act defined by this MIR is public, except a private link\"", "Its content key is held, as its recipient holds it; an Identity act other than a link's is public.", Facts::default(), ask_status(&private_routes), json!("invalid"), None);
 
-    // Rule 24: a withdrawal, by the publication's signer or its for.
+    // Rule 24 retired: a bake is never withdrawn; type 3 is retired, and a
+    // bake carrying field 7 or 8 (reserved) is invalid ("Bake (type 0)").
     let mut w = World::new();
     let mut publisher = w.genesis("lea", vec![own_home()], None, None);
     let mut creator = w.genesis("mio", vec![own_home()], None, None);
     let mut stranger = w.genesis("ned", vec![own_home()], None, None);
-    let pubn = w.everyday_act(&mut publisher, env, et::PUBLICATION, publication(vec![(Value::Uint(8), Value::Bytes(creator.id.to_vec()))]), None, None);
+    let pubn = w.everyday_act(&mut publisher, env, et::BAKE, publication(vec![(Value::Uint(8), Value::Bytes(creator.id.to_vec()))]), None, None);
     let pid = pubn.id();
     let naming = || Some(vec![Object { chain: pid, predecessor: pid }]);
-    let by_stranger = { let a = w.everyday_act(&mut stranger, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
-    out.case(&mut w, "a withdrawal whose publication this verifier does not hold: unknown", "Envelopes rule 24", "Who may withdraw is read from the publication: its signer, or its for.", Facts::default(), ask_status(&by_stranger), json!("unknown"), None);
+    let by_stranger = { let a = w.everyday_act(&mut stranger, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    out.case(&mut w, "an act of the retired type 3 naming a bake this verifier does not hold: invalid", "Envelopes rule 24 (retired) and rule 30; \"Withdrawal (retired type 3)\"", "Type 3 is retired, never reused: an act of it is invalid, whatever it names.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
     w.add(&pubn);
-    let by_creator = { let a = w.everyday_act(&mut creator, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
-    let by_publisher = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    let by_creator = { let a = w.everyday_act(&mut creator, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
+    let by_publisher = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], naming(), None); w.add(&a) };
     let text = { let a = w.everyday_act(&mut publisher, mirs().text, 0, say("Not a publication."), None, None); w.add(&a) };
-    let not_pub = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], obj(text), None); w.add(&a) };
-    let no_entry = { let a = w.everyday_act(&mut publisher, env, et::WITHDRAWAL, vec![], Some(vec![Object { chain: pid, predecessor: text }]), None); w.add(&a) };
+    let not_pub = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], obj(text), None); w.add(&a) };
+    let no_entry = { let a = w.everyday_act(&mut publisher, env, et::RETIRED_WITHDRAWAL, vec![], Some(vec![Object { chain: pid, predecessor: text }]), None); w.add(&a) };
+    let priced = { let a = w.everyday_act(&mut publisher, env, et::BAKE, publication(vec![(Value::Uint(7), Value::Uint(100))]), None, None); w.add(&a) };
+    let plain = { let a = w.everyday_act(&mut creator, env, et::BAKE, publication(vec![]), None, None); w.add(&a) };
     let log = w.log.clone();
-    out.case(&mut w, "a withdrawal signed by a stranger: invalid", "Envelopes rule 24: valid only if signed by the publication's signer or by the identity its for names", "No other authority exists at this layer.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a withdrawal signed by the identity the publication's for names: valid", "Envelopes rule 24", "The for field gives a client with no Agreements what it needs to judge a withdrawal.", Facts::default(), ask_status(&by_creator), json!("valid"), None);
-    out.case(&mut fresh(&log), "a withdrawal signed by the publication's signer: valid", "Envelopes rule 24", "Its signer may withdraw it.", Facts::default(), ask_status(&by_publisher), json!("valid"), None);
-    out.case(&mut fresh(&log), "a withdrawal naming an act that is no publication: invalid", "Envelopes rule 24: a withdrawal names a publication in objects", "The act named as both chain and predecessor is a text act.", Facts::default(), ask_status(&not_pub), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a withdrawal without the entry [publication, publication]: invalid", "Envelopes rule 24; \"Withdrawal (type 3)\"; rule 30", "Its one entry names the publication as chain and another act as predecessor: outside its format.", Facts::default(), ask_status(&no_entry), json!("invalid"), None);
+    out.case(&mut w, "an act of the retired type 3 signed by a stranger: invalid", "Envelopes rule 24 (retired) and rule 30", "Type 3 is retired: no authority withdraws a bake.", Facts::default(), ask_status(&by_stranger), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 signed by the identity a bake's field 8 names: invalid", "Envelopes rule 24 (retired) and rule 30", "A bake is never withdrawn; what stops is a price tag or a publication.", Facts::default(), ask_status(&by_creator), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 signed by the bake's uploader: invalid", "Envelopes rule 24 (retired) and rule 30", "A bake is never withdrawn, by its uploader either: the uploader withdraws a price tag instead (Money rule 18).", Facts::default(), ask_status(&by_publisher), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 naming a text act: invalid", "Envelopes rule 30", "Type 3 is retired.", Facts::default(), ask_status(&not_pub), json!("invalid"), None);
+    out.case(&mut fresh(&log), "an act of the retired type 3 without the entry [bake, bake]: invalid", "Envelopes rule 30", "Type 3 is retired.", Facts::default(), ask_status(&no_entry), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake carrying field 8, reserved: invalid", "Envelopes, \"Bake (type 0)\"; rule 30", "Fields 7 and 8 are reserved, never reused: a bake names nobody it is made for.", Facts::default(), ask_status(&pid), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake carrying field 7, reserved: invalid", "Envelopes, \"Bake (type 0)\"; rule 30", "A bake carries no price: its price is a price tag (Money type 5).", Facts::default(), ask_status(&priced), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake with fields 0 to 4 and nothing reserved: valid", "Envelopes, \"Bake (type 0)\"", "A bake says only who uploaded it.", Facts::default(), ask_status(&plain), json!("valid"), None);
 
     // Rule 30: an act of a type this MIR does not define, or outside its format.
     let mut w = World::new();
@@ -3049,10 +3180,10 @@ fn s7g_envelopes(out: &mut Out) {
     let retired = { let a = w.everyday_act(&mut p, env, et::RETIRED_COMMITMENT, vec![(Value::Uint(0), Value::Uint(3))], None, None); w.add(&a) };
     let mut no_nonce = publication(vec![]);
     no_nonce.retain(|(k, _)| *k != Value::Uint(4));
-    let no_nonce = { let a = w.everyday_act(&mut p, env, et::PUBLICATION, no_nonce, None, None); w.add(&a) };
+    let no_nonce = { let a = w.everyday_act(&mut p, env, et::BAKE, no_nonce, None, None); w.add(&a) };
     let log = w.log.clone();
     out.case(&mut w, "an Envelopes act of type 2, retired: invalid", "Envelopes rule 30; \"Types defined by this MIR\": type 2 retired, never reused", "An act of a type this MIR does not define is invalid.", Facts::default(), ask_status(&retired), json!("invalid"), None);
-    out.case(&mut fresh(&log), "a publication without its nonce (field 4): invalid", "Envelopes rule 30; \"Publication (type 0)\"", "A payload outside its type's format is invalid.", Facts::default(), ask_status(&no_nonce), json!("invalid"), None);
+    out.case(&mut fresh(&log), "a bake without its nonce (field 4): invalid", "Envelopes rule 30; \"Bake (type 0)\"", "A payload outside its type's format is invalid.", Facts::default(), ask_status(&no_nonce), json!("invalid"), None);
 
     // Rule 11: a key delivery is valid as an act by its shape.
     let mut w = World::new();
@@ -3224,9 +3355,11 @@ fn s7g_money(out: &mut Out) {
     let mut eli = w.genesis("eli, who co-owns it with her", vec![own_home()], None, None);
     let mut fay = w.genesis("fay, who tips dee", vec![own_home()], None, None);
     let song = spec("dee and eli's song");
+    let owners = [dee.id, eli.id];
+    let sc = claim_act(&mut w, &mut dee, &owners, song);
     let mut t = deal(&[dee.id, eli.id], None);
-    t.text = "A deal over a song.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(song), holders: vec![(agreements::Who::Id(dee.id), 500_000), (agreements::Who::Id(eli.id), 500_000)] }]);
+    t.text = "The ownership of a song.".into();
+    owning(&mut t, sc, &[(dee.id, 500_000), (eli.id, 500_000)]);
     let d = ag_act(&mut w, &mut dee, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut dee, &d);
     sign(&mut w, &mut eli, &d);
@@ -3242,7 +3375,7 @@ fn s7g_money(out: &mut Out) {
                 purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
             let a = w.everyday_act(&mut fay, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         case(out, &mut w, &format!("{what} naming a claim in field 9: no purchase, and no payment for a work"), "Money rule 18: a payment to an identity's own pointer (a tip) or toward an obligation is no purchase and names nothing",
-            "Fay's claim names Dee and Eli's deal, which claims their song, as the claim it pays under, though it pays a tip or a debt: it is no payment for a work, so neither a purchase nor money owed back as Agreements rule 12's \"no purchase\" is.",
+            "Fay's claim names Dee and Eli's ownership agreement of their song in field 9, though it pays a tip or a debt, naming no price tag: it is no payment for a work, so neither a purchase nor money owed back as Agreements rule 12's \"no purchase\" is.",
             Facts { rail_valid: vec![(c, dee_ptr)], rail_payments: vec![(proof, b"fay's payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c) }), json!("not a payment for a work"));
     }
 }
@@ -3261,22 +3394,30 @@ fn s7g_agreements_a(out: &mut Out) {
     let mut dee = w.genesis("dee, cy's partner", vec![own_home()], None, None);
     let mut buyer = w.genesis("a buyer of the duet's song", vec![own_home()], None, None);
     let song = spec("the duet's song, S7g");
+    let owners = [ana.id, bo.id];
+    let sc = claim_act(&mut w, &mut ana, &owners, song);
     let mut t = deal(&[ana.id, bo.id], None);
-    t.text = "A deal staking the duet's song.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(song), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(bo.id), 400_000)] }]);
+    t.text = "The ownership of the duet's song.".into();
+    owning(&mut t, sc, &[(ana.id, 600_000), (bo.id, 400_000)]);
     let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &d);
     sign(&mut w, &mut bo, &d);
-    let publ = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(song.to_vec()))]), None, None); w.add(&a) };
-    // Another deal, staking another work, and that work's release.
+    let bake = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(song.to_vec()))]), None, None); w.add(&a) };
+    // Their publication, Ana its split service, priced by her tag.
+    let aid = ana.id;
+    let pb = owners_publication(&mut w, &mut ana, d, aid, vec![agreements::Sold::Bake(bake)], "The duet's song.");
+    sign(&mut w, &mut bo, &pb);
+    let publ = price_tag(&mut w, &mut ana, mirs().money, money::Priced::Publication(pb), 300, unit, aid);
+    // Another ownership agreement, of another work, and that work's release.
     let other = spec("cy's own ballad, S7g");
+    let cid = cy.id;
+    let ballad_claim = claim_act(&mut w, &mut cy, &[cid], other);
     let mut e = deal(&[cy.id, dee.id], None);
-    e.text = "Another deal, staking another work.".into();
-    e.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(other), holders: vec![(agreements::Who::Id(cy.id), 1_000_000)] }]);
+    e.text = "Another ownership agreement, of another work.".into();
+    owning(&mut e, ballad_claim, &[(cy.id, 1_000_000)]);
     let e = ag_act(&mut w, &mut cy, agreements::types::TERMS, e.to_map(), None);
     sign(&mut w, &mut cy, &e);
     sign(&mut w, &mut dee, &e);
-    let ballad_claim = ag_act(&mut w, &mut cy, agreements::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(other.to_vec()))], None);
     let release = agreements::Release { work: other, stakes: vec![(e, 0)], claims: vec![ballad_claim], keys: vec![(spec("a publication carrying the ballad"), vec![7; 32])], timed: None };
     let unrelated = ag_act(&mut w, &mut cy, agreements::types::RELEASE, release.to_map(), obj(e));
     let base = w.log.clone();
@@ -3287,22 +3428,22 @@ fn s7g_agreements_a(out: &mut Out) {
     };
     let mut b2 = buyer.clone();
     let c = pay(&mut w, &mut buyer, unrelated, b"the buyer pays for the duet's song");
-    out.case(&mut w, "a purchase naming the claiming agreement, its line a release of another work under another agreement: no purchase", "Agreements rule 12: \"a line that carries none of that agreement's claims, is no purchase\"",
-        "The buyer's claim names the deal staking the song, and as its line a release of another work that only another agreement stakes. That release never changed who is paid for the song, so the line carries none of the deal's claims: money received for nothing, owed back.",
-        Facts { rail_valid: vec![(c, publ)], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c) }), json!("no purchase"), None);
+    out.case(&mut w, "a purchase of the publication's tag naming its ownership agreement, its version a release of another work under another agreement: a wrong receipt", "Agreements rule 12: \"a receipt naming a version on no line of the agreement the publication names is a wrong receipt\"",
+        "The buyer's claim names, in field 9, the ownership agreement the publication names, and as its version a release of another work that another agreement owns. That release is on no line of the song's ownership agreement: the claim is a wrong receipt, counting for nothing.",
+        Facts { rail_valid: vec![(c, publ)], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c) }), json!("wrong receipt"), None);
     let mut w2 = World::new();
     for (a, _) in &base {
         w2.add(a);
     }
     let c2 = pay(&mut w2, &mut b2, d, b"the buyer pays for the duet's song");
-    out.case(&mut w2, "the same purchase, its line the claiming agreement itself: a purchase", "Agreements rule 12: the line is \"a version of that agreement\"",
-        "The twin of the case before: the line is the deal staking the song, on a request rail with no collective seller.",
+    out.case(&mut w2, "the same purchase, its version the ownership agreement's founding version: a purchase", "Agreements rule 12: field 9 names \"a version on that agreement's line\"",
+        "The twin of the case before: the version is the ownership agreement's founding one, on a request rail.",
         Facts { rail_valid: vec![(c2, publ)], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c2) }), json!("purchase"), None);
 }
 
 /// S7g: Agreements' suspected differences, offers, parties, standing, and lines 1126 to 2129.
 fn s7g_agreements_b(out: &mut Out) {
-    use agreements::types::{FORK_SETTLEMENT, SETTLEMENT_REQUEST, STANDING_OFFER, TERMS};
+    use agreements::types::{FORK_SETTLEMENT, SETTLEMENT_REQUEST, TERMS};
     let replay = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)], skip: &[Hash]| {
         let mut w = World::new();
         for (a, _) in log {
@@ -3376,9 +3517,11 @@ fn s7g_agreements_b(out: &mut Out) {
     let mut ivo = w.genesis("ivo, who holds part of the stake and is no party", vec![own_home()], None, None);
     let mut judge = w.genesis("the judge of fenna and gus's forks", vec![own_home()], None, None);
     let song = spec("fenna and gus's song");
+    let owners = [fenna.id, gus.id];
+    let sc = claim_act(&mut w, &mut fenna, &owners, song);
     let mut t = deal(&[fenna.id, gus.id], None);
-    t.text = "A deal over a song, an investor holding part of its stake.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(song), holders: vec![(agreements::Who::Id(fenna.id), 400_000), (agreements::Who::Id(gus.id), 400_000), (agreements::Who::Id(ivo.id), 200_000)] }]);
+    t.text = "The ownership of a song, an investor holding part of its stake.".into();
+    owning(&mut t, sc, &[(fenna.id, 400_000), (gus.id, 400_000), (ivo.id, 200_000)]);
     t.arbitrators = Some(vec![judge.id]);
     t.fork_judge = Some(judge.id);
     t.time = Some((spec("a block height reference"), Value::Uint(0)));
@@ -3422,24 +3565,29 @@ fn s7g_agreements_b(out: &mut Out) {
     let mut ito = w.genesis("ito", vec![own_home()], None, None);
     let mut buyer = w.genesis("a buyer of hana and ito's film", vec![own_home()], None, None);
     let film = spec("hana and ito's film");
+    let owners = [hana.id, ito.id];
+    let fc = claim_act(&mut w, &mut hana, &owners, film);
     let mut t = deal(&[hana.id, ito.id], None);
-    t.text = "A deal over a film its two owners sell by an offer.".into();
-    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(film), holders: vec![(agreements::Who::Id(hana.id), 500_000), (agreements::Who::Id(ito.id), 500_000)] }]);
+    t.text = "The ownership of a film its two owners sell by a publication.".into();
+    owning(&mut t, fc, &[(hana.id, 500_000), (ito.id, 500_000)]);
     let d = ag_act(&mut w, &mut hana, TERMS, t.to_map(), None);
     sign(&mut w, &mut hana, &d);
     sign(&mut w, &mut ito, &d);
     let publ = { let a = w.everyday_act(&mut hana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
-    let o = agreements::Offer { under: Some(d), sold: vec![agreements::Sold::Publication(publ)], price: Amount { unit, value: 500 }, paid: Some(agreements::Paid::ByStakes), words: Some("The film.".into()), until: None, time: None, refund: None };
-    let offer = ag_act(&mut w, &mut hana, STANDING_OFFER, o.to_map(), obj(d));
+    // Hana drafts the publication of their ownership agreement, its split
+    // service; Ito signs it below.
+    let hid = hana.id;
+    let pb = owners_publication(&mut w, &mut hana, d, hid, vec![agreements::Sold::Bake(publ)], "The film.");
+    let offer = price_tag(&mut w, &mut hana, mirs().money, money::Priced::Publication(pb), 500, unit, hid);
     let proof = b"the buyer pays for hana and ito's film".to_vec();
     let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: hana.id, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
         let a = w.everyday_act(&mut buyer, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
     let facts = || Facts { rail_valid: vec![(claim, offer)], rail_payments: vec![(proof.clone(), b"the film's payment".to_vec())], ..Default::default() };
     let base = w.log.clone();
     let mut w2 = replay(&base, &[]);
-    sign(&mut w2, &mut ito, &offer);
-    out.case(&mut w2, "a payment under co-owners' offer every party of their deal signed, naming the deal: a purchase", "Agreements rule 11 (co-owners' offer: names their agreement, signed under its rule, in a deal every party); rule 12",
-        "Hana makes the offer under the deal, Ito signs it too, and the buyer's claim names the deal as the claim it pays under.",
+    sign(&mut w2, &mut ito, &pb);
+    out.case(&mut w2, "a payment under co-owners' publication every party of their ownership agreement signed, naming the agreement: a purchase", "Agreements rule 11 (every party signs a publication: the owners' side by every party of their agreement); rule 12",
+        "Hana drafts the publication of their ownership agreement, Ito signs it too; Hana, its split service, prices it by a tag, and the buyer's claim names the agreement and its version (field 9).",
         facts(), json!({ "question": "purchase", "act": hx(&claim) }), json!("purchase"), None);
 
     // ---- Agreements 684 (rule 15): an inner deal signs by its version in force.
@@ -3508,8 +3656,9 @@ fn s7g_agreements_b(out: &mut Out) {
     let mut door = w.genesis("the s7g hall's door", vec![own_home()], None, None);
     let name = { let v = mor_core::envelopes::vow::Vow { words: "A free open rehearsal in the hall".into(), cmip: None };
         let a = w.everyday_act(&mut hall, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
-    let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Vow(name)], price: Amount { unit, value: 0 }, paid: None, words: Some("A free seat.".into()), until: None, time: None, refund: None };
-    let offer = ag_act(&mut w, &mut hall, STANDING_OFFER, o.to_map(), None);
+    // A free seat: the hall's publication with no price tag; a sign-on to
+    // it is a free sale (rule 13).
+    let offer = lone_publication(&mut w, &mut hall, &mirs(), vec![agreements::Sold::Vow(name)], Some("A free seat."));
     let sale = sign(&mut w, &mut rafa, &offer);
     let scanned = { let a = w.everyday_act_refs(&mut door, spec("a ticketing Module"), 0, vec![(Value::Uint(0), Value::Text("a free seat, scanned at the door".into()))], None, None, Some(vec![mor_core::act::Ref::Act(name)])); w.add(&a) };
     let base = w.log.clone();
@@ -3521,8 +3670,8 @@ fn s7g_agreements_b(out: &mut Out) {
     let ask_vow = json!({ "question": "vow", "vow": hx(&name) });
     let mut w1 = replay(&base, &[]);
     ack_act(&mut w1, &mut rafa.clone(), vec![scanned, sale]);
-    out.case(&mut w1, "a free sale confirmed by the buyer's act acknowledging both the door's record of the vow and the buyer's own sign-on: confirmed", "Agreements rule 13: for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer",
-        "Rafa signed the hall's free offer (the sale), then acknowledges the door's record naming the vow and that signature act.",
+    out.case(&mut w1, "a free sale confirmed by the buyer's act acknowledging both the door's record of the vow and the buyer's own sign-on: confirmed", "Agreements rule 13: for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the publication",
+        "Rafa signed the hall's publication of the free seat, which no price tag prices (the sale), then acknowledges the door's record naming the vow and that signature act.",
         Facts::default(), ask_vow.clone(), json!({ "sales": [{ "act": hx(&sale), "buyer": hx(&rafa.id), "state": "confirmed" }], "unsigned": [], "unknown": [] }), None);
 }
 
@@ -3531,51 +3680,20 @@ fn s7g_agreements_c(out: &mut Out) {
     let unit = spec("a test unit (regtest satoshi)");
     let rail = spec("a rail Module");
 
-    // Row 5 (text 2150): a member key after its holder's rotation disowns the
-    // signature that named it. Placed by an act of the collective
-    // acknowledging it, it stays valid for the collective ("Made before,
-    // made after", 2 and 4); never placed, Identity alone judges it.
-    for (placed, name, v) in [
-        (true, "a member key whose naming signature the collective acknowledged, after the holder's rotation disowns that signature: its receipt still counts", true),
-        (false, "the same, the naming signature never placed by an act of the collective: its receipt does not count", false),
-    ] {
-        let mut w = World::new();
-        let mut col = collective(&mut w, &[1], 1);
-        let cid = col.c.id;
-        let mut ben = member_key(&mut w, &mut col, 1, "ben");
-        let named = ben.binding;
-        let acks = placed.then(|| vec![named]);
-        let ptr = {
-            let x = Fin::PayeePointer(money::PayeePointer { payee: cid, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"the collective's address".to_vec() }] });
-            let a = w.everyday_act(&mut col.c, mirs().money, 0, x.to_map(), None, acks);
-            w.add(&a)
-        };
-        sign(&mut w, &mut col.m[1], &ptr);
-        let r = Fin::Receipt(Receipt { rail, proof: b"a payment the member key receipts".to_vec(), payer: None, payee: cid, amount: Amount { unit, value: 7 }, fulfils: ptr, previous: None, forward: None, batch: None, purchase: None });
-        let rec = { let a = w.everyday_act(&mut ben, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
-        let (_, b2) = w.rotate(&col.m[1], Rot { disowned: Some(vec![named]), ..Default::default() });
-        col.m[1] = b2;
-        out.case(&mut w, name, "Agreements rule 73 (\"The holder's own change of keys leaves it as it is\"); \"Made before, made after\", 2 and 4",
-            "Ben's signature of the founding names his member key; his rotation disowns that signature, and no line of the collective registers the rotation. The collective's payee pointer acknowledges the signature (placed) or does not (never placed).",
-            Facts::default(), ask("consent counts", &rec), json!(v), None);
-    }
-
     // Row 102 (text 3434): a collective's grant after its grantee's rotation
     // disowns the acceptance. Acknowledged by an act of the collective, the
     // acceptance keeps its effect for the collective; acknowledged by none,
     // Identity alone judges it.
     for (acked, name, v) in [
-        (true, "a collective's grant whose acceptance an act of the collective acknowledged, after the grantee's rotation disowns it: the grant key's act is backed", "backed"),
+        (true, "a collective's grant whose acceptance an act of the collective acknowledged, after the grantee's rotation disowns it: the grantee's act is backed", "backed"),
         (false, "the same, the acceptance acknowledged by no act of the collective: not backed", "not backed (void)"),
     ] {
         let mut w = World::new();
         let mut col = collective(&mut w, &[1], 1);
-        let cid = col.c.id;
+        let cid = col.id;
         let mut app = w.genesis("the collective's publishing app", vec![own_home()], None, None);
-        let k = schnorr("the collective's publishing app/grant key", 0);
-        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(vec![Kind::Layer(agreements::layers::TEXT), Kind::Layer(agreements::layers::ENVELOPES)]), reinstates: None, key: None };
         let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
-        sign(&mut w, &mut col.m[0], &gid);
         let acc = sign(&mut w, &mut app, &gid);
         if acked {
             // A Money act may carry `acks` (Envelopes rule 18): the collective's payee pointer.
@@ -3583,15 +3701,11 @@ fn s7g_agreements_c(out: &mut Out) {
             let a = w.everyday_act(&mut col.c, mirs().money, 0, p.to_map(), None, Some(vec![acc]));
             w.add(&a);
         }
-        let mut lane = col.c.clone();
-        lane.binding = gid;
-        lane.sign = k;
-        lane.seq = vec![];
-        lane.cite = Some((cid, vec![gid]));
+        let mut lane = app.acting_for(cid, vec![gid]);
         let x = text_act(&mut w, &mut lane, "A note the app publishes for the collective.", None);
         w.rotate(&app, Rot { disowned: Some(vec![acc]), ..Default::default() });
         out.case(&mut w, name, "Agreements, \"Grant (type 9)\": \"the grantee's acceptance is placed as a member's signature is\"; \"Made before, made after\", 2 and 4",
-            "Ana, who holds the area the grant issues from, signs the collective's grant; the app accepts it and publishes with its grant key; the app's rotation then disowns its acceptance. The collective's payee pointer, an act of its own key, acknowledges the acceptance, or no act does.",
+            "Cy, under the rule for Agreements (any one member), draws the collective's grant; the app accepts it and publishes for the collective with its own key, naming the grant; the app's rotation then disowns its acceptance. The collective's payee pointer, drawn by Cy for it, acknowledges the acceptance, or no act does.",
             Facts::default(), ask("backing", &x), json!(v), None);
     }
 
@@ -3622,7 +3736,6 @@ fn s7g_agreements_c(out: &mut Out) {
         t1.parties = if in_place { place.clone() } else { vec![ids[0], ids[2], dee.id] };
         t1.succession = None;
         let g = t1.grammar.as_mut().unwrap();
-        g.signing = Holding::Shares { threshold: 2, members: place.clone() };
         g.chain_key = Holding::Shares { threshold: 3, members: place.clone() };
         t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Plan(ids[1]), signers: vec![dee.id] }]);
         let k = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t1.to_map(), obj(founding));
@@ -3636,37 +3749,30 @@ fn s7g_agreements_c(out: &mut Out) {
     // makes it bind, the revocation racing it notwithstanding; with no
     // payment, the revocation that does not hold it voids it.
     for (pays, name, v) in [
-        (true, "a grant key's obligation that the collective's own key pays on, its grant revoked by a revocation not holding it: binds", "binds"),
+        (true, "a grantee's obligation for the collective that the collective pays on, its grant revoked by a revocation not holding it: binds", "binds"),
         (false, "the same obligation the collective never paid on, acknowledged, nor cited: void", "not backed (void)"),
     ] {
         let mut w = World::new();
         let mut col = collective(&mut w, &[1], 1);
-        let cid = col.c.id;
+        let cid = col.id;
         let mut supplier = w.genesis("a supplier of the collective", vec![own_home()], None, None);
         let sptr = pointer_act(&mut w, &mut supplier, b"the supplier's address");
         let mut app = w.genesis("the collective's buying app", vec![own_home()], None, None);
-        let k = schnorr("the collective's buying app/grant key", 0);
-        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(2), kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), reinstates: None, key: None };
         let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
-        sign(&mut w, &mut col.m[1], &gid);
         sign(&mut w, &mut app, &gid);
-        let mut lane = col.c.clone();
-        lane.binding = gid;
-        lane.sign = k;
-        lane.seq = vec![];
-        lane.cite = Some((cid, vec![gid]));
+        let mut lane = app.acting_for(cid, vec![gid]);
         let ob = Fin::Obligation(money::Obligation { debtor: cid, creditor: supplier.id, amount: Amount { unit, value: 30 }, pointer: sptr, agreement: None });
         let y = { let a = w.everyday_act(&mut lane, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
-        let rv = ag_act(&mut w, &mut col.c, agreements::types::REVOCATION, agreements::Revocation { grant: gid }.to_map(), None);
-        sign(&mut w, &mut col.m[1], &rv);
+        ag_act(&mut w, &mut col.c, agreements::types::REVOCATION, agreements::Revocation { grant: gid }.to_map(), None);
         if pays {
             let x = Fin::Claim(Claim { rail, proof: b"the collective pays its supplier".to_vec(), payee: supplier.id, amount: Amount { unit, value: 30 }, fulfils: y, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
-            let a = w.everyday_act(&mut col.c, mirs().money, 3, x.to_map(), None, None);
-            let c = w.add(&a);
-            sign(&mut w, &mut col.m[1], &c);
+            let mut ben = member_for(&col, 1);
+            let a = w.everyday_act(&mut ben, mirs().money, 3, x.to_map(), None, None);
+            w.add(&a);
         }
         out.case(&mut w, name, "Agreements rule 76 (\"The grantor may adopt a void or disputed act of a grant key as its own\": \"pays on it\"); \"Made before, made after\", 7",
-            "Ben, who holds the Money area, signs a grant reaching Money; the app signs an obligation of the collective to a supplier with its grant key; the collective revokes the grant, the revocation's history not holding the obligation. The collective's own claim, signed by Ben, pays the obligation (its field fulfils names it), or nothing does.",
+            "Cy, under the rule for Agreements, draws a grant reaching Money; the app signs an obligation of the collective to a supplier with its own key, naming the grant; Cy draws the collective's revocation of the grant, whose history does not hold the obligation. The collective's own claim, signed by Ben, whom the rule for Money names, pays the obligation (its field fulfils names it), or nothing does.",
             Facts::default(), ask("backing", &y), json!(v), None);
     }
 
@@ -3679,7 +3785,7 @@ fn s7g_agreements_c(out: &mut Out) {
     ] {
         let mut w = World::new();
         let mut col = collective(&mut w, &[1], 1);
-        let cid = col.c.id;
+        let cid = col.id;
         let f = col.founding;
         let l = ag_act(&mut w, &mut col.m[0], agreements::new_types::LIVENESS, agreements::Liveness { agreement: f }.to_map(), obj(f));
         if placed {
@@ -3778,11 +3884,13 @@ fn s7g_development(out: &mut Vec<J>) {
     // Layers an extension acts on (field 10), and the checker's field 12.
     push("field 10 out of order: no specification", "Development, \"Layers an extension acts on\"; freeze scenario, Part one",
         "Field 10 is ascending, without repeats.", &cmip(vec![(10, arr(vec![u(2), u(0)]))], "An extension acting on Money and Identity."), &[], none.clone());
-    push("field 10 naming layer 4: no specification", "Development, \"Layers an extension acts on\"",
-        "The layers are 0 Identity, 1 Envelopes and Text, 2 Money, 3 Agreements.", &cmip(vec![(10, arr(vec![u(4)]))], "An extension acting on a fifth layer."), &[], none.clone());
+    push("field 10 naming layer 4, Agreements: a specification", "Development, \"Layers an extension acts on\"; MICS, \"Structure\"",
+        "The layers are 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development: 4 is Agreements.", &cmip(vec![(10, arr(vec![u(4)]))], "An extension acting on a fifth layer."), &[], spec_.clone());
+    push("field 10 naming layer 5, Development itself: no specification", "Development, \"Layers an extension acts on\"",
+        "Field 10 names layers 0 to 4: an extension's own acts are Development's.", &cmip(vec![(10, arr(vec![u(5)]))], "An extension acting on Development."), &[], none.clone());
     push("field 10 empty: no specification", fmt, "`[+ uint]` holds at least one item.", &cmip(vec![(10, arr(vec![]))], "An extension declaring an empty list."), &[], none.clone());
     push("field 10 ascending on a cMIP: a specification", "Development, \"Layers an extension acts on\"",
-        "Money and Agreements, ascending.", &cmip(vec![(10, arr(vec![u(2), u(3)]))], "An extension acting on Money and Agreements."), &[], spec_.clone());
+        "Envelopes and Money (layers 2 and 3), ascending.", &cmip(vec![(10, arr(vec![u(2), u(3)]))], "An extension acting on Money and Agreements."), &[], spec_.clone());
     push("field 12 on a cMIP: a specification", "Development, \"A proof-of-delivery checker\"",
         "A cMIP declaring itself a checker.", &cmip(vec![(12, Value::Bool(true))], "A proof checker."), &[], spec_.clone());
     push("field 12 false: no specification", fmt, "Field 12 is the value true alone.", &cmip(vec![(12, Value::Bool(false))], "A cMIP writing false."), &[], none.clone());

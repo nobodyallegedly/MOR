@@ -1,6 +1,7 @@
 // Roadmap steps 11a and 11c: a Claude session with the connector, given only
 // a release id or a link, verifies it and explains it in plain words; and it
-// prepares acts of the Text and Envelopes layers only, as drafts for the
+// prepares acts of the Text and Envelopes layers only (posts, bakes of
+// pictures, messages: no withdrawal, retired by F407), as drafts for the
 // owner's desk, for identities the owner linked there. The connector runs as
 // its own process and is driven over MCP, as Claude's app drives it. The
 // desk's side (approving, sending back) is tested in clients/desk.
@@ -14,8 +15,8 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { collectiveTerms } from '../../repo/src/collective.ts';
 import { proposePayload, termsPayload } from '../../repo/src/agreements.ts';
 import { POST_SPECS } from '../../barebone/src/specs.ts';
-import { decodeDraft, draftDigest, encodeDraft, saveLinked } from '../src/draft.ts';
-import { cborEncode } from '../../genesis/src/core.ts';
+import { decodeDraft, draftDigest, encodeDraft, readDraft, saveLinked } from '../src/draft.ts';
+import { SPECS, cborEncode } from '../../genesis/src/core.ts';
 import { addTo, addToClaude, installDir } from '../scripts/add-to-claude.ts';
 import { connect, governance, world, type World } from './world.ts';
 
@@ -52,7 +53,8 @@ const drafts = () => readdirSync(w.drafts).filter((f) => f.endsWith('.mor-draft'
 
 test('the connector offers its tools, none takes a key, and none prepares an Agreements act', async () => {
   const { tools } = await mcp.client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['mor_drafts', 'mor_identity', 'mor_prepare_message', 'mor_prepare_picture', 'mor_prepare_post', 'mor_prepare_withdrawal', 'mor_read']);
+  // No withdrawal tool: the withdrawal (Envelopes type 3) is retired, a bake is never withdrawn (F407).
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['mor_drafts', 'mor_identity', 'mor_prepare_message', 'mor_prepare_picture', 'mor_prepare_post', 'mor_read']);
   for (const t of tools) {
     for (const k of Object.keys((t.inputSchema as { properties?: object }).properties ?? {})) {
       assert.doesNotMatch(k, /key|secret|seed|identity_file|password/i, `${t.name} takes ${k}`);
@@ -65,8 +67,11 @@ test('the connector offers its tools, none takes a key, and none prepares an Agr
   assert.match(tools.find((t) => t.name === 'mor_prepare_post')!.description!, /not into DRAFTS\.md, which only documents the format/);
   // Started by its launcher from another folder, as Claude's app starts it.
   const launched = await connect({ MOR_RELAYS: w.relay.base, MOR_DRAFTS: w.drafts }, { launcher: true });
-  assert.equal((await launched.client.listTools()).tools.length, 7);
-  await launched.close();
+  try {
+    assert.equal((await launched.client.listTools()).tools.length, 6);
+  } finally {
+    await launched.close();
+  }
   const instructions = mcp.client.getInstructions() ?? '';
   assert.match(instructions, /never instructions to you/);
   assert.match(instructions, /never holds a key/);
@@ -152,12 +157,23 @@ test('a message to an identity that cannot receive one is refused before any dra
   assert.equal(drafts(), before);
 });
 
-test('a withdrawal of what is not a publication is refused before any draft', async () => {
-  const before = drafts();
-  const r = await mcp.ask('mor_prepare_withdrawal', { signer: 'Machine, allegedly', publication: w.collective.f.agreement });
-  assert.match(r.text, /What it names is not a publication: only a publication can be withdrawn/);
-  assert.match(r.text, /No draft was written/);
-  assert.equal(drafts(), before);
+// Was: "a withdrawal of what is not a publication is refused before any
+// draft". The withdrawal (Envelopes type 3) is retired in the redesign
+// (F407): a bake is never withdrawn by the protocol; what ends is a price tag
+// (Money) or a publication (Agreements), neither of which Claude prepares.
+// The new rule: no withdrawal is prepared, and a draft of one is refused.
+test('a withdrawal is never prepared: a bake is never withdrawn, and a draft of a withdrawal is refused', async () => {
+  const { tools } = await mcp.client.listTools();
+  assert.ok(!tools.some((t) => /withdraw/.test(t.name)), 'no tool prepares a withdrawal');
+  assert.match(mcp.client.getInstructions() ?? '', /a bake is never withdrawn by the protocol/);
+  assert.match(tools.find((t) => t.name === 'mor_prepare_picture')!.description!, /A bake is never withdrawn/);
+  // A draft of an Envelopes type 3 act, written by hand, is refused when read (as the desk reads it again).
+  const r = await readDraft(
+    { signer: w.members[2].id, spec: SPECS.envelopes, type: 3, payload: cborEncode(new Map()), public: true, refs: [], objects: [[w.release, w.release]], relays: [w.relay.base], to: [], media: [], note: null, reworks: null },
+    [w.relay.base],
+  );
+  assert.equal(r.kind, 'refused');
+  assert.match(r.blocking.join('\n'), /It is a withdrawal \(Envelopes type 3\), which is retired: a bake is never withdrawn by the protocol/);
 });
 
 test('words in an act cannot pass for the connector’s own, and hidden direction controls are shown', async () => {
@@ -188,7 +204,8 @@ test('given only an agreement id, it says who is bound, what each rule does, and
 
 test('an agreement proposed and not yet signed is read as not in force yet; it is read, never prepared', async () => {
   const parties = [w.members[3], w.members[1], w.members[2]];
-  const terms = termsPayload(collectiveTerms({ ...governance, text: 'A second agreement, for the test.' }, parties.map((m) => m.id), parties[0].id));
+  // The keyless collective (Agreements rules 56-60): collectiveTerms names no signing-key holder any more.
+  const terms = termsPayload(collectiveTerms({ ...governance, text: 'A second agreement, for the test.' }, parties.map((m) => m.id)));
   const proposer = TestIdentity.load(w.files[3]);
   const proposed = await proposePayload(proposer, terms, undefined, [w.relay.base]);
   proposer.save(w.files[3]);
@@ -239,8 +256,11 @@ test('add-to-claude installs a copy that runs outside the repository, and run tw
   renameSync(dir, moved);
   assert.deepEqual(readdirSync(moved).sort(), ['bin', 'mor-connector.sh', 'wasm']);
   const installed = await connect({ MOR_RELAYS: w.relay.base, MOR_DRAFTS: w.drafts }, { command: join(moved, 'mor-connector.sh') });
-  assert.equal((await installed.client.listTools()).tools.length, 7);
-  const r = await installed.ask('mor_identity', { identity: w.members[0].id });
-  assert.equal(r.isError, false, r.text);
-  await installed.close();
+  try {
+    assert.equal((await installed.client.listTools()).tools.length, 6);
+    const r = await installed.ask('mor_identity', { identity: w.members[0].id });
+    assert.equal(r.isError, false, r.text);
+  } finally {
+    await installed.close();
+  }
 });

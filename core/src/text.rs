@@ -263,12 +263,13 @@ pub fn check_act(inside: &crate::act::Inside, signer: Option<&crate::hash::Hash>
         return Err(NotATextAct("a text act carries no acks (Envelopes rule 18)"));
     }
     if let Some(objects) = &inside.objects {
-        // F334: one object at most, naming the signer itself as chain (a
-        // collective's pointer to its own decision, Agreements rule 58).
-        let own = matches!(objects.as_slice(), [o] if Some(&o.chain) == signer);
-        if !own {
+        // Rule 14: one object at most, `[grantor, grant]` or `[collective,
+        // decision]`; which, and whether it holds, is judged with the
+        // identity chains ([`crate::chain::Verifier`]).
+        let _ = signer;
+        if objects.len() != 1 {
             return Err(NotATextAct(
-                "a text act carries no objects, save a collective's one pointer to its own decision (rule 14, F296, F334)",
+                "a text act carries no objects, save one: a grantee's pointer to its grant, or a member's to the collective's decision it acts under (rule 14)",
             ));
         }
     }

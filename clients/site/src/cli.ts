@@ -126,7 +126,7 @@ async function main(argv: string[]): Promise<number> {
     if (!id) throw new Error('verify takes the version id');
     const v = await openVersion(id, one(opts, 'identity'), opts.at ?? [], via);
     console.log(`version ${id}`);
-    if (v.signer) console.log(`  signed by ${v.signer}${v.standing ? `, ${v.standing}` : ''}`);
+    if (v.signer) console.log(`  signed by ${v.signer}${v.standing ? `, ${v.standing}` : ''}${v.collective ? `, uploading for the collective ${v.collective}` : ''}`);
     if (!v.ok) {
       console.log('NOT VERIFIED');
       for (const p of v.problems) console.log(`  ${p}`);
@@ -144,7 +144,7 @@ async function main(argv: string[]): Promise<number> {
       console.log(`NOT VERIFIED: ${bad.length} file(s) not found or not matching`);
       return 1;
     }
-    console.log(`VERIFIED: the site "${v.manifest!.name}", ${got.length} files, each what ${v.signer} signed`);
+    console.log(`VERIFIED: the site "${v.manifest!.name}", ${got.length} files, each what ${v.collective ? `the collective ${v.collective}'s member ${v.signer}` : v.signer} signed`);
     const out = opts.out?.[0];
     if (out) {
       for (const f of got) {
@@ -173,7 +173,7 @@ async function main(argv: string[]): Promise<number> {
       for (const p of v.problems) console.log(`  ${p}`);
       return 1;
     }
-    console.log(`  the version verifies: the site "${v.manifest!.name}", signed by ${v.signer}`);
+    console.log(`  the version verifies: the site "${v.manifest!.name}", signed by ${v.signer}${v.collective ? ` for the collective ${v.collective}` : ''}`);
     const later = await findLater(v, via);
     if (later.latest.version !== v.version) console.log(`  a newer version exists: ${later.latest.version}`);
     if (later.fork.length) console.log(`  later versions split: ${later.fork.join(', ')} name the same version`);

@@ -84,7 +84,8 @@ import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
-import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, termsAt, type ConsentRead } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, collectivePointer, collectiveVerifier, termsAt, type ConsentRead } from '../../grants/src/member.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { dealOfPost, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -97,7 +98,7 @@ import { idForm, idWhere, readActId, readId } from '../../genesis/src/forms.ts';
 import { Known } from '../../kit/src/engine/known.ts';
 import type { Named, NameShown } from '../../kit/src/html.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
-import { offers as anchorOffers } from '../../ummia/src/anchor.ts';
+import { offers as anchorOffers, tagFor } from '../../ummia/src/anchor.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
 import type { ChainSource } from './chain.ts';
@@ -106,6 +107,8 @@ import { ACCEPTABLE, MESSAGES_SPEC, MESSAGES_SPEC_1, MESSAGES_SPEC_3, MESSAGES_S
 import { readValue, say, totals, unitOf, type Amount } from './units.ts';
 import type { SharedShown, Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from './shapes.ts';
 
+/** Money's price tag (type 5, rule 18). */
+const PRICE_TAG = 5;
 export type { State } from './shapes.ts';
 
 export const TEST_ONLY = 'Test identities and test networks only, until MOR is frozen. No real money.';
@@ -242,6 +245,8 @@ export interface Book {
   after: Record<string, number>;
   /** Every message and Money act kept, by id: its bytes, and its content key where private. */
   acts: Record<string, { act: string; key?: string; from: string }>;
+  /** The acts this identity relies on (a witness act names them), each a copy kept (F400: Identity rules 10 and 11, client conformance), by act: its bytes, base64; the witness act; where the copy was left. */
+  relied?: Record<string, { act: string; witness: string; at: number; left: string[] }>;
   drafts: Record<string, { found: number; stage: 'new' | 'signed' | 'declined'; payment: string | null }>;
   requestsIn: Record<string, { from: string; found: number; stage: 'new' | 'declined' | 'debt' | 'asked' | 'paid'; obligation: string | null; payment: string | null }>;
   requestsOut: Record<string, { to: string; at: number; obligation: string | null; payment: string | null }>;
@@ -260,8 +265,9 @@ export interface Book {
   /** Payments to a deal between separate people this identity is a party of, receipted by its split service in the deal's payee's name and sealed to every party (this round), by receipt. */
   shared?: Record<string, { payer: string; payee: string; amount: Amount; fulfils: string; purchase: boolean; at: number }>;
   /** The splits a split service sealed to this identity (Agreements type 8), by act: the agreement and this identity's payouts. */
+  /** `agreement`: the ownership agreement its owners' line names (payout key 2), else the publication (split field 3). */
   splits?: Record<string, { service: string; agreement: string; receipt: string; mine: { amount: number; role: string | null }[]; unit: string | null; at: number }>;
-  /** Promises signed here for a collective with this member's own key (round 3, F353), by act. */
+  /** Promises signed here for a collective with this member's own key, naming the collective (rule 58), by act. */
   collectiveActs?: Record<string, { collective: string; to: string; amount: Amount; whatFor: string; asked: string[]; at: number }>;
   /** Anchors asked from Damgar's own act menu (decided: Rely and Anchor on every act), by draft: the act, and its blind, which never leaves this app. */
   anchored?: Record<string, { act: string; blind: string; leaf: string; service: string; offer: string; tier: number; at: number }>;
@@ -1067,13 +1073,13 @@ export class Damgar {
         try {
           c = await readCollective(me, id, places, s.via);
         } catch (e) {
-          c = { id, agreement: null, area: null, key: null, why: message(e) };
+          c = { id, agreement: null, area: null, why: message(e) };
         }
         const acts = [];
         for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x]) => x.collective === id)) {
           acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.area ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
         }
-        out.push({ ...c, key: c.key ? { ...c.key, secret: new Uint8Array() } : null, acts });
+        out.push({ ...c, acts });
       }
       return { collectives: out };
     });
@@ -1088,7 +1094,7 @@ export class Damgar {
     }
   }
 
-  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area and its own key for it is found. */
+  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area or layer (rule 60; a collective has no key, and its members no member keys: each acts with their own). */
   collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();
@@ -1100,7 +1106,7 @@ export class Damgar {
       const area = c.area!;
       return {
         lines: [
-          { text: `Damgar acts for ${short(id)} in money, with your own key for it (F353).`, tone: 'ok' },
+          { text: `Damgar acts for ${short(id)} in money, with your own identity’s key, naming the collective (rule 58).`, tone: 'ok' },
           { text: `Its Money area, “${area.name}”: ${area.holders.map(short).join(', ')}; ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.` },
         ],
       };
@@ -1387,7 +1393,9 @@ export class Damgar {
       const payouts = (m.get(1) as Map<number, unknown>[] | undefined) ?? [];
       const mine = payouts.filter((x) => x.get(0) instanceof Uint8Array && hex(x.get(0) as Uint8Array) === me.id).map((x) => ({ amount: Number(x.get(1)), role: typeof x.get(3) === 'string' ? (x.get(3) as string) : null }));
       const receipt = m.get(0);
-      const agreement = m.get(3);
+      // Field 3 names the publication it divides under (round 8); a payout on the owners' line names the ownership agreement (key 2): the agreement shown is that one where it is named, else the publication.
+      const owners = payouts.find((x) => x.get(0) instanceof Uint8Array && hex(x.get(0) as Uint8Array) === me.id && x.get(2) instanceof Uint8Array)?.get(2);
+      const agreement = owners instanceof Uint8Array ? owners : m.get(3);
       if (mine.length && receipt instanceof Uint8Array && agreement instanceof Uint8Array) {
         const rc = book.acts[hex(receipt)] ? this.moneyOf(book, hex(receipt)) : null;
         (book.splits ??= {})[d.id] = { service: signer, agreement: hex(agreement), receipt: hex(receipt), mine, unit: rc?.amount?.unit ?? null, at: t };
@@ -1758,7 +1766,7 @@ export class Damgar {
     const { look } = await this.payee(payee, me, s);
     let c = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]) as { to: string; pointer?: string; rail?: number; declaredBy?: string; entry?: number; module?: string; address?: Uint8Array; why: string };
     let ptr = look.verifier.moneyPointer(MONEY, payee) as { act: string | null };
-    // A collective's pointer, signed with its Money area's member keys, is scoped: Agreements read it (Money draft 10, rule 7, F358).
+    // A collective's pointer, made by a member with their own key naming the collective, counts as Agreements read it (Money draft 10, rule 7, F358; rule 58).
     const col = await collectivePointer(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via, { amount, accepted: [...acc] }).catch(() => null);
     if (col?.choice) {
       c = col.choice as typeof c;
@@ -1785,34 +1793,32 @@ export class Damgar {
    */
   private async bind(me: TestIdentity, s: Settings, book: Book, a: { payee: string; amount: Amount; fulfils: string | null; whatFor: string | null; answers: string | null; draft: string | null; ticket: { leaf: string; tier: number } | null; auto?: boolean; referral?: { identity: string; evidence: string } | null; refs?: [string, string][]; purchase?: [string, string] | null }): Promise<Payment> {
     const acc = this.acceptedSet(await this.accepted(me));
-    let r = await this.route(me, s, a.payee, a.amount, acc);
-    const fulfils = a.fulfils ?? r.tipPointer;
+    // A price tag decides who is paid (Money rule 18: its payee); a tip through a publication pays its split service (Agreements rule 16). The split service receives in its own name: no payee's service answers for another (round 8: the publication replaced terms field 14).
+    // A tip to a collective that names a split agreement (Agreements rule 15) goes through it: paid to its split service, in the service's own name, naming the split agreement (a tip through a publication, Money rule 18).
+    const through = a.fulfils ? null : await this.splitAgreementOf(me, s, a.payee);
+    const payee = through?.service ?? (a.fulfils ? await this.payeeOf(me, s, a.payee, a.fulfils) : null) ?? a.payee;
+    const r = await this.route(me, s, payee, a.amount, acc);
+    const fulfils = a.fulfils ?? through?.agreement ?? r.tipPointer;
     if (!fulfils) throw new Error('The payee has no payee pointer: a tip follows one (Money rule 17). Nothing was signed.');
-    // Draft 4 (F357): where the payee's agreement names a split service, the request goes to the service.
-    const service = await this.splitServiceFor(me, s, a.payee, fulfils);
-    // Its one grantee is the agreement's designated pointer (Agreements field 14, rule 15): where the payee's own pointer does not lead to the service (a lone seller's deal), the service's own pointer is paid (a reading, to confirm).
-    if (service) {
-      const sr = await this.route(me, s, service, a.amount, acc);
-      if (sr.module !== r.module || base64(sr.address) !== base64(r.address)) r = { ...sr, tipPointer: r.tipPointer };
-    }
+    const service: string | null = null;
     const paidTo = r.to === 'flow' ? { kind: 'flow', pointer: r.pointer!, rail: r.rail } : { kind: 'vault', declaredBy: r.declaredBy!, entry: r.entry };
     const salt = new Uint8Array(randomBytes(16));
-    const c = { rail: r.module, payee: a.payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...(a.purchase ? { purchase: a.purchase } : {}) };
+    const c = { rail: r.module, payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...(a.purchase ? { purchase: a.purchase } : {}) };
     const commitment = commitmentCbor(c) as Uint8Array;
     const key = paymentCommitment(c) as string;
     const irPayload = invoiceRequestPayload({ commitment, whatFor: a.whatFor, answers: a.answers, ticket: a.ticket });
     const how = await this.payerHow(me, s, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, !!a.auto);
     // The claim will be signed the same way: checked now, before anything leaves (a lane reaching invoice requests but not claims would leave a payment no claim can record).
     if (how.by === 'lane') {
-      const claimAs = moneyPayload({ type: 'claim', rail: r.module, proof: new Uint8Array(0), payee: a.payee, amount: a.amount, fulfils }) as { type: number; payload: Uint8Array };
+      const claimAs = moneyPayload({ type: 'claim', rail: r.module, proof: new Uint8Array(0), payee, amount: a.amount, fulfils }) as { type: number; payload: Uint8Array };
       const f = await this.laneFor(me, s, MONEY, claimAs.type, claimAs.payload, this.opts.app ? 'app' : 'payouts');
       if ('why' in f || f.lane.grant !== how.grant) throw new Error(`The lane does not reach the payment’s claim${'why' in f ? ` (${f.why})` : ''}. Nothing was signed.`);
     }
-    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, service ?? a.payee, a.refs, how);
+    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, payee, a.refs, how);
     const p: Payment = {
       key,
       side: 'out',
-      other: a.payee,
+      other: payee,
       amount: a.amount,
       fulfils,
       whatFor: a.whatFor,
@@ -1841,29 +1847,50 @@ export class Damgar {
   }
 
   /**
-   * The payee's split service, where its agreement names one (the money
-   * messages cMIP, draft 4, 4.4; F357): the agreement an offer followed is
-   * made under (field 0), or a collective payee's agreement in force; its
-   * field 14 read, as the pointer check reads Agreements. Null where none.
+   * A collective's split agreement in force (Agreements rule 15: a
+   * publication selling nothing, naming the collective's ownership
+   * agreement and its split service), as Agreements count it from what the
+   * collective's places hold: its first version and its service. Null where
+   * the payee is no collective, or names none that counts.
    */
-  private async splitServiceFor(me: TestIdentity, s: Settings, payee: string, fulfils: string): Promise<string | null> {
+  private async splitAgreementOf(me: TestIdentity, s: Settings, payee: string): Promise<{ agreement: string; service: string } | null> {
     const places = await collectivePlaces(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via);
-    let agreement: string | null = null;
+    const got = await collectiveVerifier(payee, places, s.via).catch(() => null);
+    if (!got) return null;
+    let found: { agreement: string; service: string } | null = null;
+    for (const a of got.acts) {
+      const d = describeAct(a) as { id: string; spec?: string; type?: number; payload?: Uint8Array; objects?: [string, string][] };
+      if (d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.publication || !d.payload || !d.objects?.some(([c]) => c === payee)) continue;
+      try {
+        const p = got.v.agreementsPublication(AGREEMENTS_SPECS, d.id) as { first: string; counts: boolean; splitAgreement: boolean; ends: boolean; latest: string[]; service: string };
+        if (p.counts && p.splitAgreement && p.latest.includes(d.id)) found = { agreement: p.first, service: p.service };
+      } catch {
+        // not read: not followed
+      }
+    }
+    return found;
+  }
+
+  /**
+   * Who a payment following `fulfils` pays, where that act decides it: a
+   * price tag's payee (Money rule 18, field 5), or a publication's split
+   * service for a tip through it (Money rule 18; Agreements rule 16). Null
+   * where the act decides nothing (a pointer, an obligation), or is not
+   * found at the places asked.
+   */
+  private async payeeOf(me: TestIdentity, s: Settings, payee: string, fulfils: string): Promise<string | null> {
+    const places = await collectivePlaces(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via);
     for (const h of places) {
       const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
       if (!act) continue;
       const d = describeAct(act) as { spec?: string; type?: number; payload?: Uint8Array };
-      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
-        const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
-        if (under instanceof Uint8Array) agreement = hex(under);
-      }
-      // A tip to a work shared under a deal follows the deal itself (the money messages cMIP, draft 5, 4.4).
-      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) agreement = fulfils;
-      break;
+      if (!d.payload) return null;
+      const m = cborDecode(d.payload) as Map<number, unknown>;
+      if (d.spec === MONEY && d.type === PRICE_TAG && m.get(5) instanceof Uint8Array) return hex(m.get(5) as Uint8Array);
+      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.publication && m.get(3) instanceof Uint8Array) return hex(m.get(3) as Uint8Array);
+      return null;
     }
-    if (!agreement) agreement = (await collectiveNow(payee, places, s.via).catch(() => null))?.agreement ?? null;
-    if (!agreement) return null;
-    return (await splitServiceOf(agreement, payee, places, s.via).catch(() => null))?.service ?? null;
+    return null;
   }
 
   /** An answer arrived: checked under the rail Module's rule before anything is shown to pay (the money messages cMIP, 5.2). */
@@ -1897,15 +1924,18 @@ export class Damgar {
   private async checkTicket(me: TestIdentity, s: Settings, book: Book, p: Payment, ticket: string): Promise<string | null> {
     const { acts } = await this.payee(p.other, me, s);
     const t = acts.get(ticket);
-    const o = acts.get(p.fulfils);
-    if (!t || !o || t.signer !== p.other) return 'the ticket or the offer was not found at the service’s places';
-    const tk = anchoringReadTicket(t.payload!) as { batch: number; deadline: number; tier: number; leaf: string } | null;
+    const tag = acts.get(p.fulfils);
+    if (!t || !tag || t.signer !== p.other) return 'the ticket or the price tag paid was not found at the service’s places';
+    const tk = anchoringReadTicket(t.payload!) as { offer: string; batch: number; deadline: number; tier: number; leaf: string } | null;
     if (!tk) return 'not a ticket';
+    // The publication the ticket names, and the tag this payment fulfils (anchoring draft 7: the tier's own).
+    const o = acts.get(tk.offer);
+    if (!o) return 'the service’s publication the ticket names was not found at its places';
     const ir = readInvoiceRequest(this.opened(book, p.invoiceRequest).payload);
     if (!ir.ticket) return 'no anchor was asked';
     const chain = this.opts.chain ? await this.opts.chain.headers().catch(() => null) : null;
     const nowPoint = chain ? chain.start + chain.headers.length - 1 : null;
-    const why = anchoringCheckTicket(o.bytes, t.payload!, b64(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1))) as string | undefined;
+    const why = anchoringCheckTicket(o.bytes, tag.bytes, t.payload!, b64(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1))) as string | undefined;
     if (why) return why;
     book.acts[ticket] = { act: base64(t.bytes), from: p.other };
     p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier, checked: nowPoint !== null };
@@ -2095,7 +2125,7 @@ export class Damgar {
           lines.push({ text: message(e), tone: 'warn' });
         }
       }
-      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
+      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s publication ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}, paying that tier’s price tag ${short(dr.anchor.tag)}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
     }
     return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: dr.what === 'ask' ? 'A request to send' : dr.what === 'anchor' ? 'A payment for an anchor' : 'A payment to make', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
   }
@@ -2173,6 +2203,9 @@ export class Damgar {
       if (a.typed.trim() !== 'RELY') throw new Error('Type RELY to sign the witness act. Nothing was signed.');
       const id = readActId(a.id);
       if (book.acts[id]?.from === me.id || me.f.sequence.includes(id)) throw new Error('It is this identity’s own act: a witness act names other identities’ acts. Nothing was signed.');
+      // F400 (Identity rules 10 and 11, client conformance): whoever relies keeps a copy of what it names. The copy is in hand before anything is signed.
+      const copy = await this.copyOf(me, s, book, id);
+      if (!copy) throw new Error('That act was not found here, at your homes or at your relays: Damgar keeps a copy of every act it relies on (F400), so it cannot rely on one it does not hold. Nothing was signed.');
       await this.current(me);
       let made: Awaited<ReturnType<TestIdentity['witness']>>;
       try {
@@ -2181,8 +2214,36 @@ export class Damgar {
         await this.store.saveIdentity(me);
       }
       if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join('; ')}. It is signed here, not published.`);
-      return { lines: [{ text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
+      // The copy kept here, and left where this identity's own acts are found: its homes and relays (a signed act verifies from any copy).
+      const left: string[] = [];
+      for (const h of [...new Set([...me.f.homes.map((x) => x.hint), ...s.relays])]) {
+        try {
+          await relayAt(h, s.via).putAct(copy);
+          left.push(h);
+        } catch {
+          // that place refused it, or is away: the copy is still kept here
+        }
+      }
+      (book.relied ??= {})[id] = { act: base64(copy), witness: made.id, at: now(), left };
+      await this.saveBook(me.id, book);
+      return {
+        lines: [
+          { text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' },
+          { text: `A copy of the act is kept here${left.length ? ` and left at ${left.length} of your homes and relays` : ''}, so it does not vanish with its author: a signed act verifies from any copy (F400).`, tone: 'ok' },
+        ],
+      };
     });
+  }
+
+  /** An act's bytes, for a copy kept by whoever relies on it (F400): as it arrived here, or as this identity's homes and relays hold it. */
+  private async copyOf(me: TestIdentity, s: Settings, book: Book, id: string): Promise<Uint8Array | null> {
+    const held = book.acts[id]?.act ?? book.relied?.[id]?.act;
+    if (held) return b64(held);
+    for (const h of [...new Set([...s.relays, ...me.f.homes.map((x) => x.hint)])]) {
+      const got = await relayAt(h, s.via).getAct(id).catch(() => null);
+      if (got) return got;
+    }
+    return null;
   }
 
   /** An anchoring service's standing offers (the anchoring cMIP), read from its public acts. */
@@ -2213,7 +2274,8 @@ export class Damgar {
     if (!tier) throw new Error('The offer has no such tier. Nothing was signed.');
     const blind = new Uint8Array(randomBytes(32));
     const leaf = anchoringLeaf(id, blind) as string;
-    const d: Draft = { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: 'Damgar', anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const tag = tagFor(offer, a.tier);
+    const d: Draft = { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: 'Damgar', anchor: { offer: offer.act, tier: a.tier, leaf, tag } };
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
@@ -2255,7 +2317,8 @@ export class Damgar {
       const p = await this.bind(me, s, book, {
         payee: dr.other,
         amount: dr.amount,
-        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : await this.followsOf(me, s, book, id, dr),
+        // An anchor's payment fulfils its tier's own price tag (anchoring draft 7, Money rule 18), never the publication: that would be a tip, buying no ticket.
+        fulfils: dr.what === 'anchor' ? dr.anchor!.tag : await this.followsOf(me, s, book, id, dr),
         whatFor: dr.whatFor,
         answers: null,
         draft: id,
@@ -2666,17 +2729,30 @@ export class Damgar {
     return lines;
   }
 
-  /** A seller's offer this identity signed, read from its places: what it sells, its price, its words. */
+  /**
+   * A price tag this identity signed on a bare bake it uploaded (Money type 5,
+   * rule 18: on a bare bake only its uploader's tag counts, and a payment of
+   * it is a sale of the bake, unsplit), read from its places: the bake, the
+   * price, and the seller's words. A tag carries no words: they are the text
+   * of this identity's post naming the tag (Dub's sealed post). A tag under a
+   * publication is the split service's to tell: not read here.
+   */
   private async offerOf(me: TestIdentity, s: Settings, id: string): Promise<{ publication: string; price: Amount; words: string | null } | null> {
     const { acts } = await this.payee(me.id, me, s);
     const d = acts.get(id);
-    if (!d || d.signer !== me.id || d.spec !== MIRS.agreements || d.type !== AGREEMENTS_TYPES.offer || !d.payload) return null;
+    if (!d || d.signer !== me.id || d.spec !== MONEY || d.type !== PRICE_TAG || !d.payload) return null;
     try {
       const m = cborDecode(d.payload) as Map<number, unknown>;
-      const sold = (m.get(1) as unknown[][]).find((x) => x[0] === 0);
-      const price = m.get(2) as [Uint8Array, number];
-      if (!sold || !(sold[1] instanceof Uint8Array)) return null;
-      return { publication: hex(sold[1] as Uint8Array), price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null };
+      const bake = m.get(0);
+      const price = m.get(4) as [Uint8Array, number] | undefined;
+      if (!(bake instanceof Uint8Array) || !price) return null;
+      let words: string | null = null;
+      for (const x of acts.values()) {
+        if (x.signer !== me.id || x.spec !== MIRS.text || !x.payload || !(x.refs ?? []).includes(id)) continue;
+        const t = (cborDecode(x.payload) as Map<number, unknown>).get(0);
+        if (typeof t === 'string') words = t;
+      }
+      return { publication: hex(bake), price: { unit: hex(price[0]), value: Number(price[1]) }, words };
     } catch {
       return null;
     }
@@ -2698,7 +2774,7 @@ export class Damgar {
     const save = () => this.store.saveIdentity(me);
     const sale = await sendToSelf(me, TYPES.sale, salePayload({ offer: c.fulfils, buyer: p.other, receipt, publication: offer.publication }), { via: s.via, save });
     (book.sales ??= {})[receipt] = sale.id;
-    lines.push({ text: `A sale of your offer ${short(c.fulfils)}: told to your own Dub, sealed to yourself, which delivers the key to ${short(p.other)}.`, tone: 'ok' });
+    lines.push({ text: `A sale of your offer ${short(c.fulfils)} (your price tag on the bake you uploaded): told to your own Dub, sealed to yourself, which delivers the key to ${short(p.other)}.`, tone: 'ok' });
     const share = referralShare(offer.words);
     if (!c.referral || share === null) return lines;
     const why = await this.repostProblem(me, s, c.referral, offer.publication);
@@ -2715,7 +2791,7 @@ export class Damgar {
       { refs: [[c.referral.evidence, c.referral.identity]], via: s.via, save },
     );
     (book.referrals ??= {})[p.claims[p.claims.length - 1]] = { reposter: c.referral.identity, evidence: c.referral.evidence, amount, draft: draft.id };
-    lines.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share}% to the reposter. Its payment is prepared (${say(amount, new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in Waiting. A promise in words, not judged by the core (F351).`, tone: 'ok' });
+    lines.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share}% to the reposter (in your post’s words). Its payment is prepared (${say(amount, new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in Waiting. A promise in words, not judged by the core (F351).`, tone: 'ok' });
     return lines;
   }
 
@@ -2825,8 +2901,12 @@ export class Damgar {
             if (!act) continue;
             const d = describeAct(act) as { spec?: string; type?: number; payload?: Uint8Array };
             if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) version = fulfils;
-            else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
-              const u = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+            // A price tag under a publication (Money rule 18): the ownership agreement the publication names (field 1), its owners' line.
+            else if (d.spec === MONEY && d.type === PRICE_TAG && d.payload) {
+              const pub = (cborDecode(d.payload) as Map<number, unknown>).get(1);
+              const pa = pub instanceof Uint8Array ? await relayAt(h, s.via).getAct(hex(pub)).catch(() => null) : null;
+              const pd = pa ? (describeAct(pa) as { payload?: Uint8Array }) : null;
+              const u = pd?.payload ? (cborDecode(pd.payload) as Map<number, unknown>).get(1) : null;
               if (u instanceof Uint8Array) version = hex(u);
             }
             break;
@@ -3486,7 +3566,7 @@ export class Damgar {
     let why = role === 'app' ? `${this.opts.app ?? 'This app'} holds no lane: ask Damgar for one` : 'Damgar holds no lane for this';
     for (const l of keys.lanes ?? []) {
       if (l.role !== role) continue;
-      if (!reaches(l.kinds as Kind[], spec, type, (x) => (x === MONEY ? 2 : null))) {
+      if (!reaches(l.kinds as Kind[], spec, type, (x) => (x === MONEY ? 3 : null))) {
         why = `its lane “${l.label}” does not reach this act`;
         continue;
       }

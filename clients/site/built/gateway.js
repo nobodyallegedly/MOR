@@ -463,26 +463,24 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
-   * What a fork of `collective` must hand out (F127), its line drawn at
-   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
-   * `agreement` in force there: every obligation in the history it would
-   * cite, its own and those an earlier fork handed to it. Null where the
-   * line does not hold.
+   * What a fork of `collective` must hand out, its line the acts `line`
+   * it would cite on the collective's chain, with `agreement` in force
+   * there: every obligation in that history, its own and those an
+   * earlier fork handed to it. Null where the line does not hold.
    * @param {any} specs
    * @param {string} collective
    * @param {string} agreement
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[] | undefined}
    */
-  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+  agreementsHandOut(specs, collective, agreement, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr2 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -515,21 +513,20 @@ var Verifier = class {
     return v2;
   }
   /**
-   * The acts the history a line at `chain_act` and `tips` would cite
-   * that this verifier does not hold (F127): a member's client signs no
-   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * The acts the history of a line citing `line` on the collective's
+   * chain names that this verifier does not hold: a member's client signs
+   * no fork or closing while any is missing (client conformance).
    * @param {any} specs
    * @param {string} collective
-   * @param {string} chain_act
-   * @param {any} tips
+   * @param {string[]} line
    * @returns {string[]}
    */
-  agreementsLineUnheld(specs, collective, chain_act, tips) {
+  agreementsLineUnheld(specs, collective, line) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passArrayJsValueToWasm0(line, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -636,30 +633,6 @@ var Verifier = class {
     return BigInt.asUintN(64, ret[0]);
   }
   /**
-   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
-   * each holder for `amount` on the stake in `object` (hex, or null for
-   * the collective itself), or why it cannot. Leftovers by largest
-   * remainder; a tied unit is the payer's to decide, at most one per tie
-   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
-   * with the smallest identity hash, a choice, not a rule.
-   * @param {any} specs
-   * @param {string} agreement
-   * @param {string | null | undefined} object
-   * @param {bigint} amount
-   * @returns {any}
-   */
-  agreementsPayerSplit(specs, agreement, object, amount) {
-    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
-    if (ret[2]) {
-      throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-  }
-  /**
    * The pointer check (rule 18, F123): whether the payee pointer of
    * `owners` counts for Agreements under `agreement`: "no-split-service",
    * "ordinary", "bypasses" (with the addresses no service's own pointer
@@ -712,6 +685,44 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The tips a payment names (F409), for a publication by its first
+   * version: `latest`, its latest versions (two or more, the parties'
+   * fork); `tags`, the latest version of each price tag line that counts
+   * under it, one per price; `owners` and `ownersLatest`, the ownership
+   * agreement it names and that agreement's latest version, which a
+   * purchase names in field 9.
+   * @param {any} specs
+   * @param {string} first
+   * @returns {any}
+   */
+  agreementsPublicationTip(specs, first) {
+    const ptr0 = passStringToWasm0(first, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublicationTip(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A publication, judged (Agreements rule 11): its parties and who has
+   * not signed, whether it counts and why not, the latest versions of its
+   * line, whether this version ends it, and the ownership agreements
+   * claiming what it sells that it stands outside of (rule 14).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPublication(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublication(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -936,22 +947,21 @@ var Verifier = class {
    * stake, or carries no count.
    * @param {any} specs
    * @param {string} service
-   * @param {string} agreement
-   * @param {bigint} stake
+   * @param {string} owners
    * @param {string[]} holders
    * @param {string | null} [previous]
    * @returns {Float64Array | undefined}
    */
-  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
+  agreementsSplitTurns(specs, service, owners, holders, previous) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
     var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -975,6 +985,23 @@ var Verifier = class {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether a price tag counts under its publication (Money rule 18;
+   * Agreements rule 12): "counts" (with the publication, and whether this
+   * version withdraws the tag), "nobody's offer" or "unknown", with why.
+   * @param {any} specs
+   * @param {string} tag
+   * @returns {any}
+   */
+  agreementsTagUnder(specs, tag) {
+    const ptr0 = passStringToWasm0(tag, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsTagUnder(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1041,6 +1068,29 @@ var Verifier = class {
       throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who uploaded a bake, as a verifier reading Money and Envelopes tells
+   * it (Money, "Only identities have payee pointers"): the signer's
+   * identity hash, or "unknown" where the bake names another chain, a
+   * collective's perhaps, which a Money-only wallet refuses to tip.
+   * `null` for no bake held.
+   * @param {string} bake
+   * @returns {string | undefined}
+   */
+  bakeUploader(bake) {
+    const ptr0 = passStringToWasm0(bake, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_bakeUploader(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
   }
   /**
    * The standing of an act for everything binding (keeper records,
@@ -1306,6 +1356,28 @@ var Verifier = class {
     }
     var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * Whose offer a price tag is (Money rule 18), as a verifier reading
+   * Money and Envelopes tells it: "counts" (on a bare bake, its
+   * uploader's), "nobody's offer", or "unknown" (not held, or under a
+   * publication, which Agreements judges). `null` for no price tag held.
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  priceTag(act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_priceTag(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
     return v2;
   }
   /**
@@ -3895,6 +3967,8 @@ var POST_SPECS = {
   text: LONGFORM_SPECS.text,
   /** The Envelopes MIR (`ENVELOPES`). */
   envelopes: SPECS.envelopes,
+  /** The Money MIR (`MONEY`): its price tags. */
+  money: MIRS.money,
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
@@ -3905,8 +3979,7 @@ var POST_SPECS = {
   audio: test2("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT = 0;
-var PUBLICATION = 0;
-var WITHDRAWAL = 3;
+var BAKE = 0;
 
 // ../barebone/src/corrections.ts
 var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
@@ -4002,7 +4075,7 @@ async function readRef(r, hints, via, judge) {
   }
   if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== BAKE) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
   const media = cborDecode(d.payload).get(0);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.audio) return readRecordingRef(act, d, hints, via, judge);
@@ -4011,44 +4084,40 @@ async function readRef(r, hints, via, judge) {
 async function readFilmRef(act, d, hints, via, judge) {
   const m = cborDecode(d.payload);
   const size = m.get(3);
-  const out = { kind: "film", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const out = { kind: "film", bake: d.id, publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, size: typeof size === "number" ? size : 0 };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no("the film is locked: its key is not public");
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no("withdrawn by its signer");
   return out;
 }
 async function readRecordingRef(act, d, hints, via, judge) {
   const m = cborDecode(d.payload);
   const size = m.get(3);
-  const out = { kind: "recording", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const out = { kind: "recording", bake: d.id, publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, size: typeof size === "number" ? size : 0 };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no("the recording is locked: its key is not public");
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no("withdrawn by its signer");
   return out;
 }
 async function readPicture(act, d, hints, via, judge) {
   const out = {
     kind: "picture",
+    bake: d.id,
     publication: d.id,
     signer: d.signer ?? "",
     standing: "unknown",
     problem: null,
-    withdrawn: null,
     bytes: null,
     picture: null
   };
   const no = (why) => (out.problem = why, out);
-  if (!d.signer) return no("the publication has no signer");
+  if (!d.signer) return no("the bake has no uploader");
   out.standing = await judge.standing(act, d.id, d.signer);
-  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (out.standing !== "valid") return no(`the bake is ${out.standing}, not valid, for its uploader's identity chain`);
   const m = cborDecode(d.payload);
   const spec = m.get(0);
   if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.jpeg) return no("media of a type this client does not implement");
@@ -4059,10 +4128,8 @@ async function readPicture(act, d, hints, via, judge) {
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) return no("the picture is locked: its key is not public");
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) {
-    return no("the publication does not describe its media");
+    return no("the bake does not describe its media");
   }
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
-  if (out.withdrawn) return no("withdrawn by its signer");
   const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
   const locked = await media(hints) ?? await media(named.filter((n) => !hints.includes(n)));
@@ -4073,7 +4140,7 @@ async function readPicture(act, d, hints, via, judge) {
   } catch {
     return no("its key does not open its bytes");
   }
-  if (workHash(plain) !== hex(work) || plain.length !== size) return no("its bytes do not match the work hash and size it was published with");
+  if (workHash(plain) !== hex(work) || plain.length !== size) return no("its bytes do not match the work hash and size it was uploaded with");
   try {
     out.picture = read(plain);
   } catch (e) {
@@ -4082,37 +4149,6 @@ async function readPicture(act, d, hints, via, judge) {
   }
   out.bytes = plain;
   return out;
-}
-async function findWithdrawal(publication, signer, forId, hints, via, judge) {
-  const who2 = [signer];
-  if (forId instanceof Uint8Array) who2.push(hex(forId));
-  const search = async (h, s) => {
-    let after;
-    for (; ; ) {
-      let page;
-      try {
-        page = await relayAt(h, via).feed({ signer: s, after });
-      } catch {
-        return null;
-      }
-      for (const it of page.items) {
-        if (it.kind !== "act") continue;
-        let d;
-        try {
-          d = describeAct(it.item);
-        } catch {
-          continue;
-        }
-        if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
-        if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-        if (await judge.standing(it.item, d.id, d.signer) === "valid") return d.id;
-      }
-      if (!page.items.length || page.next === after) return null;
-      after = page.next;
-    }
-  };
-  const pairs = hints.filter((h) => !cannotReach(h, via)).flatMap((h) => who2.map((s) => [h, s]));
-  return firstOf(pairs, ([h, s]) => search(h, s));
 }
 
 // ../longform/src/format.ts
@@ -5030,7 +5066,7 @@ function picture(p, poster) {
   const src = `data:image/jpeg;base64,${base64(p.bytes)}`;
   const still = p.picture.carries.length ? ` It still carries ${p.picture.carries.map((c) => CARRIED_WORDS[c]).join("; ")}, not shown.` : "";
   return `<figure><img src="${src}" width="${p.picture.shownWidth}" height="${p.picture.shownHeight}" alt="">
-<figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, publication <code>${short(p.publication)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
+<figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, bake <code>${short(p.bake)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
 }
 function renderPost(p) {
   const text2 = p.format === POST_SPECS.longform ? renderHtml(parse2(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
@@ -5170,9 +5206,9 @@ function parseSiteSettings(raw) {
 var test3 = (s) => sha2562(s);
 var SITE_SPECS = {
   identity: SPECS.identity,
-  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
+  /** The Envelopes MIR (`ENVELOPES`): a version is a bake (an upload, Envelopes type 0; called a publication before F407). */
   envelopes: SPECS.envelopes,
-  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
+  /** The Agreements MIR (`AGREEMENTS`): to judge a collective's site (website cMIP draft 12, rule 3). */
   agreements: test3("LAW, test value until the freeze"),
   /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
    * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
@@ -5180,12 +5216,11 @@ var SITE_SPECS = {
    * published still verify. */
   site: test3("website cMIP, draft 2, test value until publication")
 };
-var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
-var PUBLICATION2 = 0;
-var WITHDRAWAL2 = 3;
+var BAKE2 = 0;
 var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
 var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
 var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements, extLayers: { [RELEASE_MANIFEST]: [] } };
 var PAYMENT_CMIP = test3("payment cMIP, draft 2, test value until publication");
 
 // src/verify.ts
@@ -5212,40 +5247,52 @@ async function openVersion(version2, expected, hints, via = {}) {
     return fail2(`the version is not a valid act: ${e instanceof Error ? e.message : e}`);
   }
   if (!d.public || !d.payload) return fail2("the version is not a public act");
-  if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION2) return fail2("the version is not a publication (Envelopes type 0)");
+  if (d.spec !== SITE_SPECS.envelopes || d.type !== BAKE2) return fail2("the version is not a bake (Envelopes type 0)");
   if (!d.signer) return fail2("the version has no signer");
   r.signer = d.signer;
   let media;
   try {
     media = cborDecode(d.payload);
   } catch {
-    return fail2("the publication does not decode");
+    return fail2("the bake does not decode");
   }
   const spec = media.get(0);
-  if (!(spec instanceof Uint8Array) || hex(spec) !== SITE_SPECS.site) return fail2("the publication is not a site manifest");
+  if (!(spec instanceof Uint8Array) || hex(spec) !== SITE_SPECS.site) return fail2("the bake is not a site manifest");
   const named = Array.isArray(media.get(6)) ? media.get(6).filter((x) => typeof x === "string") : [];
   r.places = [...hints, ...named.filter((n) => !hints.includes(n))];
-  const v = new Verifier(SITE_SPECS.identity, void 0, void 0, SPECS.envelopes, SPECS.text);
+  const named0 = d.objects?.[0]?.[0];
+  const forCollective = named0 && named0 === expected && d.signer !== expected ? expected : null;
+  const v = forCollective ? new Verifier(SITE_SPECS.identity, MIRS.money, MIRS.agreements, SPECS.envelopes, SPECS.text) : new Verifier(SITE_SPECS.identity, void 0, void 0, SPECS.envelopes, SPECS.text);
   try {
     await holdSequence(v, d.signer, await lookUp(d.signer, r.places, via, v), r.places, via);
   } catch (e) {
     return fail2(`the signer's identity was not found: ${e instanceof Error ? e.message : e}`);
   }
-  v.add(act);
-  r.standing = v.status(version2);
-  if (d.signer !== expected) fail2(`signed by ${d.signer}, not by the identity expected (${expected})`);
-  if (r.standing !== "valid") fail2(`the version is ${r.standing}, not valid, for its signer's identity chain`);
-  const res = v.resolve(d.signer);
-  for (const link of res.links) {
-    if (v.agreementsDeclared(SITE_AGREEMENTS_SPECS, d.signer, link.act)) {
-      fail2("the signer is a collective (its chain declares an agreement): a collective's site counts only once Agreements draft 7 is approved, under its Envelopes lane (website cMIP, rule 3)");
-      break;
+  if (forCollective) {
+    try {
+      await lookUp(forCollective, r.places, via, v);
+    } catch (e) {
+      return fail2(`the collective it names was not found: ${e instanceof Error ? e.message : e}`);
     }
   }
-  const w = await findWithdrawal2(version2, d.signer, r.places, via, v);
-  if (w) {
-    r.withdrawn = w;
-    fail2(`withdrawn by its signer (act ${w})`);
+  v.add(act);
+  r.standing = v.status(version2);
+  if (r.standing !== "valid") fail2(`the version is ${r.standing}, not valid, for its signer's identity chain`);
+  if (forCollective) {
+    r.collective = forCollective;
+    await countsForCollective(r, v, version2, forCollective, via);
+  } else if (d.signer !== expected) {
+    fail2(`signed by ${d.signer}, not by the identity expected (${expected})`);
+  } else if (named0) {
+    fail2(`uploaded for ${named0}, which it names in its objects: not a version of its uploader's own site (website cMIP draft 12, rule 2)`);
+  } else {
+    const res = v.resolve(d.signer);
+    for (const link of res.links) {
+      if (v.agreementsDeclared(SITE_AGREEMENTS_SPECS, d.signer, link.act)) {
+        fail2("the signer is a collective (its chain declares an agreement): a collective's site is uploaded by a member naming it (website cMIP draft 12, rule 2)");
+        break;
+      }
+    }
   }
   const work = media.get(1);
   const locked = media.get(2);
@@ -5268,38 +5315,76 @@ async function openVersion(version2, expected, hints, via = {}) {
   r.ok = r.problems.length === 0;
   return r;
 }
-async function findWithdrawal2(version2, signer, hints, via, v) {
+async function allBy(signer, hints, via) {
+  const out = [];
   for (const h of hints) {
     let after;
-    for (; ; ) {
-      let page;
-      try {
-        page = await relayAt(h, via).feed({ signer, after });
-      } catch {
-        break;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ signer, after });
+        for (const it of page.items) if (it.kind === "act") out.push(it.item);
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
       }
-      for (const it of page.items) {
-        if (it.kind !== "act") continue;
-        let d;
-        try {
-          d = describeAct(it.item);
-        } catch {
-          continue;
-        }
-        if (d.spec !== SITE_SPECS.envelopes || d.type !== WITHDRAWAL2 || d.signer !== signer) continue;
-        if (!(d.objects ?? []).some(([chain]) => chain === version2)) continue;
-        try {
-          v.add(it.item);
-        } catch {
-          continue;
-        }
-        if (v.status(d.id) === "valid") return d.id;
-      }
-      if (!page.items.length || page.next === after) break;
-      after = page.next;
+    } catch {
     }
   }
-  return null;
+  return out;
+}
+var addAll = (v, acts) => {
+  for (const a of acts) {
+    try {
+      v.add(a);
+    } catch {
+    }
+  }
+};
+async function countsForCollective(r, v, version2, collective, via) {
+  const fail2 = (p) => void r.problems.push(p);
+  const res = v.resolve(collective);
+  const agreements = /* @__PURE__ */ new Set();
+  for (const link of res.links) {
+    const a = v.agreementsDeclared(SITE_AGREEMENTS_SPECS, collective, link.act);
+    if (a) agreements.add(a);
+  }
+  if (!agreements.size) return fail2(`it names ${collective}, which declares no agreement: not a collective, and not its uploader`);
+  const parties = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  const queue = [...agreements];
+  while (queue.length) {
+    const id = queue.shift();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const t = await fetchAct2(id, r.places, via);
+    if (!t) continue;
+    try {
+      v.add(t);
+      const p = cborDecode(describeAct(t).payload);
+      for (const x of p.get(0) ?? []) parties.add(hex(x));
+      if (p.get(11) instanceof Uint8Array) queue.push(hex(p.get(11)));
+    } catch {
+    }
+  }
+  r.members = [...parties];
+  for (const party of parties) {
+    try {
+      await lookUp(party, r.places, via, v);
+    } catch {
+    }
+    addAll(v, await allBy(party, r.places, via));
+  }
+  let consent;
+  try {
+    consent = v.agreementsConsent(SITE_AGREEMENTS_SPECS, version2);
+  } catch (e) {
+    return fail2(`Agreements: ${e instanceof Error ? e.message : e}`);
+  }
+  r.signers = consent.areas.flatMap((a) => a.signers);
+  const area = consent.areas[0];
+  if (consent.kind === "areas" && area) r.rule = area.frozen ? `the ${area.name} area, which has no holder left` : `any ${area.needed} of the ${area.name} area's holders`;
+  else if (consent.kind === "no-area") r.rule = "the uploading member's own act";
+  if (consent.kind !== "areas" && consent.kind !== "no-area") return fail2(`Agreements count it as no act of the collective ${collective}: ${consent.reason ?? consent.kind}`);
+  if (!consent.met) fail2(`it does not count for the collective yet: Agreements ask for ${r.rule ?? "more signatures"}, and ${r.signers.length === 1 ? "1 member" : `${r.signers.length} members`} counted at the places asked (website cMIP draft 12, rule 3)`);
 }
 async function fetchMedia(lockedHash, hints, via) {
   for (const h of hints) {
@@ -5316,9 +5401,9 @@ function matches(entry, bytes) {
 }
 
 // src/latest.ts
-async function candidates(signer, places, via) {
+async function candidates(uploaders, collective, places, via) {
   const found = /* @__PURE__ */ new Map();
-  for (const h of places) {
+  for (const signer of uploaders) for (const h of places) {
     let after;
     for (; ; ) {
       let page;
@@ -5336,7 +5421,8 @@ async function candidates(signer, places, via) {
           continue;
         }
         if (found.has(d.id) || d.signer !== signer || !d.public || !d.payload) continue;
-        if (d.spec !== SITE_SPECS.envelopes || d.type !== PUBLICATION2) continue;
+        if (d.spec !== SITE_SPECS.envelopes || d.type !== BAKE2) continue;
+        if (collective && d.objects?.[0]?.[0] !== collective) continue;
         const previous = await previousOf(d.payload, places, via);
         if (previous !== void 0) found.set(d.id, { id: d.id, previous });
       }
@@ -5372,7 +5458,7 @@ async function previousOf(payload, places, via) {
 async function findLater(from, via = {}) {
   const r = { latest: from, after: [], fork: [] };
   if (!from.ok || !from.signer) return r;
-  const all = await candidates(from.signer, from.places, via);
+  const all = await candidates(from.collective ? [.../* @__PURE__ */ new Set([from.signer, ...from.members ?? []])] : [from.signer], from.collective ?? null, from.places, via);
   const seen = /* @__PURE__ */ new Set([from.version]);
   for (; ; ) {
     const named = all.filter((c) => c.previous === r.latest.version && !seen.has(c.id));
@@ -6201,7 +6287,7 @@ var LAYERS = {
   [MIRS.agreements]: "Agreements",
   [MIRS.development]: "Development"
 };
-var EXTENSION_LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements"];
+var EXTENSION_LAYERS = ["Identity", "Text", "Envelopes", "Money", "Agreements"];
 var TASKS = {
   1: ["Identity", "Identity proofs and credentials"],
   2: ["Identity", "Naming"],
@@ -6263,7 +6349,7 @@ function nameOf3(text2) {
   return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
 }
 function mediaOf(d) {
-  if (!d.public || !d.payload || d.type !== PUBLICATION2 || d.spec !== SPECS.envelopes) return null;
+  if (!d.public || !d.payload || d.type !== BAKE2 || d.spec !== SPECS.envelopes) return null;
   let m;
   try {
     m = cborDecode(d.payload);
@@ -6328,7 +6414,7 @@ async function openAt(m, places, via) {
   return null;
 }
 function queriesOf(f) {
-  return [{ spec: SPECS.envelopes, type: PUBLICATION2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+  return [{ spec: SPECS.envelopes, type: BAKE2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
 }
 async function readRelay(line, via, into, queries = [{}]) {
   for (const q of queries) {
@@ -6452,7 +6538,7 @@ async function readListing(relays, gatewayRelays, via = {}, filtered) {
         problem ??= field6.problem;
       }
       if (!named.length) return;
-      const r = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
+      const r = { id: d.id, signer: d.signer, collective: d.objects?.[0]?.[0] ?? null, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
       if (!r.problem) {
         if (man) {
           r.name = man.get(0);
@@ -6646,7 +6732,7 @@ function roleWords(l, all) {
   }
   if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
   if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(", ") : "nothing"}`);
-  if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
+  if (s.checker) role.push("checks proofs of proven deliveries (field 12)");
   if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor) ? `\u201C${all.get(s.predecessor).name}\u201D` : `a specification not found here (${s.predecessor.slice(0, 12)}\u2026)`}`);
   if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
   if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
@@ -6774,8 +6860,9 @@ code,.l-fp{font-family:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo
 var short4 = (h) => `${h.slice(0, 8)}\u2026${h.slice(-4)}`;
 var fp = (identity) => `<span class="l-fp">${fingerprint(identity)}</span>`;
 function releaseWords(r, creator2) {
-  const by = r.signer === creator2 ? "by its creator" : `by another identity, <span class="l-fp">${short4(r.signer)}</span>`;
-  const how = r.by === "implements" ? "its manifest names it among what it implements" : "its publication refers to it";
+  const whose = r.collective ?? r.signer;
+  const by = (whose === creator2 ? "by its creator" : `by another identity, <span class="l-fp">${short4(whose)}</span>`) + (r.collective ? `, uploaded by its member <span class="l-fp">${short4(r.signer)}</span>` : "");
+  const how = r.by === "implements" ? "its manifest names it among what it implements" : "its bake refers to it";
   if (r.problem) return `<li data-release="${r.id}" data-by="${r.by}" data-verified="no">a release ${by}, <span class="l-no">not verified</span>: ${escapeHtml(r.problem)}</li>`;
   return `<li data-release="${r.id}" data-by="${r.by}" data-verified="yes"><span class="l-ok">released</span> ${by}: \u201C${escapeHtml(r.name ?? "")}\u201D ${escapeHtml(r.version ?? "")} (${how})</li>`;
 }
@@ -6791,11 +6878,11 @@ function creator(l) {
   const c = l.spec.creator;
   if (!c || NO_CREATOR_KINDS.includes(l.spec.kind)) {
     const by2 = [...new Set(l.publications.map((p) => p.signer))].map(fp).join("; ");
-    return `<div class="l-row" data-claimed="none">No creator: a ${escapeHtml(KINDS2[l.spec.kind])} names none. Published by ${by2}.</div>`;
+    return `<div class="l-row" data-claimed="none">No creator: a ${escapeHtml(KINDS2[l.spec.kind])} names none. Uploaded by ${by2}.</div>`;
   }
-  if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who published it.</div>`;
+  if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who uploaded it.</div>`;
   const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join("; ");
-  return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's publication of it was not found. Published by ${by}.</div>`;
+  return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's bake of it was not found. Uploaded by ${by}.</div>`;
 }
 function draftItem(d) {
   const l = d.listed;
@@ -6821,7 +6908,7 @@ ${code(l)}
 ${drafts}
 <details><summary>How it was checked</summary>
 <div>Spec hash <code>${escapeHtml(l.hash)}</code></div>
-${l.publications.map((p) => `<div>Published in act <code>${escapeHtml(p.id)}</code>, signed by ${fp(p.signer)}, verified through its identity chain in this browser; its content matches its work hash.</div>`).join("")}
+${l.publications.map((p) => `<div>Uploaded in a bake, act <code>${escapeHtml(p.id)}</code>, by ${fp(p.signer)}, verified through its identity chain in this browser; its content matches its work hash.</div>`).join("")}
 </details></article>`;
 }
 function actLink(id, reader) {
@@ -6887,7 +6974,7 @@ function unverifiedHtml(listing) {
   const items = listing.unverified.map(
     (p) => `<article class="l-line l-bad" data-pub="${p.id}" data-verified="no">
 <div class="l-head"><span class="l-name">A specification?</span><span class="l-no">Not verified</span></div>
-<div class="l-row">A publication that could not be verified in this browser: ${escapeHtml(p.problem ?? "unknown")}. What it says is not shown.</div>
+<div class="l-row">A bake that could not be verified in this browser: ${escapeHtml(p.problem ?? "unknown")}. What it says is not shown.</div>
 <details><summary>Which act</summary><div>Act <code>${escapeHtml(p.id)}</code>${p.signer ? `, naming as its signer ${fp(p.signer)}` : ""}</div></details></article>`
   );
   return `<h3 class="l-section" id="l-unverified">Could not be verified (${listing.unverified.length})</h3>${items.join("\n")}`;
@@ -7154,13 +7241,13 @@ function listingItem(l) {
     const name = r.name ? `${escapeHtml(r.name)}, ` : "";
     if (!r.asked) return `<li>${name}<code>${escapeHtml(r.address)}</code>: <span class="bad-word">not reachable from a browser</span>, not asked</li>`;
     if (r.problem) return `<li>${name}<code>${escapeHtml(r.address)}</code>: <span class="bad-word">could not be read</span>, ${escapeHtml(r.problem)}${r.read ? ` (after ${r.read} acts)` : ""}</li>`;
-    return `<li>${name}<code>${escapeHtml(r.address)}</code>: ${r.read} ${r.read === 1 ? "act" : "acts"} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? "publication" : "publications"} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ""}</li>`;
+    return `<li>${name}<code>${escapeHtml(r.address)}</code>: ${r.read} ${r.read === 1 ? "act" : "acts"} read, ${r.terms} public terms, ${r.private} private, not opened, ${r.specs} ${r.specs === 1 ? "bake" : "bakes"} of specifications${r.stopped ? `; <span class="bad-word">stopped</span> after ${r.read} acts, the most this listing reads of one relay` : ""}</li>`;
   });
   const a = l.agreements;
   const ag = a ? `${l.extensions} ${l.extensions === 1 ? "extension" : "extensions"} named by ${a.counted} ${a.counted === 1 ? "agreement" : "agreements"} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ""}); private agreements are not counted. ` : "";
   const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? "xtype" : "xtypes"} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? "act" : "acts"} of their types counted; private acts are not counted. ` : "";
   const mp = l.mips ? `${l.mips.listed} ${l.mips.listed === 1 ? "MIP" : "MIPs"} listed, under ${l.mips.under} ${l.mips.under === 1 ? "MIR" : "MIRs"}${l.mips.versions ? `; ${l.mips.versions} ${l.mips.versions === 1 ? "text" : "texts"} found in versions` : ""}. ` : "";
-  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
+  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "bake" : "bakes"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
 }
 function filmItem(f) {
   const words = {
@@ -7178,9 +7265,10 @@ function bar(s) {
   const rows = [];
   if (v?.signer) {
     rows.push(`<dt>Signed by</dt><dd><span class="fp" id="mor-signer">${fingerprint(v.signer)}</span></dd>`);
+    if (v.collective) rows.push(`<dt>For</dt><dd>The collective <span class="fp">${fingerprint(v.collective)}</span>, which has no key of its own: a member uploaded it, naming the collective${v.rule ? `, and it counts under ${escapeHtml(v.rule)}` : ""}.</dd>`);
     if (set) {
       rows.push(
-        v.signer === set.identity ? `<dt>Whose</dt><dd>The identity this gateway names as ${escapeHtml(set.name)}. The name is the gateway's setting; the identity is what was checked.</dd>` : `<dt>Whose</dt><dd><strong>Not the identity this gateway names as ${escapeHtml(set.name)}</strong>, which is <span class="fp">${fingerprint(set.identity)}</span>.</dd>`
+        (v.collective ?? v.signer) === set.identity ? `<dt>Whose</dt><dd>The identity this gateway names as ${escapeHtml(set.name)}. The name is the gateway's setting; the identity is what was checked.</dd>` : `<dt>Whose</dt><dd><strong>Not the identity this gateway names as ${escapeHtml(set.name)}</strong>, which is <span class="fp">${fingerprint(set.identity)}</span>.</dd>`
       );
     }
   } else if (set) {

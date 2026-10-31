@@ -1,13 +1,13 @@
 {
   "name": "mor-split-service",
   "version": "0.1.0",
-  "description": "A TEST split service on regtest (round 3, part C): it receives a collective's or a deal's payments under its grant, signs their receipts, publishes the split and pays each holder, talking only through MOR acts. Never for real money.",
+  "description": "A TEST split service on regtest (round 8, F407): named by a publication, it signs it, puts its own price tag on it, receives every payment in its own name, publishes the split (the split cMIP, draft 4) and pays everyone, talking only through MOR acts. Never for real money.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && echo 'The service is tested where it is used: clients/desk (split.test.ts, round-3.test.ts).'",
+    "test": "tsc --noEmit && node --import tsx --test test/*.test.ts",
     "start": "node --import tsx src/cli.ts run"
   },
   "engines": {

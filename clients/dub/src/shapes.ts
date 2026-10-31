@@ -40,29 +40,37 @@ export interface Pic {
   src: string | null;
   width: number;
   height: number;
+  /** The bake (Envelopes type 0) it was uploaded by; `publication` the same id, its name from before. */
+  bake: string;
   publication: string;
   /** Why it is not shown, if so. */
   problem: string | null;
-  /** This identity's own picture, which it may withdraw. */
-  withdrawable: boolean;
+  /** This identity uploaded it. A bake is never withdrawn: its menu says so, and what could end instead (a price tag, a publication). */
+  own: boolean;
 }
 
 /** A film a post shows (the video Module, rule 13): played only when asked, its bytes checked first. */
 export interface FilmShown {
+  /** The bake; `publication` the same id, its name from before. */
+  bake: string;
   publication: string;
   signer: string;
   size: number;
   problem: string | null;
-  withdrawable: boolean;
+  /** This identity uploaded it (never withdrawn, said in its menu). */
+  own: boolean;
 }
 
 /** A recording a post plays (the audio Module, rule 13): played only when asked, its bytes checked first, as a film is. */
 export interface RecordingShown {
+  /** The bake; `publication` the same id, its name from before. */
+  bake: string;
   publication: string;
   signer: string;
   size: number;
   problem: string | null;
-  withdrawable: boolean;
+  /** This identity uploaded it (never withdrawn, said in its menu). */
+  own: boolean;
 }
 
 /** A quiet label on a card: answers…, correction of…, signed under a grant, a pick or a nudge and who gave it (H65). `bad`: an alarm. */
@@ -107,10 +115,34 @@ export interface Item {
   correctedBy?: string[];
   /** Where it was found: the feed, this identity's inbox, or the relay view (H29). */
   via: 'feed' | 'inbox' | 'relay';
-  /** A sealed post (pay-per-view, round 2): its price, its state, its text once opened. */
   /** A vow the post names (round 3), with its offer. */
   vow?: { vow: string; offer: string | null; seller: string; words: string; price: string; state: 'for sale' | 'paying' | 'bought' | 'yours'; problem: string | null } | null;
-  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; media: 'text' | 'picture' | 'video' | 'audio'; text: string | null; picture: string | null; problem: string | null } | null;
+  /**
+   * A sealed work (pay-per-view): its bake (`publication`, its name from
+   * before), the price tag a purchase follows (`tag`, `offer` its name from
+   * before), its price, its state, its text once opened; the publication it
+   * is offered through; said plainly where its uploader is no owner, with
+   * the owners' own publication; and what this identity may end on it.
+   */
+  sealed?: {
+    bake: string;
+    publication: string;
+    tag: string | null;
+    offer: string | null;
+    seller: string;
+    price: string;
+    words: string | null;
+    state: 'for sale' | 'paying' | 'opened' | 'yours';
+    media: 'text' | 'picture' | 'video' | 'audio';
+    text: string | null;
+    picture: string | null;
+    problem: string | null;
+    through: { publication: string; version: string; words: string } | null;
+    outside: string | null;
+    owners: { post: string; signer: string; bake: string; price: string; words: string } | null;
+    ends: 'tag' | 'publication' | null;
+    work: string;
+  } | null;
   /** A repost of a sealed post: who reposted it, whose it is. */
   repost?: { by: Who; of: Who } | null;
   /** In the relay view, an act that is not a post: what it is, in a few words. */

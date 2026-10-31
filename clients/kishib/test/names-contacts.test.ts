@@ -18,7 +18,7 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { idForm } from '../../genesis/src/forms.ts';
 import { KIT_STYLE } from '../../kit/src/style.ts';
 import { panel, PANEL_STYLE } from '../src/page/panel.ts';
-import { closeAll, dub, kishib, runnerOn, start, type Relay } from './world.ts';
+import { closeAll, dub, kishib, runnerOn, start, type Relay, stopAll } from './world.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -33,9 +33,8 @@ before(async () => {
 });
 
 after(async () => {
-  await browser.close();
-  await closeAll();
-  for (const h of [...homes, relay]) await h.stop();
+  // Part 4: every program, page and server this file started, stopped whatever the outcome (`world.ts`, stopAll).
+  await stopAll(() => browser?.close());
 });
 
 async function shot(page: Page, name: string) {

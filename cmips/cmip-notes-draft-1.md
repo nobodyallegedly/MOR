@@ -2,6 +2,8 @@
 
 *Draft 1, 28 October 2026, written by the Dubsar Suite session of fix round 7 (`docs/fixes-r7-report.md`), for **F403**, for Nobody, allegedly, to approve. A Dubsar cMIP: the Suite lead's, not core.*
 
+***Approved.*** *"Approved and tests will refine them", Nobody, allegedly, 29 October 2026.*
+
 ***Decided by Nobody, allegedly, hand test v3, H122*** *("Let's add private notes to dub (one more tab) for private sealed message to oneself"; its layout: "The tab is similar to the private messages one, but instead of identities the left bar offers the past notes, they all can be edited with a correction mechanism (previous drafts accessible)"): a note is a private text act sealed to oneself, left at the identity's homes; nothing is updated; Edit signs a new version correcting the earlier one, the earlier ones kept; Retire marks it dropped, kept; above the core, "if a small cMIP is needed to mark a text act as a note, the suite's". This is that cMIP.*
 
 *Founding cMIP, EXPERIMENTAL. Not approved, not a product; test identities only until MOR is frozen.* Written against the Text MIR draft 11 (the text act and its format), the Envelopes MIR draft 11 (private acts and the sealed container) and the Identity MIR draft 15 (the identity's homes, its sequence). It fills the Text MIR's format task for one use, a note, and adds no act type. Its hash stays a draft hash until its creator is named at step 17 (its test value: the SHA-256 of "Notes cMIP, draft 1, test value until publication"). Its code: `clients/dub/src/notes.ts`.

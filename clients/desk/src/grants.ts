@@ -46,9 +46,9 @@ export const GRANT_SAY =
 /** A unit's name, from the units Module Damgar knows. */
 export const unitName = (u: string) => BITCOIN_UNITS.units.find((x) => x.hash === u)?.many ?? `units ${u.slice(0, 8)}…`;
 
-/** A layer's number, as Agreements reads a kind (F106): Identity 0, Envelopes and Text 1, Money 2, Agreements 3, Development 4. */
+/** A layer's number, as Agreements reads a kind (MICS, "Structure": six layers, one per MIR): Identity 0, Text 1, Envelopes 2, Money 3, Agreements 4, Development 5. */
 const layerOf = (spec: string): number | null =>
-  spec === MIRS.identity ? 0 : spec === MIRS.text || spec === MIRS.envelopes ? 1 : spec === MIRS.money ? 2 : spec === MIRS.agreements ? 3 : spec === MIRS.development ? 4 : null;
+  spec === MIRS.identity ? 0 : spec === MIRS.text ? 1 : spec === MIRS.envelopes ? 2 : spec === MIRS.money ? 3 : spec === MIRS.agreements ? 4 : spec === MIRS.development ? 5 : null;
 
 const reaches = (kinds: Kind[] | null, spec: string, type: number) => !kinds || kinds.some((k) => ('layer' in k ? layerOf(spec) === k.layer : k.spec === spec && k.type === type));
 

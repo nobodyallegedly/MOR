@@ -615,9 +615,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const open = conv ? (all.find((c) => c.with.id === conv) ?? null) : null;
     const msgs = open ? (inbox?.messages ?? []).filter((m) => m.with === open.with.id).sort((a, b) => a.at - b.at) : [];
     const body = app.querySelector('.k-body');
+    // What is being typed survives the redraw (the inbox read again while typing would clear it): kept for the same conversation, focus and caret too.
+    const typing = app.querySelector<HTMLTextAreaElement>('#message textarea');
+    const kept = typing ? { value: typing.value, focused: document.activeElement === typing, start: typing.selectionStart, end: typing.selectionEnd, conv: open?.with.id ?? null } : null;
     const html = v.privatePart(state!, all, open, msgs.map((m) => (keep(v.messageAct(m), { message: m }), m)));
     if (body) body.outerHTML = html;
     else app.insertAdjacentHTML('beforeend', html);
+    const again = app.querySelector<HTMLTextAreaElement>('#message textarea');
+    if (kept && again && kept.value && kept.conv === (open?.with.id ?? null) && !again.value) {
+      again.value = kept.value;
+      if (kept.focused) {
+        again.focus();
+        again.setSelectionRange(kept.start, kept.end);
+      }
+    }
     const notes = [
       ...(inbox && !inbox.encryption
         ? [inbox.opening ?? 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
@@ -706,9 +717,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (!a.signer.me && (it || d?.message)) after.push({ key: 'tip', label: 'Tip' });
       if (it?.sealed?.state === 'for sale' && !it.who.me) after.push({ key: 'buy', label: 'Buy' });
       if (it?.vow?.state === 'for sale' && !it.who.me && !it.vow.problem) after.push({ key: 'buy-vow', label: 'Buy' });
-      for (const p of it?.pictures.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${p.publication}`, label: 'Withdraw the picture' });
-      for (const f of it?.films?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${f.publication}`, label: 'Withdraw the film' });
-      for (const r of it?.recordings?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${r.publication}`, label: 'Withdraw the recording' });
+      // The owners' own publication of a work uploaded by someone none of its owners (Agreements rule 14): bought there instead.
+      if (it?.sealed?.owners && it.sealed.state === 'for sale' && !it.who.me) after.push({ key: 'buy-owners', label: 'Buy from the owners’ publication' });
+      // One withdrawal per layer (decided 28 October 2026), named by what actually ends: a price tag, or a publication. A bake itself never is.
+      if (it?.sealed?.ends === 'tag') after.push({ key: `end:tag:${it.sealed.bake}`, label: 'Withdraw the price tag' });
+      if (it?.sealed?.ends === 'publication') after.push({ key: `end:publication:${it.sealed.bake}`, label: 'Withdraw the publication' });
+      for (const p of it?.pictures.filter((x) => x.own) ?? []) after.push({ key: `kept:picture`, label: 'Why the picture can’t be withdrawn' });
+      for (const _ of it?.films?.filter((x) => x.own) ?? []) after.push({ key: `kept:film`, label: 'Why the film can’t be withdrawn' });
+      for (const _ of it?.recordings?.filter((x) => x.own) ?? []) after.push({ key: `kept:recording`, label: 'Why the recording can’t be withdrawn' });
       // Decided (question 5): confirm or contest only on vows the identity bought.
       const vow = it?.vow?.state === 'bought' ? it.vow.vow : d?.purchase?.kind === 'vow' && d.purchase.paid && d.purchase.sale !== 'confirmed' && d.purchase.sale !== 'contested' ? d.purchase.id : null;
       if (vow) after.push({ key: `confirm:${vow}`, label: 'Confirm: it was kept', line: true }, { key: `contest:${vow}`, label: 'Contest it…' });
@@ -852,11 +868,17 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'buy-vow':
         return payOpen('vow', a, d);
     }
-    if (key.startsWith('withdraw:')) {
-      const publication = key.slice('withdraw:'.length);
-      if (!confirm('Withdraw it? Readers stop showing it; the post stays. It cannot be undone.')) return;
-      const r = await busy('Withdrawing…', () => b.ask<{ id: string }>('withdraw', { publication }));
-      if (r) (say('done', `Withdrawn (act <code>${v.e(shortForm(v.actFormOf(r.id)))}</code>).`), await readFeed());
+    if (key === 'buy-owners') return payOpen('buy-owners', a, d);
+    if (key.startsWith('end:')) {
+      const [, what, bake] = key.split(':');
+      if (!confirm(v.endConfirm(what === 'tag' ? 'tag' : 'publication'))) return;
+      const r = await busy('Withdrawing…', () => b.ask<{ id: string; lines: v.Line[] }>('withdraw', { bake }));
+      if (r) (say('done', `${v.lines(r.lines)}<span class="k-small k-faint">act <code>${v.e(shortForm(v.actFormOf(r.id)))}</code></span>`), await readFeed());
+      return;
+    }
+    if (key.startsWith('kept:')) {
+      const what = key.slice('kept:'.length) as 'picture' | 'film' | 'recording';
+      popup.show(`Why the ${what} can’t be withdrawn`, v.keptSay(what));
       return;
     }
     if (key.startsWith('confirm:')) {
@@ -928,19 +950,23 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   let paying: { kind: 'tip' | 'buy' | 'vow' | 'pay'; signer: string; post?: string; publication?: string; vow?: string; repost?: string; reposter?: string } | null = null;
 
-  async function payOpen(kind: 'tip' | 'buy' | 'vow' | 'pay', a: KitAct | null, d?: { item?: Item }, to?: v.Who) {
+  async function payOpen(asked: 'tip' | 'buy' | 'vow' | 'pay' | 'buy-owners', a: KitAct | null, d?: { item?: Item }, to?: v.Who) {
     const it = d?.item;
-    const who = to ?? whoOf(a!.signer.id);
+    // The owners' own publication: the same purchase, following their post instead.
+    const owners = asked === 'buy-owners' ? (it?.sealed?.owners ?? null) : null;
+    const kind = asked === 'buy-owners' ? 'buy' : asked;
+    const who = owners ? whoOf(owners.signer) : (to ?? whoOf(a!.signer.id));
     paying = { kind, signer: who.id };
     if (kind === 'tip' && a) paying.post = a.id;
-    if (kind === 'buy' && it?.sealed) Object.assign(paying, { publication: it.sealed.publication, signer: it.sealed.seller, ...(it.repost ? { repost: it.id, reposter: it.repost.by.id } : { post: it.id }) });
+    if (owners) Object.assign(paying, { publication: owners.bake, signer: owners.signer, post: owners.post });
+    else if (kind === 'buy' && it?.sealed) Object.assign(paying, { publication: it.sealed.bake, signer: it.sealed.seller, ...(it.repost ? { repost: it.id, reposter: it.repost.by.id } : { post: it.id }) });
     if (kind === 'vow' && it?.vow) Object.assign(paying, { vow: it.vow.vow, signer: it.vow.seller, post: it.id });
     const name = v.nameOf(who);
     const title = kind === 'tip' ? `Tip ${name}` : kind === 'pay' ? `Pay ${name}` : kind === 'vow' ? `Buy ${name}’s vow` : `Buy ${name}’s sealed ${it?.sealed?.media ?? 'file'}`;
     popup.show(title, '<p class="k-empty">Reading the ways open…</p>');
     try {
-      const ways = await b.ask<PayWays>('pay ways', { kind, post: paying.post ?? (it?.id || undefined), signer: a?.signer.id ?? who.id });
-      popup.replace(v.payChooser({ title, sub: `${kind === 'tip' && a ? `For ${shortForm(a.form)} · ` : ''}${name} · ${shortForm(who.form)}`, kind, ways, units: state?.units ?? [], price: it?.vow?.price ?? it?.sealed?.price ?? null }));
+      const ways = await b.ask<PayWays>('pay ways', { kind, post: paying.post ?? (it?.id || undefined), signer: owners ? owners.signer : (a?.signer.id ?? who.id), ...(kind === 'buy' && paying.publication ? { bake: paying.publication, seller: paying.signer } : {}) });
+      popup.replace(v.payChooser({ title, sub: `${kind === 'tip' && a ? `For ${shortForm(a.form)} · ` : ''}${name} · ${shortForm(who.form)}`, kind, ways, units: state?.units ?? [], price: owners ? owners.price : (it?.vow?.price ?? it?.sealed?.price ?? null) }));
     } catch (err) {
       popup.replace(note('error', v.e(errorOf(err))));
     }
@@ -1616,6 +1642,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           fresh = null;
           cc = [];
           appended = null;
+          // Sent: the typing box empties (a redraw keeps only what is still being typed).
+          const box = form.querySelector<HTMLTextAreaElement>('textarea');
+          if (box) box.value = '';
           say('done', `<strong>Sent.</strong>${v.lines(r.lines)}`);
           await readInbox();
           drawPrivate();

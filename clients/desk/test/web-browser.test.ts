@@ -362,14 +362,14 @@ test('the banner on every screen; three tiles, no Agents and nothing of Claude�
   assert.ok(stored.includes(ada.f.signingSecret), 'the signing key is kept in this browser’s storage, as the banner says');
   assert.ok(!stored.includes(ada.f.safety.seeds), 'never its chain key');
 
-  // Collectives: no test collective; Publishing: a protected file.
+  // Collectives: no test collective; Publishing: its first way in, Upload (round 8).
   await tile(ed, 'collectives');
   await ed.locator('.k-col button', { hasText: '+ Found a collective' }).waitFor();
   assert.equal(await ed.locator('.k-col button', { hasText: '+ Found a test collective' }).count(), 0, 'no test collective on the web');
   await ed.locator('.k-col button', { hasText: '+ Bring a collective' }).waitFor();
   await tile(ed, 'publishing');
   await banner(ed, 'Publishing');
-  await ed.locator('#pane h2', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
+  await ed.locator('#pane h2', { hasText: 'Upload' }).waitFor({ timeout: 60_000 });
 
   // At an iPhone's width, nothing scrolls sideways, on every tile.
   await ed.setViewportSize({ width: 390, height: 844 });
@@ -426,26 +426,34 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('#real-found [data-action="member-add"]');
   await ed.fill('#real-found input[name=member-3]', shownId(boId));
   await ed.locator('#real-found input[name=member-3]').dispatchEvent('change');
-  // Round 3: the grid. Members are its columns, the founder first; three bands, the constitution first.
+  // The grid (F402): members are its columns, the founder first; what one member may do alone said above it, Money first; then its bands.
   const grid = ed.locator('#e-grid-real-found table.grid');
   await grid.waitFor({ timeout: 30_000 });
   assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
-  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The areas: operations']);
+  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'Who acts for the collective, layer by layer', 'Finer areas (optional): some kinds of act within a layer', 'Shares: who owns the collective']);
+  assert.match(await ed.locator('#e-grid-real-found [data-alone] li').first().innerText(), /^Money: no member alone/);
+  // Money, Nobody and Ana together (Bo's box emptied): said at once.
+  await grid.locator(`tr[data-layer="3"] button[data-grid-cell="layer:3"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-layer="3"] td.say', { hasText: 'together' }).waitFor({ timeout: 10_000 });
+  // A finer area of Money, its pointers and receipts, any one of them up to 10,000 an act.
   await ed.click('[data-grid-add=real-found]');
-  const money = grid.locator('tr[data-area="1"]');
-  await money.locator('input.areaname').fill('Money');
-  await money.locator('select[data-grid-layer]').selectOption('2');
-  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${id}"]`).click();
-  await grid.locator('tr[data-area="1"] input[data-grid-cap]').fill('10000');
-  await grid.locator('tr[data-area="1"] input[data-grid-cap]').press('Tab');
-  await grid.locator('tr[data-area="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
-  // A second area over all of Money is refused in plain words, then removed.
+  const money = grid.locator('tr[data-area="0"]');
+  await money.locator('input.areaname').fill('Day to day money');
+  await money.locator('select[data-grid-layer]').selectOption('3');
+  for (const t of [0, 2]) await grid.locator(`input[data-grid-kind="0"][value$=":${t}"]`).first().check();
+  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="0"] button[data-grid-cell="area:0"][data-m="${id}"]`).click();
+  await grid.locator('tr[data-area="0"] input[data-grid-cap]').fill('10000');
+  await grid.locator('tr[data-area="0"] input[data-grid-cap]').press('Tab');
+  await grid.locator('tr[data-area="0"] td.say', { hasText: 'above 10,000, 2' }).waitFor({ timeout: 10_000 });
+  // A second area over one of the same kinds is refused in plain words, then removed.
   await ed.click('[data-grid-add=real-found]');
-  await grid.locator('tr[data-area="2"] input.areaname').fill('More money');
-  await grid.locator(`tr[data-area="2"] button[data-grid-cell="area:2"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-area="1"] input.areaname').fill('More money');
+  await grid.locator('tr[data-area="1"] select[data-grid-layer]').selectOption('3');
+  await grid.locator(`input[data-grid-kind="1"][value$=":0"]`).first().check();
+  await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${boId}"]`).click();
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review', { hasText: 'reach the same acts' }).waitFor({ timeout: 90_000 });
-  await grid.locator('[data-grid-remove="2"]').click();
+  await grid.locator('[data-grid-remove="1"]').click();
   // At a phone's width the grid scrolls in its own box; the page does not.
   await ed.setViewportSize({ width: 390, height: 844 });
   assert.ok(await ed.locator('#e-grid-real-found .gridbox').evaluate((b) => b.scrollWidth > b.clientWidth), 'the grid scrolls sideways in its own box');
@@ -454,7 +462,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   await shot(ed, 'found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
-  assert.match(await ed.locator('#e-real-review').innerText(), /“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(await ed.locator('#e-real-review').innerText(), /“Day to day money”, within Money: only [\s\S]*above 10,000 regtest satoshis an act, 2 of them/);
   await ed.click('#e-real-review [data-action=confirm]');
   await done(ed, '#e-status .k-note.k-done', 'The founding of “The tablet house” is proposed');
 
@@ -499,7 +507,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   const collective = JSON.parse(places_.edubba)['edubba/files'] as Record<string, unknown>;
   const colFile = Object.keys(collective).find((k) => k.startsWith('/edubba/real/collectives/') && k.endsWith('.json'))!;
   const col = await file<{ identity: { signingSecret: string; safety: { seeds: string } } }>(ed, colFile);
-  assert.ok(col.identity.signingSecret, 'the collective’s signing key, held by its founder here');
+  assert.equal(col.identity.signingSecret, '', 'no signing key: a collective has none (Agreements rule 56)');
   assert.equal(col.identity.safety.seeds, '', 'never its chain key');
 
   // Its tabs (decided): Act (permissions as chips, its feed, the typing box), Members, Money, Keepers, To sign; its constitution top right.
@@ -513,20 +521,15 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('.edubba-tabs button:has-text("Money")');
   await ed.locator('#pane', { hasText: 'A collective’s releases are made in Ummia' }).waitFor({ timeout: 60_000 });
   assert.equal(await ed.locator('#real-release, [data-action=pick-folder], [data-anchorable]').count(), 0, 'no release from a folder and no money drafts on the web');
-  const shares = ed.locator('#real-money input[name=share]');
-  assert.equal(await shares.count(), 3);
-  await shares.nth(0).fill('50');
-  await shares.nth(1).fill('30');
-  await shares.nth(2).fill('20');
+  // Its shares were set at its founding (the grid's Shares band); this card only chooses where payments land (H101).
+  assert.equal(await ed.locator('#real-money input[name=share]').count(), 0, 'no shares on the Money tab');
   await ed.fill('#real-money input[name=referral]', '10');
   await ed.fill('#real-money input[name=service]', cyId);
-  await ed.fill('#real-money input[name=serviceKey]', '11'.repeat(32));
-  await ed.fill('#real-money textarea[name=keepers]', cyId);
   await ed.click('#real-money button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'The money of “The tablet house”' }).waitFor({ timeout: 60_000 });
   const moneyRead = await ed.locator('#e-real-review').innerText();
   assert.match(moneyRead, /a referral share of 10%/);
-  assert.match(moneyRead, /50%[\s\S]*30%[\s\S]*20%/);
+  assert.match(moneyRead, /never copied here/);
   await shot(ed, 'money-review');
   await ed.click('#e-real-review [data-action=cancel]');
   await done(ed, '#e-status', /Nothing was signed/);
@@ -536,12 +539,20 @@ test('a real collective founded in the web client, its members made in Dub on th
   await ed.click('#e-real-change > summary');
   const cg = ed.locator('#e-grid-real-change table.grid');
   await cg.waitFor({ timeout: 60_000 });
-  assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
+  assert.equal(await cg.locator('tr[data-area="0"] input.areaname').inputValue(), 'Day to day money', 'the finer areas in force carried into the change');
   assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
   await ed.click('#real-change [data-action="member-add"]');
   await ed.fill('#real-change input[name=member-4]', shownId(cyId));
   await ed.locator('#real-change input[name=member-4]').dispatchEvent('change');
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
+  // A member change carries the shares; the joining member's box is required (H101): a quarter each.
+  const cgShares = cg.locator('input[data-grid-share]');
+  assert.equal(await cgShares.count(), 4);
+  assert.equal(await cg.locator(`input[data-grid-share="${cyId}"]`).inputValue(), '', 'Cy’s share starts empty');
+  for (let i = 0; i < 4; i++) {
+    await cgShares.nth(i).fill('25');
+    await cgShares.nth(i).dispatchEvent('change');
+  }
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await ed.click('#e-real-review [data-action=confirm]');
@@ -576,7 +587,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   assert.deepEqual(problems, []);
 });
 
-test('Publishing and Vows in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; Track; both seen sealed and for sale in Dub on the web', async () => {
+test('Publishing and Vows in the web client by clicks: who acts; a text and a picture uploaded with a price tag (way 1, round 8), read back and signed; a vow; Track; both seen sealed and for sale in Dub on the web', async () => {
   const ed = await pageOf(edubbaBase);
   await ed.locator('.edubba-first').waitFor({ timeout: 60_000 });
   const seller = await elsewhere();
@@ -588,29 +599,31 @@ test('Publishing and Vows in the web client by clicks: who acts; a protected tex
   assert.match((await ed.locator('#pane .k-say').first().textContent()) ?? '', /A text, a JPEG picture, an MP4 film or an M4A recording/);
   await shot(ed, 'publishing');
 
-  // A text, read back, then signed.
-  await ed.fill('#pub-work textarea[name=text]', 'Three verses, sealed.');
-  await ed.fill('#pub-work input[name=title]', 'Verses, sealed');
-  await ed.fill('#pub-work input[name=price]', '1500');
-  await ed.click('#pub-work button[type=submit]');
+  // A text with a price tag on the bare bake, read back, then signed.
+  await ed.fill('#pub-upload textarea[name=text]', 'Three verses, sealed.');
+  await ed.fill('#pub-upload input[name=title]', 'Verses, sealed');
+  await ed.check('#pub-upload input[name=then][value=price]');
+  await ed.fill('#pub-upload input[name=price]', '1500');
+  await ed.click('#pub-upload button[type=submit]');
   await ed.locator('#e-pub-review #reading').waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-pub-review').innerText(), /lone seller’s: itself the agreement between you and each buyer/);
+  assert.match(await ed.locator('#e-pub-review').innerText(), /paid to you, the uploader, unsplit/);
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
+  await done(ed, '#e-status .k-note.k-done', 'Uploaded');
   await ed.locator('#here-feed .k-act', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
 
   // A picture, chosen as a file: stripped to the picture alone, read back, signed.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
-  await part(ed, 'A protected file');
+  await part(ed, '1 · Upload');
   await ed.click('button[data-media=picture]');
-  await ed.locator('#pub-work[data-media=picture]').waitFor();
-  await ed.setInputFiles('#pub-work input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
-  await ed.fill('#pub-work input[name=title]', 'A tablet, photographed');
-  await ed.fill('#pub-work input[name=price]', '2000');
-  await ed.click('#pub-work button[type=submit]');
+  await ed.locator('#pub-upload[data-media=picture]').waitFor();
+  await ed.setInputFiles('#pub-upload input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await ed.fill('#pub-upload input[name=title]', 'A tablet, photographed');
+  await ed.check('#pub-upload input[name=then][value=price]');
+  await ed.fill('#pub-upload input[name=price]', '2000');
+  await ed.click('#pub-upload button[type=submit]');
   await done(ed, '#e-pub-review #reading', /stripped to the picture alone/);
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
+  await done(ed, '#e-status .k-note.k-done', 'Uploaded');
 
   // A vow, read back, signed; Track points at the seller by default, at Edubba's own relays.
   await tile(ed, 'vows');

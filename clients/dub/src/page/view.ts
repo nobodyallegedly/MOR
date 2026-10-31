@@ -262,15 +262,31 @@ function sealedBox(p: Item): string {
     : x.media === 'video' || x.media === 'audio'
       ? x.problem
         ? ''
-        : sealedPlayBox({ publication: x.publication, seller: x.seller, media: x.media })
+        : sealedPlayBox({ publication: x.bake, seller: x.seller, media: x.media })
       : `<div class="k-txt" dir="auto">${e(x.text ?? '')}</div>`;
   const state =
     x.state === 'opened' || x.state === 'yours'
-      ? `${opened}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>`
+      ? `${opened}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was uploaded with.`}</div>`
       : x.state === 'paying'
         ? '<div class="k-small k-soft">Bought: pay it in your wallet (Payments, in Private). Its key arrives once the seller’s Damgar signs the receipt.</div>'
         : `<div class="k-small k-soft">Sealed: its ${what} opens once paid. Buy it from the act’s menu.</div>`;
-  return `<div class="dub-sealed"><span class="k-small">${e(x.price)}</span>${x.words ? `<div class="k-small k-soft">${e(x.words)}</div>` : ''}${state}${x.problem ? `<div class="k-label k-warn">${e(x.problem)}</div>` : ''}</div>`;
+  // Through a publication: its partners paid first, then the owners. Its uploader no owner: said plainly, and the owners' own publication offered (Agreements rule 14).
+  const through = x.through ? `<div class="k-small k-soft dub-through">${e(x.through.words)}</div>` : '';
+  const outside = x.outside ? `<div class="k-label k-warn dub-outside">${e(x.outside)}</div>` : '';
+  const owners = x.owners ? `<div class="k-small dub-owners">${e(x.owners.words)} Buy it there from the act’s menu: Buy from the owners’ publication.</div>` : '';
+  return `<div class="dub-sealed"><span class="k-small">${e(x.price)}</span>${x.words ? `<div class="k-small k-soft">${e(x.words)}</div>` : ''}${through}${outside}${owners}${state}${x.problem ? `<div class="k-label k-warn">${e(x.problem)}</div>` : ''}</div>`;
+}
+
+/** Asked before withdrawing, named by what actually ends (decided 28 October 2026): its price tag, or its publication. */
+export function endConfirm(what: 'tag' | 'publication'): string {
+  return what === 'tag'
+    ? 'Withdraw the price tag? A later version of your tag, with no price: from then on, paying it buys nothing. The bytes stay where they were uploaded unless homes and relays drop them.'
+    : 'Withdraw the publication? A later version of it that sells nothing, signed by you: it ends once every party signs it too. The bytes stay where they were uploaded unless homes and relays drop them.';
+}
+
+/** Why an upload of one's own cannot be withdrawn (Envelopes rule 24): said in its menu, nothing signed. */
+export function keptSay(what: 'picture' | 'film' | 'recording'): string {
+  return `<div class="k-box dub-kept"><p>There is nothing to withdraw at the protocol level. The ${what} is a bake, an upload: a bake is never withdrawn by the protocol, and its bytes stay where they were uploaded unless homes and relays drop them.</p><p class="k-small k-soft">What can be withdrawn is what sells an upload: a price tag (withdrawn by its signer) or a publication (ended by a later version selling nothing). This one carries neither. A profile’s picture is the same: a later profile simply names another picture.</p></div>`;
 }
 
 /** A vow a post names (round 3): its words, its price; bought, confirmed or contested from the act's menu. */

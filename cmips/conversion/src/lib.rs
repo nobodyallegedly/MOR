@@ -1,6 +1,6 @@
 //! # mor-conversion
 //!
-//! The conversion cMIP, draft 2 (`cmips/cmip-conversion-draft-2.md`):
+//! The conversion cMIP, draft 4 (`cmips/cmip-conversion-draft-4.md`):
 //! Money's conversion task ("a cMIP defining how a conversion is offered
 //! and evidenced"). **Experimental**: an instrument for testing the core,
 //! never for real money.
@@ -8,22 +8,28 @@
 //! In plain words: a **conversion service** is an identity that receives on
 //! one rail (or unit) and pays on another, at the rate of its own offer
 //! (Money, "Conversion service"). It sells a **rail swap**, which is a
-//! **proven offer** (Agreements draft 11, rule 11, F261): its delivery
-//! leaves a proof anyone checks from data, the onward payment's receipt
-//! or, where the next payee signs none, the service's claim (F267).
+//! **proven delivery** (Agreements rule 11, F261): its delivery leaves a
+//! proof anyone checks from data, the onward payment's receipt or, where
+//! the next payee signs none, the service's claim (F267).
 //!
-//! - The service publishes a **standing offer** (Agreements type 6, a lone
-//!   seller's, F215) selling this cMIP's **terms** in the access form,
+//! - The service signs a **publication** (Agreements type 6, a lone
+//!   seller's: no ownership agreement, no partner, the service its own
+//!   split service) selling this cMIP's **terms** in the access form,
 //!   `[2, [conversion cMIP, terms]]`: the rail and unit it pays out on, a
 //!   **rate** (fixed, or quoted per order no worse than a floor), a **fee**,
-//!   and the most points on the offer's time reference it may take.
-//! - Before each payment it signs an **order** under the offer: the first
-//!   hop's payment commitment, the **forward** it will pay (Money's
-//!   `forward`: the next payee, the amount, the offer), what the onward hop
-//!   follows, and a **deadline**. *Mechanic, the build's: the order binds
-//!   the forward before the money moves, as the anchoring ticket binds a
-//!   batch; Money's forward is otherwise written only in the service's own
-//!   receipt, after it is paid.*
+//!   and the most points on the publication's time reference it may take;
+//!   and a **price tag** (Money type 5) naming it, paid to the service, its
+//!   price the most one conversion takes in. Together they are its offer
+//!   ([`Offer`]). *Drafts 1 to 3 sold under an Agreements standing offer,
+//!   which the core no longer has (round 8, F407).*
+//! - Before each payment it signs an **order** under the publication: the
+//!   first hop's payment commitment (paying the tag), the **forward** it
+//!   will pay (Money's `forward`: the next payee, the amount, the
+//!   publication), what the onward hop follows, and a **deadline**.
+//!   *Mechanic, the build's: the order binds the forward before the money
+//!   moves, as the anchoring ticket binds a batch; Money's forward is
+//!   otherwise written only in the service's own receipt, after it is
+//!   paid.*
 //! - It signs its **receipt** of the first hop with that forward (Money
 //!   receipt field 7), and pays the next hop; the next payee's **receipt**
 //!   names the first hop's (field 6, and `objects`); where the next payee
@@ -32,21 +38,20 @@
 //! - **Delivered** where that onward receipt or claim is valid, names the
 //!   first hop's receipt, its payment serving no other forward (Money rule
 //!   12), is for the forward's amount to the forward's next
-//!   payee, and its payment is placed by the deadline on the offer's clock
-//!   ([`judge`]; [`Checker`], the core's `ProofChecker`). **Forwarded
+//!   payee, and its payment is placed by the deadline on the publication's
+//!   clock ([`judge`]; [`Checker`], the core's `ProofChecker`). **Forwarded
 //!   nothing** by the deadline: the forward stays an open obligation of the
-//!   service, under the offer (Money rule 27, was 9).
-//! - [`route`]: Money's route rules (24 to 28, were 5, 6, 8, 9 and 11) read
-//!   over receipts and claims: one chain, or where it stops and who owes
-//!   what.
+//!   service, under the publication (Money rule 27).
+//! - [`route`]: Money's route rules (24 to 28) read over receipts and
+//!   claims: one chain, or where it stops and who owes what.
 
 pub mod route;
 
-use mor_core::agreements::{self, Sold};
+use mor_core::agreements::{self, Sold, SplitPlan, Unfilled};
 use mor_core::cbor::{self, Value};
 use mor_core::envelopes::anchoring::Reference;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{Amount, Citations, Claim, Forward, Payer, Receipt};
+use mor_core::money::{Amount, Citations, Claim, Forward, Payer, PriceTag, Priced, Receipt};
 use mor_payment::{Answer, Commitment, Held, PaidTo, Proof, Record};
 
 /// This cMIP's spec hash. A test value until its creator is named at step
@@ -58,6 +63,11 @@ pub fn spec() -> Hash {
 /// The act type of an order under this cMIP. *Mechanic, the build's: the
 /// number.*
 pub const ORDER: u64 = 1;
+
+/// The conversion task (Development's task table, task 7: "a conversion
+/// service's offer, and a hop received on one rail"): the task a service's
+/// publication names this cMIP for, in its field 9.
+pub const CONVERSION_TASK: u64 = 7;
 
 /// The slack, in points, a payer's client allows between its own view of
 /// the clock and the service's when it checks an order's deadline.
@@ -77,7 +87,7 @@ pub enum Rate {
     Quoted { num: u64, den: u64 },
 }
 
-/// The conversion cMIP's terms, what the service's standing offer sells
+/// The conversion cMIP's terms, what the service's publication sells
 /// (`[2, [conversion cMIP, terms]]`).
 ///
 /// ```cddl
@@ -171,72 +181,127 @@ impl Terms {
         })
     }
 
-    /// The Agreements standing offer (type 6) the service signs selling
-    /// these terms: a lone seller's (no field 0, F215), paid to its signer,
-    /// its price (field 2) **the most one conversion takes in** (mechanic,
-    /// the build's), its own time reference (field 6) the clock its
-    /// deadlines are points on.
-    pub fn standing_offer(&self, most_in: Amount, reference: &Reference, words: Option<String>) -> agreements::Offer {
-        agreements::Offer {
-            under: None,
-            sold: vec![Sold::Access(spec(), cbor::encode(&self.to_value()))],
-            price: most_in,
-            paid: None,
+    /// The publication (Agreements type 6) the service signs selling these
+    /// terms (draft 4, item 1): a lone seller's (no field 1, no partner),
+    /// `service` its own split service (field 3), under a split plan with
+    /// no share off the top naming the split cMIP `split_cmip`; selling
+    /// exactly `[2, [conversion cMIP, terms]]`; its time reference (field 6)
+    /// `reference`, the clock its deadlines are points on; naming this cMIP
+    /// for the conversion task (field 9).
+    pub fn publication(&self, service: Hash, split_cmip: Hash, reference: &Reference, words: Option<String>) -> agreements::Publication {
+        agreements::Publication {
+            sold: Some(vec![Sold::Access(spec(), cbor::encode(&self.to_value()))]),
+            owners: None,
+            partners: vec![],
+            service,
+            plan: SplitPlan {
+                shares: vec![],
+                cmip: split_cmip,
+                unfilled: Unfilled::Stakes,
+                top: vec![],
+                service_bears_rail_fees: false,
+                max_rail_fee: None,
+                params: None,
+                metrics: vec![],
+                fees: vec![],
+            },
             words,
-            until: None,
             time: Some((reference.cmip, reference.params.clone())),
+            until: None,
             refund: None,
+            cmips: vec![(CONVERSION_TASK, spec())],
+            designated: None,
+            backups: vec![],
+            failed: None,
         }
+    }
+
+    /// The first version of the price tag (Money type 5) the service signs
+    /// under its publication `first`: its price `most_in`, **the most one
+    /// conversion takes in** (mechanic, the build's), paid to `service`.
+    pub fn price_tag(&self, first: Hash, most_in: Amount, service: Hash) -> PriceTag {
+        PriceTag { priced: Priced::Publication(first), version: 1, previous: None, price: Some(most_in), payee: service }
     }
 }
 
 // ---------------------------------------------------------------- the offer
 
-/// The service's standing offer, as this cMIP reads the Agreements offer
-/// it signed.
+/// The service's offer, as this cMIP reads it (draft 4, item 1): its
+/// publication and the price tag version a payer pays.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Offer {
-    /// The offer act's id: what the first hop follows, and what each
-    /// forward names as its agreement.
+    /// The publication's first version: what each order names, and what
+    /// each forward names as its agreement.
     pub id: Hash,
-    /// The service: the offer's signer, its payee, the receiver of the
-    /// first hop and the payer of the onward one.
+    /// The price tag's version read: what the first hop fulfils (Money
+    /// rule 18).
+    pub tag: Hash,
+    /// The service: the publication's drafter and split service, the tag's
+    /// payee, the receiver of the first hop and the payer of the onward one.
     pub service: Hash,
-    /// Its field 2: the most one conversion takes in, in the in unit.
+    /// The tag's price: the most one conversion takes in, in the in unit.
     pub most_in: Amount,
     pub terms: Terms,
-    /// Its own time reference (field 6): deadlines are points on it.
+    /// The publication's time reference (field 6): deadlines are points on it.
     pub reference: Reference,
 }
 
 impl Offer {
-    /// Read an Agreements standing offer, `id`, signed by `signer`, as this
-    /// cMIP's: a lone seller's (F215), selling exactly these terms, on its
-    /// own time reference, paid to its signer (the service converts: it
-    /// receives and pays on; mechanic, the build's). Whether it counts as an
-    /// offer (public, valid) is Agreements' (`AgreementsView::offer`),
-    /// checked beside.
-    pub fn read(id: Hash, signer: Hash, o: &agreements::Offer) -> Result<Offer, String> {
-        if o.under.is_some() {
-            return Err("a conversion offer is a lone seller's (F215): no co-owners' agreement behind it".into());
+    /// Read a service's publication and its price tag as this cMIP's offer
+    /// (draft 4, item 1). `first` is the publication's first version, `p`
+    /// the version in force (the caller finds the latest, Agreements rule
+    /// 11), `drafter` its drafter; `tag` the tag version a payer would pay,
+    /// act `tag_id`, signed by `tag_signer`. The publication: a lone
+    /// seller's (no field 1, no partner), its drafter its own split service
+    /// (the service converts: it receives and pays on; mechanic, the
+    /// build's), selling exactly this cMIP's terms, not ended, on its own
+    /// time reference, naming this cMIP for the conversion task. The tag:
+    /// naming `first`, signed by the service (or the party the publication
+    /// designates), paid to the service, not withdrawn, its price more than
+    /// nothing. Whether the publication counts and the tag counts under it
+    /// is Agreements' (`AgreementsView::publication`, `tag_under`), checked
+    /// beside.
+    pub fn from_publication(first: Hash, drafter: Hash, p: &agreements::Publication, tag_id: Hash, tag_signer: Hash, tag: &PriceTag) -> Result<Offer, String> {
+        if p.owners.is_some() || !p.partners.is_empty() {
+            return Err("a conversion publication is a lone seller's: no ownership agreement (field 1), no partner".into());
         }
-        let [Sold::Access(cmip, params)] = o.sold.as_slice() else {
-            return Err("a conversion offer sells exactly one thing: this cMIP's terms (a version selling nothing withdraws it)".into());
+        if p.service != drafter {
+            return Err("the service is its own split service (field 3), the publication's drafter: it receives and pays on (mechanic, the build's)".into());
+        }
+        let sold = match &p.sold {
+            None => return Err("a split agreement sells nothing".into()),
+            Some(s) if s.is_empty() => return Err("this version sells nothing: the publication has ended".into()),
+            Some(s) => s,
+        };
+        let [Sold::Access(cmip, params)] = sold.as_slice() else {
+            return Err("a conversion publication sells exactly one thing: this cMIP's terms".into());
         };
         if cmip != &spec() {
             return Err("it sells another cMIP's terms".into());
         }
         let terms = cbor::decode(params).ok().as_ref().and_then(Terms::decode).ok_or("its terms are not in this cMIP's format")?;
-        let Some((cmip, params)) = &o.time else {
-            return Err("its deadlines need its own time reference (field 6)".into());
+        let Some((cmip, params)) = &p.time else {
+            return Err("its deadlines need its time reference (field 6)".into());
         };
-        if o.payee(&signer) != Some(signer) {
-            return Err("a conversion offer is paid to its signer, the service that pays on (mechanic, the build's)".into());
+        if p.cmip(CONVERSION_TASK) != Some(&spec()) {
+            return Err("it names this cMIP for the conversion task (field 9)".into());
         }
-        if o.price.value == 0 {
-            return Err("its price (field 2), the most one conversion takes in, is more than nothing".into());
+        if tag.priced != Priced::Publication(first) {
+            return Err("the price tag names another publication, or a bake".into());
         }
-        Ok(Offer { id, service: signer, most_in: o.price, terms, reference: Reference { cmip: *cmip, params: params.clone() } })
+        if tag_signer != p.service && p.designated != Some(tag_signer) {
+            return Err("the price tag is signed neither by the service nor by the party the publication designates: nobody's offer (Money rule 18)".into());
+        }
+        if tag.payee != p.service {
+            return Err("the price tag is paid to the service, which pays on (mechanic, the build's)".into());
+        }
+        let Some(most_in) = tag.price else {
+            return Err("this version of the price tag carries no price: withdrawn (Money rule 18)".into());
+        };
+        if most_in.value == 0 {
+            return Err("the tag's price, the most one conversion takes in, is more than nothing".into());
+        }
+        Ok(Offer { id: first, tag: tag_id, service: p.service, most_in, terms, reference: Reference { cmip: *cmip, params: params.clone() } })
     }
 
     /// What `paid_in` comes to out, at the offer's rate (or, where its rate
@@ -248,7 +313,7 @@ impl Offer {
             return Err("the payment is not in the unit the offer takes".into());
         }
         if paid_in.value == 0 || paid_in.value > self.most_in.value {
-            return Err(format!("the offer converts more than nothing and at most {} (its field 2)", self.most_in.value));
+            return Err(format!("the offer converts more than nothing and at most {} (its price tag's price)", self.most_in.value));
         }
         let (num, den) = match (self.terms.rate, quote) {
             (Rate::Fixed { num, den }, None) => (num, den),
@@ -272,17 +337,20 @@ impl Offer {
 
 // ---------------------------------------------------------------- the order
 
-/// The order the service signs under its offer for one conversion, before
-/// it is paid (an act of this cMIP, type [`ORDER`], naming the offer in its
-/// payload and in its `objects` as `[offer, offer]`; mechanic, the build's).
+/// The order the service signs under its publication for one conversion,
+/// before it is paid (an act of this cMIP, type [`ORDER`], naming the
+/// publication's first version in its payload and in its `objects` as
+/// `[publication, publication]`; mechanic, the build's).
 ///
 /// ```cddl
 /// order = { 0 => offer: hash, 1 => commitment: hash, 2 => forward, 3 => onward: hash, 4 => deadline: uint, ? 5 => quote }
-/// forward = [ next-payee: hash, amount, agreement: hash ]   ; Money's, the agreement this offer
+/// forward = [ next-payee: hash, amount, agreement: hash ]   ; Money's, the agreement this publication
 /// quote   = [ num: uint, den: uint ]
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
+    /// The publication it is signed under, by its first version (drafts 1
+    /// to 3: the standing offer; the wire key 0 is unchanged).
     pub offer: Hash,
     /// The payment commitment of the first hop (payment cMIP): the payment
     /// to the service that buys this conversion.
@@ -336,33 +404,35 @@ impl Order {
 }
 
 /// Whether the payment committed to as `c` buys the conversion `order`
-/// under `offer`: the order names the offer and the commitment; the
-/// payment follows the offer, to the service, to its flow or vault (which
-/// pointer counts is Money's, rules 17 and 29), naming no claim (a lone
-/// seller's offer, F215), in the offer's unit, at most its field 2; and the
-/// order's forward is what the terms make of it, to be paid under the offer.
+/// under `offer`: the order names the publication and the commitment; the
+/// payment pays the publication's price tag (its `fulfils` the tag's
+/// version), to the service, to its flow or vault (which pointer counts is
+/// Money's, rule 17), naming no ownership agreement (a lone seller's
+/// publication), in the tag's unit, at most the tag's price; and the
+/// order's forward is what the terms make of it, to be paid under the
+/// publication. The core does not check the amount: this does.
 pub fn ordered(offer: &Offer, order: &Order, c: &Commitment) -> Result<(), String> {
     if order.offer != offer.id {
-        return Err("the order names another offer".into());
+        return Err("the order names another publication".into());
     }
     if c.hash() != order.commitment {
         return Err("the payment's commitment is not the one the order names".into());
     }
-    if c.fulfils != offer.id {
-        return Err("the payment does not follow the conversion offer (a tip to the service's pointer buys no conversion)".into());
+    if c.fulfils != offer.tag {
+        return Err("the payment does not pay the publication's price tag (a tip to the service's pointer buys no conversion)".into());
     }
     if c.payee != offer.service || matches!(c.paid_to, PaidTo::Refund { .. }) {
         return Err("the payment is not to the service's own flow or vault".into());
     }
     if c.purchase.is_some() {
-        return Err("a payment following a lone seller's offer names no claim (F215)".into());
+        return Err("a purchase under a lone seller's publication names no ownership agreement (Agreements rule 11)".into());
     }
     let out = offer.out(&c.amount, order.quote)?;
     if order.forward.amount != out {
         return Err(format!("the order forwards {} where the offer's terms make {} of the payment", order.forward.amount.value, out.value));
     }
     if order.forward.agreement != offer.id {
-        return Err("the order's forward names another agreement than the offer (Money rule 27: the forward is owed under the agreement it names)".into());
+        return Err("the order's forward names another agreement than the publication (Money rule 27: the forward is owed under the agreement it names)".into());
     }
     Ok(())
 }
@@ -552,7 +622,7 @@ fn candidates<'a>(r: &Hop, hops: &'a [Hop]) -> Vec<&'a Hop> {
     route::carriers(r, hops).0
 }
 
-/// Judge a conversion (draft 2, "Delivery and default") under `offer`,
+/// Judge a conversion (draft 4, "Delivery and default") under `offer`,
 /// from the order `order` (act `order_id`) the service signed, the first
 /// hop's `paid` payment, the service's receipt of it where held
 /// (`first`), the receipts and claims held that may be the onward hop, or
@@ -626,7 +696,7 @@ pub fn judge(offer: &Offer, order_id: &Hash, order: &Order, paid: &Payment, firs
 /// asks for.
 pub struct Checker<'c> {
     pub offers: Vec<Offer>,
-    /// Order acts the caller holds, by id, each signed by its offer's
+    /// Order acts the caller holds, by id, each signed by its publication's
     /// service (checked as acts by the caller).
     pub orders: Vec<(Hash, Order)>,
     pub payments: Vec<Payment>,
@@ -649,9 +719,9 @@ impl agreements::ProofChecker for Checker<'_> {
 
     fn check(&self, offer: &Hash, _params: &[u8], proof: &[u8]) -> agreements::ProofVerdict {
         use agreements::ProofVerdict as V;
-        let Some(o) = self.offers.iter().find(|o| &o.id == offer) else {
-            return V::Unknown("this checker does not hold the offer as a conversion offer".into());
-        };
+        if !self.offers.iter().any(|o| &o.id == offer) {
+            return V::Unknown("this checker does not hold the publication as a conversion offer".into());
+        }
         let (order_id, onward) = match cbor::decode(proof) {
             Ok(Value::Array(x)) if x.len() == 2 => {
                 let Some(order) = hash(Some(&x[0])) else { return V::NotProven("not a conversion proof: [order, onward / null]".into()) };
@@ -672,6 +742,9 @@ impl agreements::ProofChecker for Checker<'_> {
         let Some(paid) = self.payments.iter().find(|p| p.commitment.hash() == order.commitment) else {
             return V::Unknown("the payment buying the order is not held".into());
         };
+        // The tag version the payment pays, under this publication; where
+        // it pays none of them, any, and the judgment says not paid.
+        let o = self.offers.iter().find(|o| &o.id == offer && o.tag == paid.commitment.fulfils).or_else(|| self.offers.iter().find(|o| &o.id == offer)).expect("held");
         let first = self.hops.iter().find(|h| h.receipt.payee == o.service && commitment_of(&h.receipt).is_some_and(|c| c.hash() == order.commitment));
         // The onward record the proof names, judged beside every record
         // held of the same payment, so that Money rule 12 sees another use

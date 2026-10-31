@@ -47,7 +47,14 @@ async function pair(page: Page, base: string, code: string, label: string) {
   await page.click('#pair button');
 }
 
-const done = (page: Page, words: string) => page.locator('#status .note.done', { hasText: words }).waitFor();
+/** Waits for the page's note saying it is done; where it never comes, the error says what the page said instead. */
+const done = async (page: Page, words: string, timeout = 30_000) => {
+  try {
+    await page.locator('#status .note.done', { hasText: words }).waitFor({ timeout });
+  } catch (e) {
+    throw new Error(`${e instanceof Error ? e.message : e}\nThe page said: ${await page.locator('#status').innerText().catch(() => '(nothing)')}`);
+  }
+};
 const refresh = (page: Page) => page.click('[data-action=refresh]');
 
 before(async () => {
@@ -56,10 +63,11 @@ before(async () => {
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
+// Every server stopped whatever the outcome: one that fails to close does not keep the others running.
 after(async () => {
-  await browser?.close();
-  await home?.stop();
-  await relay?.stop();
+  await browser?.close().catch(() => undefined);
+  await home?.stop().catch(() => undefined);
+  await relay?.stop().catch(() => undefined);
 });
 
 test('an operator runs a home from the page, without a terminal', async () => {
@@ -138,7 +146,8 @@ test('an operator runs a home from the page, without a terminal', async () => {
   await page.locator('#status .note.error', { hasText: 'type "rotate"' }).waitFor();
   await page.fill('#rotate-confirm', 'rotate');
   await page.click('#rotate button');
-  await done(page, 'The operator has rotated');
+  // The rotation makes new keys and re-signs on the server: on a loaded machine it took past 30 seconds once (round 8), so it is given 90.
+  await done(page, 'The operator has rotated', 90_000);
   // The home signs on under the new key: a newcomer still gets a receipt.
   const after = TestIdentity.create({ homes: [home.home] });
   assert.ok((await after.publishGenesis())[0].result?.receipt);

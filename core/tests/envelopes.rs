@@ -461,7 +461,7 @@ fn a_key_delivered_to_a_bare_key_carries_no_recipient() {
     let media_key = h("media key");
     let publication = make(
         &seller,
-        &inside(types::PUBLICATION, vec![], "pub"),
+        &inside(types::BAKE, vec![], "pub"),
         &h("pub key"),
         true,
         None,

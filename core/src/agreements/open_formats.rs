@@ -119,8 +119,8 @@ impl RefundTerms {
 /// agreement), and refused meanwhile, fail closed.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Sold {
-    /// `[ 0, publication ]`: a publication (Envelopes type 0), by its act id.
-    Publication(Hash),
+    /// `[ 0, bake ]`: a bake (Envelopes type 0), by its act id.
+    Bake(Hash),
     /// `[ 2, [ cmip, params ] ]`: something with no work hash yet (a live
     /// stream): a cMIP and its parameters.
     Access(Hash, Vec<u8>),
@@ -134,7 +134,7 @@ pub enum Sold {
 impl Sold {
     pub fn to_value(&self) -> Value {
         match self {
-            Sold::Publication(p) => Value::Array(vec![Value::Uint(0), b(p)]),
+            Sold::Bake(p) => Value::Array(vec![Value::Uint(0), b(p)]),
             Sold::Access(c, params) => Value::Array(vec![
                 Value::Uint(2),
                 Value::Array(vec![b(c), cbor::decode(params).unwrap_or(Value::Null)]),
@@ -143,13 +143,11 @@ impl Sold {
         }
     }
 
-    fn decode(v: &Value) -> R<Sold> {
-        let a = nonempty(v, "offer: what it sells")?;
-        match (uint(&a[0], "offer: what it sells, its form")?, a.len()) {
-            (0, 2) => Ok(Sold::Publication(hash(&a[1], "offer: a publication")?)),
-            (1, 2) => Err(AgreementsError::Unsupported(
-                "offer: a work, any publication carrying it (OF1 [1]): put to Nobody, allegedly, with F216",
-            )),
+    pub(crate) fn decode(v: &Value) -> R<Sold> {
+        let a = nonempty(v, "publication: what it sells")?;
+        match (uint(&a[0], "publication: what it sells, its form")?, a.len()) {
+            (0, 2) => Ok(Sold::Bake(hash(&a[1], "publication: a bake")?)),
+            (1, 2) => Err(AgreementsError::Shape("publication: [1, work], any bake carrying a work, is not defined")),
             (2, 2) => {
                 let x = tuple(&a[1], 2, "offer: access, a cMIP and its parameters")?;
                 Ok(Sold::Access(hash(&x[0], "offer: access, its cMIP")?, cbor::encode(&x[1])))
@@ -157,189 +155,6 @@ impl Sold {
             (3, 2) => Ok(Sold::Vow(hash(&a[1], "offer: a vow, by its name")?)),
             _ => Err(AgreementsError::Shape("offer: what it sells")),
         }
-    }
-}
-
-/// Who an offer's payments go to (field 3; Fable's review 2.1 to 2.3, taken
-/// under the delegation).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Paid {
-    /// `hash`: the identity paid, whose payee pointer the payment goes to.
-    /// Under an agreement naming a split service, one of its payees: in a
-    /// deal, a payee whose grant field 14 lists; in a collective, the
-    /// collective (review 2.2).
-    Payee(Hash),
-    /// `0`: paid by the stakes (rule 18's payer-side splitting, F124 P2,
-    /// F125 D3): the payer's wallet pays each holder's own pointer by the
-    /// stakes of the agreement in field 0, one flow. Only under an
-    /// agreement naming no split service (review 2.1). The encoding is the
-    /// build's mechanic.
-    ByStakes,
-}
-
-/// A standing offer (Agreements type 6, rule 32).
-///
-/// ```cddl
-/// offer-payload = {
-///   ? 0 => hash,          ; under: the co-owners' agreement (version) it is made under; present only
-///                         ;   where co-owners stand behind it (F215); absent: a lone seller's offer,
-///                         ;   itself the agreement between seller and buyer
-///   1 => [* sold],        ; what it sells, ascending by deterministic encoding, none twice; empty in a
-///                         ;   version that withdraws the offer (OF4 a, mechanic, the build's)
-///   2 => amount,          ; the price (OF5 a: one amount)
-///   ? 3 => hash / 0,      ; paid: the payee, or 0 for payer-side splitting by the stakes; required
-///                         ;   with field 0; absent with no field 0: the signer
-///   ? 4 => tstr,          ; the offer's words, canonical text; required where it names a vow (F237)
-///   ? 5 => any,           ; until: a point on the time reference after which it takes no payment
-///   ? 6 => [hash, any],   ; a lone seller's own time reference (F215, F219; mechanic, the build's)
-///   ? 7 => refund-terms   ; a lone seller's own refund terms (F215; mechanic, the build's)
-/// }
-/// ```
-///
-/// Its `objects`: the first version names, where field 0 is present, the
-/// agreement as `[agreement, agreement]`; a later version names the offer
-/// chain `[first, previous]` first (OF4 a, Fable's reading; as a
-/// negotiation thread does), then the agreement as above.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Offer {
-    pub under: Option<Hash>,
-    pub sold: Vec<Sold>,
-    pub price: Amount,
-    pub paid: Option<Paid>,
-    pub words: Option<String>,
-    pub until: Option<Value>,
-    pub time: Option<(Hash, Value)>,
-    pub refund: Option<RefundTerms>,
-}
-
-/// An offer as an act names it: the offer, and where it is a later
-/// version, the first offer and the previous version (OF4 a).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OfferAct {
-    pub offer: Offer,
-    /// `(first, previous)` for a later version.
-    pub follows: Option<(Hash, Hash)>,
-}
-
-impl Offer {
-    pub fn to_map(&self) -> Vec<(Value, Value)> {
-        let mut m = vec![];
-        if let Some(u) = &self.under {
-            m.push((Value::Uint(0), b(u)));
-        }
-        m.push((Value::Uint(1), Value::Array(self.sold.iter().map(Sold::to_value).collect())));
-        m.push((Value::Uint(2), self.price.to_value()));
-        match &self.paid {
-            Some(Paid::Payee(h)) => m.push((Value::Uint(3), b(h))),
-            Some(Paid::ByStakes) => m.push((Value::Uint(3), Value::Uint(0))),
-            None => {}
-        }
-        if let Some(w) = &self.words {
-            m.push((Value::Uint(4), Value::Text(w.clone())));
-        }
-        if let Some(u) = &self.until {
-            m.push((Value::Uint(5), u.clone()));
-        }
-        if let Some((h, p)) = &self.time {
-            m.push((Value::Uint(6), Value::Array(vec![b(h), p.clone()])));
-        }
-        if let Some(r) = &self.refund {
-            m.push((Value::Uint(7), r.to_value()));
-        }
-        m
-    }
-
-    /// Whether this version withdraws the offer (an empty field 1).
-    pub fn withdraws(&self) -> bool {
-        self.sold.is_empty()
-    }
-
-    /// The identity paid where one is (field 3, or the signer for a lone
-    /// seller); `None` where paid by the stakes.
-    pub fn payee(&self, signer: &Hash) -> Option<Hash> {
-        match &self.paid {
-            Some(Paid::Payee(h)) => Some(*h),
-            Some(Paid::ByStakes) => None,
-            None => Some(*signer),
-        }
-    }
-
-    /// The checks that need no other act.
-    pub fn decode(inside: &Inside) -> R<OfferAct> {
-        let f = fields(&inside.payload, 7, "offer: unknown field")?;
-        let under = get(&f, 0).map(|v| hash(v, "offer: the agreement it is made under")).transpose()?;
-        let Value::Array(sv) = get(&f, 1).ok_or(AgreementsError::Shape("offer: what it sells"))? else {
-            return Err(AgreementsError::Shape("offer: what it sells"));
-        };
-        let sold = sv.iter().map(Sold::decode).collect::<R<Vec<_>>>()?;
-        let enc: Vec<Vec<u8>> = sold.iter().map(|s| cbor::encode(&s.to_value())).collect();
-        if !enc.windows(2).all(|w| w[0] < w[1]) {
-            return Err(AgreementsError::Check("offer: what it sells is ascending by deterministic encoding, none twice"));
-        }
-        let price = amount(get(&f, 2).ok_or(AgreementsError::Shape("offer: the price"))?, "offer: the price")?;
-        let paid = match get(&f, 3) {
-            None => None,
-            Some(Value::Uint(0)) => Some(Paid::ByStakes),
-            Some(v) => Some(Paid::Payee(hash(v, "offer: who is paid")?)),
-        };
-        let words = get(&f, 4).map(|v| text(v, "offer: its words")).transpose()?;
-        let until = get(&f, 5).cloned();
-        let time = get(&f, 6)
-            .map(|v| {
-                let a = tuple(v, 2, "offer: its time reference")?;
-                Ok((hash(&a[0], "offer: its time reference's cMIP")?, a[1].clone()))
-            })
-            .transpose()?;
-        let refund = get(&f, 7).map(RefundTerms::decode).transpose()?;
-        // F237: an offer naming a vow sells it with its words.
-        if words.is_none() && sold.iter().any(|s| matches!(s, Sold::Vow(_))) {
-            return Err(AgreementsError::Check("offer: an offer naming a vow carries its words, field 4 (F237)"));
-        }
-        // F215: co-owners' offers carry field 0, and their agreement's time
-        // reference and refund terms; a lone seller's offer carries its own.
-        if under.is_some() && (time.is_some() || refund.is_some()) {
-            return Err(AgreementsError::Check(
-                "offer: an offer under co-owners' agreement takes its time reference and refund terms from that agreement (F215, FR1)",
-            ));
-        }
-        if under.is_some() && paid.is_none() {
-            return Err(AgreementsError::Check(
-                "offer: under an agreement, field 3 says who is paid: a payee, or the stakes (review 2.1; mechanic, the build's)",
-            ));
-        }
-        if under.is_none() && paid == Some(Paid::ByStakes) {
-            return Err(AgreementsError::Check("offer: a lone seller's offer has no stakes to be paid by (F215)"));
-        }
-        if under.is_none() && (until.is_some() || refund.is_some()) && time.is_none() {
-            return Err(AgreementsError::Check(
-                "offer: a lone seller's deadline or refund terms are points on its own time reference, field 6 (rule 33; F219)",
-            ));
-        }
-        // Objects: the chain, then the agreement.
-        let objects = inside.objects.as_deref().unwrap_or(&[]);
-        let mut rest = objects;
-        let follows = match objects.first() {
-            Some(o) if Some(o.chain) != under || o.chain != o.predecessor => {
-                rest = &objects[1..];
-                Some((o.chain, o.predecessor))
-            }
-            _ => None,
-        };
-        if let Some(u) = &under {
-            match rest.first() {
-                Some(o) if o.chain == *u && o.predecessor == *u => rest = &rest[1..],
-                _ => return Err(AgreementsError::Shape("offer: objects name the agreement it is made under, [agreement, agreement]")),
-            }
-        }
-        // A collective's offer cites its chain after these (F127).
-        let _ = rest;
-        if sold.is_empty() && follows.is_none() {
-            return Err(AgreementsError::Check("offer: only a later version withdraws an offer, by selling nothing (OF4 a)"));
-        }
-        Ok(OfferAct {
-            offer: Offer { under, sold, price, paid, words, until, time, refund },
-            follows,
-        })
     }
 }
 
@@ -353,9 +168,9 @@ impl Offer {
 pub enum FeeScope {
     /// Absent: every payment.
     Every,
-    /// `[ 0, publication ]`: payments for this publication (the receipt's
-    /// field 5 naming it, or an offer selling it).
-    Publication(Hash),
+    /// `[ 0, bake ]`: payments for this bake (a payment under a publication
+    /// selling it).
+    Bake(Hash),
     /// `[ 1, rail ]`: payments by this rail Module (the receipt's field 0).
     Rail(Hash),
 }
@@ -379,7 +194,7 @@ impl Fee {
         let mut v = vec![b(&self.module), Value::Uint(self.part)];
         match &self.scope {
             FeeScope::Every => {}
-            FeeScope::Publication(p) => v.push(Value::Array(vec![Value::Uint(0), b(p)])),
+            FeeScope::Bake(p) => v.push(Value::Array(vec![Value::Uint(0), b(p)])),
             FeeScope::Rail(r) => v.push(Value::Array(vec![Value::Uint(1), b(r)])),
         }
         Value::Array(v)
@@ -395,7 +210,7 @@ impl Fee {
             Some(s) => {
                 let x = tuple(s, 2, "fee: its scope")?;
                 match uint(&x[0], "fee: its scope's form")? {
-                    0 => FeeScope::Publication(hash(&x[1], "fee: a publication")?),
+                    0 => FeeScope::Bake(hash(&x[1], "fee: a bake")?),
                     1 => FeeScope::Rail(hash(&x[1], "fee: a rail Module")?),
                     _ => return Err(AgreementsError::Shape("fee: its scope")),
                 }
@@ -528,6 +343,7 @@ pub struct Metric {
 /// build's: the key stays unused, never reused).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SplitPlan {
+    /// 0: role and metric shares, off the top.
     pub shares: Vec<ShareRule>,
     pub cmip: Hash,
     pub unfilled: Unfilled,
@@ -536,9 +352,12 @@ pub struct SplitPlan {
     pub max_rail_fee: Option<Value>,
     pub params: Option<Value>,
     pub metrics: Vec<Metric>,
+    /// 9: fees, each borne by every share, off the top.
+    pub fees: Vec<Fee>,
 }
 
 impl SplitPlan {
+    /// The plan as a publication's field 4 writes it.
     pub fn to_value(&self) -> Value {
         let mut m = vec![
             (Value::Uint(0), Value::Array(self.shares.iter().map(ShareRule::to_value).collect())),
@@ -548,9 +367,6 @@ impl SplitPlan {
             Unfilled::Stakes => {}
             Unfilled::HeldOpen => m.push((Value::Uint(3), Value::Array(vec![Value::Uint(1)]))),
             Unfilled::To(h) => m.push((Value::Uint(3), Value::Array(vec![Value::Uint(2), b(h)]))),
-        }
-        if !self.top.is_empty() {
-            m.push((Value::Uint(4), Value::Array(self.top.iter().map(|i| Value::Uint(*i)).collect())));
         }
         if self.service_bears_rail_fees {
             m.push((Value::Uint(5), Value::Uint(1)));
@@ -578,21 +394,30 @@ impl SplitPlan {
                 ),
             ));
         }
+        if !self.fees.is_empty() {
+            m.push((Value::Uint(9), Fee::field_value(&self.fees)));
+        }
         Value::Map(m)
     }
 
+    /// A publication's split plan (field 4): role and metric shares off the
+    /// top (keys 2 and 4 are not used: every share but the owners' line is
+    /// off the top, and a named receiver is a partner).
     pub fn decode(v: &Value) -> R<SplitPlan> {
         let Value::Map(m) = v else { return Err(AgreementsError::Shape("split plan")) };
-        if m.iter().any(|(k, _)| k == &Value::Uint(2)) {
-            return Err(AgreementsError::Check("split plan: fees are terms field 28, their own field, since F213"));
+        if m.iter().any(|(k, _)| k == &Value::Uint(2) || k == &Value::Uint(4)) {
+            return Err(AgreementsError::Check("split plan: keys 2 and 4 are not used: every share but the owners' line is off the top"));
         }
-        let f = fields(m, 8, "split plan: unknown field")?;
-        let shares = nonempty(get(&f, 0).ok_or(AgreementsError::Shape("split plan: its shares"))?, "split plan: its shares")?
-            .iter()
-            .map(ShareRule::decode)
-            .collect::<R<Vec<_>>>()?;
+        let f = fields(m, 9, "split plan: unknown field")?;
+        let Value::Array(sv) = get(&f, 0).ok_or(AgreementsError::Shape("split plan: its shares"))? else {
+            return Err(AgreementsError::Shape("split plan: its shares"));
+        };
+        let shares = sv.iter().map(ShareRule::decode).collect::<R<Vec<_>>>()?;
+        if shares.iter().any(|s| !matches!(s, ShareRule::Role { .. } | ShareRule::Metric { .. })) {
+            return Err(AgreementsError::Check("split plan: a share is a role [1, role, part] or a metric share [3, metric, part]; a stake is the owners' line and a named receiver a partner"));
+        }
         if !shares.windows(2).all(|w| w[0].kind() <= w[1].kind()) {
-            return Err(AgreementsError::Check("split plan: stakes, then roles, then named receivers, then metric shares"));
+            return Err(AgreementsError::Check("split plan: roles, then metric shares"));
         }
         let unfilled = match get(&f, 3) {
             None => Unfilled::Stakes,
@@ -606,13 +431,6 @@ impl SplitPlan {
                 }
             }
         };
-        let top: Vec<u64> = match get(&f, 4) {
-            None => vec![],
-            Some(v) => nonempty(v, "split plan: shares off the top")?.iter().map(|x| uint(x, "split plan: a share off the top")).collect::<R<_>>()?,
-        };
-        if !top.windows(2).all(|w| w[0] < w[1]) || top.iter().any(|i| *i as usize >= shares.len()) {
-            return Err(AgreementsError::Check("split plan: shares off the top name shares of field 0, ascending, none twice"));
-        }
         let service_bears_rail_fees = match get(&f, 5) {
             None => false,
             Some(Value::Uint(0)) => false,
@@ -648,16 +466,30 @@ impl SplitPlan {
                 }
             }
         }
+        let fees = get(&f, 9).map(Fee::decode_field).transpose()?.unwrap_or_default();
         Ok(SplitPlan {
             shares,
             cmip: hash(get(&f, 1).ok_or(AgreementsError::Shape("split plan: the split cMIP"))?, "split plan: the split cMIP")?,
             unfilled,
-            top,
+            top: vec![],
             service_bears_rail_fees,
             max_rail_fee,
             params: get(&f, 7).cloned(),
             metrics,
+            fees,
         })
+    }
+
+    /// The fixed parts the plan takes off the top, in millionths: its role
+    /// and metric shares' parts (fees are computed by the split cMIP).
+    pub fn fixed_parts(&self) -> u128 {
+        self.shares
+            .iter()
+            .map(|s| match s {
+                ShareRule::Role { part, .. } | ShareRule::Metric { part, .. } => *part as u128,
+                _ => 0,
+            })
+            .sum()
     }
 
     /// Agreements draft 12 (F280, decided by Nobody, allegedly: "Shared

@@ -18,6 +18,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { actForm } from '../../genesis/src/forms.ts';
 import { DOMAIN, serve, type Running } from '../src/server.ts';
 import type { Item, State } from '../src/shapes.ts';
+import { stopAll } from './stop.ts';
 
 const apps: Running[] = [];
 let places: Relay[] = [];
@@ -26,10 +27,7 @@ before(async () => {
   places = [await start('home'), await start('relay'), await start('home'), await start('relay'), await start('relay')];
 });
 
-after(async () => {
-  for (const a of apps) await a.close();
-  for (const r of places) await r.stop();
-});
+after(() => stopAll(...apps.map((a) => () => a.close()), ...(places ?? []).map((r) => () => r?.stop())));
 
 async function made(home: string, relay: string): Promise<{ c: Client; id: string; state: State }> {
   const app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-across-')), port: 0 });

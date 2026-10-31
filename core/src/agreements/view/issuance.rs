@@ -99,7 +99,7 @@ impl<'a> AgreementsView<'a> {
                     return invalid("the issuance offer it names offers another stake, or of another agreement (rule 96, F309)");
                 }
                 let ot = self.terms(&offer.version)?;
-                if x.act.outside.signer != Some(col.id) || !Self::own_key(col, x) || !self.valid(o) || !self.on_chain(col, x) || !self.sealed_to_all(x, &ot) {
+                if !Self::for_col(col, x) || !self.valid(o) || !self.on_chain(col, x) || !self.sealed_to_all(x, &ot) {
                     return draft("the issuance offer is not an act of the collective that is done: valid, on its chain and sealed to every member (rule 57; type 26)");
                 }
                 if !self.before_struct(col, x, at) {
@@ -202,12 +202,12 @@ impl<'a> AgreementsView<'a> {
     pub(super) fn placing_acts(&self, col: &Col, y: &Held, at: Line<'a>) -> R<Vec<&'a Held>> {
         let mut out = vec![];
         for a in self.v.acknowledgements(&y.id) {
-            if Self::own_key(col, a) && self.status(&a.id) == Status::Valid && self.on_chain(col, a) && self.before_struct(col, a, at) {
+            if Self::for_col(col, a) && self.status(&a.id) == Status::Valid && self.on_chain(col, a) && self.before_struct(col, a, at) {
                 out.push(a);
             }
         }
-        for r in self.v.signed_by(&col.id) {
-            if !Self::own_key(col, r) || self.status(&r.id) != Status::Valid || !self.is_agreements(r, types::RECORD) {
+        for r in self.col_acts(col) {
+            if self.status(&r.id) != Status::Valid || !self.is_agreements(r, types::RECORD) {
                 continue;
             }
             if !Record::decode(&r.inside).is_ok_and(|d| d.registers.iter().flatten().any(|z| *z == y.id)) {
@@ -262,7 +262,8 @@ impl<'a> AgreementsView<'a> {
                 Ok(Fin::Receipt(rc))
                     if &rc.fulfils == fulfils
                         && &rc.payee == payee
-                        && r.act.outside.signer == Some(*payee)
+                        // Its payee's: a collective's, a member's act naming it (rule 58).
+                        && self.author(r).as_ref() == Some(payee)
                         && self.valid(&r.id)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>

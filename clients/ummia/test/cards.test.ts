@@ -34,9 +34,13 @@ before(async () => {
   relays = [await start('relay'), await start('relay')];
 });
 
+// Every app and server this file starts is stopped whatever the outcome, even where one before it fails (Part 4).
 after(async () => {
-  await closeAll();
-  for (const h of [...homes, ...relays]) await h.stop();
+  try {
+    await closeAll();
+  } finally {
+    for (const h of [...homes, ...relays]) await h?.stop().catch(() => undefined);
+  }
 });
 
 const publish = async (c: { ask<T>(op: string, a?: Record<string, unknown>): Promise<T> }, op: string, a: Record<string, unknown>, confirm = 'confirm') => {

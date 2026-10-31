@@ -786,7 +786,7 @@ export class Desk {
       }
       // F188 (DQ6), client conformance: a holder's client raises the alarm
       // where the numbers on the splits it receives from one service under
-      // one deal skip: splits are being made where it is not shown.
+      // one publication (field 3) skip: splits are being made where it is not shown.
       const groups = new Map<string, Item[]>();
       for (const it of rec.items) {
         if (!it.split) continue;
@@ -807,10 +807,10 @@ export class Desk {
         if (gaps.length || unnumbered || repeated.length) {
           top.alarm = [
             gaps.length
-              ? `ALARM (Agreements rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.`
-              : 'ALARM (Agreements rule 15a, QF4): the numbers on this service\'s splits under this deal break the plan.',
+              ? `ALARM (Agreements rule 15a, F188): this service's splits under this publication skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(', ')} were`} never delivered here. Splits are being made where this identity is not shown: the publication may have a version hidden from it.`
+              : 'ALARM (Agreements rule 15a, QF4): the numbers on this service\'s splits under this publication break the plan.',
             unnumbered
-              ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this deal carr${unnumbered === 1 ? 'ies' : 'y'} no number: a deviation that breaks the plan (Agreements rule 15a, QF4).`
+              ? `${unnumbered} split${unnumbered === 1 ? '' : 's'} of this service under this publication carr${unnumbered === 1 ? 'ies' : 'y'} no number: a deviation that breaks the plan (Agreements rule 15a, QF4).`
               : '',
             ...repeated.map(
               (n) => `The number ${n} is carried by ${numbers.filter((m) => m === n).length} splits: a deviation that breaks the plan (Agreements rule 15a, QF4).`,

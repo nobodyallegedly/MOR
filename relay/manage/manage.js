@@ -134,7 +134,7 @@ var IDENTITY_TYPES = {
   13: "absence statement",
   14: "escape endorsement"
 };
-var ENVELOPES_TYPES = { 0: "publication", 4: "encryption key" };
+var ENVELOPES_TYPES = { 0: "bake", 4: "encryption key" };
 function what(it) {
   if (it.kind === "sealed") return "sealed container";
   if (it.kind === "media") return "media";

@@ -68,8 +68,27 @@ export function siteCopy(firstAct: string): string {
 }
 
 export async function world(): Promise<World> {
-  const homes = [await start('home'), await start('home')];
-  const relay = await start('relay');
+  // Every server started here is stopped if building the world fails, so none outlives a failed run (CI).
+  const started: Running[] = [];
+  const up = async (role: 'home' | 'relay') => {
+    const r = await start(role);
+    started.push(r);
+    return r;
+  };
+  const stopAll = async () => {
+    for (const r of started) await r.stop().catch(() => {});
+  };
+  try {
+    return await made(up, stopAll);
+  } catch (e) {
+    await stopAll();
+    throw e;
+  }
+}
+
+async function made(up: (role: 'home' | 'relay') => Promise<Running>, stopAll: () => Promise<void>): Promise<World> {
+  const homes = [await up('home'), await up('home')];
+  const relay = await up('relay');
   const owner = TestIdentity.create({ homes: homes.map((h) => h.home) });
   await owner.publishGenesis();
   const firstAct = (await post(owner, { text: 'Thank you for the shower… (a test post)', jpeg: phone, relays: [relay.base] })).id;
@@ -82,9 +101,7 @@ export async function world(): Promise<World> {
     firstAct,
     dir,
     site,
-    async stop() {
-      for (const r of [...homes, relay]) await r.stop();
-    },
+    stop: stopAll,
   };
 }
 

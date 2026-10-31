@@ -12,7 +12,7 @@ A retired rule or type keeps its number, which is never reused.
 
 *Client conformance* marks a rule for the client that locks or signs, which no verifier checks and no verdict reads.
 
-The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media and the bake, vows, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 
@@ -21,9 +21,8 @@ The Envelopes MIR is the grammar every act is written in. It defines:
 - the two parts of every act: a small **outside** that relays can see, and a locked **inside** that holds everything else;
 - how content is locked, and how its key is made public or delivered privately;
 - how acts name their type, link into chains, acknowledge and refer to each other, without a clock;
-- how media is fingerprinted and published, and for whom;
+- how media is fingerprinted and baked, and to whom money sent to a bare bake goes;
 - what relays do, and how acts reach the people they concern (a relay's statement of what it holds is the relay transport cMIP's);
-- how an offer of media is withdrawn;
 - what a client does with an act it does not understand.
 
 ## Dependencies
@@ -48,18 +47,21 @@ Identity (signers, keys, bindings, sequences, routes) and Text (canonical text i
 - **Content key.** The key that locks one inside or one media object. A new one for every object.
 - **Public act.** An act whose content key travels with it, on its outside. Anyone can open it.
 - **Private act.** An act whose content key is delivered only to chosen recipients.
-- **Key delivery.** An act that says which key opens which act or media object. Sent privately, it travels in a sealed container locked to the recipient's encryption key, or to a bare key the recipient supplied; published openly, it makes that act or media public.
-- **Encryption key.** A public key an identity publishes so others can deliver content keys to it.
+- **Key delivery.** An act that says which key opens which act or media object. Sent privately, it travels in a sealed container locked to the recipient's encryption key, or to a bare key the recipient supplied; made public, it makes that act or media public.
+- **Encryption key.** A public key an identity uploads so others can deliver content keys to it.
 - **Sealed container.** A wrapper that carries a private act and its content key to its recipients, locked to their encryption keys, and hides the sender from relays. Not an act. Its outside is unauthenticated by design: all proof lives in the inner act.
 
 ### Media
 
 - **Work hash.** The fingerprint of a work's complete plaintext.
-- **Withdrawal.** An act marking a publication as no longer offered.
+- **Bake.** The act (type 0) that locks and stores media, and says one thing: "I uploaded this." Anyone may bake the same file; each bake is its uploader's.
+- **Uploader.** A bake's signer: the one who uploaded it.
+- **Upload.** To put an act, a bake among them, on homes and relays.
+- *Withdrawal (type 3) is retired: a bake is never withdrawn by the protocol (rule 24).*
 
 ### Relays
 
-- **Relay.** A server that publishes, fetches and mirrors acts and media, untrusted by default, operated by an identity.
+- **Relay.** A server that carries, fetches and mirrors the acts and media uploaded to it, untrusted by default, operated by an identity.
 - **Inbox.** A route of kind 1 (Identity) where others deliver acts addressed to an identity.
 
 ## Part one: an act as it runs most of the time
@@ -122,8 +124,8 @@ Identity acts are the public face of an identity: genesis, rotations, receipts, 
 
 **Private:** no key on the outside. The key reaches each recipient in a sealed container: either with the act itself, or in a key delivery for an act the recipient fetches elsewhere.
 
-- **Encryption key.** An identity that wants to receive private content publishes an encryption key: a public act (type 4), versioned in its own chain like routes, changed with the signing key. *Its forks are in Part two; its scheme, X-Wing, and its format are in Part three.*
-- **Key delivery.** An act (type 1) whose payload names the act whose content key it carries, or the publication whose media key it carries, and the key itself. Sent privately, it is a private act, addressed (`to`) to its recipient, and travels in a sealed container locked to the recipient's current encryption key; sent to a bare key the recipient supplied (a device or application key), it carries no `to`, and its container is locked to that bare key. Published openly, addressed to no one, it makes the act or media it names public. Key release may be delegated to a service through a grant (Agreements). Group keys, subscriptions and rights management are access modules.
+- **Encryption key.** An identity that wants to receive private content uploads an encryption key: a public act (type 4), versioned in its own chain like routes, changed with the signing key. *Its forks are in Part two; its scheme, X-Wing, and its format are in Part three.* An identity with no signing key (a collective, Identity rule 1) has no encryption key: **a collective is sealed to by sealing to each of its members, or by publicity; no act is sealed to a collective's own key** (Agreements rule 57).
+- **Key delivery.** An act (type 1) whose payload names the act whose content key it carries, or the bake whose media key it carries, and the key itself. Sent privately, it is a private act, addressed (`to`) to its recipient, and travels in a sealed container locked to the recipient's current encryption key; sent to a bare key the recipient supplied (a device or application key), it carries no `to`, and its container is locked to that bare key. Made public, addressed to no one, it makes the act or media it names public. Key release may be delegated to a service through a grant (Agreements). Group keys, subscriptions and rights management are access modules.
 
 Following the privacy principle, public receiver and private sender, a private act reaches its recipients inside a sealed container, with its content key. A sealed container is not an act, and relays carry it as opaque bytes. Relays see only the recipients, which are none for a delivery to a bare key, and the size. *The inner act is signed by its sender as any act; its recipient may later show it to anyone, and a private inner act stays locked unless its key is shown too.* *The container's format, and how it is locked and opened, are in Part three ("Sealed container").*
 
@@ -137,15 +139,15 @@ Rules about an act's inside can only be checked by those who hold its key. A cli
 
 A private act MUST reach its recipients in a sealed container that carries its content key, or have its content key delivered by a key delivery that does.
 
-A key delivery MUST name the act or publication whose key it carries; a private one MUST be addressed to the recipient whose encryption key its container is locked to, or, for a bare key, carry no `to`.
+A key delivery MUST name the act or bake whose key it carries; a private one MUST be addressed to the recipient whose encryption key its container is locked to, or, for a bare key, carry no `to`.
 
-A key delivery is valid as an act by its shape; its key is used only if it opens what it names (rule 7's test), and one that does not is ignored and shown so. Anyone holding a key may deliver it. *A recipient may already show what it was given to anyone (section 3); a buyer publishing a key it bought is the same fact, and nothing in the bytes can stop it.*
+A key delivery is valid as an act by its shape; its key is used only if it opens what it names (rule 7's test), and one that does not is ignored and shown so. Anyone holding a key may deliver it. *A recipient may already show what it was given to anyone (section 3); a buyer making public a key it bought is the same fact, and nothing in the bytes can stop it.*
 
 #### Rule 12. A container that fails delivers nothing
 
 A sealed container MUST follow the format in Part three; a container whose capsule or contents fail the checks of "Opening" (step 4), or whose inner act fails "Addressing" (step 5), is invalid, and a client MUST NOT treat its inner act as delivered.
 
-**Going public later.** The signer publishes a key delivery addressed to no one, with the key on its outside. *One act turns a private act public, for an embargo, a timed release, or disclosing a negotiation record (Agreements).*
+**Going public later.** The signer uploads a public key delivery addressed to no one, with the key on its outside. *One act turns a private act public, for an embargo, a timed release, or disclosing a negotiation record (Agreements).*
 
 ### 4. Sequences
 
@@ -185,7 +187,7 @@ An act acknowledges another identity's act by naming it in `acks`. It says only 
 
 #### Rule 18. Who may acknowledge
 
-Only an act whose type is defined by the Identity, Money or Agreements MIR may carry `acks`. A text act, any other act of this MIR, and every act of a cMIP or Module MUST NOT carry `acks`; an act that does is invalid. *The rule limits which acts carry an acknowledgement, never which acts can be acknowledged: a post or a publication still becomes disputed, not void, after its signer's rotation when an Identity, Money or Agreements act acknowledges it (a witness act, a buyer's claim, a signature) or a keeper recorded it. To rely on a post or a message deliberately, an identity signs a witness act (Identity, type 15).*
+Only an act whose type is defined by the Identity, Money or Agreements MIR may carry `acks`. A text act, any other act of this MIR, and every act of a cMIP or Module MUST NOT carry `acks`; an act that does is invalid. *The rule limits which acts carry an acknowledgement, never which acts can be acknowledged: a post or a bake still becomes disputed, not void, after its signer's rotation when an Identity, Money or Agreements act acknowledges it (a witness act, a buyer's claim, a signature) or a keeper recorded it. To rely on a post or a message deliberately, an identity signs a witness act (Identity, type 15).*
 
 Negotiation messages acknowledge the latest message received from the other side (Agreements rule 52). A negotiation message is an Agreements act type carrying text (Agreements type 18), so it may carry `acks` under this rule; a text act in a negotiation thread may not, and is no part of the record.
 
@@ -195,7 +197,7 @@ An act carrying `acks` whose type is not defined by the Identity, Money or Agree
 
 #### Rule 20. References
 
-An act names other acts, or web resources, in `refs`, meaning only "look at this". A web reference may carry the hash of what was there when it was referenced, so readers can check it has not changed. A repost is a reference to a publication, never a publication of its own: it pays nobody by itself, and a reposter earns through a role share where the owners' split plan offers one (Agreements).
+An act names other acts, or web resources, in `refs`, meaning only "look at this". A web reference may carry the hash of what was there when it was referenced, so readers can check it has not changed. A repost is a reference to a bake or a post, never a bake of its own: it pays nobody by itself, and a reposter earns through a role share where the owners' split plan offers one (Agreements).
 
 **A reference may name the act's signer.** A reference to an act MAY carry, beside the act id, the identity hash of the act's signer (Part three, `ref`). A reader uses it only to know where to look: the signer's identity, its homes, its routes, then the act. It is never a validity rule: a reference that names no signer never makes an act invalid, and an act whose reference names a wrong signer stays valid; a wrong signer shows when the reference is followed, since the act fetched shows its own signer. The signer of a genesis is the identity it makes, whose hash is the genesis's own id.
 
@@ -205,7 +207,7 @@ An act names other acts, or web resources, in `refs`, meaning only "look at this
 
 ### 7. How acts reach people
 
-An act counts for a verifier only once the verifier holds it. Nothing forces propagation; delivery is the signer's interest. *Four reaches, as a working picture: identity acts must reach the home, since their standing depends on it; acts that concern a counterparty (agreements, signatures, receipts, claims, key deliveries, obligations) should reach that counterparty; publications and posts are published on the signer's outbox routes for whoever is interested; drafts never leave.*
+An act counts for a verifier only once the verifier holds it. Nothing forces propagation; delivery is the signer's interest. *Four reaches, as a working picture: identity acts must reach the home, since their standing depends on it; acts that concern a counterparty (agreements, signatures, receipts, claims, key deliveries, obligations) should reach that counterparty; bakes and posts are uploaded to the signer's outbox routes for whoever is interested; drafts never leave.*
 
 Clients SHOULD deliver an act that concerns a counterparty to that counterparty's inbox route where one is declared (Identity). Any two identities can find each other without already sharing a relay, through identity, home and routes. Whether a relay accepts deliveries, from whom, at what price and for how long, and whether it propagates to other relays, is the relay market's business; spam control, metadata privacy and gossip are cMIPs.
 
@@ -213,11 +215,11 @@ Clients SHOULD deliver an act that concerns a counterparty to that counterparty'
 
 **Work hash.** The work hash is `tagged_hash("MOR/work", plaintext)`, over the complete plaintext of the work. For a text work, the plaintext is its canonical text. It is the same wherever the work travels and however it is locked or cut, and it is what ownership points to (Agreements).
 
-**Publication.** A publication is an act of type 0 of this MIR. Its payload describes a media object. *Its format is in Part three ("Publication").*
+**Bake.** A bake is an act of type 0 of this MIR, saying "I uploaded this." Its payload describes a media object, locked and stored. Its signer is its **uploader**. Anyone may bake the same file, and each bake is its own uploader's. *Its format is in Part three ("Bake").*
 
-Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. The size (field 3) is that of the media once unlocked: what a reader and a media module need to know; a relay measures the locked bytes it stores for itself. For public media, the key sits in the publication's payload. For media on sale, the publication is public (anyone can see the offer) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
+Media bytes are always stored locked, with their own content key, the same way as an inside: XChaCha20-Poly1305 with the nonce in the payload and no associated data. The size (field 3) is that of the media once unlocked: what a reader and a media module need to know; a relay measures the locked bytes it stores for itself. For public media, the key sits in the bake's payload. For media on sale, the bake is public (anyone can see what is sold) but the media key is absent, and is delivered to each buyer. After unlocking, a buyer checks the plaintext against the work hash.
 
-A publication is a neutral carrier: it never claims the work. A work is bound to its creators only by an explicit work claim (Agreements).
+A bake is a neutral carrier: it says only that its uploader uploaded it, and never claims the work. A work is bound to its creators only by an explicit claim, its ownership written only by an ownership agreement, and it is sold only by a publication (Agreements) or, on the bare bake, by its uploader's price tag (Money).
 
 #### Rule 21. Check the media against the work hash
 
@@ -225,52 +227,53 @@ A client MUST check unlocked media against the work hash before treating a purch
 
 #### Rule 22. A size that does not match is shown
 
-A publication whose size (field 3) is not the size of the unlocked media is shown as inconsistent. *It cannot be judged without the media's key, so it is not a validity rule on the act; a client that unlocks the media checks it, as it checks the work hash.*
+A bake whose size (field 3) is not the size of the unlocked media is shown as inconsistent. *It cannot be judged without the media's key, so it is not a validity rule on the act; a client that unlocks the media checks it, as it checks the work hash.*
 
-#### Rule 23. For whom
+#### Rule 23. Money sent to a bare bake is its uploader's
 
-A payment for a publication is owed to the identity in `for` if present, otherwise to the signer (Money).
+Money sent to a bake itself, **a bare bake** (a tip naming the bake, or a payment of a price tag naming the bake, Money), is its uploader's: it is paid to the uploader's payee pointer, unsplit. What a payment names decides: one naming the bake is a bare bake's, whatever publication also sells that bake. *Unless there is a publication, the tip goes to the uploader, with no split possible.* A tip or a sale found through a publication goes through that publication, which pays its partners and the owners (Agreements).
 
-Payment for a publication goes to the payee pointer of the identity named in `for` if present, otherwise of the signer (Money). *A false `for` can only send money to the identity it names, never to whoever wrote it, so nobody gains by lying in it. Whether a grant backs a publication made for another identity is Agreements' business (a collective's grantee signs with a grant key, so its publication is the collective's own and names no `for`); an Agreements client may refuse a publication whose `for` is not backed by a grant it can check, and shows it so. A Money-only wallet needs nothing beyond this field.*
+A bake an act of a collective made (a member's bake naming the collective, Agreements rule 58) is the collective's, its uploader the collective; whether it is the collective's is Agreements' to judge, and a Money-only wallet shows its uploader unknown.
 
-**Buying a work under an Agreements claim** is a purchase only when the payment names that claim (Agreements rule 12, Money rule 18): a Money-only wallet can pay a claimed work's publication, but its payment is no purchase and is owed back to it. *A plain publication of an unclaimed work is paid like any publication.*
+*Stated cost, in Money: whoever uploads a bake, someone else's work included, receives the tips and tag payments sent to that bake (Money rule 18).*
 
-**Parts, streams and live media.** Segmentation, chunk fingerprints, streaming and live media are defined by the cMIP the publication names; the fields of the publication then describe the whole, or a manifest of the parts. A live stream has no work hash until it ends; paid live access is sold through a standing offer (Agreements), not a publication. A stream that needs a name before it ends takes a vow's (below); everything else about it is the live media cMIP's.
+**Buying under a publication.** A payment naming a publication's price tag is a purchase under that publication (Agreements rule 12, Money rule 18), whichever wallet pays it. *A bare bake is paid like any bake.*
+
+**Parts, streams and live media.** Segmentation, chunk fingerprints, streaming and live media are defined by the cMIP the bake names (its media type, field 0); the fields of the bake then describe the whole, or a manifest of the parts. A live stream has no work hash until it ends; paid live access is sold by a publication (Agreements), never by a bake. A stream that needs a name before it ends takes a vow's (below); everything else about it is the live media cMIP's.
 
 ### 9. Vows
 
 *The core keeps the grammar of claiming and confirming apart from what is claimed and confirmed: it wants to know only whether a sale is pending, confirmed or contested.*
 
-A vow is an act of type 5 of this MIR, naming in words **something MOR cannot hash, existing or to come**: a good in stock or to be made, a service, an hourly rate, storage, a seat, a work not yet made. **It is its own chain:** its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as an offer's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
+A vow is an act of type 5 of this MIR, naming in words **something MOR cannot hash, existing or to come**: a good in stock or to be made, a service, an hourly rate, storage, a seat, a work not yet made. **It is its own chain:** its first act is its **genesis**, **whose id is its name for good**; a later version (a new date, a changed description) is signed again on that chain by the genesis's signer, naming the genesis and the version it follows, as a publication's and an agreement's versions do. The name is the vow's fingerprint, never a work hash.
 
 *Its payload's format is in Part three ("Vow").*
 
-Its `objects`: none on the genesis; a later version names `[genesis, previous]`, one entry beside any a collective's actions chain needs (Agreements rule 58).
+Its `objects`: none on the genesis; a later version names `[genesis, previous]`, one entry beside any a collective's chain needs (Agreements rule 58).
 
 - **A version counts** only signed by the genesis's signer, naming the genesis and a version of the same chain. A stranger's act naming the chain is no version of it. **Two versions naming one previous are the signer's fork, shown**, both standing (rule 15), as two versions of an offer naming one previous are (Agreements).
-- **A rotation voids the signer's own acts after the kept tip, the genesis among them where it lies there; never a name others wrote down**: what others signed naming the id (an offer, a stake, a claim) stands, pointing at a void act, shown so.
-- **Offers naming it** sell it, with their words, and **each sale's state** (pending, confirmed or contested) are Agreements' (Agreements rule 13). **Nothing else is the core's**: what is claimed or delivered and how it is confirmed; what a vow became and how claims reach it (an ordinary work claim, dated by itself, Agreements rule 7); quantities and seats; delivery points; kinds; and streams, whose segments, signers, closing, branches and recording are the live media cMIP's.
+- **A rotation voids the signer's own acts after the kept tip, the genesis among them where it lies there; never a name others wrote down**: what others signed naming the id (a publication, an ownership agreement, a claim) stands, pointing at a void act, shown so.
+- **Publications selling it** sell it, with their words, and **each sale's state** (pending, confirmed or contested) are Agreements' (Agreements rule 13). **Nothing else is the core's**: what is claimed or delivered and how it is confirmed; what a vow became and how claims reach it (an ordinary work claim, dated by itself, Agreements rule 7); quantities and seats; delivery points; kinds; and streams, whose segments, signers, closing, branches and recording are the live media cMIP's.
 
-### 10. Withdrawal
+### 10. Withdrawals belong where the act lives
 
-#### Rule 24. Who may withdraw, and what it does
+#### Rule 24. Retired: a bake is never withdrawn
 
-A withdrawal is an act of type 3 of this MIR naming a publication in `objects`. It marks that publication as no longer offered.
+*Retired*, its number never reused, with type 3. **A bake is never withdrawn by the protocol**: "I uploaded this" stays true. An act of type 3 of this MIR is of a type it does not define, and is invalid (rule 30).
 
-Its payload is empty, and its `objects` carries the entry `[publication, publication]`, naming the publication as both chain and predecessor (Part three, "Withdrawal").
+Each stop lives where its act lives:
 
-A withdrawal is valid only if signed by the publication's signer or by the identity named in its `for` field.
+- a publication is ended in Agreements, by a later version of it that sells nothing (Agreements rule 11);
+- a price tag is withdrawn in Money, by a later version of it carrying no price (Money rule 18);
+- taking a bake's bytes off homes and relays is their policy (rule 29), never a verdict.
 
-- **Authority.** The publication's signer, or the identity named in its `for` field. No other authority exists at this layer. *A creator who wants to withdraw a publisher's publication of their work has Agreements' tools: a contest, and their own publication.*
-- **Effect.** Clients stop presenting the publication as available; offers attached to it close; no new content keys are released for it.
-- **Past deals stand.** A payment arriving after the withdrawal creates no deal and an obligation to refund it (Agreements).
-- **Relays are asked, not forced,** to stop serving it.
+*A witnessed act stays with whoever relied on it (Identity rules 10 and 11).*
 
 ### 11. Relays
 
 #### Rule 25. Untrusted by default
 
-Relays publish, fetch and mirror acts, media and sealed containers. Nothing a relay says is trusted unless it is signed.
+Relays carry, fetch and mirror the acts, media and sealed containers uploaded to them. Nothing a relay says is trusted unless it is signed.
 
 #### Rule 26. Operated by identities
 
@@ -296,7 +299,7 @@ Storage and delivery policy (what a relay keeps, whose deliveries it accepts, fo
 
 A client MUST NOT sign, pay or accept anything whose specification it does not implement. It shows such an act as unknown.
 
-**Outside its format, invalid; not implemented, unknown.** An act whose type its specification does not define, or whose payload is not in the format that specification gives for the type, is invalid, as the MICS's common conventions say for every MIR and cMIP; a verifier that does not implement the specification shows it as unknown. An act naming a specification whose content is not in Development's format names no specification: it is unknown to every client, since no client can have adopted it, and a verifier holding that content shows it as no specification. *Nothing in MOR is updated, so a later format is a new specification with a new hash, shown unknown by older clients, never invalid: strictness costs no flexibility. This MIR's own types are judged so too: a payload outside Part three's formats, or an act of a type this MIR does not define (type 2 among them, retired), is invalid.*
+**Outside its format, invalid; not implemented, unknown.** An act whose type its specification does not define, or whose payload is not in the format that specification gives for the type, is invalid, as the MICS's common conventions say for every MIR and cMIP; a verifier that does not implement the specification shows it as unknown. An act naming a specification whose content is not in Development's format names no specification: it is unknown to every client, since no client can have adopted it, and a verifier holding that content shows it as no specification. *Nothing in MOR is updated, so a later format is a new specification with a new hash, shown unknown by older clients, never invalid: strictness costs no flexibility. This MIR's own types are judged so too: a payload outside Part three's formats, or an act of a type this MIR does not define (types 2 and 3 among them, retired), is invalid.*
 
 **Invalid beats unknown.** A verifier that can show an act invalid by any rule it can apply (its shape, its text, its acknowledgements) does so, whatever else in it the verifier cannot read; unknown is the verdict only where no rule it can apply fails. *An act of a specification the verifier does not implement that carries a text that is not canonical, or a text act signed under a scheme the verifier lacks that carries `acks`, is invalid, not unknown: two verifiers say the same word.*
 
@@ -312,7 +315,7 @@ The one exception is a text act's format (Text MIR): its text is always shown as
 
 ### 13. Theft of the signing key
 
-- **The hijack window.** A thief holding the signing key can publish a new encryption key, and every private delivery until the owner rotates goes to the thief. The rotation voids the thief's act. *The consequence for a purchase is stated plainly: a seller who delivered a bought key into that window did nothing wrong, and still owes the buyer a new delivery once the owner has rotated, since the buyer paid and did not receive (Agreements). The window is the price of changing the encryption key with the signing key, and the same window applies to the inbox route (Identity).*
+- **The hijack window.** A thief holding the signing key can upload a new encryption key, and every private delivery until the owner rotates goes to the thief. The rotation voids the thief's act. *The consequence for a purchase is stated plainly: a seller who delivered a bought key into that window did nothing wrong, and still owes the buyer a new delivery once the owner has rotated, since the buyer paid and did not receive (Agreements). The window is the price of changing the encryption key with the signing key, and the same window applies to the inbox route (Identity).*
 - **Forks of the encryption key.** A fork in the encryption key's chain is contested from that point, as for routes; a fork behind an act the owner's later rotation kept is settled by that rotation.
 
 ## Part three: act formats
@@ -371,7 +374,7 @@ signature = [ scheme: 1 / 2 / 3 / hash, key: bstr, sig: bstr ]   ; scheme as Ide
 
 ### Encryption key (type 4) and key delivery (type 1)
 
-**The scheme: X-Wing.** An encryption key, and a bare key, is `[scheme, key]`, in the form Identity defines for keys, in the same number space: founding number 4 is X-Wing, the hybrid of ML-KEM-768 (FIPS 203) and X25519, as specified in draft-connolly-cfrg-xwing-kem-11 ("X-Wing Construction"): a 1216-byte public key, a 1120-byte ciphertext, a 32-byte shared secret. Numbers 1 to 3 are signature schemes and are never encryption keys. A scheme may also be named by the hash of a key-exchange specification (Development); a client that does not implement it cannot seal to that key. The version MOR names is that draft's revision 11, fixed by the SHA-256 of its published text, `XWING`, which is written here at the freeze (a step of the freeze procedure). *What is locked today stays locked if either half holds. The draft may change before it is final; revision 11, fixed by hash, does not.*
+**The scheme: X-Wing.** An encryption key, and a bare key, is `[scheme, key]`, in the form Identity defines for keys, in the same number space: founding number 4 is X-Wing, the hybrid of ML-KEM-768 (FIPS 203) and X25519, as specified in draft-connolly-cfrg-xwing-kem-11 ("X-Wing Construction"): a 1216-byte public key, a 1120-byte ciphertext, a 32-byte shared secret. Numbers 1 to 3 are signature schemes and are never encryption keys. A scheme may also be named by the hash of a key-exchange specification (Development); a client that does not implement it cannot seal to that key. The version MOR names is that draft's revision 11, fixed by the SHA-256 of its text as released, `XWING`, which is written here at the freeze (a step of the freeze procedure). *What is locked today stays locked if either half holds. The draft may change before it is final; revision 11, fixed by hash, does not.*
 
 ```cddl
 enc-key = [ scheme: 4 / hash, key: bstr ]   ; 4: X-Wing, a 1216-byte public key
@@ -385,13 +388,13 @@ encryption-key-payload = {     ; type 4
 ; version with it; an X-Wing key (scheme 4) of another length than 1216 bytes makes the act invalid
 
 key-delivery-payload = {       ; type 1
-  0 => hash,                   ; the act whose content key this is; with 2, the publication whose media key it is
+  0 => hash,                   ; the act whose content key this is; with 2, the bake whose media key it is
   1 => bstr .size 32,          ; the key
-  ? 2 => true                  ; the key of the media the publication describes
+  ? 2 => true                  ; the key of the media the bake describes
 }
 ```
 
-*Why a key delivery cannot simply be a private act that carries its key locked inside: its payload is locked with its own content key, which would need a delivery of its own, and that one another, without end. The recipient could never open the first. The key exchange therefore lives in one place, the sealed container, which carries an act and the key that opens it; the key delivery's payload is then plain, and the same payload, published openly, is "going public later".*
+*Why a key delivery cannot simply be a private act that carries its key locked inside: its payload is locked with its own content key, which would need a delivery of its own, and that one another, without end. The recipient could never open the first. The key exchange therefore lives in one place, the sealed container, which carries an act and the key that opens it; the key delivery's payload is then plain, and the same payload, made public, is "going public later".*
 
 ### Sealed container
 
@@ -422,9 +425,9 @@ contents = [ act: bstr, ? key: bstr .size 32 ]   ; the inner act, encoded whole,
 
 **Which summary an act carries.** The act at position `p` of a sequence carries `S(p − 1)`: the summary over every act before it, up to and including the previous one; the first act, at position 1, carries `S(0)`. A rotation records, in its `kept-tip` entry for the act at position `p`, `S(p)`, the summary including that act: the one the act after it would carry (Identity, "Rotation (type 1)"). *So `S(3)` over three acts is the summary a fourth act carries, and the one a rotation keeping the third carries for it.*
 
-Its test vectors, `S(0)` to `S(11)` and a three-act sequence among them, are published with this MIR's conformance vectors (Parameters); they are computed exactly as written here.
+Its test vectors, `S(0)` to `S(11)` and a three-act sequence among them, are given with this MIR's conformance vectors (Parameters); they are computed exactly as written here.
 
-### Publication (type 0)
+### Bake (type 0)
 
 ```cddl
 media = {
@@ -434,11 +437,11 @@ media = {
   3 => uint,          ; size of the media once unlocked, in bytes (rule 22)
   4 => bstr .size 24, ; nonce of the media lock
   ? 5 => bstr .size 32, ; the media's content key, for public media
-  ? 6 => [+ tstr],    ; where the locked bytes can be fetched
-  ? 7 => any,         ; price, in the form the Money MIR defines
-  ? 8 => hash         ; for: the identity this publication is made for; payment goes to its payee pointer
-}
+  ? 6 => [+ tstr]     ; where the locked bytes can be fetched
+}                     ; fields 7 and 8 are reserved, never reused: a bake carrying either is invalid
 ```
+
+*A bake carries no price and names nobody it is made for: its price, where it has one, is its uploader's price tag (Money), and selling under an agreement is a publication (Agreements). So an upload only stores.*
 
 ### Vow (type 5)
 
@@ -449,23 +452,20 @@ vow = {
 }
 ```
 
-### Withdrawal (type 3)
+### Withdrawal (retired type 3)
 
-```cddl
-withdrawal = { }      ; empty
-; its objects carry the entry [publication, publication]: the publication as both chain and predecessor
-```
+*Type 3 is retired and never reused: a bake is never withdrawn by the protocol (rule 24). An act of type 3 of this MIR is invalid.*
 
 ### Types defined by this MIR
 
 | Type | Name | Public or private |
 | --- | --- | --- |
-| 0 | Publication | public (the offer); its media may be locked |
+| 0 | Bake | public; its media may be locked |
 | 1 | Key delivery | private, addressed to its recipient, in a sealed container; or public, addressed to no one, to make something public |
 | 2 | *Retired*, never reused: an act of this MIR of type 2 is of a type it does not define (rule 30) | |
-| 3 | Withdrawal | public |
+| 3 | *Retired*, never reused: a bake is never withdrawn (rule 24) | |
 | 4 | Encryption key | public (an Identity act in spirit, defined here) |
-| 5 | Vow | as any act ("Public and private"); its offers are always public (Agreements) |
+| 5 | Vow | as any act ("Public and private"); the publications selling it are always public (Agreements) |
 
 ## Part four: tasks, reasoning, parameters and freeze scenarios
 
@@ -481,12 +481,13 @@ withdrawal = { }      ; empty
 - **Commit to the inside, not only the lock.** *Common encryption lets a clever sender make one locked message open to different contents under different keys. Signing the hash of the unlocked inside makes that impossible: what you sign is what everyone opens.*
 - **Salt the inside.** *Without a salt, a short private reply could be guessed by hashing candidates.*
 - **One shape for every act.** *Identity acts are locked too, with their key attached. That costs a few bytes and saves every implementer a special case.*
-- **Going public is one act.** *Publishing a key turns anything private public, for embargoes, timed releases and disclosure, with no copy and no new fingerprint.*
+- **Going public is one act.** *Making a key public turns anything private public, for embargoes, timed releases and disclosure, with no copy and no new fingerprint.*
 - **Order without a clock.** *Clocks can be faked and disagree; hash links cannot.*
 - **Acknowledgements are cheap, on purpose, and never stand alone.** *A thief with an accomplice can turn their own acts into visible disputes, never into valid acts. In return, anyone who genuinely relied on an act is protected. An acknowledgement of an act nobody can produce changes nothing, so the noise a thief can make is bounded by the real acts the thief signed.*
 - **A like is never an acknowledgement.** *An acknowledgement carries weight in three layers: it keeps an act alive as a dispute, turns a regretted sale into a dispute, and places signatures on a collective's line. A reaction module that let a like carry `acks` would turn every like on a thief's post into testimony. So the line is drawn by type, the simplest check there is: only the act types of the three layers that need acknowledgements may carry them, and a deliberate reliance on anything else is a witness act, signed on purpose. An accomplice can still witness a thief's acts, making a visible dispute and never a valid act; what disappears is the accidental case.*
 - **One size, the one readers need.** *A field two conforming programs can read two ways is a flaw. The size of the unlocked media is what a reader shows and a media module needs; a relay counts what it stores itself.*
-- **A layer's rules use only that layer's data.** *The `for` field exists so that a wallet with no Agreements can pay the right identity, and a client with no Agreements can judge a withdrawal. Pushing one small field down is always better than pulling a rule up.*
+- **A layer's rules use only that layer's data.** *A wallet with no Agreements pays a bare bake's uploader, or a price tag's payee, reading nothing above Money; where Agreements need a lower layer to carry something, it is a field there, and pushing one small field down is always better than pulling a rule up.*
+- **The upload only stores.** *A price on the bake would make one act two things, an upload and an offer. The bake says "I uploaded this"; the price is its own Money act, the sale under an agreement its own Agreements act, and a stop for each lives where each lives.*
 - **Where to look, never what counts.** *A reference's signer helps a reader find the act, through the signer's homes and routes, and decides nothing: validity never waits on fetching what an act points at. The client that writes it, which already points at the act, is the one asked to fetch it and name its signer rightly, and only for public acts, whose signer is no secret.*
 - **Delivery is the signer's interest.** *An act counts only where it is held, so whoever wants an act to count carries it to those who must hold it. A reserved inbox gives that carrying a destination without making any relay the meeting point by default.*
 - **One depth for everyone.** *A decoder must stop somewhere, or hostile input can crash it. If each stopped at its own depth, one verifier could accept an act that another cannot read. A fixed limit, far above any act the MICS defines, gives every verifier the same answer.*
@@ -499,11 +500,11 @@ withdrawal = { }      ; empty
 
 ### Parameters
 
-- The running-summary test vectors (`S(0)` to `S(11)`, and a three-act sequence): published with this MIR's conformance vectors, alongside the texts; the summaries over stand-in act ids are final now, and the three-act sequence's at the freeze, when the spec hashes its acts name are fixed.
+- The running-summary test vectors (`S(0)` to `S(11)`, and a three-act sequence): given with this MIR's conformance vectors, alongside the texts; the summaries over stand-in act ids are final now, and the three-act sequence's at the freeze, when the spec hashes its acts name are fixed.
 
 Left to the relay transport cMIP: how a client finds the key deliveries and sealed containers addressed to it (inbox routes and relay queries). The core fixes only what a client checks of what it finds: the act, the sealed container and the key delivery, in the formats of Part three.
 
-Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as published, written into "Encryption key (type 4) and key delivery (type 1)".
+Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as released, written into "Encryption key (type 4) and key delivery (type 1)".
 
 ### Freeze scenarios
 
@@ -515,31 +516,30 @@ Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as p
 - Key delivery to an identity and to a bare application key: 2, 6.
 - Delegated key release at scale, stopping on lapse: 6, 7.
 - A private message between two parties that a relay can route but not read, sender sealed; the two parties share no relay and meet through the inbox: 5.
-- A private act made public later by publishing its key (disclosure): 5.
-- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes and Text".
-- A key delivery whose key does not open what it names: valid as an act, its key ignored and shown so: a component under "Envelopes and Text".
-- Two copies of one act id differing in their signature, delivered in both orders: the copy with the valid signature counts at every verifier, and a relay holding the other replaces it: a component under "Envelopes and Text".
+- A private act made public later by making its key public (disclosure): 5.
+- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes".
+- A key delivery whose key does not open what it names: valid as an act, its key ignored and shown so: a component under "Envelopes".
+- Two copies of one act id differing in their signature, delivered in both orders: the copy with the valid signature counts at every verifier, and a relay holding the other replaces it: a component under "Envelopes".
 
 #### Sequences, chains, acknowledgements and references
 
 - Hash-linked ordering; provable forks; a two-chain act (stake transfer) read correctly: 1, 3.
 - Running summary from the test vector; kept-ancestry proofs: 1, 5, 8 (with Identity).
-- An everyday act with key 2 (`prev`) absent is invalid, and so is one whose `prev` carries two entries; one whose position or summary does not fit its predecessor is not invalid act by act, and cannot be proven kept when its line is rebuilt: a component under "Envelopes and Text", and 5, 8 (with Identity).
+- An everyday act with key 2 (`prev`) absent is invalid, and so is one whose `prev` carries two entries; one whose position or summary does not fit its predecessor is not invalid act by act, and cannot be proven kept when its line is rebuilt: a component under "Envelopes", and 5, 8 (with Identity).
 - A repost as a reference; tips reach the original: 5.
 - A stranger holding only a reply at one home follows it, by the signer its reference names, to the post at another home; a reference naming a wrong signer leaves both acts valid and fails when followed: 5.
-- A text act carrying `acks` is invalid; a reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a publication: 2, 5.
+- A text act carrying `acks` is invalid; a reaction under a cMIP carrying `acks` is invalid; a witness act keeps a disowned post visible as disputed; a buyer's claim does the same for a bake: 2, 5.
 
-#### Media and withdrawal
+#### Media and the bake
 
-- Work hash of plaintext; locked bytes fingerprinted per publication; segmentation by the named cMIP: 1, 2, 6.
-- Publication with `for`; a Money-only wallet and a full client pay the same identity; withdrawal by signer or `for`: 2, 3.
-- A publication whose size is not the unlocked media's, shown as inconsistent: 2.
-- Withdrawal, including a payment racing it: 2.
-- A withdrawal in its format, `{}` with the entry `[publication, publication]`: 2, 5.
+- Work hash of plaintext; locked bytes fingerprinted per bake; segmentation by the named cMIP: 1, 2, 6.
+- A bare bake: a tip and its uploader's price tag paid to the uploader's pointer, unsplit, by a Money-only wallet and a full client alike; the same file baked by another, its tips that uploader's: 2, 3.
+- A bake whose size is not the unlocked media's, shown as inconsistent: 2.
+- A bake carrying field 7 or field 8, and an act of type 3: invalid: a component under "Envelopes".
 
 #### Relays and fail closed
 
 - Relays: 4, 5. *Scenario 4's "every mirror matches the commitment" rests on the voting cMIP's own commitment, not on this MIR.*
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - An act of a type its specification does not define, or with a payload outside that specification's format, invalid where the specification is implemented and unknown where it is not; an act naming a specification whose content is not in Development's format, unknown to every client: 2, 8.
-- An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes and Text".
+- An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes".

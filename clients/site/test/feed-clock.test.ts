@@ -39,6 +39,12 @@ let browser: Browser;
 let gateway: Gateway;
 let base: string;
 const running: Running[] = [];
+/** Start a home or relay, kept for `after` at once: stopped whatever happens next (CI). */
+const up = async (role: 'home' | 'relay') => {
+  const r = await start(role);
+  running.push(r);
+  return r;
+};
 let nobody: TestIdentity;
 let machine: TestIdentity;
 let third: TestIdentity;
@@ -62,9 +68,8 @@ ${extra}
 
 before(async () => {
   execFileSync('node', ['--import', 'tsx', 'scripts/build.ts'], { cwd: here, stdio: 'ignore' });
-  const [home1, home2] = [await start('home'), await start('home')];
-  const [site, out1, out2, stamps] = [await start('relay'), await start('relay'), await start('relay'), await start('relay')];
-  running.push(home1, home2, site, out1, out2, stamps);
+  const [home1, home2] = [await up('home'), await up('home')];
+  const [site, out1, out2, stamps] = [await up('relay'), await up('relay'), await up('relay'), await up('relay')];
 
   nobody = TestIdentity.create({ homes: [home1.home] });
   machine = TestIdentity.create({ homes: [home2.home] });

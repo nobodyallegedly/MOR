@@ -21,6 +21,7 @@ import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import { labelOf } from '../../damgar/src/specs.ts';
 import { dealName } from '../../grants/src/deal.ts';
+import { readPublishingProposal } from '../../grants/src/publishing-read.ts';
 
 /** Said at the top of the Signing tab, and where it is turned on, word for word. */
 export const SIGNING_SAY =
@@ -86,6 +87,9 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
   if (!d.public || !d.payload) {
     return { kind: 'other', title: 'A private act', summary: ['It cannot be read here, so it cannot be signed here.'], sections: [], plain: [], risks: [], blocking: ['It is private.'], collective: null };
   }
+  // Edubba's Publishing (F407): a claim, a work's ownership agreement, a publication or its ending, read with every act the proposal names.
+  const pub = await readPublishingProposal(act, names, hints, via, also);
+  if (pub) return pub;
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
     const a = assess(d.payload, names);
     const t = termsOf(d.payload);
@@ -193,20 +197,20 @@ async function readDealProposal(d: Described, a: ReturnType<typeof assess>, name
       sections.unshift({ heading: 'Its second version: the stake shared', lines: [{ text: `The first version writes the vow’s stake wholly to its signer (Agreements rule 14); this second one shares it: ${shared}. You sign both.` }, ...readChanges(d.payload!, x.payload, names)] });
       continue;
     }
-    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.offer) {
+    // The deal's publication (Agreements type 6, which replaced the standing offer): its owners the deal, its split service paying everyone; its price a price tag the service signs.
+    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.publication) {
       const m = cborDecode(x.payload) as Map<number, unknown>;
-      const under = m.get(0);
-      const price = m.get(2) as unknown[] | undefined;
-      const payee = m.get(3);
-      if (!(under instanceof Uint8Array) || (hex(under) !== d.id && hex(under) !== version)) {
-        blocking.push(`An act it asks you to sign (${id}) is an offer under another agreement.`);
+      const owners = m.get(1);
+      const service = m.get(3);
+      if (!(owners instanceof Uint8Array) || (hex(owners) !== d.id && hex(owners) !== version)) {
+        blocking.push(`An act it asks you to sign (${id}) is a publication under another ownership agreement.`);
         continue;
       }
-      lines.push({ text: `Its offer, always public, made under the deal${payee instanceof Uint8Array ? ` and paying ${names(hex(payee))}, the deal’s own payee` : ''}${Array.isArray(price) ? `, at ${String(price[1])} of its unit` : ''}. Every party signs it (Agreements, Standing offer: “under a deal, it is signed by every party”).` });
-      if (typeof m.get(4) === 'string') lines.push({ text: `Its words: “${escapeControls(m.get(4) as string)}”` });
+      lines.push({ text: `Its publication, always public, its owners this deal${service instanceof Uint8Array ? `, its split service ${names(hex(service))}, which receives every payment and pays everyone` : ''}. Its price is a price tag the split service signs. Every party signs the publication (Agreements, Publication: “every party of it has signed it”).` });
+      if (typeof m.get(5) === 'string') lines.push({ text: `Its words: “${escapeControls(m.get(5) as string)}”` });
       continue;
     }
-    blocking.push(`An act it asks you to sign (${id}) is neither a version of the deal nor its offer.`);
+    blocking.push(`An act it asks you to sign (${id}) is neither a version of the deal nor its publication.`);
   }
   if (lines.length) sections.unshift({ heading: 'What it sells', lines });
   if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
@@ -261,11 +265,10 @@ function actOfCollective(d: Described, names: Names): Reading | null {
       const text = typeof m.get(0) === 'string' ? (m.get(0) as string) : '';
       return base('Sign a post of the collective', ['A post (Text), in the collective’s name.'], [{ heading: 'Its words', text: escapeControls(text) }]);
     }
-    if (d.spec === SPECS.envelopes && d.type === 0) return base('Sign a publication of the collective', ['A publication (Envelopes), in the collective’s name.']);
-    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.offer) {
+    if (d.spec === SPECS.envelopes && d.type === 0) return base('Sign an upload of the collective', ['A bake (Envelopes): an upload, in the collective’s name. It carries no price: a price is a price tag.']);
+    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.publication) {
       const m = cborDecode(d.payload) as Map<number, unknown>;
-      const price = m.get(2) as unknown[] | undefined;
-      return base('Sign an offer of the collective', [`A standing offer, always public.${Array.isArray(price) ? ` Its price: ${String(price[1])}.` : ''}`], typeof m.get(4) === 'string' ? [{ heading: 'Its words', text: escapeControls(m.get(4) as string) }] : []);
+      return base('Sign a publication of the collective', ['A publication (Agreements), always public: what is sold, on which terms, which split service pays everyone. Its price is a price tag naming it.'], typeof m.get(5) === 'string' ? [{ heading: 'Its words', text: escapeControls(m.get(5) as string) }] : []);
     }
   } catch {
     return null;
