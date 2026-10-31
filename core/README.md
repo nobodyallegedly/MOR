@@ -148,4 +148,4 @@ S7h-4 brought the core to the texts where they were clear and it lagged: a sale 
 
 S7h-5: a departed member's act for the collective counts for nothing, however many current members sign it (rule 58); a payment to a backup the publication lists, still naming the tag, is a purchase (rule 17); `publication_tip` gives a publication's latest versions, its price tags' latest versions that count, and its ownership agreement's latest version, which a payment names; `after_closing` and the relay's keyless genesis as the texts say.
 
-S7h-6: `agreements::Offer`, `OfferAct` and `Paid`, the retired standing offer's formats, are gone. A grant within an area counts once the area's rule is met, its drafter's own act its signature (rules 58, 60, 74): a fixed test and two vectors show it; the core already read it so.
+S7h-6: `agreements::Offer`, `OfferAct` and `Paid`, the retired standing offer's formats, are gone. A grant within an area counts once the area's rule is met, its drafter's own act its signature (rule 58, its count rule 60; rule 74): a fixed test and two vectors show it; the core already read it so.
