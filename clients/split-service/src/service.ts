@@ -38,8 +38,13 @@
 //   stake by their shares, rule 9, ties by turns from its own running count
 //   (payout key 2, split key 4);
 // - **pays each payout** as a simple Money payment: an invoice request to
-//   the receiver, its answer checked by the rail's rule, the invoice paid
-//   from its node, its claim sent;
+//   the receiver, its commitment fulfilling the split (Agreements rule 23:
+//   "with its own receipt naming the split"), its answer checked by the
+//   rail's rule, the invoice paid from its node, its claim sent; and keeps
+//   **each receiver's receipt** of its payout, sealed to the service, signed
+//   by the receiver with their own key (round 9, F411: "the service signs
+//   its receipt, then the members sign theirs after the split. Each hop has
+//   its receipt"; `hops()`);
 // - tells the publication's side of a sale of a bake or a vow it sells (the
 //   money messages cMIP, draft 4, 7.2.3), so the seller's app delivers the
 //   key.
@@ -136,6 +141,8 @@ interface Payout {
   invoice: string | null;
   preimage: string | null;
   claim: string | null;
+  /** The receiver's own receipt of this payout, sealed to the service, naming the split (rule 23): the last hop's. */
+  receipt?: string | null;
   why: string | null;
 }
 
@@ -487,6 +494,7 @@ export class SplitService {
               if (d.spec && MESSAGES_SPECS.includes(d.spec) && d.type === TYPES.invoiceRequest && d.signer && d.payload) said.push(await this.answer(d.id, d.signer, d.payload));
               else if (d.spec && MESSAGES_SPECS.includes(d.spec) && d.type === TYPES.answer && d.signer && d.payload) said.push(await this.onAnswer(d.signer, d.payload));
               else if (d.spec === MIRS.money && d.type === 3 && d.signer && d.payload) said.push(this.onClaim(d.id, d.signer, d.payload));
+              else if (d.spec === MIRS.money && d.type === 2 && d.signer && d.payload) said.push(this.onReceipt(d.id, d.signer, d.payload));
               // A publication sealed to the service: its drafter asks it to sign (rule 11). The act itself is kept at the service's places so its id resolves.
               else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.publication) {
                 await this.publish(o.act);
@@ -713,7 +721,8 @@ export class SplitService {
       if (c.to === 'nowhere' || !c.module || !ptr.act) throw new Error(c.why || 'no payee pointer');
       if (c.module !== SPEC.lightning.hash) throw new Error('this service pays on Lightning only');
       const paidTo = c.to === 'flow' ? { kind: 'flow', pointer: c.pointer!, rail: c.rail ?? 0 } : { kind: 'vault', declaredBy: c.declaredBy!, entry: c.entry ?? 0 };
-      const cm = { rail: c.module, payee: p.receiver, amount: { unit, value: p.amount }, fulfils: ptr.act, payer: this.me.id, paidTo, salt: new Uint8Array(randomBytes(16)) };
+      // It fulfils the split, so the receiver's receipt, which names what the payment fulfils, names the split (rule 23).
+      const cm = { rail: c.module, payee: p.receiver, amount: { unit, value: p.amount }, fulfils: x.split!, payer: this.me.id, paidTo, salt: new Uint8Array(randomBytes(16)) };
       const bytes = commitmentCbor(cm) as Uint8Array;
       p.key = paymentCommitment(cm) as string;
       p.commitment = base64(bytes);
@@ -725,6 +734,36 @@ export class SplitService {
       p.why = message(e);
       said.push(`A payout to ${short(p.receiver)} is held: ${p.why}. It stays the service’s open obligation (rule 30).`);
     }
+  }
+
+  /**
+   * A receiver's receipt of a payout, sealed to the service (rule 23; round
+   * 9, F411, "each hop has its receipt"): kept where it is signed by the
+   * payout's receiver, its payer this service, naming the split it pays.
+   */
+  private onReceipt(id: string, signer: string, payload: Uint8Array): string {
+    const r = (moneyRead(2, payload) as { act: { payer?: string | null; payee: string; amount: { value: number }; fulfils: string } }).act;
+    for (const x of this.s.incoming) {
+      if (!x.split || r.fulfils !== x.split) continue;
+      const p = x.payouts.find((y) => y.receiver === signer && y.amount === Number(r.amount.value) && y.claim && !y.receipt);
+      if (!p) continue;
+      if (r.payee !== signer || (r.payer && r.payer !== this.me.id)) return `A receipt from ${short(signer)} for the split ${short(x.split)} is not kept: it names another payee or payer.`;
+      p.receipt = id;
+      return `Receipted by ${short(signer)}: the payout of ${p.amount} of the split ${short(x.split)}, its receipt signed with their own key, naming the split.`;
+    }
+    return `A receipt from ${short(signer)} names no payout of this service.`;
+  }
+
+  /** Every payment received and each of its hops: the service's own receipt of the buyer's payment, then each payout's receipt by its receiver. */
+  hops(): Hops[] {
+    return this.s.incoming
+      .filter((x) => x.paid)
+      .map((x) => ({
+        payer: x.payer,
+        publication: x.publication,
+        split: x.split,
+        hops: [{ by: this.me.id, receipt: x.receipt, amount: Number(readCommitmentFields(Uint8Array.from(Buffer.from(x.commitment, 'base64'))).amount.value) }, ...x.payouts.filter((p) => p.amount > 0).map((p) => ({ by: p.receiver, receipt: p.receipt ?? null, amount: p.amount }))],
+      }));
   }
 
   /** A holder's answer to a payout's invoice request: checked by the rail's rule, the invoice paid from the node, the claim sent (rule 23). */
@@ -762,6 +801,21 @@ export class SplitService {
     p.claim = made.id;
     return `Paid ${p.amount} to ${short(signer)}: its claim sent.`;
   }
+}
+
+export interface Hop {
+  /** Who signed the receipt of this hop, and its act; null where none is held yet. */
+  by: string;
+  receipt: string | null;
+  amount: number;
+}
+
+/** Every hop of a payment the service received: its own receipt of the buyer's payment, then each payout's, signed by its receiver. */
+export interface Hops {
+  payer: string;
+  publication: string;
+  split: string | null;
+  hops: Hop[];
 }
 
 function blank(p: { receiver: string; amount: number; owners?: string; partner?: number; role?: string; evidence?: string }): Payout {
