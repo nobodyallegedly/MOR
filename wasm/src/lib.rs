@@ -109,7 +109,7 @@ fn salt() -> [u8; 16] {
     random::<16>()
 }
 
-fn payload_of(bytes: &[u8]) -> R<Vec<(Value, Value)>> {
+pub(crate) fn payload_of(bytes: &[u8]) -> R<Vec<(Value, Value)>> {
     match cbor::decode(bytes).map_err(err)? {
         Value::Map(m) => Ok(m),
         _ => Err(err("a payload is a map")),
