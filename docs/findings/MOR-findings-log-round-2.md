@@ -40,6 +40,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Readings taken, said at the top of the report.** No other finding number taken.
 
+**Round 8's follow-up (31 October 2026, after S7h-5; report `docs/suite-r8b-report.md`).** The anchoring call sites moved to S7h-5's binding: the service offers a lone seller's publication with **one price tag per tier** (F409), a payment fulfils its tier's tag, and Damgar checks a ticket against the publication and the tag paid; Edubba, Ummia and Dub read the tags and pay the tier's. **The anchoring cMIP, draft 7:** one tag per tier; the batch notice's keys 5 and 6 listed again (F341); its Rust reads a tag per tier, and `Offer::read` is gone, so nothing outside the core uses `agreements::Offer` or `OfferAct`. Manage says "bake" for Envelopes type 0. Nakišib's Linux job was red on the typecheck of Damgar's old `anchoringCheckTicket` call, the cause S7h-5 named; it passes with the call moved.
+
 ## F403. The Dubsar Suite's fix round 7: hand test v3's rows built, app-only (28 October 2026)
 
 **Found by Nobody, allegedly, in hand test v3's free run** (24 to 26 October 2026; `docs/human-tests-v3-findings.md`, H82 to H126). **Built** on the suite's apps and its kit, nothing compiled into the shared WebAssembly changed (`604aa9b5632d0bef8b17687e664317d7f841767d26f5ea4e7a13d553b30dd8fb`, the same in every release); the report: `docs/fixes-r7-report.md`.

@@ -21,6 +21,9 @@ import { publishSite, readFolder } from '../src/publish.ts';
 import { post } from '../../barebone/src/post.ts';
 import { benign, DOORS, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
+// A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
+const LIMIT = { timeout: 240_000 };
+
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 /** WebKit is Safari's engine, which every browser on an iPhone uses: Playwright's own build of it, installed with `npx playwright-core install webkit`. */
@@ -86,14 +89,14 @@ before(async () => {
   hostileBase = await hostile.listen('127.0.0.1', 0);
 
   browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
-});
+}, LIMIT);
 
 after(async () => {
   await browser?.close();
   honest?.close();
   hostile?.close();
   await w?.stop();
-});
+}, LIMIT);
 
 /** A fresh browser context: no cache, no storage, as a fresh device. */
 async function open(url: string, refusals = csp) {
@@ -135,7 +138,7 @@ const shot = async (page: Page, name: string) => {
   if (shots) await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true });
 };
 
-test('a fresh browser shows each page of the site as verified, and signed by the owner', async () => {
+test('a fresh browser shows each page of the site as verified, and signed by the owner', LIMIT, async () => {
   const pages: [string, string, string][] = [
     ['/', 'dubsar.org · dubsar.org', 'front'],
     ['/read.html', 'Read · dubsar.org · dubsar.org', 'read'],
@@ -162,7 +165,7 @@ test('a fresh browser shows each page of the site as verified, and signed by the
   }
 });
 
-test('the front page opens on the first act, shown as the act, verified, with its picture', async () => {
+test('the front page opens on the first act, shown as the act, verified, with its picture', LIMIT, async () => {
   const { page, ctx, problems } = await open(base + '/');
   const f = await pageFrame(page);
   const inner = await (await f.waitForSelector('.mor-act iframe', { timeout: 60_000 })).contentFrame();
@@ -221,7 +224,7 @@ async function largeJpeg(): Promise<Uint8Array> {
   return strip(new Uint8Array(bytes)).bytes;
 }
 
-test("the first act's photograph scales to the page's width, whole, and nothing scrolls inside the page", async () => {
+test("the first act's photograph scales to the page's width, whole, and nothing scrolls inside the page", LIMIT, async () => {
   // "Image needs a better fit. Now it shows pixel per pixel in a scrollable box" (Nobody, allegedly, 7 October 2026).
   const act = (await post(w.owner, { text: 'Thank you for the shower… (a large picture)', jpeg: await largeJpeg(), relays: [w.relay.base] })).id;
   const v = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(siteCopy(act)), relays: [w.relay.base] });
@@ -283,7 +286,7 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
   }
 });
 
-test("on a phone's first screen (390 x 844): the photograph whole at the act's width, both shortcuts side by side, and Read's first line through the gradient", async () => {
+test("on a phone's first screen (390 x 844): the photograph whole at the act's width, both shortcuts side by side, and Read's first line through the gradient", LIMIT, async () => {
   // Option B, decided by Nobody, allegedly, 9 October 2026: the first act's photograph stays whole at the act's
   // full width (7 October), and the room is made by the furniture instead: the checking bar briefer on a narrow
   // screen, the two shortcuts side by side at the top of the band, and below them a gradient behind the four
@@ -381,7 +384,7 @@ test("on a phone's first screen (390 x 844): the photograph whole at the act's w
   }
 });
 
-test('on a wide screen, the checking bar keeps its whole sentence', async () => {
+test('on a wide screen, the checking bar keeps its whole sentence', LIMIT, async () => {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   await page.goto(base + '/');
@@ -392,7 +395,7 @@ test('on a wide screen, the checking bar keeps its whole sentence', async () => 
   await ctx.close();
 });
 
-test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', async () => {
+test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', LIMIT, async () => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const path of ['/', '/read.html', '/build.html', '/run.html', '/use.html']) {
       const ctx = await browser.newContext({ colorScheme });
@@ -441,7 +444,7 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
   }
 });
 
-test("a door opens its page through the display client, checked again", async () => {
+test("a door opens its page through the display client, checked again", LIMIT, async () => {
   const { page, ctx, problems, sandbox } = await open(base + '/');
   const f = await pageFrame(page);
   assert.equal(await f.getAttribute('.doors a:nth-child(3)', 'href'), '/run.html');
@@ -460,7 +463,7 @@ test("a door opens its page through the display client, checked again", async ()
   await ctx.close();
 });
 
-test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", async () => {
+test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", LIMIT, async () => {
   // Decided by Nobody, allegedly, 9 October 2026: a door of its own for each department, a folder within the
   // one site; every pitch sends both doors, so each door links back to the main door.
   for (const [folder, name] of DOORS) {
@@ -512,7 +515,7 @@ test("every department's door verifies, signed by the owner, with the main door'
   }
 });
 
-test("the main door lists no department's door: unlisted, never hidden", async () => {
+test("the main door lists no department's door: unlisted, never hidden", LIMIT, async () => {
   const { page, ctx } = await open(base + '/');
   const f = await pageFrame(page);
   const hrefs = await f.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')!));
@@ -526,7 +529,7 @@ test("the main door lists no department's door: unlisted, never hidden", async (
   for (const [folder] of DOORS) assert.ok(paths.includes(`${folder}/index.html`), folder);
 });
 
-test("a department's door leads back to the main door, checked again", async () => {
+test("a department's door leads back to the main door, checked again", LIMIT, async () => {
   const { page, ctx, problems } = await open(base + '/law/');
   const f = await pageFrame(page);
   await f.locator('.back a').scrollIntoViewIfNeeded();
@@ -539,7 +542,7 @@ test("a department's door leads back to the main door, checked again", async () 
   await ctx.close();
 });
 
-test('an altered page is shown as failing, and not shown', async () => {
+test('an altered page is shown as failing, and not shown', LIMIT, async () => {
   const original = at(honest).files.get('run.html')!;
   const altered = new TextDecoder().decode(original).replace('<h1>Run</h1>', '<h1>Run: send your keys to the gateway</h1>');
   at(honest).files.set('run.html', new TextEncoder().encode(altered));
@@ -561,7 +564,7 @@ test('an altered page is shown as failing, and not shown', async () => {
   await ctx.close();
 });
 
-test('an altered stylesheet fails every page that uses it', async () => {
+test('an altered stylesheet fails every page that uses it', LIMIT, async () => {
   const original = at(honest).files.get('site.css')!;
   at(honest).files.set('site.css', new TextEncoder().encode('.placeholder{display:none}\n'));
   try {
@@ -575,7 +578,7 @@ test('an altered stylesheet fails every page that uses it', async () => {
   }
 });
 
-test("a version signed by someone else is shown as failing, naming who did sign it", async () => {
+test("a version signed by someone else is shown as failing, naming who did sign it", LIMIT, async () => {
   const other = TestIdentity.create({ homes: w.homes.map((h) => h.home) });
   await other.publishGenesis();
   const copy = await publishSite(other, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base] });
@@ -597,13 +600,13 @@ test("a version signed by someone else is shown as failing, naming who did sign 
   }
 });
 
-test('an address the signed site does not hold says so', async () => {
+test('an address the signed site does not hold says so', LIMIT, async () => {
   const { page, ctx } = await open(base + '/nothing.html');
   assert.match((await standing(page))!, /^Failing: the signed site has no file at this address/);
   await ctx.close();
 });
 
-test('a page runs no code and loads nothing from elsewhere, whatever it tries; what is left is shown, verified', async () => {
+test('a page runs no code and loads nothing from elsewhere, whatever it tries; what is left is shown, verified', LIMIT, async () => {
   const { page, ctx, problems, elsewhere } = await open(hostileBase + '/', hostileCsp);
   assert.match((await standing(page))!, /^Verified/);
   const f = await pageFrame(page);
@@ -643,7 +646,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   await txt.ctx.close();
 });
 
-test('the display client always looks for later versions, and says when a newer one exists', async () => {
+test('the display client always looks for later versions, and says when a newer one exists', LIMIT, async () => {
   // Pinned by its operator to the first version.
   const pinned = new Gateway(gatewayFor(w, w.site.id, { serve: 'pinned' }), join(here, 'dist'), { extraConnect: LOCAL });
   assert.ok(await ok(pinned));
@@ -680,7 +683,7 @@ test('the display client always looks for later versions, and says when a newer 
   }
 });
 
-test('a browser that blocks WebAssembly is told, in plain words, that the page cannot be checked there, and why; nothing is shown', async () => {
+test('a browser that blocks WebAssembly is told, in plain words, that the page cannot be checked there, and why; nothing is shown', LIMIT, async () => {
   // As Tor Browser's Safer level does (onion check, 1 October 2026), the
   // browser offers no WebAssembly at all; the checker used to wait for the
   // core library forever. (Chromium's own switch for it is ignored, so the
@@ -705,7 +708,7 @@ test('a browser that blocks WebAssembly is told, in plain words, that the page c
   await ctx.close();
 });
 
-test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', async () => {
+test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', LIMIT, async () => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.route('**/_mor/mor_wasm_bg.wasm', (r) => r.abort('connectionfailed'));

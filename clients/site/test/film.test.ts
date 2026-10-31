@@ -24,6 +24,9 @@ import { Gateway } from '../src/gateway.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { benign, gatewayFor, phone, siteCopy, world, type World } from './world.ts';
 
+// A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
+const LIMIT = { timeout: 240_000 };
+
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const WEBKIT = process.env.MOR_BROWSER === 'webkit';
@@ -69,13 +72,13 @@ before(async () => {
   assert.ok((await g.load()).every((s) => s.loaded.ok));
   base = await g.listen('127.0.0.1', 0);
   browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
-});
+}, LIMIT);
 
 after(async () => {
   await browser?.close();
   g?.close();
   await w?.stop();
-});
+}, LIMIT);
 
 const at = () => g.sites.get('127.0.0.1')!;
 const shot = async (page: Page, name: string) => {
@@ -123,7 +126,7 @@ async function press(page: Page, selector = '.mor-player[data-film="film.mp4"]')
   return (await page.getAttribute(selector, 'data-state'))!;
 }
 
-test("the front page shows the film's place with its poster, checked, and fetches nothing of the film until play is pressed", async () => {
+test("the front page shows the film's place with its poster, checked, and fetches nothing of the film until play is pressed", LIMIT, async () => {
   const { page, ctx, fetched, elsewhere, problems } = await open('/');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified: this page is exactly what was signed/);
   const f = await pageFrame(page);
@@ -161,7 +164,7 @@ test("the front page shows the film's place with its poster, checked, and fetche
   await ctx.close();
 });
 
-test('pressed, the film is fetched, checked, and played inline with its controls; nothing starts on its own', async () => {
+test('pressed, the film is fetched, checked, and played inline with its controls; nothing starts on its own', LIMIT, async () => {
   const { page, ctx, fetched, problems } = await open('/');
   await pageFrame(page);
   const plays = await playsH264(page);
@@ -190,7 +193,7 @@ test('pressed, the film is fetched, checked, and played inline with its controls
   await ctx.close();
 });
 
-test('a browser told it plays H.264 checks the film, then plays it or says its decoder could not', async () => {
+test('a browser told it plays H.264 checks the film, then plays it or says its decoder could not', LIMIT, async () => {
   const { page, ctx, fetched } = await open('/', { canPlay: true });
   await pageFrame(page);
   const state = await press(page);
@@ -207,7 +210,7 @@ test('a browser told it plays H.264 checks the film, then plays it or says its d
   await ctx.close();
 });
 
-test('a film the gateway altered is not played, and the bar says so; the page stays as signed', async () => {
+test('a film the gateway altered is not played, and the bar says so; the page stays as signed', LIMIT, async () => {
   const original = at().files.get('film.mp4')!;
   const altered = original.slice();
   altered[altered.length - 100] ^= 0xff; // one bit of one picture
@@ -229,7 +232,7 @@ test('a film the gateway altered is not played, and the bar says so; the page st
   }
 });
 
-test('an altered poster fails the page, as any picture it uses', async () => {
+test('an altered poster fails the page, as any picture it uses', LIMIT, async () => {
   const original = at().files.get('film-poster.jpg')!;
   at().files.set('film-poster.jpg', strip(new Uint8Array(readFileSync(new URL('../../../modules/jpeg/test/fixtures/grey.jpg', import.meta.url)))).bytes);
   try {
@@ -243,7 +246,7 @@ test('an altered poster fails the page, as any picture it uses', async () => {
   }
 });
 
-test('a page cannot load a film from elsewhere, through sources, as sound, or start one on its own', async () => {
+test('a page cannot load a film from elsewhere, through sources, as sound, or start one on its own', LIMIT, async () => {
   const { page, ctx, elsewhere, fetched } = await open('/films.html');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified/);
   const f = await pageFrame(page);
@@ -257,7 +260,7 @@ test('a page cannot load a film from elsewhere, through sources, as sound, or st
   await ctx.close();
 });
 
-test('the film at its own address is shown in the player, verified, under the bar', async () => {
+test('the film at its own address is shown in the player, verified, under the bar', LIMIT, async () => {
   const { page, ctx } = await open('/film.mp4');
   assert.match((await page.textContent('#mor-standing'))!, /^Verified: this film is exactly what was signed/);
   assert.equal(await page.locator('.file .mor-player').count(), 1);
@@ -266,7 +269,7 @@ test('the film at its own address is shown in the player, verified, under the ba
   await ctx.close();
 });
 
-test("on a phone's screen the film's place spans the page's width, and the player with it", async () => {
+test("on a phone's screen the film's place spans the page's width, and the player with it", LIMIT, async () => {
   const { page, ctx } = await open('/', { phone: true });
   const f = await pageFrame(page);
   await page.waitForFunction(() => (document.querySelector<HTMLImageElement>('.mor-player img')?.naturalWidth ?? 0) > 0);
