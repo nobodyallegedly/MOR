@@ -23,6 +23,8 @@ import { benign, DOORS, gatewayFor, phone, siteCopy, world, type World } from '.
 
 // A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
 const LIMIT = { timeout: 240_000 };
+/** A page's context closed, fifteen seconds at most: WebKit can hang closing one that holds a film; the browser closes it at the end anyway. */
+const closeSoon = (c: { close(): Promise<void> }) => Promise.race([c.close().catch(() => undefined), new Promise<void>((r) => void setTimeout(r, 15_000).unref())]);
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -161,7 +163,7 @@ test('a fresh browser shows each page of the site as verified, and signed by the
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
     assert.deepEqual(sandbox, [], `${address}: the display client tries nothing the page's sandbox refuses`);
-    await ctx.close();
+    await closeSoon(ctx);
   }
 });
 
@@ -203,7 +205,7 @@ test('the front page opens on the first act, shown as the act, verified, with it
   assert.ok(acts.includes(w.firstAct) && acts.replace(/ /g, '').includes(w.owner.id), 'the bar names the act, its standing and signer');
   await shot(page, 'front-first-act');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 /** A large JPEG, as the photograph of the Earth is: drawn by the browser, stripped to the picture alone. */
@@ -220,7 +222,7 @@ async function largeJpeg(): Promise<Uint8Array> {
     const b: Blob = await new Promise((r) => c.toBlob((b) => r(b!), 'image/jpeg', 0.8));
     return [...new Uint8Array(await b.arrayBuffer())];
   });
-  await ctx.close();
+  await closeSoon(ctx);
   return strip(new Uint8Array(bytes)).bytes;
 }
 
@@ -279,7 +281,7 @@ test("the first act's photograph scales to the page's width, whole, and nothing 
       assert.ok(m.pageScroll[0] <= m.pageScroll[1] && m.pageScroll[2] <= m.pageScroll[3] + 1, `the page's frame does not scroll: it is as tall as the page (${m.pageScroll})`);
       assert.ok(m.top[0] <= m.top[1], 'nothing wider than the window');
       await shot(page, `front-large-picture-${width}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   } finally {
     g.close();
@@ -377,7 +379,7 @@ test("on a phone's first screen (390 x 844): the photograph whole at the act's w
       assert.ok((await page.textContent('#mor-acts'))!.includes(act), 'the act shown is listed, with its standing and signer');
       await page.click('#mor-bar summary');
       await shot(page, `front-first-screen-${colorScheme}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   } finally {
     g.close();
@@ -392,7 +394,7 @@ test('on a wide screen, the checking bar keeps its whole sentence', LIMIT, async
   assert.ok(await page.locator('#mor-standing').isVisible());
   assert.match(await page.locator('#mor-standing').innerText(), /^Verified: this page is exactly what was signed by the identity this gateway names as Nobody, allegedly\./);
   assert.ok(!(await page.locator('#mor-brief').isVisible()), 'the brief line is for narrow or short screens only');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('the footer: only the contact and the sealed message, then the clay tablet, the very last thing, on light and dark; the KI icon on the tab', LIMIT, async () => {
@@ -439,7 +441,7 @@ test('the footer: only the contact and the sealed message, then the clay tablet,
       assert.equal(await page.evaluate(() => (window as { morIconAtLoad?: string | null }).morIconAtLoad), icon, 'the icon set before the window finished loading');
       assert.equal(await page.locator('iframe[aria-hidden]').count(), 0, 'the hold is gone once released');
       if (path === '/') await shot(page, `footer-${colorScheme}`);
-      await ctx.close();
+      await closeSoon(ctx);
     }
   }
 });
@@ -460,7 +462,7 @@ test("a door opens its page through the display client, checked again", LIMIT, a
   // Only the sandbox at work: the test's own helpers refused inside the page's frame, and WebKit reporting
   // its rule for leaving the page (only on a click) before it follows the click.
   assert.ok(sandbox.every((m) => /^Blocked script execution in 'about:srcdoc'|initiate navigation .* sandboxed/s.test(m)), sandbox.join('\n'));
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test("every department's door verifies, signed by the owner, with the main door's stylesheet, icon and footer, and a link back to the main door", LIMIT, async () => {
@@ -511,7 +513,7 @@ test("every department's door verifies, signed by the owner, with the main door'
     await shot(page, `door-${folder}`);
     assert.deepEqual(problems, [], address);
     assert.deepEqual(elsewhere, [], `${address}: nothing fetched from elsewhere`);
-    await ctx.close();
+    await closeSoon(ctx);
   }
 });
 
@@ -523,7 +525,7 @@ test("the main door lists no department's door: unlisted, never hidden", LIMIT, 
   for (const [folder] of DOORS) {
     assert.ok(!hrefs.some((h) => h === `/${folder}/` || h.startsWith(`/${folder}/`)), `the main door does not link to /${folder}/ (${hrefs})`);
   }
-  await ctx.close();
+  await closeSoon(ctx);
   // Never hidden: each door is in the signed version's list of files, for anyone to see.
   const paths = at(honest).manifest!.files.map((x) => x.path);
   for (const [folder] of DOORS) assert.ok(paths.includes(`${folder}/index.html`), folder);
@@ -539,7 +541,7 @@ test("a department's door leads back to the main door, checked again", LIMIT, as
   assert.match((await standing(page))!, /^Verified/);
   assert.equal(await (await pageFrame(page)).locator('.doors a').count(), 4, 'the main door');
   assert.deepEqual(problems, []);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('an altered page is shown as failing, and not shown', LIMIT, async () => {
@@ -554,14 +556,14 @@ test('an altered page is shown as failing, and not shown', LIMIT, async () => {
     assert.equal(await fp(page), w.owner.id, 'who signed the real page is still said');
     assert.match((await page.textContent('#mor-reasons'))!, /do not match the work hash/);
     await shot(page, 'altered-page');
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at(honest).files.set('run.html', original);
   }
   // The other pages still verify.
   const { page, ctx } = await open(base + '/read.html');
   assert.match((await standing(page))!, /^Verified/);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('an altered stylesheet fails every page that uses it', LIMIT, async () => {
@@ -572,7 +574,7 @@ test('an altered stylesheet fails every page that uses it', LIMIT, async () => {
     assert.match((await standing(page))!, /^Failing: a file this page uses is not what was signed/);
     assert.match((await page.textContent('#mor-reasons'))!, /site\.css/);
     assert.equal(await page.locator('#mor-page').count(), 0);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at(honest).files.set('site.css', original);
   }
@@ -594,7 +596,7 @@ test("a version signed by someone else is shown as failing, naming who did sign 
     assert.match((await page.textContent('#mor-bar'))!, /Not the identity this gateway names as Nobody, allegedly/);
     assert.equal(await page.locator('#mor-page').count(), 0);
     await shot(page, 'other-signer');
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     g.close();
   }
@@ -603,7 +605,7 @@ test("a version signed by someone else is shown as failing, naming who did sign 
 test('an address the signed site does not hold says so', LIMIT, async () => {
   const { page, ctx } = await open(base + '/nothing.html');
   assert.match((await standing(page))!, /^Failing: the signed site has no file at this address/);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('a page runs no code and loads nothing from elsewhere, whatever it tries; what is left is shown, verified', LIMIT, async () => {
@@ -633,7 +635,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   assert.equal(await page.getAttribute('link[rel="icon"]', 'href'), 'data:,', 'an icon from elsewhere is not the tab icon');
   assert.deepEqual(problems, []);
   assert.ok(hostileCsp.every((m) => /base URI|inline style|inline event handler/.test(m)), hostileCsp.join('\n'));
-  await ctx.close();
+  await closeSoon(ctx);
 
   // Files that are not pages: a picture and text, each under the bar.
   const pic = await open(hostileBase + '/photo.jpg');
@@ -656,7 +658,7 @@ test('the display client always looks for later versions, and says when a newer 
     await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
     assert.equal(await page.locator('#mor-newer').count(), 0, 'nothing newer yet');
     assert.match((await page.textContent('#mor-bar'))!, /This gateway's operator chose this version, and serves no other/);
-    await ctx.close();
+    await closeSoon(ctx);
 
     // The owner publishes a second version, naming the first.
     const next = await publishSite(w.owner, { name: 'dubsar.org', files: readFolder(w.dir), relays: [w.relay.base], previous: w.site.id });
@@ -667,7 +669,7 @@ test('the display client always looks for later versions, and says when a newer 
     assert.match((await page.textContent('#mor-newer'))!, /^A newer version of this site exists, signed by the same identity: [0-9a-f]{64}\. This gateway serves an earlier one\.$/);
     assert.equal(await page.textContent('#mor-latest'), next.id);
     await shot(page, 'newer-version');
-    await ctx.close();
+    await closeSoon(ctx);
 
     // A gateway following the owner's latest moves to it once it looks again.
     assert.ok(await ok(honest));
@@ -677,7 +679,7 @@ test('the display client always looks for later versions, and says when a newer 
     await page.waitForSelector('#mor-bar[data-looked]', { timeout: 60_000 });
     assert.equal(await page.locator('#mor-newer').count(), 0);
     assert.match((await page.textContent('#mor-bar'))!, /This gateway follows the owner's latest version/);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     pinned.close();
   }
@@ -705,7 +707,7 @@ test('a browser that blocks WebAssembly is told, in plain words, that the page c
   assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
   assert.equal(await page.locator('#mor-view').innerHTML(), '');
   await shot(page, 'no-webassembly');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('when the core library does not start for another reason, the page says so, with the reason, and shows nothing', LIMIT, async () => {
@@ -719,7 +721,7 @@ test('when the core library does not start for another reason, the page says so,
   assert.match(why, /could not be started in this browser \(.+\)\./);
   assert.match(why, /Reload the page to try again/);
   assert.equal(await page.locator('#mor-page').count(), 0, 'no page shown');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('everything ran under the content security policy, with nothing refused', () => {

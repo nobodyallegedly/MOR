@@ -26,6 +26,8 @@ import { benign, gatewayFor, phone, siteCopy, world, type World } from './world.
 
 // A time limit on each test and hook (WebKit on GitHub once hung 58 minutes with no word, round 8's follow-up): a hang fails here, named.
 const LIMIT = { timeout: 240_000 };
+/** A page's context closed, fifteen seconds at most: WebKit can hang closing one that holds a film; the browser closes it at the end anyway. */
+const closeSoon = (c: { close(): Promise<void> }) => Promise.race([c.close().catch(() => undefined), new Promise<void>((r) => void setTimeout(r, 15_000).unref())]);
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -136,19 +138,30 @@ test("the front page shows the film's place with its poster, checked, and fetche
   // Over it: the display client's own player, with the poster, laid exactly on the place.
   const player = page.locator('.mor-player[data-film="film.mp4"]');
   await page.waitForFunction(() => (document.querySelector<HTMLImageElement>('.mor-player img')?.naturalWidth ?? 0) > 0);
-  await page.waitForTimeout(200);
-  const spot = await f.$eval('.mor-film', (e) => {
-    const r = e.getBoundingClientRect();
-    return { x: r.left, y: r.top, w: r.width, h: r.height };
-  });
-  const frameAt = await page.$eval('#mor-page', (e) => ({ x: (e as HTMLElement).getBoundingClientRect().left, y: (e as HTMLElement).getBoundingClientRect().top }));
-  const box = (await player.boundingBox())!;
-  for (const [a, b, what] of [
-    [box.x, frameAt.x + spot.x, 'left'],
-    [box.y, frameAt.y + spot.y, 'top'],
-    [box.width, spot.w, 'width'],
-    [box.height, spot.h, 'height'],
-  ] as const) assert.ok(Math.abs(a - b) < 1.5, `the player lies on the film's place (${what}: ${a} and ${b})`);
+  // Laid on the place once layout settles (WebKit once read the player 830 pixels off it, 200 ms after the poster loaded):
+  // read until the two agree, ten seconds at most, then checked.
+  const measure = async () => {
+    const spot = await f.$eval('.mor-film', (e) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    });
+    const frameAt = await page.$eval('#mor-page', (e) => ({ x: (e as HTMLElement).getBoundingClientRect().left, y: (e as HTMLElement).getBoundingClientRect().top }));
+    const box = (await player.boundingBox())!;
+    const pairs = [
+      [box.x, frameAt.x + spot.x, 'left'],
+      [box.y, frameAt.y + spot.y, 'top'],
+      [box.width, spot.w, 'width'],
+      [box.height, spot.h, 'height'],
+    ] as const;
+    return { spot, pairs, fits: pairs.every(([a, b]) => Math.abs(a - b) < 1.5) };
+  };
+  let m = await measure();
+  for (let i = 0; i < 50 && !m.fits; i++) {
+    await page.waitForTimeout(200);
+    m = await measure();
+  }
+  const spot = m.spot;
+  for (const [a, b, what] of m.pairs) assert.ok(Math.abs(a - b) < 1.5, `the player lies on the film's place (${what}: ${a} and ${b})`);
   // The place takes the poster's shape, so nothing of the film is cropped.
   const shape = await page.$eval('.mor-player img', (i) => (i as HTMLImageElement).naturalWidth / (i as HTMLImageElement).naturalHeight);
   assert.ok(Math.abs(spot.w / spot.h - shape) < 0.02, `the place has the poster's shape (${spot.w / spot.h} and ${shape})`);
@@ -161,7 +174,7 @@ test("the front page shows the film's place with its poster, checked, and fetche
   assert.deepEqual(elsewhere, []);
   assert.deepEqual(problems, []);
   await shot(page, 'film-waiting');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('pressed, the film is fetched, checked, and played inline with its controls; nothing starts on its own', LIMIT, async () => {
@@ -190,7 +203,7 @@ test('pressed, the film is fetched, checked, and played inline with its controls
   assert.match((await page.textContent('#mor-standing'))!, /^Verified/, 'the page stays verified');
   assert.deepEqual(problems, []);
   await shot(page, 'film-pressed');
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('a browser told it plays H.264 checks the film, then plays it or says its decoder could not', LIMIT, async () => {
@@ -207,7 +220,7 @@ test('a browser told it plays H.264 checks the film, then plays it or says its d
   } else {
     assert.equal(state, 'verified');
   }
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('a film the gateway altered is not played, and the bar says so; the page stays as signed', LIMIT, async () => {
@@ -226,7 +239,7 @@ test('a film the gateway altered is not played, and the bar says so; the page st
     assert.match((await page.textContent('#mor-standing'))!, /^Verified: this page/, 'the page itself is as signed');
     assert.deepEqual(problems, []);
     await shot(page, 'film-altered');
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at().files.set('film.mp4', original);
   }
@@ -240,7 +253,7 @@ test('an altered poster fails the page, as any picture it uses', LIMIT, async ()
     assert.match((await page.textContent('#mor-standing'))!, /^Failing: a file this page uses is not what was signed/);
     assert.match((await page.textContent('#mor-reasons'))!, /film-poster\.jpg/);
     assert.equal(await page.locator('#mor-page, .mor-player').count(), 0);
-    await ctx.close();
+    await closeSoon(ctx);
   } finally {
     at().files.set('film-poster.jpg', original);
   }
@@ -257,7 +270,7 @@ test('a page cannot load a film from elsewhere, through sources, as sound, or st
   assert.equal(await page.locator('.mor-player img').count(), 0, 'no poster from elsewhere');
   assert.deepEqual(elsewhere, [], 'nothing asked of anyone else');
   assert.ok(!fetched.includes('film.mp4'));
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test('the film at its own address is shown in the player, verified, under the bar', LIMIT, async () => {
@@ -266,7 +279,7 @@ test('the film at its own address is shown in the player, verified, under the ba
   assert.equal(await page.locator('.file .mor-player').count(), 1);
   const state = await press(page, '.file .mor-player');
   assert.ok(['verified', 'cannot'].includes(state), state);
-  await ctx.close();
+  await closeSoon(ctx);
 });
 
 test("on a phone's screen the film's place spans the page's width, and the player with it", LIMIT, async () => {
@@ -280,5 +293,5 @@ test("on a phone's screen the film's place spans the page's width, and the playe
   assert.ok(Math.abs(spot - main) < 1.5 && spot > 300, `the place spans the page's width (${spot} of ${main})`);
   assert.ok(Math.abs(box.width - spot) < 1.5 && box.x >= 0 && box.x + box.width <= 390 + 0.5, `the player with it (${JSON.stringify(box)})`);
   await shot(page, 'film-phone');
-  await ctx.close();
+  await closeSoon(ctx);
 });

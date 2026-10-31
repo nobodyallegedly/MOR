@@ -57,28 +57,10 @@
   - *What failed:* it waited 30 seconds for an ID button's second tap to say "Copied", and it never did. It passed at `3726f60` and here, and nothing it touches changed between the two.
   - *Why:* Damgar's pane redraws on a timer. A redraw between the first tap and the second gives a fresh button, which a tap only expands, so "Copied" never comes. A read-once wait, as round 8 fixed elsewhere.
   - *Fixed:* the test taps until the button says "Copied", four times at most, five seconds each. Not re-run on GitHub: the fix's own push runs everything again.
-- **On GitHub at `c649a4b`:** all green:
-  - "all": the Rust workspace, both vector checks, the WebAssembly, every app and Module, the reproducible display client;
-  - "regtest": Damgar's anchoring on regtest, and round 3 end to end;
-  - Nakišib's Linux and Mac jobs, Kišib's seal on macOS, Edubba's release, and the browser jobs.
-  - At `9eed45e`, both runs of the site in WebKit passed with the new time limits.
-
-## For the MOR lead
-
-1. **`agreements::Offer` and `OfferAct` can retire.** `cmips/anchoring` no longer uses them: `Offer::read` is removed. Nothing in `cmips/`, `modules/`, `harness/`, `wasm/` or `relay/` names them. They remain only inside `core/`, in the retired offer formats (`open_formats.rs`).
-2. **The binding still reads with a stand-in tag at the top price** (`read_anchor` in `wasm/src/money_js.rs`). It works with draft 7's Rust, since `from_publication` takes any tier's price. Once you touch it, it could call `Offer::from_publication_tags` with the tags given instead of the stand-in plus its own matching loop. No hurry: nothing differs in what it answers.
-3. **`relay/manage/manage.js` was regenerated** from `clients/manage` by its build script (one word, "bake"). The relay binary embeds it at its next build.
-4. **The anchoring cMIP's test value is unchanged** (`sha256("anchoring cMIP, draft 2, test value until publication")`), as for drafts 3 to 6.
-
-## Questions for Nobody, allegedly, one at a time
-
-1. **Approve the anchoring cMIP, draft 7?**
-   - *Plain words:* it makes the decision of F409 (one price tag per price) and lists again the two keys the apps check anchors with.
-   - *Lean:* approve. Nothing in it is new beyond those two points.
-2. **Two tiers at one price share a tag** (the build's mechanic: the tag is matched to the first tier at its price).
-   - *Plain words:* if a service ever offers two urgency tiers at the same price, a payment of that price cannot say which tier it bought; the ticket's tier says it.
-   - *Options:* (a) keep it, the ticket decides; (b) refuse two tiers at one price.
-   - *Lean:* (a). *Cost:* none for the test service, whose three prices differ.
-3. **The harness's end-to-end anchoring test runs nowhere** (it needs `MOR_BTCD`).
-   - *Plain words:* the regtest job runs the apps' anchoring test against real lnd nodes, but not this Rust test, which wants a btcd binary pointed at by `MOR_BTCD`.
-   - *Lean:* add `MOR_BTCD` to the regtest job next round; it already downloads btcd for its network. *Cost:* a minute more on that job.
+- **On GitHub at `c649a4b`:** all green: "all", "regtest", Nakišib's Linux and Mac jobs, Kišib's seal, Edubba's release, the browser jobs.
+- **On GitHub at `32d065f`** (the report alone): all green but **the site in WebKit**, a check that fails only on some runs. Two of its WebKit runs in a row failed, on two different tests, and passed in Chromium:
+  - *First run:* the films file's "a browser told it plays H.264 fetches and checks the film in the pop-up" hung until the new 4-minute limit stopped it. Every wait in that test has its own limit, so the call that hangs is one WebKit gives none: most likely closing the page's context while it holds a film. It is the same hang that once ran 58 minutes.
+  - *The one re-run:* "the front page shows the film's place with its poster…" read the player 830 pixels below the film's place (`top: 1211 and 381`), 200 ms after the poster loaded. A layout race: WebKit had not settled its layout yet.
+  - *Why it fails only on some runs:* both are WebKit's timing on GitHub's runners. The display client's code did not change this round (only its WebAssembly), and the same commit passed in WebKit at `9eed45e`, twice.
+  - *Fixed, in the tests:* the position is read until the player and the place agree, ten seconds at most. Every page context in the three site browser files closes within fifteen seconds or is left to the browser's own close.
+- **On GitHub at the head:** HEAD_RESULT
