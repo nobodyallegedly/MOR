@@ -91,4 +91,8 @@ Also for the suite: the anchoring cMIP's Rust (`Offer::from_publication`) and dr
     - `clients/damgar/src/damgar.ts:1935` calls `anchoringCheckTicket` with five.
   - **Fixed in the binding:** `anchoringReadOffer`'s tag acts are now optional, as intended. The publication is read alone where none are given.
   - **The suite's:** `anchoringCheckTicket` needs the tag act paid, by draft 6, so Damgar's call is one of the four sites the suite moves. Until it does, Nakišib's typecheck fails on that one line, and the anchoring tests in the "all" job and Damgar's regtest anchoring test stay red.
-  - The other jobs are as above.
+  - **The other jobs at 2bb0c13e:**
+    - Green: "Rust workspace", both vector checks, the WebAssembly, every app but four, the reproducible display client, Edubba's release, the site and the suite in WebKit, and Kišib's seal on macOS.
+    - Red: four steps of the "all" job, each on anchoring alone. Edubba, Damgar and Ummia have their anchoring tests, and `clients/anchoring-service` fails its `tsc --noEmit` on its three-argument `anchoringOffer`.
+    - Red: Damgar's regtest anchoring test.
+    - The runs on 10ea4dc0, this fix, were in progress when this was written.
