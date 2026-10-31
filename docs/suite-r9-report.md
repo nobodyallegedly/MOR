@@ -96,11 +96,32 @@
 
 - **Main** had not moved since this branch began (still `dd8fdd3`), so its WebAssembly was unchanged (`63e514f9…`, the same as the releases').
 - **Releases rebuilt** for the five apps this round touches: Dub, Damgar, Ummia, Kišib and Edubba (`npm run release` in each). The display client's rebuild came out byte for byte unchanged.
-- **Tests:** in section "Tests" below.
+- **Tests:** below.
 
 ### Tests
 
-TESTS_HERE
+Run on this machine (Linux x86-64; Chromium for the browser tests, named with `MOR_CHROMIUM` because this machine's browser sits at another path than the tests' default), every app's `npm test` after the releases:
+
+| App | Passed | Failed |
+| --- | --- | --- |
+| Assess (now in CI) | 56 | 0 |
+| Edubba (desk) | 117 | 0 |
+| display client (site) | 86 | 0 |
+| Dub | 47 | 0 |
+| collective | 45 | 0 |
+| Kišib | 44 | 0 |
+| genesis | 41 | 0 |
+| Damgar | 41 | 0 |
+| Ummia | 35 | 0 |
+| longform, reader, repo, kit, barebone, connector | 26, 22, 21, 18, 15, 13 | 0 |
+| reports, grants, manage, testwallet, split service | 9, 8, 7, 4, 2 | 0 |
+| Modules: carry, jpeg, audio, video, timestamp | 11, 14, 8, 6, 5 | 0 |
+
+- **Repo, one red on the first run:** "the MOR repository itself, published and verified file by file". It compares the working tree with what is committed, and two record files were edited but not yet committed during that run. Run again after committing them: 21 of 21.
+- **The four media Modules, red on the first run:** they could not start, because their packages were not installed on this machine (`tsx` not found). Installed and run again: all green, as above.
+- **The Rust workspace was not run here:** this round changed no Rust. GitHub's "all" job runs it.
+
+**On GitHub** (pull request 115): regtest, release, mac, linux, seal and browsers green at the first push of the code; "all" is reported in the pull request once it ends.
 
 ## 3. For the MOR lead
 
