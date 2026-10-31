@@ -1,4 +1,4 @@
-**The suite's side is ready to merge.** Every check on GitHub is green at `c649a4b` (the last commit with code); the commit after it adds only this report.
+**The suite's side is ready to merge.** At `59b1eb7`, the last commit with code, every suite check on GitHub is green. One test of the relay, the MOR lead's, failed there on one run of several: a race, described below (For the MOR lead, 5). The commit after it adds only this report; its own run is on the pull request.
 
 # The Dubsar Suite, round 8's follow-up (F407): anchoring on one price tag per tier
 
@@ -63,4 +63,28 @@
   - *The one re-run:* "the front page shows the film's place with its poster…" read the player 830 pixels below the film's place (`top: 1211 and 381`), 200 ms after the poster loaded. A layout race: WebKit had not settled its layout yet.
   - *Why it fails only on some runs:* both are WebKit's timing on GitHub's runners. The display client's code did not change this round (only its WebAssembly), and the same commit passed in WebKit at `9eed45e`, twice.
   - *Fixed, in the tests:* the position is read until the player and the place agree, ten seconds at most. Every page context in the three site browser files closes within fifteen seconds or is left to the browser's own close.
-- **On GitHub at the head:** HEAD_RESULT
+- **On GitHub at `59b1eb7`:** both WebKit runs green (the fixes above), and every other check green but one test in "all"'s Rust workspace: **`a_live_home_objects_to_a_homeless_rotation`** (`relay/tests/home.rs:389`, "re-homed without audit, on the reader's own attempt": one link where two were expected).
+  - *A check that fails only on some runs:* it passed at `3726f60`, `9eed45e`, `c649a4b` and `32d065f`, and 15 times out of 15 here.
+  - *Why, as far as can be seen from outside:* the reader reads the new home after the old home objected. When the new home's own probe of the old home has already fetched the objection ("objections travel"), the reader holds it. Since S7h-4 (Identity rule 49), an objection voids the rotation, so the reader sees one link.
+  - *Whose:* `relay/` and its test, the MOR lead's; nothing this round touched them (For the MOR lead, 5).
+
+## For the MOR lead
+
+1. **`agreements::Offer` and `OfferAct` can retire.** `cmips/anchoring` no longer uses them: `Offer::read` is removed. Nothing in `cmips/`, `modules/`, `harness/`, `wasm/` or `relay/` names them. They remain only inside `core/`, in the retired offer formats (`open_formats.rs`).
+2. **The binding still reads with a stand-in tag at the top price** (`read_anchor` in `wasm/src/money_js.rs`). It works with draft 7's Rust, since `from_publication` takes any tier's price. Once you touch it, it could call `Offer::from_publication_tags` with the tags given instead of the stand-in plus its own matching loop. No hurry: nothing differs in what it answers.
+3. **`relay/manage/manage.js` was regenerated** from `clients/manage` by its build script (one word, "bake"). The relay binary embeds it at its next build.
+4. **The anchoring cMIP's test value is unchanged** (`sha256("anchoring cMIP, draft 2, test value until publication")`), as for drafts 3 to 6.
+5. **A relay test races** (`relay/tests/home.rs`, `a_live_home_objects_to_a_homeless_rotation`, line 389). It failed once on GitHub at `59b1eb7` and passes otherwise. The reader can read the new home after that home's probe has brought it the old home's objection; S7h-4's rule 49 then voids the rotation, and the test expects it to count. *Lean:* the reader in the test reads the new home before it can probe, or the test expects one link once the objection has travelled.
+
+## Questions for Nobody, allegedly, one at a time
+
+1. **Approve the anchoring cMIP, draft 7?**
+   - *Plain words:* it makes the decision of F409 (one price tag per price) and lists again the two keys the apps check anchors with.
+   - *Lean:* approve. Nothing in it is new beyond those two points.
+2. **Two tiers at one price share a tag** (the build's mechanic: the tag is matched to the first tier at its price).
+   - *Plain words:* if a service ever offers two urgency tiers at the same price, a payment of that price cannot say which tier it bought; the ticket's tier says it.
+   - *Options:* (a) keep it, the ticket decides; (b) refuse two tiers at one price.
+   - *Lean:* (a). *Cost:* none for the test service, whose three prices differ.
+3. **The harness's end-to-end anchoring test runs nowhere** (it needs `MOR_BTCD`).
+   - *Plain words:* the regtest job runs the apps' anchoring test against real lnd nodes, but not this Rust test, which wants a btcd binary pointed at by `MOR_BTCD`.
+   - *Lean:* add `MOR_BTCD` to the regtest job next round; it already downloads btcd for its network. *Cost:* a minute more on that job.
