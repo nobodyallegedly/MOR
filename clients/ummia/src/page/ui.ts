@@ -5,6 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
+import { keyStringHtml } from '../../../../modules/carry/src/key-html.ts';
 import { NOT_STAMPED, attachCards, attachClosing, attachColumn, attachContacts, attachIds, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, namesHtml, openPanel, openSlot, ownId, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, rulesAsk, attachRules, rulesPart, shortForm, stampCards, type KitAct, type Named } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
@@ -485,8 +486,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (key === 'remove') return void openConfirm(app, removeSaid('Ummia', v.labelOf(named, 'this identity')).replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
       closePanel();
       if (key === 'words') {
-        const c = await act(() => b.ask<{ grouped: string; words: string[] }>('carry'));
-        if (c) popup.show('The signing key’s words', v.wordsShown(c));
+        const c = await act(() => b.ask<{ grouped: string; words: string[]; key: string }>('carry'));
+        if (c) popup.show('The signing key’s words', v.wordsShown(c) + keyStringHtml(c.key));
       } else if (key === 'line') popup.show('Line and homes', v.lineShown(state!));
       else if (key === 'renew') popup.show('New words from Kišib', v.renewForm());
       else if (key === 'collective') popup.show('A collective under it', v.collectiveForm(state!));

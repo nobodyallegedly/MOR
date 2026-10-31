@@ -88,6 +88,12 @@ The core library does every check: payloads, commitments, rail proofs, the route
 - The chain Damgar follows on a computer is a regtest node it trusts, said where it is used.
 - The rails' own costs, shown before a rail is declared (`LIGHTNING_COSTS`, `ONCHAIN_COSTS`).
 
+## Round 9 (F411)
+
+**The signing key as a string** (round 9, F411; H104, "Signing key, users choses"). In plain words: where the app asks for the signing key, you can give its 24 words or its string (it starts with `morsk1`), the same key either way; where it shows the words, "Show the same key as a string" unfolds the string. A copying mistake in the string is caught. The chain key stays words only. Precisely: `fromCarried` and `toKeyString` (`modules/carry/src/string.ts`), `keyStringHtml` (`modules/carry/src/key-html.ts`); `module-signing-key-string-draft-1.md`.
+
+**Every hop has its receipt.** In plain words: when a split service pays you your part of a sale, Damgar signs your receipt for it by itself (under your receipts lane), or you sign it by hand; the receipt names the split it came from. Precisely: the service's payout commitment fulfils the split, and Damgar's receipt copies what the payment fulfils (Money receipt field 5); tested end to end in `clients/desk/test/round-3.test.ts`.
+
 ## Round 8: the keyless collective, the publication and the price tag (F407)
 
 *In plain words:* a collective has no key of its own any more, and its members have no special "member keys". When you act for a collective in Damgar, you sign with your own identity's key, and the act names the collective. Money goes where a price tag or a publication says: a price tag names who is paid (on a work you uploaded, you; under a publication, its split service), and a split service receives in its own name and pays everyone. When you rely on someone's act, Damgar keeps a copy of it, so it does not vanish if its author removes it.

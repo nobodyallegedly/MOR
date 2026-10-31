@@ -4,6 +4,18 @@
 
 **Test identities only.** Every key is held in software in the program's folders. The real identity's signer plugs in at step 16b.
 
+## Round 9 (F411, 31 October 2026)
+
+### In plain words
+
+- **Reading before you sign.** "Its constitution, in plain words" and every read-back in Publishing before you sign an ownership agreement or a publication now carry the assessment tool's reading: who owns what, how the owners decide, how much comes off the top, and the risks, each with the rule it rests on (for example: no maximum fee per payout; partners taking half or more before the owners; one member alone able to act in Money).
+- **A collective in Publishing.** Acting as a collective you belong to: its owners are its constitution (Publishing shows it, nothing to sign); its publication names that constitution, and you make it, and later end it, for the collective with your own key; the other members its rule asks are asked in their own Edubba. A collective's claim is not offered yet (the core reads a claim's opener as one of its creators).
+- **The signing key as a string** (round 9, F411; H104, "Signing key, users choses"). In plain words: where the app asks for the signing key, you can give its 24 words or its string (it starts with `morsk1`), the same key either way; where it shows the words, "Show the same key as a string" unfolds the string. A copying mistake in the string is caught. The chain key stays words only. Precisely: `fromCarried` and `toKeyString` (`modules/carry/src/string.ts`), `keyStringHtml` (`modules/carry/src/key-html.ts`); `module-signing-key-string-draft-1.md`.
+
+### Precisely
+
+`src/publishing.ts`: `prepareOwnership` as a collective returns `collectiveOwnership` (the constitution in force read by `assess`, blocked with "Nothing to sign here"); `preparePublication` appends `beforeSigningPublication` (with the owners' terms: the constitution in force, or the ownership agreement named); `prepareOwnership` appends `beforeSigning`; `preparePublicationEnd` for a collective signs the ending with `signAsMember`, objects `[[first, latest], [owners, owners]]` and the collective's chain, and asks the area's other holders. The `publishing work read` alias is gone (`src/ops.ts`). Tests: `test/publishing.test.ts` ("way 1 as a collective… its owners its constitution; its publication and its ending"), `test/round-3.test.ts` (every hop's receipt).
+
 ## In plain words (round 8, F407, 30 October 2026): what is true now
 
 *Where an older section below says otherwise, this one holds. Report: `docs/suite-r8-report.md`.*

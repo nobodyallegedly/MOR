@@ -69,7 +69,6 @@ export const WEB_OPS: readonly string[] = [
   'publishing act as',
   'publishing collective add',
   'publishing upload read',
-  'publishing work read',
   'publishing tag read',
   'publishing tag withdraw read',
   'publishing claim read',
@@ -531,9 +530,6 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       // The four ways in (F407): each read back, then signed by 'publishing confirm' with its digest.
       case 'publishing upload read':
         return publishing.prepareUpload({ media: text(a.media), data: text(a.data), title: text(a.title), then: text(a.then), price: text(a.price), creators: rowsIn(a.creators) });
-      // Kept for callers from before round 8: a protected file with a price is now an upload with a price tag on the bare bake (its acts, the bake, the tag and the post, in the same places as the publication, the offer and the post were).
-      case 'publishing work read':
-        return publishing.prepareUpload({ media: text(a.media), data: text(a.data), title: text(a.title), then: text(a.price) ? 'price' : 'none', price: text(a.price) });
       case 'publishing tag read':
         return publishing.prepareTag({ bake: text(a.bake), price: text(a.price) });
       case 'publishing tag withdraw read':

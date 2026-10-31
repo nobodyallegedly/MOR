@@ -5,6 +5,7 @@
 // and part were open (`damgar:at`), and in memory which collective is acted
 // as; nothing of a key or a payment.
 
+import { keyStringHtml } from '../../../../modules/carry/src/key-html.ts';
 import { askNick, attachCards, attachClosing, attachColumn, attachContacts, attachIds, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, nameOf, namesHtml, openPanel, openSlot, ownId, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, who, type KitAct, type KitWho, type Named } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Account, LaneShown, PaymentShown, Rails, State, ToSign, Who } from '../shapes.ts';
@@ -589,8 +590,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (key === 'remove') return void openConfirm(app, removeSaid('Damgar', called ?? 'this identity').replace('data-k-remove>', `data-k-remove data-id="${v.e(id)}">`));
       closePanel();
       if (key === 'words') {
-        const c = await act(() => b.ask<{ grouped: string; words: string[] }>('carry'));
-        if (c) popup.show('The signing key’s words', v.wordsShown(c));
+        const c = await act(() => b.ask<{ grouped: string; words: string[]; key: string }>('carry'));
+        if (c) popup.show('The signing key’s words', v.wordsShown(c) + keyStringHtml(c.key));
       } else if (key === 'line') popup.show('Line and homes', v.lineShown(state!));
       else if (key === 'renew') popup.show('New words from Kišib', v.renewForm());
       else if (key === 'collective') popup.show('A collective under it', v.collectiveForm(state!.identity!.collectives));

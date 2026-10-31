@@ -123,7 +123,7 @@ export function readingText(id: string, a: Assessment): string {
 
 /** The flags as a list, each with what it rests on and the rules it cites by name. */
 function flagsText(a: Assessment): string {
-  if (a.problem) return `Agreements refuse these terms, so nothing is flagged: ${a.problem}`;
+  if (a.problem) return `Agreements refuse it, so nothing is flagged: ${a.problem}`;
   if (!a.flags.length) return 'No risk flagged.';
   return a.flags
     .map((f) => `- ${f.code} (${f.family}): ${f.text}\n  Rests on: ${f.rests}.\n  Rules quoted below: ${f.cites.map((c) => `${c.mir} rule ${c.rule}`).join(', ')}.`)
@@ -131,7 +131,7 @@ function flagsText(a: Assessment): string {
 }
 
 /** What Claude is told, the same for every question. */
-export const INSTRUCTIONS = `You answer one question about one agreement, for a person reading it before deciding whether to sign. You work inside MOR's deal-assessment tool.
+export const INSTRUCTIONS = `You answer one question about one agreement or publication, for a person reading it before deciding whether to sign. You work inside MOR's assessment tool.
 
 You are given two things, and nothing else counts:
 1. THE TOOL'S READING of the agreement: its explanation in plain words and the risks it flagged, each fact read by the MOR core library from the agreement's exact bytes.

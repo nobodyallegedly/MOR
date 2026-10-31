@@ -1,5 +1,7 @@
 # cMIP: Member keys
 
+*Retired: see `cmip-member-keys-draft-2.md` (Nobody, allegedly, 30 October 2026: members use their own private key). This draft is kept as it was.*
+
 *Draft 1, 19 October 2026, written by the round 3 session for **F353**, for Nobody, allegedly, to approve. Decided by Nobody, allegedly, 18 and 19 October 2026: each member acts for a collective with a key of their own, named in their signature of its founding or clone (Agreements draft 16, rule 73); "the app that makes the key leaves it as a private act sealed to the member's own identity, as the accepted list (F340) and money drafts travel; any app holding the identity opens it; the key stays the same through the member's own change of keys (the collective unaffected), re-sealed to the new encryption key in Kišib's change of keys. Stated cost: the key sits encrypted at the member's homes." "Other ways of keeping and using keys are for the competitive layer."*
 
 *Founding cMIP, EXPERIMENTAL. Not approved, not a product; test identities only until MOR is frozen.* Written against Agreements draft 16 (rules 60 and 73), Envelopes draft 10 (private acts, the sealed container), Identity draft 14. Its hash stays a draft hash until its creator is named at step 17; until then its acts name a test value, `sha256("Member keys cMIP, draft 1, test value until publication")`. Its code is in `clients/grants` (`src/member.ts`), shared by Dub, Edubba, Damgar, Ummia and Kišib.

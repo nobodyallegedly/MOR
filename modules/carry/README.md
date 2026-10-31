@@ -15,3 +15,9 @@ npm test     # needs the core library's WebAssembly (clients/genesis: npm run wa
 ```
 
 The tests: the Rust vectors give the same words, the same seed back and the same public signing key (through the core library); BIP-39's own words for 32 zero bytes; 200 random round trips whatever the case and spacing; a changed word refused by the checksum (an 8-bit checksum misses one in 256, so the test counts), a word off the list, a wrong count; three words typed back; an ID as typed.
+
+## The signing key as a string (round 9, F411)
+
+**In plain words.** The signing key can also be written as one string starting with `morsk1` instead of 24 words: the same key, a check built in so a copying mistake is caught. Apps take either, and show the other on request. The chain key stays words only.
+
+**Precisely.** `module-signing-key-string-draft-1.md`. `src/string.ts`: `toKeyString(seed)` (Bech32m, BIP-350, prefix `morsk`), `fromKeyString(typed)` (refusing a wrong prefix, a character outside the alphabet, a wrong length, a failed checksum, mixed case, saying which), `groupKeyString`, `bothForms`, `fromCarried(typed)` (24 words or the string, to the same seed; never for a chain key). `src/key-html.ts`, with no import, for the pages: `keyStringHtml(key)`, the string folded under "Show the same key as a string", with `KEY_STRING_SAY`. Tests `test/string.test.ts` (BIP-350's vectors among them).

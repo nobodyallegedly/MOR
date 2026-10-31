@@ -26,6 +26,8 @@ An identity's **chain key** is the key that changes its other keys: it lives on 
 
 **No network.** Nakišib opens no connection, ever: not to a home, a relay, a font or an update. Its page is served by its own program on 127.0.0.1 (this Mac alone) and shown in Nakišib's own window, which keeps nothing on disk. Its first screen says: **"This Mac should never connect again."**
 
+**Round 9 (F411): words only.** The signing key as a string (`modules/module-signing-key-string-draft-1.md`) is offered by the TypeScript apps (Dub, Damgar, Ummia, Edubba, Kišib); Nakišib, Rust and offline, still writes and reads the signing key as 24 words this round. The words and the string are the same key, so a key Nakišib wrote can be brought into any app as its words, and the app shows its string on request.
+
 ## Precisely
 
 | File | What |

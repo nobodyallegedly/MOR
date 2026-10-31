@@ -36,7 +36,7 @@ import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
 import { contestPurchase, contestSale, purchaseContests, readVow, vowOffer, vowSales, type ContestsBeside, type VowOffer } from './vows.ts';
 import { collectiveNow, collectivePlaces, termsAt } from '../../grants/src/member.ts';
-import { dealOfPost, pct, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
+import { dealOfPost, pct, publicationTip, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
 /** What Dub's lane may sign: invoice requests (the money messages cMIP) and payment claims (Money). */
@@ -571,7 +571,23 @@ export class DubMoney {
         // the core cannot say
       }
       out.standing = latest.price ? verdict : 'withdrawn';
-      if (!latest.price) out.why = 'its price tag is withdrawn: a later version carries no price';
+      // The tip, always (round 9, F411; his answer to Q5, "Clients need to provide the tip"): the core's latest versions of
+      // the publication's tags and of the ownership agreement it names, followed before paying; the purchase names the latest.
+      const tip = await publicationTip(pub.first, hints, via, held).catch(() => null);
+      if (tip) {
+        if (tip.ownersLatest && tip.ownersLatest !== out.deal?.version) {
+          const d = await readDeal(tip.ownersLatest, hints, via, pub.id).catch(() => null);
+          if (d) out.deal = d;
+        }
+        if (tip.tags.length && !tip.tags.includes(latest.id)) {
+          const t = held.map(readTag).find((x) => x && tip.tags.includes(x.id));
+          if (t) {
+            out.tag = t;
+            out.standing = t.price ? 'counts' : 'withdrawn';
+          }
+        }
+      }
+      if (!out.tag?.price) out.why = 'its price tag is withdrawn: a later version carries no price';
       else if (verdict !== 'counts') out.why = verdict === "nobody's offer" ? 'its price tag is nobody’s offer under the publication (signed by someone other than its split service or designated party)' : 'whether its price tag counts under the publication is unknown here: its parties’ signatures were not all found';
       return out;
     }
@@ -903,7 +919,9 @@ export class DubMoney {
     const offer = await vowOffer(v.name, v.signer, hints, via, named);
     if (!offer) throw new Error('No publication of its signer selling it was found. Nothing was signed.');
     if (!offer.tag || !offer.price || !offer.payee) throw new Error(`It cannot be bought: ${offer.why ?? 'no price tag that counts was found'}. Nothing was signed.`);
-    const deal = offer.owners ? await readDeal(offer.owners, hints, via, offer.version).catch(() => null) : null;
+    // The tip, always (round 9, F411): the ownership agreement's latest version, as the core finds it, is what the purchase names.
+    const tip = offer.owners ? await publicationTip(offer.publication, hints, via).catch(() => null) : null;
+    const deal = offer.owners ? await readDeal(tip?.ownersLatest ?? offer.owners, hints, via, offer.version).catch(() => null) : null;
     const said = deal ? [sharedLine(deal, a.names ?? short)] : [];
     return { payee: offer.payee, amount: offer.price, fulfils: offer.tag.id, purchase: offer.owners ? [offer.owners, deal?.version ?? offer.owners] : null, said, offer };
   }

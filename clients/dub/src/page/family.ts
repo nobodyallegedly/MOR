@@ -254,7 +254,7 @@ ${web ? '' : via}
 <p class="small">Its ID and its signing key’s words. Dub reads it from its homes and checks the words give its current signing key.</p>
 <form id="bring">
 <label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
-<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words in order, or its string (morsk1…), as you wrote it down</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? '' : via}
@@ -630,7 +630,7 @@ ${acts ? `<div class="acts">${acts}</div>` : ''}</article>`;
 export function spent(say: string): string {
   return note(
     'spent',
-    `<p>${e(say)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Use the new words</button></div></form>`,
+    `<p>${e(say)}</p><form id="renew"><label>The new signing key: its 24 words, or its string (morsk1…)</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Use the new words</button></div></form>`,
   );
 }
 

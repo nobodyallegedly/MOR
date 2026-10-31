@@ -9066,6 +9066,80 @@ function typedBack(words2, positions, typed) {
   return positions.length === 3 && typed.length === 3 && positions.every((p, i) => words2[p - 1] === (typed[i] ?? "").trim().toLowerCase());
 }
 
+// ../../modules/carry/src/key-html.ts
+var KEY_STRING_SAY = "The same signing key, written as one string: either form, the 24 words or this string, brings the identity into another app. Whoever holds it can sign as this identity and read its private messages, until the key is changed with the chain key. The chain key is not in it.";
+function keyStringHtml(key) {
+  if (!key || !/^morsk1[0-9a-z ]+$/.test(key)) return "";
+  return `<details class="key-string" data-key-string><summary>Show the same key as a string</summary><p class="small">${KEY_STRING_SAY}</p><p><code class="key-string-value">${key}</code></p></details>`;
+}
+
+// ../../modules/carry/src/string.ts
+var KEY_PREFIX = "morsk";
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+var BECH32M = 734539939;
+function polymod(values) {
+  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+  let chk = 1;
+  for (const v of values) {
+    const b = chk >>> 25;
+    chk = (chk & 33554431) << 5 ^ v;
+    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
+  }
+  return chk >>> 0;
+}
+var expand = (hrp) => [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+function checksum(hrp, data) {
+  const mod = polymod([...expand(hrp), ...data, 0, 0, 0, 0, 0, 0]) ^ BECH32M;
+  return [0, 1, 2, 3, 4, 5].map((i) => mod >>> 5 * (5 - i) & 31);
+}
+function regroup(data, from, to, pad) {
+  let acc = 0;
+  let bits = 0;
+  const out = [];
+  const max = (1 << to) - 1;
+  for (const v of data) {
+    acc = acc << from | v;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      out.push(acc >> bits & max);
+    }
+  }
+  if (pad) {
+    if (bits) out.push(acc << to - bits & max);
+  } else if (bits >= from || acc << to - bits & max) return null;
+  return out;
+}
+function toKeyString(seed) {
+  if (seed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const data = regroup([...seed], 8, 5, true);
+  return `${KEY_PREFIX}1${[...data, ...checksum(KEY_PREFIX, data)].map((d) => CHARSET[d]).join("")}`;
+}
+var groupKeyString = (s) => `${s.slice(0, KEY_PREFIX.length + 1)} ${s.slice(KEY_PREFIX.length + 1).match(/.{1,4}/g).join(" ")}`;
+var looksLikeKeyString = (typed) => typed.replace(/[\s-]/g, "").toLowerCase().startsWith(`${KEY_PREFIX}1`);
+function fromKeyString(typed) {
+  const s = typed.replace(/[\s-]/g, "");
+  if (s !== s.toLowerCase() && s !== s.toUpperCase()) throw new Refused("the string mixes capital and small letters: type it all in one case");
+  const t = s.toLowerCase();
+  if (!t.startsWith(`${KEY_PREFIX}1`)) throw new Refused(`a signing key\u2019s string starts with \u201C${KEY_PREFIX}1\u201D`);
+  const body = t.slice(KEY_PREFIX.length + 1);
+  for (let i = 0; i < body.length; i++) {
+    if (!CHARSET.includes(body[i])) throw new Refused(`character ${KEY_PREFIX.length + 2 + i}, \u201C${body[i]}\u201D, is not one a signing key\u2019s string uses (no b, i, o or 1 after the prefix): check how it is written`);
+  }
+  if (body.length !== 58) throw new Refused(`${body.length} characters after \u201C${KEY_PREFIX}1\u201D, not 58: a character is missing or one too many`);
+  const data = [...body].map((c) => CHARSET.indexOf(c));
+  if (polymod([...expand(KEY_PREFIX), ...data]) !== BECH32M) throw new Refused("the checksum does not match: a character was written or read wrong");
+  const bytes = regroup(data.slice(0, -6), 5, 8, false);
+  if (!bytes || bytes.length !== 32) throw new Refused("it does not carry 32 bytes");
+  return Uint8Array.from(bytes);
+}
+function fromCarried(typed) {
+  if (typeof typed === "string" && looksLikeKeyString(typed)) return fromKeyString(typed);
+  if (Array.isArray(typed) && typed.length && looksLikeKeyString(typed.join(""))) return fromKeyString(typed.join(""));
+  if (typeof typed === "string" && splitWords(typed).length === 1 && splitWords(typed)[0].length > 20) throw new Refused(`neither 24 words nor a signing key\u2019s string (which starts with \u201C${KEY_PREFIX}1\u201D)`);
+  return fromWords(typed);
+}
+
 // ../genesis/src/forms.ts
 var form = (label, hex3) => formEncode(label, unhex(hex3));
 var idForm = (id) => form("mid", id);
@@ -9906,6 +9980,45 @@ async function dealOfPost(post3, places, via2 = {}) {
 }
 function sharedLine(d, names) {
   return `This work is shared: ${d.owners.map(([id, n]) => `${names(id)} (${pct(n)})`).join(", ")}. The split service${d.service ? `, ${names(d.service)},` : ""} answers for it.`;
+}
+async function publicationTip(first, places, via2 = {}, also = []) {
+  const act = await actAt(first, places, via2);
+  if (!act) return null;
+  const d = describeAct(act);
+  if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.publication || !d.payload) return null;
+  const m = cborDecode(d.payload);
+  const h = (x) => x instanceof Uint8Array ? hex(x) : null;
+  const partners = (Array.isArray(m.get(2)) ? m.get(2) : []).map((p) => p instanceof Map ? h(p.get(0)) : null);
+  const backups = (Array.isArray(m.get(11)) ? m.get(11) : []).map(h);
+  const owners = h(m.get(1));
+  const parties = new Set([d.signer ?? "", ...partners, h(m.get(3)), h(m.get(10)), ...backups].filter((x) => !!x));
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const held = [act, ...also];
+  if (owners) {
+    const o = await actAt(owners, places, via2);
+    if (o) {
+      held.push(o);
+      const t = describeAct(o);
+      for (const x of t.payload ? cborDecode(t.payload).get(0) ?? [] : []) parties.add(hex(x));
+    }
+  }
+  for (const x of parties) {
+    const l = await lookUp(x, places, via2, v).catch(() => null);
+    held.push(...await allBy(x, [.../* @__PURE__ */ new Set([...places, ...l?.resolution.homes.map((y) => y.hint) ?? []])], via2));
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    for (const a of held) {
+      try {
+        v.add(a);
+      } catch {
+      }
+    }
+  }
+  try {
+    return v.agreementsPublicationTip(AGREEMENTS_SPECS, first);
+  } catch {
+    return null;
+  }
 }
 
 // ../damgar/src/total.ts
@@ -10968,7 +11081,15 @@ async function offers(service, hints, via2 = {}) {
   for (const a of pubs.values()) {
     try {
       const o = anchoringReadOffer(a, valid);
-      if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
+      if (l.verifier.status(o.id) !== "valid") continue;
+      let offerTags = o.tags;
+      try {
+        const tip = l.verifier.agreementsPublicationTip(AGREEMENTS_SPECS, readPublication(a)?.first ?? o.id);
+        if (tip.latest.length && !tip.latest.includes(o.id)) continue;
+        offerTags = o.tags.filter((t) => tip.tags.includes(t.tag));
+      } catch {
+      }
+      out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: offerTags });
     } catch {
     }
   }
@@ -11438,7 +11559,7 @@ var Damgar = class {
       let seed;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -11488,7 +11609,7 @@ var Damgar = class {
       if (!active) throw new Error("No identity in use.");
       let seed;
       try {
-        seed = fromWords(words2);
+        seed = fromCarried(words2);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -11619,7 +11740,7 @@ var Damgar = class {
   async carry() {
     const { me } = await this.ctx();
     if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY);
-    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)) };
+    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), key: groupKeyString(toKeyString(unhex(me.f.signingSecret))) };
   }
   /** Whether the signing key Damgar holds still counts. */
   async check() {
@@ -13791,9 +13912,9 @@ var Damgar = class {
     if (!left) throw new Error("No relay or home took the lane\u2019s grant. It was signed here; grant it again later.");
     return grant.id;
   }
-  laneLimits(cap2, until, clock) {
-    if (!Number.isSafeInteger(cap2.value) || cap2.value <= 0) throw new Error("A lane needs a cap per act, a whole amount above zero.");
-    const l = { cap: { unit: cap2.unit, value: cap2.value } };
+  laneLimits(cap3, until, clock) {
+    if (!Number.isSafeInteger(cap3.value) || cap3.value <= 0) throw new Error("A lane needs a cap per act, a whole amount above zero.");
+    const l = { cap: { unit: cap3.unit, value: cap3.value } };
     if (until !== null) {
       if (!clock) throw new Error("An expiry is judged on a timestamp clock: name one in Lanes, In force (its ID), or leave Until empty.");
       l.expiry = { clock: "timestamp", identity: clock, time: until };
@@ -15296,7 +15417,21 @@ var DubMoney = class {
       } catch {
       }
       out.standing = latest.price ? verdict : "withdrawn";
-      if (!latest.price) out.why = "its price tag is withdrawn: a later version carries no price";
+      const tip = await publicationTip(pub.first, hints, via2, held).catch(() => null);
+      if (tip) {
+        if (tip.ownersLatest && tip.ownersLatest !== out.deal?.version) {
+          const d = await readDeal(tip.ownersLatest, hints, via2, pub.id).catch(() => null);
+          if (d) out.deal = d;
+        }
+        if (tip.tags.length && !tip.tags.includes(latest.id)) {
+          const t = held.map(readTag).find((x) => x && tip.tags.includes(x.id));
+          if (t) {
+            out.tag = t;
+            out.standing = t.price ? "counts" : "withdrawn";
+          }
+        }
+      }
+      if (!out.tag?.price) out.why = "its price tag is withdrawn: a later version carries no price";
       else if (verdict !== "counts") out.why = verdict === "nobody's offer" ? "its price tag is nobody\u2019s offer under the publication (signed by someone other than its split service or designated party)" : "whether its price tag counts under the publication is unknown here: its parties\u2019 signatures were not all found";
       return out;
     }
@@ -15607,7 +15742,8 @@ var DubMoney = class {
     const offer = await vowOffer(v.name, v.signer, hints, via2, named2);
     if (!offer) throw new Error("No publication of its signer selling it was found. Nothing was signed.");
     if (!offer.tag || !offer.price || !offer.payee) throw new Error(`It cannot be bought: ${offer.why ?? "no price tag that counts was found"}. Nothing was signed.`);
-    const deal = offer.owners ? await readDeal(offer.owners, hints, via2, offer.version).catch(() => null) : null;
+    const tip = offer.owners ? await publicationTip(offer.publication, hints, via2).catch(() => null) : null;
+    const deal = offer.owners ? await readDeal(tip?.ownersLatest ?? offer.owners, hints, via2, offer.version).catch(() => null) : null;
     const said2 = deal ? [sharedLine(deal, a.names ?? short2)] : [];
     return { payee: offer.payee, amount: offer.price, fulfils: offer.tag.id, purchase: offer.owners ? [offer.owners, deal?.version ?? offer.owners] : null, said: said2, offer };
   }
@@ -15824,8 +15960,8 @@ async function membership(member, collective, hints, via2 = {}) {
 }
 
 // ../genesis/src/shown.ts
-var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-function polymod(values) {
+var CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function polymod2(values) {
   const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
   let chk = 1;
   for (const v of values) {
@@ -15852,9 +15988,9 @@ function shownForm(label, hex3) {
   if (bits > 0) five.push(acc << 5 - bits & 31);
   const hrp = [...label].map((c) => c.charCodeAt(0));
   const values = [...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...five, 0, 0, 0, 0, 0, 0];
-  const pm = polymod(values) ^ 734539939;
+  const pm = polymod2(values) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >>> 5 * (5 - i) & 31);
-  return `${label}1${[...five, ...check].map((v) => CHARSET[v]).join("")}`;
+  return `${label}1${[...five, ...check].map((v) => CHARSET2[v]).join("")}`;
 }
 var shownId = (hex3) => shownForm("mid", hex3);
 var shownAct = (hex3) => shownForm("mact", hex3);
@@ -16021,10 +16157,10 @@ function layerLines(t, names) {
     }
     const k = r.form === "threshold" ? r.threshold ?? 0 : r.form === "named" ? (r.named ?? []).length : r.form === "all" ? n : 0;
     const who2 = r.form === "all" ? "every member whose voice remains, all together," : r.form === "threshold" ? k === 1 ? "any one member alone" : `any ${k} of the ${n} members together` : r.form === "named" ? `${list4((r.named ?? []).map(names))}${k > 1 ? " together" : " alone"}` : ruleWords(r, t.parties, names);
-    const alone2 = k === 1 && r.form !== "share" && r.form !== "holders" && r.form !== "allOf";
+    const alone3 = k === 1 && r.form !== "share" && r.form !== "holders" && r.form !== "allOf";
     out.push({
-      text: `${name} (layer ${l}): ${who2} can ${LAYER_DOES[l]} for the collective. ${alone2 ? `One member alone can do that, without asking the others${l === 3 ? ": for example point its income at an address of their choosing" : ""}.` : k > 1 ? `No member can do it alone: an act counts once ${k - 1} other member${k - 1 === 1 ? "" : "s"} sign${k - 1 === 1 ? "s" : ""} it too.` : ""}`.trim(),
-      tone: alone2 ? "warn" : void 0
+      text: `${name} (layer ${l}): ${who2} can ${LAYER_DOES[l]} for the collective. ${alone3 ? `One member alone can do that, without asking the others${l === 3 ? ": for example point its income at an address of their choosing" : ""}.` : k > 1 ? `No member can do it alone: an act counts once ${k - 1} other member${k - 1 === 1 ? "" : "s"} sign${k - 1 === 1 ? "s" : ""} it too.` : ""}`.trim(),
+      tone: alone3 ? "warn" : void 0
     });
   }
   out.push({ text: "Identity is no layer it acts in: its genesis and rotations are its chain, signed by its chain key under the key grammar (Agreements rule 60)." });
@@ -16124,9 +16260,9 @@ function readAgreement(t, names, parent) {
       const reach = [...a2.kinds.map(kindWords2), ...a2.fields.map(fieldRefWords)];
       al.push({ text: `It reaches ${list4(reach) || "nothing"}.` });
       if (a2.limitsCmip) {
-        const cap2 = capOf2(a2.limits);
+        const cap3 = capOf2(a2.limits);
         al.push({
-          text: cap2 !== null ? `Above ${cap2.toLocaleString("en")} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.` : `Its holders' acts are judged under limits of cMIP ${short3(a2.limitsCmip)}, a cMIP's rule beside the core's count (Agreements rule 60); an app that does not read it shows its acts as unknown.`,
+          text: cap3 !== null ? `Above ${cap3.toLocaleString("en")} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.` : `Its holders' acts are judged under limits of cMIP ${short3(a2.limitsCmip)}, a cMIP's rule beside the core's count (Agreements rule 60); an app that does not read it shows its acts as unknown.`,
           tone: "warn"
         });
       }
@@ -16424,37 +16560,46 @@ function readRelease(m, before) {
 // ../assess/src/assess.ts
 var A = (...rules) => rules.map((rule) => ({ mir: "Agreements", rule }));
 var unique = (cites) => cites.filter((c, i) => cites.findIndex((d) => d.mir === c.mir && d.rule === c.rule) === i);
-var cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+var cap2 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 var pct3 = (n) => `${Number((n / 1e4).toFixed(4))}%`;
-var SHARED = ["The collective's keys", "The five layers: who acts for it", "Finer areas: who decides which act types", "Who decides what", "If someone disappears", "Hidden characters"];
+var SHARED = ["The five layers: who acts for it", "Finer areas: who decides which act types", "Who decides what", "If someone disappears", "Hidden characters"];
+var NONE_FOUND = "None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, money divided with no owner, partners paid before the owners with no cap, one member alone holding Money, or a stated cost one of its clauses brings.";
+function risksSection(flags, problem) {
+  return {
+    heading: "Risks",
+    lines: problem ? [{ text: `Not judged further: ${problem}`, tone: "bad" }] : flags.length ? flags.map((f) => ({ text: `${cap2(f.text)} Rests on: ${f.rests}.`, tone: "warn" })) : [{ text: NONE_FOUND, tone: "ok" }]
+  };
+}
+function kindOf(t) {
+  if (t.grammar || t.target?.[0] === "collective") return "collective";
+  if (t.target?.[0] === "claim") return "ownership";
+  return "deal";
+}
 function assess(payload, names, found) {
   const t = termsOf2(payload);
-  const collective = !!t.grammar;
+  const kind = kindOf(t);
   const problem = t.problem ? problemWords(t.problem) : null;
-  const flags = problem ? [] : flagsOf(t, payload, names);
+  const flags = problem ? [] : flagsOf(t, names);
   const shared = readAgreement(t, names);
   const sections = [
     signedSection(t, names, found),
     boundSection(t, names),
     sharesSection(t, names),
+    decideSection(t, names),
     judgesSection(t, names),
     endsSection(t, names),
-    owedSection(t, found),
+    owedSection(found),
     ...shared.sections.filter((s) => SHARED.includes(s.heading)),
-    {
-      heading: "Risks",
-      lines: problem ? [{ text: `Not judged further: ${problem}`, tone: "bad" }] : flags.length ? flags.map((f) => ({ text: `${cap(f.text)} Rests on: ${f.rests}.`, tone: "warn" })) : [{ text: "None of the risks this tool looks for: a party with no exit, an uncapped fee, a judge who is also a party, no judge of forks, a stake diluted without its holder, money divided with no owner, or a stated cost one of its clauses brings.", tone: "ok" }]
-    }
+    risksSection(flags, problem)
   ];
   const who2 = list4(t.parties.map(names));
-  const kind = collective ? "collective" : "deal";
   const summary = [
-    collective ? `${t.parent ? "A new version of a collective\u2019s agreement" : "The founding agreement of a collective"} of ${t.parties.length} members: ${who2}.` : `${t.parent ? "A new version of a deal" : "A deal"} between ${t.parties.length === 1 ? "one party" : `${t.parties.length} parties`}: ${who2}.`,
+    kind === "collective" ? `${t.parent ? "A new version of a collective\u2019s constitution" : "The constitution of a collective, its founding agreement"}, of ${t.parties.length} members: ${who2}. It is an ownership agreement with an identity of its own: its stake is a share of all the collective\u2019s income.` : kind === "ownership" ? `${t.parent ? "A new version of a work\u2019s ownership agreement" : "A work\u2019s ownership agreement"}, between ${t.parties.length === 1 ? "one owner" : `${t.parties.length} parties`}: ${who2}. It says who owns what share of the work and how the owners decide; what is sold, and how payments divide, is a publication\u2019s.` : `${t.parent ? "A new version of a deal" : "A deal"} between ${t.parties.length === 1 ? "one party" : `${t.parties.length} parties`}: ${who2}.`,
     problem ? "Agreements refuse these terms: they bind nobody as they stand." : flags.length ? `${flags.length === 1 ? "One risk" : `${flags.length} risks`} flagged, each with the rule it rests on.` : "No risk flagged."
   ];
   return {
     kind,
-    title: collective ? "A collective\u2019s agreement, assessed" : "A deal, assessed",
+    title: kind === "collective" ? "A collective\u2019s constitution, assessed" : kind === "ownership" ? "An ownership agreement, assessed" : "A deal, assessed",
     summary,
     sections,
     plain: [{ heading: "The words, as signed", text: t.text }, ...shared.plain],
@@ -16482,17 +16627,18 @@ function signedSection(t, names, found) {
         tone: "warn"
       });
     } else if (found.inForce) {
-      lines2.push({ text: `The version of this deal in force is ${found.inForce.slice(0, 8)}\u2026, as far as ${list4(found.at)} show.` });
+      lines2.push({ text: `The version of this agreement in force is ${found.inForce.slice(0, 8)}\u2026, as far as ${list4(found.at)} show. A payment under it names that version (Agreements rule 12).` });
     }
   }
   lines2.push({ text: "Each party is bound only through its own signature act (Agreements rule 1)." });
   return { heading: "Who signed", lines: lines2 };
 }
+function stakeOf(t) {
+  return (t.stakes ?? [])[0]?.[1] ?? [];
+}
 function roles(t, who2, names) {
   const out = [];
-  for (const [object, holders2] of t.stakes ?? []) {
-    for (const [h, n] of holders2) if (h === who2) out.push(`holds ${pct3(n)} of ${object == null ? "all of this collective\u2019s income" : names(object)}`);
-  }
+  for (const [h, n] of stakeOf(t)) if (h === who2) out.push(`holds ${pct3(n)} of ${t.target?.[0] === "collective" ? "all of this collective\u2019s income" : "the work"}`);
   if (t.arbitrators?.includes(who2)) out.push("is named arbitrator or verifier");
   if (t.forkJudge === who2) out.push("is the judge of the deal\u2019s forks");
   if (t.keepers?.[0].includes(who2)) out.push("operates a keeper");
@@ -16500,60 +16646,61 @@ function roles(t, who2, names) {
   for (const [, next] of t.chain ?? []) if (next.some(([hs]) => hs[0] === who2)) out.push("takes over as a judge in the chain of judgment");
   for (const a of t.areas ?? []) if (a.holders.includes(who2)) out.push(`holds the \u201C${a.name}\u201D area`);
   for (const p of t.succession ?? []) if (p.party === who2) out.push("has a succession plan in it");
-  if (t.plan?.shares.some((s) => s.kind === "receiver" && s.receiver === who2)) out.push("is a named receiver in the split plan");
   return out;
 }
 function boundSection(t, names) {
   const lines2 = [{ text: "Each party who signs is bound to the words below, as signed, and to every rule of these terms: a signature is consent to everything they define, pre-authorised changes included (Agreements rule 8)." }];
   for (const p of t.parties) {
     const r = roles(t, p, names);
-    lines2.push({ text: `${names(p)}: ${r.length ? list4(r) : "a party, with no stake or role of its own in these terms"}.` });
+    lines2.push({ text: `${names(p)}: ${r.length ? list4(r) : "a party, with no share or role of its own in these terms"}.` });
   }
-  const others = /* @__PURE__ */ new Set();
-  for (const [, holders2] of t.stakes ?? []) for (const [h] of holders2) if (h && !t.parties.includes(h)) others.add(h);
-  for (const h of others) lines2.push({ text: `${names(h)}, not a party: ${list4(roles(t, h, names))}. Bound by nothing here; protected by it (Agreements rules 45, 48).` });
+  for (const [h] of stakeOf(t)) if (h && !t.parties.includes(h)) lines2.push({ text: `${names(h)}, not a party: ${list4(roles(t, h, names))}. Bound by nothing here; protected by it (Agreements rules 45, 48).` });
   lines2.push({
-    text: t.grammar ? "A member\u2019s obligations change only as the constitution\u2019s rules allow; no share is lowered without its holder\u2019s signature (Agreements rules 45, 48)." : "No version of it changes without every party\u2019s signature (Agreements rule 47, was 45b)."
+    text: kindOf(t) === "collective" ? "A member\u2019s obligations change only as the constitution\u2019s rules allow; no share is lowered without its holder\u2019s signature (Agreements rules 45, 48)." : "No version of it changes without every party\u2019s signature (Agreements rule 47)."
   });
   return { heading: "What each party is bound to", lines: lines2 };
 }
 function sharesSection(t, names) {
   const lines2 = [];
-  const stakes = t.stakes ?? [];
-  stakes.forEach(([object, holders2], i) => {
+  const holders2 = stakeOf(t);
+  const collective = t.target?.[0] === "collective";
+  if (holders2.length) {
     lines2.push({
-      text: `Stake ${i}, in ${object == null ? "this collective itself, a share of all its income" : names(object)}: ${list4(holders2.map(([h, n]) => `${h == null ? "this collective" : names(h)} ${pct3(n)}`))}, written in millionths summing to 100% (Agreements rule 9).`
+      text: `The stake, in ${collective ? "this collective itself, a share of all its income, whoever earns it" : `the work its claim ${t.target?.[1] ? names(t.target[1]) : ""} names`}: ${list4(holders2.map(([h, n]) => `${h == null ? "this collective" : names(h)} ${pct3(n)}`))}, written in millionths summing to 100% (Agreements rule 9).`
     });
-  });
-  const p = t.plan;
-  if (p) {
-    const share2 = (s) => s.kind === "stake" ? `stake ${s.stake}, paid to its holders as currently held` : s.kind === "role" ? `the role \u201C${s.role}\u201D, paid to whoever fills it, with evidence the payer acknowledges (rule 22)` : s.kind === "receiver" ? `${names(s.receiver ?? "")}, a named receiver holding no stake` : `metric ${s.metric}`;
     lines2.push({
-      text: `Each payment in is divided by the split cMIP ${names(p.cmip)}, which computes the amounts from these parts: ${p.shares.map((s, i) => `${share2(s)}, part ${s.part}${p.top.includes(i) ? ", taken off the top first" : ""}`).join("; ")} (Agreements rules 17, 27).`
+      text: collective ? "Every payment to the collective is divided by these shares, member or departed, by the split service its split agreement names, which reads them here at each payment, never a copy (Agreements rule 15)." : "A publication naming this agreement pays these owners what is left of each payment once its partners and its plan\u2019s shares are paid off the top, read here by reference at each payment (Agreements rules 11, 12)."
     });
-    if (p.shares.some((s) => s.kind === "role")) {
-      lines2.push({
-        text: p.unfilled === "stakes" ? "A role nobody fills goes to the stakes, in proportion to their parts (F218)." : p.unfilled === "held-open" ? "A role nobody fills is held open, as an obligation." : `A role nobody fills goes to ${names(p.unfilledTo ?? "")}.`
-      });
-    }
-    const bearer = p.serviceBearsRailFees ? "The split service bears each payout\u2019s rail fee" : "Each receiver bears its payout\u2019s rail fee";
-    const m = p.maxRailFee;
-    lines2.push(
-      m ? { text: `${bearer}; no payout may lose more than ${m.form === "millionths" ? `${pct3(m.value)} of each payout` : `${m.value} of ${names(m.unit ?? "")}`} to it, and a shortfall beyond that is the service\u2019s open obligation (Agreements rule 25).` } : { text: `${bearer}; the plan states no maximum fee per payout (Agreements rule 25).`, tone: "warn" }
-    );
+  } else {
+    lines2.push({ text: "It writes no stake: it owns nothing, and divides no money." });
   }
-  for (const f of t.fees ?? []) {
-    const when = f.scope === "every" ? "every payment" : f.scope === "publication" ? `payments for ${names(f.of ?? "")}` : `payments by the rail ${names(f.of ?? "")}`;
-    lines2.push({ text: `A fee entry: ${names(f.module)} is owed part ${f.part} of ${when}, taken off the top before the stakes divide, so it falls alike on every stake; a split leaving it out owes it (Agreements rule 28, F213, F214).` });
+  lines2.push({ text: "An ownership agreement carries no split plan, no fees and no split service: those are a publication\u2019s (Agreements, \u201COwnership agreement\u201D)." });
+  return { heading: "Who owns what", lines: lines2 };
+}
+function ruleText(r, n, names) {
+  if (!r || r.form === "all") return "every party";
+  if (r.form === "threshold") return r.threshold === 1 ? "any one party alone" : `any ${r.threshold} of the ${n} parties`;
+  if (r.form === "named") return list4((r.named ?? []).map(names));
+  if (r.form === "share" || r.form === "holders") return `holders of at least ${pct3(r.share ?? 0)} of the stake, by share`;
+  return "all of several rules together";
+}
+function decideSection(t, names) {
+  const lines2 = [];
+  const n = t.parties.length;
+  if (kindOf(t) !== "collective") {
+    lines2.push({ text: "Every party signs every change, and every publication that names it (as one party, consenting by its own rule: every party, Agreements rules 11, 15, 47)." });
+  } else {
+    lines2.push({ text: `Its constitution (who the members are, the change rules, the key grammar, the layers and areas) changes with ${ruleText(t.constitutional, n, names)} (field 18, Agreements rule 62).` });
+    lines2.push({ text: "Its judicial tier (judges, keepers, the abandonment clause, succession, and its split agreement) changes only with every member whose voice remains (Agreements rule 67)." });
+    lines2.push({ text: `Operational matters outside every layer and area change with ${ruleText(t.clone, n, names)} (field 5).` });
+    const hr = t.holdersRules ?? [];
+    const own = hr.find((x) => x.stake === 0);
+    lines2.push({
+      text: own && own.rule.form !== "all" ? `The owners\u2019 matters (what the stake is paid, an issuance in it, a sale of a share it holds) are decided by ${ruleText(own.rule, n, names)}, binding only holders who accepted that rule by signing or buying (field 30, Agreements rules 94, 95).` : "The owners\u2019 matters (what the stake is paid, an issuance in it, a sale of a share it holds) need every holder (Agreements rules 94, 95)."
+    });
+    if (own?.waived) lines2.push({ text: "It waives pre-emption on the stake for good: an issuance need not first offer existing holders their proportion (Agreements rule 96).", tone: "warn" });
   }
-  if (t.payeeGrants?.length || t.splitGrant) {
-    lines2.push({ text: `Payments go to a split service, by ${t.splitGrant ? "the collective\u2019s grant" : `${t.payeeGrants.length === 1 ? "one payee\u2019s grant" : `each payee\u2019s own grant (${t.payeeGrants.length})`}`}: it publishes each split, delivered to every holder it pays, naming each fee and who received it (Agreements rules 16, 20).` });
-    if (t.backups?.services.length) lines2.push({ text: `If an attempt at the service fails, ${t.backups.services.length === 1 ? "one backup" : `${t.backups.services.length} backups`} take${t.backups.services.length === 1 ? "s" : ""} that payment, in order (Agreements rule 17, field 29).` });
-  } else if (stakes.length) {
-    lines2.push({ text: "No split service: each payer\u2019s wallet pays each holder\u2019s own pointer by the stakes (payer-side splitting, Agreements rule 16)." });
-  }
-  if (!lines2.length) lines2.push({ text: "It divides no money: no stakes, no split plan, no fees." });
-  return { heading: "Shares and fees", lines: lines2 };
+  return { heading: "How the owners decide", lines: lines2 };
 }
 function judgesSection(t, names) {
   const lines2 = [];
@@ -16569,9 +16716,9 @@ function judgesSection(t, names) {
   const c11 = cmip(11);
   if (c11) lines2.push({ text: `Anchoring is judged by ${names(c11)}${then("task 11")}.` });
   for (const a2 of t.arbitrators ?? []) lines2.push({ text: `Content is judged by ${names(a2)}, an arbitrator or verifier, who receives the keys it must judge${then(a2)}.` });
-  if (!t.grammar) {
+  if (kindOf(t) !== "collective" && t.parties.length > 1) {
     lines2.push(
-      t.forkJudge ? { text: `The judge of forks is ${names(t.forkJudge)} (field 27): if two complete versions of the deal ever stand side by side, it settles them on a party\u2019s request${then(t.forkJudge)} (Agreements rule 47).` } : { text: "No judge of forks: if two complete versions of the deal ever stand side by side, only a version every party signs settles them (Agreements rule 47).", tone: "warn" }
+      t.forkJudge ? { text: `The judge of forks is ${names(t.forkJudge)} (field 27): if two complete versions ever stand side by side, it settles them on a party\u2019s request${then(t.forkJudge)} (Agreements rule 47).` } : { text: "No judge of forks: if two complete versions ever stand side by side, only a version every party signs settles them (Agreements rule 47).", tone: "warn" }
     );
   }
   if (t.keepers) {
@@ -16592,82 +16739,43 @@ function judgesSection(t, names) {
 function endsSection(t, names) {
   const lines2 = [];
   if (t.parent) lines2.push({ text: `It is a new version of ${names(t.parent)}: once complete, it replaces it (Agreements rule 45).` });
-  if (t.grammar) {
+  if (kindOf(t) === "collective") {
     lines2.push({ text: "Any member can leave alone, at any time, by a resignation no one else signs, keeping what they own (Agreements rule 70)." });
     lines2.push({ text: "The collective ends by a fork, its members splitting into successors, or by a closing once it holds nothing and owes nothing (Agreements rule 91)." });
   } else {
-    lines2.push({ text: "A deal has no closing act. It ends, or winds down, by a new version every party signs, stating where its stakes went, what is still owed, and, where it is a party of another agreement, to whom that one now pays (Agreements rule 47, F263)." });
+    lines2.push({ text: "A deal has no closing act. It ends, or winds down, by a new version every party signs, stating where its stake went, what is still owed, and to whom it now pays (Agreements rule 47)." });
     lines2.push({ text: "A party leaves only as its terms provide." });
   }
   if (t.abandonment?.outcomes.includes(4)) lines2.push({ text: `A declaration of absence may close it (Agreements rule 89, outcome 4: ${OUTCOMES[4]}).` });
-  if ((t.stakes ?? []).length) {
+  if (stakeOf(t).length && t.target?.[0] === "claim") {
     const r = t.releaseRule;
-    lines2.push({ text: `A stake ends if released to the public domain, which ${!r || r.form === "all" ? "every holder of it signs" : r.form === "named" ? `${list4((r.named ?? []).map(names))} sign` : `holders of it holding together at least ${(r.share ?? 0) / 1e4}% sign`} (Agreements rule 55, field 24; Agreements draft 14, F308: by share, never by head).` });
+    lines2.push({ text: `The work leaves ownership if released to the public domain, which ${!r || r.form === "all" ? "every holder signs" : r.form === "named" ? `${list4((r.named ?? []).map(names))} sign` : `holders together holding at least ${pct3(r.share ?? 0)} sign`} (Agreements rule 55, field 24: by share, never by head).` });
   }
   return { heading: "How it ends", lines: lines2 };
 }
-function owedSection(t, found) {
+function owedSection(found) {
   const lines2 = [];
-  const service = !!(t.payeeGrants?.length || t.splitGrant);
-  if (found) {
-    lines2.push(...found.owed.length ? found.owed : [{ text: `Nothing owed under it, as far as ${list4(found.at)} show.` }]);
-  } else {
-    lines2.push({ text: "The relays were not asked: no payment made under it is known here." });
-    if (service) lines2.push({ text: "What its split service receives and does not split, or splits and does not pay out, is that service\u2019s open obligation, naming one receiver and this agreement (Agreements rule 30)." });
-  }
-  if (t.refund?.until != null) lines2.push({ text: `A refund owed on a payment under it is claimable until ${t.refund.until} on its time reference; past that point it is ended (field 17, F219).` });
-  else if (service || (t.stakes ?? []).length) lines2.push({ text: "No refund terms: a refund owed stays open until claimed (Agreements rule 11; the core sets no lapse, F80)." });
-  lines2.push({ text: "A party who has not signed owes nothing under it: its obligations are shown as unsigned, never as open (Agreements rule 1, F74)." });
+  if (found) lines2.push(...found.owed.length ? found.owed : [{ text: `Nothing owed under it, as far as ${list4(found.at)} show.` }]);
+  else lines2.push({ text: "The relays were not asked: no payment made under it is known here." });
+  lines2.push({ text: "A party who has not signed owes nothing under it: its obligations are shown as unsigned, never as open (Agreements rule 1)." });
   return { heading: "What is still owed", lines: lines2 };
-}
-function mustSign(t, p) {
-  const rule = (r, among) => {
-    if (!r || r.form === "all") return among;
-    if (r.form === "named") return r.named ?? [];
-    return (r.threshold ?? 0) >= among.length ? among : [];
-  };
-  switch (p.form) {
-    case "clone":
-      return rule(t.clone, t.parties);
-    case "constitutional":
-      return rule(t.constitutional, t.parties);
-    case "judicial":
-      return t.parties;
-    case "area": {
-      const a = t.areas.find((x) => x.id === p.area);
-      return a && a.threshold >= a.holders.length ? a.holders : [];
-    }
-    default:
-      return [];
-  }
-}
-function signersFor(payload, t, field) {
-  const m = new Map(cborDecode(payload));
-  const mark = (x) => unhex(sha2562(`deal assessment: a version changing field ${field}, ${x}`));
-  m.set(11, mark("its parent"));
-  m.set(4, [[[1], [...t.parties].sort().map(unhex)]]);
-  if (field === 8) {
-    const plan = m.get(8);
-    if (plan instanceof Map) m.set(8, new Map([...plan, [7, "a changed parameter"]]));
-    else m.set(8, /* @__PURE__ */ new Map([[0, [[0, 0, 1]]], [1, mark("a split cMIP")]]));
-  } else {
-    m.set(28, [[mark("a fee Module"), 1]]);
-  }
-  try {
-    const plan = agreementsClonePlan(payload, cborEncode(m), AGREEMENTS_SPECS);
-    return /* @__PURE__ */ new Set([...plan.needs.flatMap((p) => mustSign(t, p)), ...plan.paySigners]);
-  } catch {
-    return null;
-  }
 }
 function holders(t) {
   const out = [];
-  for (const [, hs] of t.stakes ?? []) for (const [h] of hs) if (h && !out.includes(h)) out.push(h);
+  for (const [h] of stakeOf(t)) if (h && !out.includes(h)) out.push(h);
   return out;
 }
-function flagsOf(t, payload, names) {
+function alone(r, n) {
+  if (!r) return n;
+  if (r.form === "all") return n;
+  if (r.form === "threshold") return r.threshold ?? n;
+  if (r.form === "named") return (r.named ?? []).length;
+  return 0;
+}
+function flagsOf(t, names) {
   const out = [];
-  const deal = !t.grammar;
+  const kind = kindOf(t);
+  const deal = kind !== "collective";
   const who2 = (xs) => list4(xs.map(names));
   const owners = holders(t);
   const a = t.abandonment;
@@ -16678,32 +16786,11 @@ function flagsOf(t, payload, names) {
         code: "no-exit",
         family: "listed",
         who: stuck,
-        text: `${who2(stuck)} cannot be declared absent: if ${stuck.length === 1 ? "that party goes" : "any of them goes"} silent, nobody can change or end the deal, and no party can leave it.`,
-        rests: "Agreements rule 47 (was 45b), stated cost: \u201Cone silent party blocks every change to a deal, however large\u201D; the way out is an abandonment clause removing an absent party\u2019s voice (rule 89, outcome 0)",
+        text: `${who2(stuck)} cannot be declared absent: if ${stuck.length === 1 ? "that party goes" : "any of them goes"} silent, nobody can change or end it, sign a publication for it, or leave it.`,
+        rests: "Agreements rule 47, stated cost: one silent party blocks every change to a deal, however large; the way out is an abandonment clause removing an absent party\u2019s voice (rule 89, outcome 0)",
         cites: A(47, 89)
       });
     }
-  }
-  {
-    const why = [];
-    const rests = [];
-    const cites = [];
-    let bearers = [];
-    if (t.plan && !t.plan.maxRailFee) {
-      why.push("the split plan states no maximum fee per payout, so a payout may lose any rail fee and nothing beyond a maximum becomes the service\u2019s obligation");
-      rests.push("Agreements rule 25 (was 24a): the split plan \u201Cmay state a maximum fee per payout\u201D; \u201Cwhere it states none, there is no cap\u201D, and a client must flag the absence before signing (F271); Money rule 21");
-      cites.push(...A(25), { mir: "Money", rule: 21 });
-    }
-    if (owners.length) {
-      const need = signersFor(payload, t, 28);
-      bearers = need ? owners.filter((h) => !need.has(h)) : [];
-      if (bearers.length) {
-        why.push(`fees can be added or raised without ${who2(bearers)}, who bear${bearers.length === 1 ? "s" : ""} them with every stake`);
-        rests.push("Agreements rule 28 (was 27): fees come off the top of every stake, and their bearers consent by the power the fees field falls under, not each by their own signature, save a holder with no voice in it, who signs a version paying its stake less (rule 48, F270)");
-        cites.push(...A(28, 48));
-      }
-    }
-    if (why.length) out.push({ code: "uncapped-fee", family: "listed", who: bearers.length ? bearers : void 0, text: `Uncapped fee: ${why.join("; and ")}.`, rests: rests.join("; "), cites });
   }
   {
     const judges = /* @__PURE__ */ new Map();
@@ -16723,7 +16810,7 @@ function flagsOf(t, payload, names) {
         family: "listed",
         who: ids,
         text: `A judge who is also a party: ${list4(ids.map((h) => `${names(h)} judges as ${list4([...new Set(judges.get(h))])}`))}, in a question where they have a stake of their own.`,
-        rests: "Agreements rule 35 (was 34a), the chain of judgment, which every party signs; Agreements bar it for specifications only (\u201Ca judge never handles what it judges\u201D, Q20), and let a party be the absence authority (rule 85)",
+        rests: "Agreements rule 35, the chain of judgment, which every party signs; Agreements bar it for specifications only (a judge never handles what it judges), and let a party be the absence authority (rule 85)",
         cites: A(35, 85)
       });
     }
@@ -16732,8 +16819,8 @@ function flagsOf(t, payload, names) {
     out.push({
       code: "no-fork-judge",
       family: "listed",
-      text: "No judge of forks: if two complete versions of the deal ever stand side by side, the deal stays on its reference until every party signs one settling version, and any party can keep it there.",
-      rests: "Agreements rule 47 (was 45b), field 27: \u201CWith no judge of forks named, the deal stays on its reference\u201D; stated cost: \u201Ca party of either branch can refuse every settlement and keep the deal on its reference\u201D",
+      text: "No judge of forks: if two complete versions ever stand side by side, it stays on its reference until every party signs one settling version, and any party can keep it there.",
+      rests: "Agreements rule 47, field 27: with no judge of forks named, the deal stays on its reference; stated cost: a party of either branch can refuse every settlement and keep the deal on its reference",
       cites: A(47)
     });
   }
@@ -16742,75 +16829,80 @@ function flagsOf(t, payload, names) {
     const why = [];
     const rests = [];
     const cites = [];
-    const lose = (a?.outcomes ?? []).filter((o) => o === 1 || o === 2);
-    if (a && lose.length) {
+    if (a && a.outcomes.includes(1)) {
       const heir = (h) => (t.succession ?? []).some((s) => s.party === h && (s.stakes ?? []).length > 0);
       const declarable = (h) => (t.parties.includes(h) || (t.departed ?? []).includes(h)) && !(a.authority === "named" && h === a.identity);
       const declared = owners.filter((h) => declarable(h) && !heir(h));
       if (declared.length) {
         for (const h of declared) hit.add(h);
-        why.push(`${who2(declared)}, naming no stake successor, may be declared absent and have ${declared.length === 1 ? "that stake" : "those stakes"} ${list4(lose.map((o) => o === 1 ? "shared among the remaining holders" : "transferred to parties named or defined by role"))}, without signing; naming a successor sends the stake to the successor instead`);
-        rests.push("Agreements rule 89 (was 53), new in draft 12 (F279): outcomes 1 and 2 apply to a stake \u201Conly where the holder\u2019s succession plan names no stake successor\u201D; rule 48");
+        why.push(`${who2(declared)}, naming no stake successor, may be declared absent and have ${declared.length === 1 ? "that share" : "those shares"} shared among the remaining holders, without signing; naming a successor sends it to the successor instead`);
+        rests.push("Agreements rule 89: outcome 1 applies to a stake only where the holder\u2019s succession plan names no stake successor; rule 48");
         cites.push(...A(48, 89));
       }
     }
     const r = t.releaseRule;
     if (r && r.form !== "all") {
-      const need2 = new Set(r.form === "named" ? r.named ?? [] : []);
-      const left2 = owners.filter((h) => !need2.has(h));
-      if (left2.length) {
-        for (const h of left2) hit.add(h);
-        why.push(`a stake can be released to the public domain, ending what it earns, without ${who2(left2)}`);
-        rests.push("Agreements rule 55 (was 17), field 24: the release rule says which holders sign a release");
+      const need = new Set(r.form === "named" ? r.named ?? [] : []);
+      const left = owners.filter((h) => !need.has(h));
+      if (left.length) {
+        for (const h of left) hit.add(h);
+        why.push(`the work can be released to the public domain, ending what it earns, without ${who2(left)}`);
+        rests.push("Agreements rule 55, field 24: the release rule says which holders sign a release");
         cites.push(...A(55));
       }
     }
-    const need = signersFor(payload, t, 8);
-    const left = need ? owners.filter((h) => !need.has(h)) : [];
-    if (left.length) {
-      for (const h of left) hit.add(h);
-      why.push(`the split plan, which sets what each stake is paid, can be changed without ${who2(left)}`);
-      rests.push("Agreements rules 45 and 48: the split plan (field 8) falls under its own power (rules 62 to 65; every party in a deal, rule 47); a version paying a stake less needs the signature of a holder with no voice in that power (a deal\u2019s holder who is no party, a collective\u2019s departed holder: rule 48, F270, F274), not of a member, whom the collective\u2019s own rules bind");
-      cites.push(...A(45, 48, 62, 63, 64, 65, 47));
+    const hr = t.holdersRules ?? [];
+    const own = hr.find((x) => x.stake === 0);
+    if (own && own.rule.form !== "all") {
+      for (const h of owners) hit.add(h);
+      why.push(`owners holding together ${pct3(own.rule.share ?? 0)} of the stake decide what it is paid and whether new shares are issued in it, without the others, once they have accepted that rule by signing or buying`);
+      rests.push("Agreements rules 94 and 95: the holders\u2019 rule decides the owners\u2019 matters, binding only holders who accepted it");
+      cites.push(...A(94, 95));
+    }
+    if (own?.waived) {
+      for (const h of owners) hit.add(h);
+      why.push("pre-emption is waived for good, so an issuance need not first offer each holder their proportion");
+      rests.push("Agreements rule 96: an issuance is pre-emptive, waived only by every holder, here in advance (field 30)");
+      cites.push(...A(96));
     }
     if (why.length) out.push({ code: "dilutable-stake", family: "listed", who: owners.filter((h) => hit.has(h)), text: `A stake can be diluted without its holder: ${why.join("; and ")}.`, rests: rests.join("; "), cites: unique(cites) });
   }
-  if (!(t.stakes ?? []).length && (t.plan || (t.fees ?? []).length)) {
-    out.push({
-      code: "no-owner",
-      family: "listed",
-      text: "No owner: it divides money but writes no stake, so every share is overhead, taken off the top, and nothing is left for an owner. Nobody is paid as an owner is, protected against a fee raised or a share added without their signature. A deal made on a vow writes a stake in the vow, held by whoever signed it, and what is left after the overhead is theirs.",
-      rests: "Agreements rule 14, new in draft 13 (F284): \u201Ca deal made on a vow has an owner: the vow\u2019s signer, who holds the stake\u201D; rule 22 (F280): every share paying anyone but a stake is paid off the top, what is left going to the stakes alone; rule 48 (F270): a stake is not paid less without its holder",
-      cites: A(14, 22, 48)
-    });
+  if (kind === "collective" && t.parties.length > 1) {
+    const n = t.parties.length;
+    const money2 = (t.layers ?? []).find(([l]) => l === 3)?.[1];
+    const k = alone(money2, n);
+    const why = [];
+    let ids = [];
+    if (k === 1) {
+      ids = money2?.form === "named" ? money2.named ?? [] : t.parties;
+      why.push(`${money2?.form === "named" ? who2(ids) : "any one member"} can act alone in Money for the collective: set where its income goes, sign its receipts and price tags, and take on debts in its name`);
+    }
+    for (const ar of t.areas ?? []) {
+      const inMoney = ar.kinds.some((x) => x.layer === 3 || x.form === "type" && x.spec === MIRS.money);
+      if (inMoney && ar.threshold === 1 && !ar.limitsCmip) {
+        ids = [.../* @__PURE__ */ new Set([...ids, ...ar.holders])];
+        why.push(`the area \u201C${ar.name}\u201D, in Money, lets ${ar.holders.length === 1 ? names(ar.holders[0]) : `any one of ${who2(ar.holders)}`} act alone there, with no cap`);
+      }
+    }
+    if (why.length) {
+      out.push({
+        code: "money-alone",
+        family: "listed",
+        who: ids,
+        text: `One member alone holds Money: ${why.join("; and ")}. The others learn of it from the act, sealed to them, never by being asked first.`,
+        rests: "Agreements rule 60, the layers: who acts for the collective in Money is the founders\u2019 choice, shown before signing (client conformance); rule 57: an act for it is done once sealed to every member",
+        cites: A(60, 57)
+      });
+    }
   }
   if (a && !a.proof) {
     out.push({
       code: "absence-on-word",
       family: "stated cost",
       text: `Absence is on ${a.authority === "named" ? `${names(a.identity ?? "")}\u2019s` : "the other members\u2019"} word alone: no absence-proof cMIP checks it, and a party declared absent wrongly can only contest it, in public.`,
-      rests: "Agreements rule 87 (was 51), stated cost: a declaration is the authority\u2019s judgment, \u201Ca stated cost the party accepted\u201D; rule 85 (was 49), client conformance (F178)",
+      rests: "Agreements rule 87, stated cost: a declaration is the authority\u2019s judgment, a stated cost the party accepted; rule 85, client conformance",
       cites: A(87, 85)
     });
-  }
-  if (owners.length) {
-    if (t.payeeGrants?.length || t.splitGrant) {
-      out.push({
-        code: "split-service-window",
-        family: "stated cost",
-        text: "A split service holds the money between receiving and paying out: after a stake is sold, a seller and the service acting together can keep paying the seller until the first split citing the sale.",
-        rests: "Agreements rule 10 (was 14), stated cost (the window after a transfer); rule 32 (was 31), the trust that remains",
-        cites: A(10, 32)
-      });
-    } else {
-      out.push({
-        code: "payer-side-split",
-        family: "stated cost",
-        text: "No split service: each payer divides its own payment, so a payer can pay some holders and not others, every holder\u2019s pointer is visible to payers, and the payer decides who gets a leftover unit.",
-        rests: "Agreements rule 16 (was 18), stated cost (payer-side splitting); rule 9, stated cost (the payer decides tied units)",
-        cites: A(16, 9)
-      });
-    }
   }
   return out;
 }
@@ -17369,7 +17461,7 @@ var SUITE_RULES = {
   naming: { key: "naming", name: "Naming", kind: "cMIP", hashes: [NAMING_SPEC], does: "Display names: the name an identity publishes for itself, shown beside its ID.", text: "cmips/cmip-naming-draft-1.md" },
   corrections: { key: "corrections", name: "Corrections", kind: "cMIP", hashes: [CORRECTIONS_SPEC], does: "A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.", text: "cmips/cmip-corrections-draft-2.md" },
   appended: { key: "appended", name: "Appended collective", kind: "cMIP", hashes: [APPENDED_FORMAT], does: "A collective\u2019s posts whose members append, each signed by its member.", text: "cmips/cmip-appended-collective-draft-1.md" },
-  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired: there are no member keys now. A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-1.md" },
+  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired (Nobody, allegedly, 30 October 2026: not needed any more, members use their own private key). A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-2.md" },
   "agent-memory": { key: "agent-memory", name: "Agent memory", kind: "cMIP", hashes: [MEMORY_SPEC], does: "What an agent keeps between its sessions, sealed to its owner.", text: "cmips/cmip-agent-memory-draft-2.md" },
   notes: { key: "notes", name: "Notes", kind: "cMIP", hashes: [NOTES_FORMAT], does: "Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.", text: "cmips/cmip-notes-draft-1.md" },
   "long-form": { key: "long-form", name: "Long form", kind: "cMIP", hashes: [LONGFORM_SPECS.longform], does: "Long documents with headings: drafts of MIPs, and their replies.", text: "cmips/cmip-long-form-draft-1.md" },
@@ -17755,7 +17847,7 @@ var Dub = class _Dub {
       let seed;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -17825,7 +17917,7 @@ var Dub = class _Dub {
       if (!active) throw new Error("No identity in use.");
       let seed;
       try {
-        seed = fromWords(words2);
+        seed = fromCarried(words2);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -17983,7 +18075,7 @@ var Dub = class _Dub {
   async carry() {
     const { me } = await this.ctx();
     if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY2);
-    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), say: CARRY_SAY };
+    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), key: groupKeyString(toKeyString(unhex(me.f.signingSecret))), say: CARRY_SAY };
   }
   // ------------------------------------------------------------ the key in use
   /**
@@ -21453,7 +21545,7 @@ function attachRules(root, o) {
 // ../kit/src/ids.ts
 function idForm2(hex3, label = "mid") {
   if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
-  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET3 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -21467,7 +21559,7 @@ function idForm2(hex3, label = "mid") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod2 = (v) => {
+  const polymod3 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -21478,9 +21570,9 @@ function idForm2(hex3, label = "mid") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod3([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET3[d]).join("")}`;
 }
 function who(o) {
   const form2 = o.form ?? idForm2(o.id, "mid");
@@ -21946,7 +22038,7 @@ function vowBox(p) {
 }
 function actFormOf(hex3, label = "mact") {
   if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
-  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET3 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -21960,7 +22052,7 @@ function actFormOf(hex3, label = "mact") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod2 = (v) => {
+  const polymod3 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -21971,9 +22063,9 @@ function actFormOf(hex3, label = "mact") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod3([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET3[d]).join("")}`;
 }
 function sizeWords(n) {
   return n >= 1 << 20 ? `${(n / (1 << 20)).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} kB` : `${n} bytes`;
@@ -22020,7 +22112,7 @@ function bringForm(web) {
   return `<form id="bring" class="k-box"><h4>Bring an identity you have</h4>
 ${say2("Its ID and its signing key\u2019s words; Dub checks they give its current key.", ["Never type the chain key\u2019s words here: they belong to Ki\u0161ib, the app where a change of keys is done, and to paper.", ...web ? [KEPT_SAY] : []])}
 <label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
-<label>Its signing key\u2019s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words in order, or its string (morsk1\u2026), as you wrote it down</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? "" : via}
@@ -22039,7 +22131,7 @@ function typeBack(positions) {
 <form id="confirm"><div class="k-row">${positions.map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
 <div class="k-row"><button type="submit" class="k-btn k-p">Go on</button><button type="button" class="k-btn k-q" data-action="abandon">Start again with a new identity</button></div></form></section></div>`;
 }
-function alone(html) {
+function alone2(html) {
   return `${top({ left: appMark(NAME2, "icon.png"), right: "" })}<div class="k-body"><section class="dub-first">${html}</section></div>`;
 }
 var LAYERS2 = [
@@ -22202,7 +22294,7 @@ function collectiveForm(s) {
   const cs = s.identity.collectives;
   return `${cs.length ? `<ul class="k-small">${cs.map((c) => `<li>${e(c.name ?? shortForm(c.form))} \xB7 ${c.available ? "usable" : e(c.why ?? "not usable")} <button type="button" class="k-btn k-q" data-action="collective-remove" data-id="${e(c.id)}">Remove</button></li>`).join("")}</ul>` : ""}
 <form id="collective" class="dub-modal-form"><label>A collective this identity is a member of: its ID</label><input name="id" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Add it under this identity</button></div></form>
-${say2("Acting as a collective is the same gesture as switching.", ["It is listed under this identity in the identity panel: choose it to post as it, with your own member key (made when you signed its founding). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba."])}`;
+${say2("Acting as a collective is the same gesture as switching.", ["It is listed under this identity in the identity panel: choose it to post for it, with your own key, naming it (a collective has no key of its own, and there are no member keys). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba."])}`;
 }
 function appFoot(s, web) {
   return `${web ? "" : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
@@ -22222,7 +22314,7 @@ ${say2(i.list === "published" ? "Published: anyone reads the IDs; your names for
   ])}`;
 }
 function renewForm() {
-  return `<form id="renew"><label>The new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+  return `<form id="renew"><label>The new signing key: its 24 words, or its string (morsk1\u2026)</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 function runnerForm(r) {
   const intro = '<p class="k-small k-soft">Ki\u0161ib\u2019s runner keeps the identity\u2019s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Ki\u0161ib, in its own panel inside this window, before Ki\u0161ib signs it (unless you give Dub a standing yes for that kind, in Ki\u0161ib). Money, agreements, relying on another\u2019s act, and keys always ask. Where you let Dub, in Ki\u0161ib, Ki\u0161ib also opens what is sealed to the identity, so that Dub reads its private messages.</p>';
@@ -23081,7 +23173,7 @@ function mount(app2, b) {
         closePanel();
         if (runnerKind) return void popup2.show("The signing key\u2019s words", runnerWords());
         const r = await busy("Reading the identity\u2026", () => b.ask("carry"));
-        if (r) popup2.show("The signing key\u2019s words", carry(r));
+        if (r) popup2.show("The signing key\u2019s words", carry(r) + keyStringHtml(r.key));
         return;
       }
       case "line":
@@ -23578,7 +23670,7 @@ function mount(app2, b) {
         return;
       }
       case "collective": {
-        const r = await busy("Reading the collective and your member key\u2026", () => b.ask("collective add", { id: text3(d.get("id")) }));
+        const r = await busy("Reading the collective and your place in it\u2026", () => b.ask("collective add", { id: text3(d.get("id")) }));
         if (r) await refresh(), say3("done", lines(r.lines));
         return;
       }
@@ -23873,13 +23965,13 @@ var suggested = {};
 var ui = mount(app, { web: true, ask: ask2, start, suggested: () => suggested });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app.innerHTML = `${alone(note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it."))}`;
+    app.innerHTML = `${alone2(note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it."))}`;
     return;
   }
   try {
     keep ??= await WebKeep.open();
   } catch (err) {
-    app.innerHTML = `${alone(note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}). A private window may not.`))}`;
+    app.innerHTML = `${alone2(note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}). A private window may not.`))}`;
     return;
   }
   if (!dub) {
@@ -23891,7 +23983,7 @@ async function start() {
   try {
     state = await dub.state();
   } catch (err) {
-    app.innerHTML = `${alone(note("error", e(err instanceof Error ? err.message : String(err))))}`;
+    app.innerHTML = `${alone2(note("error", e(err instanceof Error ? err.message : String(err))))}`;
     return;
   }
   await ui.show(state);

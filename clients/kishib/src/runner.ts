@@ -35,6 +35,7 @@ import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
 import { actForm, idForm, idWhere, readId } from '../../genesis/src/forms.ts';
 import type { Opener } from '../../kit/src/engine/people.ts';
 import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
+import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
 import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
@@ -529,7 +530,7 @@ export class Runner {
     const id = readId(a.id);
     let seed: Uint8Array;
     try {
-      seed = fromWords(a.words);
+      seed = fromCarried(a.words);
     } catch (e) {
       if (e instanceof WordsRefused) throw new Error(`${e.message}. Nothing was kept.`);
       throw e;
@@ -554,7 +555,7 @@ export class Runner {
       // no name read: its short ID is shown
     }
     const was = f.held.find((h) => h.id === id);
-    const held: HeldId = { id, secret: hex(fromWords(a.words)), binding, homes: r.homes, name, given: Math.floor(this.now() / 1000) };
+    const held: HeldId = { id, secret: hex(fromCarried(a.words)), binding, homes: r.homes, name, given: Math.floor(this.now() / 1000) };
     if (was) {
       // New words after a change of keys: the lines signed under the old binding are not continued (the carry Module, 4.3).
       if (was.binding !== binding) f.lines = f.lines.filter((l) => l.identity !== id);

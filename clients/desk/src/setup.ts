@@ -29,6 +29,7 @@ import { lineWords, whatIs } from '../../genesis/src/lines.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { Refused, fromWords } from '../../../modules/carry/src/carry.ts';
+import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { shownAct } from '../../genesis/src/shown.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
@@ -273,7 +274,7 @@ export class Setup {
       let seed: Uint8Array;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e) {
         if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
         throw e;
