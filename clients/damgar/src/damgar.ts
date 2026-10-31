@@ -98,7 +98,7 @@ import { idForm, idWhere, readActId, readId } from '../../genesis/src/forms.ts';
 import { Known } from '../../kit/src/engine/known.ts';
 import type { Named, NameShown } from '../../kit/src/html.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
-import { offers as anchorOffers } from '../../ummia/src/anchor.ts';
+import { offers as anchorOffers, tagFor } from '../../ummia/src/anchor.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
 import type { ChainSource } from './chain.ts';
@@ -1924,15 +1924,18 @@ export class Damgar {
   private async checkTicket(me: TestIdentity, s: Settings, book: Book, p: Payment, ticket: string): Promise<string | null> {
     const { acts } = await this.payee(p.other, me, s);
     const t = acts.get(ticket);
-    const o = acts.get(p.fulfils);
-    if (!t || !o || t.signer !== p.other) return 'the ticket or the offer was not found at the service’s places';
-    const tk = anchoringReadTicket(t.payload!) as { batch: number; deadline: number; tier: number; leaf: string } | null;
+    const tag = acts.get(p.fulfils);
+    if (!t || !tag || t.signer !== p.other) return 'the ticket or the price tag paid was not found at the service’s places';
+    const tk = anchoringReadTicket(t.payload!) as { offer: string; batch: number; deadline: number; tier: number; leaf: string } | null;
     if (!tk) return 'not a ticket';
+    // The publication the ticket names, and the tag this payment fulfils (anchoring draft 7: the tier's own).
+    const o = acts.get(tk.offer);
+    if (!o) return 'the service’s publication the ticket names was not found at its places';
     const ir = readInvoiceRequest(this.opened(book, p.invoiceRequest).payload);
     if (!ir.ticket) return 'no anchor was asked';
     const chain = this.opts.chain ? await this.opts.chain.headers().catch(() => null) : null;
     const nowPoint = chain ? chain.start + chain.headers.length - 1 : null;
-    const why = anchoringCheckTicket(o.bytes, t.payload!, b64(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1))) as string | undefined;
+    const why = anchoringCheckTicket(o.bytes, tag.bytes, t.payload!, b64(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1))) as string | undefined;
     if (why) return why;
     book.acts[ticket] = { act: base64(t.bytes), from: p.other };
     p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier, checked: nowPoint !== null };
@@ -2122,7 +2125,7 @@ export class Damgar {
           lines.push({ text: message(e), tone: 'warn' });
         }
       }
-      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
+      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s publication ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}, paying that tier’s price tag ${short(dr.anchor.tag)}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
     }
     return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: dr.what === 'ask' ? 'A request to send' : dr.what === 'anchor' ? 'A payment for an anchor' : 'A payment to make', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
   }
@@ -2271,7 +2274,8 @@ export class Damgar {
     if (!tier) throw new Error('The offer has no such tier. Nothing was signed.');
     const blind = new Uint8Array(randomBytes(32));
     const leaf = anchoringLeaf(id, blind) as string;
-    const d: Draft = { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: 'Damgar', anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const tag = tagFor(offer, a.tier);
+    const d: Draft = { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: 'Damgar', anchor: { offer: offer.act, tier: a.tier, leaf, tag } };
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
@@ -2313,7 +2317,8 @@ export class Damgar {
       const p = await this.bind(me, s, book, {
         payee: dr.other,
         amount: dr.amount,
-        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : await this.followsOf(me, s, book, id, dr),
+        // An anchor's payment fulfils its tier's own price tag (anchoring draft 7, Money rule 18), never the publication: that would be a tip, buying no ticket.
+        fulfils: dr.what === 'anchor' ? dr.anchor!.tag : await this.followsOf(me, s, book, id, dr),
         whatFor: dr.whatFor,
         answers: null,
         draft: id,

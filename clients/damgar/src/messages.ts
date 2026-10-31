@@ -52,7 +52,8 @@ export interface Draft {
   whatFor: string | null;
   /** The app that prepared it, as it names itself. */
   app: string;
-  anchor: { offer: string; tier: number; leaf: string } | null;
+  /** For an anchor: the service's publication (`offer`), the tier, the leaf, and the tier's own price tag (`tag`, anchoring draft 7: the payment fulfils it). */
+  anchor: { offer: string; tier: number; leaf: string; tag: string } | null;
   /** Confirm a purchase (draft 4, F357): the identity's own public claim of the payment, and the acts to acknowledge (a vow). */
   confirm?: { claim: string; acks: string[] } | null;
 }
@@ -66,8 +67,8 @@ export function draftPayload(d: Draft): Uint8Array {
   if (d.whatFor) m.set(3, text(d.whatFor, 'what for'));
   m.set(4, text(d.app, 'the app'));
   if (d.what === 'anchor') {
-    if (!d.anchor) throw new Error('A draft paying for an anchor names the offer, the tier and the leaf.');
-    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+    if (!d.anchor) throw new Error('A draft paying for an anchor names the offer, the tier, the leaf and the tier’s price tag.');
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf), unhex(d.anchor.tag)]);
   }
   if (d.what === 'confirm') {
     if (!d.confirm?.acks.length) throw new Error('A draft confirming a purchase names the claim and what it acknowledges.');
@@ -85,8 +86,8 @@ export function readDraft(payload: Uint8Array): Draft {
   let anchor: Draft['anchor'] = null;
   if (what === 'anchor') {
     const a = m.get(5);
-    if (!Array.isArray(a) || a.length !== 3 || typeof a[1] !== 'number') throw new Error('a draft for an anchor: its anchor');
-    anchor = { offer: h32(a[0], 'the offer'), tier: a[1], leaf: h32(a[2], 'the leaf') };
+    if (!Array.isArray(a) || a.length !== 4 || typeof a[1] !== 'number') throw new Error('a draft for an anchor: its anchor (the publication, the tier, the leaf and the tier’s price tag)');
+    anchor = { offer: h32(a[0], 'the offer'), tier: a[1], leaf: h32(a[2], 'the leaf'), tag: h32(a[3], 'the price tag') };
   } else if (m.has(5)) throw new Error('a draft: an anchor on a draft that pays for none');
   let confirm: Draft['confirm'] = null;
   if (m.get(0) === 3) {

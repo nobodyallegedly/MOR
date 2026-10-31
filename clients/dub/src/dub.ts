@@ -46,7 +46,7 @@ import { standingWords } from '../../reader/src/read.ts';
 import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, newestFirst, timeWords } from '../../barebone/src/clock.ts';
 import { APPENDED_FORMAT, appendedOf, appendedRef, membership } from './appended.ts';
 import { draftPayload, type Draft } from '../../damgar/src/messages.ts';
-import { offers as anchorOffers, type Offer } from '../../ummia/src/anchor.ts';
+import { offers as anchorOffers, tagFor, type Offer } from '../../ummia/src/anchor.ts';
 import { shownAct, shownId } from '../../genesis/src/shown.ts';
 import { newChainKey } from './chainwords.ts';
 import { readMessage, acceptanceText, negotiate, openShare, DECLINED, RESIGNED } from '../../repo/src/proposals.ts';
@@ -2298,7 +2298,7 @@ export class Dub {
       await this.current(me);
       const blind = new Uint8Array(randomBytes(32));
       const leaf = anchoringLeaf(id, blind) as string;
-      const r = await sendDraft(me, { what: 'anchor', other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: 'Dub', anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await sendDraft(me, { what: 'anchor', other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: 'Dub', anchor: { offer: offer.act, tier: a.tier, leaf, tag: tagFor(offer, a.tier) } }, { via: s.via, save: () => this.store.saveIdentity(me) });
       const kept = (await this.store.money<Record<string, unknown>[]>(me.id, 'anchors')) ?? [];
       kept.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now() });
       await this.store.saveMoney(me.id, 'anchors', kept);
