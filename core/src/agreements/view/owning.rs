@@ -19,7 +19,8 @@ pub struct WorkOwners {
     /// their holders are the owners as recorded (rules 15b, N12).
     pub agreements: Vec<Hash>,
     /// Where no agreement writes shares in the work and one claim binds
-    /// it: the creator who opened that claim, the default holder (F218).
+    /// it: the creator who opened that claim, the default holder (F218): a
+    /// collective, for a claim a member signed for it (rule 58, F412).
     pub default_holder: Option<Hash>,
 }
 
@@ -75,7 +76,14 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             let reaches = h.act.outside.content_key.is_some() || c.creators.iter().all(|x| h.act.outside.to.iter().flatten().any(|q| q == x));
-            let opener = h.act.outside.signer.unwrap_or_default();
+            // Its opener, read as rule 58 reads every act: the collective a
+            // member's act names, else its signer. A claim for a collective
+            // counts only where the member may act for it there (rule 60);
+            // one whose opener is not among its creators counts for nothing.
+            let Some(opener) = self.claim_opener(h)? else { continue };
+            if !c.creators.contains(&opener) {
+                continue;
+            }
             let others: Vec<Hash> = c.creators.iter().filter(|x| **x != opener).copied().collect();
             if reaches && self.signers(&h.id, &others).len() == others.len() {
                 claims.push(h.id);
@@ -100,7 +108,7 @@ impl<'a> AgreementsView<'a> {
         }
         agreements.sort();
         let default_holder = match (agreements.is_empty(), claims.as_slice()) {
-            (true, [one]) => self.v.get(one).and_then(|h| h.act.outside.signer),
+            (true, [one]) => self.v.get(one).and_then(|h| self.claim_opener(h).ok().flatten()),
             _ => None,
         };
         Ok(WorkOwners { work: *work, contested: claims.len() > 1, claims, agreements, default_holder })
@@ -108,6 +116,21 @@ impl<'a> AgreementsView<'a> {
 }
 
 impl<'a> AgreementsView<'a> {
+    /// Who opened a claim (rule 15; "Claim (type 3)"), read as rule 58
+    /// reads every act: for a claim a member signs naming a collective, the
+    /// collective, where the member's act counts for it (rule 60; F412);
+    /// `None` where it names a collective and does not count for it, which
+    /// is nobody's claim; else its signer.
+    pub(super) fn claim_opener(&self, h: &Held) -> R<Option<Hash>> {
+        if self.named_collective(h).is_some() {
+            return Ok(match self.consent(&h.id)? {
+                c if c.counts() => self.author(h),
+                _ => None,
+            });
+        }
+        Ok(h.act.outside.signer)
+    }
+
     /// The work a claim binds (its field 0), where `claim` is a held claim.
     pub(super) fn claim_work(&self, claim: &Hash) -> Option<Hash> {
         let h = self.v.get(claim)?;

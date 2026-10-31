@@ -1523,7 +1523,7 @@ On neither chain are:
 - the decision it acts under: a record of the collective, a link of its identity chain, or, for a grantee, its grant (rule 73); and
 - each other act on the collective's chain it knows that no act it cites already reaches, so that the next act joins the heads where several members signed at once.
 
-These entries come after those the act's type defines, all on that one chain. Agreements' formats allow them there: signature, release, resignation, declaration, terms, publication. **A signer's own `prev` is never followed for the collective**: a member's sequences are theirs, not the collective's. *Client conformance:* a member's client cites, among the heads, its own last act for the collective.
+These entries come after those the act's type defines, all on that one chain. Agreements' formats allow them there: signature, release, resignation, declaration, terms, publication, claim. **A claim a member signs for the collective is the collective's claim, the collective its opener and a creator** ("Claim (type 3)"). **A signer's own `prev` is never followed for the collective**: a member's sequences are theirs, not the collective's. *Client conformance:* a member's client cites, among the heads, its own last act for the collective.
 
 **An act within its signer's powers counts for the collective as soon as it is done and cites the collective's latest decision as the signer knew it.** It is judged under the decisions its history holds (rule 72). A record it never cites decides nothing for it, save by the tie rule ("Made before, made after", 7).
 
@@ -2727,7 +2727,7 @@ Every Agreements act type may carry acknowledgements (`acks`, Envelopes rules 18
 | 0 | Terms | the proposer. Terms carrying a target (field 33) are an ownership agreement |
 | 1 | Signature | each party (or grantee, or collective member) |
 | 2 | Keeper record | a keeper's operator |
-| 3 | Claim | a sole creator; or one creator, who opens it, completed by the other creators' signature acts. Counts only public or addressed to every creator it names |
+| 3 | Claim | a sole creator; or one creator, who opens it, completed by the other creators' signature acts; a collective's, signed by a member for it (rule 58). Counts only public or addressed to every creator it names |
 | 4 | Stake transfer | the seller, who also signs it by a chain signature (Identity type 16), which fixes its place on the seller's own line; completed by the buyer's signature. Names the agreement as `[agreement, agreement]` |
 | 5 | Public domain release | a direct owner of the work, completed by the signature acts of every other holder of the stakes it ends, unless the release rule says otherwise (field 24). A collective owner signs by its own rules, under its rules for Envelopes, Money and Agreements |
 | 6 | Publication | always public. Its drafter, completed by the signature acts of its other parties: the owners' side (the ownership agreement it names, consenting by its own rule; for a collective, under its rule for Agreements), each partner and its split service (rule 11). A split agreement of a collective likewise, the collective signing under the judicial tier's rule (rule 15) |
@@ -3148,12 +3148,15 @@ A pooled anchoring service sells so, a proven delivery: its tiers, prices or pri
 ```cddl
 claim-payload = {
   0 => hash,            ; the work hash
-  1 => [+ hash],        ; the creators, ascending, none twice, the signer (who opens it) among them
+  1 => [+ hash],        ; the creators, ascending, none twice, its opener among them: the signer (who opens it), or,
+                        ;   for a claim a member signs for a collective, the collective (rule 58)
   ? 2 => [hash, any]    ; a claim cMIP and what it produces (a commitment made before upload)
 }
 ```
 
-It is bound when every other creator listed has a signature act naming it. It counts only public or addressed to every creator. It carries no roles. Where no ownership agreement targets it, the default holder is the creator who opened it.
+**A claim a member signs for a collective is the collective's claim** (rule 58): the collective, which its `objects` name, is its opener and a creator, and it counts only where the member may act for the collective there (rule 60); members may be listed beside the collective as co-creators. A claim naming neither its signer nor a chain its `objects` name among its creators is outside its format (invalid); one whose opener, so read, is not among its creators counts for nothing, as does a stranger's naming a collective (rule 58).
+
+It is bound when every other creator listed has a signature act naming it. It counts only public or addressed to every creator. It carries no roles. Where no ownership agreement targets it, the default holder is the creator who opened it, the collective for a collective's claim. *A member listed beside the collective is another creator: they bind the claim by a signature act of their own, the member who signed it for the collective included. A member's claim for themselves names no collective.*
 
 
 ### Stake transfer (type 4)

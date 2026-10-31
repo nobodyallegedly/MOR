@@ -34,6 +34,9 @@ fn spec(s: &str) -> Hash {
 #[path = "scenario9.rs"]
 mod scenario9;
 
+#[path = "s7i.rs"]
+mod s7i;
+
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mirs {
@@ -634,6 +637,9 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.owed_back_by(&h("act")).map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hx(who), n])).collect::<Vec<_>>()))
         }
+        // Who made a work and who owns it as recorded (rule 15): the claims
+        // that count and bind, and the default holder.
+        "work owners" => s7i::work_owners_json(view(w).work_owners(&h("work"))),
         q => panic!("no such question: {q}"),
     }
 }
@@ -2621,6 +2627,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_b(out);
     s7g_agreements_c(out);
     scenario9::agreements(out);
+    s7i::agreements(out);
 }
 
 pub fn development(out: &mut Vec<J>) {

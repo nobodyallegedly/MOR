@@ -484,6 +484,14 @@ fn verdict_vectors() {
                 "owed back by" => with_facts(&v, &mirs, facts)
                     .owed_back_by(&h(&ask["act"]))
                     .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
+                "work owners" => match with_facts(&v, &mirs, facts).work_owners(&h(&ask["work"])) {
+                    Ok(o) => {
+                        let mut c: Vec<String> = o.claims.iter().map(hex::encode).collect();
+                        c.sort();
+                        json!({ "claims": c, "default_holder": o.default_holder.map(hex::encode) })
+                    }
+                    Err(_) => json!("unknown"),
+                },
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
