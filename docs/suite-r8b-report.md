@@ -1,4 +1,4 @@
-**The suite's side is ready to merge.** At `59b1eb7`, the last commit with code, every suite check on GitHub is green. One test of the relay, the MOR lead's, failed there on one run of several: a race, described below (For the MOR lead, 5). The commit after it adds only this report; its own run is on the pull request.
+**The suite's side is ready to merge; the head is not all green, on two tests of the MOR lead's.** At `59b1eb7` (the last commit with code) and `039d6fc`, every suite check on GitHub is green: every app, the anchoring tests, regtest, Nakišib, WebKit. Red, on some runs only: a relay test's race (`relay/tests/home.rs`, at `59b1eb7`) and a case the core's random invariant test drew that the core fails (`core/tests/agreements_invariants.rs`, `collective_promises_hold`, at `039d6fc`, reproduced here with its seed). Both are For the MOR lead, 5 and 6.
 
 # The Dubsar Suite, round 8's follow-up (F407): anchoring on one price tag per tier
 
@@ -67,6 +67,10 @@
   - *A check that fails only on some runs:* it passed at `3726f60`, `9eed45e`, `c649a4b` and `32d065f`, and 15 times out of 15 here.
   - *Why, as far as can be seen from outside:* the reader reads the new home after the old home objected. When the new home's own probe of the old home has already fetched the objection ("objections travel"), the reader holds it. Since S7h-4 (Identity rule 49), an objection voids the rotation, so the reader sees one link.
   - *Whose:* `relay/` and its test, the MOR lead's; nothing this round touched them (For the MOR lead, 5).
+- **On GitHub at `039d6fc`** (the report): every check green but "all"'s Rust workspace, on one test of the core: **`collective_promises_hold`** (`core/tests/agreements_invariants.rs:129`), a property test drawing random collectives each run.
+  - *The case:* "GRANT-COUNTS: an act of a grant that does not count binds (accepted true, holders signed false)". In plain words, an agent's act under a grant its holders never signed still bound the collective.
+  - *Reproduced here, every time, with its seed:* `AGREEMENTS_INVARIANT_SEED=9907697584341890613 AGREEMENTS_INVARIANT_CASES=48 cargo test -p mor-core --test agreements_invariants -- --exact collective_promises_hold`.
+  - It fails only on the runs whose random seed draws such a case. Nothing this round touched `core/` (For the MOR lead, 6).
 
 ## For the MOR lead
 
@@ -75,6 +79,7 @@
 3. **`relay/manage/manage.js` was regenerated** from `clients/manage` by its build script (one word, "bake"). The relay binary embeds it at its next build.
 4. **The anchoring cMIP's test value is unchanged** (`sha256("anchoring cMIP, draft 2, test value until publication")`), as for drafts 3 to 6.
 5. **A relay test races** (`relay/tests/home.rs`, `a_live_home_objects_to_a_homeless_rotation`, line 389). It failed once on GitHub at `59b1eb7` and passes otherwise. The reader can read the new home after that home's probe has brought it the old home's objection; S7h-4's rule 49 then voids the rotation, and the test expects it to count. *Lean:* the reader in the test reads the new home before it can probe, or the test expects one link once the objection has travelled.
+6. **The core's random invariant test found a case the core fails** (`collective_promises_hold`, GRANT-COUNTS). The smallest case: two members, one device, a lane `(3, 1)`, one grant in the area that the agent accepts and the holders do not sign, then one public act of the agent in scope. The core lets that act bind; the invariant says a grant that does not count binds nothing. Seed and command under Tests. The suite does not issue such grants, and no suite test reads this verdict.
 
 ## Questions for Nobody, allegedly, one at a time
 
