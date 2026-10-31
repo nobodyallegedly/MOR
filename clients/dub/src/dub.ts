@@ -36,6 +36,7 @@ import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { CARRIED_WORDS as SOUND_CARRIED_WORDS } from '../../../modules/audio/src/audio.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { fromCarried, groupKeyString, toKeyString } from '../../../modules/carry/src/string.ts';
 import { actForm, idForm, idWhere, readActId, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { sharedLine } from '../../grants/src/deal.ts';
 import { throughLine } from './money.ts';
@@ -631,7 +632,7 @@ export class Dub {
       let seed: Uint8Array;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e) {
         if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
         throw e;
@@ -705,7 +706,7 @@ export class Dub {
       if (!active) throw new Error('No identity in use.');
       let seed: Uint8Array;
       try {
-        seed = fromWords(words);
+        seed = fromCarried(words);
       } catch (e) {
         if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
         throw e;
@@ -877,10 +878,11 @@ export class Dub {
   }
 
   /** The identity's ID and its signing key's words (the carry Module), on request: the way to another app. */
-  async carry(): Promise<{ id: string; grouped: string; words: string[]; say: string[] }> {
+  async carry(): Promise<{ id: string; grouped: string; words: string[]; key: string; say: string[] }> {
     const { me } = await this.ctx();
     if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY);
-    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), say: CARRY_SAY };
+    // The same key as a string, shown on request (module-signing-key-string-draft-1.md; H104, "Signing key, users choses").
+    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), key: groupKeyString(toKeyString(unhex(me.f.signingSecret))), say: CARRY_SAY };
   }
 
   // ------------------------------------------------------------ the key in use

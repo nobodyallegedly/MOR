@@ -368,7 +368,7 @@ export function newIdentity(): string {
 <p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it.</p>
 <form id="bring-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
 <label>Its ID</label><div class="row tight"><input name="id" type="text" class="grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
-<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words in order, or its string (morsk1…), as you wrote it down</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
 <p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
@@ -380,7 +380,7 @@ function bringIdentityWeb(): string {
 <p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it. A new identity is made in Dub, or in Edubba on a computer.</p>
 <form id="bring-identity"><label>Its name, kept in this browser</label><input name="name" type="text" placeholder="A name" required>
 <label>Its ID</label><div class="row tight"><input name="id" type="text" class="grow" autocomplete="off" spellcheck="false" placeholder="mid1…" required>${contactsButtonFor('id')}</div>
-<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words in order, or its string (morsk1…), as you wrote it down</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
 <p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. ${e(WEB_KEPT_SAY)}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
@@ -739,7 +739,7 @@ export const KEY_CHANGED_START = ['This identity’s signing key was changed els
 
 /** The box for an identity's new signing key's words, after Kišib: in its record, and wherever a refusal says its key changed (H80). */
 export function renewIdentityForm(id: string, name?: string): string {
-  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note('error', e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : 'The'} new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
+  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note('error', e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : 'The'} new signing key: its 24 words, or its string (morsk1…)</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
 }
 
 /** The box for a collective's new signing key's words, after Kišib. */

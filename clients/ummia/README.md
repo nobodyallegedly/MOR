@@ -129,6 +129,12 @@ On the Mac: `npm install` here and in `../desk`, `../dub` and `../damgar` (and t
 
 As Damgar's: `npm run release` (or the GitHub workflow `release-ummia-web.yml`, on a merge message containing `[release ummia web]`), then serve `built/` as Kišib's is. `node --import tsx src/cli.ts check URL` says SAME. Not done here: a later server session.
 
+## Round 9 (F411)
+
+**The signing key as a string** (round 9, F411; H104, "Signing key, users choses"). In plain words: where the app asks for the signing key, you can give its 24 words or its string (it starts with `morsk1`), the same key either way; where it shows the words, "Show the same key as a string" unfolds the string. A copying mistake in the string is caught. The chain key stays words only. Precisely: `fromCarried` and `toKeyString` (`modules/carry/src/string.ts`), `keyStringHtml` (`modules/carry/src/key-html.ts`); `module-signing-key-string-draft-1.md`.
+
+**The tip, always.** The anchoring reader (`src/anchor.ts`, `offers`), shared with Damgar, Edubba and Dub, keeps only a service's latest publication and each tier's latest tag, as the core's `agreementsPublicationTip` finds them.
+
 ## Round 8: the keyless collective, the six layers (F407)
 
 *In plain words:* a collective has no key and its members no member keys any more: Ummia acts for a collective with your own key, naming it. The layers are numbered anew (Text 1, Envelopes 2, Money 3, Agreements 4, Development 5), so a collective's releases go through the Envelopes layer, or a finer area of it reaching bakes; and an extension's layers are read in the new numbers. The eight core texts changed, so the MICS document's and the freeze suite's hashes did (`src/cards.ts`, computed again from their files by `cards.test.ts`).

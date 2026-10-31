@@ -6889,6 +6889,80 @@ function encryptionSecret(signingSeed) {
 }
 var groupId = (id) => id.match(/.{1,4}/g).join(" ");
 
+// ../../modules/carry/src/key-html.ts
+var KEY_STRING_SAY = "The same signing key, written as one string: either form, the 24 words or this string, brings the identity into another app. Whoever holds it can sign as this identity and read its private messages, until the key is changed with the chain key. The chain key is not in it.";
+function keyStringHtml(key) {
+  if (!key || !/^morsk1[0-9a-z ]+$/.test(key)) return "";
+  return `<details class="key-string" data-key-string><summary>Show the same key as a string</summary><p class="small">${KEY_STRING_SAY}</p><p><code class="key-string-value">${key}</code></p></details>`;
+}
+
+// ../../modules/carry/src/string.ts
+var KEY_PREFIX = "morsk";
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+var BECH32M = 734539939;
+function polymod(values) {
+  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+  let chk = 1;
+  for (const v of values) {
+    const b = chk >>> 25;
+    chk = (chk & 33554431) << 5 ^ v;
+    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
+  }
+  return chk >>> 0;
+}
+var expand = (hrp) => [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+function checksum(hrp, data) {
+  const mod = polymod([...expand(hrp), ...data, 0, 0, 0, 0, 0, 0]) ^ BECH32M;
+  return [0, 1, 2, 3, 4, 5].map((i) => mod >>> 5 * (5 - i) & 31);
+}
+function regroup(data, from, to, pad) {
+  let acc = 0;
+  let bits = 0;
+  const out = [];
+  const max = (1 << to) - 1;
+  for (const v of data) {
+    acc = acc << from | v;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      out.push(acc >> bits & max);
+    }
+  }
+  if (pad) {
+    if (bits) out.push(acc << to - bits & max);
+  } else if (bits >= from || acc << to - bits & max) return null;
+  return out;
+}
+function toKeyString(seed) {
+  if (seed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const data = regroup([...seed], 8, 5, true);
+  return `${KEY_PREFIX}1${[...data, ...checksum(KEY_PREFIX, data)].map((d) => CHARSET[d]).join("")}`;
+}
+var groupKeyString = (s) => `${s.slice(0, KEY_PREFIX.length + 1)} ${s.slice(KEY_PREFIX.length + 1).match(/.{1,4}/g).join(" ")}`;
+var looksLikeKeyString = (typed) => typed.replace(/[\s-]/g, "").toLowerCase().startsWith(`${KEY_PREFIX}1`);
+function fromKeyString(typed) {
+  const s = typed.replace(/[\s-]/g, "");
+  if (s !== s.toLowerCase() && s !== s.toUpperCase()) throw new Refused("the string mixes capital and small letters: type it all in one case");
+  const t = s.toLowerCase();
+  if (!t.startsWith(`${KEY_PREFIX}1`)) throw new Refused(`a signing key\u2019s string starts with \u201C${KEY_PREFIX}1\u201D`);
+  const body = t.slice(KEY_PREFIX.length + 1);
+  for (let i = 0; i < body.length; i++) {
+    if (!CHARSET.includes(body[i])) throw new Refused(`character ${KEY_PREFIX.length + 2 + i}, \u201C${body[i]}\u201D, is not one a signing key\u2019s string uses (no b, i, o or 1 after the prefix): check how it is written`);
+  }
+  if (body.length !== 58) throw new Refused(`${body.length} characters after \u201C${KEY_PREFIX}1\u201D, not 58: a character is missing or one too many`);
+  const data = [...body].map((c) => CHARSET.indexOf(c));
+  if (polymod([...expand(KEY_PREFIX), ...data]) !== BECH32M) throw new Refused("the checksum does not match: a character was written or read wrong");
+  const bytes = regroup(data.slice(0, -6), 5, 8, false);
+  if (!bytes || bytes.length !== 32) throw new Refused("it does not carry 32 bytes");
+  return Uint8Array.from(bytes);
+}
+function fromCarried(typed) {
+  if (typeof typed === "string" && looksLikeKeyString(typed)) return fromKeyString(typed);
+  if (Array.isArray(typed) && typed.length && looksLikeKeyString(typed.join(""))) return fromKeyString(typed.join(""));
+  if (typeof typed === "string" && splitWords(typed).length === 1 && splitWords(typed)[0].length > 20) throw new Refused(`neither 24 words nor a signing key\u2019s string (which starts with \u201C${KEY_PREFIX}1\u201D)`);
+  return fromWords(typed);
+}
+
 // ../genesis/src/forms.ts
 var form = (label, hex3) => formEncode(label, unhex(hex3));
 var idForm = (id) => form("mid", id);
@@ -10096,6 +10170,51 @@ async function sendToSelf(me, type, payload, opts) {
   return { id: made.id, left };
 }
 
+// ../barebone/src/sealed.ts
+var SEALED_TEXT = POST_SPECS.text;
+var SEALED_PICTURE = POST_SPECS.jpeg;
+var SEALED_VIDEO = POST_SPECS.video;
+var SEALED_AUDIO = POST_SPECS.audio;
+var PUBLICATION_ACT = 6;
+function readPublication(act) {
+  let d;
+  try {
+    d = describeAct(act);
+  } catch {
+    return null;
+  }
+  if (d.spec !== MIRS.agreements || d.type !== PUBLICATION_ACT || !d.payload || !d.signer) return null;
+  try {
+    const m = cborDecode(d.payload);
+    const service = m.get(3);
+    if (!(service instanceof Uint8Array)) return null;
+    const sold = (Array.isArray(m.get(0)) ? m.get(0) : []).filter((x) => Array.isArray(x));
+    const bakes = sold.filter((x) => x[0] === 0 && x[1] instanceof Uint8Array).map((x) => hex(x[1]));
+    const vows = sold.filter((x) => x[0] === 3 && x[1] instanceof Uint8Array).map((x) => hex(x[1]));
+    const owners = m.get(1);
+    const designated = m.get(10);
+    const partners = (Array.isArray(m.get(2)) ? m.get(2) : []).map((p) => p instanceof Map ? p : null).filter((p) => !!p && p.get(0) instanceof Uint8Array).map((p) => ({ identity: hex(p.get(0)), share: Number(p.get(1) ?? 0), label: typeof p.get(2) === "string" ? p.get(2) : null }));
+    const o0 = (d.objects ?? [])[0];
+    const later = !!o0 && !(owners instanceof Uint8Array && o0[0] === hex(owners) && o0[1] === hex(owners));
+    return {
+      id: d.id,
+      first: later ? o0[0] : d.id,
+      previous: later ? o0[1] : null,
+      drafter: d.signer,
+      bakes,
+      vows,
+      ends: Array.isArray(m.get(0)) && sold.length === 0,
+      owners: owners instanceof Uint8Array ? hex(owners) : null,
+      partners,
+      service: hex(service),
+      designated: designated instanceof Uint8Array ? hex(designated) : null,
+      words: typeof m.get(5) === "string" ? m.get(5) : null
+    };
+  } catch {
+    return null;
+  }
+}
+
 // src/anchor.ts
 var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var message3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
@@ -10132,7 +10251,15 @@ async function offers(service, hints, via = {}) {
   for (const a of pubs.values()) {
     try {
       const o = anchoringReadOffer(a, valid);
-      if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
+      if (l.verifier.status(o.id) !== "valid") continue;
+      let offerTags = o.tags;
+      try {
+        const tip = l.verifier.agreementsPublicationTip(AGREEMENTS_SPECS, readPublication(a)?.first ?? o.id);
+        if (tip.latest.length && !tip.latest.includes(o.id)) continue;
+        offerTags = o.tags.filter((t) => tip.tags.includes(t.tag));
+      } catch {
+      }
+      out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: offerTags });
     } catch {
     }
   }
@@ -10679,7 +10806,7 @@ var SUITE_RULES = {
   naming: { key: "naming", name: "Naming", kind: "cMIP", hashes: [NAMING_SPEC], does: "Display names: the name an identity publishes for itself, shown beside its ID.", text: "cmips/cmip-naming-draft-1.md" },
   corrections: { key: "corrections", name: "Corrections", kind: "cMIP", hashes: [CORRECTIONS_SPEC], does: "A post corrected by its author: the correction shown in its place, the earlier text kept beneath it.", text: "cmips/cmip-corrections-draft-2.md" },
   appended: { key: "appended", name: "Appended collective", kind: "cMIP", hashes: [APPENDED_FORMAT], does: "A collective\u2019s posts whose members append, each signed by its member.", text: "cmips/cmip-appended-collective-draft-1.md" },
-  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired: there are no member keys now. A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-1.md" },
+  "member-keys": { key: "member-keys", name: "Member keys", kind: "cMIP", hashes: [MEMBER_KEYS_SPEC], does: "Retired (Nobody, allegedly, 30 October 2026: not needed any more, members use their own private key). A member acts for a collective with their own key, naming the collective.", text: "cmips/cmip-member-keys-draft-2.md" },
   "agent-memory": { key: "agent-memory", name: "Agent memory", kind: "cMIP", hashes: [MEMORY_SPEC], does: "What an agent keeps between its sessions, sealed to its owner.", text: "cmips/cmip-agent-memory-draft-2.md" },
   notes: { key: "notes", name: "Notes", kind: "cMIP", hashes: [NOTES_FORMAT], does: "Your notes: private text sealed to yourself at your homes, each change a new version, the earlier ones kept.", text: "cmips/cmip-notes-draft-1.md" },
   "long-form": { key: "long-form", name: "Long form", kind: "cMIP", hashes: [LONGFORM_SPECS.longform], does: "Long documents with headings: drafts of MIPs, and their replies.", text: "cmips/cmip-long-form-draft-1.md" },
@@ -10912,7 +11039,7 @@ var Ummia = class {
       let seed;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -10962,7 +11089,7 @@ var Ummia = class {
       if (!active) throw new Error("No identity in use.");
       let seed;
       try {
-        seed = fromWords(words);
+        seed = fromCarried(words);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
         throw e3;
@@ -11016,7 +11143,7 @@ var Ummia = class {
   /** The signing key's words, on request: the way back if this app's storage is lost. */
   async carry() {
     const { me } = await this.ctx();
-    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)) };
+    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), key: groupKeyString(toKeyString(unhex(me.f.signingSecret))) };
   }
   /** Whether the signing key Ummia holds still counts. */
   async check() {
@@ -13222,7 +13349,7 @@ function attachRules(root, o) {
 // ../kit/src/ids.ts
 function idForm2(hex3, label = "mid") {
   if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
-  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -13236,7 +13363,7 @@ function idForm2(hex3, label = "mid") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod = (v) => {
+  const polymod2 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -13247,9 +13374,9 @@ function idForm2(hex3, label = "mid") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
 }
 function who(o) {
   const form2 = o.form ?? idForm2(o.id, "mid");
@@ -13660,7 +13787,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
 function actFormOf(hex3, label = "mact") {
   if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
-  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -13674,7 +13801,7 @@ function actFormOf(hex3, label = "mact") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod = (v) => {
+  const polymod2 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -13685,9 +13812,9 @@ function actFormOf(hex3, label = "mact") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
 }
 
 // src/page/view.ts
@@ -13751,7 +13878,7 @@ var says = (xs) => xs.map((x) => `<p class="k-small k-soft">${e(x)}</p>`).join("
 var formOf2 = actFormOf;
 var specFormOf = (hex3) => /^[0-9a-f]{64}$/.test(hex3) ? specBech(hex3) : hex3;
 function specBech(hex3) {
-  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -13766,7 +13893,7 @@ function specBech(hex3) {
   }
   if (bits) data.push(acc << 5 - bits & 31);
   const hrp = "mspec";
-  const polymod = (v) => {
+  const polymod2 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -13776,10 +13903,10 @@ function specBech(hex3) {
     }
     return chk;
   };
-  const expand = [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
-  const mod = polymod([...expand, ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const expand2 = [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+  const mod = polymod2([...expand2, ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => mod >> 5 * (5 - i) & 31);
-  return `${hrp}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+  return `${hrp}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
 }
 var hashCopy = (hex3, big = false, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}${big ? `<span class="k-mono ummia-big" title="${e(specFormOf(hex3))}">${e(specFormOf(hex3))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(specFormOf(hex3))}">Copy</button>` : idButton(specFormOf(hex3))}</span>`;
 var actCopy = (hex3, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}${actId2(hex3)}</span>`;
@@ -13860,7 +13987,7 @@ function firstScreen(web, part = "bring") {
 function bringForm() {
   return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key\u2019s words (never the chain key\u2019s).</p>
 <label>Its ID (mid1\u2026, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
-<label>Its signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words, or its string (morsk1\u2026), as you wrote it down</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
 <div class="k-row"><button type="submit" class="k-btn k-p">Bring it</button></div></form>`;
@@ -13890,7 +14017,7 @@ ${say2("Give Ki\u0161ib this card at a change of keys.", ["Some of Ummia\u2019s 
 ${i.encryption || i.runner ? "" : note("error", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}`;
 }
 function renewForm() {
-  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Ki\u0161ib): give the new signing key\u2019s words, and Ummia signs with them, in a new line.</p><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Ki\u0161ib): give the new signing key\u2019s words, and Ummia signs with them, in a new line.</p><label>The new signing key: its 24 words, or its string (morsk1\u2026)</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 function collectiveForm(s) {
   const cs = s.actors.filter((a) => a.kind === "collective");
@@ -14480,7 +14607,7 @@ Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card ye
       closePanel();
       if (key === "words") {
         const c = await act(() => b.ask("carry"));
-        if (c) popup2.show("The signing key\u2019s words", wordsShown(c));
+        if (c) popup2.show("The signing key\u2019s words", wordsShown(c) + keyStringHtml(c.key));
       } else if (key === "line") popup2.show("Line and homes", lineShown(state));
       else if (key === "renew") popup2.show("New words from Ki\u0161ib", renewForm());
       else if (key === "collective") popup2.show("A collective under it", collectiveForm(state));

@@ -408,6 +408,17 @@ test('the follow list sealed to the identity (people cMIP draft 2): kept at its 
   // A change in the first goes on from the version read.
   await c1.ask('call', { id: y.id, name: 'Yves' });
   assert.equal((await readSealedList(me.id, [secret], [homes[0].base])).version, 4);
+
+  // Round 9 (F411; H104, "Signing key, users choses"): the same key as a string, shown on request beside the words; a third
+  // Dub brought by the string alone is the same identity; a typo in it is caught, nothing kept.
+  const full = await c1.ask<{ words: string[]; key: string }>('carry');
+  assert.match(full.key, /^morsk1 [0-9a-z ]+$/);
+  const { c: c3 } = await dub();
+  await c3.ask('bring', { id: me.id, words: full.key, address: homes[0].base });
+  assert.equal((await c3.ask<State>('state')).identity!.id, me.id);
+  const { c: c4 } = await dub();
+  const typo = full.key.slice(0, -1) + (full.key.endsWith('q') ? 'p' : 'q');
+  await assert.rejects(c4.ask('bring', { id: me.id, words: typo, address: homes[0].base }), /checksum does not match/);
 });
 
 test('the follow list carried over (people cMIP draft 2, 3.7): a list kept in the app before is sealed once, nothing removed', async () => {

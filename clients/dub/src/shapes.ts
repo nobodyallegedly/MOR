@@ -218,7 +218,7 @@ export interface State {
     signing: boolean;
     follows: Who[];
     muted: Who[];
-    /** The collectives under this identity it can act as (with its own member key), added by ID. */
+    /** The collectives under this identity it can act for (with its own key, naming the collective), added by ID. */
     collectives: Collective[];
     /** The collective it acts as now, or null: itself. */
     acting: string | null;
@@ -231,12 +231,12 @@ export interface State {
   proposalsWaiting?: number;
 }
 
-/** A collective an identity can act as from here: its member key found at its homes. */
+/** A collective an identity can act for from here, with its own key. */
 export interface Collective {
   id: string;
   form: string;
   name: string | null;
-  /** Its member key is here and it holds an area reaching public posts. */
+  /** It holds a voice in the rule reaching public posts. */
   available: boolean;
   why: string | null;
 }

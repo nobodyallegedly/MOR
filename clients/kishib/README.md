@@ -146,6 +146,10 @@ A change of keys may keep, declare anew or remove the identity's **vault** (Mone
 
 `src/runner.ts` (stated needs read and kept, `self()` opening for Kišib's own page, nothing signed for itself), `src/collective.ts` (the rotation notice's structured part, written and read; `collectiveNotices`), `src/server.ts` (`/runner/pair` with `needs`; the suite's type served to the panel), `src/page/` (the Runner column's entry, Apps newest first, needs beside the box, Waiting for you prefilled, the kit's `who`, `attachIds`, `attachContacts` read-only). Dub's side: `../dub/src/runner.ts` (`DUB_NEEDS`). Tests: `test/runner-needs.test.ts`, `test/rotation-notice.test.ts`, `test/names-contacts.test.ts`, `test/runner-draft-3.test.ts`, `test/runner-browser.test.ts`.
 
+## Round 9 (F411)
+
+**The signing key as a string** (round 9, F411; H104, "Signing key, users choses"). In plain words: where the app asks for the signing key, you can give its 24 words or its string (it starts with `morsk1`), the same key either way; where it shows the words, "Show the same key as a string" unfolds the string. A copying mistake in the string is caught. The chain key stays words only. Precisely: `fromCarried` and `toKeyString` (`modules/carry/src/string.ts`), `keyStringHtml` (`modules/carry/src/key-html.ts`); `module-signing-key-string-draft-1.md`. In Kišib: a new signing key's words, once they count, unfold its string too; the chain key's paper never does. The runner's "hold an identity" takes either form.
+
 ## Round 8 (F407): a collective has no keys of its own
 
 ### In plain words

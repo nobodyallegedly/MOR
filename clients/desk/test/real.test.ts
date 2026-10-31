@@ -144,7 +144,7 @@ test('three people on three devices: a real collective founded, a release, a mem
   assert.equal(ap0.reading.kind, 'founding');
   assert.match(ap0.reading.title, /^Found a collective/);
   const headings = ap0.reading.sections.map((s: any) => s.heading);
-  for (const h of ['What each party is bound to', 'Who decides what', 'Shares and fees', 'How it ends', 'Risks']) assert.ok(headings.some((x: string) => x.startsWith(h)), `${h} in ${headings.join(' / ')}`);
+  for (const h of ['What each party is bound to', 'Who decides what', 'Who owns what', 'How it ends', 'Risks']) assert.ok(headings.some((x: string) => x.startsWith(h)), `${h} in ${headings.join(' / ')}`);
   assert.ok(ap0.reading.plain.length);
   assert.ok(Array.isArray(ap0.reading.risks));
   assert.equal(ap0.share, 'none');

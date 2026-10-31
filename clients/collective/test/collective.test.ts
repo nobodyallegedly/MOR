@@ -80,7 +80,7 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.match(fw, /Their consent is simulated/);
   assert.match(fw, /release manifest cMIP/);
   // Roadmap step 14: the deal-assessment tool's shares and fees, and risks, before signing.
-  assert.ok(f.reading.sections.some((s) => s.heading === 'Risks, before you sign (the deal-assessment tool)'));
+  assert.ok(f.reading.sections.some((s) => s.heading === 'Risks, before you sign (the assessment tool)'));
   assert.match(fw, /Absence is on the other members’ word alone.*Rests on: Agreements rule 87/);
   assert.equal(f.reading.plain[0].heading, 'The words everyone signs');
   assert.match(f.reading.plain[0].text, /^“Makers”, a MOR test collective/);

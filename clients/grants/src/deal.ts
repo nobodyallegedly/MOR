@@ -49,11 +49,13 @@
 //
 // TEST IDENTITIES ONLY, regtest only.
 
-import { cborDecode, cborEncode, checkTerms, describeAct, hex, publicationPayload, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, describeAct, hex, publicationPayload, unhex } from '../../genesis/src/core.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS, SPLIT_CMIP } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { termsAt } from './member.ts';
+import { allBy } from './grant.ts';
 
 /** What a deal between separate people says, as Edubba writes it. */
 export interface DealDraft {
@@ -282,4 +284,64 @@ export async function dealOfPost(post: Uint8Array, places: string[], via: Via = 
 /** The one line a buyer or tipper reads before paying (decided: "This work is shared: X, Y, Z. The split service answers for it."). */
 export function sharedLine(d: DealRead, names: (id: string) => string): string {
   return `This work is shared: ${d.owners.map(([id, n]) => `${names(id)} (${pct(n)})`).join(', ')}. The split service${d.service ? `, ${names(d.service)},` : ''} answers for it.`;
+}
+
+/** What a payment names, as the core finds it (`agreementsPublicationTip`): a publication's latest versions, its price tags' latest versions that count under it, and the ownership agreement it names with that agreement's latest version. */
+export interface PublicationTip {
+  latest: string[];
+  tags: string[];
+  owners: string | null;
+  ownersLatest: string | null;
+}
+
+/**
+ * The tip, always (round 9, F411; Nobody, allegedly, on Q5: "Yes,
+ * absolutely. Clients need to provide the tip"): before paying under a
+ * publication, every app follows its line, its price tags' lines and its
+ * ownership agreement's line to their latest versions, as the core reads
+ * them (Agreements rules 11 and 12; Money rule 18). Fetches the publication
+ * (`first`, its first version), the ownership agreement it names, and every
+ * act its parties and the agreement's parties published at `places`; hands
+ * them to the core's verifier and asks it. Null where the publication is not
+ * found, or the core cannot say.
+ */
+export async function publicationTip(first: string, places: string[], via: Via = {}, also: Uint8Array[] = []): Promise<PublicationTip | null> {
+  const act = await actAt(first, places, via);
+  if (!act) return null;
+  const d = describeAct(act) as { signer?: string; spec?: string; type?: number; payload?: Uint8Array };
+  if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.publication || !d.payload) return null;
+  const m = cborDecode(d.payload) as Map<number, unknown>;
+  const h = (x: unknown) => (x instanceof Uint8Array ? hex(x) : null);
+  const partners = (Array.isArray(m.get(2)) ? (m.get(2) as unknown[]) : []).map((p) => (p instanceof Map ? h(p.get(0)) : null));
+  const backups = (Array.isArray(m.get(11)) ? (m.get(11) as unknown[]) : []).map(h);
+  const owners = h(m.get(1));
+  const parties = new Set<string>([d.signer ?? '', ...partners, h(m.get(3)), h(m.get(10)), ...backups].filter((x): x is string => !!x));
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const held: Uint8Array[] = [act, ...also];
+  if (owners) {
+    const o = await actAt(owners, places, via);
+    if (o) {
+      held.push(o);
+      const t = describeAct(o) as { payload?: Uint8Array };
+      for (const x of t.payload ? (((cborDecode(t.payload) as Map<number, unknown>).get(0) as Uint8Array[]) ?? []) : []) parties.add(hex(x));
+    }
+  }
+  for (const x of parties) {
+    const l = await lookUp(x, places, via, v).catch(() => null);
+    held.push(...(await allBy(x, [...new Set([...places, ...(l?.resolution.homes.map((y) => y.hint) ?? [])])], via)));
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    for (const a of held) {
+      try {
+        v.add(a);
+      } catch {
+        // held, or waits for another
+      }
+    }
+  }
+  try {
+    return v.agreementsPublicationTip(AGREEMENTS_SPECS, first) as PublicationTip;
+  } catch {
+    return null;
+  }
 }

@@ -23,6 +23,7 @@ import { cborDecode, describeAct, hex, signingPublic, unhex, xwingPublic } from 
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { freshLines } from '../../genesis/src/identity.ts';
 import { Refused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
+import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { carriedKey, lookCurrent, servedChain, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { REPO_SPECS, FOUNDING_AGREEMENT } from '../../repo/src/specs.ts';
 import type { Line } from '../../collective/src/explain.ts';
@@ -43,7 +44,7 @@ export const COLLECTIVE_RENEW_SAY =
 
 function seedOf(words: string): Uint8Array {
   try {
-    return fromWords(words);
+    return fromCarried(words);
   } catch (e) {
     if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
     throw e;

@@ -295,7 +295,22 @@ test(`round 3, end to end${run ? ', on regtest' : ''}: layers and areas, members
     const got = (await x.damgar.c.ask<Account>('account')).payments.find((y) => y.side === 'in' && y.other.id === svc.id);
     assert.equal(got?.amount.value, value, `${x.id.slice(0, 8)}’s payout`);
     assert.ok(got!.proofs.some((y) => y.kind === 'receipt' && y.rail.answer === 'valid'));
+    // The payout's receipt is the receiver's own: signed by their Damgar, by itself, under its receipts lane (round 9, F411).
+    assert.ok(got!.proofs.some((y) => y.kind === 'receipt' && y.by.id === x.id), `${x.id.slice(0, 8)} receipted its own payout`);
   }
+  // Every hop has its receipt (round 9, F411; his words: "the service signs its receipt, then the members sign theirs after
+  // the split. Each hop has its receipt"): the buyer's payment receipted by the service in its own name (Agreements rule 16);
+  // each payout receipted by its receiver, naming the split (rule 23), sealed to the service, which keeps it.
+  const t3 = (await svc.tick()).join(' | ');
+  const hops = svc.hops().find((h) => h.payer === buyer.id && h.publication === publication);
+  assert.ok(hops, 'the payment and its hops');
+  assert.equal(hops!.hops[0].by, svc.id, 'the first hop: the buyer to the service, receipted by the service');
+  assert.deepEqual(
+    hops!.hops.slice(1).map((h) => [h.by, h.amount]).sort(),
+    ([[A.id, 1350], [iPa.id, 810], [iPh.id, 540], [reposter.id, 300]] as [string, number][]).sort(),
+    'one hop per payout of the split',
+  );
+  for (const h of hops!.hops) assert.ok(h.receipt, `${h.by.slice(0, 8)}’s hop has its receipt: ${t3}`);
   const d = await e.c.ask<{ lines: { text: string }[] }>('publishing deliver');
   assert.ok(d.lines.some((l) => /delivered to .*, as the collective/.test(l.text)), JSON.stringify(d.lines));
   await buyer.dub.c.ask('money look');

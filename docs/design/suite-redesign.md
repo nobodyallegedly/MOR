@@ -167,6 +167,14 @@ Each app makes or brings an identity the hard way (its ID and words).
 - **Damgar:** payments by publication and price tag; Rely keeps a copy (F400).
 - **Nakišib:** a collective's keyless genesis is not offered this round (its README says so).
 
+## Built in round 9 (F411, 31 October 2026, `docs/suite-r9-report.md`)
+- **Assess on what people now sign** (Q1, "Move it to next round"): an ownership agreement, a constitution, a publication; its risks re-read and two new (partners first with no cap; one member alone holding Money); "Its constitution, in plain words" and Publishing's read-backs use it; in CI.
+- **A collective in Publishing** (Q3, "Agreed"): its owners its constitution (read back, nothing to sign); its publication naming that founding agreement, made and ended for it by a member under the rule reaching publications, the others asked in their own Edubba. *Not built:* a collective's claim (the core reads a claim's opener, the member, as its creator).
+- **Every hop has its receipt** (Q10): the service receipts the buyer's payment as itself; each payout's commitment fulfils the split, so the member's own receipt (Damgar by itself under its receipts lane, or by hand) names it; the service keeps each one.
+- **The tip, always** (Q5): Dub and the anchoring reader pay at the latest versions, as `agreementsPublicationTip` finds them.
+- **Clean-ups:** the `publishing work read` alias gone; the member keys cMIP marked retired.
+- **The signing key as a string** (H104, "Chain key, only words in dubsar apps. Signing key, users choses"): `morsk1…`, Bech32m; 24 words or the string wherever a signing key is brought; the string beside the words on request.
+
 ## Still open
 - Question 2 of the H80 report: private lines Kišib cannot place (apps leaving each private act's locked act at the identity's homes).
 - **Two lines per app** (decided 21 October: "Agreed", option (a) of the private-lines report): each app keeps its public acts and its private acts on separate lines, so anyone can follow the public line after a change of keys. To build before round 2 (F376).
@@ -196,7 +204,7 @@ Nobody, allegedly: "Core has priority until everything is been updated." Decided
 - **Q7, a site's version cannot be withdrawn** (on the lean, leave it so: "Some people will love it, some people will hate it. Not sure there is a solution that makes everyone happy"): left so; a bad version is fixed by a new one; what gateways and homes keep or drop of old bytes is their policy (the vanish request, after the freeze).
 - **Q8, the money messages cMIP keeps draft 4's value** ("Yes, we clean everything once we're ready"): every cMIP's hash set once, together, at the freeze.
 - **Q9, the runner tells a collective's act** by its objects naming an identity whose genesis declares a founding ("Yes, needed"): kept.
-- **Q10, a collective's income through its split service** ("Yes, the service signs its receipt, then the members sign theirs after the split. Each hop has its receipt"): the buyer's payment is paid to the service under the collective's split agreement, the service signing its own receipt (never in another's name, Agreements rule 16); each payout from the split is then receipted by the member who receives it. **Every hop has its receipt.** *To check next round:* that each member's app signs a receipt for its payout.
+- **Q10, a collective's income through its split service** ("Yes, the service signs its receipt, then the members sign theirs after the split. Each hop has its receipt"): the buyer's payment is paid to the service under the collective's split agreement, the service signing its own receipt (never in another's name, Agreements rule 16); each payout from the split is then receipted by the member who receives it. **Every hop has its receipt.** *Checked and built in round 9 (F411).*
 - **Q11, the old `publishing work read` alias** ("Whatever is needed"): removed next round, once the tests use the new names.
 - **The anchoring cMIP draft 7 approved** (31 October 2026). **One price tag per tier is the suite's choice** (the anchoring cMIP is suite ground), approved by Nobody, allegedly; only Money rule 18 (a tag pays exactly the price it states, unchanged) is the core's (F409). The MOR lead had decided the tiers under delegation and relayed them as his; the suite lead's round 8b prompt had quoted them as his words. His words, 31 October: "MOR lead overstepped on this. It's dubsar stuff, not core"; "Fine by me. I just got confused by MOR lead stating it was mine, when I did not even know the service had tiers." Draft 7's labels corrected on the branch (`63b4397e`).
 - **Q12, the website cMIP draft 12** ("Ok, agreed"): approved after his next hand test, once dubsar.org has been seen running on it.

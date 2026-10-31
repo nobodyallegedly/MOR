@@ -28,6 +28,8 @@ import { SPEC } from '../../damgar/src/specs.ts';
 import { say } from '../../damgar/src/units.ts';
 import type { ChainSource } from '../../damgar/src/chain.ts';
 import type { Line } from './shapes.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
+import { readPublication } from '../../barebone/src/sealed.ts';
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -111,7 +113,18 @@ export async function offers(service: string, hints: string[], via: Via = {}): P
   for (const a of pubs.values()) {
     try {
       const o = anchoringReadOffer(a, valid) as Offer & { id: string };
-      if (l.verifier.status(o.id) === 'valid') out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: o.tags });
+      if (l.verifier.status(o.id) !== 'valid') continue;
+      // The tip, always (round 9, F411): only the publication's latest version is paid under, and only its tags' latest
+      // versions that count under it, as the core finds them (`agreementsPublicationTip`).
+      let offerTags = o.tags;
+      try {
+        const tip = l.verifier.agreementsPublicationTip(AGREEMENTS_SPECS, readPublication(a)?.first ?? o.id) as { latest: string[]; tags: string[] };
+        if (tip.latest.length && !tip.latest.includes(o.id)) continue;
+        offerTags = o.tags.filter((t) => tip.tags.includes(t.tag));
+      } catch {
+        // the core cannot say: the tags read stand
+      }
+      out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words, tags: offerTags });
     } catch {
       // not an anchoring publication
     }

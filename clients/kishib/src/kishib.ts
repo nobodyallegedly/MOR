@@ -33,6 +33,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { CODE, RelayError, relayAt, type Via } from '../../genesis/src/transport.ts';
 import { checkWarned, planLines, readCards, type LinePlan } from '../../genesis/src/lines.ts';
 import { encryptionSecret, fromWords, Refused as WordsRefused, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { fromCarried, groupKeyString, toKeyString } from '../../../modules/carry/src/string.ts';
 import { actForm, idForm, idWhere, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { bindingOf, homesWords, linesUnder, placing, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
@@ -642,7 +643,7 @@ export class Kishib {
    * new paper, H79), then, once three of them are typed back, the new
    * signing key's; each shown, then hidden before three are asked back.
    */
-  showWords(): { words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing' } {
+  showWords(): { words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing'; key?: string } {
     if (this.col) return this.col.showWords();
     const h = this.held;
     if (!h || (!h.signing && !h.chain)) throw new Error('No new signing key is held here.');
@@ -654,7 +655,8 @@ export class Kishib {
     }
     if (h.stage === 'sent') throw new Error('Not yet: the new signing key’s words are shown once the homes’ receipts are in, so they are never words of a key that does not count.');
     h.stage = 'counts';
-    return { words: toWords(h.signing!), say: h.kind === 'make' ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: 'signing' };
+    // The signing key, also as a string on request (module-signing-key-string-draft-1.md; H104): never the chain key, words only.
+    return { words: toWords(h.signing!), say: h.kind === 'make' ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: 'signing', key: groupKeyString(toKeyString(h.signing!)) };
   }
 
   /** Hide the words; three positions to type back. */
@@ -1322,7 +1324,7 @@ export class Kishib {
       const hints = addresses(a.address ?? '');
       let seed: Uint8Array;
       try {
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e) {
         if (e instanceof WordsRefused) throw new Error(`${e.message}. Nothing was read.`);
         throw e;

@@ -6,18 +6,19 @@
 import { short } from '../../collective/src/explain.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { answerText, ask, findKey, material, readingText, redact, settings } from './ask.ts';
-import { assess } from './assess.ts';
-import { gather } from './gather.ts';
+import { assess, assessPublication, type Assessment } from './assess.ts';
+import { gather, gatherPublication, isPublication } from './gather.ts';
 
-const USAGE = `mor-assess: explain an agreement in plain words, and flag its obvious risks.
+const USAGE = `mor-assess: explain an agreement or a publication in plain words, and flag its obvious risks.
 
   mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--json]
   mor-assess ID --at URL [--at URL ...] --ask "QUESTION" [--json]
 
-ID is the agreement's id, its terms act. Every relay given with --at is asked
-for it, its earlier versions, its parties' signatures and later versions,
-and its split service's account; what they hold is judged by the core
-library. --via reaches an address another way (URL=LOCAL). --json prints
+ID is an ownership agreement's id (its terms act: a work's, or a
+collective's constitution) or a publication's. Every relay given with --at
+is asked for it, its earlier versions, its parties' signatures and later
+versions, and, for a publication, the ownership agreement it names and its
+price tags; what they hold is judged by the core library. --via reaches an address another way (URL=LOCAL). --json prints
 the assessment as data. A flag is a risk worth reading before signing, each
 with the rule or stated cost it rests on; it is not a verdict on the deal.
 
@@ -64,8 +65,14 @@ async function main() {
     via[from] = to;
   }
   const names = (h: string) => short(h);
-  const g = await gather(id, at, via, names);
-  const a = assess(g.payload, names, g.found);
+  let a: Assessment;
+  if (await isPublication(id, at, via)) {
+    const g = await gatherPublication(id, at, via);
+    a = assessPublication(g.payload, names, g.context);
+  } else {
+    const g = await gather(id, at, via, names);
+    a = assess(g.payload, names, g.found);
+  }
   if (!asking) {
     console.log(opts.json ? JSON.stringify({ id, ...a }, null, 2) : readingText(id, a));
     return;

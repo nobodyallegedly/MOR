@@ -390,7 +390,7 @@ export function bringForm(web: boolean): string {
   return `<form id="bring" class="k-box"><h4>Bring an identity you have</h4>
 ${say('Its ID and its signing key’s words; Dub checks they give its current key.', ['Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper.', ...(web ? [KEPT_SAY] : [])])}
 <label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
-<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words in order, or its string (morsk1…), as you wrote it down</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? '' : via}
@@ -711,7 +711,7 @@ export function collectiveForm(s: State): string {
   const cs = s.identity!.collectives;
   return `${cs.length ? `<ul class="k-small">${cs.map((c) => `<li>${e(c.name ?? shortForm(c.form))} · ${c.available ? 'usable' : e(c.why ?? 'not usable')} <button type="button" class="k-btn k-q" data-action="collective-remove" data-id="${e(c.id)}">Remove</button></li>`).join('')}</ul>` : ''}
 <form id="collective" class="dub-modal-form"><label>A collective this identity is a member of: its ID</label><input name="id" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Add it under this identity</button></div></form>
-${say('Acting as a collective is the same gesture as switching.', ['It is listed under this identity in the identity panel: choose it to post as it, with your own member key (made when you signed its founding). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba.'])}`;
+${say('Acting as a collective is the same gesture as switching.', ['It is listed under this identity in the identity panel: choose it to post for it, with your own key, naming it (a collective has no key of its own, and there are no member keys). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba.'])}`;
 }
 
 /** The panel's foot, for the app itself: paired browsers (the Mac), the clock feeds are ordered by, homes and relays. */
@@ -744,7 +744,7 @@ ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for 
 
 /** The new signing key's words taken, where the key was changed elsewhere (in the kit's warning, H82). */
 export function renewForm(): string {
-  return `<form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+  return `<form id="renew"><label>The new signing key: its 24 words, or its string (morsk1…)</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 
 // ---------------------------------------------------------------- an identity used through Kišib (the Dubsar runner cMIP)

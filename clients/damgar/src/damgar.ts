@@ -91,6 +91,7 @@ import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { fromCarried, groupKeyString, toKeyString } from '../../../modules/carry/src/string.ts';
 import { newChainKey } from '../../dub/src/chainwords.ts';
 import { openerOf, type Opener } from '../../dub/src/people.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
@@ -575,7 +576,7 @@ export class Damgar {
       let seed: Uint8Array;
       try {
         id = readId(a.id);
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e) {
         if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
         throw e;
@@ -626,7 +627,7 @@ export class Damgar {
       if (!active) throw new Error('No identity in use.');
       let seed: Uint8Array;
       try {
-        seed = fromWords(words);
+        seed = fromCarried(words);
       } catch (e) {
         if (e instanceof Refused) throw new Error(`${e.message}. Nothing was kept.`);
         throw e;
@@ -764,10 +765,11 @@ export class Damgar {
   }
 
   /** The signing key's words, on request: the way back if this app's storage is lost. */
-  async carry(): Promise<{ id: string; grouped: string; words: string[] }> {
+  async carry(): Promise<{ id: string; grouped: string; words: string[]; key: string }> {
     const { me } = await this.ctx();
     if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY);
-    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)) };
+    // The same key as a string, shown on request (module-signing-key-string-draft-1.md; H104).
+    return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), key: groupKeyString(toKeyString(unhex(me.f.signingSecret))) };
   }
 
   /** Whether the signing key Damgar holds still counts. */

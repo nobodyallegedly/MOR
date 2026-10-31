@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { closeAll, dub as dubOf, edubba, person, start, testLink, type Relay } from '../../damgar/test/world.ts';
-import { openSealed, unhex } from '../../genesis/src/core.ts';
+import { describeAct, openSealed, unhex } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { judgeCollective } from '../../grants/src/member.ts';
 import { readKeyDelivery } from '../../barebone/src/sealed.ts';
@@ -181,7 +181,7 @@ test('way 1, Upload: a text and a picture uploaded with a price tag on the bare 
   assert.ok((await e.c.ask<any>('publishing tag withdraw read', { on: recording })).reading.blocking.some((b: string) => /withdrawn already/.test(b)));
 });
 
-test('way 1 as a collective: an upload and its price tag, made by a member with their own key naming the collective, under the Envelopes layer’s rule; its key sealed to every member', async () => {
+test('way 1 as a collective: an upload and its price tag, made by a member with their own key naming the collective, under the Envelopes layer’s rule; its key sealed to every member; its owners its constitution; its publication and its ending, made for it by a member (F411)', async () => {
   const H = homes.map((h) => h.base);
   const e = await edubba(H, [relay.base]);
   const A = (await e.c.ask<Done>('identity', { name: 'A', linked: false })).acts[0];
@@ -199,9 +199,9 @@ test('way 1 as a collective: an upload and its price tag, made by a member with 
   assert.deepEqual(st.actors.map((a) => [a.id, a.kind, a.available]), [[A, 'self', true], [collective, 'collective', true]], JSON.stringify(st.actors));
   await e.c.ask('publishing act as', { id: collective });
 
-  // A collective's claim is not offered here yet: said in plain words, nothing signed.
+  // A collective's claim is not offered (the core reads a claim's opener, the member, as one of its creators): said in plain words, nothing signed.
   const c = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Three verses.')), title: 'Verses', then: 'claim' });
-  assert.ok(c.reading.blocking.some((x: string) => /A collective’s claim is not offered here yet/.test(x)), JSON.stringify(c.reading.blocking));
+  assert.ok(c.reading.blocking.some((x: string) => /A collective’s claim is not offered: the core reads a claim’s opener/.test(x)), JSON.stringify(c.reading.blocking));
   const w = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Three verses, by three hands.')), title: 'Verses, by the collective', then: 'price', price: '3000' });
   assert.deepEqual(w.reading.blocking, []);
   assert.match(w.reading.summary.join(' '), /Uploaded by the collective .*, by you \(A .*\) with your own key, naming it/);
@@ -214,6 +214,40 @@ test('way 1 as a collective: an upload and its price tag, made by a member with 
   // Both count for the collective on A's act alone, under the rules of their layers (rule 60).
   const j = await judgeCollective(collective, [bake, tag], hints);
   for (const x of [bake, tag]) assert.equal(j.get(x)!.met, true, JSON.stringify(j.get(x)));
+
+  // Round 9 (F411, his answer to Q3): its owners are its constitution, read back by the assessment tool, nothing new to sign.
+  const own = await e.c.ask<any>('publishing ownership read', { claim: '', people: [] });
+  assert.ok(own.reading.blocking.some((x: string) => /Nothing to sign here: a collective’s owners are its constitution/.test(x)), JSON.stringify(own.reading.blocking));
+  assert.match(own.reading.summary.join(' '), /its founding agreement, an ownership agreement with an identity of its own/);
+  const ownSaid = JSON.stringify(own.reading.sections);
+  assert.match(ownSaid, /Who owns what/);
+  assert.match(ownSaid, /The five layers: who acts for it/);
+
+  // Its publication names its founding agreement; read back with the assessment tool; made by A for the collective, the
+  // other member its Agreements rule asks (two of three) asked in their own Edubba.
+  const svc = await dubOf(H, [relay.base]);
+  const pr = await e.c.ask<any>('publishing publication read', { sold: [bake], service: svc.id, price: '3000', tagBy: 'service', title: 'Verses, sold by the collective' });
+  assert.deepEqual(pr.reading.blocking, []);
+  assert.match(pr.reading.summary.join(' '), /Sold by the collective .* its owners its constitution in force/);
+  const prSaid = JSON.stringify(pr.reading.sections);
+  assert.match(prSaid, /Risks, before you sign \(the assessment tool\)/);
+  assert.match(prSaid, /the collective signs this publication under its rule for Agreements \(any 2 of 3 members\)/);
+  assert.match(prSaid, /Its rule asks 2 members/);
+  const made = await e.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest });
+  const pubAct = describeAct((await relayAt(relay.base).getAct(made.acts[0]))!) as { signer: string; objects: [string, string][] };
+  assert.equal(pubAct.signer, A, 'signed by the member, with their own key');
+  assert.ok(pubAct.objects.some(([chain]) => chain === collective), 'naming the collective on its chain');
+  assert.ok(made.lines.some((l) => /is asked, in their own app/.test(l.text)), JSON.stringify(made.lines));
+
+  // Its ending, made for the collective by A the same way (Agreements rule 11): a version selling nothing.
+  const end = await e.c.ask<any>('publishing publication end read', { publication: made.acts[0] });
+  assert.deepEqual(end.reading.blocking, []);
+  assert.match(JSON.stringify(end.reading.sections), /for the collective .* with your own key, naming it/);
+  const ended = await e.c.ask<Done>('publishing confirm', { plan: end.plan, digest: end.digest });
+  const endAct = describeAct((await relayAt(relay.base).getAct(ended.acts[0]))!) as { signer: string; objects: [string, string][] };
+  assert.equal(endAct.signer, A);
+  assert.deepEqual(endAct.objects[0], [made.acts[0], made.acts[0]], 'naming the publication it ends');
+  assert.ok(endAct.objects.some(([chain]) => chain === collective));
 
   // Each member opens the key, sealed to them (a collective keeps no secret from its members, rule 57).
   for (const m of [iPa, iPh]) {
