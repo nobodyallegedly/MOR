@@ -1,4 +1,4 @@
-RESULT_LINE
+**The suite's side is ready to merge.** Every check on GitHub is green at `c649a4b` (the last commit with code); the commit after it adds only this report.
 
 # The Dubsar Suite, round 8's follow-up (F407): anchoring on one price tag per tier
 
@@ -57,7 +57,11 @@ RESULT_LINE
   - *What failed:* it waited 30 seconds for an ID button's second tap to say "Copied", and it never did. It passed at `3726f60` and here, and nothing it touches changed between the two.
   - *Why:* Damgar's pane redraws on a timer. A redraw between the first tap and the second gives a fresh button, which a tap only expands, so "Copied" never comes. A read-once wait, as round 8 fixed elsewhere.
   - *Fixed:* the test taps until the button says "Copied", four times at most, five seconds each. Not re-run on GitHub: the fix's own push runs everything again.
-- **On GitHub at the head:** HEAD_RESULT
+- **On GitHub at `c649a4b`:** all green:
+  - "all": the Rust workspace, both vector checks, the WebAssembly, every app and Module, the reproducible display client;
+  - "regtest": Damgar's anchoring on regtest, and round 3 end to end;
+  - Nakišib's Linux and Mac jobs, Kišib's seal on macOS, Edubba's release, and the browser jobs.
+  - At `9eed45e`, both runs of the site in WebKit passed with the new time limits.
 
 ## For the MOR lead
 
