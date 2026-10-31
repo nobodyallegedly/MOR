@@ -133,7 +133,7 @@ As Damgar's: `npm run release` (or the GitHub workflow `release-ummia-web.yml`, 
 
 *In plain words:* a collective has no key and its members no member keys any more: Ummia acts for a collective with your own key, naming it. The layers are numbered anew (Text 1, Envelopes 2, Money 3, Agreements 4, Development 5), so a collective's releases go through the Envelopes layer, or a finer area of it reaching bakes; and an extension's layers are read in the new numbers. The eight core texts changed, so the MICS document's and the freeze suite's hashes did (`src/cards.ts`, computed again from their files by `cards.test.ts`).
 
-*Waiting on the core:* a release anchored on Bitcoin reads the anchoring service's offer through the WebAssembly's `anchoringReadOffer`, which refuses until its binding reads the anchoring cMIP draft 6's publication and price tag; `releases.test.ts`'s anchored release stays red until then.
+*Anchoring, on the anchoring cMIP draft 7* (round 8's follow-up, F409): a release anchored on Bitcoin reads the service's publication with its price tags, one per tier (`anchoringReadOffer`, the tags given), and the payment prepared for Damgar pays the chosen tier's tag (`tagFor`).
 
 ## Round 2: a collective's releases (F339, F353)
 

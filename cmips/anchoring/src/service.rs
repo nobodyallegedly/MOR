@@ -1,4 +1,4 @@
-//! The pooled anchoring service (anchoring cMIP draft 6, "The pooled
+//! The pooled anchoring service (anchoring cMIP draft 7: one price tag per tier, F409; draft 6, "The pooled
 //! service"; roadmap step 14a, its second pass, and the redesign of round
 //! 8, F407): hashes paid for one by one, anchored in batches, with omission
 //! and late anchoring provable from what the service itself signed.
@@ -208,11 +208,30 @@ impl Terms {
         }
     }
 
-    /// The first version of the price tag (Money type 5) the service signs
-    /// under its publication `first` (its first version): its price the
-    /// most one hash costs under these terms, in `unit`, paid to `service`.
+    /// The first version of the price tag (Money type 5) at the most one
+    /// hash costs under these terms: the most urgent tier's tag (draft 6's
+    /// single tag), in `unit`, paid to `service`.
     pub fn price_tag(&self, first: Hash, unit: Hash, service: Hash) -> PriceTag {
         PriceTag { priced: Priced::Publication(first), version: 1, previous: None, price: Some(Amount { unit, value: self.most() }), payee: service }
+    }
+
+    /// The first versions of the price tags (Money type 5) the service
+    /// signs under its publication `first`, **one per tier** (draft 7, F409:
+    /// "one price tag per price"), each at exactly its tier's price (a
+    /// scheme's cap), in `unit`, paid to `service`; by tier. Two tiers at one
+    /// price share the first one's tag: that price's tag is listed once.
+    pub fn price_tags(&self, first: Hash, unit: Hash, service: Hash) -> Vec<(u64, PriceTag)> {
+        let mut seen: Vec<u64> = vec![];
+        let mut out = vec![];
+        for (i, t) in self.tiers.iter().enumerate() {
+            let value = t.price.most();
+            if seen.contains(&value) {
+                continue;
+            }
+            seen.push(value);
+            out.push((i as u64, PriceTag { priced: Priced::Publication(first), version: 1, previous: None, price: Some(Amount { unit, value }), payee: service }));
+        }
+        out
     }
 }
 
@@ -244,7 +263,7 @@ pub struct Offer {
     pub tag: Hash,
     /// Who is paid: the tag's payee, the service.
     pub payee: Hash,
-    /// The tag's price: the most one hash costs under the terms.
+    /// The tag's price: exactly its tier's price (draft 7: one tag per tier).
     pub price: Amount,
     pub terms: Terms,
     /// The publication's refund terms (field 8): the point on the reference
@@ -263,7 +282,8 @@ impl Offer {
     /// reference, the terms' own; naming this cMIP for the anchoring task.
     /// The tag: naming `first`, signed by the service (or the party the
     /// publication designates), paid to the service, not withdrawn, its
-    /// price the most one hash costs under the terms. Whether the
+    /// price exactly one tier's price (draft 7, F409: one tag per tier; the
+    /// most urgent tier's tag is draft 6's single tag). Whether the
     /// publication counts and the tag counts under it is Agreements'
     /// (`AgreementsView::publication`, `tag_under`), checked beside.
     pub fn from_publication(first: Hash, drafter: Hash, p: &agreements::Publication, tag_id: Hash, tag_signer: Hash, tag: &PriceTag) -> Result<Offer, String> {
@@ -308,42 +328,45 @@ impl Offer {
         let Some(price) = tag.price else {
             return Err("this version of the price tag carries no price: withdrawn (Money rule 18)".into());
         };
-        if price.value != terms.most() {
-            return Err("the tag's price is the most one hash costs under the terms (mechanic, the build's)".into());
+        // Draft 7 (F409, "one price tag per price"): a tag prices exactly one tier, at that tier's price (a
+        // scheme's cap). Draft 6's single tag at the most a hash costs is the most urgent tier's.
+        if !terms.tiers.iter().any(|t| t.price.most() == price.value) {
+            return Err("the tag's price is no tier's price under the terms: one price tag per tier, each exactly at its tier's (draft 7)".into());
         }
         Ok(Offer { id: first, tag: tag_id, payee: tag.payee, price, terms, refund_until })
     }
 
-    /// Read an Agreements standing offer as drafts 3 to 5 did. **Kept only
-    /// for the WebAssembly binding until the MOR lead moves it** to
-    /// [`Offer::from_publication`]: the core no longer reads standing
-    /// offers, and nothing else in this cMIP makes one. The offer is its
-    /// own price here: `tag` is `id`.
-    #[doc(hidden)]
-    pub fn read(id: Hash, signer: Hash, o: &agreements::Offer) -> Result<Offer, String> {
-        if o.under.is_some() {
-            return Err("an anchoring offer is a lone seller's (F215, F225): no co-owners' agreement behind it".into());
+    /// The tier a tag at `price` sells (draft 7): the first tier whose price
+    /// (a scheme's cap) is exactly `price`, in this offer's unit; `None`
+    /// where it prices no tier.
+    pub fn tier_of(&self, price: &Amount) -> Option<u64> {
+        if price.unit != self.price.unit {
+            return None;
         }
-        let [Sold::Access(cmip, params)] = o.sold.as_slice() else {
-            return Err("an anchoring offer sells exactly one thing: this cMIP's terms (a version selling nothing withdraws it)".into());
-        };
-        if cmip != &crate::spec() {
-            return Err("it sells another cMIP's access".into());
+        self.terms.tiers.iter().position(|t| t.price.most() == price.value).map(|i| i as u64)
+    }
+
+    /// Read a service's publication with its price tags, **one per tier**
+    /// (draft 7, F409): each tag as `(act id, signer, tag)`, read as
+    /// [`Offer::from_publication`] reads one, then matched to the tier it
+    /// prices exactly. Returns the offer (read through the first tag that
+    /// counts) and `(tier, tag act)` for each tier a tag prices, by tier; a
+    /// tier with no tag is absent, not on sale. Refuses where no tag prices
+    /// a tier, or two tags price one tier.
+    pub fn from_publication_tags(first: Hash, drafter: Hash, p: &agreements::Publication, tags: &[(Hash, Hash, PriceTag)]) -> Result<(Offer, Vec<(u64, Hash)>), String> {
+        let mut offer: Option<Offer> = None;
+        let mut tiers: Vec<(u64, Hash)> = vec![];
+        for (id, signer, tag) in tags {
+            let o = Offer::from_publication(first, drafter, p, *id, *signer, tag)?;
+            let tier = o.tier_of(&o.price).ok_or("the tag's price is no tier's price")?;
+            if tiers.iter().any(|(t, _)| *t == tier) {
+                return Err(format!("two price tags price tier {tier}: one tag per tier"));
+            }
+            tiers.push((tier, *id));
+            offer.get_or_insert(o);
         }
-        let terms = cbor::decode(params).ok().as_ref().and_then(Terms::decode).ok_or("its terms are not in this cMIP's format")?;
-        if o.time.as_ref().map(|(c, p)| (c, p)) != Some((&terms.reference.cmip, &terms.reference.params)) {
-            return Err("its own time reference (field 6) is the clock its deadlines are points on, the terms' reference".into());
-        }
-        if o.price.value != terms.most() {
-            return Err("its price (field 2) is the most one hash costs under its terms (mechanic, the build's)".into());
-        }
-        let refund_until = match &o.refund {
-            None => None,
-            Some(RefundTerms { until: Value::Uint(u) }) => Some(*u),
-            Some(_) => return Err("its refund point is a point on the reference".into()),
-        };
-        let payee = o.payee(&signer).ok_or("a lone seller's offer is paid to a payee")?;
-        Ok(Offer { id, tag: id, payee, price: o.price, terms, refund_until })
+        tiers.sort();
+        Ok((offer.ok_or("no price tag prices a tier: nothing is on sale")?, tiers))
     }
 
     /// The price of one hash at `tier`, given the ticket's `quote` of the
@@ -587,7 +610,7 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
         return Err("the payment's commitment is not the one the ticket names".into());
     }
     if c.fulfils != offer.tag {
-        return Err("the payment does not pay the publication's price tag (F225: a tip to the service's pointer buys no anchor)".into());
+        return Err("the payment does not pay the ticket's tier's price tag (draft 7: one tag per tier; a tip to the service's pointer or through the publication buys no anchor)".into());
     }
     if c.payee != offer.payee || !matches!(c.paid_to, PaidTo::Flow { .. }) {
         return Err("the payment is not to the tag's payee's flow".into());

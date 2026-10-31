@@ -1,6 +1,6 @@
 //! # mor-anchoring
 //!
-//! The anchoring cMIP, draft 6 (`cmips/cmip-anchoring-draft-6.md`): the
+//! The anchoring cMIP, draft 7 (`cmips/cmip-anchoring-draft-7.md`; one price tag per tier, F409): the
 //! Envelopes' anchoring task (F173), one cMIP with each clock a Module under
 //! it (F202). **Experimental**: an instrument for testing the core.
 //!

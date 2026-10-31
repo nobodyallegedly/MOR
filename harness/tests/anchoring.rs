@@ -469,12 +469,17 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
     let publication_of = terms.publication(svc.id, mor_core::hash::sha256(b"a split cMIP, a test value"), Some(words.into()), None);
     let offer_act = svc.act(mirs().agreements, agreements::types::PUBLICATION, publication_of.to_map(), None, None);
     put(&site, &offer_act).await;
-    let tag_act = svc.act(money_spec(), money::types::PRICE_TAG, Payload::PriceTag(terms.price_tag(offer_act.id(), mor_onchain::unit(Network::Regtest), svc.id)).to_map(), None, None);
-    put(&site, &tag_act).await;
+    // One price tag per tier (anchoring draft 7, F409), each at exactly its tier's price.
+    let mut tag_acts = vec![];
+    for (_, t) in terms.price_tags(offer_act.id(), mor_onchain::unit(Network::Regtest), svc.id) {
+        let a = svc.act(money_spec(), money::types::PRICE_TAG, Payload::PriceTag(t).to_map(), None, None);
+        put(&site, &a).await;
+        tag_acts.push(a);
+    }
     let under_offer = Some(vec![Object { chain: offer_act.id(), predecessor: offer_act.id() }]);
     let pool_key_sk = secret("the anchoring service's batch key");
     let pool_key = bitcoin::key::Keypair::from_secret_key(&Secp256k1::new(), &pool_key_sk).x_only_public_key().0.serialize();
-    eprintln!("the service publishes its pointer, its publication (Agreements type 6, a lone seller's, its own split service) and its price tag (Money type 5, 50 satoshis, the most a hash costs): tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash");
+    eprintln!("the service publishes its pointer, its publication (Agreements type 6, a lone seller's, its own split service) and its price tags (Money type 5, one per tier: 50, 20 and 5 satoshis): tiers of 2, 6 and 144 blocks at 50, 20 and 5 satoshis a hash");
 
     // ------------------------------------------------ four payers buy one hash each
     let now = node.rpc.block_count().await.unwrap();
@@ -494,6 +499,8 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
         // home; the core's Agreements view says the publication counts and
         // the tag counts under it.
         let rd = read(&site, &[svc.id]).await;
+        // The tier's own tag (draft 7): what the payment fulfils, and the offer read with it.
+        let tag_act = &tag_acts[tier as usize];
         let o = offer_in(&rd, &offer_act.id(), &tag_act.id(), &svc.id);
         // The act it anchors, and a random blind: the service sees only the leaf.
         let act = p.post(&format!("{name}'s act, to be anchored"));
@@ -525,7 +532,7 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
         put(&site, &ticket_act).await;
         let receipt_act = svc.act(money_spec(), money::types::RECEIPT, Payload::Receipt(receipt_of(&commitment, &proof)).to_map(), None, None);
         put(&site, &receipt_act).await;
-        eprintln!("{name} pays {} satoshis over Lightning, paying the publication's price tag, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
+        eprintln!("{name} pays {} satoshis over Lightning, paying its tier's price tag, for one hash (tier {tier}, batch {batch}, by block {})", price.value, ticket.deadline);
         buyers.push(Buyer { name, p, act: act.id(), blind, pointer: own_act.id(), commitment, claim: claim_act, ticket_act, ticket });
     }
 
@@ -564,7 +571,7 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
     for b in &buyers {
         eve.add_act(&b.ticket_act);
     }
-    let offer = offer_in(&eve, &offer_act.id(), &tag_act.id(), &svc.id);
+    let offer = offer_in(&eve, &offer_act.id(), &tag_acts[0].id(), &svc.id);
     let ids: Vec<Hash> = eve.v.signed_by(&svc.id).filter(|a| a.inside.spec == mor_anchoring::spec() && a.inside.type_ == service::BATCH_NOTICE).map(|a| a.id).collect();
     let published: Vec<Publication> = ids.iter().map(|id| Publication::from_map(&payload(&eve, id)).unwrap()).collect();
     assert_eq!(published, vec![publication.clone()]);
