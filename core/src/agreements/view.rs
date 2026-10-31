@@ -53,6 +53,9 @@ pub use deals::SuccessorCheck;
 /// The owning side of step 12b: work claims and stake transfers.
 mod owning;
 pub use owning::{TransferEval, WorkOwners};
+
+mod routes;
+pub use routes::{ForwardOwed, HopRecord, RouteVerdict};
 /// The vow grammar (F237, F240): a vow's chain, the offers naming it, and
 /// each sale's state.
 mod vows;
@@ -7575,9 +7578,11 @@ impl<'a> AgreementsView<'a> {
         Ok(Some(out))
     }
 
-    /// What payments held pay toward an obligation (Money rule 7: valid
+    /// What payments held pay toward an obligation (Money rule 15: valid
     /// routes ending at the creditor's payee pointer, each naming the
-    /// obligation). A receipt counts when it names the obligation, is
+    /// obligation). A record naming a previous hop (receipt field 6, claim
+    /// key 10) counts only where the route ending at it is valid (Money
+    /// rule 24, [`Self::route_to`]); one naming none is a route of one hop. A receipt counts when it names the obligation, is
     /// received and signed by the creditor the obligation names (a receipt
     /// anyone else signs, the debtor's own among them, pays nothing; Agreements
     /// invariants, IC2), and:
@@ -7644,7 +7649,8 @@ impl<'a> AgreementsView<'a> {
                         && standing(r)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc)
-                        && !self.shared_unresolved(&r.id, &rc.rail, &rc.proof, &rc.payee, &rc.fulfils, rc.batch.as_ref()) =>
+                        && !self.shared_unresolved(&r.id, &rc.rail, &rc.proof, &rc.payee, &rc.fulfils, rc.batch.as_ref())
+                        && (rc.previous.is_none() || self.route_to(&r.id).is_valid()) =>
                 {
                     receipts.push(((rc.rail, self.record_payment(&r.id, &rc.proof)), rc.amount.value));
                 }
@@ -7655,7 +7661,8 @@ impl<'a> AgreementsView<'a> {
                         && relied(r)
                         && counts(&r.id, &c.amount, &c.proof)
                         && !self.claim_overruled(&c)
-                        && !self.shared_unresolved(&r.id, &c.rail, &c.proof, &c.payee, &c.fulfils, None) =>
+                        && !self.shared_unresolved(&r.id, &c.rail, &c.proof, &c.payee, &c.fulfils, None)
+                        && (c.previous.is_none() || self.route_to(&r.id).is_valid()) =>
                 {
                     claims.push(((c.rail, self.record_payment(&r.id, &c.proof)), c.amount.value));
                 }

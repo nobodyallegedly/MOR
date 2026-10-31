@@ -351,6 +351,8 @@ pub struct Facts {
     /// and 13, under its spec hash (Development, "A rail Module's kind and
     /// binding").
     pub rail_specifications: Vec<Vec<u8>>,
+    /// Receipts and claims the rail answered invalid (Money rule 8).
+    pub rail_invalid: Vec<Hash>,
 }
 
 impl Facts {
@@ -389,6 +391,9 @@ impl Facts {
         if !self.rail_specifications.is_empty() {
             m.insert("rail_specifications".into(), self.rail_specifications.iter().map(|c| json!(hx(c))).collect());
         }
+        if !self.rail_invalid.is_empty() {
+            m.insert("rail_invalid".into(), self.rail_invalid.iter().map(|x| json!(hx(x))).collect());
+        }
         J::Object(m)
     }
 
@@ -424,6 +429,9 @@ impl Facts {
             if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(c, &mor_core::development::Known::default()) {
                 v.rails.insert(Spec::hash_of(c), r);
             }
+        }
+        for x in &self.rail_invalid {
+            v.rail_invalid.insert(*x);
         }
     }
 }
@@ -640,6 +648,19 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
         // Who made a work and who owns it as recorded (rule 15): the claims
         // that count and bind, and the default holder.
         "work owners" => s7i::work_owners_json(view(w).work_owners(&h("work"))),
+        // A route across rails (Money rules 24 to 28): the route ending at a
+        // receipt or claim, as its final creditor reads it, or starting at a
+        // receipt, followed forward.
+        "route to" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7i::route_json(&v.route_to(&h("act")))
+        }
+        "route from" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7i::route_json(&v.route_from(&h("act")))
+        }
         q => panic!("no such question: {q}"),
     }
 }
@@ -1624,6 +1645,7 @@ pub fn money(out: &mut Out) {
         "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
     s7g_money(out);
     s7g_development_rails(out);
+    s7i::money(out);
 }
 
 pub fn agreements(out: &mut Out) {

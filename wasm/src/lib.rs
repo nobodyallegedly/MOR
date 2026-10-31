@@ -3617,6 +3617,44 @@ impl Verifier {
         view.paid(&unhex(id)?).map_err(lerr)
     }
 
+    /// A route across rails (Money rules 24 to 28), the rail answers in
+    /// `specs` (`railValid`, `railInvalid`, `railPayments`,
+    /// `rails`): `direction` "to" reads the route ending at the receipt or
+    /// claim `act`, as its final creditor does, back through the previous
+    /// hop each record names (receipt field 6, claim key 10); "from"
+    /// follows it forward from the receipt `act`. `{ route, hops, at, why,
+    /// agreement, owed, near }`: `route` "valid" (`hops` first to last),
+    /// "stopped" (rule 27: at the receipt `at`, whose forward no valid
+    /// record of the next hop carries on, `owed` its open obligation:
+    /// `{ debtor, creditor, amount: { unit, value }, agreement }`; `near`
+    /// the records naming it that do not carry it on, each `[act, why]`),
+    /// "broken" (rule 28: at the record `at`, under `agreement`, `why`) or
+    /// "unknown" (a rail's answer on it pending or not held).
+    #[wasm_bindgen(js_name = moneyRoute)]
+    pub fn money_route(&self, specs: JsValue, act: &str, direction: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let id = unhex(act)?;
+        let r = match direction {
+            "to" => view.route_to(&id),
+            "from" => view.route_from(&id),
+            _ => return Err(err("a route is read \"to\" a record or \"from\" a receipt")),
+        };
+        to_js(&route_out(&r))
+    }
+
+    /// The forward a receipt declares that no valid record of the next hop
+    /// carries on (Money rule 27): that hop's open obligation, under the
+    /// agreement the forward names, `{ debtor, creditor, amount, agreement }`;
+    /// null where it declares none, or it is carried on. Throws, coded as
+    /// a rail's answer not given, where that cannot be told yet.
+    #[wasm_bindgen(js_name = moneyForwardOwed)]
+    pub fn money_forward_owed(&self, specs: JsValue, receipt: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        to_js(&view.forward_owed(&unhex(receipt)?).map_err(lerr)?.map(|o| owed_out(&o)))
+    }
+
     /// The payee's pointer acts its own acts hold, for what a payment
     /// follows (an obligation, an agreement or an offer; Money rule 14,
     /// F145, F157, F163, F168): `{ pointers, complete }`, or null where
@@ -4478,4 +4516,56 @@ pub fn form_read(s: &str, want: &str) -> R<JsValue> {
     let k = form_kind(want)?;
     let r = mor_core::textual::read(s, k).map_err(|e| err(e.to_string()))?;
     to_js(&FormRead { label: r.kind.label(), data: hex::encode(&r.data), hints: r.hints, bare: r.bare })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AmountOut {
+    unit: String,
+    value: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OwedOut {
+    declared_by: String,
+    debtor: String,
+    creditor: String,
+    amount: AmountOut,
+    agreement: String,
+}
+
+fn owed_out(o: &agreements::ForwardOwed) -> OwedOut {
+    OwedOut { declared_by: hx(&o.declared_by), debtor: hx(&o.debtor), creditor: hx(&o.creditor), amount: AmountOut { unit: hx(&o.amount.unit), value: o.amount.value }, agreement: hx(&o.agreement) }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RouteOut {
+    route: &'static str,
+    hops: Vec<String>,
+    at: Option<String>,
+    why: Option<String>,
+    agreement: Option<String>,
+    owed: Option<OwedOut>,
+    near: Vec<(String, String)>,
+}
+
+fn route_out(r: &agreements::RouteVerdict) -> RouteOut {
+    use agreements::RouteVerdict as V;
+    let hs = |v: &[Hash]| v.iter().map(hx).collect::<Vec<_>>();
+    match r {
+        V::Valid { hops } => RouteOut { route: "valid", hops: hs(hops), at: None, why: None, agreement: None, owed: None, near: vec![] },
+        V::Stopped { hops, at, owed, near } => RouteOut {
+            route: "stopped",
+            hops: hs(hops),
+            at: Some(hx(at)),
+            why: None,
+            agreement: Some(hx(&owed.agreement)),
+            owed: Some(owed_out(owed)),
+            near: near.iter().map(|(x, w)| (hx(x), w.clone())).collect(),
+        },
+        V::Broken { hops, at, agreement, why } => RouteOut { route: "broken", hops: hs(hops), at: Some(hx(at)), why: Some(why.clone()), agreement: agreement.as_ref().map(hx), owed: None, near: vec![] },
+        V::Unknown { at, why } => RouteOut { route: "unknown", hops: vec![], at: Some(hx(at)), why: Some(why.clone()), agreement: None, owed: None, near: vec![] },
+    }
 }

@@ -484,6 +484,8 @@ fn verdict_vectors() {
                 "owed back by" => with_facts(&v, &mirs, facts)
                     .owed_back_by(&h(&ask["act"]))
                     .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
+                "route to" => route_json(&with_facts(&v, &mirs, facts).route_to(&h(&ask["act"]))),
+                "route from" => route_json(&with_facts(&v, &mirs, facts).route_from(&h(&ask["act"]))),
                 "work owners" => match with_facts(&v, &mirs, facts).work_owners(&h(&ask["work"])) {
                     Ok(o) => {
                         let mut c: Vec<String> = o.claims.iter().map(hex::encode).collect();
@@ -543,6 +545,9 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     // A rail Module's kind and binding, read from its specification (fields
     // 11 and 13), under the specification's hash.
+    for x in facts["rail_invalid"].as_array().into_iter().flatten() {
+        av.rail_invalid.insert(h(x));
+    }
     for x in facts["rail_specifications"].as_array().into_iter().flatten() {
         use mor_core::development::{Known, Spec};
         if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(&b(x), &Known::default()) {
@@ -550,4 +555,23 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
         }
     }
     av
+}
+
+/// A route as the vectors write it (Money rules 24 to 28): its verdict, its
+/// records first to last, and where it stops or breaks; a stop's open
+/// obligation (rule 27); the agreement a failure names (rule 28).
+fn route_json(r: &mor_core::agreements::RouteVerdict) -> J {
+    use mor_core::agreements::RouteVerdict as V;
+    use serde_json::json;
+    let hs = |v: &[Hash]| v.iter().map(hex::encode).collect::<Vec<_>>();
+    match r {
+        V::Valid { hops } => json!({ "route": "valid", "hops": hs(hops) }),
+        V::Stopped { hops, at, owed, near } => json!({
+            "route": "stopped", "hops": hs(hops), "at": hex::encode(at),
+            "owed": { "debtor": hex::encode(owed.debtor), "creditor": hex::encode(owed.creditor), "amount": [hex::encode(owed.amount.unit), owed.amount.value], "agreement": hex::encode(owed.agreement) },
+            "near": near.iter().map(|(x, _)| hex::encode(x)).collect::<Vec<_>>(),
+        }),
+        V::Broken { hops, at, agreement, .. } => json!({ "route": "broken", "hops": hs(hops), "at": hex::encode(at), "agreement": agreement.map(hex::encode) }),
+        V::Unknown { at, .. } => json!({ "route": "unknown", "at": hex::encode(at) }),
+    }
 }
