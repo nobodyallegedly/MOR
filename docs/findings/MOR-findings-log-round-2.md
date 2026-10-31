@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F412. A collective's claim is the collective's (31 October 2026)
+
+**Found by the Dubsar Suite's round 9** (pull request 115, `docs/suite-r9-report.md`, "For the MOR lead", 1): a collective cannot open a claim. The claim's format asks its signer, "who opens it", to be among the creators; a member's act for a collective (rule 58) is signed by the member, so the creator read is the member, never the collective.
+
+**Decided by Nobody, allegedly, 31 October 2026 ("Agreed"), the MOR lead's lean (a):** **a claim a member signs for the collective is the collective's claim**: the collective is its opener and a creator, read as rule 58 reads every act for a collective; members who want their own names may be listed beside it as co-creators. *Why:* "the collective is simply one ID"; one reading for every act signed for a collective. *Not chosen (b):* members as the creators and the collective only an owner through an ownership agreement, under which a band's work is always claimed by named people, never the band. Where: Agreements (the claim's format and its opener; rule 58) and the core (`WorkClaim::decode`, `work_owners`), in the next core session.
+
+**Taken by the MOR lead under delegation:** a payout's receipt "names the split" (rule 23) in its field 5 (fulfils), as the suite reads it; the wording pass names the field. A core reader of a publication's payload before it is signed (`readPublication`), in the next core session. `agreementsPublicationTip`'s owners' latest version staying at the founding where no newer version came to exist: right (rule 47).
+
 ## F409. The suite's round 8 done; the last core points before the merge (30 October 2026)
 
 **Found by the Dubsar Suite's round 8** (F407, on pull request 113, `docs/suite-r8-report.md`): every app and cMIP on the redesigned core; the cMIPs reassessed (split, anchoring, conversion kept and moved; member keys proposed for retirement); the six releases rebuilt on S7h-4's WebAssembly; 782 Rust tests pass; **the only red on GitHub: six anchoring tests** (Damgar 4, Ummia 1, Edubba 1, and one regtest), all waiting on the anchoring binding, which is the MOR lead's.
