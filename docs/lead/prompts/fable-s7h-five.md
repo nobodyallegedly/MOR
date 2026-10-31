@@ -1,0 +1,11 @@
+Five questions from S7h, for your judgment, in the MOR repository (`nobodyallegedly/MOR`): pull request 113, branch `claude/s7h-the-redesign`, its report `docs/s7h-report.md` ("The questions", Q2, Q3, Q4, Q14, Q24) and the texts as S7h rewrote them on that branch. S7h wrote your fourth review's redesign into all eight texts; these five touch the way out or a format door, so they come to you before the MOR lead and Nobody, allegedly, decide. Everything else from S7h is decided (F404, on `claude/lead-records`).
+
+1. **Q2, who signs a collective's genesis.** Your sentence ("signed by the chain key it commits to") would have one chain key sign twice, the genesis and the first rotation. S7h's lean: a chain key revealed in the genesis's signature, the genesis committing the next.
+2. **Q3, a collective's rotations** carry no signing key and no kept tip; its line is read through the signature acts a rotation names, never through a member's `prev` (Q15).
+3. **Q4, a rotation for every constitutional clone** (rule 69), or, as your walk had it, a record where the key grammar is unchanged and a rotation only where it changes.
+4. **Q14, a collective's escape endorsement** is signed by members meeting the constitutional change rule, so Identity counts an escape on Agreements' judgment, against the MICS's "a layer's validity depends only on data its own clients hold"; and the endorsement cannot name a decision. S7h's options: (a) as written, a stated cost; (b) the escape judged by the key grammar's holders of the chain key, an Identity matter.
+5. **Q24, a collective that sold its works by transfer can never close**, since "holds nothing" reads only agreement versions. Options: (a) count the transfers in the closing's history; (b) sell by a clone only.
+
+For each: plain words first, then precisely; keep the lean or say what should change and why; the sentence that closes it, in the texts' voice, and where it goes; whether it must close before the freeze. Measured: say what you read and what you only reason.
+
+Do not change texts, code or vectors; decide nothing. Write a short `fable-s7h-five.md` (in the repository: `docs/reviews/`, branch `claude/fable-s7h-five`, a pull request, no merge). Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
