@@ -88,7 +88,7 @@ const IDENTITY_TYPES: Record<number, string> = {
   14: 'escape endorsement',
 };
 
-const ENVELOPES_TYPES: Record<number, string> = { 0: 'publication', 4: 'encryption key' };
+const ENVELOPES_TYPES: Record<number, string> = { 0: 'bake', 4: 'encryption key' };
 
 /** What an arrival is, in words the relay can tell. */
 export function what(it: Item): string {
