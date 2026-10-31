@@ -202,7 +202,7 @@ export function firstScreen(web: boolean, part: 'make' | 'bring' | 'kishib' = 'b
 export function bringForm(): string {
   return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key’s words, as Dub, Edubba or Kišib show them (never the chain key’s).</p>
 <label>Its ID (mid1…, or its hexadecimal)</label><div class="k-row"><input name="id" class="k-grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
-<label>Its signing key’s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
+<label>Its signing key: its 24 words, or its string (morsk1…), as you wrote it down</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
 <div class="k-row"><button type="submit" class="k-btn k-p">Bring it</button></div></form>`;
@@ -275,7 +275,7 @@ ${i.encryption ? '' : note('error', 'Damgar holds no encryption key for this ide
 }
 
 export function renewForm(): string {
-  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Kišib): give the new signing key’s words, and Damgar signs with them, in a new line.</p><label>The new signing key’s 24 words</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Kišib): give the new signing key’s words, and Damgar signs with them, in a new line.</p><label>The new signing key: its 24 words, or its string (morsk1…)</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
 }
 
 export function collectiveForm(cs: { id: string; form: string }[]): string {

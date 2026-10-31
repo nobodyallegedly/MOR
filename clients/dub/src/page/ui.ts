@@ -5,6 +5,7 @@
 // (`clients/kit`): the act card and its two menus, the pop-up thread, the
 // panels, names for @ and To…; this file says what each choice means in Dub.
 
+import { keyStringHtml } from '../../../../modules/carry/src/key-html.ts';
 import {
   attachCards,
   attachClosing,
@@ -1067,8 +1068,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'words': {
         closePanel();
         if (runnerKind) return void popup.show('The signing key’s words', v.runnerWords());
-        const r = await busy('Reading the identity…', () => b.ask<{ grouped: string; words: string[]; say: string[] }>('carry'));
-        if (r) popup.show('The signing key’s words', v.carry(r));
+        const r = await busy('Reading the identity…', () => b.ask<{ grouped: string; words: string[]; key: string; say: string[] }>('carry'));
+        if (r) popup.show('The signing key’s words', v.carry(r) + keyStringHtml(r.key));
         return;
       }
       case 'line':

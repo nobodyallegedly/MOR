@@ -4,6 +4,7 @@
 // browser). It keeps nothing in the browser's storage, not even which
 // screen was open: a reload opens on the four tiles.
 
+import { keyStringHtml } from '../../../../modules/carry/src/key-html.ts';
 import { ask, attachCards, attachClosing, attachColumn, attachContacts, attachIds, card, cardsUntimed, ownId, Popup, stampCards, type KitAct, type Named } from '../../../kit/src/index.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import * as v from './view.ts';
@@ -450,12 +451,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return again(await act(() => b.ask<v.State>(op)));
       }
       case 'show words': {
-        const w = await act(() => b.ask<{ words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing' }>('words show'));
+        const w = await act(() => b.ask<{ words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing'; key?: string }>('words show'));
         if (!w) return;
         const st = state?.sitting;
         const label = st?.kind === 'make' ? (w.which === 'chain' ? 'Its chain key’s words: its first paper' : 'Its signing key’s words') : w.which === 'chain' ? 'Write a new chain-key paper' : 'The new signing key’s words';
         const pane = $('pane');
-        if (pane) pane.innerHTML = v.wordsShown(w.words, w.say, label, st?.kind === 'identity' ? (w.which === 'chain' ? 2 : 4) : null);
+        // The signing key's string beside its words, on request; the chain key, words only (H104).
+        if (pane) pane.innerHTML = v.wordsShown(w.words, w.say, label, st?.kind === 'identity' ? (w.which === 'chain' ? 2 : 4) : null) + (w.which === 'signing' ? keyStringHtml(w.key) : '');
         return;
       }
       case 'written': {
