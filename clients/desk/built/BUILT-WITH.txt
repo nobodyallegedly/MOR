@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 37753ac19293d6e064b0b21f3c5b43424f7a96decca6fb7b5368f5999238c8aa  index.html
-0404df4f3296bbd5ad85524d629efc0964550edc0bfc8eca3a9597ce592c0535  edubba.js
+9af32b58095167a202d3211fbfde5e421baf9d6872e1dae257230cc61b176de2  edubba.js
 251dc7db63919069c5d3ac787ca48ed8dd2d2d36531d20d38992222441a58c13  edubba.css
 465de7280c1ea0ddd18104727fdeffb62efcc887657bc41a79ef6d15a0510e98  mor_wasm_bg.wasm
 332d75526d70de87230a439e64d6a712b91ca44c82867569198b990db20fa45a  atkinson_next.woff2
@@ -22,7 +22,7 @@ Work hash of each file (as the display client lists them):
 
 SHA-256 of each file (as sha256sum prints it):
 f1d34a14915c187cb214dde9e2d31e043a95b4af80131a579580bc3f67725264  index.html
-94af090c1ad410a0ac551a9899dbb491d6ac6f947ef18c99b2042f10b46a0a94  edubba.js
+6bac469163f1c231c879f42342003e694b22e4e6c2343656074c96a5718d531c  edubba.js
 5dcdf791ee1ba004b938c0fceac2adeb41f52bec57e780e07d92b22b3390d683  edubba.css
 63e514f9aed15217af7ccd10ce5f5790e1f85f2211cca8b3213b3a3bfc6bc62e  mor_wasm_bg.wasm
 b91d77113185c48e46d43435dd28bf079756e34b5560baabc38256ad8ced99a7  atkinson_next.woff2

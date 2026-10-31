@@ -5881,6 +5881,80 @@ function typedBack(words2, positions, typed) {
   return positions.length === 3 && typed.length === 3 && positions.every((p, i) => words2[p - 1] === (typed[i] ?? "").trim().toLowerCase());
 }
 
+// ../../modules/carry/src/key-html.ts
+var KEY_STRING_SAY = "The same signing key, written as one string: either form, the 24 words or this string, brings the identity into another app. Whoever holds it can sign as this identity and read its private messages, until the key is changed with the chain key. The chain key is not in it.";
+function keyStringHtml(key) {
+  if (!key || !/^morsk1[0-9a-z ]+$/.test(key)) return "";
+  return `<details class="key-string" data-key-string><summary>Show the same key as a string</summary><p class="small">${KEY_STRING_SAY}</p><p><code class="key-string-value">${key}</code></p></details>`;
+}
+
+// ../../modules/carry/src/string.ts
+var KEY_PREFIX = "morsk";
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+var BECH32M = 734539939;
+function polymod(values) {
+  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+  let chk = 1;
+  for (const v of values) {
+    const b = chk >>> 25;
+    chk = (chk & 33554431) << 5 ^ v;
+    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
+  }
+  return chk >>> 0;
+}
+var expand = (hrp) => [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+function checksum(hrp, data) {
+  const mod = polymod([...expand(hrp), ...data, 0, 0, 0, 0, 0, 0]) ^ BECH32M;
+  return [0, 1, 2, 3, 4, 5].map((i) => mod >>> 5 * (5 - i) & 31);
+}
+function regroup(data, from, to, pad) {
+  let acc = 0;
+  let bits = 0;
+  const out = [];
+  const max = (1 << to) - 1;
+  for (const v of data) {
+    acc = acc << from | v;
+    bits += from;
+    while (bits >= to) {
+      bits -= to;
+      out.push(acc >> bits & max);
+    }
+  }
+  if (pad) {
+    if (bits) out.push(acc << to - bits & max);
+  } else if (bits >= from || acc << to - bits & max) return null;
+  return out;
+}
+function toKeyString(seed) {
+  if (seed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const data = regroup([...seed], 8, 5, true);
+  return `${KEY_PREFIX}1${[...data, ...checksum(KEY_PREFIX, data)].map((d) => CHARSET[d]).join("")}`;
+}
+var groupKeyString = (s) => `${s.slice(0, KEY_PREFIX.length + 1)} ${s.slice(KEY_PREFIX.length + 1).match(/.{1,4}/g).join(" ")}`;
+var looksLikeKeyString = (typed) => typed.replace(/[\s-]/g, "").toLowerCase().startsWith(`${KEY_PREFIX}1`);
+function fromKeyString(typed) {
+  const s = typed.replace(/[\s-]/g, "");
+  if (s !== s.toLowerCase() && s !== s.toUpperCase()) throw new Refused("the string mixes capital and small letters: type it all in one case");
+  const t = s.toLowerCase();
+  if (!t.startsWith(`${KEY_PREFIX}1`)) throw new Refused(`a signing key\u2019s string starts with \u201C${KEY_PREFIX}1\u201D`);
+  const body = t.slice(KEY_PREFIX.length + 1);
+  for (let i = 0; i < body.length; i++) {
+    if (!CHARSET.includes(body[i])) throw new Refused(`character ${KEY_PREFIX.length + 2 + i}, \u201C${body[i]}\u201D, is not one a signing key\u2019s string uses (no b, i, o or 1 after the prefix): check how it is written`);
+  }
+  if (body.length !== 58) throw new Refused(`${body.length} characters after \u201C${KEY_PREFIX}1\u201D, not 58: a character is missing or one too many`);
+  const data = [...body].map((c) => CHARSET.indexOf(c));
+  if (polymod([...expand(KEY_PREFIX), ...data]) !== BECH32M) throw new Refused("the checksum does not match: a character was written or read wrong");
+  const bytes = regroup(data.slice(0, -6), 5, 8, false);
+  if (!bytes || bytes.length !== 32) throw new Refused("it does not carry 32 bytes");
+  return Uint8Array.from(bytes);
+}
+function fromCarried(typed) {
+  if (typeof typed === "string" && looksLikeKeyString(typed)) return fromKeyString(typed);
+  if (Array.isArray(typed) && typed.length && looksLikeKeyString(typed.join(""))) return fromKeyString(typed.join(""));
+  if (typeof typed === "string" && splitWords(typed).length === 1 && splitWords(typed)[0].length > 20) throw new Refused(`neither 24 words nor a signing key\u2019s string (which starts with \u201C${KEY_PREFIX}1\u201D)`);
+  return fromWords(typed);
+}
+
 // ../genesis/src/forms.ts
 var form = (label, hex2) => formEncode(label, unhex(hex2));
 var idForm = (id) => form("mid", id);
@@ -9259,7 +9333,7 @@ var Kishib = class {
     }
     if (h.stage === "sent") throw new Error("Not yet: the new signing key\u2019s words are shown once the homes\u2019 receipts are in, so they are never words of a key that does not count.");
     h.stage = "counts";
-    return { words: toWords(h.signing), say: h.kind === "make" ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: "signing" };
+    return { words: toWords(h.signing), say: h.kind === "make" ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: "signing", key: groupKeyString(toKeyString(h.signing)) };
   }
   /** Hide the words; three positions to type back. */
   written() {
@@ -9879,7 +9953,7 @@ var Kishib = class {
       const hints = addresses(a.address ?? "");
       let seed;
       try {
-        seed = fromWords(a.words);
+        seed = fromCarried(a.words);
       } catch (e3) {
         if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was read.`);
         throw e3;
@@ -11011,7 +11085,7 @@ function askNick(page, o) {
 // ../kit/src/ids.ts
 function idForm2(hex2, label = "mid") {
   if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
-  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET3 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -11025,7 +11099,7 @@ function idForm2(hex2, label = "mid") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod = (v) => {
+  const polymod2 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -11036,9 +11110,9 @@ function idForm2(hex2, label = "mid") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET3[d]).join("")}`;
 }
 function who(o) {
   const form2 = o.form ?? idForm2(o.id, "mid");
@@ -11442,7 +11516,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
 function actFormOf(hex2, label = "mact") {
   if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
-  const CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET3 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
   const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
   const data = [];
   let acc = 0;
@@ -11456,7 +11530,7 @@ function actFormOf(hex2, label = "mact") {
     }
   }
   if (bits) data.push(acc << 5 - bits & 31);
-  const polymod = (v) => {
+  const polymod2 = (v) => {
     const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
     let chk = 1;
     for (const x of v) {
@@ -11467,9 +11541,9 @@ function actFormOf(hex2, label = "mact") {
     return chk;
   };
   const hrp = [...label].map((c) => c.charCodeAt(0));
-  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const pm = polymod2([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
   const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
-  return `${label}1${[...data, ...check].map((d) => CHARSET2[d]).join("")}`;
+  return `${label}1${[...data, ...check].map((d) => CHARSET3[d]).join("")}`;
 }
 
 // src/page/panel.ts
@@ -11549,14 +11623,14 @@ li.warn{color:var(--k-soft)}
   .k-top .k-tabs{display:none}
   .kishib-door .k-box{padding:20px}
 }`;
-var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+var CHARSET2 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 function hexOfForm(form2) {
   const one = form2.lastIndexOf("1");
   let acc = 0;
   let bits = 0;
   const out = [];
   for (const c of form2.slice(one + 1, -6)) {
-    const v = CHARSET.indexOf(c);
+    const v = CHARSET2.indexOf(c);
     if (v < 0) return null;
     acc = (acc << 5 | v) & 4095;
     bits += 5;
@@ -12340,7 +12414,7 @@ function mount(app2, b) {
         const st = state?.sitting;
         const label2 = st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
         const pane = $("pane");
-        if (pane) pane.innerHTML = wordsShown(w.words, w.say, label2, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null);
+        if (pane) pane.innerHTML = wordsShown(w.words, w.say, label2, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null) + (w.which === "signing" ? keyStringHtml(w.key) : "");
         return;
       }
       case "written": {
