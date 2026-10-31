@@ -293,3 +293,40 @@ fn a_collectives_homeless_rotation_is_its_own_escape_endorsement() {
     let res = w.v.resolve(&col.id);
     assert_eq!(res.links.len(), 2, "it counts: the objection never voids a collective's homeless rotation");
 }
+
+/// Rules 58, 60 and 74: a grant within an area counts once the area's
+/// rule is met, its drafter's own act counting as their signature. Drawn
+/// by a holder of an area whose number is one, it counts with no other
+/// signature, and its grantee's act within it counts; drawn by a member
+/// holding no part of the area, no holder signing, it counts for nothing,
+/// and neither does its grantee's act.
+#[test]
+fn a_grant_in_an_area_counts_once_the_areas_rule_is_met_its_drafter_signing_by_drafting() {
+    for (drafter, counts) in [(0usize, true), (2usize, false)] {
+        let mut w = World::new();
+        let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+        let authority = w.genesis("the band's authority", vec![own_home()], None, None);
+        let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+        let mut t = terms(&ids, authority.id);
+        let money: Vec<Kind> = [0, 1, 2].into_iter().map(|ty| Kind::Type { spec: mirs().money, type_: ty }).collect();
+        t.areas = Some(vec![agreements::Area { name: "Money".into(), holders: vec![ids[0], ids[1]], threshold: 1, kinds: Some(money.clone()), fields: None, id: 2, limits: None }]);
+        assert_eq!(t.check(&mirs()), Ok(()));
+        let founding = act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
+        for p in m.iter_mut() {
+            sign(&mut w, p, &founding);
+        }
+        let col = w.genesis_with("the band", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &founding)]), 3);
+        let c = col.id;
+        let mut agent = w.genesis("the band's money agent", vec![own_home()], None, None);
+        let g = Grant { grantee: agent.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: Some(2), kinds: Some(money), reinstates: None, key: None };
+        let mut d = m[drafter].acting_for(c, vec![c]);
+        let gid = w.everyday_act(&mut d, mirs().agreements, agreements::types::GRANT, g.to_map(), None, None);
+        let gid = w.add(&gid);
+        sign(&mut w, &mut agent, &gid);
+        assert_eq!(view(&w).consent(&gid).unwrap().counts(), counts, "the grant, drawn by member {drafter}: {:?}", view(&w).consent(&gid));
+        let mut a = agent.acting_for(c, vec![gid]);
+        let x = w.everyday_act(&mut a, mirs().money, 0, pointer(c), None, None);
+        let x = w.add(&x);
+        assert_eq!(view(&w).consent(&x).unwrap().counts(), counts, "the grantee's act, the grant drawn by member {drafter}: {:?}", view(&w).consent(&x));
+    }
+}

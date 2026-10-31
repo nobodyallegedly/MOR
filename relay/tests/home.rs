@@ -374,11 +374,18 @@ async fn a_live_home_objects_to_a_homeless_rotation() {
         .receipt
         .is_some());
 
-    // A reader who could not reach the old home would accept it; the
-    // objection, from wherever it comes, voids it.
+    // A reader who could not reach the old home, and has not yet seen its
+    // objection, would accept it; the objection, from wherever it comes,
+    // voids it (Identity rule 49). The new home may already hold the
+    // objection its own probe brought: this reader leaves it out, so that
+    // what it reads does not depend on when that probe ran.
     let mut v = Verifier::new(specs().identity);
     for h in [&hs[1]] {
         for a in h.client.identity(&alice.id, None).await.unwrap().all_acts() {
+            let x = decode(&a);
+            if x.open(None).is_ok_and(|i| i.spec == specs().identity && i.type_ == mor_core::identity::types::OBJECTION) {
+                continue;
+            }
             v.add(decode(&a)).unwrap();
         }
         for a in h.client.identity(&h.op(), None).await.unwrap().all_acts() {

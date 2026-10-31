@@ -281,7 +281,7 @@ fn a_free_offer_is_signed_onto_by_a_signature_act() {
     let e = view(&w).vow(&name).unwrap();
     assert_eq!(e.sales.iter().map(|x| (x.act, x.buyer, x.state.clone())).collect::<Vec<_>>(), vec![(s, citizen.id, SaleState::Pending)]);
     let built = about(&mut w, &mut town, name, "the bench is in");
-    let seen = w.ack(&mut citizen, built);
+    let _seen = w.ack(&mut citizen, built);
     assert_eq!(view(&w).vow(&name).unwrap().sales[0].state, SaleState::Pending, "draft 11, rule 13: a confirmation names the sale, and this one names only the act about the vow");
     let seen = w.everyday_act(&mut citizen, common::identity_spec(), mor_core::identity::types::WITNESS, vec![], None, Some(vec![built, s]));
     let seen = w.add(&seen);

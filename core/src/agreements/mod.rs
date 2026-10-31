@@ -32,7 +32,7 @@ pub mod view;
 pub use formats::*;
 pub use owners::{decode_proxy_revocation, in_format, owner_types, proxy_revocation_payload, IssuanceOffer, Proxy};
 pub use open_formats::{
-    new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, Offer, OfferAct, Paid, RefundTerms, ShareRule, Sold, SplitPlan,
+    new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, RefundTerms, ShareRule, Sold, SplitPlan,
     StakeTransfer, Unfilled, WorkClaim, FEES_FIELD, RETIRED_TYPES, WITHDRAWN_FIELDS,
 };
 pub use publication::{Partner, Publication, PublicationAct};

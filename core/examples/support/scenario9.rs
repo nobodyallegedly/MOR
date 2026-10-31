@@ -138,6 +138,27 @@ fn decisions(out: &mut Out) {
     out.case(&mut w, "a platform's publication of a worker's vow, no ownership agreement claiming it: a purchase, its drafter the owners' side", "Agreements rule 14, \"A vow has an owner\"; rule 11",
         "A publication selling a vow no ownership agreement claims is a lone seller's: its drafter is its owners' side, and the worker, no party of it, is paid nothing by it (the stated cost).", facts, ask("purchase", &rec), json!("purchase"), None);
 
+    // Rules 58, 60 and 74: a grant within an area counts once the area's
+    // rule is met, its drafter's own act its signature.
+    for (drafter, counts, name, why) in [
+        (0usize, true, "a grant in an area of number one, drawn by one of the area's holders, no other signing: its grantee's act within it counts", "The drafter's act is their signature: Ana holds the Money area, whose number is one, so the grant counts, and the agent accepted it."),
+        (2usize, false, "the same grant drawn by a member holding no part of the area, no holder signing: its grantee's act counts for nothing", "A grant never reaches beyond its issuer's power: Cy holds no part of the Money area, and neither holder signed the grant."),
+    ] {
+        let mut w = World::new();
+        let money: Vec<Kind> = [0, 1, 2].into_iter().map(|ty| Kind::Type { spec: mirs().money, type_: ty }).collect();
+        let mk = money.clone();
+        let (col, _) = band(&mut w, "a band with a Money area", &move |t, ids| {
+            t.areas = Some(vec![agreements::Area { name: "Money".into(), holders: vec![ids[0], ids[1]], threshold: 1, kinds: Some(mk.clone()), fields: None, id: 2, limits: None }]);
+        });
+        let cid = col.id;
+        let mut agent = w.genesis("the band's money agent", vec![own_home()], None, None);
+        let g = Grant { grantee: agent.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: Some(2), kinds: Some(money), reinstates: None, key: None };
+        let gid = ag_act(&mut w, &mut col.m[drafter].acting_for(cid, vec![cid]), agreements::types::GRANT, g.to_map(), None);
+        sign(&mut w, &mut agent, &gid);
+        let x = pointer_act(&mut w, &mut agent.acting_for(cid, vec![gid]), b"the band's address, set by its agent");
+        out.case(&mut w, name, "Agreements rules 58, 60 and 74", why, Facts::default(), ask("consent counts", &x), json!(counts), None);
+    }
+
     // Rule 17: a backup the publication lists, paid with the payment still
     // naming the tag, receipts in its own name: a purchase.
     let mut w = World::new();

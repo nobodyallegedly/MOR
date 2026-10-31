@@ -984,7 +984,15 @@ impl ColWorld {
             sign(&mut self.w, &mut self.agents[agent], &id);
         }
         let strand = self.agents[agent].acting_for(self.col, vec![id]);
-        self.grants.push(GrantInfo { id, in_area, accepted: accept, holders_signed: holders_sign, strands: vec![strand.clone(), strand], service });
+        // The drafter's act is their signature (rule 60): where the drafter
+        // holds the area and its number is met by one, the grant counts
+        // with no other holder signing.
+        let drafter_alone = in_area && {
+            let now = self.lane_now();
+            let k = self.shape.lane.map_or(1, |(_, k)| k as usize).min(now.len()).max(1);
+            now.contains(&self.ids()[0]) && k <= 1
+        };
+        self.grants.push(GrantInfo { id, in_area, accepted: accept, holders_signed: holders_sign || drafter_alone, strands: vec![strand.clone(), strand], service });
         n
     }
 
