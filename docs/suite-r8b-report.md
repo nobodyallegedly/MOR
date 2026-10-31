@@ -53,6 +53,10 @@ RESULT_LINE
   - **one check failed only on one run:** the site in WebKit, the pull-request run of the same commit. Its push-event run passed in 4 minutes. This one passed its first 27 tests (browser 19, film 8), then the films file hung with no word until the job's 60-minute limit cancelled it. WebKit's MiniBrowser, three relays and esbuild were left running.
   - *Why:* a hang in WebKit, at the films file's start, on one runner. The display client's code did not change this round, only its WebAssembly.
   - *What changed:* the three site browser files now give every test and hook a 4-minute limit, so a hang fails in minutes and names itself.
+- **On GitHub at `9eed45e`:** everything green but one test in "all": Damgar's "H88… every short ID is a button" (`names-contacts.test.ts:239`).
+  - *What failed:* it waited 30 seconds for an ID button's second tap to say "Copied", and it never did. It passed at `3726f60` and here, and nothing it touches changed between the two.
+  - *Why:* Damgar's pane redraws on a timer. A redraw between the first tap and the second gives a fresh button, which a tap only expands, so "Copied" never comes. A read-once wait, as round 8 fixed elsewhere.
+  - *Fixed:* the test taps until the button says "Copied", four times at most, five seconds each. Not re-run on GitHub: the fix's own push runs everything again.
 - **On GitHub at the head:** HEAD_RESULT
 
 ## For the MOR lead

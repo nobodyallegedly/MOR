@@ -234,9 +234,17 @@ test('H88, H96, H100, H106, H109, H119, H121: Damgar shows names, keeps the one 
   await scan('Waiting, To pay');
   let taps = await tapsShowWhole(page, 'Waiting, To pay');
   // A second tap copies it, "Copied" said.
+  // The pane may redraw between taps (a fresh button only expands, the first tap again): tapped until it says "Copied",
+  // a few times at most (round 8's follow-up: a single read once timed out on GitHub).
   const first = page.locator(`#pane [data-k-who="${bob.id}"] .k-idbtn`).first();
-  await first.click();
-  await page.waitForFunction((id) => document.querySelector(`#pane [data-k-who="${id}"] .k-idbtn`)?.textContent === 'Copied', bob.id);
+  let copied = false;
+  for (let i = 0; i < 4 && !copied; i++) {
+    await first.click();
+    copied = await page
+      .waitForFunction((id) => [...document.querySelectorAll(`#pane [data-k-who="${id}"] .k-idbtn`)].some((b) => b.textContent === 'Copied' || (b as HTMLElement).dataset.kCopied === 'yes'), bob.id, { timeout: 5_000 })
+      .then(() => true, () => false);
+  }
+  assert.ok(copied, 'a second tap copies the ID, "Copied" said');
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), idForm(bob.id));
   for (const [tab, part] of [
     ['account', 'summary'],
