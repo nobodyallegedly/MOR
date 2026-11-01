@@ -2,7 +2,7 @@
 
 # S7j: S7i's gaps closed
 
-*Session S7j, 1 November 2026, on `claude/s7i-routes` (pull request 116), continuing S7i. This session recorded no finding of its own; F414 is the MOR lead's, deciding this session's questions 1 to 6 (section 5).*
+*Session S7j, 1 November 2026, on `claude/s7i-routes` (pull request 116), continuing S7i. This session recorded no finding of its own; F414 is the MOR lead's, deciding every question of this session (sections 5 and 6).*
 
 ## In plain words
 
@@ -153,23 +153,30 @@ Kišib needs no change; its five rare tests pass, F299 included, here and on Git
   - owed to nobody, named in field 4: complete.
 - **Q3, Q4 and Q6:** as built.
 
-## Questions still open
+## 6. F414, second part, built
 
-1. **Identity: does a conflicted position count on the other homes?** (question 7 before)
-   - *Plain words:* the texts say two things. Line 70, rule 44 and the MICS say a position where one home's two receipts conflict is contested, and no rotation counts there. "Which rotation counts", step 2, says to leave the conflicting receipts out and apply the home rule to the rest. The core does the second.
-   - The new Q-I3 vectors (a home that never rotates) pin the core's answer, position 1 counting on the other two homes. The stranger reads the texts as the first. Fable's own Q-I3 sentence ("the position is contested") reads as the first too.
-   - *Options:* (a) step 2 governs: a conflict discounts that home's receipts, and the other homes may still meet the rule (the core today); (b) contested: no rotation counts while the conflict stands.
-   - *Lean:* (a), one sentence in line 70 and rule 44.
-   - *Cost of (b):* a stolen home key stalls every identity it serves, so the escape is the only way out. Of (a): none new.
-   - The stranger adds that once proven, a conflict never ends: a stated cost to say either way.
-2. **Vows and referrals through a route** are not covered (question 8 before).
-   - Agreements rule 13 lets only "the payer its commitment names" confirm a vow's sale by their claim. Money rule 20 counts a referral "signed in the buyer's claim".
-   - So a route's first payer can contest, but cannot confirm a vow's sale or carry a referral.
-   - *Lean:* extend both to the first payer's claim of the first hop, citing the tag in `refs` as F414 now says.
-3. **Q-A11 against rules 48 and 94** (the stranger; question 9 before): under every holder, members consent through the collective's own powers, and only holders with no voice sign under rule 48.
-   - Fable's sentence asks the mark to name every holder; the stranger would name only the holders with no voice.
-   - *Built:* Fable's sentence.
-   - *Lean:* keep it, and say in rule 65 how `[5, stake]` is counted under every holder (every holder at the line, members too).
+- **Identity, a conflict at one home** (decided by Nobody, allegedly: step 2 governs). *Texts:* the glossary's "contested position" (line 70), rule 44, and rule 45's last sentence. A home whose two receipts conflict at a position has them left out, and the other homes may still meet the rule. Beside it, the stated cost: a conflict the home's own rotation proves never ends, that home's receipts count for nothing later, and the owner moves to other homes or leaves by the escape. *Core:* no change; it already read so. The two Q-I3 vectors the stranger found differing now agree with the texts.
+- **A vow's sale and a referral through a route** (under delegation).
+  - *Texts:* Agreements rule 13 and Money rule 20, and the suite's 4l. The sale, and the claim carrying a referral, are the route's first payer's claim of the first hop citing the tag.
+  - *Core:* the vow's sales read `route_buyer` first. `payer_acknowledged` reads the first payer's claims of the first hop.
+  - *Vectors:* the vow's sale through a swap, pending; confirmed by a later claim of the fan's of the first hop. *Test:* `s7j_a_referral_through_a_route_is_the_first_payers`, the citing claim filling the role share, the non-citing one not.
+  - *Found while building:* the core listed a first-hop claim citing nothing as "astray". Money rule 24 shows as astray only one citing another tag; the core now follows it. No vector moved.
+- **Q-A11** as built. Rule 65 now says how `[5, stake]` is counted under every holder: every holder of the stake at the line, members and holders who are no members alike, each signing.
+
+**A third stranger's reading** (these sentences and their two cases): both cases agree.
+- *Its points on my sentences, fixed in the texts (no core change):*
+  - Identity: "Conflicting receipts", step 1, section 9's "In short", the glossary's tail, the MICS row and the suite's 7d now say that a conflict leaves the position contested only where the other homes do not meet the rule without it;
+  - rule 44's cost: "a conflict proven (rule 45)", with both ways out said;
+  - rule 45's last sentence: the receipts are left out before proof and after it;
+  - rule 13: conditional on Money rule 24's test, the service the buyer otherwise;
+  - rule 22 and Money rule 20: one route sentence for every kind of evidence, and "their referral there, or their acknowledgement of other evidence";
+  - the suite's 4l: "an act about the vow".
+- *For the MOR lead, older contradictions these sentences meet but do not settle:*
+  1. **Rule 65 (as F414 asks) against rules 94, 95 and 48.** Under every holder, rule 65 now has every holder sign, members too; rules 94, 95 and 48 have only holders with no voice sign, members consenting through the collective's own rules. Rule 64 item 4 asks `[5, stake]` only where the rule is by share. *Lean:* rules 94, 95 and 48 follow rule 65 for a declared every-holder rule, and rule 64 item 4 names it; one sentence in each.
+  2. **The way out of a position contested for good by a proven conflict.** Rule 29 allows a second rotation with the same chain key only after a rotation refused, or contested at a self-hosted home. So an owner whose remaining homes cannot meet the rule has no escape. *Lean:* add to rule 29's second exception "or contested by one home's proven conflict (rule 44)", the endorsement naming both rotations as abandoned. A new rule, so not written.
+  3. **A bare-key first payer and a vow:** rule 13 says a bare-key payer signs nothing onto a vow; the contest paragraph lets them contest by a key-8 claim. Older, now met through routes. *Lean:* one sentence in rule 13 matching the contest paragraph.
+  4. **Several claims of the first hop**, one citing the tag and one citing another or none: the core takes any citing claim (the smallest act id). *Lean:* as built, said in rule 24.
+
 
 ## The stranger's reading
 
@@ -177,7 +184,7 @@ A subagent read only the eight texts, the diff of every sentence written here, a
 
 **The verdicts: 43 agree, 3 silent, 3 differ.**
 - *Differ:*
-  - the two Q-I3 identity cases (open question 1);
+  - the two Q-I3 identity cases (decided in F414: they now agree, section 6);
   - the closing completed by the fan's receipt of the refund (no act of the collective acknowledges it): the case was dropped, and is back once F414 placed refunds by the line (section 5).
 - *Silent:*
   - the closing owing a refund on a payment naming another seller's tag (no text says such a payment is no purchase; with F414 the first hop names the converter's own tag, so routes no longer meet it);
@@ -200,10 +207,10 @@ A subagent read only the eight texts, the diff of every sentence written here, a
   - the suite's 4l is a sixth purchase, and 4g's out-of-order "fifth" is "another";
   - the MICS's route paragraph and receipt field 8's comment no longer give claims a batch;
   - the inner deal's italic follows rule 1's reading.
-- *Questions:* the route buyer's claim and a refund owed to nobody (decided, F414); Identity's contested position, vows and referrals, Q-A11 (still open).
+- *Questions:* all decided in F414 (sections 5 and 6).
 - *Left as written:*
   - the Identity worker's Q-I1 sentence (the stranger would extend it to several pending or unknown acknowledgements; the core already judges those both ways);
-  - "until the home has so rotated, or both so sit" (open question 1 decides it).
+  - "until the home has so rotated, or both so sit" (rewritten with F414: the home not yet proven, its two receipts left out).
 
 **A second reading, of F414's sentences and their 13 cases** (the same limits): **13 agree.** Two rest on weaker ground than the builder's words:
 - that a payment naming another seller's counted tag, paid to the collective, is no purchase rests on the suite's 9f and Money rule 18's "pays the price … to the tag's payee", not on a rule that says so;
@@ -223,7 +230,7 @@ Left open: a claim citing several price tags (the core reads any matching citati
 
 ## Vectors
 
-- 499 verdict cases, 51 of them new, every one made by the core's own functions.
+- 501 verdict cases, 53 of them new, every one made by the core's own functions.
 - Every earlier case keeps its verdict, acts and ids, save the four above, each a decision's own case.
 - New questions: "route buyer", "refund along", "specification claim, reading Agreements".
 - Both READMEs are updated, the c-box's too.
@@ -241,8 +248,8 @@ Left open: a claim citing several price tags (the core reads any matching citati
 - **The deal invariants** (`deal_promises_hold`): a random seed failed, on S7i's head as on this branch, so S7j did not cause it. The core counts a later clone as reliance where the clone keeps its own completeness by being relied on in turn. Rule 47 says so: "once that version is itself complete", and a version relied on stays complete. The oracle accepted only strictly valid signatures. The oracle now reads it by the same rule, and the seed passes.
 - **The releases:** main merged (empty). The WebAssembly is rebuilt, then `npm run release` in `clients/site`, `dub`, `kishib`, `damgar`, `ummia` and `desk`. Only their `built/` changed. Kišib's airgap WebAssembly was rebuilt too, as it depends on the core.
 - **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`): see below. They are computed as its test computes them. The same script gives S7i's published values on S7i's texts.
-  - `MICS_HASH = '6287c1edcddf9ebed72ddb23ae5235cec0e7ca663f557aafec2ad412823dcff8'`
-  - `SUITE_HASH = 'f1c52cf4072d766e5ecdd6393793b353f9122b7109761ef012e7da5cd650e134'`
+  - `MICS_HASH = 'ff3335579e323954b4918277b4ce94808e1959c591494c6749060617e5c83e0a'`
+  - `SUITE_HASH = '222f9b4d7b63b867fd8a328548eb337f673ab0f9ce7d33e5c7dfbdcb7b934804'`
 - **GitHub, at the release commit `eb4c4ce`** (run 41314600805, read by me): **green save the suite's two.**
   - Green: the Rust workspace; the vectors regenerated byte for byte; the Python check; the WebAssembly; every client but two (Kišib included, F299 too); the modules; **the reproducible display client** and its fingerprints; regtest; Nakišib; Kišib's seal on macOS; the site in WebKit; Edubba's release.
   - Red, the suite's:

@@ -305,6 +305,21 @@ impl<'a> AgreementsView<'a> {
                     _ => continue,
                 }
                 seen_payments.push(payment);
+                // A purchase paid through a route: the sale is the first
+                // payer's, by their claim of the first hop citing the tag
+                // (Money rule 24; rule 13); a later claim of theirs of that
+                // hop confirms it.
+                match self.route_buyer(&x.id) {
+                    super::RouteBuyer::FirstPayer { payer, claim } => {
+                        let first_proof = self.hop_record(&claim).map(|r| r.proof).unwrap_or_default();
+                        let state = self.sale_state(name, &payer, &claim, Some((&claim, &first_proof)));
+                        let evidence = self.evidence_of(&claim);
+                        sales.push(VowSale { act: claim, offer: *o, buyer: payer, state, evidence });
+                        continue;
+                    }
+                    super::RouteBuyer::Unknown => return Err(AgreementsError::RailUnanswered),
+                    _ => {}
+                }
                 match self.committed_buyer(&x.id, &proof) {
                     Some((claim, buyer)) => {
                         let state = self.sale_state(name, &buyer, &claim, Some((&x.id, &proof)));

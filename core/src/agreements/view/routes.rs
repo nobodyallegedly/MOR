@@ -525,7 +525,10 @@ impl<'a> AgreementsView<'a> {
         if claims.iter().any(|x| named(x) && !self.rail_invalid.contains(&x.id)) {
             return RouteBuyer::Unknown;
         }
-        let astray = claims.iter().filter(|x| !named(x) && self.rail_valid.contains_key(&x.id)).map(|x| x.id).collect();
+        // Astray: a claim citing another price tag than the one the last
+        // hop names; a claim citing none cites nothing (rule 24).
+        let cites_other = |x: &HopRecord| self.v.get(&x.id).is_some_and(|h| h.inside.refs.iter().flatten().filter_map(|c| c.act()).any(|a| a != r.fulfils && self.tag_of(&a).is_some()));
+        let astray = claims.iter().filter(|x| !named(x) && cites_other(x) && self.rail_valid.contains_key(&x.id)).map(|x| x.id).collect();
         RouteBuyer::OwnAccount { service, astray }
     }
 

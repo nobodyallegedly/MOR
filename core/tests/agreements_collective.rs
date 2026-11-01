@@ -15091,7 +15091,7 @@ fn s7j_an_every_holder_rule_is_named_in_the_mark_with_every_holder() {
         )
     };
     let mark_problem = |st: &CloneState| matches!(st, CloneState::Invalid(w) if w.contains("rule 64.4"));
-    let mut run = |lab: &mut Lab, dana: &mut Person, m: Field4| {
+    let run = |lab: &mut Lab, dana: &mut Person, m: Field4| {
         let mut t = lab.clone_terms(&y, vec![], &f);
         t.field4 = m;
         let x = lab.propose(ANA, &t);
@@ -15109,4 +15109,56 @@ fn s7j_an_every_holder_rule_is_named_in_the_mark_with_every_holder() {
     // 3. The mark naming the rule without Dana: invalid.
     let st3 = run(&mut lab, &mut dana, mark(&ids, true));
     assert!(mark_problem(&st3), "a mark leaving a holder out: {st3:?}");
+}
+
+/// S7j, F414 (Money rule 20 through a route): a referral is the first
+/// payer's where a purchase is paid through a route, carried by their claim
+/// of the first hop, which cites the tag in `refs` (Money rule 24); a claim
+/// of the first hop citing nothing makes the purchase the service's own,
+/// and the first payer's acknowledgement then fills no role share.
+#[test]
+fn s7j_a_referral_through_a_route_is_the_first_payers() {
+    use mor_core::money::{Amount, Claim, Forward, Payer, Payload as Fin, Purchase, Receipt};
+    for cites in [true, false] {
+        let mut l = ServiceDeal::with(&|p| p.plan = role_plan("relay", 200_000));
+        let mut r1 = l.w.genesis("a relay, routes", vec![own_home()], None, None);
+        let e1 = { let a = l.w.everyday_act(&mut r1, spec("a relay transport cMIP, routes"), 0, vec![(Value::Uint(0), Value::Bytes(spec("the song's locked bytes, routes").to_vec()))], None, None); l.w.add(&a) };
+        let mut swap = l.w.genesis("a swap carrying the fan's payment", vec![own_home()], None, None);
+        let (sid, fid, swid, deal, song) = (l.svc.id, l.fan.id, swap.id, l.deal, l.publication);
+        let unit = spec("a unit");
+        let offer = spec("the swap's own offer, routes");
+        let first_proof = b"the fan pays the swap".to_vec();
+        let first = {
+            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: first_proof.clone(), payer: Some(Payer::Identity(fid)), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, previous: None, forward: Some(Forward { next_payee: sid, amount: Amount { unit, value: 1000 }, agreement: spec("the swap's publication, routes") }), batch: None, purchase: None });
+            let a = l.w.everyday_act(&mut swap, mirs().money, 2, r.to_map(), None, None);
+            l.w.add(&a)
+        };
+        let claim = {
+            let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: first_proof.clone(), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+            let refs = cites.then(|| vec![mor_core::act::Ref::Act(song)]);
+            let a = l.w.everyday_act_refs(&mut l.fan, mirs().money, 3, c.to_map(), None, Some(vec![e1]), refs);
+            l.w.add(&a)
+        };
+        let last = {
+            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"the swap pays the split service".to_vec(), payer: Some(Payer::Identity(swid)), payee: sid, amount: Amount { unit, value: 1000 }, fulfils: song, previous: Some(first), forward: None, batch: None, purchase: Some(Purchase { agreement: deal, line: deal }) });
+            let mut svc = l.svc.clone();
+            let a = l.w.everyday_act(&mut svc, mirs().money, 2, r.to_map(), Some(vec![Object { chain: first, predecessor: first }]), None);
+            l.svc = svc;
+            l.w.add(&a)
+        };
+        let mut ps = l.stake_payouts();
+        ps.push(agreements::Payout { role: Some("relay".into()), evidence: Some(e1), ..payout(r1.id, 200) });
+        let x = l.split(last, ps, vec![]);
+        let mut v = common::stand_in_payments(view(&l.w));
+        for id in [first, claim, last] {
+            v.rail_valid.insert(id, mor_core::money::PaidAt::Flow(spec("a pointer")));
+        }
+        assert_eq!(v.route_buyer(&last), if cites { agreements::RouteBuyer::FirstPayer { payer: fid, claim } } else { agreements::RouteBuyer::OwnAccount { service: Some(swid), astray: vec![] } });
+        let e = v.split(&x).unwrap();
+        if cites {
+            assert!(e.unevidenced.is_empty(), "the first payer's claim of the first hop carries the referral: {e:?}");
+        } else {
+            assert_eq!(e.unevidenced, vec![r1.id], "no first payer's citation: the purchase is the swap's, and the fan's acknowledgement fills nothing");
+        }
+    }
 }

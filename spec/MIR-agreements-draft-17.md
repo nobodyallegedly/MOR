@@ -528,13 +528,13 @@ The core keeps only the grammar:
 
 **Each sale is pending, confirmed or contested.**
 
-- **Confirmed:** the buyer acknowledges an act about the vow. For a payment, this is done in a payer's claim of that payment by the payer its commitment names (rule 22: never the payer a receipt names), its `acks` naming an act about the vow, held and valid (Envelopes rule 17).
+- **Confirmed:** the buyer acknowledges an act about the vow. For a payment, this is done in a payer's claim of that payment by the payer its commitment names (rule 22: never the payer a receipt names), its `acks` naming an act about the vow, held and valid (Envelopes rule 17). **For a purchase paid through a route whose buyer is the route's first payer (Money rule 24: the route valid, their claim of the first hop valid on its rail and citing the tag version the last hop names), the sale is that claim, and any claim of theirs of that hop's payment confirms it the same way; otherwise the conversion service is the buyer, by its own claim of the last hop.**
 - **Contested:** the buyer signs a contest naming the sale (type 14).
 - Otherwise, **pending.**
 
 **Only someone who signed onto the vow may confirm or contest it**, **at any price, including none.** They sign on:
 
-- for a payment that is a purchase under a publication naming the vow (rule 12), by their own payer's claim;
+- for a payment that is a purchase under a publication naming the vow (rule 12), by their own payer's claim; through a route, by their claim of the first hop citing the tag (Money rule 24);
 - for a publication with no price tag, by a signature act naming the publication.
 
 **A vow nobody signed onto carries no state.**
@@ -769,7 +769,7 @@ For a relay's delivery record, **the object it names is the one the payment was 
 
 One no claim acknowledges is evidence of nothing. A claim may acknowledge several, so several helpers can share one payment.
 
-**The payer is the one the payment's own commitment names** (payment cMIP: an identity, an anonymous payer's bare key, or nobody): a claim of the same rail payment whose rail proof carries the commitment recomputed from it, its signer, or the bare key it carries, as payer. **It is never the payer a receipt names**, which the split service writes. Where the commitment names nobody, or the rail binds no payer, nothing can be acknowledged, and the share is one nobody fills.
+**The payer is the one the payment's own commitment names** (payment cMIP: an identity, an anonymous payer's bare key, or nobody): a claim of the same rail payment whose rail proof carries the commitment recomputed from it, its signer, or the bare key it carries, as payer. **It is never the payer a receipt names**, which the split service writes. Where the commitment names nobody, or the rail binds no payer, nothing can be acknowledged, and the share is one nobody fills. **For a purchase paid through a route whose buyer is the first payer (Money rule 24), the payer is that first payer, by their claims of the first hop, for every kind of evidence (Money rule 20).**
 
 *Stated cost: a payer who stays wholly anonymous, committing no key, cannot reward a relay or a service.*
 
@@ -1777,7 +1777,7 @@ A clone needing several powers comes into force only when each is met, all at on
 - the clone rule: among the parent's parties, under its field 5;
 - a layer's rule, `[6, layer]`: among the parent's parties, under the parent's field 19 entry for that layer;
 - an area's power: among that area's holders in the parent, at least its threshold of them;
-- a stake's holders' rule, `[5, stake]`: among that stake's holders at the line, by share (rule 94); and a constitutional change rule counted among a stake's holders, likewise.
+- a stake's holders' rule, `[5, stake]`: among that stake's holders at the line, by share (rule 94), and, where the rule is every holder, every holder of that stake at the line, members and holders who are no members alike, each signing; and a constitutional change rule counted among a stake's holders, likewise.
 
 In each, only parties whose voice remains are counted, a stake's holders aside, who are counted by what they hold. This is judged on the collective's chain at the act, or, for a clone, at the record or rotation that puts it in force ("Made before, made after"). Left out are:
 - a party whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before it;

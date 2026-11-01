@@ -42,6 +42,7 @@ fn first_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: 
 
 pub fn money(out: &mut Out) {
     route_buyer(out);
+    vow_through_route(out);
     route_refund(out);
 }
 
@@ -482,4 +483,49 @@ pub fn closing_refund_placed(out: &mut Out) {
             Facts { rail_valid: valid, rail_payments: pays, ..Default::default() },
             json!({ "question": "closing", "act": hx(&k) }), json!({ "complete": !payer_named || repaid }), None);
     }
+}
+
+
+/// A vow's sale paid through a route (Agreements rule 13; Money rule 24):
+/// the sale is the first payer's, by their claim of the first hop citing
+/// the tag; a later claim of theirs of that hop acknowledging an act about
+/// the vow confirms it.
+fn vow_through_route(out: &mut Out) {
+    let enc = |fields: Vec<(u64, Value)>| cbor::encode(&Value::Map(fields.into_iter().map(|(k, v)| (Value::Uint(k), v)).collect()));
+    let content = enc(vec![(0, Value::Uint(kinds::MODULE)), (1, Value::Bytes(spec("a rail's creator").to_vec())), (5, Value::Bytes(spec("a payment cMIP, by its hash").to_vec())), (9, Value::Text("A Lightning request rail, a vow through a route.".into())), (11, Value::Uint(0)), (13, Value::Array(vec![Value::Uint(0), Value::Uint(1)]))]);
+    let lnr = Spec::hash_of(&content);
+    let mut w = World::new();
+    let mut club = w.genesis("a club selling seats through a swap", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan paying a seat through a swap", vec![own_home()], None, None);
+    let mut sw = w.genesis("a swap for seats", vec![own_home()], None, None);
+    let sw_ptr = pointer_on(&mut w, &mut sw, &[(lnr, b"the swap's node, seats")]);
+    let name = { let v = mor_core::envelopes::vow::Vow { words: "A concert in the hall, 20 December".into(), cmip: None };
+        let a = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
+    let tag = lone_offer(&mut w, &mut club, vec![agreements::Sold::Vow(name)], sat(300), "One seat, through a route.");
+    let (pubs, tags) = conversion_offer(&mut w, &mut sw, "Lightning to on-chain, seats.", sat(100_000));
+    let (cid, fid, swid) = (club.id, fan.id, sw.id);
+    let (q1, q3) = (b"the fan pays the swap for a seat".to_vec(), b"the swap pays the club for the seat".to_vec());
+    let pays = vec![(q1.clone(), b"seat ln".to_vec()), (q3.clone(), b"seat out".to_vec())];
+    let a1 = hop_receipt(&mut w, &mut sw, lnr, &q1, fid, sat(950), tags, None, fwd(cid, sat(300), pubs), None);
+    let a2 = hop_receipt(&mut w, &mut club, onchain(), &q3, swid, sat(300), tag, Some(a1), None, None);
+    let k1 = first_claim(&mut w, &mut fan, lnr, &q1, swid, tags, Some(tag));
+    let base = w.log.clone();
+    let rule = "Agreements rule 13: a vow's sale, its buyer through a route the first payer (Money rule 24)";
+    let ask_vow = json!({ "question": "vow", "vow": hx(&name) });
+    let facts = |extra: &[(Hash, Hash)]| {
+        let mut v = vec![(a1, sw_ptr), (a2, tag), (k1, sw_ptr)];
+        v.extend_from_slice(extra);
+        Facts { rail_valid: v, rail_payments: pays.clone(), rail_specifications: vec![content.clone()], ..Default::default() }
+    };
+    out.case(&mut fresh(&base), "a vow's seat paid through a swap, the fan's claim of the first hop citing the club's tag: one sale, the fan's, pending", rule,
+        "The route ending at the club's receipt is valid and the fan's claim of the first hop cites the tag: the fan signed onto the vow by that claim, the sale is pending.",
+        facts(&[]), ask_vow.clone(), json!({ "sales": [{ "act": hx(&k1), "buyer": hx(&fid), "state": "pending" }], "unsigned": [], "unknown": [] }), None);
+    let mut w2 = fresh(&base);
+    let mut door = w2.genesis("the hall's door, a route", vec![own_home()], None, None);
+    let scanned = { let a = w2.everyday_act_refs(&mut door, spec("a ticketing Module"), 0, vec![(Value::Uint(0), Value::Text("seat 3, scanned".into()))], None, None, Some(vec![mor_core::act::Ref::Act(name)])); w2.add(&a) };
+    let _k2 = { let c = Fin::Claim(Claim { rail: lnr, proof: q1.clone(), payee: swid, amount: sat(950), fulfils: tags, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w2.everyday_act_refs(&mut fan.clone(), mirs().money, 3, c.to_map(), None, Some(vec![scanned]), Some(vec![mor_core::act::Ref::Act(tag)])); w2.add(&a) };
+    out.case(&mut w2, "the same, a later claim of the fan's of the first hop acknowledging the door's record of the vow: confirmed", rule,
+        "A claim of the first payer's of the first hop, the sale's own payment, acknowledges an act about the vow: the buyer confirms it, as a direct buyer does by their claim.",
+        facts(&[(_k2, sw_ptr)]), ask_vow.clone(), json!({ "sales": [{ "act": hx(&k1), "buyer": hx(&fid), "state": "confirmed" }], "unsigned": [], "unknown": [] }), None);
 }

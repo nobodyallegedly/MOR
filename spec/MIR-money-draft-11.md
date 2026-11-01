@@ -342,7 +342,7 @@ Until claimed and discharged, the obligation stays open and visible. Whether an 
 
 #### Rule 20. Referrals, and evidence of a rail Module's use
 
-A referral counts as evidence for a role share (Agreements) only when it is signed by the payer, in a claim; a referral the receiver or its split service names on its own earns nothing.
+A referral counts as evidence for a role share (Agreements) only when it is signed by the payer, in a claim; a referral the receiver or its split service names on its own earns nothing. **For a purchase paid through a route, the payer is the route's first payer, and the claim is theirs of the first hop, citing the tag (rule 24)**; their referral there, or their acknowledgement of other evidence, counts for the purchase at the last hop. Where the first payer's claim does not cite the tag version the last hop names, or there is none, the service is the payer, by its own claim of the last hop.
 
 The evidence that a rail Module carried a payment is the receipt or claim naming it in field 0, signed by a party; a Module signs nothing (Development rule 15).
 

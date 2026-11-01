@@ -5804,6 +5804,14 @@ impl<'a> AgreementsView<'a> {
         }
         let mut claims: Vec<&Held> = vec![p];
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
+        // A purchase paid through a route: the first payer's claims of the
+        // first hop, the one citing the tag and the others of that payment
+        // by the same payer, carry the referral (Money rule 20; rule 24).
+        if let RouteBuyer::FirstPayer { payer, claim } = self.route_buyer(payment) {
+            let mut first: Vec<Hash> = vec![claim];
+            first.extend(self.same_payment(&claim).into_iter().map(|(x, _)| x));
+            claims.extend(first.into_iter().filter_map(|x| self.v.get(&x)).filter(|h| h.act.outside.signer == Some(payer)));
+        }
         let acknowledging = |c: &Held| -> Option<(Hash, Payment)> {
             let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return None };
             (c.inside.spec == self.mirs.money

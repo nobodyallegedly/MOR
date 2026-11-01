@@ -67,7 +67,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Homeless rotation.** A rotation signed with the current chain key that names new homes and counts without receipts from the old ones, when those homes are gone.
 - **Closure.** A declaration, carried in a rotation of a home's operator, that the home stops serving every identity.
 - **Contested.** The word names four things, each said with its own noun:
-  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44), or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape;
+  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44) and the other homes' receipts do not meet the rule without them, or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape, and where a home's conflict is proven (rule 45) and the other homes do not meet the rule without it;
   - **a contested rotation:** one of the rotations competing at a contested position; a rule it changes waits (rule 42);
   - **a contesting receipt:** a receipt voided by its operator's rotation that another identity acknowledged; it is shown as a dispute at its chain position and decides nothing (receipt check 6);
   - **contested routes:** two routes acts naming one predecessor; clients use the last act before the fork ("Which value counts", 3).
@@ -508,7 +508,7 @@ A succession to another protocol is confirmed as that protocol's link cMIP says.
 
 ### 9. Competing rotations and several homes
 
-*In short: two rotations at one position can only come from one chain key used twice: by a thief, by an owner's mistake, or in one of rule 29's two exceptions. The home rule decides which counts; at most one can. Two receipts from one home for different acts at one position are a conflict: the identity is contested there, never frozen. A home is proven dishonest at a position only as rule 45 says, and the verdict never reaches backwards.*
+*In short: two rotations at one position can only come from one chain key used twice: by a thief, by an owner's mistake, or in one of rule 29's two exceptions. The home rule decides which counts; at most one can. Two receipts from one home for different acts at one position are a conflict: both are left out, and where the other homes do not meet the rule without them the identity is contested there, never frozen. A home is proven dishonest at a position only as rule 45 says, and the verdict never reaches backwards.*
 
 #### Rule 40. The home rule decides between competing rotations
 
@@ -528,17 +528,17 @@ A home left holding a losing rotation is outvoted. The owner may drop it in a la
 
 #### Rule 44. Two receipts from one home: a conflict
 
-Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, the identity is contested at that position, not frozen. Anyone may publish the pair, and clients SHOULD flag the home to the owner.
+Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, both are left out ("Which rotation counts", step 2): the other homes' receipts may still meet the rule, and a rotation they meet it for counts; where they do not, the identity is contested at that position, not frozen. *Stated cost: a conflict proven (rule 45) never ends; that home's receipts count for nothing for that identity at later positions. Where the other homes meet the rule at that position, the chain goes on and the owner moves to other homes by a later rotation; where they do not, the position stays contested.* Anyone may publish the pair, and clients SHOULD flag the home to the owner.
 
 #### Rule 45. Dishonesty, proven at a position
 
-A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions. A conflict survives once a rotation of the home that counts keeps both receipts, or both sit under cosigned summaries; until the home has so rotated, or both so sit, the position is contested and the home is not yet proven.
+A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions. A conflict survives once a rotation of the home that counts keeps both receipts, or both sit under cosigned summaries; until then the home is not yet proven. Its two receipts are left out at that position before proof and after it (rule 44); at an identity requiring audit, proof needs both receipts under cosigned summaries.
 
 #### Conflicting receipts
 
 Two receipts that pass receipt check 1 from the same operator, for the same identity and chain position but different acts, are a conflict, even if they come from different relays of that operator. *After check 1, a conflict needs two genuine rotations at one position, which needs the chain key. A stolen operator key alone can no longer touch any identity's chain.*
 
-1. While a conflict stands, neither receipt counts, and that home counts for nothing at that position. The identity is contested there, not frozen.
+1. While a conflict stands, neither receipt counts, and that home counts for nothing at that position. Where the other homes do not meet the rule without it, the identity is contested there, not frozen.
 2. The conflict ends when one of the two receipts becomes void: through the home's own rotation, or, for an identity that requires audit, because only one of them is included under a cosigned log summary.
 3. The home is proven dishonest for that identity **at that position** only as rule 45 says: both receipts remain valid after the home's rotations, and, where the identity requires audit, both are included under cosigned log summaries. *For an identity that requires audit, step 2 already ends the conflict where only one of them is included.* From then on, its receipts count for nothing for that identity at positions after that one. Its receipts at earlier positions keep counting. *A thief holding the chain key and a bad home may contest the future; they cannot erase the past.*
 
