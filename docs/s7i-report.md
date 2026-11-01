@@ -268,4 +268,5 @@ Not yet rebuilt: stopped at the final merge, as asked. After "preparing to merge
 - `cargo test -p mor-core`: green at the head; the invariants were replayed on the seed that caught the oracle.
 - `python3 core/vectors/check.py`: all 276 agree.
 - `scripts/c-box/make-c-box.sh` into a scratch folder: 8 texts, 12 vector files, nothing refused.
-- CI on GitHub: below.
+- Client tests run here against this branch's WebAssembly, built locally (not a release): collective 44 of 45, desk 82 of 117, damgar 32 of 41, dub 41 of 47, assess 56 of 56. Every failure is the browser not launching in this container (no Chromium at the path Playwright pins), none an answer of the core's; GitHub runs them with a browser.
+- CI on GitHub: pull request 116, read when it finishes (below).
