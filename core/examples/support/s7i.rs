@@ -533,4 +533,22 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w2, "the same rotation with the owner's escape endorsement: it counts, once the new home's receipt meets its rule", "Identity rule 4; section 11, \"The escape endorsement\"; step 5",
         "The owner's escape endorsement, signed with the key bound before it, skips steps 3 and 4; the new home's receipt meets the home rule the rotation declares.",
         Facts::default(), ask_status(&hr), json!("valid"), None);
+
+    // A rotation built on a homeless rotation a valid objection voids: void
+    // with it ("Which rotation counts"), the acts bound to it invalid.
+    let mut w = World::new();
+    let mut old = w.operator("an old home that objects");
+    let mut new = w.operator("the new home chosen");
+    let p = w.genesis("an identity whose homeless rotation is objected to", vec![home_of(&old)], None, None);
+    let (hr, p1) = w.rotate(&p, Rot { homeless: true, homes: Some(vec![home_of(&new)]), ..Default::default() });
+    w.receipt(&mut new, &p.id, &hr, 1);
+    let (r2, mut p2) = w.rotate(&p1, Rot::default());
+    w.receipt(&mut new, &p.id, &r2, 2);
+    let post = w.post(&mut p2, "posted under the rotation built on it");
+    w.object(&mut old, &p.id, &hr);
+    let base = w.log.clone();
+    let rule = "Identity, \"Which rotation counts\": a valid objection voids a homeless rotation, and with it every rotation built on it";
+    out.case(&mut w, "a homeless rotation a live old home's valid objection names: void", rule, "Steps 2 and 3 keep applying until it is final; the old home's objection, valid, voids it.", Facts::default(), ask_status(&hr), json!("void"), None);
+    out.case(&mut fresh(&base), "the rotation built on it: void with it, never invalid", rule, "It fails no rule of its own: it is voided with the rotation it is built on.", Facts::default(), ask_status(&r2), json!("void"), None);
+    out.case(&mut fresh(&base), "an act bound to the rotation built on it: invalid", "Identity, everyday check 2", "Bound to a rotation that does not count.", Facts::default(), ask_status(&post), json!("invalid"), None);
 }

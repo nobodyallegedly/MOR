@@ -2710,13 +2710,16 @@ impl DealWorld {
             // cloning it, a receipt naming it in field 9, and so the splits
             // of that payment) keeps its completeness, a disowned signature
             // on it shown as a dispute.
-            let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid)
+            // A clone relies only once it is itself complete, every party
+            // having signed it; a receipt only as its payee's; a payer's
+            // claim never (rule 47, S7i).
+            let complete = |x: &Hash| (0..ids.len()).all(|i| self.sigs.get(x).is_some_and(|ss| ss.iter().any(|(j, s, _)| *j == i && v.status(s) == Status::Valid)));
+            let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid && complete(x))
                 || v.held_acts().any(|x| {
                     x.inside.spec == mirs().money
                         && v.status(&x.id) == Status::Valid
                         && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
-                            Ok(mor_core::money::Payload::Receipt(r)) => r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
-                            Ok(mor_core::money::Payload::Claim(c)) => c.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                            Ok(mor_core::money::Payload::Receipt(r)) => x.act.outside.signer == Some(r.payee) && r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
                             _ => false,
                         }
                 });

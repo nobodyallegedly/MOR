@@ -114,7 +114,7 @@ A public act's content key MUST open its inside.
 
 #### Rule 8. Identity acts are public
 
-Identity acts are the public face of an identity: genesis, rotations, receipts, routes, names, links, log summaries, cosignatures, objections, absence statements, escape endorsements, witness acts, and this MIR's encryption keys (type 4). They MUST be public acts, save a private link (Identity, section 3). *They go through the same lock as everything else, with their key attached, so every act has one shape.*
+Identity acts are the public face of an identity: genesis, rotations, receipts, routes, names, links, log summaries, cosignatures, objections, absence statements, escape endorsements, witness acts, and this MIR's encryption keys (type 4). They MUST be public acts, save a private link (Identity, section 3): **an Identity act or an encryption key (type 4) that is private, save a private link, is invalid.** *They go through the same lock as everything else, with their key attached, so every act has one shape.*
 
 #### Rule 9. A new key for every object
 

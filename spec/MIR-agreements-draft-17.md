@@ -299,7 +299,7 @@ A bake is a neutral carrier: carrying or quoting a work, or pointing to a web re
 
 The core records claims and their order, never legitimacy. Order is not evidence of authorship; a claim cMIP MAY carry a commitment made before upload. *A claim is used to build agreements and as a defence. Where no claim is made, and no agreement builds on one, nothing in Agreements speaks for the work; and a claim, even with an anchor, proves only "first on MOR": MOR is not a court.*
 
-Where claims from different identities conflict, priority can only be decided where they meet: by anchoring, or by a keeper of an agreement both claims belong to that recorded both. Otherwise they remain openly contested.
+Where claims from different identities conflict, priority can only be decided where they meet: by anchoring, or by a keeper of an agreement both claims belong to that recorded both. Otherwise they remain openly contested. **Priority so decided is shown; it changes no act's validity and no purchase**, which names the ownership agreement its buyer's payment chose (rule 12).
 
 **A claim counts only public or addressed to every creator it names.** It names no roles.
 
@@ -375,7 +375,7 @@ The new holder inherits the full position. The transfers name the current holder
 
 **A sale takes effect on the seller's own line.** The seller signs the transfer by a chain signature too (Identity type 16), which fixes its place.
 
-**Once the seller has signed it, a payout receipt the seller signs for that share after it on the seller's own line is a wrong receipt, counting for nothing.** That payout is owed to the buyer, in the share sold, as the split service's open obligation (rule 30), the service settling with the seller.
+**Once the transfer is complete (both signatures placed), a payout receipt the seller signs for that share after it on the seller's own line is a wrong receipt, counting for nothing.** That payout is owed to the buyer, in the share sold, as the split service's open obligation (rule 30), the service settling with the seller. Before that, the seller's payouts are the seller's, and what the seller may still sell is counted as below.
 
 *Stated cost:* between the transfer and the service's first split following it (split key 8, the service's statement, never the moment), a colluding seller and service can keep paying the seller. The buyer's protection is to anchor the transfer. Otherwise the trail shows it, and the service is liable once it is shown.
 
@@ -448,7 +448,7 @@ The deal is complete when the publication's side either:
 
 That proves payment was verified and honoured.
 
-A payment that receives neither, such as one arriving after the publication ended, creates an obligation to refund it.
+A payment that receives neither, such as one arriving after the publication ended, creates an obligation to refund it. *A verifier shows this obligation where it can tell the payment received neither (the publication ended before it, or the payment naming a tag that counts for nothing); otherwise, holding no key delivery, which is sealed to the buyer, it answers unknown for it.*
 
 A refund owed on a payment whose payer is not named is owed to whoever signs with the key the payment committed to as its payer. They claim it by a payment claim carrying that key's signature and naming where to be paid (Money rule 19). It is never owed to whoever presents the rail proof, which others on the route may hold too. A payment that committed to no key leaves its refund unclaimable by anyone.
 
@@ -557,7 +557,7 @@ These hold too:
 
 - "an act about the vow" is one of its versions, or a valid act naming its name in `objects` or `refs`, except another vow naming it in `refs` (above);
 - a contest prevails over a confirmation and voids nothing;
-- a free sale is confirmed by any valid act of the buyer's acknowledging such an act;
+- a free sale is confirmed by a valid act of the buyer's acknowledging such an act and its own signature act on the publication, as "Promises, and bundles" says;
 - a sign-on by signature is by anyone other than the publication's own parties;
 - a payment whose buyer signed nothing the verifier holds, or committed only a bare key, is a purchase nobody signed onto, listed, with no state (a stated cost of rule 22).
 
@@ -676,7 +676,7 @@ An address is a rail, a rail Module and the address bytes it reads (Money, payee
 
 *Stated cost:* a wallet that reads only Money cannot check it, and pays the pointer as it stands; payers who want the protection use wallets that read Agreements.
 
-*Make it legible: a bypass needs the service, or the party the publication designates, to sign, publicly, for an address that is not its own: collusion in plain view. Set aside: a "receiver" field (anyone can write any name next to their own address); a pointer delegating to another identity's pointer (cleanest, but a change to Money and every wallet); sending every buyer's claim to every owner (it reveals buyers).*
+*Make it legible: a bypass needs the service, or the party the publication designates, to sign, publicly, for an address that is not its own: collusion in plain view. Set aside: a "receiver" field (anyone can write any name next to their own address); a pointer delegating to another identity's pointer (cleanest, but a change to Money and every wallet); sending every buyer's claim to every owner for the pointer check (it reveals buyers; reaching the sellers of a purchase is another matter, rule 16's client conformance below).*
 
 *Payer-side splitting, where a payer's wallet paid each owner's own pointer by the shares, is not a core model: a price tag names one payee, which any wallet can pay, and the split service pays everyone. Owners who want less exposure choose services that pay out at once (rule 32).*
 
@@ -801,7 +801,7 @@ A receipt or claim naming a rail Module the payee's pointer and vault never name
 
 Anyone can check the evidence afterwards.
 
-A role share nobody fills follows the option the plan chose: to the owners pro rata, held open as an obligation, or to a named party. **Absent a choice, it goes to the owners' line**, shown before signing (Development rule 13).
+A role share nobody fills follows the option the plan chose: to the owners pro rata, held open as an obligation, or to a named party. **Absent a choice, it goes to the owners' line**, shown before signing (Development rule 13). *Whether a role share nobody fills went where the plan says is read from the split cMIP's answer; the core shows the choice the plan made.*
 
 **A role share is named by its role, never by a cMIP's hash**: a new transport cMIP needs no new version of every publication.
 
@@ -960,7 +960,7 @@ An arbitrator's answer is an act of the condition cMIP the agreement names (task
 
 A question is a disputed fork (rule 47) or any question put to the chain.
 
-- **The first valid request with standing** (rule 54) **starts the active link's period**, measured on the agreement's time reference (rule 33).
+- **The first valid request with standing** (rule 54; for the judge of forks, a signing party, rule 35) **starts the active link's period**, measured on the agreement's time reference (rule 33).
 - **Later requests on the same question join that stage** and start no clock of their own.
 - **When the period passes with no answer, the next link is active, and every earlier link is void on that question.**
 - **Only the active link can settle.** **A settlement signed outside its link's active window counts for nothing**: before the window opened, or after it closed.
@@ -1072,7 +1072,7 @@ A clone is a draft until all of these hold:
 
 **A draft changes nothing.** *Nobody is added to a collective, or given an area, without their approval: a party added is bound only by its own signature (rule 1), and until it signs, the clone that adds it changes nothing.*
 
-A complete clone closes the parent. Obligations before that point settle under the parent.
+A complete clone closes the parent. *Obligations before that point settle under the parent.*
 
 Where two complete clones of one deal share a parent, rule 47 says which version is in force. For a collective's agreement, rules 72 and 90 settle it.
 
@@ -2212,7 +2212,7 @@ Changing a plan takes a clone, which needs every member's signature, the party's
 
 #### Rule 82. Triggers
 
-A plan executes when the party triggers it while alive, or when the authority named by the abandonment clause declares the party absent.
+A plan executes when the party triggers it while alive, or when the authority named by the abandonment clause declares the party absent. **The living party triggers it by signing the clone marked with the plan**: no other act, and no declaration, is needed.
 
 *Death is a complex issue; the core leaves it to the parties, their named authorities and verifying modules.*
 
@@ -2511,7 +2511,7 @@ A payment to the payer's vault always counts, and the payer's own receipt counts
 
 *Why: one anonymous tip with no key, received in a broken stretch, kept the collective from ever closing, a protection trapping every member with nobody gaining from it. Stated cost: a collective may close while visibly owing an anonymous payer who could never have been paid.*
 
-**Money owed back to a payer who gave no address**: a payer with no payee pointer, vault, or refund rail on a claim of theirs. Before closing, the collective sends the payer **a notice sealed to their identity, with a deadline on a time reference** (type 24), asking where the money should go.
+**Money owed back to a payer who gave no address**: a payer whose claim carries no refund rail and whose chain, as the verifier holds it, names no payee pointer or vault before the notice's deadline on its time reference. **A verifier that cannot resolve the payer's chain answers unknown for the closing.** Before closing, the collective sends the payer **a notice sealed to their identity, with a deadline on a time reference** (type 24), asking where the money should go.
 
 - If the payer names an address in time, they are paid.
 - If not, the collective may close, the debt named in the closing act, visible and unpaid.
@@ -3466,7 +3466,7 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance: where the publication the buyer paid or signed onto sells a vow, the buyer's client names the vow in the contest, as its inside's chain and predecessor, `[[vow, vow]]`, so that the sale is marked.*
 
-*Client conformance: where the payee of a purchase is a collective, or an agreement with several parties, the buyer's client makes its claim of the purchase readable by every member of the collective's agreement in force, or by every party of the version the purchase names: sealed to each of them, or its key delivered to each (rule 57). Stated cost: every member or party sees who bought.*
+*Client conformance: where the payee of a purchase is a collective, or an agreement with several parties, the buyer's client makes its claim of the purchase readable by every member of the collective's agreement in force, or by every party of the version the purchase names: sealed to each of them, or its key delivered to each, or public, as rule 57 says where a member or party is itself an agreement. Stated cost: every member or party sees who bought.*
 
 **A vow's sale** is a purchase, and its buyer contests it the same way, with one difference: where its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`, the contest marks that sale contested (rule 13), and field 1 says which of the vow's promises was not kept, in words or in a cMIP's terms. A contest naming the vow whose field 0 is no sale of that vow marks nothing and shows nothing. In the purchase's form, `[[purchase, purchase]]`, it is shown beside the purchase and marks no sale.
 
@@ -3869,7 +3869,7 @@ left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
 - its signer and the members whose chain signatures on it count are members whose voice remains at the line, its signer among them, and, with the holders below, **meet the constitutional change rule**, counted as rule 65 says;
 - where that rule counts among a stake's holders, a holder who is no member counts toward it only by a chain signature on the closing that counts in their identity chain and is not void, as members do;
 - **the collective holds nothing**: no stake of a latest version of an agreement a verifier holds names it as a holder, after the complete transfers of that stake the closing's history cites, each placed on the collective's line (rule 94), are applied as rule 10 counts them; other than its own stake in itself; unless the work's release (rule 55) counted with the collective's consent placed before the line. *A transfer not in the closing's history leaves the collective a holder, as the tie rule already stands for debts.*
-- **the collective owes nothing**: every obligation that binds it and lies before its line, that is, in the history it cites (one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92). An obligation it owes as a successor is placed by the original's line, not its own. **A receipt or a release of another identity counts toward this only where an act of the collective in the closing's history acknowledges it (Envelopes, `acks`), or the receipt is the collective's own**: it is then placed by the collective's line, and kept there whatever its signer's later rotation disowns, shown as a dispute. **A receipt or release nobody acknowledged is shown, and the closing waits** until an act of the collective acknowledges it. **An absentee's money share, left where the collective's own rules sent it, does not block the closing** (below);
+- **the collective owes nothing**: every obligation that binds it and lies before its line, that is, in the history it cites (one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92); **a refund owed on a payment to it that is not ended (rule 11) among them**. An obligation it owes as a successor is placed by the original's line, not its own. **A receipt or a release of another identity counts toward this only where an act of the collective in the closing's history acknowledges it (Envelopes, `acks`), or the receipt is the collective's own**: it is then placed by the collective's line, and kept there whatever its signer's later rotation disowns, shown as a dispute. **A receipt or release nobody acknowledged is shown, and the closing waits** until an act of the collective acknowledges it. **An absentee's money share, left where the collective's own rules sent it, does not block the closing** (below);
 - **no money is owed back from a broken stretch**, whatever the closing's line (rule 93), save what field 4 leaves open as the rules allow (below);
 - **the collective is not broken.**
 

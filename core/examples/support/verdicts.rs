@@ -3245,6 +3245,13 @@ fn s7g_envelopes(out: &mut Out) {
     out.case(&mut w, "an X-Wing encryption key of 1216 bytes, version 1: valid", "Envelopes, \"Encryption key (type 4)\"", "Scheme 4, a 1216-byte key, version 1 naming nothing it replaces.", Facts::default(), ask_status(&good), json!("valid"), None);
     out.case(&mut fresh(&log), "an X-Wing encryption key of 1215 bytes: invalid", "Envelopes, \"Encryption key (type 4)\"; rule 30", "An X-Wing key of another length than 1216 bytes makes the act invalid.", Facts::default(), ask_status(&short), json!("invalid"), None);
     out.case(&mut fresh(&log), "an encryption key under scheme 1, a signature scheme: invalid", "Envelopes, \"Encryption key (type 4)\": numbers 1 to 3 are signature schemes and are never encryption keys", "enc-key's scheme is 4 or a specification hash.", Facts::default(), ask_status(&schnorr), json!("invalid"), None);
+    // Envelopes rule 8: an encryption key is a public act.
+    let mut w = World::new();
+    let mut p = w.genesis("ivo's friend", vec![own_home()], None, None);
+    let other = w.genesis("someone ivo's friend writes to", vec![own_home()], None, None);
+    let private = w.private_act(&mut p, env, et::ENCRYPTION_KEY, ek(1216), None, vec![other.id]);
+    out.case(&mut w, "an X-Wing encryption key of 1216 bytes, private: invalid", "Envelopes rule 8: Identity acts and this MIR's encryption keys are public acts, save a private link",
+        "A well-formed key, sealed to one reader: an encryption key must be public, so which key is current is the same for every verifier.", Facts::default(), ask_status(&private), json!("invalid"), None);
 }
 
 /// S7g: Money's suspected differences (`docs/untested-sentences.md`, Money).

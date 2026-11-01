@@ -4141,7 +4141,10 @@ impl<'a> AgreementsView<'a> {
             ));
         }
         let up: Vec<Hash> = lineage[1..].iter().map(|(i, _)| *i).collect();
-        let triggered = self
+        // A living party triggers its own plan by signing the clone marked
+        // with it (rule 82); otherwise, the authority's declaration does.
+        let triggered = by.contains_key(party)
+            || self
             .departure_lines(col, Point::Line(at), own)?
             .iter()
             .any(|(_, d)| {

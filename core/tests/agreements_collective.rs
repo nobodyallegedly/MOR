@@ -2871,11 +2871,14 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
 #[test]
 fn a_seat_passes_by_automatic_succession() {
     // (declared, a stranger's plan cloned by two of three, Ben holds Money alone)
-    for (declared, stranger, alone) in [
-        (true, false, false),
-        (false, false, false),
-        (true, true, false),
-        (true, false, true),
+    // (declared, a stranger's plan cloned by two of three, Ben holds Money
+    // alone, Ben alive triggers his own plan by signing the clone, rule 82)
+    for (declared, stranger, alone, living) in [
+        (true, false, false, false),
+        (false, false, false, false),
+        (true, true, false, false),
+        (true, false, true, false),
+        (false, false, false, true),
     ] {
         let mut lab = Lab::new(&|t| {
             if !alone {
@@ -2979,11 +2982,15 @@ fn a_seat_passes_by_automatic_succession() {
         let k = lab.propose(ANA, &t);
         assert_eq!(lab.view().agreement(&k).unwrap().invalid, None);
         let sd = lab.sign_by(&mut dee, &k);
-        lab.rotate(Some((k, vec![sd])), &[0]);
+        let mut named = vec![sd];
+        if living {
+            named.push(lab.sign(BEN, &k));
+        }
+        lab.rotate(Some((k, named)), &[0]);
         let y = lab.publish(0);
         lab.sign(ANA, &y);
         let got = lab.view().consent(&y);
-        match (declared, stranger) {
+        match (declared || living, stranger) {
             (true, false) => {
                 assert!(matches!(&got, Ok(c) if c.counts()), "{got:?}");
                 assert_eq!(lab.in_force(&y), k);

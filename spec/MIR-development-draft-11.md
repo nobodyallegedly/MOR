@@ -322,7 +322,7 @@ The content is decoded as an act's payload is, under the encoding and the CDDL c
 1. The content is deterministic CBOR, holding one map. Bytes that are not, or a map key twice, make it no specification.
 2. Every key of the content map is an unsigned integer from 0 to 13 (arrays and maps inside it follow their own CDDL). Any other key, a key the format does not define, makes it no specification.
 3. Every text string in it, field 9 and every `type-def` included, is canonical text (Text MIR, the pinned Unicode version).
-4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` carried as given; field 12 the value `true` alone.
+4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` any item, carried as given; field 12 the value `true` alone.
 5. Field 0 is a kind from 0 to 8, and field 9 is present.
 6. **By kind**:
    - field 1 is absent on kinds 4, 6 and 7 (a MIR, the MICS document, a test suite) and present on every other kind;

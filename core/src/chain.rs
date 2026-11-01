@@ -586,6 +586,11 @@ impl Verifier {
             .never_ack_specs
             .and_then(|(envelopes, text)| {
                 if inside.spec == envelopes {
+                    // Envelopes rule 8: an encryption key (type 4) is public,
+                    // as Identity acts are; a private one is invalid.
+                    if inside.type_ == crate::envelopes::types::ENCRYPTION_KEY && !act.outside.is_public() {
+                        return Some(Err("an encryption key is a public act (Envelopes rule 8)".into()));
+                    }
                     Some(crate::envelopes::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
                 } else if inside.spec == text {
                     Some(crate::text::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
@@ -1945,6 +1950,30 @@ impl Verifier {
         false
     }
 
+    /// Whether a rotation or chain signature is built on a homeless rotation
+    /// a valid objection voids: void with it ("Which rotation counts": "and
+    /// with it every rotation built on it"), never invalid.
+    fn built_on_voided(&self, cx: &mut Cx, id: &Hash, res: &Resolution, x: &Held) -> bool {
+        let prev_of = |h: &Held| match h.payload() {
+            Some(Payload::Rotation(r)) => Some(r.prev),
+            Some(Payload::ChainSignature(c)) => Some(c.prev),
+            _ => None,
+        };
+        let mut cur = x;
+        for _ in 0..4096 {
+            let Some(p) = prev_of(cur) else { return false };
+            if res.position_of(&p).is_some() {
+                return false;
+            }
+            let Some(h) = self.acts.get(&p) else { return false };
+            if self.objection_voids(cx, id, res, h) {
+                return true;
+            }
+            cur = h;
+        }
+        false
+    }
+
     /// Homeless procedure steps 1, 3 (if `objections`), 4 and 5, and escape.
     #[allow(clippy::too_many_arguments)]
     fn homeless_basis(
@@ -2301,7 +2330,7 @@ impl Verifier {
             let res = self.resolve_cx(cx, &who);
             return if res.position_of(&x.id).is_some() {
                 Status::Valid
-            } else if self.objection_voids(cx, &who, &res, x) {
+            } else if self.objection_voids(cx, &who, &res, x) || self.built_on_voided(cx, &who, &res, x) {
                 Status::Void
             } else if res.waiting().contains(&x.id) || self.on_waiting(cx, &res, x) {
                 Status::Pending
