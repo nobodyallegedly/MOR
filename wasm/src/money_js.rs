@@ -501,7 +501,7 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
     let payer = match &a[4] {
         Value::Null => None,
         Value::Bytes(_) => Some(h(&a[4])?),
-        _ => return Err(err("a payer named by a bare key is not read here")),
+        _ => return Err(err("a payer is an identity hash, or null for a gift")),
     };
     let salt = match &a[6] {
         Value::Bytes(b) if b.len() == 16 => b.clone(),
