@@ -157,14 +157,14 @@ pub(super) fn conversion_offer(w: &mut World, svc: &mut Person, words: &str, mos
 /// hop's receipt, that receipt is also named in `objects`.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn hop_receipt(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payer: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>, forward: Option<money::Forward>, batch: Option<Hash>) -> Hash {
-    let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(payer)), payee: by.id, amount, fulfils, previous, forward, batch, purchase: None });
+    let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(payer), payee: by.id, amount, fulfils, previous, forward, batch, purchase: None });
     let a = w.everyday_act(by, mirs().money, 2, r.to_map(), previous.map(|p| vec![Object { chain: p, predecessor: p }]), None);
     w.add(&a)
 }
 
 /// The paying hop's claim of its payment, signed by `by`.
 pub(super) fn hop_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>) -> Hash {
-    let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous });
+    let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount, fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous });
     let a = w.everyday_act(by, mirs().money, 3, c.to_map(), previous.map(|p| vec![Object { chain: p, predecessor: p }]), None);
     w.add(&a)
 }

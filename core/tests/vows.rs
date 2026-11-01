@@ -16,7 +16,7 @@ use mor_core::agreements::{self, AgreementsView, Mirs, SaleState};
 use mor_core::cbor::Value;
 use mor_core::envelopes::vow::Vow;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{Amount, Claim, PaidAt, Payload as Fin, Purchase, Receipt};
 
 fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -92,7 +92,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: proof.to_vec(),
-        payer: Some(Payer::Identity(payer)),
+        payer: Some(payer),
         payee: pid,
         amount: Amount { unit: spec("a unit"), value: 300 },
         fulfils,
@@ -117,7 +117,6 @@ fn payers_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: Hash, p
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: purchase.map(|a| Purchase { agreement: a, line: a }),
         previous: None,
     });
@@ -146,7 +145,6 @@ fn acknowledging_claim(w: &mut World, payer: &mut Person, payee: Hash, fulfils: 
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: None,
     });

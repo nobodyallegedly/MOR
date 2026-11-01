@@ -27,7 +27,7 @@ use common::{own_home, publication, Person, World};
 use mor_core::act::{Act, Object};
 use mor_core::cbor::Value;
 use mor_core::chain::{Status, Verifier};
-use mor_core::money::{self as fin, Amount, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{self as fin, Amount, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{
     self, outcomes, Abandonment, Area, Authority, Backing, Field4, Grant, Holding, KeyGrammar, Kind,
@@ -1356,7 +1356,7 @@ impl ColWorld {
                     Fin::Receipt(Receipt {
                         rail: rail(),
                         proof: vec![],
-                        payer: Some(Payer::Identity(payer)),
+                        payer: Some(payer),
                         payee,
                         amount: Amount { unit: unit(), value },
                         fulfils: o,
@@ -1415,7 +1415,7 @@ impl ColWorld {
                 let r = Fin::Receipt(Receipt {
                     rail: rail(),
                     proof: vec![proof],
-                    payer: Some(Payer::Identity(if matches!(disguise, Disguise::PayerIsService) { svc_id } else { spec(&format!("a fan {proof}")) })),
+                    payer: Some(if matches!(disguise, Disguise::PayerIsService) { svc_id } else { spec(&format!("a fan {proof}")) }),
                     payee: svc_id,
                     amount: Amount { unit: unit(), value: 10 },
                     fulfils: tag,
@@ -2569,7 +2569,7 @@ impl DealWorld {
                 let r = Receipt {
                     rail: rail(),
                     proof: vec![*proof],
-                    payer: Some(Payer::Identity(spec(&format!("a fan {proof}")))),
+                    payer: Some(spec(&format!("a fan {proof}"))),
                     payee: if matches!(disguise, DealDisguise::OtherPayee) { ids[i] } else { self.svc.id },
                     amount: Amount { unit: unit(), value: 1000 },
                     fulfils: self.tag,
@@ -2594,7 +2594,7 @@ impl DealWorld {
                 let r = Receipt {
                     rail: push_rail(),
                     proof: vec![*proof],
-                    payer: Some(Payer::Identity(spec(&format!("a fan {proof}")))),
+                    payer: Some(spec(&format!("a fan {proof}"))),
                     payee: self.svc.id,
                     amount: Amount { unit: unit(), value: 1000 },
                     fulfils: self.tag,

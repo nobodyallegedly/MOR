@@ -3370,17 +3370,7 @@ impl Verifier {
             .iter()
             .map(|o| OwedBackOut {
                 payment: hx(&o.payment),
-                to: match &o.to {
-                    money::RefundTo::Identity(h) => Some(hx(h)),
-                    money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-                    money::RefundTo::Nobody => None,
-                },
-                to_kind: match &o.to {
-                    money::RefundTo::Identity(_) => "identity",
-                    money::RefundTo::Key(_) => "key",
-                    money::RefundTo::Nobody => "nobody",
-                }
-                .into(),
+                to: hx(&o.to),
                 unit: hx(&o.amount.unit),
                 value: o.amount.value,
                 still_broken: o.still_broken,
@@ -3791,11 +3781,7 @@ impl Verifier {
             agreements::PurchaseVerdict::WrongReceipt { why } => ("wrong-receipt", Some(why.clone())),
             agreements::PurchaseVerdict::Unknown => ("unknown", None),
         };
-        let refund_to = match &e.refund_to {
-            money::RefundTo::Identity(h) => Some(hx(h)),
-            money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-            money::RefundTo::Nobody => None,
-        };
+        let refund_to = e.refund_to.as_ref().map(hx);
         to_js(&PurchaseOut {
             verdict: verdict.into(),
             why,
@@ -4065,11 +4051,9 @@ struct RollbackRegistersOut {
 #[serde(rename_all = "camelCase")]
 struct OwedBackOut {
     payment: String,
-    to: Option<String>,
-    /// Who it is owed to: "identity", "key" (an anonymous payer's bare
-    /// key, Money rule 10a) or "nobody" (no key committed: it does not
-    /// block a closing that names it, QG1).
-    to_kind: String,
+    /// The payer the payment names, owed it back (Money rule 17). A
+    /// payment naming no payer is a gift and owes nothing back.
+    to: String,
     unit: String,
     value: u64,
     still_broken: bool,

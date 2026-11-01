@@ -1,0 +1,126 @@
+diff --git a/cmips/anchoring/src/service.rs b/cmips/anchoring/src/service.rs
+index a083bbf..6a35ced 100644
+--- a/cmips/anchoring/src/service.rs
++++ b/cmips/anchoring/src/service.rs
+@@ -53,7 +53,7 @@
+ 
+ use mor_core::cbor::{self, Value};
+ use mor_core::envelopes::anchoring::Reference;
+-use mor_core::money::{Amount, Payer, PriceTag, Priced, RefundTo};
++use mor_core::money::{Amount, PriceTag, Priced};
+ use mor_core::hash::Hash;
+ use mor_core::agreements::{self, RefundTerms, Sold, SplitPlan, Unfilled};
+ use mor_payment::{Answer, Commitment, PaidTo};
+@@ -543,7 +543,8 @@ pub struct Payment {
+ #[derive(Clone, Debug, PartialEq, Eq)]
+ pub struct Refund {
+     pub amount: Amount,
+-    pub to: RefundTo,
++    /// The payer the payment names; none, a gift, owed nothing.
++    pub to: Option<Hash>,
+     pub until: Option<u64>,
+ }
+ 
+@@ -621,11 +622,7 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
+     if c.amount != price {
+         return Err("the payment is not the tier's price".into());
+     }
+-    let to = match &c.payer {
+-        Some(Payer::Identity(h)) => RefundTo::Identity(*h),
+-        Some(Payer::Key(k)) => RefundTo::Key(k.clone()),
+-        None => RefundTo::Nobody,
+-    };
++    let to = c.payer;
+     Ok(Refund { amount: price, to, until: offer.refund_until })
+ }
+ 
+diff --git a/cmips/conversion/src/lib.rs b/cmips/conversion/src/lib.rs
+index 61556a7..e3cafe3 100644
+--- a/cmips/conversion/src/lib.rs
++++ b/cmips/conversion/src/lib.rs
+@@ -51,7 +51,7 @@ use mor_core::agreements::{self, Sold, SplitPlan, Unfilled};
+ use mor_core::cbor::{self, Value};
+ use mor_core::envelopes::anchoring::Reference;
+ use mor_core::hash::{sha256, Hash};
+-use mor_core::money::{Amount, Citations, Claim, Forward, Payer, PriceTag, Priced, Receipt};
++use mor_core::money::{Amount, Citations, Claim, Forward, PriceTag, Priced, Receipt};
+ use mor_payment::{Answer, Commitment, Held, PaidTo, Proof, Record};
+ 
+ /// This cMIP's spec hash. A test value until its creator is named at step
+@@ -501,7 +501,7 @@ impl Hop {
+         let receipt = Receipt {
+             rail: claim.rail,
+             proof: claim.proof.clone(),
+-            payer: Some(claim.payer(&signer)),
++            payer: Some(signer),
+             payee: claim.payee,
+             amount: claim.amount,
+             fulfils: claim.fulfils,
+@@ -765,6 +765,6 @@ impl agreements::ProofChecker for Checker<'_> {
+ }
+ 
+ /// Whether `payer` names the identity `who`.
+-pub(crate) fn is(payer: &Option<Payer>, who: &Hash) -> bool {
+-    matches!(payer, Some(Payer::Identity(h)) if h == who)
++pub(crate) fn is(payer: &Option<Hash>, who: &Hash) -> bool {
++    payer.as_ref() == Some(who)
+ }
+diff --git a/cmips/payment/src/lib.rs b/cmips/payment/src/lib.rs
+index 37c1587..1163993 100644
+--- a/cmips/payment/src/lib.rs
++++ b/cmips/payment/src/lib.rs
+@@ -21,7 +21,7 @@
+ //! payers (F112).
+ 
+ use mor_core::cbor::{self, Value};
+-use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
++use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Receipt, VaultEntry};
+ use mor_core::hash::{sha256, tagged_hash, Hash};
+ use std::collections::{BTreeMap, BTreeSet};
+ use std::fmt;
+@@ -101,9 +101,9 @@ pub struct Commitment {
+     /// The obligation, agreement, offer or payee-pointer act it follows
+     /// (Money's open parameter: this is how a payment carries it).
+     pub fulfils: Hash,
+-    /// The payer: an identity, an anonymous payer's bare key (F113), or
+-    /// `None` for an anonymous payment that committed no key.
+-    pub payer: Option<Payer>,
++    /// The payer's identity (an anonymous payer's fresh identity), or
++    /// `None` for a payment naming no payer, a gift.
++    pub payer: Option<Hash>,
+     pub paid_to: PaidTo,
+     /// Chosen by the payer, so the commitment cannot be guessed.
+     pub salt: [u8; 16],
+@@ -123,7 +123,7 @@ impl Commitment {
+             Value::Bytes(self.fulfils.to_vec()),
+             self.payer
+                 .as_ref()
+-                .map(Payer::to_value)
++                .map(|p| Value::Bytes(p.to_vec()))
+                 .unwrap_or(Value::Null),
+             self.paid_to.to_value(),
+             Value::Bytes(self.salt.to_vec()),
+@@ -483,12 +483,12 @@ fn address(
+ /// answer is invalid (decided by Nobody, allegedly, 21 October 2026: not an
+ /// ordinary payment that fulfils nothing). Checked from the act alone: step
+ /// 3 has already found the declaration counting on the payee's chain.
+-pub fn transfer_to_oneself(fulfils: &Hash, payee: &Hash, payer: Option<&Payer>, purchase: bool, paid_to: &PaidTo) -> Result<(), Answer> {
++pub fn transfer_to_oneself(fulfils: &Hash, payee: &Hash, payer: Option<&Hash>, purchase: bool, paid_to: &PaidTo) -> Result<(), Answer> {
+     let PaidTo::Vault { declared_by, .. } = paid_to else { return Ok(()) };
+     if declared_by != fulfils {
+         return Ok(());
+     }
+-    if !matches!(payer, Some(Payer::Identity(p)) if p == payee) {
++    if payer != Some(payee) {
+         return Err(Answer::Invalid(
+             "it names the vault declaration it is paid to as what it fulfils, a transfer to oneself, but its payer is not the payee's own identity (the payment cMIP draft 4, step 4a)".into(),
+         ));
+@@ -548,7 +548,7 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
+             &c.payee,
+             &c.amount,
+             &c.fulfils,
+-            Some(c.payer(signer)),
++            Some(*signer),
+             c.purchase.clone(),
+         ),
+     };

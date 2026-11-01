@@ -386,7 +386,7 @@ impl<'a> AgreementsView<'a> {
     /// other than the offer's own side, the buyer being its signer (rule
     /// 13's sign-on). `None` for anything else.
     fn purchase_buyer(&self, act: &Hash) -> R<Option<Hash>> {
-        use crate::money::{Payer, Payload as Fin};
+        use crate::money::Payload as Fin;
         let Some(h) = self.v.get(act) else { return Ok(None) };
         let Some(signer) = h.act.outside.signer else { return Ok(None) };
         if !self.valid(act) {
@@ -403,13 +403,7 @@ impl<'a> AgreementsView<'a> {
             if !self.rail_counts(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return Ok(None);
             }
-            // A payer who committed only a one-time key has standing by a
-            // claim carrying that key's signature (key 8): the buyer is that
-            // claim's signer (rule 13; "A contest of a purchase").
-            let buyer = match c.payer(&signer) {
-                Payer::Identity(b) => b,
-                Payer::Key(_) => signer,
-            };
+            let buyer = signer;
             return Ok(match self.purchase_unjudged(act)? {
                 Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }) => Some(buyer),
                 _ => None,
@@ -469,7 +463,7 @@ impl<'a> AgreementsView<'a> {
     /// claim. `None` where no such claim is held, or the payer committed
     /// only a bare key.
     fn committed_buyer(&self, record: &Hash, proof: &[u8]) -> Option<(Hash, Hash)> {
-        use crate::money::{Payer, Payload as Fin};
+        use crate::money::Payload as Fin;
         let mut claims = self.claims_of_payment((Some(record), proof), |id| self.rail_counts(id));
         // A claim with the rail's answer, valid, names the sale first, so
         // that a claim whose answer is not held moves only the sale's state.
@@ -480,13 +474,7 @@ impl<'a> AgreementsView<'a> {
             if !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return None;
             }
-            let signer = h.act.outside.signer?;
-            match c.payer(&signer) {
-                Payer::Identity(b) => Some((id, b)),
-                // A one-time key's claim carrying its signature (key 8):
-                // the buyer is the claim's signer, standing for the key.
-                Payer::Key(_) => Some((id, signer)),
-            }
+            Some((id, h.act.outside.signer?))
         })
     }
 
@@ -532,14 +520,7 @@ impl<'a> AgreementsView<'a> {
     /// buyer's own claims of it is named); for a free sale, the buyer's
     /// signature act on the offer.
     fn sale_acts(&self, buyer: &Hash, sale: &Hash, proof: Option<(&Hash, &[u8])>) -> Vec<Hash> {
-        use crate::money::{Payer, Payload as Fin};
-        // The payer the sale is of: an identity, or the one-time key its
-        // claim carries (key 8), whose every claim of the payment is theirs.
-        let payer_of = |h: &Held| -> Option<Payer> {
-            let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return None };
-            Some(c.payer(&h.act.outside.signer?))
-        };
-        let want = self.v.get(sale).and_then(payer_of).unwrap_or(Payer::Identity(*buyer));
+        use crate::money::Payload as Fin;
         match proof {
             Some((record, proof)) => self
                 .claims_of_payment((Some(record), proof), |id| self.rail_counts(id))
@@ -547,7 +528,7 @@ impl<'a> AgreementsView<'a> {
                 .filter(|id| {
                     let Some(h) = self.v.get(id) else { return false };
                     let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-                    self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == want)
+                    self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer == Some(*buyer)
                 })
                 .collect(),
             None => vec![*sale],

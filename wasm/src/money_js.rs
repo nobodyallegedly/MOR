@@ -13,7 +13,7 @@ use mor_core::cbor::{self, Value};
 use mor_core::chain::Status;
 use mor_core::hash::Hash;
 use mor_core::identity::Payload as Id;
-use mor_core::money::{self, Amount, Citations, Claim, Obligation, PayeePointer, Payer, Payload, Rail, Receipt, Referral, VaultEntry};
+use mor_core::money::{self, Amount, Citations, Claim, Obligation, PayeePointer, Payload, Rail, Receipt, Referral, VaultEntry};
 use mor_lightning::bolt11::{self, Network as LnNetwork};
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::chain::HeaderChain;
@@ -162,7 +162,7 @@ impl MoneyIn {
             MoneyIn::Receipt { rail, proof, payer, payee, amount, fulfils, purchase } => Payload::Receipt(Receipt {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
-                payer: opt(payer)?.map(Payer::Identity),
+                payer: opt(payer)?,
                 payee: unhex(payee)?,
                 amount: amount.core()?,
                 fulfils: unhex(fulfils)?,
@@ -180,7 +180,6 @@ impl MoneyIn {
                 disagrees: opt(disagrees)?,
                 referral: referral.as_ref().map(|r| -> R<Referral> { Ok(Referral { identity: unhex(&r.identity)?, evidence: unhex(&r.evidence)? }) }).transpose()?,
                 refund: refund.as_ref().map(RailIn::core).transpose()?,
-                anonymous: None,
                 purchase: purchase_of(purchase)?,
                 previous: None,
             }),
@@ -200,7 +199,7 @@ impl MoneyIn {
     }
 
     /// What a client is shown of a payload; a field this binding does not
-    /// show (a forward, a batch, a purchase, a referral, an anonymous key)
+    /// show (a forward, a batch, a purchase, a referral)
     /// is named in `more`, so nothing is shown as absent that is there.
     fn of(p: &Payload) -> (Self, Vec<&'static str>) {
         let mut more = vec![];
@@ -228,14 +227,7 @@ impl MoneyIn {
                 if r.batch.is_some() {
                     more.push("a batch");
                 }
-                let payer = match &r.payer {
-                    Some(Payer::Identity(h)) => Some(hx(h)),
-                    Some(Payer::Key(_)) => {
-                        more.push("an anonymous payer's key");
-                        None
-                    }
-                    None => None,
-                };
+                let payer = r.payer.as_ref().map(hx);
                 MoneyIn::Receipt {
                     rail: hx(&r.rail),
                     proof: ByteBuf::from(r.proof.clone()),
@@ -247,9 +239,6 @@ impl MoneyIn {
                 }
             }
             Payload::Claim(c) => {
-                if c.anonymous.is_some() {
-                    more.push("an anonymous payer's key");
-                }
                 if c.previous.is_some() {
                     more.push("a previous hop");
                 }
@@ -437,7 +426,7 @@ struct CommitmentIn {
     payee: String,
     amount: AmountIn,
     fulfils: String,
-    /// The payer's identity, or none (an anonymous payment that committed no key).
+    /// The payer's identity (an anonymous payer's fresh identity), or none: a payment naming no payer, a gift.
     payer: Option<String>,
     paid_to: PaidToIn,
     salt: ByteBuf,
@@ -467,7 +456,7 @@ impl CommitmentIn {
             payee: unhex(&self.payee)?,
             amount: self.amount.core()?,
             fulfils: unhex(&self.fulfils)?,
-            payer: opt(&self.payer)?.map(Payer::Identity),
+            payer: opt(&self.payer)?,
             paid_to: self.paid_to.core()?,
             salt: arr::<16>(&self.salt, "the salt")?,
             purchase: purchase_of(&self.purchase)?,
@@ -523,7 +512,7 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
         payee: h(&a[1])?,
         amount: Amount::decode(&a[2]).map_err(err)?,
         fulfils: h(&a[3])?,
-        payer: payer.map(Payer::Identity),
+        payer,
         paid_to: PaidTo::decode(&a[5]).ok_or_else(|| err("paid-to"))?,
         salt: salt.clone().try_into().unwrap(),
         purchase: if a.len() == 8 { Some(money::Purchase::decode(&a[7]).map_err(err)?) } else { None },
@@ -1550,7 +1539,7 @@ pub fn anchoring_check_ticket(publication: &[u8], tag: &[u8], ticket: &[u8], com
         fulfils: h(&c[3])?,
         payer: match &c[4] {
             Value::Null => None,
-            v => Some(Payer::decode(v).map_err(err)?),
+            v => Some(h(v)?),
         },
         paid_to: PaidTo::decode(&c[5]).ok_or_else(|| err("paid-to"))?,
         salt: match &c[6] {

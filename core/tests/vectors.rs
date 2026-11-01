@@ -364,7 +364,7 @@ fn verdict_vectors() {
                     .purchase_contests(&h(&ask["purchase"]))
                     .map_or(json!("unknown"), |x| json!(x.iter().map(hex::encode).collect::<Vec<_>>())),
                 "refund repaid" => with_facts(&v, &mirs, facts)
-                    .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
+                    .refund_repaid(&h(&ask["payment"]), &h(&ask["to"]), &h(&ask["unit"]))
                     .map_or(json!("unknown"), |x| json!(x)),
                 "version in force" => with_facts(&v, &mirs, facts).version_in_force(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(hex::encode(x))),
                 "fork" => match with_facts(&v, &mirs, facts).fork(&h(&ask["act"])) {

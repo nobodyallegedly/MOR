@@ -35,7 +35,7 @@ pub fn refund_along_json(r: Result<Vec<agreements::RefundHop>, agreements::Agree
 /// as the commitment names it (the service's tag), citing in `refs` the
 /// tag the route pays for.
 fn first_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: Hash, commitment: Hash, cites: Option<Hash>) -> Hash {
-    let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: sat(950), fulfils: commitment, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: sat(950), fulfils: commitment, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
     let a = w.everyday_act_refs(by, mirs().money, 3, c.to_map(), None, None, cites.map(|t| vec![mor_core::act::Ref::Act(t)]));
     w.add(&a)
 }
@@ -274,12 +274,12 @@ fn price_change(out: &mut Out) {
     let pays = vec![(proof.clone(), b"the old price's payment".to_vec())];
     let fid = fan.id;
     let claim = |w: &mut World, fan: &mut Person| {
-        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: sat(900), fulfils: t1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: sat(900), fulfils: t1, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
     let receipt = |w: &mut World, seller: &mut Person| {
-        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fid)), payee: sid, amount: sat(900), fulfils: t1, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(fid), payee: sid, amount: sat(900), fulfils: t1, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(seller, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -356,7 +356,7 @@ pub fn closing_refund(out: &mut Out, family: &[(mor_core::act::Act, Option<[u8; 
     let tag = lone_offer(&mut w, &mut seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a song".into())))], sat(300), "A song.");
     let rail = spec("a rail Module, closing refunds");
     let proof = b"the fan pays the band, naming another seller's tag".to_vec();
-    let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: cid, amount: sat(300), fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: cid, amount: sat(300), fulfils: tag, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
     let paid = { let a = w.everyday_act(&mut fan, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
     let owing = w.log.clone();
     let pays = vec![(proof.clone(), b"the fan's payment to the band".to_vec())];
@@ -434,8 +434,8 @@ pub fn inner_deal_consent(out: &mut Out) {
 
 /// A refund owed on a payment to a collective, placed by its closing's line
 /// (the collective's own receipt in the closing's history), blocks the
-/// closing; one owed to nobody, named in field 4, is left open (Agreements,
-/// "Closing (type 20)").
+/// closing; a payment naming no payer is a gift, owing no refund (Money
+/// rule 17; Agreements, "Closing (type 20)").
 pub fn closing_refund_placed(out: &mut Out) {
     let rule = "Agreements, \"Closing (type 20)\": the collective owes nothing, a refund owed on a payment to it before its line among its debts, save what field 4 leaves open";
     for (payer_named, repaid, name, why) in [
@@ -443,8 +443,8 @@ pub fn closing_refund_placed(out: &mut Out) {
          "The fan paid the band naming another seller's tag: no purchase, money received for nothing, owed back to the fan. The band's own receipt of it lies in the closing's history: a debt of the band's, not ended, so it cannot close."),
         (true, true, "the same, the fan's receipt of the refund acknowledged by an act of the band before the line: complete",
          "The fan receipts 300 back, naming the band's receipt; an act of the band in the closing's history acknowledges it, so the closing's line relies on it: the refund is repaid, and the band owes nothing."),
-        (false, false, "a closing naming in field 4 a refund owed to nobody (a payment that committed no key), its own receipt before the line: complete",
-         "The payer committed no key: nobody can claim the refund. Named in field 4 as left open, it does not block the closing, as for the broken stretch; it stays visible."),
+        (false, false, "a closing of a collective whose own receipt before the line records a payment naming no payer, naming another seller's tag: complete",
+         "A payment naming no payer, in its receipt and by no claim, is a gift: it counts toward what it names, and no refund is owed on it. Nothing blocks the closing."),
     ] {
         let mut w = World::new();
         let mut col = collective(&mut w, &[1], 1);
@@ -454,7 +454,7 @@ pub fn closing_refund_placed(out: &mut Out) {
         let tag = lone_offer(&mut w, &mut seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a print".into())))], sat(300), "A print.");
         let rail = spec("a rail Module, a band's closing");
         let proof = b"a payment to the band naming another seller's tag".to_vec();
-        let payer = if payer_named { Some(Payer::Identity(fan.id)) } else { None };
+        let payer = if payer_named { Some(fan.id) } else { None };
         let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer, payee: cid, amount: sat(300), fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
         let mut ben = col.m[1].acting_for(cid, vec![cid]);
         let rec = { let a = w.everyday_act(&mut ben, mirs().money, 2, r.to_map(), Some(vec![Object { chain: cid, predecessor: cid }]), None); w.add(&a) };
@@ -463,7 +463,7 @@ pub fn closing_refund_placed(out: &mut Out) {
         let mut pays = vec![(proof.clone(), b"the band's payment".to_vec())];
         if repaid {
             let back = b"the band pays the fan back, a band's closing".to_vec();
-            let rr = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(cid)), payee: fan.id, amount: sat(300), fulfils: rec, previous: None, forward: None, batch: None, purchase: None });
+            let rr = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(cid), payee: fan.id, amount: sat(300), fulfils: rec, previous: None, forward: None, batch: None, purchase: None });
             let fr = { let a = w.everyday_act(&mut fan, mirs().money, 2, rr.to_map(), None, None); w.add(&a) };
             let mut ana = col.m[0].acting_for(cid, vec![rec]);
             let ack = { let a = w.everyday_act(&mut ana, mirs().agreements, agreements::new_types::LIVENESS, agreements::Liveness { agreement: f }.to_map(), obj(f), Some(vec![fr])); w.add(&a) };
@@ -472,8 +472,7 @@ pub fn closing_refund_placed(out: &mut Out) {
             pays.push((back, b"the refund".to_vec()));
         }
         let _ = &mut fan;
-        let open = if payer_named { vec![] } else { vec![agreements::OpenOwed { payment: rec, notice: None, holder: None }] };
-        let closing = agreements::Closing { agreement: f, collective: cid, open };
+        let closing = agreements::Closing { agreement: f, collective: cid, open: vec![] };
         let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, cites), agreements::types::CLOSING, closing.to_map(), obj(f));
         for i in 0..3 {
             let (_, q) = w.chain_sign(&col.m[i], k);
@@ -523,7 +522,7 @@ fn vow_through_route(out: &mut Out) {
     let mut w2 = fresh(&base);
     let mut door = w2.genesis("the hall's door, a route", vec![own_home()], None, None);
     let scanned = { let a = w2.everyday_act_refs(&mut door, spec("a ticketing Module"), 0, vec![(Value::Uint(0), Value::Text("seat 3, scanned".into()))], None, None, Some(vec![mor_core::act::Ref::Act(name)])); w2.add(&a) };
-    let _k2 = { let c = Fin::Claim(Claim { rail: lnr, proof: q1.clone(), payee: swid, amount: sat(950), fulfils: tags, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let _k2 = { let c = Fin::Claim(Claim { rail: lnr, proof: q1.clone(), payee: swid, amount: sat(950), fulfils: tags, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w2.everyday_act_refs(&mut fan.clone(), mirs().money, 3, c.to_map(), None, Some(vec![scanned]), Some(vec![mor_core::act::Ref::Act(tag)])); w2.add(&a) };
     out.case(&mut w2, "the same, a later claim of the fan's of the first hop acknowledging the door's record of the vow: confirmed", rule,
         "A claim of the first payer's of the first hop, the sale's own payment, acknowledges an act about the vow: the buyer confirms it, as a direct buyer does by their claim.",

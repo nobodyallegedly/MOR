@@ -295,8 +295,7 @@ fn scheme(v: &Value, w: &'static str) -> R<Scheme> {
     }
 }
 
-/// Decode `signing-key = [ scheme, key: bstr ]`; Money reads an anonymous
-/// payer's bare key in this form (F113). A key of a founding scheme whose
+/// Decode `signing-key = [ scheme, key: bstr ]`. A key of a founding scheme whose
 /// length is not the one in the table makes the act invalid ("Encoding
 /// and conventions", signature schemes).
 pub fn signing_key(v: &Value) -> R<SigningKey> {

@@ -608,7 +608,7 @@ impl Verifier {
         // F295: a Money act outside its type's format, of a type Money does
         // not define, or signed by someone other than Money names (a pointer
         // not by its payee, an obligation not by its debtor, a receipt not
-        // by its payee, an anonymous claim whose key 8 does not verify) is
+        // by its payee) is
         // invalid, for a verifier that knows which specification Money is.
         let money = self
             .ack_specs

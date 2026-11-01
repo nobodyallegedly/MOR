@@ -29,7 +29,7 @@
 //! runs back hop by hop (rule 28, [`AgreementsView::refund_along`]).
 
 use super::*;
-use crate::money::{Amount, Claim, Forward, Payload as Fin, Payer, Receipt};
+use crate::money::{Amount, Claim, Forward, Payload as Fin, Receipt};
 
 /// One hop's record, as a route reads it: a receipt signed by the hop's
 /// receiver, or the paying hop's claim.
@@ -42,9 +42,6 @@ pub struct HopRecord {
     /// A receipt's payer (field 2), where it names an identity; a claim's
     /// payer is its signer.
     pub payer: Option<Hash>,
-    /// A receipt's payer as field 2 writes it: an identity, or an
-    /// anonymous payer's one-time key.
-    pub payer_as_written: Option<Payer>,
     pub payee: Hash,
     pub amount: Amount,
     pub fulfils: Hash,
@@ -120,11 +117,7 @@ impl<'a> AgreementsView<'a> {
                 id: *id,
                 claim: false,
                 signer,
-                payer: match &payer {
-                    Some(Payer::Identity(p)) => Some(*p),
-                    _ => None,
-                },
-                payer_as_written: payer.clone(),
+                payer,
                 payee,
                 amount,
                 fulfils,
@@ -135,7 +128,7 @@ impl<'a> AgreementsView<'a> {
                 batch,
             },
             Fin::Claim(Claim { rail, proof, payee, amount, fulfils, previous, .. }) => {
-                HopRecord { id: *id, claim: true, signer, payer: signer, payer_as_written: None, payee, amount, fulfils, rail, proof, previous, forward: None, batch: None }
+                HopRecord { id: *id, claim: true, signer, payer: signer, payee, amount, fulfils, rail, proof, previous, forward: None, batch: None }
             }
             _ => return None,
         })
@@ -513,26 +506,17 @@ impl<'a> AgreementsView<'a> {
         };
         let service = r.payer;
         let Some(first) = hops.first().and_then(|f| self.hop_record(f)) else { return RouteBuyer::Unknown };
-        // The first payer: an identity, or a one-time key whose claims carry
-        // its signature (key 8), each claim's signer standing for it.
-        let Some(written) = first.payer_as_written.clone() else { return RouteBuyer::OwnAccount { service, astray: vec![] } };
-        let is_theirs = |x: &HopRecord| {
-            self.v.get(&x.id).is_some_and(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if h.act.outside.signer.is_some_and(|s| c.payer(&s) == written)))
-        };
+        let Some(payer) = first.payer else { return RouteBuyer::OwnAccount { service, astray: vec![] } };
         let mut claims: Vec<HopRecord> = self
             .same_payment_records(&first)
             .into_iter()
-            .filter(|x| x.claim && is_theirs(x) && x.payee == first.payee && x.previous.is_none())
+            .filter(|x| x.claim && x.signer == Some(payer) && x.payee == first.payee && x.previous.is_none())
             .collect();
         claims.sort_by_key(|x| x.id);
         // The first payer's claim keeps key 4 as its commitment's (the
         // service's tag) and cites, in `refs`, the tag the route pays for.
         let named = |x: &HopRecord| self.v.get(&x.id).is_some_and(|h| h.inside.refs.iter().flatten().any(|c| c.act().as_ref() == Some(&r.fulfils)));
         if let Some(c) = claims.iter().find(|x| named(x) && self.rail_valid.contains_key(&x.id)) {
-            let payer = match &written {
-                Payer::Identity(p) => *p,
-                Payer::Key(_) => c.signer.unwrap_or_default(),
-            };
             return RouteBuyer::FirstPayer { payer, claim: c.id };
         }
         if claims.iter().any(|x| named(x) && !self.rail_invalid.contains(&x.id)) {
@@ -599,7 +583,7 @@ impl<'a> AgreementsView<'a> {
             let agreement = if i + 1 == hops.len() { h.fulfils } else { h.forward.as_ref().map(|f| f.agreement).unwrap_or(h.fulfils) };
             let creditor = h.payer;
             let repaid = match creditor {
-                Some(p) => self.refund_repaid(id, &crate::money::RefundTo::Identity(p), &h.amount.unit),
+                Some(p) => self.refund_repaid(id, &p, &h.amount.unit),
                 None => Some(0),
             };
             out.push(RefundHop { record: *id, debtor: h.payee, creditor, amount: h.amount.clone(), agreement, repaid });

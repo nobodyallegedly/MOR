@@ -602,15 +602,10 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let signer = x.act.outside.signer.unwrap_or_default();
-        let (purchase, fulfils, refund_to, rail, payee, is_receipt) = match Fin::decode(x.inside.type_, &x.inside.payload) {
-            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, fin::refund_owed_to(&r), r.rail, r.payee, true),
-            Ok(Fin::Claim(c)) => {
-                let to = match c.payer(&signer) {
-                    fin::Payer::Identity(h) => fin::RefundTo::Identity(h),
-                    fin::Payer::Key(k) => fin::RefundTo::Key(k),
-                };
-                (c.purchase.clone(), c.fulfils, to, c.rail, c.payee, false)
-            }
+        let refund_to = self.payment_payer(id);
+        let (purchase, fulfils, rail, payee, is_receipt) = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => (r.purchase.clone(), r.fulfils, r.rail, r.payee, true),
+            Ok(Fin::Claim(c)) => (c.purchase.clone(), c.fulfils, c.rail, c.payee, false),
             _ => return Ok(None),
         };
         let unanswered = !self.rail_counts(id) && !self.rail_invalid.contains(id);

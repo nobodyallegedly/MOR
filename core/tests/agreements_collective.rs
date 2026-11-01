@@ -434,7 +434,7 @@ impl Lab {
         let r = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
             rail,
             proof: vec![],
-            payer: Some(mor_core::money::Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: self.col.id,
             amount: mor_core::money::Amount {
                 unit: spec("a unit"),
@@ -1586,7 +1586,7 @@ fn a_revocation_ends_the_grant_key() {
 /// the collective's own adoption still binds (rule 40).
 #[test]
 fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
     let env = mirs().envelopes;
@@ -1614,7 +1614,7 @@ fn a_grant_reaches_only_its_scope_and_its_limits_answer_unknown() {
         Fin::Receipt(Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: label,
             amount: Amount { unit: spec("a unit"), value: 40 },
             fulfils,
@@ -3877,7 +3877,7 @@ fn receipt_unanswered(w: &mut World, payee: &mut Person, payer: Hash, obligation
     let rc = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
         rail: spec("a rail Module"),
         proof: vec![],
-        payer: Some(mor_core::money::Payer::Identity(payer)),
+        payer: Some(payer),
         payee: payee_of(payee),
         amount: mor_core::money::Amount { unit: spec("a unit"), value },
         fulfils: obligation,
@@ -4182,7 +4182,7 @@ fn every_payout_matches_its_stake() {
         let r = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(mor_core::money::Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: svc.id,
             amount: mor_core::money::Amount { unit: spec("a unit"), value },
             fulfils: spec("an offer"),
@@ -4288,7 +4288,7 @@ fn unit_receipt(lab: &mut Lab, svc: &mut Person) -> Hash {
     let r = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
         rail: spec("a rail Module"),
         proof: vec![],
-        payer: Some(mor_core::money::Payer::Identity(spec("a listener"))),
+        payer: Some(spec("a listener")),
         payee: svc.id,
         amount: mor_core::money::Amount { unit: spec("a unit"), value: 1 },
         fulfils: spec("a stream"),
@@ -4503,7 +4503,7 @@ fn two_splits_citing_the_same_previous_fork_the_chain_a_deviation() {
 /// does not state is shown, never passed.
 #[test]
 fn a_split_is_the_named_services_act_under_the_version_in_force() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -4524,7 +4524,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
         let r = Fin::Receipt(Receipt {
             rail,
             proof: proof.to_vec(),
-            payer: Some(Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: svc.id,
             amount: Amount { unit: spec("a unit"), value: 1000 },
             fulfils: sa,
@@ -4611,7 +4611,6 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
         disagrees: None,
         referral: Some(mor_core::money::Referral { identity: fan.id, evidence: post }),
         refund: None,
-        anonymous: None,
         purchase: Some(Purchase { agreement: f, line: k2 }),
         previous: None,
     });
@@ -4638,7 +4637,7 @@ fn a_split_is_the_named_services_act_under_the_version_in_force() {
 /// the founding stake.
 #[test]
 fn a_collectives_owners_line_is_read_from_the_version_its_receipt_names() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -4650,7 +4649,7 @@ fn a_collectives_owners_line_is_read_from_the_version_its_receipt_names() {
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"a fan's payment".to_vec(),
-        payer: Some(Payer::Identity(spec("a fan"))),
+        payer: Some(spec("a fan")),
         payee: svc.id,
         amount: Amount { unit: spec("a unit"), value: 1000 },
         fulfils: sa,
@@ -4686,7 +4685,7 @@ fn a_collectives_owners_line_is_read_from_the_version_its_receipt_names() {
 /// What makes theft provable (rule 31).
 #[test]
 fn a_split_service_is_held_to_account() {
-    use mor_core::money::{Amount, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, PaidAt, Payload as Fin, Purchase, Receipt};
     use mor_core::agreements::{Unpaid, Unsplit};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
@@ -4702,7 +4701,7 @@ fn a_split_service_is_held_to_account() {
         let r = Fin::Receipt(Receipt {
             rail: spec("a rail Module"),
             proof: proof.to_vec(),
-            payer: Some(Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: st.id,
             amount: Amount { unit, value },
             fulfils: sa,
@@ -4737,7 +4736,7 @@ fn a_split_service_is_held_to_account() {
         let r = Fin::Receipt(Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(Payer::Identity(svc.id)),
+            payer: Some(svc.id),
             payee: who.id,
             amount: Amount { unit, value },
             fulfils: naming,
@@ -4758,7 +4757,7 @@ fn a_split_service_is_held_to_account() {
     let mut forger = stranger.clone();
     forger.id = ids[CY];
     let _ = {
-        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: ids[CY], amount: Amount { unit, value: 200 }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(svc.id), payee: ids[CY], amount: Amount { unit, value: 200 }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
         let a = lab.w.everyday_act(&mut stranger, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a)
     };
@@ -4813,7 +4812,7 @@ fn a_split_service_is_held_to_account() {
 /// silently.
 #[test]
 fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_counts() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let absentee = spec("an absent holder");
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
@@ -4830,7 +4829,7 @@ fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_co
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"the last sale".to_vec(),
-        payer: Some(Payer::Identity(spec("a fan"))),
+        payer: Some(spec("a fan")),
         payee: svc.id,
         amount: Amount { unit, value: 1000 },
         fulfils: sa,
@@ -4847,7 +4846,7 @@ fn f262_f265_an_absentees_share_follows_the_collectives_rules_and_the_closing_co
     // Ana and Ben take theirs; the absentee never does.
     for i in [ANA, BEN] {
         let mut who = lab.m[i].clone();
-        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(Payer::Identity(svc.id)), payee: who.id, amount: Amount { unit, value: if i == ANA { 500 } else { 300 } }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: vec![], payer: Some(svc.id), payee: who.id, amount: Amount { unit, value: if i == ANA { 500 } else { 300 } }, fulfils: x, previous: None, forward: None, batch: None, purchase: None });
         let a = lab.w.everyday_act(&mut who, mirs().money, 2, r.to_map(), None, None);
         lab.w.add(&a);
         lab.m[i] = who;
@@ -5177,7 +5176,7 @@ fn a_collective_forks() {
         let r = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(mor_core::money::Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: svc.id,
             amount: mor_core::money::Amount { unit: spec("a unit"), value: 300 },
             fulfils: tag,
@@ -5192,7 +5191,7 @@ fn a_collective_forks() {
     let stray = pay(&mut lab, &mut svc, None);
     let got = common::stand_in_answers(lab.view()).purchase(&stray).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
-    assert_eq!(got.refund_to, mor_core::money::RefundTo::Identity(spec("a fan")));
+    assert_eq!(got.refund_to, Some(spec("a fan")));
     // The same, naming the version before the fork: no purchase, owed back.
     let stale = pay(&mut lab, &mut svc, Some(mor_core::money::Purchase { agreement: f, line: k }));
     let got = common::stand_in_answers(lab.view()).purchase(&stale).unwrap().unwrap();
@@ -5865,7 +5864,6 @@ fn a_payment_naming_another_branch_raises_the_alarm() {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: Some(Purchase { agreement: d, line }),
             previous: None,
         });
@@ -6485,7 +6483,7 @@ fn the_ending_wins() {
 /// purchase, owed back by the service from what it holds.
 #[test]
 fn a_payment_racing_a_publications_ending_is_settled_by_the_split_service() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
@@ -6496,7 +6494,7 @@ fn a_payment_racing_a_publications_ending_is_settled_by_the_split_service() {
     let tag = common::price_tag(&mut w, &mut svc, mirs().money, mor_core::money::Priced::Publication(pb), 5, spec("a unit"), sid);
     let push = spec("a push rail");
     let receipt = |w: &mut World, svc: &mut Person, rail: Hash, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: svc.id, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: deal, line: deal }) });
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(spec("a fan")), payee: svc.id, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: deal, line: deal }) });
         let a = w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -6791,7 +6789,7 @@ fn a_publications_backups_are_its_fields_11_and_12() {
 /// is, the split stands, and the check follows it to Ana's payout.
 #[test]
 fn f260_a_direct_buyer_tries_the_services_in_order() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
@@ -6805,7 +6803,7 @@ fn f260_a_direct_buyer_tries_the_services_in_order() {
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"a fan pays T directly".to_vec(),
-        payer: Some(Payer::Identity(spec("a fan"))),
+        payer: Some(spec("a fan")),
         payee: tid,
         amount: Amount { unit: spec("a unit"), value: 10 },
         fulfils: pb,
@@ -6850,7 +6848,7 @@ fn payment(
     value: u64,
     proof: &[u8],
 ) -> Hash {
-    use mor_core::money::{Amount, Claim, Payer, Payload, Receipt};
+    use mor_core::money::{Amount, Claim, Payload, Receipt};
     let amount = Amount { unit, value };
     let (t, p) = if claim {
         (3, Payload::Claim(Claim {
@@ -6862,7 +6860,6 @@ fn payment(
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         }))
@@ -6870,7 +6867,7 @@ fn payment(
         (2, Payload::Receipt(Receipt {
             rail: spec("a rail Module"),
             proof: proof.to_vec(),
-            payer: Some(Payer::Identity(lab.col.id)),
+            payer: Some(lab.col.id),
             payee,
             amount,
             fulfils: obligation,
@@ -7450,10 +7447,10 @@ fn self_sale(lab: &mut Lab, d: usize, sold: Vec<agreements::Sold>, price: u64) -
 /// `f` at `line` (field 9); Ben signs it under the Money area.
 #[allow(clippy::too_many_arguments)]
 fn stretch_receipt(lab: &mut Lab, d: usize, rail: Hash, fan: Hash, proof: &[u8], tag: Hash, line: Hash, value: u64) -> Hash {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let label = lab.col.id;
     let f = lab.founding;
-    let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(fan)), payee: label, amount: Amount { unit: spec("a unit"), value }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: f, line }) });
+    let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(fan), payee: label, amount: Amount { unit: spec("a unit"), value }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: f, line }) });
     let a = lab.w.everyday_act(&mut lab.c[d], mirs().money, 2, r.to_map(), None, None);
     let x = lab.own(d, &a);
     lab.sign(BEN, &x);
@@ -7738,7 +7735,7 @@ fn rb1_a_grant_is_quarantined_during_the_broken_stretch() {
 /// payment, never an acknowledgement adopting the stretch's.
 #[test]
 fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_publication_named() {
-    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase, RefundTo};
+    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase};
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.col.id;
@@ -7765,7 +7762,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_publication_named
     let paid = stretch_receipt(&mut lab, 0, rail, spec("Eve the fan"), b"eve", during_tag, f, 10);
     let got = common::stand_in_answers(lab.view()).purchase(&paid).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
-    assert_eq!(got.refund_to, RefundTo::Identity(spec("Eve the fan")));
+    assert_eq!(got.refund_to, Some(spec("Eve the fan")));
     // BQ3: shown only by the payer's own claim, judged by the publication its tag names.
     let mut fan = lab.w.genesis("Fay the fan", vec![own_home()], None, None);
     let claim = |w: &mut World, fan: &mut Person, tag: Hash, proof: &[u8]| {
@@ -7778,7 +7775,6 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_publication_named
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: Some(Purchase { agreement: f, line: f }),
             previous: None,
         });
@@ -7854,13 +7850,13 @@ fn rb6_a_broken_collective_cannot_close_before_the_rollback() {
 /// field 9: the receipt and the verifier's verdict on it, the rail's
 /// answers stated.
 fn push_sale(w: &mut World, ana: &mut Person, ben: &mut Person, owners: Hash, line: Hash, proof: &[u8]) -> agreements::PurchaseVerdict {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut svc = w.genesis(&format!("a split service {proof:?}"), vec![own_home()], None, None);
     let sid = svc.id;
     let pb = publish_under(w, ana, owners, sid, &mut [ben, &mut svc], &|_| {});
     let tag = common::price_tag(w, &mut svc, mirs().money, mor_core::money::Priced::Publication(pb), 5, spec("a unit"), sid);
     let push = spec("a push rail");
-    let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: sid, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line }) });
+    let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line }) });
     let a = w.everyday_act(&mut svc, mirs().money, 2, r.to_map(), None, None);
     let x = w.add(&a);
     let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
@@ -7934,7 +7930,7 @@ fn published_resignations_and_declarations_naming_a_party() {
 /// to the collective itself as its own split service, is owed back too.
 #[test]
 fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.col.id;
@@ -7945,7 +7941,7 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
-        payer: Some(Payer::Identity(spec("a patron"))),
+        payer: Some(spec("a patron")),
         payee: label,
         amount: Amount { unit: spec("a unit"), value: 7 },
         fulfils: tag,
@@ -8355,7 +8351,6 @@ fn f189_3_a_payment_naming_a_version_the_seller_does_not_hold_raises_the_alarm()
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: Some(Purchase { agreement: d, line }),
             previous: None,
         });
@@ -8410,7 +8405,7 @@ fn f189_7_no_closing_counts_while_broken_whatever_its_line() {
 /// payers are settled.
 #[test]
 fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
     let bake = lab.publish(0);
@@ -8422,7 +8417,7 @@ fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
-        payer: Some(Payer::Identity(spec("a patron"))),
+        payer: Some(spec("a patron")),
         payee: label,
         amount: Amount { unit: spec("a unit"), value: 7 },
         fulfils: tag,
@@ -8967,7 +8962,7 @@ fn f190_qf4_a_missing_or_repeated_number_breaks_the_plan() {
 /// a closing (F189, 7).
 #[test]
 fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
-    use mor_core::money::{Amount, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, PaidAt, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
     let mut patron = lab.w.genesis("a patron", vec![own_home()], None, None);
@@ -8980,7 +8975,7 @@ fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: b"gift".to_vec(),
-        payer: Some(Payer::Identity(patron.id)),
+        payer: Some(patron.id),
         payee: label,
         amount: Amount { unit, value: 7 },
         fulfils: k1,
@@ -9074,7 +9069,7 @@ fn f190_qf6_an_old_stepping_down_is_spent_once_the_member_holds_the_area_again()
 /// evidence of nothing: paying for usage invites faking usage.
 #[test]
 fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
-    use mor_core::money::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -9101,7 +9096,7 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
         let r = Fin::Receipt(Receipt {
             rail,
             proof: proof.clone(),
-            payer: Some(Payer::Identity(fan.id)),
+            payer: Some(fan.id),
             payee: svc_id,
             amount: Amount { unit: spec("a unit"), value: 1000 },
             fulfils: song,
@@ -9149,7 +9144,6 @@ fn f184_a_delivery_record_counts_only_when_the_payers_claim_acknowledges_it() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     })
@@ -9270,7 +9264,7 @@ fn review_f190_2_the_judge_speaks_once_and_no_plain_version_decides() {
 /// the commitment (the rail refuses it), and acknowledges nothing.
 #[test]
 fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
-    use mor_core::money::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -9298,7 +9292,7 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
         let r = Fin::Receipt(Receipt {
             rail,
             proof: proof.clone(),
-            payer: Some(Payer::Identity(puppet.id)),
+            payer: Some(puppet.id),
             payee: svc_id,
             amount: Amount { unit: spec("a unit"), value: 1000 },
             fulfils: song,
@@ -9326,7 +9320,6 @@ fn review_f190_5_the_payer_the_service_names_acknowledges_nothing() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     });
@@ -9416,7 +9409,7 @@ fn review_f190_7_a_complete_version_naming_a_tip_nobody_holds_is_a_plain_version
 /// buyer's claim, fills the relay's role.
 #[test]
 fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_tag_of_the_publication_that_sells_it() {
-    use mor_core::money::{Amount, Claim, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Claim, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(&|t| {
         let p = t.parties.clone();
         t.stakes = stakes(vec![own(vec![(p[ANA], 400_000), (p[BEN], 300_000), (p[CY], 300_000)])]);
@@ -9448,7 +9441,7 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_tag_of_the_p
         let r = Fin::Receipt(Receipt {
             rail,
             proof: proof.clone(),
-            payer: Some(Payer::Identity(fan.id)),
+            payer: Some(fan.id),
             payee: svc_id,
             amount: Amount { unit: spec("a unit"), value: 1000 },
             fulfils: offer,
@@ -9476,7 +9469,6 @@ fn review_f190_5b_a_delivery_record_counts_on_a_purchase_naming_the_tag_of_the_p
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: Some(Purchase { agreement: k1, line: k1 }),
         previous: None,
     });
@@ -9845,7 +9837,7 @@ impl RoleLab {
         let rail = spec("a rail Module");
         let mut svc = lab.w.genesis("a split service", vec![own_home()], None, None);
         let fan = lab.w.genesis("a fan", vec![own_home()], None, None);
-        let payer = names_fan.then_some(mor_core::money::Payer::Identity(fan.id));
+        let payer = names_fan.then_some(fan.id);
         let k1 = lab.founding;
         let sa = lab.split_agreement_with(&mut svc, &|p| p.plan = role_plan("a helper", 100_000));
         let ptr = lab.pointer(0, 1, None, &[rail]);
@@ -9891,7 +9883,6 @@ impl RoleLab {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: Some(Purchase { agreement: self.k1, line: self.k1 }),
             previous: None,
         });
@@ -10028,22 +10019,23 @@ fn f195_a_resignation_never_registered_is_spent_by_coming_back() {
 /// publication it signed in its broken stretch, from `payer` (as the
 /// receipt names it): owed back (rule 93). Returns the lab, the
 /// collective, the receipt, that tag and the broken act.
-fn owed_back_lab(payer: Option<mor_core::money::Payer>, proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash) {
+fn owed_back_lab(payer: Option<Hash>, proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash) {
     let (lab, label, owed, k1, rot1, _) = owed_back_lab_with(|_| (payer, None), proof);
     (lab, label, owed, k1, rot1)
 }
 
 /// [`owed_back_lab`], the payer made in the lab first: `make` gives the
 /// payer the receipt names, and the person, where there is one.
-fn owed_back_lab_with(make: impl FnOnce(&mut Lab) -> (Option<mor_core::money::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
+fn owed_back_lab_with(make: impl FnOnce(&mut Lab) -> (Option<Hash>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
     owed_back_lab_terms(&|_| {}, make, proof)
 }
 
 /// [`owed_back_lab_with`], the founding terms shaped by `f`.
-fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (Option<mor_core::money::Payer>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
+fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (Option<Hash>, Option<Person>), proof: &[u8]) -> (Lab, Hash, Hash, Hash, Hash, Option<Person>) {
     use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut lab = Lab::new(f);
     let (payer, person) = make(&mut lab);
+    let named = payer.is_some();
     let label = lab.col.id;
     let bake = lab.publish(0);
     lab.sign(ANA, &bake);
@@ -10064,14 +10056,15 @@ fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (O
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
-    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
+    // A payment naming no payer is a gift: nothing is owed back on it.
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), usize::from(named));
     (lab, label, owed, k1, rot1, person)
 }
 
 /// A payer with an identity, made in the lab.
-fn patron_pays(lab: &mut Lab) -> (Option<mor_core::money::Payer>, Option<Person>) {
+fn patron_pays(lab: &mut Lab) -> (Option<Hash>, Option<Person>) {
     let p = lab.w.genesis("a patron", vec![own_home()], None, None);
-    (Some(mor_core::money::Payer::Identity(p.id)), Some(p))
+    (Some(p.id), Some(p))
 }
 
 /// The payer's own claim on the payment owed back (Money type 3), naming
@@ -10087,7 +10080,6 @@ fn payers_claim_on(lab: &mut Lab, payer: &mut Person, label: Hash, owed_proof: &
         disagrees: None,
         referral: None,
         refund: refund.map(|a| Rail { module: spec("a rail Module"), address: a.to_vec() }),
-        anonymous: None,
         purchase: Some(Purchase { agreement: lab.founding, line: lab.founding }),
         previous: None,
     });
@@ -10137,7 +10129,7 @@ fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
         let with_vault = |lab: &mut Lab| {
             let v = VaultEntry { unit: spec("a unit"), rail_module: spec("a rail Module"), source: b"the patron's vault".to_vec(), limit };
             let p = lab.w.genesis_with("a patron with a vault", vec![own_home()], None, None, Some(vec![vault_declaration(&mirs().money, &[v])]), 3);
-            (Some(mor_core::money::Payer::Identity(p.id)), Some(p))
+            (Some(p.id), Some(p))
         };
         let (mut lab, label, owed, k1, _, patron) = owed_back_lab_with(with_vault, b"gift");
         let mut patron = patron.unwrap();
@@ -10182,44 +10174,45 @@ fn qg2_the_pointer_the_payers_own_acts_hold() {
     assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty());
 }
 
-/// QG1, decided by Nobody, allegedly, 9 October 2026: a refund owed to a
-/// bare key (Money rule 10a) is repaid once the collective's claim
-/// carries the rail's proof that the money reached where the claim signed
-/// with that key said (key 7).
+/// A refund owed to a fresh identity, the anonymous payer's own (Money
+/// rule 17), is repaid once the collective's claim carries the rail's
+/// proof that the money reached the refund rail that identity's claim
+/// names (key 7).
 #[test]
-fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
-    use mor_core::money::{Amount, Anonymous, Citations, Claim, PaidAt, Payer, Payload as Fin, Purchase, Rail};
-    let key = SchnorrKey::from_secret(&spec("a one-time key")).unwrap();
-    let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
-    let (mut lab, label, owed, k1, _) = owed_back_lab(Some(Payer::Key(bare.clone())), b"anonymous gift");
-    // The payer's claim, signed by a one-time identity, carrying the key's
-    // signature and the refund rail.
-    let mut once = lab.w.genesis("a one-time identity", vec![own_home()], None, None);
-    let mut c = Claim {
+fn a_refund_to_a_fresh_identity_is_repaid_at_the_refund_rail_its_claim_names() {
+    use mor_core::money::{Amount, Claim, PaidAt, Payload as Fin, Purchase, Rail};
+    let (mut lab, label, owed, k1, _, once) = owed_back_lab_with(
+        |lab| {
+            let p = lab.w.genesis("a fresh identity hosted by its own wallet", vec![own_home()], None, None);
+            (Some(p.id), Some(p))
+        },
+        b"a fresh identity's payment",
+    );
+    let mut once = once.unwrap();
+    // The payer's claim, signed by the fresh identity, naming the refund rail.
+    let c = Claim {
         rail: spec("a rail Module"),
-        proof: b"anonymous gift".to_vec(),
+        proof: b"a fresh identity's payment".to_vec(),
         payee: label,
         amount: Amount { unit: spec("a unit"), value: 7 },
         fulfils: k1,
         disagrees: None,
         referral: None,
-        refund: Some(Rail { module: spec("a rail Module"), address: b"the key's refund address".to_vec() }),
-        anonymous: None,
+        refund: Some(Rail { module: spec("a rail Module"), address: b"the fresh identity's refund address".to_vec() }),
         purchase: Some(Purchase { agreement: lab.founding, line: lab.founding }),
         previous: None,
     };
-    c.anonymous = Some(Anonymous { key: bare, sig: key.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
     let a = lab.w.everyday_act(&mut once, mirs().money, 3, Fin::Claim(c).to_map(), None, None);
     let kc = lab.w.add(&a);
     assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
     // The collective's claim, naming the payment owed back, the rail's
-    // proof showing it reached the refund address the key's claim gave.
+    // proof showing it reached the refund address the claim gave.
     let mut payer = lab.c[0].clone();
-    let back = payment(&mut lab, &mut payer, true, once.id, owed, spec("a unit"), 7, b"back to the key");
+    let back = payment(&mut lab, &mut payer, true, once.id, owed, spec("a unit"), 7, b"back to the fresh identity");
     lab.c[0] = payer;
     assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "no rail answer: nothing");
     lab.rail_valid.push((back, PaidAt::Flow(kc)));
-    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "repaid where the key's claim said");
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "repaid where its claim said");
 }
 
 /// The rollback of an `owed_back_lab` collective, then a closing every
@@ -10250,21 +10243,16 @@ fn close_with_result(lab: &mut Lab, label: Hash, rot1: Hash, open: Vec<agreement
     v.closing(&x)
 }
 
-/// QG1, decided by Nobody, allegedly, 9 October 2026: money owed back to
-/// nobody (a payment that committed no key: unclaimable, Money rule 10a)
-/// stays open and visible, but does not block a closing: the closing act
-/// names every such obligation it leaves open (field 4).
+/// A payment naming no payer, in its receipt and by no claim, is a gift:
+/// it counts toward what it names, and no refund is owed on it (Money rule
+/// 17). Nothing is owed back, and a closing need not name it.
 #[test]
-fn qg1_money_owed_to_nobody_does_not_block_a_closing_that_names_it() {
+fn a_gift_owes_nothing_back_and_does_not_block_a_closing() {
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(None, b"an anonymous tip");
+    let (mut lab, label, _, _, rot1) = owed_back_lab(None, b"a gift");
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty());
     let e = close_with(&mut lab, label, rot1, vec![], &[]);
-    assert!(owed_why(&e), "not named in the closing: it blocks ({:?})", e.why);
-    let (mut lab, label, owed2, _, rot1) = owed_back_lab(None, b"an anonymous tip");
-    let _ = owed;
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed2, notice: None, holder: None }], &[]);
-    assert!(!owed_why(&e), "named, owed to nobody: it does not block ({:?})", e.why);
-    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "and it stays visible");
+    assert!(!owed_why(&e), "a gift owes nothing back: {:?}", e.why);
 }
 
 /// F197, decided by Nobody, allegedly, 10 October 2026 ("Yes, exactly"):
@@ -10276,7 +10264,6 @@ fn qg1_money_owed_to_nobody_does_not_block_a_closing_that_names_it() {
 /// shown, not required.
 #[test]
 fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
-    use mor_core::money::Payer;
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
     let carla = spec("Carla, a payer with no address");
     // Sealed to the payer and to every member (rule 35a), or public.
@@ -10289,11 +10276,11 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
         x
     };
     // Named with no notice: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: None, holder: None }], &[]);
     assert!(owed_why(&e), "{:?}", e.why);
     // A notice sealed to Carla, its deadline not passed: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![carla]);
     let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
     let e = close_with(&mut lab, label, rot1, open.clone(), &[]);
@@ -10311,7 +10298,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
     // S7j, Fable's sentence for "a payer who gave no address": a payer whose
     // chain the verifier cannot resolve leaves the closing unknown.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![carla]);
     let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
     let e = close_with_result(&mut lab, label, rot1, open, &[n]);
@@ -10327,7 +10314,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
     assert!(owed_why(&e), "a payer with a pointer held gave an address: {:?}", e.why);
     // A notice sealed to someone else only reached nobody: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![spec("someone else")]);
     let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
     assert!(owed_why(&e), "not sealed to the payer: {:?}", e.why);
@@ -10463,43 +10450,6 @@ fn review_fdb_4_today_a_second_settlement_from_the_reference_naming_the_first_ch
 // Each test was written first and seen to fail for the reason the decision
 // gives. Test identities only.
 // ---------------------------------------------------------------------------
-
-/// F208, decided by Nobody, allegedly, 10 October 2026 ("Agreed"): F197
-/// applies to a one-time key too. A notice addressed to the key, published
-/// naming the payment (a bare signing key cannot be sealed to: the
-/// mechanic, the build's), with a deadline: once it lapses with no address
-/// given, the closing names the debt and does not wait. Without a notice,
-/// or before the deadline, the debt still blocks.
-#[test]
-fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
-    use mor_core::money::Payer;
-    let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
-    let key = SchnorrKey::from_secret(&spec("a one-time key, F208")).unwrap();
-    let bare = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: key.public().to_vec() };
-    let public_notice = |lab: &mut Lab, owed: Hash| {
-        let n = agreements::Notice { payment: owed, deadline: (spec("a block height reference"), Value::Uint(900_000)) };
-        let mut dev = lab.c[0].clone();
-        let a = lab.w.everyday_act(&mut dev, mirs().agreements, agreements::types::NOTICE, n.to_map(), obj(owed), None);
-        let x = lab.w.add(&a);
-        lab.c[0] = dev;
-        x
-    };
-    // Named, no notice: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: None, holder: None }], &[]);
-    assert!(owed_why(&e), "{:?}", e.why);
-    // A public notice, its deadline not passed: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare.clone())), b"a key's penny");
-    let n = public_notice(&mut lab, owed);
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[]);
-    assert!(owed_why(&e), "the deadline has not passed: {:?}", e.why);
-    // Lapsed: the collective may close, the debt named and visible.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Key(bare)), b"a key's penny");
-    let n = public_notice(&mut lab, owed);
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
-    assert!(!owed_why(&e), "{:?}", e.why);
-    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
-}
 
 /// F207, decided by Nobody, allegedly, 10 October 2026 ("Yes. If the
 /// resignation needs it, the resignation gets it."): a resignation names
@@ -10655,11 +10605,11 @@ impl ServiceDeal {
     /// `by`, following `fulfils` and naming in field 9 the ownership
     /// agreement `purchase` at its founding version.
     fn receipt(w: &mut World, by: &mut Person, payee: Hash, payer: Hash, fulfils: Hash, purchase: Option<Hash>, proof: &[u8]) -> Hash {
-        use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+        use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
         let r = Fin::Receipt(Receipt {
             rail: spec("a rail Module"),
             proof: proof.to_vec(),
-            payer: Some(Payer::Identity(payer)),
+            payer: Some(payer),
             payee,
             amount: Amount { unit: spec("a unit"), value: 1000 },
             fulfils,
@@ -10815,7 +10765,6 @@ impl ServiceDeal {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: Some(Purchase { agreement: deal, line: deal }),
             previous: None,
         });
@@ -10992,14 +10941,13 @@ fn f210_one_record_is_spent_for_its_payers_other_claims() {
 /// (rule 32: the core sets no lapse).
 #[test]
 fn f219_a_refund_past_its_terms_is_ended() {
-    use mor_core::money::Payer;
     let carla = spec("Carla, a payer, F219");
     let refundable = |t: &mut Terms| {
         t.time = Some((spec("a block height reference"), Value::Uint(0)));
         t.refund = Some(agreements::RefundTerms { until: Value::Uint(900_000) });
     };
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
-    let (mut lab, label, owed, _, rot1, _) = owed_back_lab_terms(&refundable, |_| (Some(Payer::Identity(carla)), None), b"a refund with terms");
+    let (mut lab, label, owed, _, rot1, _) = owed_back_lab_terms(&refundable, |_| (Some(carla), None), b"a refund with terms");
     assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "before its point: owed");
     let mut v = lab.view();
     v.refunds_past_terms.insert(owed);
@@ -11008,7 +10956,7 @@ fn f219_a_refund_past_its_terms_is_ended() {
     let e = close_with_past(&mut lab, label, rot1, &[owed]);
     assert!(!owed_why(&e), "it does not block a closing: {:?}", e.why);
     // Terms with no refund terms: the caller's word changes nothing.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a refund with no terms");
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a refund with no terms");
     let e = close_with_past(&mut lab, label, rot1, &[owed]);
     assert!(owed_why(&e), "no lapse without terms: {:?}", e.why);
 }
@@ -11093,7 +11041,7 @@ fn f218_the_default_holder_is_the_creator_who_opened_the_claim() {
 /// conformance); the window before the service follows is a stated cost.
 #[test]
 fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Receipt};
     let mut l = ServiceDeal::new();
     let (bid, deal) = (l.ben.id, l.deal);
     let mut carla = l.w.genesis("carla, who buys", vec![own_home()], None, None);
@@ -11107,7 +11055,7 @@ fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
     let (receipt, _) = l.sale(b"a sale", vec![]);
     let split = l.split(receipt, l.stake_payouts(), vec![]);
     let payout_receipt = |w: &mut World, ben: &mut Person, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(spec("the service")), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(ben, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -11147,7 +11095,7 @@ fn f217_a_stakes_sale_takes_effect_on_the_sellers_own_line() {
 /// share off the top, and the owners' line by the WE's stake.
 #[test]
 fn f216_a_publication_carries_two_agreements() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
@@ -11169,7 +11117,7 @@ fn f216_a_publication_carries_two_agreements() {
     assert!(e.parties.contains(&we));
     // A sale: the publisher 15% off the top, the WE's line 85%, which its
     // stake divides 60/40.
-    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"a sale, F216".to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: lid, amount: Amount { unit: spec("a unit"), value: 1000 }, fulfils: pe, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: we, line: we }) });
+    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"a sale, F216".to_vec(), payer: Some(spec("a fan")), payee: lid, amount: Amount { unit: spec("a unit"), value: 1000 }, fulfils: pe, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: we, line: we }) });
     let a = w.everyday_act(&mut label, mirs().money, 2, r.to_map(), None, None);
     let receipt = w.add(&a);
     let payouts = vec![agreements::Payout { partner: Some(0), ..payout(lid, 150) }, line_payout(ana.id, 510, we), line_payout(ben.id, 340, we)];
@@ -11732,7 +11680,7 @@ fn ben_sells(l: &mut ServiceDeal, buyer: &mut Person, share: u64, record: Vec<Ha
 /// edge, the seller's next rotation.
 #[test]
 fn f223_from_the_services_first_split_citing_the_transfer_the_buyer_is_owed() {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
+    use mor_core::money::{Amount, Payload as Fin, Receipt};
     let mut l = ServiceDeal::new();
     let bid = l.ben.id;
     let mut carla = l.w.genesis("carla, who buys", vec![own_home()], None, None);
@@ -11742,7 +11690,7 @@ fn f223_from_the_services_first_split_citing_the_transfer_the_buyer_is_owed() {
     l.ben = ben;
     assert!(view(&l.w).transfer(&x).unwrap().effective);
     let receipt_for = |w: &mut World, ben: &mut Person, split: Hash, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(spec("the service")), payee: bid, amount: Amount { unit: spec("a unit"), value: 320 }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(ben, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -11816,7 +11764,7 @@ fn f224_a_stake_sold_twice_is_settled_on_the_sellers_own_line() {
     // Payments: each names the transfer it pays for (fulfils). Eve's is owed
     // back by Ben; Carla's is a purchase.
     let pays = |w: &mut World, buyer: &mut Person, t: Hash, proof: &[u8]| {
-        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.to_vec(), payee: bid, amount: Amount { unit: spec("a unit"), value: 5000 }, fulfils: t, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(buyer, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
@@ -11878,8 +11826,8 @@ fn owned_by(w: &mut World, by: &mut Person, work: Hash, holders: &[(Hash, u64)],
 /// A split of a 1000- (or `value`-) unit receipt `svc` signs for the
 /// publication `pb`, naming `owners` in field 9, with these payouts.
 fn split_through(w: &mut World, svc: &mut Person, pb: Hash, owners: Hash, value: u64, payouts: Vec<agreements::Payout>, to: Vec<Hash>, proof: &[u8]) -> Hash {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Purchase, Receipt};
-    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: svc.id, amount: Amount { unit: spec("a unit"), value }, fulfils: pb, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line: owners }) });
+    use mor_core::money::{Amount, Payload as Fin, Purchase, Receipt};
+    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(spec("a fan")), payee: svc.id, amount: Amount { unit: spec("a unit"), value }, fulfils: pb, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line: owners }) });
     let a = w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
     let receipt = w.add(&a);
     let sp = agreements::Split { receipt, payouts, cmip: spec("a split cMIP"), publication: pb, number: Some(1), ..Default::default() };
@@ -13514,7 +13462,7 @@ fn the_collectives_own_reserve_3_7ai() {
         let r = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(mor_core::money::Payer::Identity(spec("a fan"))),
+            payer: Some(spec("a fan")),
             payee: svc.id,
             amount: mor_core::money::Amount { unit: spec("a unit"), value: 1000 },
             fulfils: sa,
@@ -13547,7 +13495,7 @@ fn the_collectives_own_reserve_3_7ai() {
         let rc = mor_core::money::Payload::Receipt(mor_core::money::Receipt {
             rail: spec("a rail Module"),
             proof: vec![],
-            payer: Some(mor_core::money::Payer::Identity(svc.id)),
+            payer: Some(svc.id),
             payee: label,
             amount: mor_core::money::Amount { unit: spec("a unit"), value: 100 },
             fulfils: x,
@@ -14318,7 +14266,7 @@ fn a_grants_limits_take_a_clients_verdict_f345() {
 /// does not reach receipts backs no receipt, and its receipt pays nothing.
 #[test]
 fn a_persons_lane_signs_its_receipts_and_claims_f350() {
-    use mor_core::money::{types as money_types, Amount, Claim, Obligation, Payer, Payload as Fin, PaidAt, Receipt};
+    use mor_core::money::{types as money_types, Amount, Claim, Obligation, Payload as Fin, PaidAt, Receipt};
     let mut w = World::new();
     let mut p = w.genesis("a payer", vec![own_home()], None, None);
     let mut q = w.genesis("a payee", vec![own_home()], None, None);
@@ -14348,7 +14296,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     };
     let proof = b"the rail's proof".to_vec();
     let receipt = |w: &mut World, by: &mut Person| {
-        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.clone(), payer: Some(Payer::Identity(pid)), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.clone(), payer: Some(pid), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(by, mirs().money, money_types::RECEIPT, r.to_map(), None, None);
         w.add(&a)
     };
@@ -14357,7 +14305,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let (pl, pk) = lane(&mut w, &mut p, "the payer's lane", money_types::CLAIM);
     let mut ps = strand(&p, pl, &pk);
     let claim = {
-        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.clone(), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.clone(), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(&mut ps, mirs().money, money_types::CLAIM, c.to_map(), None, None);
         w.add(&a)
     };
@@ -14479,7 +14427,7 @@ fn label_receipt(label: Hash, value: u64) -> Vec<(Value, Value)> {
     mor_core::money::Payload::Receipt(mor_core::money::Receipt {
         rail: spec("a rail Module"),
         proof: vec![],
-        payer: Some(mor_core::money::Payer::Identity(spec("a fan"))),
+        payer: Some(spec("a fan")),
         payee: label,
         amount: mor_core::money::Amount { unit: spec("a unit"), value },
         fulfils: spec("an offer"),
@@ -14857,7 +14805,7 @@ fn a_member_keys_text_names_its_version_text_rule_14() {
 /// area; Cy, holding no Money area, signs none that counts.
 #[test]
 fn a_member_key_signs_every_money_act_of_its_area_money_rule_7() {
-    use mor_core::money::{Amount, Obligation, Payload as Fin, Payer, Receipt};
+    use mor_core::money::{Amount, Obligation, Payload as Fin, Receipt};
     let mut lab = Lab::new(&|_| {});
     let label = lab.col.id;
     let mut b = lab.m[BEN].acting_for(label, vec![label]);
@@ -14866,7 +14814,7 @@ fn a_member_key_signs_every_money_act_of_its_area_money_rule_7() {
     let ptr = lab.pointer(0, 1, None, &[spec("a rail")]);
     lab.sign(BEN, &ptr);
     let amount = Amount { unit: spec("a unit"), value: 10 };
-    let receipt = Fin::Receipt(Receipt { rail: spec("a rail"), proof: vec![], payer: Some(Payer::Identity(spec("a fan"))), payee: label, amount: amount.clone(), fulfils: spec("an offer"), previous: None, forward: None, batch: None, purchase: None });
+    let receipt = Fin::Receipt(Receipt { rail: spec("a rail"), proof: vec![], payer: Some(spec("a fan")), payee: label, amount: amount.clone(), fulfils: spec("an offer"), previous: None, forward: None, batch: None, purchase: None });
     let obligation = Fin::Obligation(Obligation { debtor: label, creditor: spec("a creditor"), amount, pointer: spec("its pointer"), agreement: None });
     for (what, p, t) in [("a receipt", receipt, 2u64), ("an obligation", obligation, 1u64)] {
         let x = { let a = lab.w.everyday_act(&mut b, mirs().money, t, p.to_map(), None, None); lab.w.add(&a) };
@@ -14955,8 +14903,8 @@ fn a_receipt_belongs_to_a_deal_through_what_it_fulfils() {
 
 /// A payout receipt `by` signs in its own name for `value`, naming `split`.
 fn s7g_payout_receipt(w: &mut World, by: &mut Person, split: Hash, value: u64, proof: &[u8]) -> Hash {
-    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
-    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: by.id, amount: Amount { unit: spec("a unit"), value }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+    use mor_core::money::{Amount, Payload as Fin, Receipt};
+    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(spec("the service")), payee: by.id, amount: Amount { unit: spec("a unit"), value }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
     let a = w.everyday_act(by, mirs().money, 2, r.to_map(), None, None);
     w.add(&a)
 }
@@ -15048,7 +14996,7 @@ fn s7g_a_split_that_does_not_sum_matches_no_receipt() {
 /// and the first payer's acknowledgement then fills no role share.
 #[test]
 fn s7j_a_referral_through_a_route_is_the_first_payers() {
-    use mor_core::money::{Amount, Claim, Forward, Payer, Payload as Fin, Purchase, Receipt};
+    use mor_core::money::{Amount, Claim, Forward, Payload as Fin, Purchase, Receipt};
     for cites in [true, false] {
         let mut l = ServiceDeal::with(&|p| p.plan = role_plan("relay", 200_000));
         let mut r1 = l.w.genesis("a relay, routes", vec![own_home()], None, None);
@@ -15059,18 +15007,18 @@ fn s7j_a_referral_through_a_route_is_the_first_payers() {
         let offer = spec("the swap's own offer, routes");
         let first_proof = b"the fan pays the swap".to_vec();
         let first = {
-            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: first_proof.clone(), payer: Some(Payer::Identity(fid)), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, previous: None, forward: Some(Forward { next_payee: sid, amount: Amount { unit, value: 1000 }, agreement: spec("the swap's publication, routes") }), batch: None, purchase: None });
+            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: first_proof.clone(), payer: Some(fid), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, previous: None, forward: Some(Forward { next_payee: sid, amount: Amount { unit, value: 1000 }, agreement: spec("the swap's publication, routes") }), batch: None, purchase: None });
             let a = l.w.everyday_act(&mut swap, mirs().money, 2, r.to_map(), None, None);
             l.w.add(&a)
         };
         let claim = {
-            let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: first_proof.clone(), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+            let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: first_proof.clone(), payee: swid, amount: Amount { unit, value: 1050 }, fulfils: offer, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
             let refs = cites.then(|| vec![mor_core::act::Ref::Act(song)]);
             let a = l.w.everyday_act_refs(&mut l.fan, mirs().money, 3, c.to_map(), None, Some(vec![e1]), refs);
             l.w.add(&a)
         };
         let last = {
-            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"the swap pays the split service".to_vec(), payer: Some(Payer::Identity(swid)), payee: sid, amount: Amount { unit, value: 1000 }, fulfils: song, previous: Some(first), forward: None, batch: None, purchase: Some(Purchase { agreement: deal, line: deal }) });
+            let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"the swap pays the split service".to_vec(), payer: Some(swid), payee: sid, amount: Amount { unit, value: 1000 }, fulfils: song, previous: Some(first), forward: None, batch: None, purchase: Some(Purchase { agreement: deal, line: deal }) });
             let mut svc = l.svc.clone();
             let a = l.w.everyday_act(&mut svc, mirs().money, 2, r.to_map(), Some(vec![Object { chain: first, predecessor: first }]), None);
             l.svc = svc;

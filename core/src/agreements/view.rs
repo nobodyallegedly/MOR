@@ -4940,7 +4940,7 @@ impl<'a> AgreementsView<'a> {
             .copied()
             .filter(|a| {
                 a.inside.spec == self.mirs.money
-                    && matches!(crate::money::Payload::decode(a.inside.type_, &a.inside.payload), Ok(crate::money::Payload::Claim(x)) if &x.fulfils == act && x.anonymous.is_none())
+                    && matches!(crate::money::Payload::decode(a.inside.type_, &a.inside.payload), Ok(crate::money::Payload::Claim(x)) if &x.fulfils == act)
             })
             .collect();
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
@@ -5736,8 +5736,8 @@ impl<'a> AgreementsView<'a> {
     /// service's use record too). That payer's claim is a payer's claim of
     /// the same rail payment (`payment` itself where it is one) whose rail
     /// proof the caller checked and found to carry the commitment
-    /// recomputed from it, its signer, or the anonymous key it carries, as
-    /// payer ([`Self::rail_valid`]), on a rail whose commitment binds the
+    /// recomputed from it, its signer as payer,
+    /// ([`Self::rail_valid`]), on a rail whose commitment binds the
     /// payer ([`Self::rail_binds`]), acknowledging it (Envelopes rule
     /// 4a), or naming it as its referral's evidence (Money, the claim's
     /// field 6: "the payer's client for a referral", rule 22); never the
@@ -6373,8 +6373,10 @@ pub struct PurchaseEval {
     /// The claim it names, if any.
     pub purchase: Option<crate::money::Purchase>,
     pub verdict: PurchaseVerdict,
-    /// Who a refund would be owed to (Money rule 10a).
-    pub refund_to: crate::money::RefundTo,
+    /// Who a refund would be owed to: the payer the payment names (Money
+    /// rule 17), none for a payment naming no payer, a gift, on which no
+    /// refund is owed.
+    pub refund_to: Option<Hash>,
     /// Where the tag's payee is not the publication's split service: that
     /// payee, which bypasses the service (rule 16); the purchase stands.
     pub bypassing: Option<Hash>,
@@ -6486,8 +6488,8 @@ impl AlarmKind {
 pub struct OwedBack {
     /// The receipt or claim of the payment, as held.
     pub payment: Hash,
-    /// Who it is owed back to (Money rule 10a).
-    pub to: crate::money::RefundTo,
+    /// Who it is owed back to: the payer the payment names (Money rule 17).
+    pub to: Hash,
     /// Its amount.
     pub amount: crate::money::Amount,
     /// Whether the collective is still broken (no rollback yet).
@@ -7291,26 +7293,18 @@ impl<'a> AgreementsView<'a> {
         }
         // F189 (7): money owed back from a broken stretch is a debt for
         // "owes nothing", whatever the closing's line; save what the
-        // closing names in field 4 as left open: owed to nobody (QG1,
-        // F191), or to a payer who gave no address, after a notice sealed
-        // to them whose deadline lapsed (F197).
+        // closing names in field 4 as left open: owed to a payer who gave
+        // no address, after a notice sealed to them whose deadline lapsed
+        // (F197).
         let owed = self.owed_back(&c.collective)?;
         let mut blocking = 0usize;
         for o in &owed {
             let mut of: Vec<Hash> = vec![o.payment];
             of.extend(self.same_payment(&o.payment).into_iter().map(|(h, _)| h));
             let named = c.open.iter().find(|x| of.contains(&x.payment));
-            let left_open = match (&o.to, named) {
-                (crate::money::RefundTo::Nobody, Some(_)) => true,
-                (crate::money::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(payer), &of)) && self.gave_no_address(payer, &of)?,
-                // F208 (decided 10 October 2026): a one-time key is noticed
-                // too, and never blocks a closing for good. The notice is
-                // public, naming the payment (mechanic, the build's: a bare
-                // signing key cannot be sealed to, so its holder finds the
-                // notice by looking; the cost to the payer's privacy, the
-                // key linked to this collective, is stated).
-                (crate::money::RefundTo::Key(_), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, None, &of)),
-                _ => false,
+            let left_open = match named {
+                Some(x) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(&o.to), &of)) && self.gave_no_address(&o.to, &of)?,
+                None => false,
             };
             if !left_open {
                 blocking += 1;
@@ -7375,13 +7369,13 @@ impl<'a> AgreementsView<'a> {
     /// history acknowledges), read as no purchase (money received for
     /// nothing, owed back), whose refund terms have not lapsed, not repaid
     /// in full by records the line relies on, and not left open by field 4
-    /// as the rules allow (owed to nobody; owed to a payer who gave no
-    /// address, after a lapsed notice); one entry per payment, its first
+    /// as the rules allow (owed to a payer who gave no address, after a
+    /// lapsed notice); a payment naming no payer, a gift, owes none; one entry per payment, its first
     /// record held. The payments of `owed_back` (the broken stretch's) are
     /// judged there and left out. Unknown while whether one is a purchase
     /// rests on a rail's answer.
     fn refunds_owed_to_payers(&self, col: &Col, line: &[Hash], owed_back: &[OwedBack], open: &[crate::agreements::OpenOwed]) -> R<Vec<Hash>> {
-        use crate::money::{Payload as Fin, RefundTo};
+        use crate::money::Payload as Fin;
         let collective = &col.id;
         let mut seen: Vec<Hash> = owed_back.iter().map(|o| o.payment).collect();
         for o in owed_back {
@@ -7421,18 +7415,14 @@ impl<'a> AgreementsView<'a> {
             if !names.iter().filter_map(|n| self.v.get(n)).any(relied) {
                 continue;
             }
-            let (amount, unit, to) = match self.v.get(&id).map(|h| (h, Fin::decode(h.inside.type_, &h.inside.payload))) {
-                Some((_, Ok(Fin::Receipt(r)))) => (r.amount.value, r.amount.unit, crate::money::refund_owed_to(&r)),
-                Some((h, Ok(Fin::Claim(c)))) => {
-                    let Some(signer) = h.act.outside.signer else { continue };
-                    let to = match c.payer(&signer) {
-                        crate::money::Payer::Identity(x) => RefundTo::Identity(x),
-                        crate::money::Payer::Key(k) => RefundTo::Key(k),
-                    };
-                    (c.amount.value, c.amount.unit, to)
-                }
+            let (amount, unit) = match self.v.get(&id).map(|h| Fin::decode(h.inside.type_, &h.inside.payload)) {
+                Some(Ok(Fin::Receipt(r))) => (r.amount.value, r.amount.unit),
+                Some(Ok(Fin::Claim(c))) => (c.amount.value, c.amount.unit),
                 _ => continue,
             };
+            // A payment naming no payer, in its receipt and by no claim, is
+            // a gift: no refund is owed on it (Money rule 17).
+            let Some(to) = self.payment_payer(&id) else { continue };
             let repaid = self.judged(|| self.repaid_if(&names, &to, &unit, &relied)).ok_or(AgreementsError::PaymentUnstated)?;
             if repaid >= amount {
                 continue;
@@ -7453,11 +7443,9 @@ impl<'a> AgreementsView<'a> {
             }
             // Field 4 may leave it open, as for the broken stretch.
             let named_open = open.iter().find(|x| names.contains(&x.payment));
-            let left_open = match (&to, named_open) {
-                (RefundTo::Nobody, Some(_)) => true,
-                (RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, Some(payer), &names)) && self.gave_no_address(payer, &names)?,
-                (RefundTo::Key(_), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, None, &names)),
-                _ => false,
+            let left_open = match named_open {
+                Some(x) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, Some(&to), &names)) && self.gave_no_address(&to, &names)?,
+                None => false,
             };
             if !left_open {
                 out.push(id);
@@ -8643,14 +8631,38 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// Whether `h` is a payer's claim that stands: valid under Identity,
-    /// signed by its payer (or carrying its anonymous payer's key, signed
-    /// over the claim and the act's own citations: F113, F147).
+    /// signed by its payer.
     fn payers_claim(&self, h: &Held) -> bool {
         use crate::money::{self as fin, Payload as Fin};
         let Ok(p @ Fin::Claim(_)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
         h.inside.spec == self.mirs.money
             && self.money_counts(h)
             && h.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&h.inside)).is_ok())
+    }
+
+    /// The payer a payment names (Money rule 17): its receipt's field 2, or
+    /// the signer of a payer's claim of it to the same payee (the smallest
+    /// act id among them); none, a payment naming no payer, a gift.
+    pub(super) fn payment_payer(&self, id: &Hash) -> Option<Hash> {
+        use crate::money::Payload as Fin;
+        let h = self.v.get(id)?;
+        match Fin::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Fin::Claim(_)) => h.act.outside.signer,
+            Ok(Fin::Receipt(r)) => r.payer.or_else(|| {
+                let mut claims: Vec<Hash> = self
+                    .payers_claims_for(id, &r.proof)
+                    .into_iter()
+                    .filter(|c| {
+                        self.v.get(c).is_some_and(|x| {
+                            self.payers_claim(x) && matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::Claim(c)) if c.payee == r.payee && c.rail == r.rail)
+                        })
+                    })
+                    .collect();
+                claims.sort();
+                claims.first().and_then(|c| self.v.get(c)?.act.outside.signer)
+            }),
+            _ => None,
+        }
     }
 
     /// The receipts held naming a rail proof, each valid under Identity and
@@ -9603,9 +9615,12 @@ impl<'a> AgreementsView<'a> {
                     if self.refund_ended(&names, e.purchase.as_ref()) {
                         continue;
                     }
-                    let back = self.repaid(&names, &e.refund_to, &amount.unit);
+                    // A payment naming no payer is a gift: nothing is owed
+                    // back on it (Money rule 17).
+                    let Some(to) = e.refund_to else { continue };
+                    let back = self.repaid(&names, &to, &amount.unit);
                     if back < amount.value {
-                        out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken, unknown: false });
+                        out.push(OwedBack { payment: h.id, to, amount, still_broken, unknown: false });
                     }
                 }
             }
@@ -9654,7 +9669,7 @@ impl<'a> AgreementsView<'a> {
     /// Money shows repaid.
     /// `None` (unknown) only where it depends on whether two records whose
     /// payment is not stated are one payment (Money rule 12; [`Self::judged`]).
-    pub fn refund_repaid(&self, payment: &Hash, to: &crate::money::RefundTo, unit: &Hash) -> Option<u64> {
+    pub fn refund_repaid(&self, payment: &Hash, to: &Hash, unit: &Hash) -> Option<u64> {
         self.judged(|| {
             let mut names = vec![*payment];
             names.extend(self.same_payment(payment).into_iter().map(|(x, _)| x));
@@ -9713,35 +9728,25 @@ impl<'a> AgreementsView<'a> {
     ///   the payer's vault, always. A refund to the refund rail counts
     ///   only within the payer's vault limit for its unit (Agreements
     ///   draft 11, rule 11, F255); above it, only at the vault.
-    /// - **To a bare key** (QG1, decided 9 October 2026): a claim counts
-    ///   where the rail shows the money reached the refund rail a claim
-    ///   carrying that key's signature names (Money rule 10a, key 7).
-    /// - **To nobody**: nothing repays it (rule 10a).
-    fn repaid(&self, owed: &[Hash], to: &crate::money::RefundTo, unit: &Hash) -> u64 {
+    ///
+    /// A payment naming no payer is a gift: no refund is owed on it, and
+    /// nothing is asked of this (Money rule 17).
+    fn repaid(&self, owed: &[Hash], to: &Hash, unit: &Hash) -> u64 {
         self.repaid_if(owed, to, unit, &|_| true)
     }
 
     /// [`Self::repaid`], counting only the receipts and claims `relied`
     /// keeps (for a closing: those its line relies on).
-    fn repaid_if(&self, owed: &[Hash], to: &crate::money::RefundTo, unit: &Hash, relied: &dyn Fn(&Held) -> bool) -> u64 {
-        use crate::money::{PaidAt, Payer, Payload as Fin, RefundTo};
-        let who: Option<Hash> = match to {
-            RefundTo::Identity(h) => Some(*h),
-            RefundTo::Key(_) => None,
-            RefundTo::Nobody => return 0,
-        };
-        let payer_is = |p: &Payer| match (p, to) {
-            (Payer::Identity(a), RefundTo::Identity(b)) => a == b,
-            (Payer::Key(a), RefundTo::Key(b)) => a == b,
-            _ => false,
-        };
+    fn repaid_if(&self, owed: &[Hash], to: &Hash, unit: &Hash, relied: &dyn Fn(&Held) -> bool) -> u64 {
+        use crate::money::{PaidAt, Payload as Fin};
+        let who = *to;
         // The payer's own claims on the payment naming a refund rail.
         let refund_rails: Vec<Hash> = owed
             .iter()
             .filter_map(|h| self.v.get(h))
             .filter(|h| self.payers_claim(h))
             .filter(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
-                Ok(Fin::Claim(c)) => c.refund.is_some() && h.act.outside.signer.is_some_and(|s| payer_is(&c.payer(&s))),
+                Ok(Fin::Claim(c)) => c.refund.is_some() && h.act.outside.signer == Some(who),
                 _ => false,
             })
             .map(|h| h.id)
@@ -9750,17 +9755,14 @@ impl<'a> AgreementsView<'a> {
         // paid to that refund rail counts only up to the payer's vault
         // limit for its unit, as Money rule 3 judges a payment to the
         // flow; above it, only once it reaches the payer's vault. A payer
-        // with no vault has no vault rule (rule 3), and a bare key has
-        // none (Money rule 17). Money rule 4: the other conditions apply
+        // with no vault has no vault rule (rule 3). Money rule 4: the other conditions apply
         // to it as to any payment, so the vault is read as the payer's
         // chain stood for it, a lowered limit a lock change (rule 29;
         // [`Self::follows_at`]).
-        let counts = |id: &Hash, at: &PaidAt, amount: &crate::money::Amount, proof: &[u8]| match (at, who) {
-            (PaidAt::VaultEntry(..), Some(w)) => self.payment_counts_rec(&w, at, amount, (Some(id), proof), &owed[0]),
-            (PaidAt::Flow(c), Some(w)) if !refund_rails.is_empty() => refund_rails.contains(c) && self.payment_counts_rec(&w, at, amount, (Some(id), proof), &owed[0]),
-            (PaidAt::Flow(c), None) if !refund_rails.is_empty() => refund_rails.contains(c) && self.rail_named_at(id, at),
-            (PaidAt::Flow(_), Some(w)) => self.payment_counts_rec(&w, at, amount, (Some(id), proof), &owed[0]),
-            _ => false,
+        let counts = |id: &Hash, at: &PaidAt, amount: &crate::money::Amount, proof: &[u8]| match at {
+            PaidAt::VaultEntry(..) => self.payment_counts_rec(&who, at, amount, (Some(id), proof), &owed[0]),
+            PaidAt::Flow(c) if !refund_rails.is_empty() => refund_rails.contains(c) && self.payment_counts_rec(&who, at, amount, (Some(id), proof), &owed[0]),
+            PaidAt::Flow(_) => self.payment_counts_rec(&who, at, amount, (Some(id), proof), &owed[0]),
         };
         let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
         let mut claims: Vec<((Hash, Payment), u64)> = vec![];
@@ -9771,7 +9773,8 @@ impl<'a> AgreementsView<'a> {
             match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(Fin::Receipt(rc))
                     if owed.contains(&rc.fulfils)
-                        && who.is_some_and(|w| rc.payee == w && self.author(r) == Some(w))
+                        && rc.payee == who
+                        && self.author(r) == Some(who)
                         && &rc.amount.unit == unit
                         && self.money_counts(r)
                         && !self.receipt_overruled(&rc) =>
@@ -9780,7 +9783,7 @@ impl<'a> AgreementsView<'a> {
                 }
                 Ok(Fin::Claim(c))
                     if owed.contains(&c.fulfils)
-                        && who.is_none_or(|w| c.payee == w)
+                        && c.payee == who
                         && &c.amount.unit == unit
                         && self.payers_claim(r)
                         && self.rail_valid.get(&r.id).is_some_and(|at| counts(&r.id, at, &c.amount, &c.proof))

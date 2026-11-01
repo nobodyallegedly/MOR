@@ -287,7 +287,6 @@ impl Outside {
 }
 
 /// Inside key 3, `objects`, as the act encodes it: `[* [chain, predecessor]]`.
-/// *Also signed by an anonymous payer's key over its claim (Money, F147).*
 pub fn objects_value(objs: &[Object]) -> Value {
     Value::Array(
         objs.iter()

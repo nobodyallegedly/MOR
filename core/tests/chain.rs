@@ -538,7 +538,6 @@ fn only_identity_money_and_agreements_acts_acknowledge_f110() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: None,
     });
