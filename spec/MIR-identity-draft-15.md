@@ -67,7 +67,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Homeless rotation.** A rotation signed with the current chain key that names new homes and counts without receipts from the old ones, when those homes are gone.
 - **Closure.** A declaration, carried in a rotation of a home's operator, that the home stops serving every identity.
 - **Contested.** The word names four things, each said with its own noun:
-  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44) and the other homes' receipts do not meet the rule without them, or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape, and where a home's conflict is proven (rule 45) and the other homes do not meet the rule without it;
+  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44) and the other homes' receipts do not meet the rule without them, or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it, and where one home's conflict, proven or not, leaves the other homes short of the rule: there the owner may leave by the escape (section 11);
   - **a contested rotation:** one of the rotations competing at a contested position; a rule it changes waits (rule 42);
   - **a contesting receipt:** a receipt voided by its operator's rotation that another identity acknowledged; it is shown as a dispute at its chain position and decides nothing (receipt check 6);
   - **contested routes:** two routes acts naming one predecessor; clients use the last act before the fork ("Which value counts", 3).
@@ -344,11 +344,11 @@ A self-hosted identity's rotation counts on the rotation alone.
 Two exceptions, each allowed once:
 
 - after a homeless rotation is voided by an objection, the owner MAY sign one normal rotation with the same chain key;
-- after a normal rotation is refused by the homes that count, or contested at a self-hosted home, the owner MAY sign one endorsed homeless rotation (an escape) with the same chain key, whose endorsement lists the refused rotation as abandoned, or, at a contested self-hosted position, both rotations served there.
+- after a normal rotation is refused by the homes that count, or the position is contested by two rotations revealing the same chain key, wherever they were served (at a self-hosted home, rule 4; or where one home's conflicting receipts leave the other homes short of the rule, rule 44), the owner MAY sign one endorsed homeless rotation (an escape) with the same chain key, whose endorsement lists the refused rotation as abandoned, or, at a contested position, both rotations.
 
 *SLH-DSA is stateless and is not weakened by a few signatures; the single-use rule exists so that an owner never has two competing rotations in play. "Each allowed once" cannot be checked by a verifier; it is a client and Module rule, and the air-gapped chain key Module enforces it.*
 
-*Client conformance:* the air-gapped chain key Module signs the escape for a position contested at a self-hosted home only on presentation of the competing rotation, which it checks offline under the chain key that rotation revealed: its signature verifies, its previous act is the same as that of the rotation the Module signed, and it is not the rotation the Module signed. The online side's word alone does not open it. A refusal by the homes that count (the first case of the exception) stays unprovable from bytes: the Module tells the human what it is asked to sign, and why, before signing.
+*Client conformance:* the air-gapped chain key Module signs the escape for a contested position only on presentation of the competing rotation, which it checks offline under the chain key that rotation revealed: its signature verifies, its previous act is the same as that of the rotation the Module signed, and it is not the rotation the Module signed. The online side's word alone does not open it. A refusal by the homes that count (the first case of the exception) stays unprovable from bytes: the Module tells the human what it is asked to sign, and why, before signing.
 
 *A contest at a self-hosted home is two valid rotations revealing one chain key, which the Module can see in bytes; a refusal is the absence of receipts, which no bytes prove. An honest owner holds the thief's rotation, since it is what made the contest, so the check costs the owner nothing.*
 
@@ -520,7 +520,7 @@ With several homes and no declared rule, the default of rule 2 applies.
 
 #### Rule 42. A contested rotation's rule waits
 
-A rule changed in a contested rotation takes effect only once the contest is settled, and an act bound to a contested rotation is pending, never valid and not invalid, until the contest ends, by settlement or, at a self-hosted identity, by the escape; it is then judged as everyday check 2 says. An invalid rotation never counts.
+A rule changed in a contested rotation takes effect only once the contest is settled, and an act bound to a contested rotation is pending, never valid and not invalid, until the contest ends, by settlement or by the escape (rule 29's second exception); it is then judged as everyday check 2 says. An invalid rotation never counts.
 
 #### Rule 43. An outvoted home
 
@@ -528,7 +528,7 @@ A home left holding a losing rotation is outvoted. The owner may drop it in a la
 
 #### Rule 44. Two receipts from one home: a conflict
 
-Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, both are left out ("Which rotation counts", step 2): the other homes' receipts may still meet the rule, and a rotation they meet it for counts; where they do not, the identity is contested at that position, not frozen. *Stated cost: a conflict proven (rule 45) never ends; that home's receipts count for nothing for that identity at later positions. Where the other homes meet the rule at that position, the chain goes on and the owner moves to other homes by a later rotation; where they do not, the position stays contested.* Anyone may publish the pair, and clients SHOULD flag the home to the owner.
+Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, both are left out ("Which rotation counts", step 2): the other homes' receipts may still meet the rule, and a rotation they meet it for counts; where they do not, the identity is contested at that position, not frozen. *Stated cost: a conflict proven (rule 45) never ends; that home's receipts count for nothing for that identity at later positions. Where the other homes meet the rule at that position, the chain goes on and the owner moves to other homes by a later rotation; where they do not, the position stays contested until the owner leaves by the escape (section 11).* Anyone may publish the pair, and clients SHOULD flag the home to the owner.
 
 #### Rule 45. Dishonesty, proven at a position
 
@@ -608,7 +608,7 @@ A homeless rotation at position n counts only if all of the following hold:
 
 ### 11. Escape with both keys
 
-*In short: a home that is alive but hostile can refuse the owner's normal rotation and object to a homeless one. An owner who proves both keys, the chain key in the rotation and the signing key in an endorsement, leaves anyway; so does the owner of a self-hosted identity whose position a thief contests.*
+*In short: a home that is alive but hostile can refuse the owner's normal rotation and object to a homeless one. An owner who proves both keys, the chain key in the rotation and the signing key in an endorsement, leaves anyway; so does the owner whose position a thief contests, at a self-hosted home or where one home's conflict leaves the others short of the rule.*
 
 #### Rule 53. Both keys always get out
 
@@ -620,7 +620,7 @@ A homeless rotation that has a valid escape endorsement counts without steps 3 a
 
 *This is the way out from a home that is alive but hostile: it can refuse the owner, but it cannot hold an owner who proves both keys.*
 
-It is also the way out of a position contested at a self-hosted home (rule 4): the endorsement lists both rotations served there as abandoned, and the air-gapped Module signs it only on the competing rotation's bytes (rule 29).
+It is also the way out of a position contested by two rotations under one chain key, at a self-hosted home (rule 4) or where one home's conflict leaves the others short of the rule (rule 44): the endorsement lists both as abandoned, and the Module signs it only on the competing rotation's bytes (rule 29).
 
 #### The escape endorsement
 

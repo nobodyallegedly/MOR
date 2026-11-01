@@ -288,8 +288,12 @@ impl<'a> AgreementsView<'a> {
         let (rule, _) = t.holders_rule(i);
         match rule {
             crate::agreements::HoldersRule::Every => {
-                let missing = roster.iter().any(|(x, n)| *n > 0 && !member(x) && !by.contains_key(x));
-                Ok(missing.then(|| "it pays the collective's stake less, and a holder who is no member has not signed it (rules 48, 94)".into()))
+                // Declared every holder (field 30): every holder at the
+                // line signs, members too (rules 65 and 94); the default:
+                // each holder who is no member.
+                let declared = t.holders_rules.iter().flatten().any(|e| e.stake == i);
+                let missing = roster.iter().any(|(x, n)| *n > 0 && (declared || !member(x)) && !by.contains_key(x));
+                Ok(missing.then(|| if declared { "it pays the collective's stake less, its holders' rule is declared every holder, and a holder has not signed it (rules 65, 94)".into() } else { "it pays the collective's stake less, and a holder who is no member has not signed it (rules 48, 94)".into() }))
             }
             crate::agreements::HoldersRule::Share(need) => {
                 let lineage = self.lineage(&ag)?;

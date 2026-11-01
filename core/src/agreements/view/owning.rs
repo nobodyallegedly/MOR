@@ -705,7 +705,9 @@ impl<'a> AgreementsView<'a> {
         let holders = st.identified();
         match t.holders_rule(i as u64).0 {
             HoldersRule::Every => {
-                for (h, _) in holders.iter().filter(|(h, _)| !t.parties.contains(h)) {
+                // Declared every holder (field 30): members too (rules 65, 95).
+                let declared = t.holders_rules.iter().flatten().any(|e| e.stake == i as u64);
+                for (h, _) in holders.iter().filter(|(h, _)| declared || !t.parties.contains(h)) {
                     if !placed(h)? {
                         return Ok(Err(
                             "a holder of the collective's stake in itself who has no say has not consented, by a signature act naming it that the collective's line placed (rule 95; new in draft 14, F310)".into(),

@@ -15162,3 +15162,28 @@ fn s7j_a_referral_through_a_route_is_the_first_payers() {
         }
     }
 }
+
+/// S7k, F414 (rules 48, 65, 94 and 95 under a declared every-holder rule):
+/// where the label's terms declare its stake's holders' rule every holder
+/// (field 30), a release of its work, an owners' matter, waits for every
+/// holder, members too; under the default (field 30 silent), only for the
+/// holder who is no member (3.9ah above).
+#[test]
+fn s7k_a_declared_every_holder_rule_asks_every_holder_members_too() {
+    let work = spec("the label's work, every holder declared");
+    let declare = |t: &mut Terms| t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Every, waived: false }]);
+    let (mut lab, mut dana, _k) = owned_label_by(100_000, false, None, Some(work), &declare, false);
+    let declared = lab.view().version_in_force(&lab.founding).ok().and_then(|v| lab.view().terms(&v).ok()).is_some_and(|t| t.holders_rules.is_some());
+    assert!(declared, "the label's terms in force declare the holders' rule");
+    let wa = label_owns(&mut lab, work);
+    let rel = agreements::Release { work, stakes: vec![(wa, 0)], claims: vec![], keys: vec![(spec("its publication"), vec![9; 32])], timed: None };
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::RELEASE, rel.to_map(), obj(wa), None);
+    let r = lab.w.add(&a);
+    lab.sign(BEN, &r);
+    sign(&mut lab.w, &mut dana, &r);
+    assert!(!lab.view().release(&r).unwrap().complete, "Ana and Cy, holders who are members, have not signed");
+    lab.sign(ANA, &r);
+    lab.sign(CY, &r);
+    let e = lab.view().release(&r).unwrap();
+    assert!(e.complete, "every holder signed: {:?}", e.why);
+}
