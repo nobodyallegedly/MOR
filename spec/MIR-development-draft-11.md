@@ -72,7 +72,7 @@ The types a specification defines are those its text defines, as a verifier impl
 
 #### Rule 3. Creator signature
 
-A cMIP or Module counts as its creator's only when uploaded in an act signed by the creator named inside it. **An act for a collective that Agreements counts (Agreements rule 58), or an act under a grant key Agreements backs (Agreements rule 80), is the creator's for this rule**; a client that does not read Agreements shows such a publication's claim unknown. A MIR names no creator.
+A cMIP or Module counts as its creator's only when uploaded in an act signed by the creator named inside it. **An act for a collective that Agreements counts (Agreements rule 58), or an act under a grant key Agreements backs (Agreements rule 80), is the creator's for this rule**; a client that does not read Agreements shows whether such a specification is its creator's as unknown. A MIR names no creator.
 
 A specification naming a creator that never uploaded it is shown as unclaimed by that creator; fee terms and reputation displays MUST NOT assume the named creator consented.
 

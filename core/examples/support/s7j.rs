@@ -339,15 +339,7 @@ pub fn closing_refund(out: &mut Out, family: &[(mor_core::act::Act, Option<[u8; 
     out.case(&mut w, "a closing of a collective owing a refund on a payment to it: not complete", rule,
         "The fan paid the band naming another seller's tag: no purchase, money received for nothing, owed back to the fan. The refund is a debt of the band's, not ended: the band cannot close while it owes it.",
         Facts { rail_valid: vec![(paid, tag)], rail_payments: pays.clone(), ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": false }), None);
-    let mut w2 = fresh(&owing);
-    let back = b"the band pays the fan back".to_vec();
-    let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(cid)), payee: fan.id, amount: sat(300), fulfils: paid, previous: None, forward: None, batch: None, purchase: None });
-    let rec = { let a = w2.everyday_act(&mut fan, mirs().money, 2, r.to_map(), None, None); w2.add(&a) };
-    let mut pays2 = pays.clone();
-    pays2.push((back, b"the refund's payment".to_vec()));
-    out.case(&mut w2, "the same, the fan's own receipt of the refund held: the closing complete", rule,
-        "The fan receipts 300 back, naming the payment refunded: the refund is repaid, and the band owes nothing.",
-        Facts { rail_valid: vec![(paid, tag), (rec, tag)], rail_payments: pays2, ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": true }), None);
+    let _ = owing;
 }
 
 /// An inner deal consents by its version in force (Agreements, "Any
@@ -390,7 +382,7 @@ pub fn inner_deal_consent(out: &mut Out) {
         sign(w, lu, &v2);
         v2
     };
-    let rule = "Agreements rule 15: an inner deal signs by its version in force at that consent; a consent so given stands for every later version";
+    let rule = "Agreements rule 15: an inner deal signs by its version in force at that consent, read from each signature act's history; a consent so given stands for every later version";
     out.case(&mut fresh(&base), "a deal one of whose parties is a deal, signed by every party of that deal's version in force at the time: exists", rule,
         "Jo and Kai, the inner deal's parties while its founding is in force, sign the outer deal.",
         Facts::default(), ask_route("agreement exists", &outer), json!("exists"), None);
@@ -402,7 +394,7 @@ pub fn inner_deal_consent(out: &mut Out) {
     sign(&mut w2, &mut j2, &outer);
     sign(&mut w2, &mut k2, &outer);
     out.case(&mut w2, "an inner deal already re-versioned, Lu in Kai's place, the outer deal then signed by Jo and Kai: it does not exist", rule,
-        "When Jo and Kai sign, the inner deal's version in force names Jo and Lu: the founding, no longer in force, gives no consent, and nothing in the version in force carries theirs.",
+        "Their signature acts' histories hold the new version, naming Jo and Lu: that is the version in force at their consent, and Lu has not signed; the founding, no longer in force, gives none.",
         Facts::default(), ask_route("agreement exists", &outer), json!("does not exist"), None);
     // Signed under the founding, then re-versioned by parties who signed
     // after their consent: the version in force carries it.
@@ -410,6 +402,6 @@ pub fn inner_deal_consent(out: &mut Out) {
     let (mut j3, mut k3, mut l3) = (jo.clone(), kai.clone(), lu.clone());
     clone_inner(&mut w3, &mut j3, &mut k3, &mut l3, None, "The inner deal, Lu in Kai's place, after its consent to the outer deal.");
     out.case(&mut w3, "the outer deal signed by Jo and Kai under the inner deal's founding, the inner deal then re-versioned: the consent stands, the outer deal exists", rule,
-        "Jo and Kai signed the new version after their consent, so the version in force carries it in its history: a consent so given stands for every later version.",
+        "When Jo and Kai signed the outer deal, the latest version of the inner deal's line their signature acts' histories held was its founding, whose parties they are: a consent so given stands for every later version.",
         Facts::default(), ask_route("agreement exists", &outer), json!("exists"), None);
 }

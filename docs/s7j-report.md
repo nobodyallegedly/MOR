@@ -93,7 +93,7 @@
 - **Q-A4** ("owes nothing"):
   - *Text:* written in S7i.
   - *Core:* a closing is not complete while the collective owes a refund on a payment to it that is not repaid or ended. It is unknown while that rests on a rail's answer.
-  - *Vectors:* two, owing and repaid.
+  - *Vector:* one, owing: not complete. (A "repaid" case was dropped after the stranger's reading: question 5.)
 - **Q-A21:**
   - *Text:* written in S7i.
   - *Core:* `gave_no_address` reads the payer's claim (key 7), chain (vault) and held pointers; unknown where the chain cannot be resolved.
@@ -103,8 +103,8 @@
   - *Core:* `[5, stake]` under an every-holder rule is allowed in the mark, names every holder at the line, and is needed where the terms declare that rule (`owners_powers`).
   - *Test:* `s7j_an_every_holder_rule_…`, three cases. A test, not a vector: the fixtures with a stake's holders' rule live in the core tests.
 - **Q-A13** (rule 15):
-  - *Text:* Fable's sentence, and an italic: "in force at that consent" is read from the acts.
-  - *Core:* `line_signed`. The version in force gives a new consent. An earlier version's consent stands where the version in force, or its parties' signature acts on it, hold it in their history.
+  - *Text:* Fable's sentence, and an italic: "in force at that consent" is read as a version in force for an act is (rule 1): the latest version of the inner deal's line each signature act's history holds. This is the stranger's reading, simpler than my first build, with the same verdicts.
+  - *Core:* `line_signed`.
   - *Vectors:* three. The F254 test's "carried through every later version" passes under this reading.
 
 The four Identity sentences were built by a worker in its own worktree and checked here. All four bite: with the old core put back, 8 of their new cases mismatch.
@@ -147,6 +147,7 @@ Kišib needs no change; its five rare tests pass, F299 included, here and on Git
      - **(b)** the first hop's commitment names the seller's tag. The conversion is read from the forward's agreement, and a hop declaring a forward is no payment of what it names. This changes the conversion cMIP (the suite's) and rule 18's reading.
      - **(c)** as written, rule 11 not comparing a first hop's key 4. The rail still refuses the claim, so this needs the payment cMIP to change too.
    - *My lean:* (a). *Cost:* two sentences change (rule 24 and the contest), and one line of core (which field is matched).
+   - *Also found by the stranger, the same gap:* no text says what a payment naming a counted tag but paid to someone other than its payee is. The core says no purchase, owed back. Read so, every first hop naming the seller's tag would be owed back by the converter. Option (a) avoids this too, as the first hop names the converter's own tag.
 2. **A refund owed to nobody outside a broken stretch blocks a closing forever.**
    - *Plain words:* Q-A4 counts every refund owed. One owed on a payment that committed no key can never be paid, so such a collective can never close.
    - *Options:* (a) as built; (b) field 4 may leave open such a refund, and one owed to a payer who gave no address, as it does for the broken stretch.
@@ -159,19 +160,67 @@ Kišib needs no change; its five rare tests pass, F299 included, here and on Git
      - (b) Fable's prose: each hop before the stop owes back too.
    - *Lean:* (a).
 4. **Q-A11's scope:** built for a stake whose terms declare the every-holder rule (field 30). A stake with no entry, every holder by default, keeps rule 48's signatures outside the mark. *Lean:* as built. *Cost:* two shapes remain, for declared and default rules.
-5. **Q-A4's placement:** the core counts every payment to the collective it holds, not only those before the closing's line. *Lean:* place it by the line, as other debts are placed (one more core change).
+5. **Q-A4's placement and repayment.**
+   - *Plain words:* the core counts every payment to the collective it holds, not only those before the closing's line. It also counts a refund repaid by the payer's own receipt wherever held. But "owes nothing" counts another's receipt only where an act of the collective in the closing's history acknowledges it.
+   - *Lean:* both as for other debts (placed by the line; another's receipt acknowledged). That is one more core change, after which the dropped "repaid" vector comes back.
 6. **The relay's reading** (section 4):
    - a self-hosted home signs no objection;
    - it keeps any homeless rotation of its identity as evidence, also at a free position (before, it held one there as the identity's rotation).
    - *Lean:* as built, rule 48 as written.
 
+7. **Identity: does a conflicted position count on the other homes?**
+   - *Plain words:* the texts say two things. Line 70, rule 44 and the MICS say a position where one home's two receipts conflict is contested, and no rotation counts there. "Which rotation counts", step 2, says to leave the conflicting receipts out and apply the home rule to the rest. The core does the second.
+   - The new Q-I3 vectors (a home that never rotates) pin the core's answer, position 1 counting on the other two homes. The stranger reads the texts as the first. Fable's own Q-I3 sentence ("the position is contested") reads as the first too.
+   - *Options:* (a) step 2 governs: a conflict discounts that home's receipts, and the other homes may still meet the rule (the core today); (b) contested: no rotation counts while the conflict stands.
+   - *Lean:* (a), one sentence in line 70 and rule 44.
+   - *Cost of (b):* a stolen home key stalls every identity it serves, so the escape is the only way out. Of (a): none new.
+   - The stranger adds that once proven, a conflict never ends: a stated cost to say either way.
+8. **Vows and referrals through a route** are not covered.
+   - Agreements rule 13 lets only "the payer its commitment names" confirm a vow's sale by their claim. Money rule 20 counts a referral "signed in the buyer's claim".
+   - So a route's first payer can contest, but cannot confirm a vow's sale or carry a referral.
+   - *Lean:* extend both to the first payer's claim of the first hop, once question 1 is settled.
+9. **Q-A11 against rules 48 and 94** (the stranger): under every holder, members consent through the collective's own powers, and only holders with no voice sign under rule 48.
+   - Fable's sentence asks the mark to name every holder; the stranger would name only the holders with no voice.
+   - *Built:* Fable's sentence.
+   - *Lean:* keep it, and say in rule 65 how `[5, stake]` is counted under every holder (every holder at the line, members too).
+
 ## The stranger's reading
 
-*(To come.)*
+A subagent read only the eight texts, the diff of every sentence written here, and the 49 new or moved cases told as situations.
+
+**The verdicts: 43 agree, 3 silent, 3 differ.**
+- *Differ:*
+  - the two Q-I3 identity cases (question 7);
+  - the closing completed by the fan's receipt of the refund (no act of the collective acknowledges it): the case is dropped, question 5.
+- *Silent:*
+  - the closing owing a refund on a payment naming another seller's tag (no text says such a payment is no purchase: question 1);
+  - the first-payer case itself (the claim's validity on its rail: question 1);
+  - the inner deal's consent, under my first reading: rebuilt on the stranger's reading, now decided by the texts.
+
+**Its points on my sentences, and what I did:**
+- *Fixed:*
+  - the contest paragraph no longer contradicts Money on a first payer with no claim (the purchase is the service's own; a bare-key payer contests by a key-8 claim);
+  - "stopped or broken" became "stops (rule 27) or is not valid";
+  - rule 24's first sentence admits a part;
+  - the first payer is read from receipt field 2 alone;
+  - the last hop's tag may be in a claim's key 4;
+  - "astray" no longer cites rule 28 for what it does not say;
+  - rule 28 now covers money owed back on the last hop (the usual refund is no purchase), names the seller's agreement, and says each hop owes what it received;
+  - rule 8 says records are counted one by one, "until the rail answers each";
+  - rule 27's italic says a forward in flight shows owed at once;
+  - Development rule 3's words no longer reuse "publication" and "claim";
+  - the price-change sentence parses, and covers a change of payee;
+  - the suite's 4l is a sixth purchase, and 4g's out-of-order "fifth" is "another";
+  - the MICS's route paragraph and receipt field 8's comment no longer give claims a batch;
+  - the inner deal's italic follows rule 1's reading.
+- *Questions:* the route buyer's claim (1), a refund owed to nobody (2), Identity's contested position (7), vows and referrals (8), Q-A11 (9).
+- *Left as written:*
+  - the Identity worker's Q-I1 sentence (the stranger would extend it to several pending or unknown acknowledgements; the core already judges those both ways);
+  - "until the home has so rotated, or both so sit" (question 7 decides it).
 
 ## Vectors
 
-- 496 verdict cases, 48 of them new, every one made by the core's own functions.
+- 495 verdict cases, 47 of them new, every one made by the core's own functions.
 - Every earlier case keeps its verdict, acts and ids, save the four above, each a decision's own case.
 - New questions: "route buyer", "refund along", "specification claim, reading Agreements".
 - Both READMEs are updated, the c-box's too.
