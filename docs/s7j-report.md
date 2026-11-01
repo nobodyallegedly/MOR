@@ -229,4 +229,20 @@ A subagent read only the eight texts, the diff of every sentence written here, a
 
 ## Checks
 
-*(To come.)*
+- Here, at the head:
+  - `cargo test --workspace`: green (core, relay, harness, the WebAssembly crate).
+  - `python3 core/vectors/check.py`: all 276 agree, 98 verdict cases judged.
+  - `scripts/c-box/make-c-box.sh` into a scratch folder: 8 texts, 12 vector files.
+  - The generator gives the same bytes again.
+- **On GitHub, read by me:**
+  - **At `60e56fd`** (the relay fix): **Kišib green, F299 included**; regtest and Nakišib green. Red there:
+    - the Rust workspace, two vow tests, since updated;
+    - `clients/collective`, "QG1 and F197", the suite's (above);
+    - Ummia's pinned hashes, the suite's;
+    - the reproducible display client, waiting on the releases.
+  - **At `1b9da5d`:** the Rust workspace, the vectors byte for byte, the Python check, the WebAssembly and regtest green; `clients/collective` red as above. The later steps were still running when I stopped.
+- **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`):
+  - `MICS_HASH = 'f5c68ca0ebf86aff41705d1aae9cf7a59d43a966ce7699b03068a26e7216e1ce'`
+  - `SUITE_HASH = '1eefbe3b97e022dc1cd65438b57390a33526bc8daa8eb7ad6de37883392588fa'`
+  - They are computed as `test/cards.test.ts` computes them; the same script gives S7i's published values on S7i's texts. They move again with any later edit of the MICS or the suite.
+- **The releases:** not rebuilt. I stopped at the final merge, as asked. After "preparing to merge": merge main, rebuild the six as their READMEs say, and check GitHub green, the reproducible display client included. What stays the suite's: `clients/collective`'s QG1/F197 test, and Ummia's hashes.
