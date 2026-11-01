@@ -189,3 +189,49 @@ pub fn money(out: &mut Out) {
         Facts { rail_valid: vec![(a1, sw_ptr), (a2, stag), (kr, sw_ptr)], rail_payments: vec![(q1.clone(), b"the key's first hop".to_vec()), (q3.clone(), b"the last hop".to_vec())], rail_specifications: vec![content.clone()], ..Default::default() },
         json!({ "question": "route buyer", "act": hx(&a2) }), json!({ "buyer": "the first payer", "payer": hx(&anon.id), "claim": hx(&kr) }), None);
 }
+
+/// Anonymity on MOR is a fresh identity, not a missing one (Money rule 17;
+/// rule 11): a self-hosted fresh identity, committed by the payment as its
+/// payer, names a refund rail in its claim (key 7) and is refunded there;
+/// a routing node holding the rail's proof cannot take it.
+pub fn fresh_identity_refund(out: &mut Out) {
+    let unit = spec("a test unit (regtest satoshi)");
+    let amt = |v: u64| Amount { unit, value: v };
+    let rail = spec("a rail Module, a fresh identity's refund");
+    let mut w = World::new();
+    let mut shop = w.genesis("a shop refunding a fresh identity", vec![own_home()], None, None);
+    let mut fresh = w.genesis("a fresh identity hosted by its own wallet, paying once", vec![own_home()], None, None);
+    let mut node = w.genesis("a routing node that saw the payment's proof", vec![own_home()], None, None);
+    let ptr = pointer_act(&mut w, &mut shop, b"the shop's address, a fresh identity");
+    let proof = b"a fresh identity pays the shop".to_vec();
+    let rec = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fresh.id)), payee: shop.id, amount: amt(300), fulfils: ptr, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut shop, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+    let fc = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: shop.id, amount: amt(300), fulfils: ptr, disagrees: None, referral: None, refund: Some(money::Rail { module: rail, address: b"the fresh identity's refund address".to_vec() }), anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(&mut fresh, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
+    let base = w.log.clone();
+    let back = b"the shop pays the money back".to_vec();
+    let refund_by = |w: &mut World, shop: &mut Person| {
+        let c = Fin::Claim(Claim { rail, proof: back.clone(), payee: fresh.id, amount: amt(300), fulfils: rec, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(shop, mirs().money, 3, c.to_map(), None, None);
+        w.add(&a)
+    };
+    let ask_back = json!({ "question": "refund repaid", "payment": hx(&rec), "to": hx(&fresh.id), "unit": hx(&unit) });
+    let rule = "Money rule 17: a refund owed to an identity is paid to its payee pointer, or where the payer's claim names a refund rail (key 7), there";
+    let mut w1 = World::new();
+    for (a, _) in &base { w1.add(a); }
+    let mut s1 = shop.clone();
+    let r1 = refund_by(&mut w1, &mut s1);
+    out.case(&mut w1, "a refund to a fresh identity the payment committed to, hosted by its own wallet, paid to the refund rail its claim names: repaid", rule,
+        "The payer stays unknown by paying as a fresh identity of its own (Identity rule 4), committed by the payment; its claim names where money owed back goes (key 7). The shop's claim of the money back, the rail's answer saying it reached that rail, repays it.",
+        Facts { rail_valid: vec![(rec, ptr), (fc, ptr), (r1, fc)], rail_payments: vec![(proof.clone(), b"the payment".to_vec()), (back.clone(), b"the refund".to_vec())], ..Default::default() }, ask_back.clone(), json!(300), None);
+    // A routing node holding the proof claims the payment, naming its own rail.
+    let mut w2 = World::new();
+    for (a, _) in &base { w2.add(a); }
+    let nc = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: shop.id, amount: amt(300), fulfils: ptr, disagrees: None, referral: None, refund: Some(money::Rail { module: rail, address: b"the routing node's address".to_vec() }), anonymous: None, purchase: None, previous: None });
+        let a = w2.everyday_act(&mut node, mirs().money, 3, c.to_map(), None, None); w2.add(&a) };
+    let mut s2 = shop.clone();
+    let r2 = refund_by(&mut w2, &mut s2);
+    out.case(&mut w2, "the same payment, a routing node holding its proof claiming it and naming its own refund rail, the money sent there: nothing repaid to the fresh identity", rule,
+        "The payment committed the fresh identity as its payer; the node's claim is not the payer's, and its rail refuses it (the commitment recomputed from it names another payer). Money sent to the node's rail repays nothing owed to the fresh identity.",
+        Facts { rail_valid: vec![(rec, ptr), (fc, ptr), (r2, nc)], rail_invalid: vec![nc], rail_payments: vec![(proof.clone(), b"the payment".to_vec()), (back.clone(), b"the refund".to_vec())], ..Default::default() }, ask_back, json!(0), None);
+}

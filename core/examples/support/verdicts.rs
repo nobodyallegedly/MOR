@@ -1681,6 +1681,7 @@ pub fn money(out: &mut Out) {
     s7i::money(out);
     s7j::money(out);
     s7k::money(out);
+    s7k::fresh_identity_refund(out);
 }
 
 pub fn agreements(out: &mut Out) {
