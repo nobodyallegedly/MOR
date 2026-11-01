@@ -34,7 +34,7 @@
 use crate::act::{Act, ActError, Inside};
 use crate::hash::Hash;
 use crate::identity::{
-    self, check_everyday_shape, check_genesis, check_chain_signature_shape, check_rotation_shape, check_witness_shape, names, types, ChainState,
+    self, check_everyday_shape, check_genesis, check_chain_signature_shape, check_homeless_path_objects, check_rotation_shape, check_witness_shape, names, types, ChainState,
     Effective, Endorsement, IdError, Operator, Payload, Rotation,
 };
 use crate::lock::ContentKey;
@@ -374,6 +374,31 @@ pub struct Verifier {
 struct Cx {
     stack: Vec<Hash>,
     loops: u32,
+    /// Evidence met at the position being judged whose status is unknown,
+    /// and evidence whose status is pending ([`Reading`]).
+    seen: Seen,
+}
+
+#[derive(Clone, Copy, Default)]
+struct Seen {
+    unknown: bool,
+    pending: bool,
+}
+
+/// How a position is read for evidence the verifier cannot judge, or that
+/// is pending (Identity, "What stops a chain": cannot tell). Each is taken
+/// as valid or as absent; where the readings differ on which rotation
+/// counts there, or whether one does, the position cannot be told
+/// (unknown evidence) or is pending (pending evidence). The device rule 12
+/// of Agreements uses for an unstated pair.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Reading {
+    unknown: bool,
+    pending: bool,
+}
+
+impl Reading {
+    const ABSENT: Reading = Reading { unknown: false, pending: false };
 }
 
 enum Judged {
@@ -392,8 +417,24 @@ enum Judgement {
     Kept,
     Disputed,
     Void,
-    /// A kept line it needs is not held (F298): neither kept nor void yet.
+    /// Neither kept nor void yet, or neither disputed nor void yet: an
+    /// acknowledgement or keeper record whose status cannot be told (F298).
     Unknown,
+    /// A kept line it could lie on is not held (F298): kept, or void.
+    MaybeKept,
+    /// Void unless relied on, and the only acknowledgement that would rely
+    /// on it is pending (rule 34): pending, neither void nor disputed.
+    Pending,
+}
+
+/// Whether another identity's acknowledgement relies on an act (rule 34).
+enum Ack {
+    Yes,
+    No,
+    /// None counts, and one's status cannot be told.
+    Unknown,
+    /// None counts, none is unknown, and one is pending.
+    Pending,
 }
 
 /// Whether an act lies in a rotation's kept ancestry (rules 33 to 35).
@@ -420,9 +461,6 @@ enum Line {
 enum Hb {
     Counts(Basis),
     No,
-    /// An objection that would void it has a status this verifier cannot
-    /// tell (F298).
-    CannotTell,
 }
 
 /// A rotation that can count at a position: valid, naming the act that
@@ -449,6 +487,9 @@ struct StepOut {
     result: Result<(Link, ChainState), Stop>,
     dishonest: Vec<Operator>,
     contested: bool,
+    /// Contested among two or more final homeless rotations, which no
+    /// evidence can undo: named before cannot tell ("What stops a chain").
+    final_contest: bool,
 }
 
 impl StepOut {
@@ -457,6 +498,7 @@ impl StepOut {
             result: Err(s),
             dishonest: vec![],
             contested: false,
+            final_contest: false,
         }
     }
 }
@@ -554,6 +596,10 @@ impl Verifier {
                 Payload::Witness => {
                     check_everyday_shape(&act, &inside)?;
                     check_witness_shape(&inside)?
+                }
+                Payload::Objection(_) | Payload::Absence(_) | Payload::Endorsement(_) => {
+                    check_everyday_shape(&act, &inside)?;
+                    check_homeless_path_objects(&inside)?
                 }
                 _ => check_everyday_shape(&act, &inside)?,
             }
@@ -1204,7 +1250,7 @@ impl Verifier {
                 Operator::Own => vec![*rotation],
                 Operator::Id(o) => self
                     .receipts(&o, identity, rotation, k as u64)
-                    .filter(|r| matches!(self.judge_receipt(&mut cx, r, audit.as_ref()), Judged::Support { .. }))
+                    .filter(|r| matches!(self.judge_receipt(&mut cx, r, audit.as_ref(), Reading::ABSENT), Judged::Support { .. }))
                     .map(|r| r.id)
                     .collect(),
             })
@@ -1348,6 +1394,15 @@ impl Verifier {
         self.candidates(id, n as u64, &res.links[n - 1].act, &res.states[n - 1]).iter().any(|c| c.id == x.id)
     }
 
+    /// Which rotation counts at the next position, read both ways for the
+    /// evidence the verifier cannot judge and for the evidence that is
+    /// pending (Identity, "What stops a chain": cannot tell). Each is taken
+    /// as valid and as absent; where unknown evidence changes which
+    /// rotation counts there, or whether one does, the position cannot be
+    /// told; where only pending evidence does, it is pending. The reasons
+    /// before cannot tell in the stated order (the end of what is held, and
+    /// a contest among final homeless rotations) stand as read with both
+    /// taken as absent.
     fn step(
         &self,
         cx: &mut Cx,
@@ -1356,6 +1411,47 @@ impl Verifier {
         states: &[ChainState],
         dishonest: &[(Operator, u64)],
         own: bool,
+    ) -> StepOut {
+        let outer = std::mem::take(&mut cx.seen);
+        let base = self.step_read(cx, id, links, states, dishonest, own, Reading::ABSENT);
+        let seen = std::mem::replace(&mut cx.seen, outer);
+        if own || base.final_contest || !(seen.unknown || seen.pending) {
+            return base;
+        }
+        let counts = |o: &StepOut| o.result.as_ref().ok().map(|(l, _)| l.act);
+        let read = |cx: &mut Cx, unknown: bool, pending: bool| {
+            let outer = std::mem::take(&mut cx.seen);
+            let o = self.step_read(cx, id, links, states, dishonest, own, Reading { unknown, pending });
+            cx.seen = outer;
+            counts(&o)
+        };
+        let ff = counts(&base);
+        let tf = read(cx, true, false);
+        let ft = read(cx, false, true);
+        let tt = read(cx, true, true);
+        let ids = || self.candidates(id, links.len() as u64, &links[links.len() - 1].act, &states[states.len() - 1]).iter().map(|c| c.id).collect::<Vec<_>>();
+        let mut out = if ff != tf || ft != tt {
+            StepOut::stop(Stop::CannotTell(ids()))
+        } else if ff != ft {
+            StepOut::stop(Stop::Pending(ids()))
+        } else {
+            return base;
+        };
+        out.dishonest = base.dishonest;
+        out.contested = base.contested;
+        out
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn step_read(
+        &self,
+        cx: &mut Cx,
+        id: &Hash,
+        links: &[Link],
+        states: &[ChainState],
+        dishonest: &[(Operator, u64)],
+        own: bool,
+        rd: Reading,
     ) -> StepOut {
         let n = links.len() as u64;
         let prev = links[links.len() - 1].act;
@@ -1366,6 +1462,7 @@ impl Verifier {
             result: Ok((Link { act: c.id, how }, c.state.clone())),
             dishonest: vec![],
             contested: false,
+            final_contest: false,
         };
         if cands.is_empty() {
             return StepOut::stop(Stop::End);
@@ -1407,6 +1504,7 @@ impl Verifier {
             &pool_old,
             &|c| !abandoned.contains(c),
             dishonest,
+            rd,
         );
         if let Some(w) = t.winner {
             let c = cands.iter().find(|c| c.id == w).unwrap();
@@ -1421,7 +1519,7 @@ impl Verifier {
         //    No objection can void it any more (F63, F92).
         let mut finals = vec![];
         for h in &homeless {
-            let b = self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, false);
+            let b = self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, false, rd);
             if let Hb::Counts(b @ (Basis::Escape | Basis::Gone)) = b {
                 let mut l2 = links.to_vec();
                 let mut s2 = states.to_vec();
@@ -1436,7 +1534,7 @@ impl Verifier {
                 // Under the rule it declared: a next rotation its new homes
                 // receipt, never one counting by a homeless procedure of
                 // its own (Identity, "Finality").
-                if matches!(self.step(cx, id, &l2, &s2, dishonest, false).result, Ok((Link { how: How::Homes, .. }, _))) {
+                if matches!(self.step_read(cx, id, &l2, &s2, dishonest, false, rd).result, Ok((Link { how: How::Homes, .. }, _))) {
                     finals.push((*h, b));
                 }
             }
@@ -1460,26 +1558,19 @@ impl Verifier {
                 let mut out = StepOut::stop(Stop::Contested(ids));
                 out.dishonest = t.dishonest;
                 out.contested = true;
+                out.final_contest = true;
                 return out;
             }
         }
 
         // 3. A homeless rotation, still provisional. Where an objection's
-        //    status cannot be told, neither can whether one counts (F298).
+        //    status cannot be told, neither may be whether one counts: the
+        //    caller reads it both ways (F298; [`Self::step`]).
         let mut prov: Vec<(&Cand, Basis)> = vec![];
-        let mut cannot_tell = false;
         for h in &homeless {
-            match self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, true) {
-                Hb::Counts(b) => prov.push((*h, b)),
-                Hb::CannotTell => cannot_tell = true,
-                Hb::No => {}
+            if let Hb::Counts(b) = self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, true, rd) {
+                prov.push((*h, b));
             }
-        }
-        if cannot_tell {
-            let mut out = StepOut::stop(Stop::CannotTell(ids));
-            out.dishonest = t.dishonest;
-            out.contested = t.contested || t.disputed;
-            return out;
         }
         let mut out = match prov.len() {
             0 if t.contested => StepOut::stop(Stop::Contested(ids)),
@@ -1511,6 +1602,7 @@ impl Verifier {
         pool: &[&Cand],
         eligible: &dyn Fn(&Hash) -> bool,
         dishonest: &[(Operator, u64)],
+        rd: Reading,
     ) -> Tally {
         let eff = st.effective();
         let voters = match eff {
@@ -1539,7 +1631,7 @@ impl Verifier {
                     for c in cands {
                         let mut best: Option<bool> = None;
                         for r in self.receipts(&o, id, &c.id, n) {
-                            match self.judge_receipt(cx, r, c.state.audit.as_ref()) {
+                            match self.judge_receipt(cx, r, c.state.audit.as_ref(), rd) {
                                 Judged::Support { protected } => {
                                     best = Some(best.unwrap_or(false) || protected)
                                 }
@@ -1599,11 +1691,18 @@ impl Verifier {
 
     /// Receipt checks 2, 4, 5 and 6 (check 1 is the caller's: the act named
     /// is a candidate; check 3 too: the operator is one of the homes).
-    fn judge_receipt(&self, cx: &mut Cx, r: &Held, audit: Option<&identity::Audit>) -> Judged {
+    /// A receipt this verifier cannot judge, or one pending (its operator's
+    /// chain not resolved this far), counts as `rd` takes it ([`Reading`]).
+    fn judge_receipt(&self, cx: &mut Cx, r: &Held, audit: Option<&identity::Audit>, rd: Reading) -> Judged {
         let op = *r.signer().unwrap();
         let res = self.resolve_cx(cx, &op);
         let Some(k) = self.bound(&res, r) else {
-            return Judged::No;
+            let st = self.status_cx(cx, r);
+            return if matches!(st, Status::Unknown | Status::Pending) && self.takes(cx, st, rd) {
+                Judged::Support { protected: false }
+            } else {
+                Judged::No
+            };
         };
         // Closure ends the operator's role as a home for good (rule 8c): a
         // receipt signed with the key the closing rotation set, or a later
@@ -1611,7 +1710,7 @@ impl Verifier {
         if closure_at(self, &res).is_some_and(|c| k >= c) {
             return Judged::No;
         }
-        let cosigned = audit.is_some_and(|a| self.cosigned(cx, r, &op, &res, a));
+        let cosigned = audit.is_some_and(|a| self.cosigned(cx, r, &op, &res, a, rd));
         if audit.is_some() && !cosigned {
             return Judged::No;
         }
@@ -1620,7 +1719,9 @@ impl Verifier {
                 Judgement::Kept => Judged::Support { protected: true },
                 _ if cosigned => Judged::Support { protected: true },
                 Judgement::Disputed => Judged::Disputed,
-                Judgement::Void | Judgement::Unknown => Judged::No,
+                // Q-I2: kept, or void, as yet unknown to this verifier.
+                Judgement::MaybeKept if self.takes(cx, Status::Unknown, rd) => Judged::Support { protected: false },
+                Judgement::Void | Judgement::Unknown | Judgement::MaybeKept | Judgement::Pending => Judged::No,
             }
         } else {
             Judged::Support {
@@ -1639,6 +1740,7 @@ impl Verifier {
         op: &Hash,
         op_res: &Resolution,
         a: &identity::Audit,
+        rd: Reading,
     ) -> bool {
         let Some(Payload::Receipt(rc)) = r.payload() else {
             return false;
@@ -1677,7 +1779,8 @@ impl Verifier {
                 }
                 // F297: a cosignature counts only while its signer's chain
                 // keeps it valid ("Log summaries and audits", 3).
-                if self.status_cx(cx, c) == Status::Valid {
+                let st = self.status_cx(cx, c);
+                if self.takes(cx, st, rd) {
                     by.insert(*auditor);
                 }
             }
@@ -1740,16 +1843,21 @@ impl Verifier {
             Kept::Yes => Judgement::Kept,
             // F298: void needs every kept line rebuilt and the act on none
             // of them; disputed is void but relied on, so it waits too.
-            Kept::CannotTell => Judgement::Unknown,
+            Kept::CannotTell => Judgement::MaybeKept,
             Kept::No if self.recorded.contains(&x.id) => Judgement::Disputed,
             Kept::No => match self.acknowledged(cx, x) {
-                Some(true) => Judgement::Disputed,
+                Ack::Yes => Judgement::Disputed,
                 // An acknowledgement whose status this verifier cannot
                 // tell: whether the act is relied on cannot be told
                 // either; unknown, never void (section 6, F298).
-                None => Judgement::Unknown,
-                Some(false) if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
-                Some(false) => Judgement::Void,
+                Ack::Unknown => Judgement::Unknown,
+                _ if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
+                // Rule 34: the only acknowledgement that would rely on it
+                // is pending (bound to a rotation that does not count
+                // yet): the act is pending too, neither void nor disputed,
+                // until that rotation counts or can no longer count.
+                Ack::Pending => Judgement::Pending,
+                Ack::No => Judgement::Void,
             },
         }
     }
@@ -1764,9 +1872,10 @@ impl Verifier {
     /// valid: one its signer's rotation voided keeps nothing disputed,
     /// acknowledged or not (Identity draft 13, F297). `None` where none
     /// is valid and one's status this verifier cannot tell ("A verifier
-    /// that cannot tell answers unknown").
-    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
-        let mut unknown = false;
+    /// that cannot tell answers unknown"); `Pending` where none is valid or
+    /// unknown and one is pending (rule 34).
+    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> Ack {
+        let (mut unknown, mut pending) = (false, false);
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
             let Some(s) = y.signer() else { continue };
@@ -1774,12 +1883,19 @@ impl Verifier {
                 continue;
             }
             match self.status_cx(cx, y) {
-                Status::Valid => return Some(true),
+                Status::Valid => return Ack::Yes,
                 Status::Unknown => unknown = true,
+                Status::Pending => pending = true,
                 _ => {}
             }
         }
-        (!unknown).then_some(false)
+        if unknown {
+            Ack::Unknown
+        } else if pending {
+            Ack::Pending
+        } else {
+            Ack::No
+        }
     }
 
     /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
@@ -1913,6 +2029,26 @@ impl Verifier {
     }
 
     /// Whether an operator closed its homes by a counting rotation.
+    /// Whether evidence of status `st` counts as `rd` reads it: valid
+    /// always; unknown and pending as taken ([`Reading`]); anything else
+    /// never (voided by its signer's rotation, it decides nothing). Notes
+    /// the unknown and pending it meets, so that the position is read the
+    /// other way too.
+    fn takes(&self, cx: &mut Cx, st: Status, rd: Reading) -> bool {
+        match st {
+            Status::Valid => true,
+            Status::Unknown => {
+                cx.seen.unknown = true;
+                rd.unknown
+            }
+            Status::Pending => {
+                cx.seen.pending = true;
+                rd.pending
+            }
+            _ => false,
+        }
+    }
+
     fn closed(&self, cx: &mut Cx, op: &Hash) -> bool {
         closure_at(self, &self.resolve_cx(cx, op)).is_some()
     }
@@ -1988,10 +2124,11 @@ impl Verifier {
         pool: &[&Cand],
         dishonest: &[(Operator, u64)],
         objections: bool,
+        rd: Reading,
     ) -> Hb {
         // Step 5: receipts from the new homes meet the new rule, under the
         // audit requirement it declares or inherits (F60, F86).
-        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest);
+        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest, rd);
         if t.winner != Some(h.id) {
             return Hb::No;
         }
@@ -2005,9 +2142,8 @@ impl Verifier {
         // objection counts only while its signer's chain keeps it valid: one
         // its signer's rotation voided is shown as a dispute and voids
         // nothing, acknowledged or not (Identity draft 13, F297; the
-        // objection checks, 1). One whose status this verifier cannot tell
-        // leaves the answer unknown (F298).
-        let mut unknown = false;
+        // objection checks, 1). One whose status this verifier cannot tell,
+        // or one pending, counts as `rd` takes it (F298; [`Reading`]).
         if objections {
             for oid in self.by_type.get(&types::OBJECTION).into_iter().flatten() {
                 let o = &self.acts[oid];
@@ -2027,15 +2163,11 @@ impl Verifier {
                 {
                     continue;
                 }
-                match self.status_cx(cx, o) {
-                    Status::Valid => return Hb::No,
-                    Status::Unknown => unknown = true,
-                    _ => {}
+                let st = self.status_cx(cx, o);
+                if self.takes(cx, st, rd) {
+                    return Hb::No;
                 }
             }
-        }
-        if unknown {
-            return Hb::CannotTell;
         }
         // Step 4: enough old homes are gone.
         let mut strong = 0u64;
@@ -2053,12 +2185,11 @@ impl Verifier {
                         continue;
                     };
                     // F297: only while its signer's chain keeps it valid.
-                    if &ab.operator == o
-                        && a.auditors.contains(s)
-                        && names(&x.inside, id, &h.id)
-                        && self.status_cx(cx, x) == Status::Valid
-                    {
-                        by.insert(*s);
+                    if &ab.operator == o && a.auditors.contains(s) && names(&x.inside, id, &h.id) {
+                        let st = self.status_cx(cx, x);
+                        if self.takes(cx, st, rd) {
+                            by.insert(*s);
+                        }
                     }
                 }
                 (by.len() as u64 >= a.threshold).then_some(true)
@@ -2385,7 +2516,8 @@ impl Verifier {
                 Judgement::Kept => Status::Valid,
                 Judgement::Disputed => Status::Disputed,
                 Judgement::Void => return Status::Void,
-                Judgement::Unknown => return Status::Unknown,
+                Judgement::Unknown | Judgement::MaybeKept => return Status::Unknown,
+                Judgement::Pending => return Status::Pending,
             },
             None => Status::Valid,
         };

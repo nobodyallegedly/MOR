@@ -415,7 +415,7 @@ If it lies outside the kept ancestry, or within it but listed as disowned, it is
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
 - or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records. For this rule, an acknowledgement counts only when signed with the acknowledging identity's signing key, never with a scoped key: reliance is the identity's, not a grantee's.
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records. For this rule, an acknowledgement counts only when signed with the acknowledging identity's signing key, never with a scoped key: reliance is the identity's, not a grantee's. Where the only acknowledgement that would so count is pending (bound to a rotation that does not count yet: everyday check 2), the act it would rescue is pending too, neither void nor disputed, until that rotation counts or can no longer count.
 
 *Disowning an act does not cost the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's.*
 
@@ -532,7 +532,7 @@ Two receipts that pass receipt check 1, from the same home, for different acts a
 
 #### Rule 45. Dishonesty, proven at a position
 
-A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions.
+A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions. A conflict survives once a rotation of the home that counts keeps both receipts, or both sit under cosigned summaries; until the home has so rotated, or both so sit, the position is contested and the home is not yet proven.
 
 #### Conflicting receipts
 
@@ -791,7 +791,7 @@ Every act has exactly one signer (section 2).
 | Link confirmation (7), of a succession | `[ rotation's signer, rotation ]` | an entry whose second item is the rotation |
 | Link termination (8) | `[ claim's signer, claim ]` | an entry whose second item is the claim |
 | Cosignature (10) | `[ home's operator, log summary ]` | an entry whose second item is the log summary |
-| Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that entry: the chain MUST be that identity |
+| Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that one entry and no other; more is outside the format (invalid). The chain MUST be that identity |
 
 *An entry's first item is where a reader looks; for the three acts of the homeless path it is also checked, since what they say is about one identity's chain.* For the acts of the first five rows, one entry is enough, and an act carrying more names each act an entry names. Such an entry names an act; it is no fork of that act's chain (Envelopes rule 15).
 

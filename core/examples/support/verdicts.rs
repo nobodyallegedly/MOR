@@ -40,6 +40,9 @@ mod s7i;
 #[path = "s7j.rs"]
 mod s7j;
 
+#[path = "s7j_identity.rs"]
+mod s7j_identity;
+
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mirs {
@@ -1160,6 +1163,7 @@ pub fn identity(out: &mut Out) {
     scenario9::identity(out);
     s7g_development_identity(out);
     s7i::identity(out);
+    s7j_identity::identity(out);
 }
 
 pub fn text(out: &mut Out) {

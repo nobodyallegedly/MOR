@@ -966,6 +966,19 @@ pub fn check_witness_shape(inside: &Inside) -> R<()> {
     Ok(())
 }
 
+/// An objection's, absence statement's or escape endorsement's `objects`
+/// (Identity, "What an Identity act names in `objects`"): exactly one entry,
+/// `[ identity, homeless rotation ]`, and no other; more, or none, is
+/// outside the format (invalid).
+pub fn check_homeless_path_objects(inside: &Inside) -> R<()> {
+    if inside.objects.as_ref().is_none_or(|os| os.len() != 1) {
+        return Err(IdError::Check(
+            "an objection, absence statement or escape endorsement names exactly one entry in objects",
+        ));
+    }
+    Ok(())
+}
+
 /// Whether an act names `target` in `objects`, in the chain `chain`: an
 /// entry `[chain, target]` (Envelopes, "Chains"; F81).
 pub fn names(inside: &Inside, chain: &Hash, target: &Hash) -> bool {
