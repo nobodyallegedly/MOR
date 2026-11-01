@@ -67,7 +67,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Homeless rotation.** A rotation signed with the current chain key that names new homes and counts without receipts from the old ones, when those homes are gone.
 - **Closure.** A declaration, carried in a rotation of a home's operator, that the home stops serving every identity.
 - **Contested.** The word names four things, each said with its own noun:
-  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44), or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape;
+  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44) and the other homes' receipts do not meet the rule without them, or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it, and where a proven conflict (rule 45) leaves the other homes short of the rule; at a position contested by two rotations under one chain key (rules 4, 40 and 44), the owner may leave by the escape (section 11);
   - **a contested rotation:** one of the rotations competing at a contested position; a rule it changes waits (rule 42);
   - **a contesting receipt:** a receipt voided by its operator's rotation that another identity acknowledged; it is shown as a dispute at its chain position and decides nothing (receipt check 6);
   - **contested routes:** two routes acts naming one predecessor; clients use the last act before the fork ("Which value counts", 3).
@@ -105,7 +105,7 @@ An owner who relies on a single home or an authoritative home SHOULD be told pla
 
 #### Rule 4. Self-hosting is a trust model
 
-A self-hosted identity is trusted on its own signatures: its rotation counts with no receipt and no first-held-wins. A thief holding its chain key can serve a rotation of its own, and a verifier that holds only that rotation at its position counts it, as at a single lax home.
+A self-hosted identity is trusted on its own signatures: its rotation counts with no receipt and no first-held-wins. A thief holding its chain key can serve a rotation of its own, and a verifier that holds only that rotation at its position counts it, as at a single lax home. **A self-hosted identity re-homes by a rotation that counts on its own signatures; a homeless rotation at a self-hosted identity counts only with an escape endorsement (section 11), and then only once the new homes' receipts meet the rule it declares** (the homeless procedure, step 5): its old home, the identity itself, is never gone (step 4).
 
 Two rotations served at one position of a self-hosted identity, by a thief and the owner, are a conflict nobody can settle: the position is contested for good, and the owner leaves it by the escape (section 11; rule 29's second exception).
 
@@ -117,7 +117,7 @@ Two rotations served at one position of a self-hosted identity, by a thief and t
 2. The key in the signature equals the signing key in the payload; or, where the payload declares none (field 0 absent), the signature is by a chain key of a chain-key scheme, and the declarations slot carries an Agreements declaration of kind 0 (Agreements, "Collectives in the identity chain"), whose value Identity does not read.
 3. At least one home is declared.
 4. If a home rule is present: the homes have at least two distinct operators; an index is lower than the number of homes; a threshold is greater than half the number of distinct operators and no greater than that number. Homes are counted per operator: several homes run by one operator count as one, since one stolen key signs for all of them.
-5. If an audit requirement is present: at least one auditor is declared, and the threshold is at least one and no greater than the number of auditors.
+5. If an audit requirement is present: at least one auditor is declared, and the threshold is at least one and no greater than the number of auditors. The auditors are distinct identities: a list naming one twice counts it once, and a threshold above the distinct count is invalid.
 
 ### 2. Signing: keys and bindings
 
@@ -344,13 +344,13 @@ A self-hosted identity's rotation counts on the rotation alone.
 Two exceptions, each allowed once:
 
 - after a homeless rotation is voided by an objection, the owner MAY sign one normal rotation with the same chain key;
-- after a normal rotation is refused by the homes that count, or contested at a self-hosted home, the owner MAY sign one endorsed homeless rotation (an escape) with the same chain key, whose endorsement lists the refused rotation as abandoned, or, at a contested self-hosted position, both rotations served there.
+- after a normal rotation is refused by the homes that count, or the position is contested by two rotations revealing the same chain key, wherever they were served (at a self-hosted home, rule 4; where one home's conflicting receipts leave the other homes short of the rule, rule 44; or where competing rotations each miss the home rule, rule 40), the owner MAY sign one endorsed homeless rotation (an escape) with the same chain key, whose endorsement lists the refused rotation as abandoned, or, at a contested position, both rotations.
 
 *SLH-DSA is stateless and is not weakened by a few signatures; the single-use rule exists so that an owner never has two competing rotations in play. "Each allowed once" cannot be checked by a verifier; it is a client and Module rule, and the air-gapped chain key Module enforces it.*
 
-*Client conformance:* the air-gapped chain key Module signs the escape for a position contested at a self-hosted home only on presentation of the competing rotation, which it checks offline under the chain key that rotation revealed: its signature verifies, its previous act is the same as that of the rotation the Module signed, and it is not the rotation the Module signed. The online side's word alone does not open it. A refusal by the homes that count (the first case of the exception) stays unprovable from bytes: the Module tells the human what it is asked to sign, and why, before signing.
+*Client conformance:* the air-gapped chain key Module signs the escape for a contested position only on presentation of the competing rotation, which it checks offline under the chain key that rotation revealed: its signature verifies, its previous act is the same as that of the rotation the Module signed, and it is not the rotation the Module signed. The online side's word alone does not open it. A refusal by the homes that count (the first case of the exception) stays unprovable from bytes: the Module tells the human what it is asked to sign, and why, before signing.
 
-*A contest at a self-hosted home is two valid rotations revealing one chain key, which the Module can see in bytes; a refusal is the absence of receipts, which no bytes prove. An honest owner holds the thief's rotation, since it is what made the contest, so the check costs the owner nothing.*
+*Stated cost: the competing rotation's bytes prove that a rival exists, not that the position is contested; a Module may so sign an escape that abandons a rotation which counts. An abandoned rotation never counts (section 11), so the escape then wins, and the acts bound to the abandoned rotation fail everyday check 2: the owner, who holds both keys, chose it, and those who relied on those acts bear it too.* *A contest at a self-hosted home is two valid rotations revealing one chain key, which the Module can see in bytes; a refusal is the absence of receipts, which no bytes prove. An honest owner holds the thief's rotation, since it is what made the contest, so the check costs the owner nothing.*
 
 A rotation that fails the rotation checks was never a rotation: it can count nowhere, so the owner MAY sign again with the same chain key, and that signature is no second rotation under this rule. *Validity is fixed by the bytes, so an invalid rotation can never later become a competing one; without this clause, a client that changed the homes and forgot to send a rule that fits (rotation check 5) would spend the owner's chain key on a rotation no home stores.*
 
@@ -394,7 +394,7 @@ For each position n of an identity chain, starting at 1 (a chain signature count
 
 **A rotation that does not count.** A rotation that passes the rotation checks but does not count at its position, because another counts there and no objection voids it, is neither invalid nor void: it is **not counting**, and a client shows it so. The acts bound to it are judged by the chain the rotation that counts leaves: they fail everyday check 2, their binding naming no act that counts, and are invalid.
 
-**What stops a chain.** Resolving an identity chain gives the act that counts at each position and the reason the chain stops, which a verifier names, one of seven, by its name: **no genesis** (no genesis is held); **the genesis unknown** (the genesis is signed under a scheme the verifier lacks, and no check it can apply fails: Envelopes rule 30); **the genesis invalid** (the genesis fails its checks); **the end of what is held** (nothing that can count is held for the next position); **pending** (acts that can count are held for the next position, and none counts yet); **contested** (the next position is contested); or **cannot tell** (whether one counts there cannot be told: section 6, "A verifier that cannot tell answers unknown"). Two verifiers holding the same acts and evidence, and having made the same attempts to reach homes (section 6, "Every verifier gives the same answer"), name the same reason.
+**What stops a chain.** Resolving an identity chain gives the act that counts at each position and the reason the chain stops, which a verifier names, one of seven, by its name: **no genesis** (no genesis is held); **the genesis unknown** (the genesis is signed under a scheme the verifier lacks, and no check it can apply fails: Envelopes rule 30); **the genesis invalid** (the genesis fails its checks); **the end of what is held** (nothing that can count is held for the next position); **pending** (acts that can count are held for the next position, and none counts yet); **contested** (the next position is contested); or **cannot tell** (whether one counts there cannot be told: evidence the verifier cannot judge, a receipt, objection, absence statement or cosignature whose signer's chain it cannot resolve, would, taken as valid and taken as absent, change which rotation counts there or whether one does; evidence that is pending and would so change it makes the position pending instead: section 6, "A verifier that cannot tell answers unknown"). Two verifiers holding the same acts and evidence, and having made the same attempts to reach homes (section 6, "Every verifier gives the same answer"), name the same reason.
 
 Where more than one reason fits, the verifier names the first in this order. Before the first position: no genesis, then the genesis unknown, then the genesis invalid. At a position: the end of what is held; then contested, where two or more homeless rotations there are final; then cannot tell; then contested, where the contest is under the home rule (rules 40 and 44, and rule 4's two rotations served at a self-hosted identity), or between homeless rotations there that are still provisional; then pending. *The order follows one principle among contests: what no objection can undo comes before what an objection could decide, and that before waiting.* *A contest among final rotations comes before cannot tell because no objection can undo it; a contest under the home rule yields to cannot tell because the objection whose status cannot be told could still make a homeless rotation count there.*
 
@@ -415,7 +415,7 @@ If it lies outside the kept ancestry, or within it but listed as disowned, it is
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
 - or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records. For this rule, an acknowledgement counts only when signed with the acknowledging identity's signing key, never with a scoped key: reliance is the identity's, not a grantee's.
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records. For this rule, an acknowledgement counts only when signed with the acknowledging identity's signing key, never with a scoped key: reliance is the identity's, not a grantee's. Where the only acknowledgement that would so count is pending (bound to a rotation that does not count yet: everyday check 2), the act it would rescue is pending too, neither void nor disputed, until that rotation counts or can no longer count.
 
 *Disowning an act does not cost the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's.*
 
@@ -508,7 +508,7 @@ A succession to another protocol is confirmed as that protocol's link cMIP says.
 
 ### 9. Competing rotations and several homes
 
-*In short: two rotations at one position can only come from one chain key used twice: by a thief, by an owner's mistake, or in one of rule 29's two exceptions. The home rule decides which counts; at most one can. Two receipts from one home for different acts at one position are a conflict: the identity is contested there, never frozen. A home is proven dishonest at a position only as rule 45 says, and the verdict never reaches backwards.*
+*In short: two rotations at one position can only come from one chain key used twice: by a thief, by an owner's mistake, or in one of rule 29's two exceptions. The home rule decides which counts; at most one can. Two receipts from one home for different acts at one position are a conflict: both are left out, and where the other homes do not meet the rule without them the identity is contested there, never frozen. A home is proven dishonest at a position only as rule 45 says, and the verdict never reaches backwards.*
 
 #### Rule 40. The home rule decides between competing rotations
 
@@ -520,7 +520,7 @@ With several homes and no declared rule, the default of rule 2 applies.
 
 #### Rule 42. A contested rotation's rule waits
 
-A rule changed in a contested rotation takes effect only once the contest is settled, and an act bound to a contested rotation is pending, never valid and not invalid, until the contest ends, by settlement or, at a self-hosted identity, by the escape; it is then judged as everyday check 2 says. An invalid rotation never counts.
+A rule changed in a contested rotation takes effect only once the contest is settled, and an act bound to a contested rotation is pending, never valid and not invalid, until the contest ends, by settlement or by the escape (rule 29's second exception); it is then judged as everyday check 2 says. An invalid rotation never counts.
 
 #### Rule 43. An outvoted home
 
@@ -528,17 +528,17 @@ A home left holding a losing rotation is outvoted. The owner may drop it in a la
 
 #### Rule 44. Two receipts from one home: a conflict
 
-Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, the identity is contested at that position, not frozen. Anyone may publish the pair, and clients SHOULD flag the home to the owner.
+Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, both are left out ("Which rotation counts", step 2): the other homes' receipts may still meet the rule, and a rotation they meet it for counts; where they do not, the identity is contested at that position, not frozen. *Stated cost: a conflict proven (rule 45) never ends; that home's receipts count for nothing for that identity at later positions. Where the other homes meet the rule at that position, the chain goes on and the owner moves to other homes by a later rotation; where they do not, the position stays contested until the owner leaves by the escape (section 11).* Anyone may publish the pair, and clients SHOULD flag the home to the owner.
 
 #### Rule 45. Dishonesty, proven at a position
 
-A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions.
+A home is proven dishonest for an identity at a position only when a conflict there survives the home's own rotations and, where the identity requires audit, both receipts sit under cosigned log summaries. Its receipts then count for nothing for that identity at later positions. A conflict survives once a rotation of the home that counts keeps both receipts, or both sit under cosigned summaries; until then the home is not yet proven. Its two receipts are left out at that position before proof and after it (rule 44); at an identity requiring audit, proof needs both receipts under cosigned summaries.
 
 #### Conflicting receipts
 
 Two receipts that pass receipt check 1 from the same operator, for the same identity and chain position but different acts, are a conflict, even if they come from different relays of that operator. *After check 1, a conflict needs two genuine rotations at one position, which needs the chain key. A stolen operator key alone can no longer touch any identity's chain.*
 
-1. While a conflict stands, neither receipt counts, and that home counts for nothing at that position. The identity is contested there, not frozen.
+1. While a conflict stands, neither receipt counts, and that home counts for nothing at that position. Where the other homes do not meet the rule without it, the identity is contested there, not frozen.
 2. The conflict ends when one of the two receipts becomes void: through the home's own rotation, or, for an identity that requires audit, because only one of them is included under a cosigned log summary.
 3. The home is proven dishonest for that identity **at that position** only as rule 45 says: both receipts remain valid after the home's rotations, and, where the identity requires audit, both are included under cosigned log summaries. *For an identity that requires audit, step 2 already ends the conflict where only one of them is included.* From then on, its receipts count for nothing for that identity at positions after that one. Its receipts at earlier positions keep counting. *A thief holding the chain key and a bad home may contest the future; they cannot erase the past.*
 
@@ -560,7 +560,7 @@ A home of the old set that sees a homeless rotation for an identity it serves MU
 
 #### Rule 49. One objection voids it
 
-A single valid objection from a live home of the old set voids a homeless rotation.
+A single valid objection from a live home of the old set voids a homeless rotation, and with it every rotation built on it, void too, never invalid.
 
 *This is what stops a thief holding the chain key from using the homeless path to get past careful homes.* *An objection voided by its signer's rotation voids nothing, acknowledged or not.* *Stated cost: until the operator notices and rotates, an objection signed with a stolen operator key still voids the owner's homeless rotation; an owner holding both keys leaves at once by the escape (section 11).*
 
@@ -608,7 +608,7 @@ A homeless rotation at position n counts only if all of the following hold:
 
 ### 11. Escape with both keys
 
-*In short: a home that is alive but hostile can refuse the owner's normal rotation and object to a homeless one. An owner who proves both keys, the chain key in the rotation and the signing key in an endorsement, leaves anyway; so does the owner of a self-hosted identity whose position a thief contests.*
+*In short: a home that is alive but hostile can refuse the owner's normal rotation and object to a homeless one. An owner who proves both keys, the chain key in the rotation and the signing key in an endorsement, leaves anyway; so does the owner whose position a thief contests by a rival rotation under the same chain key (rules 4, 40 and 44).*
 
 #### Rule 53. Both keys always get out
 
@@ -620,7 +620,7 @@ A homeless rotation that has a valid escape endorsement counts without steps 3 a
 
 *This is the way out from a home that is alive but hostile: it can refuse the owner, but it cannot hold an owner who proves both keys.*
 
-It is also the way out of a position contested at a self-hosted home (rule 4): the endorsement lists both rotations served there as abandoned, and the air-gapped Module signs it only on the competing rotation's bytes (rule 29).
+It is also the way out of a position contested by two rotations under one chain key, at a self-hosted home (rule 4), where one home's conflict leaves the others short of the rule (rule 44), or where competing rotations each miss the home rule (rule 40): the endorsement lists both as abandoned, and the Module signs it only on the competing rotation's bytes (rule 29).
 
 #### The escape endorsement
 
@@ -654,7 +654,7 @@ A rotation that counts under the old home rule always beats a homeless rotation 
 
 A homeless rotation that counts only through the verifier's own failed attempt (the last case of step 4) MUST be shown as "re-homed without audit", and nothing binding may rely on it, as the list after rule 35 says ("Every verifier gives the same answer"): no keeper record, payment, discharge of a debt, agreement, fork or closing. Reading and following the identity, and its everyday acts, may.
 
-It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one.
+It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one. **Such a rotation is void, with every rotation built on it; the acts bound to them fail everyday check 2 and are invalid while it stands.** Should the objection later lose its validity (its signer's rotation disowning it), the position is judged anew, and the acts bound to it with it.
 
 It is final like any other homeless rotation only once it counts through something other than the verifier's attempt: a closure by the old home's operator (step 4, first case), or an escape endorsement (section 11).
 
@@ -722,7 +722,7 @@ Tags and simple values are allowed by the encoding and carried as they are, a ta
 The core sets no length bound beyond these; homes and relays set their own policy.
 
 **Hashes.** Every hash is SHA-256, 32 bytes. A tagged hash is computed as in BIP-340:
-`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). *These two tags keep the names they were given, frozen as names: a tag is a fixed string, never a reference to a layer.* A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes), the Merkle tree of a home's log (RFC 9162, below), and `XWING` (Envelopes).
+`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap` and `MOR/law/leftover` (Agreements). *A tag is a fixed string, never a reference to a layer.* A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes), the Merkle tree of a home's log (RFC 9162, below), and `XWING` (Envelopes).
 *Tags keep the hashes of different kinds of object apart, so one can never be passed off as another. A successor protocol MUST use a different tag prefix, so its acts can never replay here (Development).*
 
 **Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIR). The signature is not part of the act id, so a signature can never change which act is meant.
@@ -736,7 +736,7 @@ The core sets no length bound beyond these; homes and relays set their own polic
 | 3 | SLH-DSA-SHA2-128f (FIPS 205) | 32 bytes | 17,088 bytes | chain keys |
 | hash | as the specification defines | as defined | as defined | either, as the specification says |
 
-In a signature, a signing key or a chain-key commitment, the scheme is written as the unsigned integer 1, 2 or 3, or as a 32-byte spec hash; any other value makes the act invalid. A key or a signature of a founding scheme whose length is not the one in the table makes the act invalid. A scheme named by hash is a signature-scheme specification (Development, kind 5): a client that has not adopted it answers unknown, whatever the lengths. An act's signature always signs the 32-byte act id; a signature a format carries inside a payload signs what that format says (Money's anonymous claim, key 8). SLH-DSA signatures are pure FIPS 205 signatures (no pre-hash) with the context string `MOR`, its three ASCII bytes. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
+In a signature, a signing key or a chain-key commitment, the scheme is written as the unsigned integer 1, 2 or 3, or as a 32-byte spec hash; any other value makes the act invalid. A key or a signature of a founding scheme whose length is not the one in the table makes the act invalid. A scheme named by hash is a signature-scheme specification (Development, kind 5): a client that has not adopted it answers unknown, whatever the lengths. An act's signature always signs the 32-byte act id; a signature a format carries inside a payload signs what that format says. SLH-DSA signatures are pure FIPS 205 signatures (no pre-hash) with the context string `MOR`, its three ASCII bytes. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
 
 **Chain key commitment.** A chain key is committed as `tagged_hash("MOR/safety", scheme || key)`, where `scheme` is the one-byte number or the 32-byte specification hash, and `key` the public key.
 
@@ -791,7 +791,7 @@ Every act has exactly one signer (section 2).
 | Link confirmation (7), of a succession | `[ rotation's signer, rotation ]` | an entry whose second item is the rotation |
 | Link termination (8) | `[ claim's signer, claim ]` | an entry whose second item is the claim |
 | Cosignature (10) | `[ home's operator, log summary ]` | an entry whose second item is the log summary |
-| Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that entry: the chain MUST be that identity |
+| Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that one entry and no other; more is outside the format (invalid). The chain MUST be that identity |
 
 *An entry's first item is where a reader looks; for the three acts of the homeless path it is also checked, since what they say is about one identity's chain.* For the acts of the first five rows, one entry is enough, and an act carrying more names each act an entry names. Such an entry names an act; it is no fork of that act's chain (Envelopes rule 15).
 

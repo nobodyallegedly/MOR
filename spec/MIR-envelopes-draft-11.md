@@ -114,7 +114,7 @@ A public act's content key MUST open its inside.
 
 #### Rule 8. Identity acts are public
 
-Identity acts are the public face of an identity: genesis, rotations, receipts, routes, names, links, log summaries, cosignatures, objections, absence statements, escape endorsements, witness acts, and this MIR's encryption keys (type 4). They MUST be public acts, save a private link (Identity, section 3). *They go through the same lock as everything else, with their key attached, so every act has one shape.*
+Identity acts are the public face of an identity: genesis, rotations, receipts, routes, names, links, log summaries, cosignatures, objections, absence statements, escape endorsements, witness acts, and this MIR's encryption keys (type 4). They MUST be public acts, save a private link (Identity, section 3): **an Identity act or an encryption key (type 4) that is private, save a private link, is invalid.** *They go through the same lock as everything else, with their key attached, so every act has one shape.*
 
 #### Rule 9. A new key for every object
 
@@ -197,7 +197,7 @@ An act carrying `acks` whose type is not defined by the Identity, Money or Agree
 
 #### Rule 20. References
 
-An act names other acts, or web resources, in `refs`, meaning only "look at this". A web reference may carry the hash of what was there when it was referenced, so readers can check it has not changed. A repost is a reference to a bake or a post, never a bake of its own: it pays nobody by itself, and a reposter earns through a role share where the owners' split plan offers one (Agreements).
+An act names other acts, or web resources, in `refs`, meaning only "look at this". *Other MIRs may read what a `refs` entry names, never what it means beyond that: Money rule 17 follows what an act holds, and Money rule 24 reads the price tag a route's first payer cites.* A web reference may carry the hash of what was there when it was referenced, so readers can check it has not changed. A repost is a reference to a bake or a post, never a bake of its own: it pays nobody by itself, and a reposter earns through a role share where the owners' split plan offers one (Agreements).
 
 **A reference may name the act's signer.** A reference to an act MAY carry, beside the act id, the identity hash of the act's signer (Part three, `ref`). A reader uses it only to know where to look: the signer's identity, its homes, its routes, then the act. It is never a validity rule: a reference that names no signer never makes an act invalid, and an act whose reference names a wrong signer stays valid; a wrong signer shows when the reference is followed, since the act fetched shows its own signer. The signer of a genesis is the identity it makes, whose hash is the genesis's own id.
 

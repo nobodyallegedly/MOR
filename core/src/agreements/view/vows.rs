@@ -198,9 +198,11 @@ impl<'a> AgreementsView<'a> {
 
     fn vow_answered(&self, name: &Hash) -> R<VowEval> {
         match self.answered(|| self.vow_unjudged(name)) {
-            (a, None) => a,
-            (Ok(a), Some(Ok(b))) => Ok(Self::vow_both(a, b)),
-            (Err(e), Some(Err(f))) if e == f => Err(e),
+            Answered::One(a) => a,
+            Answered::Both(Ok(a), Ok(b)) => Ok(Self::vow_both(a, b)),
+            Answered::Both(Err(e), Err(f)) if e == f => Err(e),
+            // Fable's bound (Money rule 8): a vow's sales are one list, and
+            // two or more records not yet verified leave it unknown.
             _ => Err(AgreementsError::RailUnanswered),
         }
     }
@@ -303,6 +305,21 @@ impl<'a> AgreementsView<'a> {
                     _ => continue,
                 }
                 seen_payments.push(payment);
+                // A purchase paid through a route: the sale is the first
+                // payer's, by their claim of the first hop citing the tag
+                // (Money rule 24; rule 13); a later claim of theirs of that
+                // hop confirms it.
+                match self.route_buyer(&x.id) {
+                    super::RouteBuyer::FirstPayer { payer, claim } => {
+                        let first_proof = self.hop_record(&claim).map(|r| r.proof).unwrap_or_default();
+                        let state = self.sale_state(name, &payer, &claim, Some((&claim, &first_proof)));
+                        let evidence = self.evidence_of(&claim);
+                        sales.push(VowSale { act: claim, offer: *o, buyer: payer, state, evidence });
+                        continue;
+                    }
+                    super::RouteBuyer::Unknown => return Err(AgreementsError::RailUnanswered),
+                    _ => {}
+                }
                 match self.committed_buyer(&x.id, &proof) {
                     Some((claim, buyer)) => {
                         let state = self.sale_state(name, &buyer, &claim, Some((&x.id, &proof)));
@@ -369,7 +386,7 @@ impl<'a> AgreementsView<'a> {
     /// other than the offer's own side, the buyer being its signer (rule
     /// 13's sign-on). `None` for anything else.
     fn purchase_buyer(&self, act: &Hash) -> R<Option<Hash>> {
-        use crate::money::{Payer, Payload as Fin};
+        use crate::money::Payload as Fin;
         let Some(h) = self.v.get(act) else { return Ok(None) };
         let Some(signer) = h.act.outside.signer else { return Ok(None) };
         if !self.valid(act) {
@@ -377,10 +394,16 @@ impl<'a> AgreementsView<'a> {
         }
         if h.inside.spec == self.mirs.money {
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return Ok(None) };
+            // A purchase paid through a route: its buyer is the route's
+            // first payer, by their claim of the first hop naming the tag
+            // the purchase names (Money rule 24; "A contest of a purchase").
+            if let Some(b) = self.route_claim_buyer(act)? {
+                return Ok(b);
+            }
             if !self.rail_counts(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return Ok(None);
             }
-            let Payer::Identity(buyer) = c.payer(&signer) else { return Ok(None) };
+            let buyer = signer;
             return Ok(match self.purchase_unjudged(act)? {
                 Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }) => Some(buyer),
                 _ => None,
@@ -409,9 +432,9 @@ impl<'a> AgreementsView<'a> {
     /// is not stated (Money rule 12).
     pub fn purchase_contests(&self, purchase: &Hash) -> R<Vec<Hash>> {
         let buyer = match self.two_ways(|| match self.answered(|| self.purchase_buyer(purchase)) {
-            (b, None) => b,
-            (Ok(a), Some(Ok(b))) if a == b => Ok(a),
-            (Err(e), Some(Err(f))) if e == f => Err(e),
+            Answered::One(b) => b,
+            Answered::Both(Ok(a), Ok(b)) if a == b => Ok(a),
+            Answered::Both(Err(e), Err(f)) if e == f => Err(e),
             _ => Err(AgreementsError::RailUnanswered),
         }) {
             Ways::One(b) => b?,
@@ -440,7 +463,7 @@ impl<'a> AgreementsView<'a> {
     /// claim. `None` where no such claim is held, or the payer committed
     /// only a bare key.
     fn committed_buyer(&self, record: &Hash, proof: &[u8]) -> Option<(Hash, Hash)> {
-        use crate::money::{Payer, Payload as Fin};
+        use crate::money::Payload as Fin;
         let mut claims = self.claims_of_payment((Some(record), proof), |id| self.rail_counts(id));
         // A claim with the rail's answer, valid, names the sale first, so
         // that a claim whose answer is not held moves only the sale's state.
@@ -451,10 +474,7 @@ impl<'a> AgreementsView<'a> {
             if !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return None;
             }
-            match c.payer(&h.act.outside.signer?) {
-                Payer::Identity(b) => Some((id, b)),
-                Payer::Key(_) => None,
-            }
+            Some((id, h.act.outside.signer?))
         })
     }
 
@@ -500,7 +520,7 @@ impl<'a> AgreementsView<'a> {
     /// buyer's own claims of it is named); for a free sale, the buyer's
     /// signature act on the offer.
     fn sale_acts(&self, buyer: &Hash, sale: &Hash, proof: Option<(&Hash, &[u8])>) -> Vec<Hash> {
-        use crate::money::{Payer, Payload as Fin};
+        use crate::money::Payload as Fin;
         match proof {
             Some((record, proof)) => self
                 .claims_of_payment((Some(record), proof), |id| self.rail_counts(id))
@@ -508,7 +528,7 @@ impl<'a> AgreementsView<'a> {
                 .filter(|id| {
                     let Some(h) = self.v.get(id) else { return false };
                     let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-                    self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
+                    self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer == Some(*buyer)
                 })
                 .collect(),
             None => vec![*sale],

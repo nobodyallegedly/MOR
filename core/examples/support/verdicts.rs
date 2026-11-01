@@ -19,7 +19,7 @@ use mor_core::development::{kinds, Judged, Spec};
 use mor_core::envelopes::anchoring::{Anchor, Reference};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::{Audit, Home, KeptTip, Successor};
-use mor_core::money::{self, Amount, Claim, Payload as Fin, Payer, Receipt};
+use mor_core::money::{self, Amount, Claim, Payload as Fin, Receipt};
 use serde_json::{json, Value as J};
 use std::collections::BTreeMap;
 
@@ -33,6 +33,18 @@ fn spec(s: &str) -> Hash {
 
 #[path = "scenario9.rs"]
 mod scenario9;
+
+#[path = "s7i.rs"]
+mod s7i;
+
+#[path = "s7j.rs"]
+mod s7j;
+
+#[path = "s7j_identity.rs"]
+mod s7j_identity;
+
+#[path = "s7k.rs"]
+mod s7k;
 
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -348,6 +360,8 @@ pub struct Facts {
     /// and 13, under its spec hash (Development, "A rail Module's kind and
     /// binding").
     pub rail_specifications: Vec<Vec<u8>>,
+    /// Receipts and claims the rail answered invalid (Money rule 8).
+    pub rail_invalid: Vec<Hash>,
 }
 
 impl Facts {
@@ -386,6 +400,9 @@ impl Facts {
         if !self.rail_specifications.is_empty() {
             m.insert("rail_specifications".into(), self.rail_specifications.iter().map(|c| json!(hx(c))).collect());
         }
+        if !self.rail_invalid.is_empty() {
+            m.insert("rail_invalid".into(), self.rail_invalid.iter().map(|x| json!(hx(x))).collect());
+        }
         J::Object(m)
     }
 
@@ -421,6 +438,9 @@ impl Facts {
             if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(c, &mor_core::development::Known::default()) {
                 v.rails.insert(Spec::hash_of(c), r);
             }
+        }
+        for x in &self.rail_invalid {
+            v.rail_invalid.insert(*x);
         }
     }
 }
@@ -499,7 +519,7 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
         "refund repaid" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
-            let to = money::RefundTo::Identity(h("to"));
+            let to = h("to");
             v.refund_repaid(&h("payment"), &to, &h("unit")).map_or(json!("unknown"), |x| json!(x))
         }
         "status after keepers" => {
@@ -585,6 +605,16 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.paid_toward(&h("act")).map_or(json!("unknown"), |x| json!(x))
         }
+        "specification claim, reading Agreements" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            json!(match v.specification_claim(&h("act"), &h("creator")) {
+                mor_core::chain::SpecClaim::Claimed => "claimed",
+                mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                mor_core::chain::SpecClaim::Unknown => "unknown",
+            })
+        }
         "specification claim" => json!(match w.v.specification_claim(&h("act"), &h("creator")) {
             mor_core::chain::SpecClaim::Claimed => "claimed",
             mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
@@ -633,6 +663,32 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             let mut v = view(w);
             facts.apply_view(&mut v);
             v.owed_back_by(&h("act")).map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hx(who), n])).collect::<Vec<_>>()))
+        }
+        // Who made a work and who owns it as recorded (rule 15): the claims
+        // that count and bind, and the default holder.
+        "work owners" => s7i::work_owners_json(view(w).work_owners(&h("work"))),
+        // A route across rails (Money rules 24 to 28): the route ending at a
+        // receipt or claim, as its final creditor reads it, or starting at a
+        // receipt, followed forward.
+        "route to" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7i::route_json(&v.route_to(&h("act")))
+        }
+        "route buyer" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7j::route_buyer_json(&v.route_buyer(&h("act")))
+        }
+        "refund along" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7j::refund_along_json(v.refund_along(&h("act")))
+        }
+        "route from" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7i::route_json(&v.route_from(&h("act")))
         }
         q => panic!("no such question: {q}"),
     }
@@ -1109,6 +1165,10 @@ pub fn identity(out: &mut Out) {
     s7g_identity(out);
     scenario9::identity(out);
     s7g_development_identity(out);
+    s7i::identity(out);
+    s7j_identity::identity(out);
+    s7k::identity(out);
+    s7k::identity_rule_40(out);
 }
 
 pub fn text(out: &mut Out) {
@@ -1276,9 +1336,9 @@ pub fn money(out: &mut Out) {
         let mut payer = w.genesis("a payer", vec![own_home()], None, None);
         let pointer = pointer_act(&mut w, &mut payee, b"an address");
         let proof = b"one payment's proof".to_vec();
-        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(payer.id)), payee: payee.id, amount: Amount { unit, value: if agree { 100 } else { 60 } }, fulfils: pointer, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(payer.id), payee: payee.id, amount: Amount { unit, value: if agree { 100 } else { 60 } }, fulfils: pointer, previous: None, forward: None, batch: None, purchase: None });
         let rid = { let a = w.everyday_act(&mut payee, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
-        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: payee.id, amount: Amount { unit, value: 100 }, fulfils: pointer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: payee.id, amount: Amount { unit, value: 100 }, fulfils: pointer, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let cid = { let a = w.everyday_act(&mut payer, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         let facts = Facts { rail_valid: vec![(rid, pointer), (cid, pointer)], rail_payments: vec![(proof.clone(), b"payment 1".to_vec())], ..Default::default() };
         out.case(&mut w, name, "Money rule 11", "The rail's answers are stated as facts (the core reads no rail): both valid, paid to the payee's flow, the proof one payment. Where they disagree in amount, the greater counts and the question is shown on the receiver.",
@@ -1295,7 +1355,7 @@ pub fn money(out: &mut Out) {
     // The creditor acknowledges the debt by a witness act of its own, whose history holds its pointer (Money rule 14).
     w.ack(&mut payee, oid);
     let receipt = |w: &mut World, payee: &mut Person, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(debtor.id)), payee: payee.id, amount: Amount { unit, value: 60 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(debtor.id), payee: payee.id, amount: Amount { unit, value: 60 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(payee, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -1337,10 +1397,10 @@ pub fn money(out: &mut Out) {
         let a = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
     let offer = lone_offer(&mut w, &mut club, vec![agreements::Sold::Vow(name)], Amount { unit, value: 300 }, "One seat.");
     let seat = b"the fan pays for a seat".to_vec();
-    let rec = { let r = Fin::Receipt(Receipt { rail, proof: seat.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+    let rec = { let r = Fin::Receipt(Receipt { rail, proof: seat.clone(), payer: Some(fan.id), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let claim = |w: &mut World, fan: &mut Person, acks: Option<Vec<Hash>>| {
-        let c = Fin::Claim(Claim { rail, proof: seat.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: seat.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, acks); w.add(&a)
     };
     let c1 = claim(&mut w, &mut fan, None);
@@ -1387,16 +1447,16 @@ pub fn money(out: &mut Out) {
         w7.add(a);
     }
     out.case(&mut w7, "a vow's sale whose buyer's claim has no verification answer: unknown, not pending", "Money rules 8 and 10; Agreements rule 13; Envelopes, \"Vows\"",
-        "A receipt or claim whose verification answer is not valid is no purchase and no sale; where the answer is pending or not held, whether the payment is a sale is unknown. No rail answer is stated for the club's receipt or the fan's claim, though the rail says they are one payment.",
+        "A receipt or claim whose verification answer is not valid is no purchase and no sale; where the answer is pending or not held, whether the payment is a sale is unknown. No rail answer is stated for the club's receipt or the fan's claim, though the rail says they are one payment: the vow's sales depend on two records not yet verified, so the list is unknown until they are (Money rule 8: an answer depending on two or more such records is unknown; a list is one answer).",
         Facts { rail_payments: stated.clone(), ..Default::default() }, json!({ "question": "vow", "vow": hx(&name) }),
-        json!({ "sales": [{ "act": hx(&c1), "buyer": hx(&fan.id), "state": "unknown" }], "unsigned": [], "unknown": [] }), None);
+        json!("unknown"), None);
     // A refund repaid: the fan's own receipt of money back, naming the fan's claim of the payment.
     let mut w5 = World::new();
     for (a, _) in &base {
         w5.add(a);
     }
     let back = b"the club pays the fan back".to_vec();
-    let rr = { let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(club.id)), payee: fan.id, amount: Amount { unit, value: 300 }, fulfils: c1, previous: None, forward: None, batch: None, purchase: None });
+    let rr = { let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(club.id), payee: fan.id, amount: Amount { unit, value: 300 }, fulfils: c1, previous: None, forward: None, batch: None, purchase: None });
         let a = w5.everyday_act(&mut fan, mirs().money, 2, r.to_map(), None, None); w5.add(&a) };
     let log5 = w5.log.clone();
     let ask_back = json!({ "question": "refund repaid", "payment": hx(&rec), "to": hx(&fan.id), "unit": hx(&unit) });
@@ -1449,7 +1509,7 @@ pub fn money(out: &mut Out) {
     let pointer = pointer_act(&mut w, &mut payee, b"an address");
     let ob = Fin::Obligation(money::Obligation { debtor: debtor.id, creditor: payee.id, amount: Amount { unit, value: 50 }, pointer, agreement: None });
     let oid = { let a = w.everyday_act(&mut debtor, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
-    let r = Fin::Receipt(Receipt { rail, proof: b"a payment to myself".to_vec(), payer: Some(Payer::Identity(payee.id)), payee: payee.id, amount: Amount { unit, value: 50 }, fulfils: payee.id, previous: None, forward: None, batch: None, purchase: None });
+    let r = Fin::Receipt(Receipt { rail, proof: b"a payment to myself".to_vec(), payer: Some(payee.id), payee: payee.id, amount: Amount { unit, value: 50 }, fulfils: payee.id, previous: None, forward: None, batch: None, purchase: None });
     let rid = { let a = w.everyday_act(&mut payee, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let facts = Facts { rail_valid: vec![(rid, pointer)], ..Default::default() };
     assert_eq!(w.v.status(&rid), Status::Valid);
@@ -1482,7 +1542,7 @@ pub fn money(out: &mut Out) {
         let a = w.everyday_act_refs(&mut svc, mirs().money, money::types::PRICE_TAG, t.to_map(), None, None, Some(vec![mor_core::act::Ref::Act(svc_pointer)])); w.add(&a) };
     let base = w.log.clone();
     let pay = |w: &mut World, buyer: &mut Person, payee: Hash, proof: &[u8]| {
-        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: Amount { unit, value: 200 }, fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: Amount { unit, value: 200 }, fulfils: tag, disagrees: None, referral: None, refund: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
         let a = w.everyday_act(buyer, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
@@ -1520,7 +1580,7 @@ pub fn money(out: &mut Out) {
     let base = w.log.clone();
     let people = (ana.clone(), bo.clone());
     let pay = |w: &mut World, bo: &mut Person, proof: &[u8]| {
-        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(bo, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
@@ -1549,7 +1609,7 @@ pub fn money(out: &mut Out) {
     let mut cy = w.genesis("cy", vec![own_home()], None, None);
     let forged = { let x = Fin::PayeePointer(money::PayeePointer { payee: ana.id, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"cy's wallet".to_vec() }] });
         let a = w.everyday_act(&mut cy, mirs().money, 0, x.to_map(), None, None); w.add(&a) };
-    let receipt = { let r = Fin::Receipt(Receipt { rail, proof: b"cy writes ana's receipt".to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 5 }, fulfils: ana.id, previous: None, forward: None, batch: None, purchase: None });
+    let receipt = { let r = Fin::Receipt(Receipt { rail, proof: b"cy writes ana's receipt".to_vec(), payer: Some(cy.id), payee: ana.id, amount: Amount { unit, value: 5 }, fulfils: ana.id, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut cy, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let owed = { let o = Fin::Obligation(money::Obligation { debtor: ana.id, creditor: cy.id, amount: Amount { unit, value: 5 }, pointer: cy.id, agreement: None });
         let a = w.everyday_act(&mut cy, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
@@ -1592,7 +1652,7 @@ pub fn money(out: &mut Out) {
     let (d1, d2) = (debt(&mut w, &mut bo, &mut ana), debt(&mut w, &mut bo, &mut ana));
     let proof = b"one payment of 60, claimed twice".to_vec();
     let claim = |w: &mut World, bo: &mut Person, fulfils: Hash| {
-        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(bo, mirs().money, 3, c.to_map(), None, None);
         w.add(&a)
     };
@@ -1609,7 +1669,7 @@ pub fn money(out: &mut Out) {
     out.case(&mut w2, "the same payment claimed toward one debt only: it counts", "Money rule 12; rule 10",
         "Only the claim naming the first debt is held: one payment, one purpose.", facts(&[c1]), ask("paid toward", &d1), json!(60), None);
     let mut w3 = world(&two);
-    let rc = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, previous: None, forward: None, batch: None, purchase: None });
+    let rc = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(bo.id), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, previous: None, forward: None, batch: None, purchase: None });
         let a = w3.everyday_act(&mut ana, mirs().money, 2, r.to_map(), None, None); w3.add(&a) };
     out.case(&mut w3, "both claims, and the receiver's receipt of the payment naming the first debt: it counts toward the first", "Money rule 12: until the receiver signs a receipt that resolves them; rule 11",
         "Ana's receipt of the one payment names the first debt: on a rail binding no purpose, the receiver has resolved the two claims.", facts(&[c1, c2, rc]), ask("paid toward", &d1), json!(60), None);
@@ -1618,6 +1678,9 @@ pub fn money(out: &mut Out) {
         "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
     s7g_money(out);
     s7g_development_rails(out);
+    s7i::money(out);
+    s7j::money(out);
+    s7k::fresh_identity_refund(out);
 }
 
 pub fn agreements(out: &mut Out) {
@@ -1764,7 +1827,7 @@ pub fn agreements(out: &mut Out) {
     let unit = spec("a test unit (regtest satoshi)");
     let ob = Fin::Obligation(money::Obligation { debtor: ben.id, creditor: ana.id, amount: Amount { unit, value: 10 }, pointer: spec("a pointer"), agreement: Some(d) });
     let oid = { let a = w.everyday_act(&mut ben, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
-    let rc = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"a payment of the debt".to_vec(), payer: Some(Payer::Identity(ben.id)), payee: ana.id, amount: Amount { unit, value: 10 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
+    let rc = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"a payment of the debt".to_vec(), payer: Some(ben.id), payee: ana.id, amount: Amount { unit, value: 10 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
     let rid = { let a = w.everyday_act(&mut ana, mirs().money, 2, rc.to_map(), None, None); w.add(&a) };
     keep(&mut w, &mut keeper, rid, ana.id);
     let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![rid]), ..Default::default() });
@@ -1971,6 +2034,7 @@ pub fn agreements(out: &mut Out) {
         "A closing needs every voice: the third member's chain signature is not among the acts held.", Facts::default(), ask("closing", &k), json!({ "complete": false }), None);
     out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 60 and 91",
         "Closed: what is signed for the collective afterwards counts for nothing, whoever the rule for Text names signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
+    s7j::closing_refund(out, &family, k, cid);
     out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 60 and 91",
         "What was signed for it before the closing, by the member the rule for Text names, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 
@@ -2312,9 +2376,9 @@ pub fn agreements(out: &mut Out) {
     let sold = agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("the concert's recording".into())));
     let offer = lone_offer(&mut w, &mut club, vec![sold], Amount { unit, value: 300 }, "The full concert, filmed in the hall.");
     let proof = b"the fan pays for the recording".to_vec();
-    { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+    { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(fan.id), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a); }
-    let claim = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let claim = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(&mut fan, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
     let base = w.log.clone();
     let words = agreements::Contest::of_purchase(claim, Some("A slideshow, not the concert.".into()));
@@ -2416,9 +2480,9 @@ pub fn agreements(out: &mut Out) {
     let offer = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 500, unit, sid);
     let proof = b"the fan pays for the collective's album".to_vec();
     let purchase = Some(money::Purchase { agreement: founding, line: founding });
-    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: purchase.clone(), previous: None });
+    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, purchase: purchase.clone(), previous: None });
         let a = w.everyday_act(&mut fan, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
-    let receipt = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, previous: None, forward: None, batch: None, purchase });
+    let receipt = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(fan.id), payee: sid, amount: Amount { unit, value: 500 }, fulfils: offer, previous: None, forward: None, batch: None, purchase });
         let a = w.everyday_act(&mut svc, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
     let facts = || Facts { rail_valid: vec![(claim, offer), (receipt, offer)], rail_payments: vec![(proof.clone(), b"the album's payment".to_vec())], ..Default::default() };
     let mut w2 = World::new();
@@ -2554,7 +2618,7 @@ pub fn agreements(out: &mut Out) {
     let base = w.log.clone();
     let mut ana2 = ana.clone();
     let rc = |w: &mut World, ana: &mut Person, fulfils: Hash, purchase: Option<money::Purchase>, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 400 }, fulfils, previous: None, forward: None, batch: None, purchase });
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(cy.id), payee: ana.id, amount: Amount { unit, value: 400 }, fulfils, previous: None, forward: None, batch: None, purchase });
         let a = w.everyday_act(ana, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -2572,7 +2636,7 @@ pub fn agreements(out: &mut Out) {
     let mut sel = w.genesis("a lone seller", vec![own_home()], None, None);
     let buyer = w.genesis("a buyer of the lone seller", vec![own_home()], None, None);
     let offer = lone_offer(&mut w, &mut sel, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a talk".into())))], Amount { unit, value: 90 }, "A recorded talk.");
-    let r = { let x = Fin::Receipt(Receipt { rail, proof: b"the buyer pays the lone seller".to_vec(), payer: Some(Payer::Identity(buyer.id)), payee: sel.id, amount: Amount { unit, value: 90 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+    let r = { let x = Fin::Receipt(Receipt { rail, proof: b"the buyer pays the lone seller".to_vec(), payer: Some(buyer.id), payee: sel.id, amount: Amount { unit, value: 90 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut sel, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
     out.case(&mut w, "a payment of a lone seller's price tag, naming no ownership agreement: a purchase", "Agreements rules 11 and 12: a lone seller's publication; its split service's receipt carries no field 9",
         "The publication names no ownership agreement (field 1); the seller is its own split service, and its receipt of a payment of the tag carries no field 9: a purchase under the publication's terms.",
@@ -2600,7 +2664,7 @@ pub fn agreements(out: &mut Out) {
     sign(&mut w, &mut eve, &pb);
     let tag = price_tag(&mut w, &mut mal, mirs().money, money::Priced::Publication(pb), 400, unit, mid);
     let proof = b"the fan pays mal's tag for eve's film".to_vec();
-    let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: mid, amount: Amount { unit, value: 400 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(money::Purchase { agreement: drafted, line: drafted }) });
+    let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(fan.id), payee: mid, amount: Amount { unit, value: 400 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(money::Purchase { agreement: drafted, line: drafted }) });
         let a = w.everyday_act(&mut mal, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
     let facts = || Facts { rail_valid: vec![(r, tag)], rail_payments: vec![(proof.clone(), b"the fan's payment".to_vec())], ..Default::default() };
     let log = w.log.clone();
@@ -2621,6 +2685,8 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_b(out);
     s7g_agreements_c(out);
     scenario9::agreements(out);
+    s7i::agreements(out);
+    s7j::agreements(out);
 }
 
 pub fn development(out: &mut Vec<J>) {
@@ -3215,6 +3281,13 @@ fn s7g_envelopes(out: &mut Out) {
     out.case(&mut w, "an X-Wing encryption key of 1216 bytes, version 1: valid", "Envelopes, \"Encryption key (type 4)\"", "Scheme 4, a 1216-byte key, version 1 naming nothing it replaces.", Facts::default(), ask_status(&good), json!("valid"), None);
     out.case(&mut fresh(&log), "an X-Wing encryption key of 1215 bytes: invalid", "Envelopes, \"Encryption key (type 4)\"; rule 30", "An X-Wing key of another length than 1216 bytes makes the act invalid.", Facts::default(), ask_status(&short), json!("invalid"), None);
     out.case(&mut fresh(&log), "an encryption key under scheme 1, a signature scheme: invalid", "Envelopes, \"Encryption key (type 4)\": numbers 1 to 3 are signature schemes and are never encryption keys", "enc-key's scheme is 4 or a specification hash.", Facts::default(), ask_status(&schnorr), json!("invalid"), None);
+    // Envelopes rule 8: an encryption key is a public act.
+    let mut w = World::new();
+    let mut p = w.genesis("ivo's friend", vec![own_home()], None, None);
+    let other = w.genesis("someone ivo's friend writes to", vec![own_home()], None, None);
+    let private = w.private_act(&mut p, env, et::ENCRYPTION_KEY, ek(1216), None, vec![other.id]);
+    out.case(&mut w, "an X-Wing encryption key of 1216 bytes, private: invalid", "Envelopes rule 8: Identity acts and this MIR's encryption keys are public acts, save a private link",
+        "A well-formed key, sealed to one reader: an encryption key must be public, so which key is current is the same for every verifier.", Facts::default(), ask_status(&private), json!("invalid"), None);
 }
 
 /// S7g: Money's suspected differences (`docs/untested-sentences.md`, Money).
@@ -3242,7 +3315,7 @@ fn s7g_money(out: &mut Out) {
         let mut w = world(&base);
         let mut bo = bo.clone();
         let proof = format!("bo pays ana's debt, on {}", if on == rail { "her rail" } else { "another rail" }).into_bytes();
-        let c = { let c = Fin::Claim(Claim { rail: on, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = { let c = Fin::Claim(Claim { rail: on, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
             let a = w.everyday_act(&mut bo, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         case(out, &mut w, name, "Money rule 4: the rail Module its field 0 names is the one named by the rail of the payee's pointer that the payment was paid to; a receipt or claim naming any other counts for nothing",
             "Ana's only pointer names one rail Module; Bo's claim of the payment names the rail Module in field 0, and the rail's answer says it was paid to that pointer.",
@@ -3255,7 +3328,7 @@ fn s7g_money(out: &mut Out) {
         let mut w = world(&base);
         let mut ana = ana.clone();
         let proof = format!("ana's receipt of bo's payment, on {}", if on == rail { "her rail" } else { "another rail" }).into_bytes();
-        let r = { let r = Fin::Receipt(Receipt { rail: on, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
+        let r = { let r = Fin::Receipt(Receipt { rail: on, proof: proof.clone(), payer: Some(bo.id), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
             let a = w.everyday_act(&mut ana, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
         case(out, &mut w, name, "Money rule 4",
             "Ana signs the receipt herself; its field 0 names a rail Module, and the rail's answer says the payment was paid to her one pointer.",
@@ -3271,11 +3344,11 @@ fn s7g_money(out: &mut Out) {
     let club_ptr = pointer_act(&mut w, &mut club, b"the club's wallet");
     let (g, lane) = grant_key_person(&mut w, &mut fan, &mut app, vec![Kind::Type { spec: mirs().money, type_: 2 }]);
     let paid = b"the fan pays the club".to_vec();
-    let c1 = { let c = Fin::Claim(Claim { rail, proof: paid.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: club_ptr, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let c1 = { let c = Fin::Claim(Claim { rail, proof: paid.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: club_ptr, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
         let a = w.everyday_act(&mut fan, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
     let back = b"the club pays the fan back".to_vec();
     let mut lane2 = lane.clone();
-    let rr = { let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(club.id)), payee: fan.id, amount: Amount { unit, value: 300 }, fulfils: c1, previous: None, forward: None, batch: None, purchase: None });
+    let rr = { let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(club.id), payee: fan.id, amount: Amount { unit, value: 300 }, fulfils: c1, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(&mut lane2, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let base = w.log.clone();
     let facts = || Facts { rail_valid: vec![(rr, fan.id)], rail_payments: vec![(paid.clone(), b"the fan's payment".to_vec()), (back.clone(), b"the refund".to_vec())], ..Default::default() };
@@ -3309,10 +3382,10 @@ fn s7g_money(out: &mut Out) {
         let shop_ptr = pointer_act(&mut w, &mut shop, b"the shop's wallet");
         let bought = b"the buyer pays the shop".to_vec();
         let c1 = { let c = Fin::Claim(Claim { rail, proof: bought.clone(), payee: shop.id, amount: Amount { unit, value: 300 }, fulfils: shop_ptr, disagrees: None, referral: None,
-                refund: Some(money::Rail { module: rail, address: b"the buyer's refund wallet".to_vec() }), anonymous: None, purchase: None, previous: None });
+                refund: Some(money::Rail { module: rail, address: b"the buyer's refund wallet".to_vec() }), purchase: None, previous: None });
             let a = w.everyday_act(&mut buyer, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         let back = b"the shop pays the buyer back at the refund rail".to_vec();
-        let cr = { let c = Fin::Claim(Claim { rail, proof: back.clone(), payee: buyer.id, amount: Amount { unit, value: 300 }, fulfils: c1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let cr = { let c = Fin::Claim(Claim { rail, proof: back.clone(), payee: buyer.id, amount: Amount { unit, value: 300 }, fulfils: c1, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
             let a = w.everyday_act(&mut shop, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         if lowered {
             w.rotate(&buyer, Rot { declarations: Some(vec![vault(100)]), ..Default::default() });
@@ -3332,7 +3405,7 @@ fn s7g_money(out: &mut Out) {
     let hal_ptr = pointer_act(&mut w, &mut hal, b"hal's wallet");
     let (hop_a, hop_b) = (spec("the previous hop's receipt gus names"), spec("the previous hop's receipt hal names"));
     let proof = b"gus pays hal on, one hop".to_vec();
-    let c = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: hal.id, amount: Amount { unit, value: 70 }, fulfils: hal_ptr, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: Some(hop_a) });
+    let c = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: hal.id, amount: Amount { unit, value: 70 }, fulfils: hal_ptr, disagrees: None, referral: None, refund: None, purchase: None, previous: Some(hop_a) });
         let a = w.everyday_act(&mut gus, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
     let base = w.log.clone();
     for (prev, name, v) in [
@@ -3341,7 +3414,7 @@ fn s7g_money(out: &mut Out) {
     ] {
         let mut w = world(&base);
         let mut hal = hal.clone();
-        let r = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(gus.id)), payee: hal.id, amount: Amount { unit, value: 70 }, fulfils: hal_ptr, previous: Some(prev), forward: None, batch: None, purchase: None });
+        let r = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(gus.id), payee: hal.id, amount: Amount { unit, value: 70 }, fulfils: hal_ptr, previous: Some(prev), forward: None, batch: None, purchase: None });
             let a = w.everyday_act(&mut hal, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
         case(out, &mut w, name, "Money rule 11: a claim and a receipt of the same payment that disagree in amount, payee, what the payment fulfils, or, on a route, the previous hop's receipt it passes on: an open question on the receiver",
             "Gus's claim and Hal's receipt carry one rail proof, the rail saying one payment, with the same amount, payee and purpose; the claim names one previous hop's receipt (key 10), the receipt (field 6) one or another.",
@@ -3371,7 +3444,7 @@ fn s7g_money(out: &mut Out) {
         let mut w = world(&base);
         let mut fay = fay.clone();
         let proof = format!("fay pays dee: {what}").into_bytes();
-        let c = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: dee.id, amount: Amount { unit, value: 40 }, fulfils, disagrees: None, referral: None, refund: None, anonymous: None,
+        let c = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: dee.id, amount: Amount { unit, value: 40 }, fulfils, disagrees: None, referral: None, refund: None,
                 purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
             let a = w.everyday_act(&mut fay, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
         case(out, &mut w, &format!("{what} naming a claim in field 9: no purchase, and no payment for a work"), "Money rule 18: a payment to an identity's own pointer (a tip) or toward an obligation is no purchase and names nothing",
@@ -3422,7 +3495,7 @@ fn s7g_agreements_a(out: &mut Out) {
     let unrelated = ag_act(&mut w, &mut cy, agreements::types::RELEASE, release.to_map(), obj(e));
     let base = w.log.clone();
     let pay = |w: &mut World, buyer: &mut Person, line: Hash, proof: &[u8]| {
-        let x = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee: ana.id, amount: Amount { unit, value: 300 }, fulfils: publ, disagrees: None, referral: None, refund: None, anonymous: None, purchase: Some(money::Purchase { agreement: d, line }), previous: None });
+        let x = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee: ana.id, amount: Amount { unit, value: 300 }, fulfils: publ, disagrees: None, referral: None, refund: None, purchase: Some(money::Purchase { agreement: d, line }), previous: None });
         let a = w.everyday_act(buyer, mirs().money, 3, x.to_map(), None, None);
         w.add(&a)
     };
@@ -3509,6 +3582,16 @@ fn s7g_agreements_b(out: &mut Out) {
     out.case(&mut w1, "a later complete version cloning a deal's version, then a signer's rotation disowning its signature on that version: the later version in force", "Agreements rule 47, \"What others relied on stands\": a later version cloning it (rule 45)",
         "Both parties signed version two, a clone of version one; Ada then rotates, disowning her signature act on version one. Version two relies on it, so version one keeps its completeness for everyone, the disowned signature shown as a dispute, and version two, complete on a complete parent, is in force.",
         Facts::default(), ask("version in force", &d), json!(hx(&v2)), None);
+    // A later version cloning it that only its drafter signed: a draft, which
+    // relies on nothing; the disowned signature uncompletes version one.
+    let (mut ada2, _, mut home2) = people.clone();
+    let mut w2 = replay(&base, &[]);
+    let v2d = clone_of(&mut w2, &mut ada2, v1, "Ada's draft of version two, Bram never signing.", &both);
+    sign(&mut w2, &mut ada2, &v2d);
+    rotate(&mut w2, &ada2, &mut home2);
+    out.case(&mut w2, "a later version cloning a deal's version, signed by its drafter alone, then a signer's rotation disowning its signature on that version: nothing relied on it, the founding in force", "Agreements rule 47, \"What others relied on stands\": a clone relies on a version only once it is itself complete",
+        "Ada drafts version two and signs it; Bram never does. A draft only one party signed is nobody's reliance: Ada's rotation disowns her signature on version one, which is judged by its signatures, so the founding stays in force.",
+        Facts::default(), ask("version in force", &d), json!(hx(&d)), None);
 
     // ---- Agreements 1036 with 1271 and 3611 (rule 35; settlement request, type 22): standing to start a judge's period.
     let mut w = World::new();
@@ -3580,7 +3663,7 @@ fn s7g_agreements_b(out: &mut Out) {
     let pb = owners_publication(&mut w, &mut hana, d, hid, vec![agreements::Sold::Bake(publ)], "The film.");
     let offer = price_tag(&mut w, &mut hana, mirs().money, money::Priced::Publication(pb), 500, unit, hid);
     let proof = b"the buyer pays for hana and ito's film".to_vec();
-    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: hana.id, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
+    let claim = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: hana.id, amount: Amount { unit, value: 500 }, fulfils: offer, disagrees: None, referral: None, refund: None, purchase: Some(money::Purchase { agreement: d, line: d }), previous: None });
         let a = w.everyday_act(&mut buyer, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
     let facts = || Facts { rail_valid: vec![(claim, offer)], rail_payments: vec![(proof.clone(), b"the film's payment".to_vec())], ..Default::default() };
     let base = w.log.clone();
@@ -3766,7 +3849,7 @@ fn s7g_agreements_c(out: &mut Out) {
         let y = { let a = w.everyday_act(&mut lane, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
         ag_act(&mut w, &mut col.c, agreements::types::REVOCATION, agreements::Revocation { grant: gid }.to_map(), None);
         if pays {
-            let x = Fin::Claim(Claim { rail, proof: b"the collective pays its supplier".to_vec(), payee: supplier.id, amount: Amount { unit, value: 30 }, fulfils: y, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+            let x = Fin::Claim(Claim { rail, proof: b"the collective pays its supplier".to_vec(), payee: supplier.id, amount: Amount { unit, value: 30 }, fulfils: y, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
             let mut ben = member_for(&col, 1);
             let a = w.everyday_act(&mut ben, mirs().money, 3, x.to_map(), None, None);
             w.add(&a);
@@ -4043,9 +4126,9 @@ fn s7g_development_rails(out: &mut Out) {
         };
         let (d1, d2) = (debt(&mut w, &mut bo, &mut ana), debt(&mut w, &mut bo, &mut ana));
         let proof = b"one payment of 60 on a push rail".to_vec();
-        let c = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, disagrees: None, referral: None, refund: None, purchase: None, previous: None });
             let a = w.everyday_act(&mut bo, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
-        let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d2, previous: None, forward: None, batch: None, purchase: None });
+        let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(bo.id), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d2, previous: None, forward: None, batch: None, purchase: None });
             let a = w.everyday_act(&mut ana, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
         let valid: Vec<(Hash, Hash)> = if both_valid { vec![(c, pointer), (r, pointer)] } else { vec![(r, pointer)] };
         let facts = || Facts { rail_valid: valid.clone(), rail_payments: vec![(proof.clone(), b"the one push payment".to_vec())], rail_specifications: vec![content.clone()], ..Default::default() };

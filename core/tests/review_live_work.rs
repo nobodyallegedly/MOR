@@ -32,7 +32,7 @@ mod common;
 use common::{own_home, Person, World};
 use mor_core::act::Object;
 use mor_core::cbor::Value;
-use mor_core::money::{Amount, Claim, PaidAt, Payer, Payload as Fin, Purchase, Receipt};
+use mor_core::money::{Amount, Claim, PaidAt, Payload as Fin, Purchase, Receipt};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{self, AgreementsView, Mirs, PurchaseVerdict, SaleState, Terms};
 use mor_core::envelopes::vow::Vow;
@@ -109,7 +109,7 @@ fn receipt(w: &mut World, payee: &mut Person, payer: Hash, fulfils: Hash, purcha
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: proof.to_vec(),
-        payer: Some(Payer::Identity(payer)),
+        payer: Some(payer),
         payee: pid,
         amount: Amount { unit: spec("a unit"), value: 300 },
         fulfils,
@@ -205,7 +205,6 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         });

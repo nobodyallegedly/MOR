@@ -53,7 +53,7 @@ use mor_core::act::{Act, Object};
 use mor_core::agreements::{self, AgreementsView, Mirs, ProofChecker, ProofVerdict};
 use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payload, Rail, Receipt, VaultEntry};
 use mor_harness::net::{Http, Site};
 use mor_harness::person::Person;
 use mor_harness::reader::Reader;
@@ -409,7 +409,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         let rd = read(&site, &[svc.id]).await;
         let o = offer_in(&rd, &offer_act.id(), &tag_act.id(), &svc.id);
         // The payment pays the price tag, to the service's flow.
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: sat(paid), fulfils: tag_act.id(), payer: Some(Payer::Identity(p.id)), paid_to: PaidTo::Flow { pointer: svc_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: sat(paid), fulfils: tag_act.id(), payer: Some(p.id), paid_to: PaidTo::Flow { pointer: svc_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
         // The service's endpoint hands back the order, an act it signs
         // under the publication: the forward to the owners, following their
         // pointer, by a deadline.
@@ -426,7 +426,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
         // Paid over Lightning, settled; the payer's claim.
         let proof = ln.pay(paid, &commitment.hash()).await;
         let rail = Proof { paid_to: commitment.paid_to, salt: commitment.salt, rail: proof.encode() }.encode();
-        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: tag_act.id(), disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+        let claim = Claim { rail: commitment.rail, proof: rail.clone(), payee: svc.id, amount: commitment.amount, fulfils: tag_act.id(), disagrees: None, referral: None, refund: None, purchase: None, previous: None };
         assert_eq!(verify(Record::Claim(&claim, p.id, &Citations::default()), &held, &ln_only).answer, Answer::Valid);
         let claim_act = p.act(money_spec(), money::types::CLAIM, Payload::Claim(claim).to_map(), None, None);
         put(&site, &claim_act).await;
@@ -441,7 +441,7 @@ async fn a_rail_swap_lightning_in_onchain_out_through_a_conversion_service_on_re
 
     // ------------------------------------------------ Ana's forward, paid on the chain
     let ana = &bought[0];
-    let onward = Commitment { rail: mor_onchain::spec(), payee: owners.id, amount: ana.order.forward.amount, fulfils: ana.order.onward, payer: Some(Payer::Identity(svc.id)), paid_to: PaidTo::Flow { pointer: owners_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
+    let onward = Commitment { rail: mor_onchain::spec(), payee: owners.id, amount: ana.order.forward.amount, fulfils: ana.order.onward, payer: Some(svc.id), paid_to: PaidTo::Flow { pointer: owners_pointer_act.id(), rail: 0 }, salt: random::<16>(), purchase: None };
     let script = owners_keys.address().script(&onward.hash()).unwrap();
     let t = coins.pay(&script, onward.amount.value);
     node.rpc.send(&consensus::serialize(&t)).await.expect("the node takes the onward payment");

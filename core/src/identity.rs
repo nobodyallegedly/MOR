@@ -295,8 +295,7 @@ fn scheme(v: &Value, w: &'static str) -> R<Scheme> {
     }
 }
 
-/// Decode `signing-key = [ scheme, key: bstr ]`; Money reads an anonymous
-/// payer's bare key in this form (F113). A key of a founding scheme whose
+/// Decode `signing-key = [ scheme, key: bstr ]`. A key of a founding scheme whose
 /// length is not the one in the table makes the act invalid ("Encoding
 /// and conventions", signature schemes).
 pub fn signing_key(v: &Value) -> R<SigningKey> {
@@ -962,6 +961,19 @@ pub fn check_witness_shape(inside: &Inside) -> R<()> {
     }
     if inside.objects.is_some() {
         return Err(IdError::Check("a witness act carries no objects"));
+    }
+    Ok(())
+}
+
+/// An objection's, absence statement's or escape endorsement's `objects`
+/// (Identity, "What an Identity act names in `objects`"): exactly one entry,
+/// `[ identity, homeless rotation ]`, and no other; more, or none, is
+/// outside the format (invalid).
+pub fn check_homeless_path_objects(inside: &Inside) -> R<()> {
+    if inside.objects.as_ref().is_none_or(|os| os.len() != 1) {
+        return Err(IdError::Check(
+            "an objection, absence statement or escape endorsement names exactly one entry in objects",
+        ));
     }
     Ok(())
 }

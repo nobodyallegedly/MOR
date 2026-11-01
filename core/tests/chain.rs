@@ -538,7 +538,6 @@ fn only_identity_money_and_agreements_acts_acknowledge_f110() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: None,
     });
@@ -1228,7 +1227,7 @@ fn a_censored_reader_sees_re_homed_without_audit_never_final_and_the_late_object
     w.object(&mut home_abroad, &j.id, &hr);
     assert_eq!(chain(&w, &j), vec![j.id]);
     assert_eq!(w.v.status(&before_theft), Status::Valid);
-    assert_eq!(w.v.status(&t2), Status::Invalid);
+    assert_eq!(w.v.status(&t2), Status::Void, "void with the homeless rotation it is built on (Q-I0)");
 }
 
 #[test]
