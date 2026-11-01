@@ -15040,76 +15040,6 @@ fn s7g_a_split_that_does_not_sum_matches_no_receipt() {
     assert!(!unsplit(&l, r2), "a split summing exactly matches it");
 }
 
-/// S7j, Fable's sentence for rule 64.4 (`[5, stake]` where every holder
-/// signs): where a stake's declared holders' rule is every holder, a clone
-/// that is an owners' matter of it (here an issuance in it, rule 96) names
-/// `[5, stake]` in its mark with every holder, each signing; its holders
-/// signing outside the mark is not that shape, and a mark leaving a holder
-/// out is false. Before, the core refused `[5, stake]` under every holder.
-#[test]
-fn s7j_an_every_holder_rule_is_named_in_the_mark_with_every_holder() {
-    let (mut lab, mut dana, k) = owned_label_with(100_000, false, None);
-    let ids = lab.ids();
-    let did = dana.id;
-    let kst = lab.view().terms(&k).unwrap().stakes.clone();
-    let mut t = lab.clone_terms(&k, vec![], &|t| {
-        t.stakes = kst.clone();
-        t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Every, waived: true }]);
-    });
-    let needs = lab.view().powers_needed(&t).unwrap();
-    t.field4 = Field4::Mark(needs.iter().map(|p| MarkEntry { power: p.clone(), signers: sorted(ids.clone()) }).collect());
-    let y = lab.propose(ANA, &t);
-    let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &y)).collect();
-    s.push(sign(&mut lab.w, &mut dana, &y));
-    let r = lab.record(0, Some((y, s)), &[], vec![], y);
-    assert_eq!(puts(&lab, &r), Some(y), "{:?}", clone_state(&lab, &r));
-    let yt = lab.view().terms(&y).unwrap();
-    let (st, hr) = (yt.stakes.clone(), yt.holders_rules.clone());
-    let eve = lab.w.genesis("eve, issued a share", vec![own_home()], None, None).id;
-    // An issuance in the stake: Eve takes a tenth from Ana's part.
-    let f = |t: &mut Terms| {
-        let mut x = st.clone().unwrap();
-        let a = x[0].holders.iter().position(|(w, _)| *w == Who::Id(ids[ANA])).unwrap();
-        x[0].holders[a].1 -= 100_000;
-        x[0].holders.push((Who::Id(eve), 100_000));
-        t.stakes = Some(x);
-        t.holders_rules = hr.clone();
-        t.issues_under = Some(agreements::IssuesUnder::Waived);
-    };
-    let probe = lab.clone_terms(&y, vec![], &f);
-    let needs = lab.view().powers_needed(&probe).unwrap();
-    assert!(needs.contains(&Power::Holders(0)), "the every-holder rule is a power the mark names: {needs:?}");
-    let mut every: Vec<Hash> = ids.clone();
-    every.push(did);
-    let mark = |holders: &[Hash], with: bool| {
-        Field4::Mark(
-            needs
-                .iter()
-                .filter(|p| with || !matches!(p, Power::Holders(_)))
-                .map(|p| MarkEntry { power: p.clone(), signers: if matches!(p, Power::Holders(_)) { sorted(holders.to_vec()) } else { sorted(ids.clone()) } })
-                .collect(),
-        )
-    };
-    let mark_problem = |st: &CloneState| matches!(st, CloneState::Invalid(w) if w.contains("rule 64.4"));
-    let run = |lab: &mut Lab, dana: &mut Person, m: Field4| {
-        let mut t = lab.clone_terms(&y, vec![], &f);
-        t.field4 = m;
-        let x = lab.propose(ANA, &t);
-        let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
-        s.push(sign(&mut lab.w, dana, &x));
-        let r = lab.record(0, Some((x, s)), &[], vec![], x);
-        clone_state(lab, &r)
-    };
-    // 1. Naming every holder, every holder signing: no fault in the mark.
-    let st1 = run(&mut lab, &mut dana, mark(&every, true));
-    assert!(!mark_problem(&st1), "{st1:?}");
-    // 2. The holders sign, the mark not naming their rule: invalid.
-    let st2 = run(&mut lab, &mut dana, mark(&every, false));
-    assert!(matches!(st2, CloneState::Invalid(_)), "holders signing outside the mark: {st2:?}");
-    // 3. The mark naming the rule without Dana: invalid.
-    let st3 = run(&mut lab, &mut dana, mark(&ids, true));
-    assert!(mark_problem(&st3), "a mark leaving a holder out: {st3:?}");
-}
 
 /// S7j, F414 (Money rule 20 through a route): a referral is the first
 /// payer's where a purchase is paid through a route, carried by their claim
@@ -15161,29 +15091,4 @@ fn s7j_a_referral_through_a_route_is_the_first_payers() {
             assert_eq!(e.unevidenced, vec![r1.id], "no first payer's citation: the purchase is the swap's, and the fan's acknowledgement fills nothing");
         }
     }
-}
-
-/// S7k, F414 (rules 48, 65, 94 and 95 under a declared every-holder rule):
-/// where the label's terms declare its stake's holders' rule every holder
-/// (field 30), a release of its work, an owners' matter, waits for every
-/// holder, members too; under the default (field 30 silent), only for the
-/// holder who is no member (3.9ah above).
-#[test]
-fn s7k_a_declared_every_holder_rule_asks_every_holder_members_too() {
-    let work = spec("the label's work, every holder declared");
-    let declare = |t: &mut Terms| t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Every, waived: false }]);
-    let (mut lab, mut dana, _k) = owned_label_by(100_000, false, None, Some(work), &declare, false);
-    let declared = lab.view().version_in_force(&lab.founding).ok().and_then(|v| lab.view().terms(&v).ok()).is_some_and(|t| t.holders_rules.is_some());
-    assert!(declared, "the label's terms in force declare the holders' rule");
-    let wa = label_owns(&mut lab, work);
-    let rel = agreements::Release { work, stakes: vec![(wa, 0)], claims: vec![], keys: vec![(spec("its publication"), vec![9; 32])], timed: None };
-    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::RELEASE, rel.to_map(), obj(wa), None);
-    let r = lab.w.add(&a);
-    lab.sign(BEN, &r);
-    sign(&mut lab.w, &mut dana, &r);
-    assert!(!lab.view().release(&r).unwrap().complete, "Ana and Cy, holders who are members, have not signed");
-    lab.sign(ANA, &r);
-    lab.sign(CY, &r);
-    let e = lab.view().release(&r).unwrap();
-    assert!(e.complete, "every holder signed: {:?}", e.why);
 }

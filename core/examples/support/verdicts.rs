@@ -1168,6 +1168,7 @@ pub fn identity(out: &mut Out) {
     s7i::identity(out);
     s7j_identity::identity(out);
     s7k::identity(out);
+    s7k::identity_rule_40(out);
 }
 
 pub fn text(out: &mut Out) {
@@ -1679,6 +1680,7 @@ pub fn money(out: &mut Out) {
     s7g_development_rails(out);
     s7i::money(out);
     s7j::money(out);
+    s7k::money(out);
 }
 
 pub fn agreements(out: &mut Out) {

@@ -1,102 +1,107 @@
-**Done. The WebAssembly changes, and so do two binding answers (`agreementsRelease`, and through it `agreementsClosing`, under a declared every-holder rule): rebuild the releases after this commit.** Texts final; Ummia's pinned hashes in "Checks"; three questions for the MOR lead below.
+**Done. The WebAssembly changes, and binding answers move (`agreementsPurchaseContests`, `agreementsVow`, `moneyRouteBuyer` for a one-time key's payer; `agreementsClonePlan` and `agreementsRecord` for `[5, stake]` under every holder): rebuild after this commit. Ummia's final hashes in "Checks". Question 1 is a flaw in the one-time key's standing, for Nobody, allegedly, before the freeze.**
 
 # S7k: the last text points before the redesign's second merge
 
-*Session S7k, 1 November 2026, on `claude/s7i-routes` (pull request 116), beside the Dubsar Suite's round 10. Only `spec/`, `core/` and `docs/` touched; no web release rebuilt. This session records no finding of its own: F416 stays free.*
+*Session S7k, 1 November 2026, on `claude/s7i-routes` (pull request 116), beside the Dubsar Suite's round 10. Only `spec/`, `core/` and `docs/` are touched (and the c-box's vectors README); no web release is rebuilt. The decisions are F414 and F416 (`claude/lead-records`). This session records no finding of its own.*
 
 ## In plain words
 
-- **An owner held at a contested position can now leave.** A thief with the chain key, plus one home that receipts both rotations, could keep an identity stuck for good. The owner can now sign one escape that abandons both rotations. The core already counted it, so only the texts changed. Fable's four cases are now vectors.
-- **Under a declared every-holder rule, members sign too.** This applies to a sale or release of a collective's work and to a version of its split agreement. A core change.
-- **A bare-key payer through a route has no standing**, as directly. This also corrects a sentence of mine from S7j that said otherwise.
-- **Several claims of the first hop:** any one citing the tag counts, as built.
+- **An owner held at a contested position can leave.** A contested position can no longer hold an identity still for good. The owner signs one escape that abandons both rotations. This works wherever the position is contested: at a self-hosted home, by one home's conflict, or by two rotations each missing the home rule. The core already counted it; only the texts changed. Fable's four cases, and the third kind, are now vectors.
+- **A holder is a holder, and a collective counts once.** A collective among a stake's holders gives one consent, by its own constitution. Under every holder, default or declared, each holder with no voice signs, and the members consent through the collective's rules. `[5, stake]` is only for a rule by share. This reverts this session's earlier sentences and core change. It also reverts S7j's Q-A11, `[5, stake]` naming every holder in a clone's mark, which rested on the reverted reading.
+- **A payer with only a one-time key can contest and confirm.** The payer acts by a claim carrying that key's signature (key 8), as for a refund, directly or as a route's first payer. A core change.
 
-## 1. The escape on a standing contest (F414, decided by Nobody, allegedly)
+## 1. The escape on a standing contest (F414, F416)
 
-- **Texts (Identity), in Fable's sentences:**
-  - rule 29's second exception: a position contested by two rotations revealing the same chain key, wherever served, at a self-hosted home or where one home's conflict leaves the others short of the rule;
-  - the conformance paragraph ("for a contested position", "at a self-hosted home" dropped);
-  - section 11's sentence;
-  - line 70 and rule 44's stated cost: "until the owner leaves by the escape (section 11)".
-  - The suite's 7d says it too.
-- **Core:** no change. It already counts an endorsed homeless rotation at a position where nothing counts under the old rule, its abandoned rotations never counting.
-- **Fable's four vectors** (two homes, a rule of two, one home receipting the owner's rotation and the rival):
-  - contested at the position;
-  - the escape, endorsed, abandoning both, receipted by its new home: counts;
-  - the same with no endorsement, the honest old home objecting: void;
-  - a verifier without the endorsement: contested.
-- *Found while writing them:* the escape's own home rule must fit its new homes (rotation check 5). A rule of two carried onto one new home makes it no rotation at all, so the vector declares the rule for its one new home.
+- **Texts (Identity):**
+  - rule 29's second exception: a position contested by two rotations revealing the same chain key, wherever served. That is at a self-hosted home (rule 4), where one home's conflict leaves the others short (rule 44), or where competing rotations each miss the rule (rule 40);
+  - its conformance paragraph ("for a contested position"), with the stated cost beside it (F416): the competing rotation's bytes prove a rival exists, not that the position is contested, and abandoning a rotation that counts harms only the owner;
+  - section 11 and its "In short";
+  - line 70 (at any contested position, the owner may leave by the escape);
+  - rule 42 (an act bound to a contested rotation is pending until the escape too);
+  - rule 44's stated cost.
+  - Elsewhere: the suite's 7d, and the MICS row.
+- **Core:** no change.
+- **Vectors:**
+  - Fable's four (two homes, a rule of two, one home receipting both): contested; the endorsed escape abandoning both, counts; no endorsement and objected to, void; a verifier without the endorsement, contested.
+  - A rule 40 contest (each home receipting one rotation): the escape counts.
+- *Found while writing them:* the escape's own home rule must fit its new homes (rotation check 5).
 
-## 2. Taken under delegation (F414)
+## 2. The holders' rule (F416, decided by Nobody, allegedly)
 
-- **A declared every-holder rule:**
-  - *Texts:* rules 48, 94 and 95 follow rule 65, and rule 64 item 4 names it, one sentence each. Where field 30 declares every holder, every holder at the line signs, members too, under `[5, stake]`. The default (field 30 silent) is unchanged.
-  - *Core:* `owners_consent` (owning.rs: a release or transfer of a work, rule 95) and the split agreement's owners' matter (publishing.rs, rule 94) ask members too where the rule is declared.
-  - *Test:* `s7k_a_declared_every_holder_rule_asks_every_holder_members_too`.
-- **A bare-key payer** (rule 13 and the contest paragraph):
-  - My S7j sentence ("a first payer committing only a bare key contests by a claim carrying that key's signature") contradicted the same paragraph's rule (no buyer who can contest), rule 13 and the core. It now says that such a payer has no buyer's standing, as above.
-  - Rule 13's sentence matches: a bare-key first payer signs nothing onto the vow, and the purchase is the conversion service's own (Money rule 24). This is how the core reads it.
-  - *Question 1 below* asks whether bare-key payers should have standing.
-- **Several claims of the first hop** (Money rule 24): any one, valid on its rail and citing the tag version, makes the first payer the buyer, whatever the others cite. As built.
+- **Texts (Agreements):**
+  - field 30 says the one reading once, with the italic "Richer models of control are a cMIP's, built from this grammar". A holder is whoever field 7 and the placed transfers name. A collective is one holder, its consent decided by its constitution, its members not holders of what it holds. "Every holder" means each holder, a collective counting once, the same declared as by default.
+  - Rules 48, 94, 95 (its lead-in and item 3) and 65 are back to S7i's wording.
+  - Rule 64 item 4 now says: under every holder, declared or by default, the holders with no voice sign outside the mark, members consenting through the powers above.
+  - Field 30's share condition stays fixed ("a rule by share has its share above zero"), as `[0]` carries none.
+- **Core:** this session's change in `owners_consent` and the split agreement's owners' matter is reverted.
+  - S7j's Q-A11 core (`owners_powers` listing `[5, stake]` for a declared every-holder rule, the mark checked against every holder) is reverted with it. `[5, stake]` under every holder is again refused in a mark.
+  - Its test, and this session's test, are removed.
+  - *Said plainly:* F414 had kept Q-A11 "as built". F416's single reading (every holder the same declared as by default, members through the collective's rules, rule 65 reverted) leaves it nothing to stand on, so I reverted it rather than keep two readings. If the MOR lead meant to keep it, it is one commit back.
+- No vector moved: no vector held a declared every-holder rule.
+
+## 3. A one-time key's standing (F416, decided by Nobody, allegedly)
+
+- **Texts:**
+  - Agreements rule 13 (a payer who committed only a one-time key signs on, confirms and contests by a claim carrying that key's signature; the identity signing that claim stands for the key, and every claim of the payment carrying the same key's signature is the buyer's);
+  - rule 22's stated cost;
+  - "A contest of a purchase" (twice: direct, and a route's first payer);
+  - Money rule 24's route buyer;
+  - the two stated costs that compared a payer with no claim to a bare-key payer, now compared to "a payer who signs no claim";
+  - the suite's 4l.
+- **Core:**
+  - `purchase_buyer` and `committed_buyer` (`vows.rs`) take the signer of a key-8 claim as the buyer;
+  - `sale_acts` counts every claim of the payment carrying the same key;
+  - `route_buyer` (`routes.rs`) finds the first payer's key-8 claims (`HopRecord` gains `payer_as_written`).
+- **Vectors** (on a request rail whose specification is held):
+  - a direct contest by the key claim's signer, shown, and by someone else, nothing;
+  - a vow's seat confirmed by a later claim carrying the same key, signed by another one-time identity;
+  - a route's first payer with a one-time key, the buyer.
 
 ## Vectors
 
-- 505 verdict cases, 4 new.
+- 510 verdict cases, 9 new this session.
 - Every earlier case keeps its verdict, acts and ids.
 - Both READMEs and the c-box's are updated.
-- The Python check: all 276 agree, 98 verdict cases judged.
 
 ## For the Dubsar Suite
 
-- **The WebAssembly changes** (rebuild after this commit), and so do two binding answers:
-  - `agreementsRelease`: under a declared every-holder rule, a release of a collective's work now waits for every holder, members too. It completed with the holders who are no members. A transfer of its stake in a work likewise (no binding of its own; it reaches `agreementsClosing`'s "holds nothing").
-  - `agreementsPublication`, for a version of a collective's split agreement that is an owners' matter: the same, though the judicial tier already asks every member there, so the answer moves only where a member's signature counted there by other means.
-  - Nothing else in the binding moves: the escape, rule 13, the contest and the route buyer read as before.
-  - `wasm/README.md` was off limits this session: these lines are for it.
-- **The air-gapped Module** (`modules/airgap`, yours). Its code already opens the escape on a competing rotation at any homes: `check_competing` and `standing` do not ask for a self-hosted home. What must change:
-  - the summary's words for `Exception::EscapeContested` ("the position is contested at a self-hosted home"): say "the position is contested by two rotations revealing this key";
-  - the doc comments on `EscapeContested` and `check_competing`, and the README, which name a self-hosted home;
-  - a test in `tests/rule_29.rs` for a contest at two homes, a rule of two, one home receipting both: the competing rotation opens the escape, and without it, the escape is refused.
-- **Ummia's pinned hashes**, final for these texts: see Checks.
+- **The WebAssembly changes. Against the releases you rebuilt last (`6c9dde0`), these binding answers move:**
+  - `agreementsPurchaseContests`, `agreementsVow`, `moneyRouteBuyer`: a payer who committed only a one-time key now has standing. A contest signed by the identity that signed the key's claim (key 8), naming it, is shown. A vow's sale whose payer is a one-time key is listed with that signer as its buyer, not as unsigned. A route's first payer with a one-time key is "the first payer".
+  - `agreementsClonePlan` (the powers needed) no longer lists `[5, stake]` under a declared every-holder rule. A clone whose mark names `[5, stake]` under every holder is invalid again (`agreementsRecord`'s clone state).
+  - `agreementsRelease` and `agreementsPublication`: unchanged against your last release (this session's change there is reverted).
+  - `wasm/README.md` was off limits: please add these under "Changed in S7k", and remove the S7j line saying that `agreementsClonePlan` lists `[5, stake]` under a declared every-holder rule.
+- **The air-gapped Module** (`modules/airgap`, yours). Its code already opens the escape on a competing rotation at any homes. To change:
+  - the summary's words for `Exception::EscapeContested` ("contested at a self-hosted home" → "contested by two rotations revealing this key");
+  - the doc comments on `EscapeContested` and `check_competing`, and the README;
+  - a test in `tests/rule_29.rs` for a contest at two homes (one home receipting both) and for a rule 40 contest: the competing rotation opens the escape; without it, refused.
+- **A client contesting or confirming for a one-time key** signs its contest with the identity that signed the claim carrying the key's signature, naming that claim (field 0).
+- **Ummia's pinned hashes**, final for these texts: in "Checks".
 
 ## Questions
 
-1. **A declared every-holder rule is now not the same rule as the default.**
-   - *Plain words:* under a declared every-holder rule, every holder signs, members too; under the default (field 30 silent), members consent through the collective's own rules. But the working rule says a default is always one of the declared options, never a third rule. And Agreements says the default is the forced one of the declared options, `[0]`.
+1. **Anyone holding a one-time key's claim can take over its standing.**
+   - *Plain words:* the key's signature binds a claim's contents, but not who signs the claim. So anyone who has seen the claim (the seller's members, the conversion service, everyone if it is public) can re-sign an identical copy under their own identity. They then "stand for the key" and can contest the buyer's purchase. Through a vow, a contest prevails over a confirmation. For refunds this costs nothing, since the refund goes where the key's own signature says; for standing it is a hijack.
+   - *Precisely:* the anonymous message (Money, "Payment claim", key 8) covers fields 0 to 10 and the inside keys 3, 7 and 8, never the act's signer. "A claim carrying that key's signature is the claim of the payer that committed to that key. Its signer … may be any identity." So the new rule 13, rule 22, contest and rule 24 sentences give standing to whoever signs a copy.
    - *Options:*
-     - (a) the default becomes the declared form: every holder signs, members too, wherever the rule is every holder. This changes rule 48's reading for every collective with no field 30, and moves vectors and tests;
-     - (b) name the default as a form of its own (members through the collective's rules) and drop "one of the declared options" and "(the default)" beside `[0]`;
-     - (c) a declared `[0]` reads as the default (members through the collective's rules), reverting this session's sentences in rules 48, 94, 95 and 65.
-   - *Lean:* (a), for one rule only. *Cost:* the most work, and members of every collective sign their own owners' matters.
-2. **Does a rule 40 contest open the escape too?** Two competing rotations, each missing the home rule, are also two rotations revealing one chain key.
-   - Fable's condition reads "wherever they were served", but rule 29, section 11 and line 70 list only the self-hosted and rule 44 cases.
-   - *Lean:* yes, one more item in each list. The core already counts an endorsed escape wherever nothing counts under the old rule.
-3. **What the Module's check proves:** a competing rotation's bytes prove a rival exists, not that the position is contested.
-   - So a Module could sign an escape that abandons a rotation which counts. Both keys are the owner's, so this harms nobody but the owner.
-   - *Lean:* a stated cost beside rule 29's conformance paragraph.
-4. **Should a bare-key payer have standing?**
-   - *Plain words:* a buyer who paid without naming an identity, giving only a one-time key for refunds, cannot contest a sale or confirm a vow, directly or through a route. They can be refunded.
-   - *Options:* (a) as now: no standing (the stated cost of rule 22); (b) standing by a claim carrying that key's signature (key 8), as for refunds.
-   - *Lean:* (a) for MOR 1.
-   - *Cost of (b):* the contest and the vow's sale read key-8 claims, and a one-time key's contests are shown publicly.
+     - **(a)** the key's signature also covers the claim's signer: one more element in key 8's signed array. This is a one-way door, a frozen signed message changing once. A claim then stands only for the identity the key chose. Refund claims are unaffected in effect.
+     - **(b)** a contest (type 14) gains an optional key carrying the one-time key's own signature over the contest. Standing then rests on the key, never on a claim's signer. Also a one-way door, a format key.
+     - **(c)** as built, said as a stated cost (a one-time key's standing is anyone's who sees its claim).
+   - *Lean:* (a). It is the smallest change, fits "as for a refund", and closes the hijack for confirmations too. *Cost:* the anonymous message's array changes before the freeze, and the suite's anonymous claims must sign it.
+   - *Built meanwhile:* as decided, with the contest signed by the identity that signed the claim it names. The vectors list a key's sale under its claim with the smallest act id, and that claim's signer as the buyer. In the core, a second signer for the same key confirms but does not contest. Whichever option is chosen settles this.
+2. **Older wording the reading met:** rule 95 item 3 says "each holder who is no member", rule 94 "each holder with no voice in the power". These differ for a member with no voice in an area's power. *Lean:* rule 94's words in item 3. One sentence, older than this session, so not changed.
 
 ## The stranger's reading
 
-A subagent read only the eight texts, this session's diff and the five new cases.
-- **4 agree, 1 differed:** the declared every-holder release, against rule 95's item 3. That item still said "each holder who is no member"; it now carries the declared case.
+A subagent read only the eight texts, the diff of every sentence changed since the last reading, and the five new cases.
+- **4 agree, 1 silent:** the vow confirmed for a one-time key (who the buyer is with two signers): question 1.
 - **Its points, fixed in the texts:**
-  - rule 42 (an act bound to a contested rotation, pending until the escape too);
-  - line 70 rewritten (the escape as soon as one home's conflict leaves the others short, proven or not);
-  - section 11's "In short" and the MICS's row;
-  - rule 64 item 4 ("where field 30 declares every holder");
-  - field 30's share condition (a rule by share);
-  - rule 95's lead-in (`[5, stake]` in a clone's mark, signature acts otherwise);
-  - Money rule 24: several claims, each a buyer's claim, "astray" only where none cites the tag, and a bare-key first payer never the buyer;
-  - the contest paragraph's list of when the service is the buyer;
-  - rule 13's clause;
-  - the suite's 7d (the conflict may also end by step 2).
-  - Case 4's explanation now says that the verifier reached both old homes.
-- **Questions:** 1 to 3 above.
+  - field 30's definition limited to the holders' rule's form, with an italic that "every holder of the stake signs" elsewhere (field 30, the release rule, a waiver) means each holder by its own signature, members included;
+  - line 70 restores the proven conflict that nothing settles, and names the three kinds of contest;
+  - section 11's "In short" is narrowed to those three;
+  - the stated cost beside rule 29 now names those who relied on an abandoned rotation's acts, and says the abandonment wins;
+  - rule 13: the buyer is the key, "the bare key of receipt field 2";
+  - the suite's 7aj: a collective holding part of the stake is one holder.
+- **Questions:** 1 and 2 above.
 
 ## Checks
 
@@ -107,5 +112,5 @@ A subagent read only the eight texts, this session's diff and the five new cases
 - No finding number or review label is in the texts.
 - **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`):
   - `MICS_HASH = 'c9d7f5cba40f00f3cb184e7c1b50bbbea11c4cbf677d5fc59b76ce764d9bd788'`
-  - `SUITE_HASH = 'd073424439a15ed815a424cfcc6659025d5272b0231e7b82c36ff0c5f04df254'`
-- GitHub: not read by me this session; the suite's final rebuild runs it.
+  - `SUITE_HASH = '3c8b9d3f5ee0d44a063962bff1e4436d77142933531d950f07950e46bf86cf03'`
+- GitHub: not read by me; the suite's final rebuild runs it.
