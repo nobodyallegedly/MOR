@@ -2713,16 +2713,34 @@ impl DealWorld {
             // A clone relies only once it is itself complete, every party
             // having signed it; a receipt only as its payee's; a payer's
             // claim never (rule 47, S7i).
-            let complete = |x: &Hash| (0..ids.len()).all(|i| self.sigs.get(x).is_some_and(|ss| ss.iter().any(|(j, s, _)| *j == i && v.status(s) == Status::Valid)));
-            let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid && complete(x))
-                || v.held_acts().any(|x| {
-                    x.inside.spec == mirs().money
-                        && v.status(&x.id) == Status::Valid
-                        && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
-                            Ok(mor_core::money::Payload::Receipt(r)) => x.act.outside.signer == Some(r.payee) && r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
-                            _ => false,
-                        }
-                });
+            // "Complete" is read by the same rule (S7j, rule 47: "once that
+            // version is itself complete"; a version relied on stays
+            // complete): a clone keeping its completeness because a later
+            // act relies on it relies on its parent in turn. A chain of
+            // versions held, so the recursion ends.
+            fn relied_on(me: &DealWorld, v: &mor_core::chain::Verifier, ids: &[Hash], k: &Hash, depth: usize) -> bool {
+                if depth > me.versions.len() {
+                    return false;
+                }
+                me.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid && complete_as(me, v, ids, x, depth + 1))
+                    || v.held_acts().any(|x| {
+                        x.inside.spec == mirs().money
+                            && v.status(&x.id) == Status::Valid
+                            && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
+                                Ok(mor_core::money::Payload::Receipt(r)) => x.act.outside.signer == Some(r.payee) && r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                                _ => false,
+                            }
+                    })
+            }
+            fn complete_as(me: &DealWorld, v: &mor_core::chain::Verifier, ids: &[Hash], x: &Hash, depth: usize) -> bool {
+                let strict = (0..ids.len()).all(|i| me.sigs.get(x).is_some_and(|ss| ss.iter().any(|(j, s, _)| *j == i && v.status(s) == Status::Valid)));
+                if strict {
+                    return true;
+                }
+                let kept = (0..ids.len()).all(|i| me.sigs.get(x).is_some_and(|ss| ss.iter().any(|(j, s, _)| *j == i && matches!(v.status(s), Status::Valid | Status::Void | Status::Disputed))));
+                kept && relied_on(me, v, ids, x, depth)
+            }
+            let relied = relied_on(self, v, &ids, k, 0);
             let standing = |s: &Hash| v.status(s) == Status::Valid || (relied && matches!(v.status(s), Status::Void | Status::Disputed));
             let valid_signer = |i: usize| self.sigs[k].iter().any(|(j, s, _)| *j == i && standing(s));
             let all = (0..ids.len()).all(valid_signer);

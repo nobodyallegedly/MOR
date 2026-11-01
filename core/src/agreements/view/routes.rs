@@ -489,11 +489,12 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// The buyer of the purchase the record `last` is, where `last` is the
-    /// last hop of a route (Money rule 24's last sentence; Agreements, "A
-    /// contest of a purchase"). The first payer is the first hop's payer:
-    /// its receipt's field 2, an identity. Their claim of the first hop,
-    /// standing and valid on its rail, naming in key 4 the tag `last`
-    /// names in field 5 (key 4 for a claim), makes them the buyer; a claim
+    /// last hop of a route (Money rule 24; Agreements, "A contest of a
+    /// purchase"). The first payer is the first hop's payer: its receipt's
+    /// field 2, an identity. Their claim of the first hop, standing and
+    /// valid on its rail, its key 4 the commitment's and citing in `refs`
+    /// the tag `last` names in field 5 (key 4 for a claim), makes them the
+    /// buyer; a claim
     /// of theirs whose rail's answer is pending or not held leaves it
     /// unknown yet.
     pub fn route_buyer(&self, last: &Hash) -> RouteBuyer {
@@ -515,7 +516,9 @@ impl<'a> AgreementsView<'a> {
             .filter(|x| x.claim && x.signer == Some(payer) && x.payee == first.payee && x.previous.is_none())
             .collect();
         claims.sort_by_key(|x| x.id);
-        let named = |x: &HopRecord| x.fulfils == r.fulfils;
+        // The first payer's claim keeps key 4 as its commitment's (the
+        // service's tag) and cites, in `refs`, the tag the route pays for.
+        let named = |x: &HopRecord| self.v.get(&x.id).is_some_and(|h| h.inside.refs.iter().flatten().any(|c| c.act().as_ref() == Some(&r.fulfils)));
         if let Some(c) = claims.iter().find(|x| named(x) && self.rail_valid.contains_key(&x.id)) {
             return RouteBuyer::FirstPayer { payer, claim: c.id };
         }

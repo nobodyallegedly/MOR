@@ -31,6 +31,15 @@ pub fn refund_along_json(r: Result<Vec<agreements::RefundHop>, agreements::Agree
     }
 }
 
+/// The first payer's claim of a route's first hop (Money rule 24): key 4
+/// as the commitment names it (the service's tag), citing in `refs` the
+/// tag the route pays for.
+fn first_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: Hash, commitment: Hash, cites: Option<Hash>) -> Hash {
+    let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount: sat(950), fulfils: commitment, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let a = w.everyday_act_refs(by, mirs().money, 3, c.to_map(), None, None, cites.map(|t| vec![mor_core::act::Ref::Act(t)]));
+    w.add(&a)
+}
+
 pub fn money(out: &mut Out) {
     route_buyer(out);
     route_refund(out);
@@ -40,20 +49,26 @@ pub fn money(out: &mut Out) {
 /// naming the tag the purchase names; naming another; none. Then the
 /// carrier's contest, a claim not yet answered, and a route that stops.
 fn route_buyer(out: &mut Out) {
+    // A Lightning rail Module whose specification the verifier holds: a
+    // request rail (field 11 is 0), its proof binding payee and purpose
+    // (field 13), so rule 11 and the commitment are the rail's own.
+    let enc = |fields: Vec<(u64, Value)>| cbor::encode(&Value::Map(fields.into_iter().map(|(k, v)| (Value::Uint(k), v)).collect()));
+    let lnr_content = enc(vec![(0, Value::Uint(kinds::MODULE)), (1, Value::Bytes(spec("a rail's creator").to_vec())), (5, Value::Bytes(spec("a payment cMIP, by its hash").to_vec())), (9, Value::Text("A Lightning request rail, routes, binding payee and purpose.".into())), (11, Value::Uint(0)), (13, Value::Array(vec![Value::Uint(0), Value::Uint(1)]))]);
+    let lnr = Spec::hash_of(&lnr_content);
     let mut w = World::new();
     let mut seller = w.genesis("a seller paid on-chain, bought from through a swap", vec![own_home()], None, None);
     let mut other_seller = w.genesis("another seller", vec![own_home()], None, None);
     let mut buyer = w.genesis("a buyer paying on Lightning through a swap", vec![own_home()], None, None);
     let mut sw = w.genesis("a swap carrying a buyer's money", vec![own_home()], None, None);
     let _ = pointer_on(&mut w, &mut seller, &[(onchain(), b"the seller's wallet, routes")]);
-    let sw_ptr = pointer_on(&mut w, &mut sw, &[(ln(), b"the swap's node, routes")]);
+    let sw_ptr = pointer_on(&mut w, &mut sw, &[(lnr, b"the swap's node, routes")]);
     let tag = lone_offer(&mut w, &mut seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a film".into())))], sat(900), "A film.");
     let other_tag = lone_offer(&mut w, &mut other_seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a book".into())))], sat(900), "A book.");
     let (pubs, tags) = conversion_offer(&mut w, &mut sw, "Lightning to on-chain, for buyers, routes.", sat(100_000));
     let (sid, bid, swid) = (seller.id, buyer.id, sw.id);
     let (q1, q3) = (b"the buyer pays the swap on Lightning, for the film".to_vec(), b"the swap pays the seller on-chain, for the film".to_vec());
     let pays = vec![(q1.clone(), b"buyer ln, film".to_vec()), (q3.clone(), b"seller output, film".to_vec())];
-    let a1 = hop_receipt(&mut w, &mut sw, ln(), &q1, bid, sat(950), tags, None, fwd(sid, sat(900), pubs), None);
+    let a1 = hop_receipt(&mut w, &mut sw, lnr, &q1, bid, sat(950), tags, None, fwd(sid, sat(900), pubs), None);
     let first_hop = w.log.clone();
     let a2 = hop_receipt(&mut w, &mut seller, onchain(), &q3, swid, sat(900), tag, Some(a1), None, None);
     let base = w.log.clone();
@@ -61,17 +76,17 @@ fn route_buyer(out: &mut Out) {
     let facts = |extra: &[(Hash, Hash)]| {
         let mut v = vec![(a1, sw_ptr), (a2, tag)];
         v.extend_from_slice(extra);
-        Facts { rail_valid: v, rail_payments: pays.clone(), ..Default::default() }
+        Facts { rail_valid: v, rail_payments: pays.clone(), rail_specifications: vec![lnr_content.clone()], ..Default::default() }
     };
     let ask_buyer = ask_route("route buyer", &a2);
     let contests = |x: &Hash| json!({ "question": "purchase contests", "purchase": hx(x) });
 
     // 1. The first payer's claim of the first hop names the tag the purchase names.
     let mut w1 = fresh(&base);
-    let k1 = hop_claim(&mut w1, &mut buyer, ln(), &q1, swid, sat(950), tag, None);
+    let k1 = first_claim(&mut w1, &mut buyer, lnr, &q1, swid, tags, Some(tag));
     let l1 = w1.log.clone();
-    out.case(&mut w1, "a purchase paid through a swap, the first payer's claim of the first hop naming the seller's tag: the first payer is the buyer", rule,
-        "The route ending at the seller's receipt is valid; its first hop's payer is the buyer (the swap's receipt, field 2), whose own claim of that hop names in key 4 the tag the seller's receipt names in field 5. That claim is the buyer's claim of the purchase.",
+    out.case(&mut w1, "a purchase paid through a swap, the first payer's claim of the first hop citing the seller's tag: the first payer is the buyer", rule,
+        "The route ending at the seller's receipt is valid; its first hop's payer is the buyer (the swap's receipt, field 2), whose own claim of that hop, on a request rail whose specification the verifier holds, keeps key 4 as the commitment's (the swap's tag) and cites in `refs` the tag the seller's receipt names in field 5. Valid on its rail, its citation matched: that claim is the buyer's claim of the purchase.",
         facts(&[(k1, sw_ptr)]), ask_buyer.clone(), json!({ "buyer": "the first payer", "payer": hx(&bid), "claim": hx(&k1) }), None);
     let mut w1b = fresh(&l1);
     let words = agreements::Contest::of_purchase(k1, Some("Not the film the page described.".into()));
@@ -88,17 +103,25 @@ fn route_buyer(out: &mut Out) {
         facts(&[(k1, sw_ptr), (s2, tag)]), contests(&s2), json!([]), None);
     let _ = kc;
 
+    // 1b. The claim naming the seller's tag in key 4, against the
+    // commitment: the request rail refuses it (Money rule 18).
+    let mut w1d = fresh(&base);
+    let kx = hop_claim(&mut w1d, &mut buyer.clone(), lnr, &q1, swid, sat(950), tag, None);
+    out.case(&mut w1d, "the first payer's claim naming the seller's tag in key 4, where the request rail's commitment names the swap's: refused by the rail, no buyer's claim", "Money rule 18: the payment decides; rule 24",
+        "On a request rail binding purpose, a claim whose key 4 is not what the commitment names is refused by the rail Module's rule: answered invalid, it counts for nothing, and the swap bought for its own account. The first payer's claim keeps key 4 as the commitment's and cites the tag in `refs`.",
+        Facts { rail_valid: vec![(a1, sw_ptr), (a2, tag)], rail_invalid: vec![kx], rail_payments: pays.clone(), rail_specifications: vec![lnr_content.clone()], ..Default::default() }, ask_buyer.clone(), json!({ "buyer": "the service, for its own account", "service": hx(&swid), "astray": [] }), None);
+
     // 2. The first payer's claim names another tag: the swap bought for its own account.
     let mut w2 = fresh(&base);
-    let k2 = hop_claim(&mut w2, &mut buyer, ln(), &q1, swid, sat(950), other_tag, None);
+    let k2 = first_claim(&mut w2, &mut buyer, lnr, &q1, swid, tags, Some(other_tag));
     let l2 = w2.log.clone();
-    out.case(&mut w2, "the same route, the first payer's claim naming another seller's tag: the swap bought for its own account, the first payer's money astray", rule,
-        "The buyer's claim says the money was for another seller's book; the route ends at this seller's film. Where the two do not match, the service bought for its own account, and the first payer's claim is shown as their money gone where they did not name (rule 28).",
+    out.case(&mut w2, "the same route, the first payer's claim citing another seller's tag: the swap bought for its own account, the first payer's money astray", rule,
+        "The buyer's claim cites another seller's book; the route ends at this seller's film. Where the two do not match, the service bought for its own account, and the first payer's claim is shown as their money gone where they did not name (rule 28).",
         facts(&[(k2, sw_ptr)]), ask_buyer.clone(), json!({ "buyer": "the service, for its own account", "service": hx(&swid), "astray": [hx(&k2)] }), None);
     let mut w2b = fresh(&l2);
     let c2 = ag_act(&mut w2b, &mut buyer, agreements::types::CONTEST, agreements::Contest::of_purchase(k2, Some("Not the film.".into())).to_map(), obj(k2));
     out.case(&mut w2b, "the same: the first payer's contest naming that claim shows nothing", "Agreements, \"A contest of a purchase\"",
-        "The first payer is the buyer only where their claim names the tag the purchase names.",
+        "The first payer is the buyer only where their claim cites the tag the purchase names.",
         facts(&[(k2, sw_ptr)]), contests(&k2), json!([]), None);
     let _ = c2;
 
@@ -109,9 +132,9 @@ fn route_buyer(out: &mut Out) {
 
     // 4. The first payer's claim without its rail's answer: unknown yet.
     let mut w4 = fresh(&base);
-    let k4 = hop_claim(&mut w4, &mut buyer, ln(), &q1, swid, sat(950), tag, None);
+    let k4 = first_claim(&mut w4, &mut buyer, lnr, &q1, swid, tags, Some(tag));
     let l4 = w4.log.clone();
-    out.case(&mut w4, "the first payer's claim naming the tag, its rail's answer not held: the buyer unknown yet", rule,
+    out.case(&mut w4, "the first payer's claim citing the tag, its rail's answer not held: the buyer unknown yet", rule,
         "Whether the first payer's claim is valid on its rail is not known yet: the buyer is unknown until it is.",
         facts(&[]), ask_buyer.clone(), json!("unknown"), None);
     let mut w4b = fresh(&l4);
@@ -121,18 +144,18 @@ fn route_buyer(out: &mut Out) {
 
     // 5. The route unknown: its last hop's rail answer not held.
     let mut w5 = fresh(&base);
-    let k5 = hop_claim(&mut w5, &mut buyer, ln(), &q1, swid, sat(950), tag, None);
-    out.case(&mut w5, "the first payer's claim naming the tag, the last hop's rail answer not held: the buyer unknown yet", rule,
+    let k5 = first_claim(&mut w5, &mut buyer, lnr, &q1, swid, tags, Some(tag));
+    out.case(&mut w5, "the first payer's claim citing the tag, the last hop's rail answer not held: the buyer unknown yet", rule,
         "While the route ending at the purchase is unknown, the buyer is unknown.",
-        Facts { rail_valid: vec![(a1, sw_ptr), (k5, sw_ptr)], rail_payments: pays.clone(), ..Default::default() }, ask_buyer.clone(), json!("unknown"), None);
+        Facts { rail_valid: vec![(a1, sw_ptr), (k5, sw_ptr)], rail_payments: pays.clone(), rail_specifications: vec![lnr_content.clone()], ..Default::default() }, ask_buyer.clone(), json!("unknown"), None);
 
     // 6. The swap never pays the seller: no purchase at the seller.
     let mut w6 = fresh(&first_hop);
-    let k6 = hop_claim(&mut w6, &mut buyer, ln(), &q1, swid, sat(950), tag, None);
+    let k6 = first_claim(&mut w6, &mut buyer, lnr, &q1, swid, tags, Some(tag));
     ag_act(&mut w6, &mut buyer, agreements::types::CONTEST, agreements::Contest::of_purchase(k6, None).to_map(), obj(k6));
     out.case(&mut w6, "the swap never pays the seller: no purchase at the seller, the first payer's contest shows nothing", "Agreements, \"A contest of a purchase\"; Money rule 27",
         "The route stops at the swap's hop: there is no purchase at the seller to contest; the swap owes its forward (rule 27).",
-        Facts { rail_valid: vec![(a1, sw_ptr), (k6, sw_ptr)], rail_payments: pays.clone(), ..Default::default() }, contests(&k6), json!([]), None);
+        Facts { rail_valid: vec![(a1, sw_ptr), (k6, sw_ptr)], rail_payments: pays.clone(), rail_specifications: vec![lnr_content.clone()], ..Default::default() }, contests(&k6), json!([]), None);
 
     // 7. A purchase naming no previous hop: no route, the ordinary rule.
     out.case(&mut fresh(&first_hop), "a receipt naming no previous hop: no route, its buyer read by the ordinary rule", rule,
@@ -229,6 +252,7 @@ pub fn agreements(out: &mut Out) {
     price_change(out);
     spec_claims(out);
     inner_deal_consent(out);
+    closing_refund_placed(out);
 }
 
 /// A price tag's price changed on a push rail, settled as a withdrawal is
@@ -336,9 +360,9 @@ pub fn closing_refund(out: &mut Out, family: &[(mor_core::act::Act, Option<[u8; 
     let owing = w.log.clone();
     let pays = vec![(proof.clone(), b"the fan's payment to the band".to_vec())];
     let rule = "Agreements, \"Closing (type 20)\": the collective owes nothing, a refund owed on a payment to it among its debts";
-    out.case(&mut w, "a closing of a collective owing a refund on a payment to it: not complete", rule,
-        "The fan paid the band naming another seller's tag: no purchase, money received for nothing, owed back to the fan. The refund is a debt of the band's, not ended: the band cannot close while it owes it.",
-        Facts { rail_valid: vec![(paid, tag)], rail_payments: pays.clone(), ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": false }), None);
+    out.case(&mut w, "a refund owed on a payment to a collective that its closing's line does not place: it does not block the closing", rule,
+        "The fan paid the band naming another seller's tag: no purchase, owed back to the fan. But the fan's claim was made after the closing's line, and no act of the band in the closing's history records or acknowledges it: as other debts are, the refund is placed by the closing's line, and this one lies outside it.",
+        Facts { rail_valid: vec![(paid, tag)], rail_payments: pays.clone(), ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": true }), None);
     let _ = owing;
 }
 
@@ -404,4 +428,58 @@ pub fn inner_deal_consent(out: &mut Out) {
     out.case(&mut w3, "the outer deal signed by Jo and Kai under the inner deal's founding, the inner deal then re-versioned: the consent stands, the outer deal exists", rule,
         "When Jo and Kai signed the outer deal, the latest version of the inner deal's line their signature acts' histories held was its founding, whose parties they are: a consent so given stands for every later version.",
         Facts::default(), ask_route("agreement exists", &outer), json!("exists"), None);
+}
+
+
+/// A refund owed on a payment to a collective, placed by its closing's line
+/// (the collective's own receipt in the closing's history), blocks the
+/// closing; one owed to nobody, named in field 4, is left open (Agreements,
+/// "Closing (type 20)").
+pub fn closing_refund_placed(out: &mut Out) {
+    let rule = "Agreements, \"Closing (type 20)\": the collective owes nothing, a refund owed on a payment to it before its line among its debts, save what field 4 leaves open";
+    for (payer_named, repaid, name, why) in [
+        (true, false, "a closing of a collective owing a refund on a payment its own receipt records before the line: not complete",
+         "The fan paid the band naming another seller's tag: no purchase, money received for nothing, owed back to the fan. The band's own receipt of it lies in the closing's history: a debt of the band's, not ended, so it cannot close."),
+        (true, true, "the same, the fan's receipt of the refund acknowledged by an act of the band before the line: complete",
+         "The fan receipts 300 back, naming the band's receipt; an act of the band in the closing's history acknowledges it, so the closing's line relies on it: the refund is repaid, and the band owes nothing."),
+        (false, false, "a closing naming in field 4 a refund owed to nobody (a payment that committed no key), its own receipt before the line: complete",
+         "The payer committed no key: nobody can claim the refund. Named in field 4 as left open, it does not block the closing, as for the broken stretch; it stays visible."),
+    ] {
+        let mut w = World::new();
+        let mut col = collective(&mut w, &[1], 1);
+        let (f, cid) = (col.founding, col.id);
+        let mut fan = w.genesis("a fan paying a band that closes", vec![own_home()], None, None);
+        let mut seller = w.genesis("a seller whose tag was named to the band", vec![own_home()], None, None);
+        let tag = lone_offer(&mut w, &mut seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a print".into())))], sat(300), "A print.");
+        let rail = spec("a rail Module, a band's closing");
+        let proof = b"a payment to the band naming another seller's tag".to_vec();
+        let payer = if payer_named { Some(Payer::Identity(fan.id)) } else { None };
+        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer, payee: cid, amount: sat(300), fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
+        let mut ben = col.m[1].acting_for(cid, vec![cid]);
+        let rec = { let a = w.everyday_act(&mut ben, mirs().money, 2, r.to_map(), Some(vec![Object { chain: cid, predecessor: cid }]), None); w.add(&a) };
+        let mut cites = vec![rec];
+        let mut valid = vec![(rec, tag)];
+        let mut pays = vec![(proof.clone(), b"the band's payment".to_vec())];
+        if repaid {
+            let back = b"the band pays the fan back, a band's closing".to_vec();
+            let rr = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(cid)), payee: fan.id, amount: sat(300), fulfils: rec, previous: None, forward: None, batch: None, purchase: None });
+            let fr = { let a = w.everyday_act(&mut fan, mirs().money, 2, rr.to_map(), None, None); w.add(&a) };
+            let mut ana = col.m[0].acting_for(cid, vec![rec]);
+            let ack = { let a = w.everyday_act(&mut ana, mirs().agreements, agreements::new_types::LIVENESS, agreements::Liveness { agreement: f }.to_map(), obj(f), Some(vec![fr])); w.add(&a) };
+            cites = vec![ack];
+            valid.push((fr, tag));
+            pays.push((back, b"the refund".to_vec()));
+        }
+        let _ = &mut fan;
+        let open = if payer_named { vec![] } else { vec![agreements::OpenOwed { payment: rec, notice: None, holder: None }] };
+        let closing = agreements::Closing { agreement: f, collective: cid, open };
+        let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, cites), agreements::types::CLOSING, closing.to_map(), obj(f));
+        for i in 0..3 {
+            let (_, q) = w.chain_sign(&col.m[i], k);
+            col.m[i] = q;
+        }
+        out.case(&mut w, name, rule, why,
+            Facts { rail_valid: valid, rail_payments: pays, ..Default::default() },
+            json!({ "question": "closing", "act": hx(&k) }), json!({ "complete": !payer_named || repaid }), None);
+    }
 }

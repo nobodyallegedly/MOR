@@ -7329,7 +7329,7 @@ impl<'a> AgreementsView<'a> {
         // A refund owed on a payment to the collective, not ended (rule 11),
         // binds it like any debt; the broken stretch's money owed back is
         // judged above, with its exceptions.
-        let refunds = self.refunds_owed_to_payers(&c.collective, &owed)?;
+        let refunds = self.refunds_owed_to_payers(&col, &cline, &owed, &c.open)?;
         if !refunds.is_empty() {
             return fail(
                 e,
@@ -7377,15 +7377,22 @@ impl<'a> AgreementsView<'a> {
         Ok(self.pointers_held(payer)?.is_empty())
     }
 
-    /// The payments to a collective on which a refund is owed and not ended
-    /// (rule 11; Money rule 17): each a payment whose payee is the
-    /// collective, read as no purchase (money received for nothing, owed
-    /// back), whose refund terms have not lapsed, not repaid in full;
-    /// one entry per payment, its first record held. The payments of
-    /// `owed_back` (the broken stretch's) are judged there and left out.
-    /// Unknown while whether one is a purchase rests on a rail's answer.
-    fn refunds_owed_to_payers(&self, collective: &Hash, owed_back: &[OwedBack]) -> R<Vec<Hash>> {
-        use crate::money::Payload as Fin;
+    /// The payments to a collective on which a refund is owed, blocking its
+    /// closing (rule 11; Money rule 17; "Closing (type 20)", "owes
+    /// nothing"): each a payment whose payee is the collective, placed
+    /// before the closing's line (a record of it the line relies on: the
+    /// collective's own, or one an act of the collective in the closing's
+    /// history acknowledges), read as no purchase (money received for
+    /// nothing, owed back), whose refund terms have not lapsed, not repaid
+    /// in full by records the line relies on, and not left open by field 4
+    /// as the rules allow (owed to nobody; owed to a payer who gave no
+    /// address, after a lapsed notice); one entry per payment, its first
+    /// record held. The payments of `owed_back` (the broken stretch's) are
+    /// judged there and left out. Unknown while whether one is a purchase
+    /// rests on a rail's answer.
+    fn refunds_owed_to_payers(&self, col: &Col, line: &[Hash], owed_back: &[OwedBack], open: &[crate::agreements::OpenOwed]) -> R<Vec<Hash>> {
+        use crate::money::{Payload as Fin, RefundTo};
+        let collective = &col.id;
         let mut seen: Vec<Hash> = owed_back.iter().map(|o| o.payment).collect();
         for o in owed_back {
             seen.extend(self.same_payment(&o.payment).into_iter().map(|(h, _)| h));
@@ -7403,6 +7410,7 @@ impl<'a> AgreementsView<'a> {
             .map(|h| h.id)
             .collect();
         ids.sort();
+        let relied = |h: &Held| self.relied_by_line(col, line, h);
         for id in ids {
             if seen.contains(&id) {
                 continue;
@@ -7410,20 +7418,32 @@ impl<'a> AgreementsView<'a> {
             let mut names = vec![id];
             names.extend(self.same_payment(&id).into_iter().map(|(h, _)| h));
             seen.extend(names.iter().copied());
-            // Repaid in full: nothing owed, whatever the payment was.
+            // A sale of a broken stretch is money owed back, judged with its
+            // own exceptions above, repaid or not (rule 93).
+            let mut stretch = false;
+            for n in names.iter().filter_map(|n| self.v.get(n)) {
+                stretch |= self.stretch_sale(col, n)?;
+            }
+            if stretch {
+                continue;
+            }
+            // Placed by the closing's line, as other debts are.
+            if !names.iter().filter_map(|n| self.v.get(n)).any(relied) {
+                continue;
+            }
             let (amount, unit, to) = match self.v.get(&id).map(|h| (h, Fin::decode(h.inside.type_, &h.inside.payload))) {
                 Some((_, Ok(Fin::Receipt(r)))) => (r.amount.value, r.amount.unit, crate::money::refund_owed_to(&r)),
                 Some((h, Ok(Fin::Claim(c)))) => {
                     let Some(signer) = h.act.outside.signer else { continue };
                     let to = match c.payer(&signer) {
-                        crate::money::Payer::Identity(x) => crate::money::RefundTo::Identity(x),
-                        crate::money::Payer::Key(k) => crate::money::RefundTo::Key(k),
+                        crate::money::Payer::Identity(x) => RefundTo::Identity(x),
+                        crate::money::Payer::Key(k) => RefundTo::Key(k),
                     };
                     (c.amount.value, c.amount.unit, to)
                 }
                 _ => continue,
             };
-            let repaid = self.refund_repaid(&id, &to, &unit).ok_or(AgreementsError::PaymentUnstated)?;
+            let repaid = self.judged(|| self.repaid_if(&names, &to, &unit, &relied)).ok_or(AgreementsError::PaymentUnstated)?;
             if repaid >= amount {
                 continue;
             }
@@ -7441,7 +7461,17 @@ impl<'a> AgreementsView<'a> {
                 PurchaseVerdict::Unknown => return Err(AgreementsError::RailUnanswered),
                 _ => continue,
             }
-            out.push(id);
+            // Field 4 may leave it open, as for the broken stretch.
+            let named_open = open.iter().find(|x| names.contains(&x.payment));
+            let left_open = match (&to, named_open) {
+                (RefundTo::Nobody, Some(_)) => true,
+                (RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, Some(payer), &names)) && self.gave_no_address(payer, &names)?,
+                (RefundTo::Key(_), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, None, &names)),
+                _ => false,
+            };
+            if !left_open {
+                out.push(id);
+            }
         }
         Ok(out)
     }
@@ -9698,6 +9728,12 @@ impl<'a> AgreementsView<'a> {
     ///   carrying that key's signature names (Money rule 10a, key 7).
     /// - **To nobody**: nothing repays it (rule 10a).
     fn repaid(&self, owed: &[Hash], to: &crate::money::RefundTo, unit: &Hash) -> u64 {
+        self.repaid_if(owed, to, unit, &|_| true)
+    }
+
+    /// [`Self::repaid`], counting only the receipts and claims `relied`
+    /// keeps (for a closing: those its line relies on).
+    fn repaid_if(&self, owed: &[Hash], to: &crate::money::RefundTo, unit: &Hash, relied: &dyn Fn(&Held) -> bool) -> u64 {
         use crate::money::{PaidAt, Payer, Payload as Fin, RefundTo};
         let who: Option<Hash> = match to {
             RefundTo::Identity(h) => Some(*h),
@@ -9739,7 +9775,7 @@ impl<'a> AgreementsView<'a> {
         let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
         let mut claims: Vec<((Hash, Payment), u64)> = vec![];
         for r in self.v.held_acts() {
-            if r.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&r.id) {
+            if r.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&r.id) || !relied(r) {
                 continue;
             }
             match Fin::decode(r.inside.type_, &r.inside.payload) {
