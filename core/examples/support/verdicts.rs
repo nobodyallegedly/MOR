@@ -599,6 +599,16 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.paid_toward(&h("act")).map_or(json!("unknown"), |x| json!(x))
         }
+        "specification claim, reading Agreements" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            json!(match v.specification_claim(&h("act"), &h("creator")) {
+                mor_core::chain::SpecClaim::Claimed => "claimed",
+                mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                mor_core::chain::SpecClaim::Unknown => "unknown",
+            })
+        }
         "specification claim" => json!(match w.v.specification_claim(&h("act"), &h("creator")) {
             mor_core::chain::SpecClaim::Claimed => "claimed",
             mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
@@ -2665,6 +2675,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_c(out);
     scenario9::agreements(out);
     s7i::agreements(out);
+    s7j::agreements(out);
 }
 
 pub fn development(out: &mut Vec<J>) {

@@ -224,3 +224,98 @@ fn route_refund(out: &mut Out) {
         "The seller's receipt names the tag's first version, carrying its price: a purchase, no refund owed.",
         Facts { rail_valid: vec![(d1, sw_ptr), (d2, t1)], rail_payments: pays.clone(), ..Default::default() }, ask_route("refund along", &d2), json!([]), None);
 }
+
+pub fn agreements(out: &mut Out) {
+    price_change(out);
+    spec_claims(out);
+}
+
+/// A price tag's price changed on a push rail, settled as a withdrawal is
+/// (Agreements rule 12; Money rule 18: the latest version counts).
+fn price_change(out: &mut Out) {
+    let enc = |fields: Vec<(u64, Value)>| cbor::encode(&Value::Map(fields.into_iter().map(|(k, v)| (Value::Uint(k), v)).collect()));
+    let content = enc(vec![(0, Value::Uint(kinds::MODULE)), (1, Value::Bytes(spec("a rail's creator").to_vec())), (5, Value::Bytes(spec("a payment cMIP, by its hash").to_vec())), (9, Value::Text("A push rail binding payee and purpose, for a price change.".into())), (11, Value::Uint(1)), (13, Value::Array(vec![Value::Uint(0), Value::Uint(1)]))]);
+    let rail = Spec::hash_of(&content);
+    let mut w = World::new();
+    let mut seller = w.genesis("a seller who changes a price", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan paying the old price", vec![own_home()], None, None);
+    let ptr = pointer_on(&mut w, &mut seller, &[(rail, b"the seller's push address")]);
+    let p = lone_publication(&mut w, &mut seller, &mirs(), vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a song".into())))], Some("A song."));
+    let sid = seller.id;
+    let t1 = price_tag(&mut w, &mut seller, mirs().money, money::Priced::Publication(p), 900, spec(SAT), sid);
+    let base = w.log.clone();
+    let proof = b"the fan pays the old price on a push rail".to_vec();
+    let pays = vec![(proof.clone(), b"the old price's payment".to_vec())];
+    let fid = fan.id;
+    let claim = |w: &mut World, fan: &mut Person| {
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: sid, amount: sat(900), fulfils: t1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
+        w.add(&a)
+    };
+    let receipt = |w: &mut World, seller: &mut Person| {
+        let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fid)), payee: sid, amount: sat(900), fulfils: t1, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(seller, mirs().money, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let new_price = |w: &mut World, seller: &mut Person| {
+        let x = Fin::PriceTag(money::PriceTag { priced: money::Priced::Publication(p), version: 2, previous: Some(t1), price: Some(sat(1200)), payee: sid }).to_map();
+        let a = w.everyday_act(seller, mirs().money, money::types::PRICE_TAG, x, Some(vec![Object { chain: t1, predecessor: t1 }]), None);
+        w.add(&a)
+    };
+    let rule = "Agreements rule 12: a price change settled as a withdrawal is; Money rule 18";
+    // The receipt recorded after the new price: no purchase.
+    let mut w1 = fresh(&base);
+    let mut s1 = seller.clone();
+    new_price(&mut w1, &mut s1);
+    let c1 = claim(&mut w1, &mut fan);
+    let r1 = receipt(&mut w1, &mut s1);
+    out.case(&mut w1, "a payment naming a tag's earlier price on a push rail, the seller's receipt recorded after a later version changing the price: no purchase, owed back", rule,
+        "The seller's own history holds the version pricing the song at 1200 when it records the payment of 900 naming the earlier version: on a push rail, no purchase once the service's history holds the new version.",
+        Facts { rail_valid: vec![(c1, ptr), (r1, ptr)], rail_payments: pays.clone(), rail_specifications: vec![content.clone()], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c1) }), json!("no purchase"), None);
+    // The receipt recorded before the new price: a purchase.
+    let mut w2 = fresh(&base);
+    let mut s2 = seller.clone();
+    let c2 = claim(&mut w2, &mut fan);
+    let r2 = receipt(&mut w2, &mut s2);
+    new_price(&mut w2, &mut s2);
+    out.case(&mut w2, "the same payment, the seller's receipt recorded before the later version: a purchase at the earlier price", rule,
+        "The receipt's history does not hold the new version: a sale at 900, past sales standing.",
+        Facts { rail_valid: vec![(c2, ptr), (r2, ptr)], rail_payments: pays.clone(), rail_specifications: vec![content.clone()], ..Default::default() }, json!({ "question": "purchase", "act": hx(&c2) }), json!("purchase"), None);
+}
+
+/// A specification published for a collective, or under a grant key
+/// (Development rule 3, read with Agreements).
+fn spec_claims(out: &mut Out) {
+    let mut w = World::new();
+    let col = collective(&mut w, &[1], 1);
+    let cid = col.id;
+    let mut ana = member_for(&col, 0);
+    let mut stranger = w.genesis("a stranger publishing for a band", vec![own_home()], None, None);
+    let content = |by: &Hash, words: &str| cbor::encode(&Value::Map(vec![(Value::Uint(0), Value::Uint(kinds::CMIP)), (Value::Uint(1), Value::Bytes(by.to_vec())), (Value::Uint(9), Value::Text(words.into()))]));
+    let media = |c: &[u8]| publication(vec![(Value::Uint(0), Value::Bytes(mirs().development.to_vec())), (Value::Uint(1), Value::Bytes(mor_core::hash::work_hash(c).to_vec()))]);
+    let base = w.log.clone();
+    let ask = |p: &Hash, c: &Hash| json!({ "question": "specification claim, reading Agreements", "act": hx(p), "creator": hx(c) });
+    let rule = "Development rule 3: an act for a collective that Agreements counts, or under a grant key Agreements backs, is the creator's";
+    let mut w1 = fresh(&base);
+    let by_ana = { let a = w1.everyday_act(&mut ana, mirs().envelopes, 0, media(&content(&cid, "A cMIP by the band.")), Some(vec![Object { chain: cid, predecessor: cid }]), None); w1.add(&a) };
+    out.case(&mut w1, "a specification naming a collective its creator, published by a member for it: the collective's", rule,
+        "Ana, whom the founding names for the band in Envelopes (a specification's publication is a bake), signs it naming the band in `objects`: an act for the collective that Agreements counts.",
+        Facts::default(), ask(&by_ana, &cid), json!("claimed"), None);
+    let mut w2 = fresh(&base);
+    let mut s = stranger.acting_for(cid, vec![cid]);
+    let by_s = { let a = w2.everyday_act(&mut s, mirs().envelopes, 0, media(&content(&cid, "A cMIP the band never wrote.")), Some(vec![Object { chain: cid, predecessor: cid }]), None); w2.add(&a) };
+    let _ = &mut stranger;
+    out.case(&mut w2, "the same naming the collective, published by a stranger: unclaimed", rule,
+        "Anyone can name a collective in `objects`; a stranger's act for it counts for nothing (Agreements rule 58).",
+        Facts::default(), ask(&by_s, &cid), json!("unclaimed"), None);
+    // A person's grant key.
+    let mut w3 = World::new();
+    let mut ida = w3.genesis("ida, publishing through her application", vec![own_home()], None, None);
+    let mut app = w3.genesis("ida's publishing application", vec![own_home()], None, None);
+    let (_, mut gk) = grant_key_person(&mut w3, &mut ida, &mut app, vec![Kind::Type { spec: mirs().envelopes, type_: 0 }]);
+    let iid = ida.id;
+    let by_key = { let a = w3.everyday_act(&mut gk, mirs().envelopes, 0, media(&content(&iid, "A cMIP by Ida, published by her application.")), None, None); w3.add(&a) };
+    out.case(&mut w3, "a specification naming a person its creator, published under her grant key that Agreements backs: hers", rule,
+        "Ida's grant reaches her application's bakes; the publication is signed with the grant key and cites the grant: her own act for this rule.",
+        Facts::default(), ask(&by_key, &iid), json!("claimed"), None);
+}

@@ -307,7 +307,8 @@ fn route_failures(out: &mut Out) {
     // The rest in a second payment: the forward carried in two parts.
     let mut w1b = fresh(&l1);
     let p2b = b"a second on-chain payment to the pool, the rest".to_vec();
-    let r2b = hop_receipt(&mut w1b, &mut pool, onchain(), &p2b, sid, sat(100), pool_ptr, Some(r1), None, None);
+    let mut pool_b = pool.clone();
+    let r2b = hop_receipt(&mut w1b, &mut pool_b, onchain(), &p2b, sid, sat(100), pool_ptr, Some(r1), None, None);
     let mut pays_b = pays.clone();
     pays_b.push((p2b.clone(), b"on-chain output f2".to_vec()));
     out.case(&mut w1b, "the same, the swap paying the 100 sat rest in a second payment: the forward carried in two parts, the route valid", "Money rules 24 and 12: the records naming a forward add up to it, one payment counted once",

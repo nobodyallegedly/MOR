@@ -4775,6 +4775,33 @@ impl<'a> AgreementsView<'a> {
     /// or closing) leaves it binding only where that decision's history
     /// holds it: otherwise the ending wins, and the act is void (the tie
     /// rule), unless the collective itself acknowledged it (rule 40, A6).
+    /// Whether a specification's publication counts as the creator's
+    /// (Development rule 3), read with Agreements: an act for a collective
+    /// that Agreements counts (rule 58), or an act under a grant key
+    /// Agreements backs (rule 80), is the creator's for this rule; any
+    /// other publication is read as Identity reads it
+    /// ([`crate::chain::View::specification_claim`]).
+    pub fn specification_claim(&self, publication: &Hash, creator: &Hash) -> crate::chain::SpecClaim {
+        use crate::chain::SpecClaim as C;
+        let base = self.v.specification_claim(publication, creator);
+        let Some(h) = self.v.get(publication) else { return base };
+        if self.named_collective(h).as_ref() == Some(creator) {
+            return match self.consent(publication) {
+                Ok(k) if k.counts() => C::Claimed,
+                Ok(_) => C::Unclaimed { disputed: false },
+                Err(_) => C::Unknown,
+            };
+        }
+        if h.act.outside.signer.as_ref() == Some(creator) && base == C::Unknown && self.key_grant(h).is_some() {
+            return match self.backing(publication) {
+                Ok(Backing::Backed { .. }) => C::Claimed,
+                Ok(Backing::NotBacked { .. }) => C::Unclaimed { disputed: false },
+                _ => C::Unknown,
+            };
+        }
+        base
+    }
+
     pub fn backing(&self, act: &Hash) -> R<Backing> {
         let y = self.held(act)?;
         // A person's grant: the grant whose key signed the act. A

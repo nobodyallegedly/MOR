@@ -523,7 +523,7 @@ impl<'a> AgreementsView<'a> {
             .held_acts()
             .filter(|h| h.act.outside.signer == signer && self.valid(&h.id))
             .filter_map(|h| self.tag_of(&h.id).map(|(h, t)| (h, t)))
-            .filter(|(h, t)| t.withdrawn() && t.priced == tag.priced && t.version > tag.version && first_of(h, t) == first)
+            .filter(|(h, t)| (t.withdrawn() || t.price != tag.price) && t.priced == tag.priced && t.version > tag.version && first_of(h, t) == first)
             .map(|(h, _)| h.id)
             .collect()
     }
@@ -763,15 +763,16 @@ impl<'a> AgreementsView<'a> {
                 if !endings.is_empty() && receipts.iter().all(|r| self.after_own_signature(r, &service, &endings)) {
                     return no(e, "on a push rail, the split service recorded its receipt after its own signature on the version ending the publication: a payment racing the ending, owed back by the service, then by each party (rule 11)");
                 }
-                // A sale before a price tag's withdrawal, settled as a push
-                // rail settles an ending (rule 12): a receipt the split
-                // service records whose history holds the version with no
-                // price is no sale.
+                // A sale before a price tag's withdrawal, or its price's
+                // change, settled as a push rail settles an ending (rule
+                // 12): a receipt the split service records whose history
+                // holds a later version, with no price or another, is no
+                // sale.
                 let withdrawals = self.tag_withdrawals(tag_h, &tag);
                 if !withdrawals.is_empty()
                     && receipts.iter().all(|r| self.after_own_signature(r, &service, &withdrawals) || withdrawals.iter().any(|w| self.act_history(&r.id).contains(w)))
                 {
-                    return no(e, "on a push rail, the split service recorded its receipt after the tag's withdrawal was in its history: no sale, owed back as a payment naming a tag the publication does not count (rule 12)");
+                    return no(e, "on a push rail, the split service recorded its receipt after a later version of the tag, withdrawing it or changing its price, was in its history: no sale, owed back (rule 12)");
                 }
                 Ok(Some(e))
             }
