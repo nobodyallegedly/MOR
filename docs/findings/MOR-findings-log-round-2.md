@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F413. S7i: routes built; its questions (1 November 2026)
+
+**Found by S7i** (pull request 116, `docs/s7i-report.md`): routes built in the core (Money rules 24 to 28): the money of a pool paid in Lightning carried on-chain by a swap service, checked hop by hop, a swap that never pays on shown owing the forward; a collective's claim (F412); `readPublication`; most of Fable's remaining sentences written; the wording pass; 47 new vectors, every earlier one kept. **Not mergeable yet:** eight of Fable's sentences the core does not yet follow (Q-I2, Q-A4, Q-A21 written; Q-I1, Q-I3, Q-I5, Q-A11, Q-A13 waiting); Kišib's escape test red after Q-I7 (the new home's receipt does not reach the reader); Ummia pins the texts' hashes (the suite's). The MOR lead uses F413 for the decisions.
+
+**Q-M2 decided by Nobody, allegedly, 1 November 2026: (b), the door closed** ("B. Seems fine. Core builds the bits, cMIPs make them elegant later"). A claim carries no batch; batches stay on receipts (Money rules 12 and 24 and the suite's 4g say "receipts" where they said "for claims as for receipts"). *Stated cost:* a payee that signs nothing, paid several forwards in one payment, shows them unpaid; such a service pays one payment per forward, or asks for receipts; a cMIP's companion act may carry a batch later.
+
 ## F412. A collective's claim is the collective's (31 October 2026)
 
 **Found by the Dubsar Suite's round 9** (pull request 115, `docs/suite-r9-report.md`, "For the MOR lead", 1): a collective cannot open a claim. The claim's format asks its signer, "who opens it", to be among the creators; a member's act for a collective (rule 58) is signed by the member, so the creator read is the member, never the collective.
