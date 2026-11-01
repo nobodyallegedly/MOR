@@ -7294,7 +7294,7 @@ impl<'a> AgreementsView<'a> {
             let named = c.open.iter().find(|x| of.contains(&x.payment));
             let left_open = match (&o.to, named) {
                 (crate::money::RefundTo::Nobody, Some(_)) => true,
-                (crate::money::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(payer), &of)),
+                (crate::money::RefundTo::Identity(payer), Some(x)) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(payer), &of)) && self.gave_no_address(payer, &of)?,
                 // F208 (decided 10 October 2026): a one-time key is noticed
                 // too, and never blocks a closing for good. The notice is
                 // public, naming the payment (mechanic, the build's: a bare
@@ -7308,6 +7308,16 @@ impl<'a> AgreementsView<'a> {
                 blocking += 1;
             }
         }
+        // A refund owed on a payment to the collective, not ended (rule 11),
+        // binds it like any debt; the broken stretch's money owed back is
+        // judged above, with its exceptions.
+        let refunds = self.refunds_owed_to_payers(&c.collective, &owed)?;
+        if !refunds.is_empty() {
+            return fail(
+                e,
+                &format!("a collective cannot close while it owes a refund on a payment to it that is not ended (rule 11): {} payment(s)", refunds.len()),
+            );
+        }
         if blocking > 0 {
             return fail(
                 e,
@@ -7316,6 +7326,106 @@ impl<'a> AgreementsView<'a> {
         }
         e.complete = true;
         Ok(e)
+    }
+
+    /// Whether a payer owed money back gave no address (rule 93, "Money owed
+    /// back to a payer who gave no address"): no claim of theirs on the
+    /// payment `of` carries a refund rail, their chain declares no vault,
+    /// and none of their acts the verifier holds is a payee pointer. A payer
+    /// whose chain this verifier cannot resolve: unknown for the closing.
+    fn gave_no_address(&self, payer: &Hash, of: &[Hash]) -> R<bool> {
+        use crate::money::{self as fin, Payload as Fin};
+        let res = self.v.resolve(payer);
+        if res.states.is_empty() {
+            return Err(AgreementsError::Missing(*payer));
+        }
+        let refund_rail = of.iter().filter_map(|x| self.v.get(x)).any(|h| {
+            h.act.outside.signer.as_ref() == Some(payer) && matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if c.refund.is_some())
+        });
+        if refund_rail {
+            return Ok(false);
+        }
+        let mut vault = false;
+        for st in &res.states {
+            match fin::vault_in(&self.mirs.money, &st.declarations) {
+                Ok(Some(Some(entries))) => vault = !entries.is_empty(),
+                Ok(Some(None)) => vault = false,
+                _ => {}
+            }
+        }
+        if vault {
+            return Ok(false);
+        }
+        Ok(self.pointers_held(payer)?.is_empty())
+    }
+
+    /// The payments to a collective on which a refund is owed and not ended
+    /// (rule 11; Money rule 17): each a payment whose payee is the
+    /// collective, read as no purchase (money received for nothing, owed
+    /// back), whose refund terms have not lapsed, not repaid in full;
+    /// one entry per payment, its first record held. The payments of
+    /// `owed_back` (the broken stretch's) are judged there and left out.
+    /// Unknown while whether one is a purchase rests on a rail's answer.
+    fn refunds_owed_to_payers(&self, collective: &Hash, owed_back: &[OwedBack]) -> R<Vec<Hash>> {
+        use crate::money::Payload as Fin;
+        let mut seen: Vec<Hash> = owed_back.iter().map(|o| o.payment).collect();
+        for o in owed_back {
+            seen.extend(self.same_payment(&o.payment).into_iter().map(|(h, _)| h));
+        }
+        let mut out = vec![];
+        let mut ids: Vec<Hash> = self
+            .v
+            .held_acts()
+            .filter(|h| h.inside.spec == self.mirs.money)
+            .filter(|h| match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(r)) => &r.payee == collective,
+                Ok(Fin::Claim(c)) => &c.payee == collective,
+                _ => false,
+            })
+            .map(|h| h.id)
+            .collect();
+        ids.sort();
+        for id in ids {
+            if seen.contains(&id) {
+                continue;
+            }
+            let mut names = vec![id];
+            names.extend(self.same_payment(&id).into_iter().map(|(h, _)| h));
+            seen.extend(names.iter().copied());
+            // Repaid in full: nothing owed, whatever the payment was.
+            let (amount, unit, to) = match self.v.get(&id).map(|h| (h, Fin::decode(h.inside.type_, &h.inside.payload))) {
+                Some((_, Ok(Fin::Receipt(r)))) => (r.amount.value, r.amount.unit, crate::money::refund_owed_to(&r)),
+                Some((h, Ok(Fin::Claim(c)))) => {
+                    let Some(signer) = h.act.outside.signer else { continue };
+                    let to = match c.payer(&signer) {
+                        crate::money::Payer::Identity(x) => crate::money::RefundTo::Identity(x),
+                        crate::money::Payer::Key(k) => crate::money::RefundTo::Key(k),
+                    };
+                    (c.amount.value, c.amount.unit, to)
+                }
+                _ => continue,
+            };
+            let repaid = self.refund_repaid(&id, &to, &unit).ok_or(AgreementsError::PaymentUnstated)?;
+            if repaid >= amount {
+                continue;
+            }
+            let named = match self.v.get(&id).map(|h| Fin::decode(h.inside.type_, &h.inside.payload)) {
+                Some(Ok(Fin::Receipt(r))) => r.purchase,
+                Some(Ok(Fin::Claim(c))) => c.purchase,
+                _ => None,
+            };
+            if self.refund_ended(&names, named.as_ref()) {
+                continue;
+            }
+            let Some(pe) = self.purchase(&id)? else { continue };
+            match pe.verdict {
+                PurchaseVerdict::NoPurchase { .. } => {}
+                PurchaseVerdict::Unknown => return Err(AgreementsError::RailUnanswered),
+                _ => continue,
+            }
+            out.push(id);
+        }
+        Ok(out)
     }
 
     /// The act that ended a collective in Agreements, if any (rule 47a): its one

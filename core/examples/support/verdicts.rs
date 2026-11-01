@@ -2024,6 +2024,7 @@ pub fn agreements(out: &mut Out) {
         "A closing needs every voice: the third member's chain signature is not among the acts held.", Facts::default(), ask("closing", &k), json!({ "complete": false }), None);
     out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 60 and 91",
         "Closed: what is signed for the collective afterwards counts for nothing, whoever the rule for Text names signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
+    s7j::closing_refund(out, &family, k, cid);
     out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 60 and 91",
         "What was signed for it before the closing, by the member the rule for Text names, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 

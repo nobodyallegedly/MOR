@@ -319,3 +319,32 @@ fn spec_claims(out: &mut Out) {
         "Ida's grant reaches her application's bakes; the publication is signed with the grant key and cites the grant: her own act for this rule.",
         Facts::default(), ask(&by_key, &iid), json!("claimed"), None);
 }
+
+/// A refund owed on a payment to a collective blocks its closing until it
+/// is repaid or ended (Agreements, "Closing": "owes nothing", a refund owed
+/// on a payment to it among its debts).
+pub fn closing_refund(out: &mut Out, family: &[(mor_core::act::Act, Option<[u8; 32]>)], closing: Hash, cid: Hash) {
+    let mut w = fresh(family);
+    let mut fan = w.genesis("a fan who paid the band for another's song", vec![own_home()], None, None);
+    let mut seller = w.genesis("a seller whose tag the fan named", vec![own_home()], None, None);
+    let tag = lone_offer(&mut w, &mut seller, vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a song".into())))], sat(300), "A song.");
+    let rail = spec("a rail Module, closing refunds");
+    let proof = b"the fan pays the band, naming another seller's tag".to_vec();
+    let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: cid, amount: sat(300), fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+    let paid = { let a = w.everyday_act(&mut fan, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
+    let owing = w.log.clone();
+    let pays = vec![(proof.clone(), b"the fan's payment to the band".to_vec())];
+    let rule = "Agreements, \"Closing (type 20)\": the collective owes nothing, a refund owed on a payment to it among its debts";
+    out.case(&mut w, "a closing of a collective owing a refund on a payment to it: not complete", rule,
+        "The fan paid the band naming another seller's tag: no purchase, money received for nothing, owed back to the fan. The refund is a debt of the band's, not ended: the band cannot close while it owes it.",
+        Facts { rail_valid: vec![(paid, tag)], rail_payments: pays.clone(), ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": false }), None);
+    let mut w2 = fresh(&owing);
+    let back = b"the band pays the fan back".to_vec();
+    let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(cid)), payee: fan.id, amount: sat(300), fulfils: paid, previous: None, forward: None, batch: None, purchase: None });
+    let rec = { let a = w2.everyday_act(&mut fan, mirs().money, 2, r.to_map(), None, None); w2.add(&a) };
+    let mut pays2 = pays.clone();
+    pays2.push((back, b"the refund's payment".to_vec()));
+    out.case(&mut w2, "the same, the fan's own receipt of the refund held: the closing complete", rule,
+        "The fan receipts 300 back, naming the payment refunded: the refund is repaid, and the band owes nothing.",
+        Facts { rail_valid: vec![(paid, tag), (rec, tag)], rail_payments: pays2, ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": true }), None);
+}

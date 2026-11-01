@@ -10226,6 +10226,11 @@ fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
 /// member signs, leaving `open` open; the closing's reading, with
 /// `lapsed` notices stated lapsed.
 fn close_with(lab: &mut Lab, label: Hash, rot1: Hash, open: Vec<agreements::OpenOwed>, lapsed: &[Hash]) -> agreements::ClosingEval {
+    close_with_result(lab, label, rot1, open, lapsed).unwrap()
+}
+
+/// [`close_with`], unknown kept.
+fn close_with_result(lab: &mut Lab, label: Hash, rot1: Hash, open: Vec<agreements::OpenOwed>, lapsed: &[Hash]) -> Result<agreements::ClosingEval, agreements::AgreementsError> {
     let f = lab.founding;
     if lab.view().broken(&label).unwrap().is_some() {
         let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
@@ -10242,7 +10247,7 @@ fn close_with(lab: &mut Lab, label: Hash, rot1: Hash, open: Vec<agreements::Open
     lab.end(CY, &x);
     let mut v = lab.view();
     v.notices_lapsed.extend(lapsed.iter().copied());
-    v.closing(&x).unwrap()
+    v.closing(&x)
 }
 
 /// QG1, decided by Nobody, allegedly, 9 October 2026: money owed back to
@@ -10293,15 +10298,34 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
     let e = close_with(&mut lab, label, rot1, open.clone(), &[]);
     assert!(owed_why(&e), "the deadline has not passed: {:?}", e.why);
-    // Lapsed, as the time reference says: the collective may close.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
-    let n = notice(&mut lab, owed, vec![carla]);
+    // Lapsed, as the time reference says, the payer's chain held and naming
+    // no address: the collective may close.
+    let (mut lab, label, owed, _, rot1, carla_p) = owed_back_lab_with(patron_pays, b"a penny");
+    let carla_id = carla_p.expect("a payer with a chain").id;
+    let n = notice(&mut lab, owed, vec![carla_id]);
     let holder = spec("a holder that outlives the closing");
     let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: Some(holder) }];
     let e = close_with(&mut lab, label, rot1, open, &[n]);
     assert!(!owed_why(&e), "{:?}", e.why);
     assert_eq!(e.closing.open[0].holder, Some(holder), "the holder chosen is shown");
     assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
+    // S7j, Fable's sentence for "a payer who gave no address": a payer whose
+    // chain the verifier cannot resolve leaves the closing unknown.
+    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
+    let n = notice(&mut lab, owed, vec![carla]);
+    let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
+    let e = close_with_result(&mut lab, label, rot1, open, &[n]);
+    assert!(e.is_err(), "the payer's chain not held: unknown for the closing, {e:?}");
+    // A payer whose payee pointer the verifier holds gave an address: the
+    // lapsed notice leaves nothing open, and the debt blocks.
+    let (mut lab, label, owed, _, rot1, carla_p) = owed_back_lab_with(patron_pays, b"a penny");
+    let mut carla_p = carla_p.expect("a payer with a chain");
+    let ptr = mor_core::money::Payload::PayeePointer(mor_core::money::PayeePointer { payee: carla_p.id, version: 1, previous: None, rails: vec![mor_core::money::Rail { module: spec("a rail Module"), address: b"carla's wallet".to_vec() }] });
+    let a = lab.w.everyday_act(&mut carla_p, mirs().money, 0, ptr.to_map(), None, None);
+    lab.w.add(&a);
+    let n = notice(&mut lab, owed, vec![carla_p.id]);
+    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
+    assert!(owed_why(&e), "a payer with a pointer held gave an address: {:?}", e.why);
     // A notice sealed to someone else only reached nobody: it blocks.
     let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
     let n = notice(&mut lab, owed, vec![spec("someone else")]);
