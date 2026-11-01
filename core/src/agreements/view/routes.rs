@@ -15,15 +15,18 @@
 //! business, and how a conversion is priced is the conversion cMIP's: the
 //! core checks no rate (rule 25's "at the rate its agreement defines").
 //!
-//! *Readings of the build* (`docs/s7i-report.md`, "Routes"): "the previous
-//! hop's forward" is its next payee and its amount, both met by the next
-//! hop; the paying hop's claim is signed by the previous hop's payee, the
-//! conversion service that pays on (Money, "Conversion service"), and a
-//! receipt naming a payer names that service; a forward is carried by one
-//! payment of exactly its amount (rule 24), a shorter or split one carrying
-//! nothing on. Where several valid records each carry a forward on, a
-//! receipt is followed before a claim, then the smallest act id (which one
-//! is followed changes no verdict).
+//! *As the texts now say* (Money rule 24): each hop is paid by the
+//! previous hop's payee to the forward's next payee, its received amount
+//! the forward's; a claim carries a forward on only as the paying hop's
+//! own, signed by the previous hop's payee, and a receipt that names a
+//! payer names that service. A forward may be carried in parts: the
+//! records naming it add up to it, one payment counted once (rule 12), and
+//! a stop shows only the shortfall (rule 27). Where more records carry a
+//! forward than it needs, a receipt is taken before a claim, then the
+//! smallest act id. The buyer of a purchase paid through a route is its
+//! first payer, by their claim of the first hop naming the tag the
+//! purchase names ([`AgreementsView::route_buyer`]); a refund owed on it
+//! runs back hop by hop (rule 28, [`AgreementsView::refund_along`]).
 
 use super::*;
 use crate::money::{Amount, Claim, Forward, Payload as Fin, Payer, Receipt};
@@ -240,17 +243,64 @@ impl<'a> AgreementsView<'a> {
         if !next.claim && next.payer.is_some_and(|p| p != prev.payee) {
             return Link::Fails("its payer is not the previous hop's payee, the conversion service that pays on".into());
         }
-        if next.amount != f.amount {
-            return Link::Fails(if next.amount.unit != f.amount.unit {
-                "it received another unit than the previous hop's forward (Money rule 24)".into()
-            } else {
-                format!("it received {} where the previous hop's forward is {} (Money rule 24)", next.amount.value, f.amount.value)
-            });
+        if next.amount.unit != f.amount.unit {
+            return Link::Fails("it received another unit than the previous hop's forward (Money rule 24)".into());
+        }
+        if next.amount.value > f.amount.value || next.amount.value == 0 {
+            return Link::Fails(format!("it received {} where the previous hop's forward is {} (Money rule 24)", next.amount.value, f.amount.value));
         }
         if let Some(why) = self.previous_contested(next) {
             return Link::Fails(why);
         }
         Link::Carries
+    }
+
+    /// The records of the next hop carrying the forward the receipt `prev`
+    /// declares (Money rules 24 and 12): the records naming it that carry
+    /// it on, one per payment (a receipt before a claim of the same
+    /// payment, then the smallest act id), taken in that order while they
+    /// add up to no more than the forward; with the records naming it that
+    /// do not carry it, and why (a part beyond what remains of the forward
+    /// among them), and whether one cannot be told yet.
+    fn carried_parts(&self, prev: &HopRecord) -> (Vec<HopRecord>, u64, Vec<(Hash, String)>, Option<(Hash, String)>) {
+        let Some(f) = prev.forward.clone() else { return (vec![], 0, vec![], None) };
+        let mut carriers: Vec<HopRecord> = vec![];
+        let mut near: Vec<(Hash, String)> = vec![];
+        let mut unknown: Option<(Hash, String)> = None;
+        for h in self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money && h.id != prev.id) {
+            let Some(n) = self.hop_record(&h.id) else { continue };
+            if n.previous != Some(prev.id) {
+                continue;
+            }
+            match self.link(prev, &n) {
+                Link::Carries => carriers.push(n),
+                Link::Unknown(why) => {
+                    if unknown.is_none() {
+                        unknown = Some((n.id, why.clone()));
+                    }
+                    near.push((n.id, why));
+                }
+                Link::Fails(why) => near.push((n.id, why)),
+            }
+        }
+        carriers.sort_by_key(|n| (n.claim, n.id));
+        let mut parts: Vec<HopRecord> = vec![];
+        let mut sum: u64 = 0;
+        for n in carriers {
+            // One payment, one count (rule 12): a record of a payment
+            // already counted adds nothing.
+            if parts.iter().any(|x| x.rail == n.rail && self.same_payment_of((Some(&x.id), &x.proof), (Some(&n.id), &n.proof))) {
+                continue;
+            }
+            if sum + n.amount.value > f.amount.value {
+                near.push((n.id, "the records naming the forward already carry what remains of it: one payment, one count (Money rules 12 and 24)".into()));
+                continue;
+            }
+            sum += n.amount.value;
+            parts.push(n);
+        }
+        near.sort();
+        (parts, sum, near, unknown)
     }
 
     /// The route ending at the held receipt or claim `last`, as its final
@@ -293,7 +343,15 @@ impl<'a> AgreementsView<'a> {
         }
         for w in back.windows(2) {
             match self.link(&w[0], &w[1]) {
-                Link::Carries => {}
+                Link::Carries => {
+                    let (parts, _, near, _) = self.carried_parts(&w[0]);
+                    let counted = parts.iter().any(|x| x.id == w[1].id || (x.rail == w[1].rail && self.same_payment_of((Some(&x.id), &x.proof), (Some(&w[1].id), &w[1].proof))));
+                    if !counted {
+                        let why = near.into_iter().find(|(x, _)| x == &w[1].id).map(|(_, y)| y).unwrap_or_else(|| "it does not carry the previous hop's forward on (Money rule 24)".into());
+                        let agreement = w[0].forward.as_ref().map(|f| f.agreement);
+                        return RouteVerdict::Broken { hops, at: w[1].id, agreement, why };
+                    }
+                }
                 Link::Unknown(why) => return RouteVerdict::Unknown { at: w[1].id, why },
                 Link::Fails(why) => {
                     let agreement = w[0].forward.as_ref().map(|f| f.agreement).or(Some(w[1].fulfils));
@@ -314,7 +372,7 @@ impl<'a> AgreementsView<'a> {
     /// carries a forward on rests on a rail's answer not held, and no
     /// other record carries it.
     pub fn route_from(&self, first: &Hash) -> RouteVerdict {
-        let Some(mut cur) = self.hop_record(first) else {
+        let Some(cur) = self.hop_record(first) else {
             return RouteVerdict::Broken { hops: vec![], at: *first, agreement: None, why: "not a receipt or claim held".into() };
         };
         match self.hop_valid(&cur) {
@@ -323,44 +381,37 @@ impl<'a> AgreementsView<'a> {
             Err((false, why)) => return RouteVerdict::Broken { hops: vec![], at: cur.id, agreement: Some(cur.fulfils), why },
         }
         let mut hops = vec![cur.id];
-        loop {
-            let Some(f) = cur.forward.clone() else {
-                return RouteVerdict::Valid { hops };
-            };
-            let mut carriers: Vec<HopRecord> = vec![];
-            let mut near: Vec<(Hash, String)> = vec![];
-            let mut unknown: Option<(Hash, String)> = None;
-            for h in self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money && h.id != cur.id) {
-                let Some(n) = self.hop_record(&h.id) else { continue };
-                if n.previous != Some(cur.id) || hops.contains(&n.id) {
+        let mut queue = std::collections::VecDeque::from([cur]);
+        let mut stop: Option<(Hash, ForwardOwed, Vec<(Hash, String)>)> = None;
+        while let Some(cur) = queue.pop_front() {
+            let Some(f) = cur.forward.clone() else { continue };
+            let (parts, sum, near, unknown) = self.carried_parts(&cur);
+            if sum < f.amount.value {
+                if let Some((at, why)) = unknown {
+                    return RouteVerdict::Unknown { at, why };
+                }
+                if stop.is_none() {
+                    let owed = ForwardOwed {
+                        declared_by: cur.id,
+                        debtor: cur.payee,
+                        creditor: f.next_payee,
+                        amount: Amount { unit: f.amount.unit, value: f.amount.value - sum },
+                        agreement: f.agreement,
+                    };
+                    stop = Some((cur.id, owed, near));
+                }
+            }
+            for n in parts {
+                if hops.contains(&n.id) {
                     continue;
                 }
-                match self.link(&cur, &n) {
-                    Link::Carries => carriers.push(n),
-                    Link::Unknown(why) => {
-                        if unknown.is_none() {
-                            unknown = Some((n.id, why.clone()));
-                        }
-                        near.push((n.id, why));
-                    }
-                    Link::Fails(why) => near.push((n.id, why)),
-                }
+                hops.push(n.id);
+                queue.push_back(n);
             }
-            carriers.sort_by_key(|n| (n.claim, n.id));
-            match carriers.into_iter().next() {
-                Some(n) => {
-                    hops.push(n.id);
-                    cur = n;
-                }
-                None => {
-                    if let Some((at, why)) = unknown {
-                        return RouteVerdict::Unknown { at, why };
-                    }
-                    near.sort();
-                    let owed = ForwardOwed { declared_by: cur.id, debtor: cur.payee, creditor: f.next_payee, amount: f.amount.clone(), agreement: f.agreement };
-                    return RouteVerdict::Stopped { hops, at: cur.id, owed, near };
-                }
-            }
+        }
+        match stop {
+            Some((at, owed, near)) => RouteVerdict::Stopped { hops, at, owed, near },
+            None => RouteVerdict::Valid { hops },
         }
     }
 
@@ -378,25 +429,162 @@ impl<'a> AgreementsView<'a> {
             Err((false, _)) => return Ok(None),
         }
         let f = r.forward.clone().expect("a forward");
-        let mut carried = false;
-        let mut unknown = false;
-        for h in self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money && h.id != r.id) {
-            let Some(n) = self.hop_record(&h.id) else { continue };
-            if n.previous != Some(r.id) {
-                continue;
-            }
-            match self.link(&r, &n) {
-                Link::Carries => carried = true,
-                Link::Unknown(_) => unknown = true,
-                Link::Fails(_) => {}
-            }
-        }
-        if carried {
+        let (_, sum, _, unknown) = self.carried_parts(&r);
+        if sum >= f.amount.value {
             return Ok(None);
         }
-        if unknown {
+        if unknown.is_some() {
             return Err(AgreementsError::RailUnanswered);
         }
-        Ok(Some(ForwardOwed { declared_by: r.id, debtor: r.payee, creditor: f.next_payee, amount: f.amount, agreement: f.agreement }))
+        Ok(Some(ForwardOwed { declared_by: r.id, debtor: r.payee, creditor: f.next_payee, amount: Amount { unit: f.amount.unit, value: f.amount.value - sum }, agreement: f.agreement }))
+    }
+}
+
+/// Who buys a purchase paid through a route (Money rule 24, its last
+/// sentence; Agreements, "A contest of a purchase"): the route's first
+/// payer, where the route is valid and the first payer's claim of the
+/// first hop names, in key 4, the tag the purchase names in field 5.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RouteBuyer {
+    /// The record names no previous hop: no route, the ordinary rule.
+    NoRoute,
+    /// The route's first payer, by their claim of the first hop naming the
+    /// tag the purchase names; that claim is the buyer's claim for a
+    /// contest (field 0).
+    FirstPayer { payer: Hash, claim: Hash },
+    /// The conversion service paying the last hop bought for its own
+    /// account: no claim of the first payer's names the tag, or the first
+    /// payer committed only a bare key. `astray`: the first payer's claims
+    /// of the first hop naming another tag, the first payer's money gone
+    /// where it did not name (rule 28).
+    OwnAccount { service: Option<Hash>, astray: Vec<Hash> },
+    /// The route ending at the record is stopped or broken: no purchase at
+    /// the seller (rule 27 names the forward owed).
+    Failed(RouteVerdict),
+    /// The route, or the first payer's claim, cannot be told yet: the
+    /// buyer is unknown, and a contest shows nothing yet.
+    Unknown,
+}
+
+/// One hop's refund owed back along a route (Money rule 28): the hop's
+/// payee owes its payer what the hop received, in that hop's unit, under
+/// the agreement the hop's forward names (for the last hop, what it
+/// fulfils); `repaid`, what the hop's payee has paid back toward it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RefundHop {
+    pub record: Hash,
+    pub debtor: Hash,
+    pub creditor: Option<Hash>,
+    pub amount: Amount,
+    pub agreement: Hash,
+    /// `None` where it cannot be told (Money rule 12).
+    pub repaid: Option<u64>,
+}
+
+impl<'a> AgreementsView<'a> {
+    /// The receipt of `claim`'s payment, signed by its payee, that declares
+    /// a forward: `claim` is then a claim of a route's hop that forwards.
+    fn forwarding_receipt_of(&self, claim: &HopRecord) -> Option<HopRecord> {
+        self.same_payment_records(claim).into_iter().filter(|x| !x.claim && x.forward.is_some()).min_by_key(|x| x.id)
+    }
+
+    /// The buyer of the purchase the record `last` is, where `last` is the
+    /// last hop of a route (Money rule 24's last sentence; Agreements, "A
+    /// contest of a purchase"). The first payer is the first hop's payer:
+    /// its receipt's field 2, an identity. Their claim of the first hop,
+    /// standing and valid on its rail, naming in key 4 the tag `last`
+    /// names in field 5 (key 4 for a claim), makes them the buyer; a claim
+    /// of theirs whose rail's answer is pending or not held leaves it
+    /// unknown yet.
+    pub fn route_buyer(&self, last: &Hash) -> RouteBuyer {
+        let Some(r) = self.hop_record(last) else { return RouteBuyer::NoRoute };
+        if r.previous.is_none() {
+            return RouteBuyer::NoRoute;
+        }
+        let hops = match self.route_to(last) {
+            RouteVerdict::Valid { hops } => hops,
+            RouteVerdict::Unknown { .. } => return RouteBuyer::Unknown,
+            v => return RouteBuyer::Failed(v),
+        };
+        let service = r.payer;
+        let Some(first) = hops.first().and_then(|f| self.hop_record(f)) else { return RouteBuyer::Unknown };
+        let Some(payer) = first.payer else { return RouteBuyer::OwnAccount { service, astray: vec![] } };
+        let mut claims: Vec<HopRecord> = self
+            .same_payment_records(&first)
+            .into_iter()
+            .filter(|x| x.claim && x.signer == Some(payer) && x.payee == first.payee && x.previous.is_none())
+            .collect();
+        claims.sort_by_key(|x| x.id);
+        let named = |x: &HopRecord| x.fulfils == r.fulfils;
+        if let Some(c) = claims.iter().find(|x| named(x) && self.rail_valid.contains_key(&x.id)) {
+            return RouteBuyer::FirstPayer { payer, claim: c.id };
+        }
+        if claims.iter().any(|x| named(x) && !self.rail_invalid.contains(&x.id)) {
+            return RouteBuyer::Unknown;
+        }
+        let astray = claims.iter().filter(|x| !named(x) && self.rail_valid.contains_key(&x.id)).map(|x| x.id).collect();
+        RouteBuyer::OwnAccount { service, astray }
+    }
+
+    /// For a payer's claim `claim` (Agreements, "A contest of a purchase"):
+    /// `Some(Some(payer))` where it is the buyer's claim of a purchase paid
+    /// through a route, `Some(None)` where it is a hop of a route that gives
+    /// it no buyer (a carrier's claim, a route stopped or broken, the first
+    /// payer naming another tag), `None` where it is no hop of a route (the
+    /// ordinary rule). `Err` while the route cannot be told yet.
+    pub(super) fn route_claim_buyer(&self, claim: &Hash) -> R<Option<Option<Hash>>> {
+        let Some(c) = self.hop_record(claim).filter(|c| c.claim) else { return Ok(None) };
+        if c.previous.is_some() {
+            // A later hop's claim: the paying service's. Where the route's
+            // first payer is the buyer, the service carries.
+            return match self.route_buyer(claim) {
+                RouteBuyer::NoRoute => Ok(None),
+                RouteBuyer::OwnAccount { .. } => Ok(None),
+                RouteBuyer::FirstPayer { .. } | RouteBuyer::Failed(_) => Ok(Some(None)),
+                RouteBuyer::Unknown => Err(AgreementsError::RailUnanswered),
+            };
+        }
+        let Some(first) = self.forwarding_receipt_of(&c) else { return Ok(None) };
+        let last = match self.route_from(&first.id) {
+            RouteVerdict::Valid { hops } => *hops.last().expect("a hop"),
+            RouteVerdict::Unknown { .. } => return Err(AgreementsError::RailUnanswered),
+            _ => return Ok(Some(None)),
+        };
+        match self.route_buyer(&last) {
+            RouteBuyer::FirstPayer { payer, claim: k } if &k == claim => match self.purchase_unjudged(&last)? {
+                Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }) => Ok(Some(Some(payer))),
+                Some(PurchaseEval { verdict: PurchaseVerdict::Unknown, .. }) => Err(AgreementsError::RailUnanswered),
+                _ => Ok(Some(None)),
+            },
+            RouteBuyer::Unknown => Err(AgreementsError::RailUnanswered),
+            _ => Ok(Some(None)),
+        }
+    }
+
+    /// A refund owed on a purchase paid through a route (Money rule 28):
+    /// owed to the last hop's payer, who owes it on to the hop before, each
+    /// under the agreement that hop's forward named, until it reaches the
+    /// first payer; each hop's debt a refund as Agreements rule 11 gives
+    /// one, in that hop's unit. `last` is the route's last record; empty
+    /// where the route is not valid, or no refund is owed on the purchase
+    /// (it is one, or not yet told). Last hop first.
+    pub fn refund_along(&self, last: &Hash) -> R<Vec<RefundHop>> {
+        let RouteVerdict::Valid { hops } = self.route_to(last) else { return Ok(vec![]) };
+        match self.purchase(last)? {
+            Some(PurchaseEval { verdict: PurchaseVerdict::NoPurchase { .. }, .. }) => {}
+            _ => return Ok(vec![]),
+        }
+        let mut out = vec![];
+        for (i, id) in hops.iter().enumerate().rev() {
+            let Some(h) = self.hop_record(id) else { continue };
+            let agreement = if i + 1 == hops.len() { h.fulfils } else { h.forward.as_ref().map(|f| f.agreement).unwrap_or(h.fulfils) };
+            let creditor = h.payer;
+            let repaid = match creditor {
+                Some(p) => self.refund_repaid(id, &crate::money::RefundTo::Identity(p), &h.amount.unit),
+                None => Some(0),
+            };
+            out.push(RefundHop { record: *id, debtor: h.payee, creditor, amount: h.amount.clone(), agreement, repaid });
+        }
+        Ok(out)
     }
 }

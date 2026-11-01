@@ -53,7 +53,7 @@ Identity, Envelopes and Text; and, of Development, the specification format alon
 - **Settlement receipt.** The common proof of one hop, signed by its receiver, the same for every rail: who paid whom, how much, in what unit, under which agreement.
 - **Payment claim.** A payer's record of a payment, carrying the rail's proof. Evidence on equal footing with a receipt.
 - **Verification answer.** The result of checking a receipt or claim against its rail: valid, invalid, pending or unknown, with the hash of the rail Module whose rule computed it, and the trusted party it relied on, if any.
-- **Batch.** A set of payouts a split service pays with one rail payment, as its publication allows (Agreements).
+- **Batch.** A set of payouts a split service pays with one rail payment, as its publication allows (Agreements), or of forwards a conversion service carries on with one rail payment (rule 12); named on receipts only.
 
 ### Debts and purchases
 
@@ -67,6 +67,7 @@ Identity, Envelopes and Text; and, of Development, the specification format alon
 
 - **Route.** One simple payment carried in several hops, across rails or units, through conversion services. Each receipt names the previous one; where the next payee signs no receipt, the paying hop's claim may also name it.
 - **Conversion service.** An identity that receives on one rail or unit and pays on another, at a rate it states: it signs a receipt as receiver, with a forward, and is the payer of the next hop. A party, not a specification.
+- **First payer.** The payer of a route's first hop; the buyer of a purchase the route pays, where their claim says so (rule 24).
 
 ## Part one: a payment as it runs most of the time
 
@@ -173,7 +174,7 @@ A claim's key 8 MUST verify under the key it names, over the bytes shown, or the
 
 A receipt or claim is verified by running the rule of the rail Module named in its field 0, as its specification gives it, against the rail's proof. The answer is valid, invalid, pending or unknown, with that Module's hash. Anyone can run the same rule independently.
 
-A receipt or claim whose verification answer is not valid counts toward no purchase and no sale: where its answer is invalid, it counts for nothing; where its answer is pending or unknown, or the verifier holds none, whether its payment is a purchase or a sale is unknown. **Judged both ways, as rule 12 judges a pair whose payment is not stated:** an answer that depends on such records is answered taking every one of them as valid, and again taking every one as counting for nothing; it stands where both agree, and is unknown where they differ. A list is judged entry by entry: each entry found both ways stands, and each found one way only is unknown.
+A receipt or claim whose verification answer is not valid counts toward no purchase and no sale: where its answer is invalid, it counts for nothing; where its answer is pending or unknown, or the verifier holds none, whether its payment is a purchase or a sale is unknown. **Judged both ways, as rule 12 judges a pair whose payment is not stated:** an answer that depends on one such record is answered taking it as valid, and again taking it as counting for nothing; it stands where both agree, and is unknown where they differ. **An answer that depends on two or more such records is unknown until they are verified.** Only the records an answer reads count, never every such record the verifier holds; a record read only when another is taken as valid counts too. A list (a vow's sales, the payments a collective owes back) is one answer: with one such record, each entry found both ways stands, and each found one way only is unknown; with two or more, the list is unknown. *Sound rather than complete: with one such record the two readings are every case, so their agreement is a proof; with two or more, the mixed cases go untried, so the verifier waits for the rail's answers.*
 
 #### Rule 9. A trusted party, named
 
@@ -206,7 +207,7 @@ What "the same payment" is, each rail Module says (for instance, on Lightning th
 
 **Where the rail's answer is not held.** Which payment a receipt or claim is, is its rail Module's answer (not the rail's verification answer of rule 8); a verifier that does not hold that answer for both of two records does not know whether they are one payment, whether the proofs' bytes match or not. An answer that depends on one such pair is judged both ways, taking the pair as one payment and as two: where both give the same answer, it stands; where they differ, it is unknown. An answer that depends on two or more such pairs is unknown. Only the pairs an answer depends on count, never every such pair the verifier holds: those whose sameness the rules giving that answer ask, a pair whose sameness is asked only when another such pair is taken as one payment included. A pair is counted between payments, never between records: a record whose payment the rail's answer does not name, and a payment the answer reads, are one pair, however many records that payment has; two such records are one pair. A list (a vow's sales, the payments a collective owes back) is one answer: with one such pair, each entry found both ways stands, and each found one way only is unknown; with two or more, the list is unknown. *Sound rather than complete: an answer that two or more pairs could change only together is unknown, where weighing every combination would cost a verifier time that grows with each pair.*
 
-Records of one payment for one purpose are never shares of it: a hop's receipt and its payer's claims (rule 11, a second claim written once the rail answers included, rule 29), and one push payment's receipts by its several holders (below). Receipts or claims of one payment that name different purposes, payees or forwards MAY share it only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them. **On a route, forwards too:** receipts or claims sharing one payment under a named batch may each name a different previous hop's receipt, one payment carrying several forwards in parts, for claims as for receipts; the money never counts twice (rule 24).
+Records of one payment for one purpose are never shares of it: a hop's receipt and its payer's claims (rule 11, a second claim written once the rail answers included, rule 29), and one push payment's receipts by its several holders (below). Receipts or claims of one payment that name different purposes, payees or forwards MAY share it only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them. **On a route, forwards too:** receipts sharing one payment under a named batch may each name a different previous hop's receipt, one payment carrying several forwards in parts; the money never counts twice (rule 24). A claim carries no batch, so claims of one payment naming different previous receipts count for none of them until the receiver resolves them. *Stated cost: a next payee that signs nothing, paid several forwards in one payment, shows them unpaid; such a service pays one payment per forward, or asks the next payee for receipts.*
 
 **One push payment to several holders** (Agreements rule 12) is one payment: each holder's receipt carries its one rail proof, for the amount that holder received, without a batch. Where they name different claims, the payment's commitment decides (rule 18).
 
@@ -371,13 +372,17 @@ MOR only ever sees a payment and, in Agreements, its split. Tracking plays or vi
 
 *In short: a route is a chain of hops, each shown by its receiver's receipt or by the paying hop's own claim, each naming the hop before it and carrying on exactly what that hop forwarded.*
 
-A route is valid when every receipt and claim in it is valid, each hop names the previous hop's receipt, and each hop's received amount equals the previous hop's forward. **A hop names the previous hop's receipt when a valid receipt or claim of that hop names it: the next payee's receipt (field 6), or the paying hop's own claim (key 10).** **Where a receipt and a claim of one hop name different previous receipts, rule 11 decides:** the payment's commitment, where it binds the previous hop (its rail Module's field 13 holds 2); otherwise the payer's claim, the receiver's contrary receipt shown as a dispute on the receiver. *This is double entry along a route, as rule 11 gives a single hop: where the next payee signs no receipt, the paying hop's claim with a valid rail proof shows the money arrived, and so that the forward was passed on.*
+A route is valid when every receipt and claim in it is valid, each hop names the previous hop's receipt, and each hop is paid by the previous hop's payee to the forward's next payee, its received amount the forward's. **A forward may be carried in parts:** the received amounts of the records naming it add up to it, one payment counted once (rule 12); a part beyond what remains of the forward carries nothing on, and a route ending at a part is valid for what that part carries. **A hop names the previous hop's receipt when a valid receipt or claim of that hop names it: the next payee's receipt (field 6), or the paying hop's own claim (key 10).** **Where a receipt and a claim of one hop name different previous receipts, rule 11 decides:** the payment's commitment, where it binds the previous hop (its rail Module's field 13 holds 2); otherwise the payer's claim, the receiver's contrary receipt shown as a dispute on the receiver. *This is double entry along a route, as rule 11 gives a single hop: where the next payee signs no receipt, the paying hop's claim with a valid rail proof shows the money arrived, and so that the forward was passed on.*
 
-**Rule 12 bounds it:** claims of one payment that name different previous receipts count only as rule 12 lets receipts or claims share a payment: one payment, one count. A named batch lets one payment pass on several forwards in parts, for claims as for receipts; without one, neither counts until the receiver resolves them.
+**Rule 12 bounds it:** records of one payment that name different previous receipts count only as rule 12 lets them share a payment: one payment, one count. A named batch lets one payment's receipts pass on several forwards in parts; claims carry no batch, so claims of one payment naming different previous receipts count for none of them until the receiver resolves them.
+
+**The buyer through a route.** The first payer of a route is the payer of its first hop (its receipt's field 2, or the signer of the claim that shows it); the first payer's claim of that hop names, in key 4, what the route pays for, as the last hop's receipt names it in field 5. Where the route is valid and the two match, the first payer is the buyer of the purchase the last hop is, and that claim is the buyer's claim of it (Agreements, "A contest of a purchase"); where they do not match, or the first payer signed no such claim, the conversion service paying the last hop bought for its own account, and a first payer's claim naming another tag shows their money gone where they did not name (rule 28). While the route or that claim cannot be told yet, the buyer is unknown. *Stated cost: a first payer who paid a converter with no MOR claim, such as a plain invoice paid from a wallet that signs nothing, has no standing, as a payer committing only a bare key has none.*
+
+*Client conformance: a client paying through a route signs the first hop's claim naming, in key 4, the tag the route pays for, so that a buyer paying through an application always has standing.*
 
 #### Rule 25. Only conversion hops forward
 
-Only conversion hops forward. A conversion hop forwards in the next unit, at the rate its agreement defines.
+Only conversion hops forward. A conversion hop forwards in the next hop's unit, at the rate its agreement defines: another unit, or the same unit on another rail (a conversion service receives on one rail or unit and pays on another).
 
 #### Rule 26. Disclosure along the route
 
@@ -385,11 +390,11 @@ Each hop's receipt, or the claim that shows it (rule 24), MUST be disclosed at l
 
 #### Rule 27. A hop that forwarded nothing
 
-When a receipt declares a forward but no valid receipt or claim of the next hop names it, as rule 24 reads them, the route stops at that hop. The forward stays an open obligation of that hop, under the agreement named in the forward.
+When a receipt declares a forward but the valid receipts and claims of the next hop naming it, as rule 24 reads them, do not add up to it, the route stops at that hop. What they leave short, the whole forward where none names it, stays an open obligation of that hop, under the agreement named in the forward. *Stated cost: the core sees a forward only in the conversion service's receipt; a service that signs no receipt declares no forward the core can read, and is shown only as paid. What binds it is the conversion cMIP's order, which the first payer's client holds beside its claim.*
 
 #### Rule 28. Failure named
 
-In every case, the receipts and claims name the exact hop and agreement that failed. What follows (refund, penalty, contest) is Agreements' business.
+In every case, the receipts and claims name the exact hop and agreement that failed. What follows (refund, penalty, contest) is Agreements' business. **A refund owed on a purchase paid through a route is owed to the last hop's payer, who owes it on to the hop before, each under the agreement that hop's forward named, until it reaches the first payer; each hop's debt is a refund owed on that hop's payment, paid as rule 17 says (rule 19 for a bare key), in that hop's unit.** *A shorter way, the seller paying the first payer directly in another unit, is a cMIP's to define.*
 
 ### 8. Theft of the signing key: anchor or bear the loss
 
@@ -672,7 +677,8 @@ The unit specification: a specification of kind 2 (Development, Part three, "A u
 #### Routes across rails
 
 - A cross-rail route through a conversion service, read as one chain of receipts; one hop fails to forward, and the receipts name that hop and its agreement: 2.
-- A conversion service pays on and the next payee signs no receipt: the service's claim naming the previous hop's receipt passes the forward on; two claims of one payment, naming two forwards and no batch, count for neither, and under a named batch count in parts; a receipt and a claim of one hop naming different previous receipts, the payer's claim deciding where the rail binds no previous hop, the receipt shown as a dispute; the claim disclosed to the final creditor: 2.
+- A conversion service pays on and the next payee signs no receipt: the service's claim naming the previous hop's receipt passes the forward on; two claims of one payment, naming two forwards, count for neither, a claim carrying no batch, and two receipts of one payment under a named batch count in parts; a forward paid in two payments adds up, and one paid short leaves only the shortfall owed; a receipt and a claim of one hop naming different previous receipts, the payer's claim deciding where the rail binds no previous hop, the receipt shown as a dispute; the claim disclosed to the final creditor: 2.
+- The buyer through a route: the first payer's claim of the first hop naming the tag the purchase names makes them its buyer, with standing to contest; naming another tag, or none, the service bought for its own account; unknown yet while the route or that claim is not answered; a refund owed back hop by hop, each in its hop's unit: 2.
 
 #### Theft of the signing key
 

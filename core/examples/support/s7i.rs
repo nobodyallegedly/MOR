@@ -4,13 +4,13 @@
 
 use super::*;
 
-fn sorted_hex(xs: &[Hash]) -> Vec<String> {
+pub(super) fn sorted_hex(xs: &[Hash]) -> Vec<String> {
     let mut v: Vec<String> = xs.iter().map(|x| hx(x)).collect();
     v.sort();
     v
 }
 
-fn fresh(log: &[(mor_core::act::Act, Option<[u8; 32]>)]) -> World {
+pub(super) fn fresh(log: &[(mor_core::act::Act, Option<[u8; 32]>)]) -> World {
     let mut w = World::new();
     for (a, _) in log {
         w.add(a);
@@ -116,27 +116,27 @@ pub fn route_json(r: &agreements::RouteVerdict) -> J {
     }
 }
 
-const SAT: &str = "a test unit (regtest satoshi)";
-const CENT: &str = "a test unit (a test stablecoin's cent)";
+pub(super) const SAT: &str = "a test unit (regtest satoshi)";
+pub(super) const CENT: &str = "a test unit (a test stablecoin's cent)";
 
-fn ln() -> Hash {
+pub(super) fn ln() -> Hash {
     spec("a Lightning rail Module (test)")
 }
-fn onchain() -> Hash {
+pub(super) fn onchain() -> Hash {
     spec("an on-chain rail Module (test)")
 }
-fn stable() -> Hash {
+pub(super) fn stable() -> Hash {
     spec("a stablecoin rail Module (test)")
 }
-fn sat(v: u64) -> Amount {
+pub(super) fn sat(v: u64) -> Amount {
     Amount { unit: spec(SAT), value: v }
 }
-fn cent(v: u64) -> Amount {
+pub(super) fn cent(v: u64) -> Amount {
     Amount { unit: spec(CENT), value: v }
 }
 
 /// A payee pointer naming one rail per (Module, address).
-fn pointer_on(w: &mut World, p: &mut Person, rails: &[(Hash, &[u8])]) -> Hash {
+pub(super) fn pointer_on(w: &mut World, p: &mut Person, rails: &[(Hash, &[u8])]) -> Hash {
     let x = Fin::PayeePointer(money::PayeePointer { payee: p.id, version: 1, previous: None, rails: rails.iter().map(|(m, a)| money::Rail { module: *m, address: a.to_vec() }).collect() });
     let a = w.everyday_act(p, mirs().money, 0, x.to_map(), None, None);
     w.add(&a)
@@ -145,7 +145,7 @@ fn pointer_on(w: &mut World, p: &mut Person, rails: &[(Hash, &[u8])]) -> Hash {
 /// A conversion service's lone publication selling a rail swap, and its
 /// price tag (Agreements rule 11; Money rule 18): what a forward's agreement
 /// names, and what the first hop's payment fulfils. (publication, tag)
-fn conversion_offer(w: &mut World, svc: &mut Person, words: &str, most_in: Amount) -> (Hash, Hash) {
+pub(super) fn conversion_offer(w: &mut World, svc: &mut Person, words: &str, most_in: Amount) -> (Hash, Hash) {
     let sold = vec![agreements::Sold::Access(spec("a conversion cMIP (test)"), cbor::encode(&Value::Text(words.into())))];
     let p = lone_publication(w, svc, &mirs(), sold, Some(words));
     let id = svc.id;
@@ -156,24 +156,24 @@ fn conversion_offer(w: &mut World, svc: &mut Person, words: &str, most_in: Amoun
 /// A hop's receipt, signed by its receiver `by`; where it names a previous
 /// hop's receipt, that receipt is also named in `objects`.
 #[allow(clippy::too_many_arguments)]
-fn hop_receipt(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payer: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>, forward: Option<money::Forward>, batch: Option<Hash>) -> Hash {
+pub(super) fn hop_receipt(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payer: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>, forward: Option<money::Forward>, batch: Option<Hash>) -> Hash {
     let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(payer)), payee: by.id, amount, fulfils, previous, forward, batch, purchase: None });
     let a = w.everyday_act(by, mirs().money, 2, r.to_map(), previous.map(|p| vec![Object { chain: p, predecessor: p }]), None);
     w.add(&a)
 }
 
 /// The paying hop's claim of its payment, signed by `by`.
-fn hop_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>) -> Hash {
+pub(super) fn hop_claim(w: &mut World, by: &mut Person, rail: Hash, proof: &[u8], payee: Hash, amount: Amount, fulfils: Hash, previous: Option<Hash>) -> Hash {
     let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee, amount, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous });
     let a = w.everyday_act(by, mirs().money, 3, c.to_map(), previous.map(|p| vec![Object { chain: p, predecessor: p }]), None);
     w.add(&a)
 }
 
-fn fwd(next: Hash, amount: Amount, agreement: Hash) -> Option<money::Forward> {
+pub(super) fn fwd(next: Hash, amount: Amount, agreement: Hash) -> Option<money::Forward> {
     Some(money::Forward { next_payee: next, amount, agreement })
 }
 
-fn ask_route(q: &str, act: &Hash) -> J {
+pub(super) fn ask_route(q: &str, act: &Hash) -> J {
     json!({ "question": q, "act": hx(act) })
 }
 
@@ -297,13 +297,23 @@ fn route_failures(out: &mut Out) {
     let mut w1 = fresh(&base);
     let r2 = hop_receipt(&mut w1, &mut pool, onchain(), &p2, sid, sat(4900), pool_ptr, Some(r1), None, None);
     let l1 = w1.log.clone();
-    out.case(&mut w1, "the next hop receives less than the forward: the route broken at that hop, under the forward's agreement", "Money rules 24 and 28",
-        "The swap's receipt forwards 5000 sat; the pool's receipt of the on-chain hop shows 4900. Each hop's received amount must equal the previous hop's forward.",
-        facts(&[(r1, swap_ptr), (r2, pool_ptr)], &[]), ask_route("route to", &r2), json!({ "route": "broken", "hops": [hx(&r1), hx(&r2)], "at": hx(&r2), "agreement": hx(&swap_pub) }), None);
-    out.case(&mut fresh(&l1), "the same, followed forward: the route stops at the swap's hop, the short receipt shown beside it, the whole forward still owed", "Money rules 24, 27 and 28",
-        "No valid record of the next hop carries the forward on as rule 24 reads them: the forward stays the swap's open obligation.",
+    out.case(&mut w1, "the next hop receives less than the forward: a part of it, the route ending there valid for what it carries", "Money rules 24 and 12: the records naming a forward add up to it",
+        "The swap's receipt forwards 5000 sat; the pool's receipt of the on-chain hop shows 4900, a part of the forward: the route ending at it is valid, carrying 4900.",
+        facts(&[(r1, swap_ptr), (r2, pool_ptr)], &[]), ask_route("route to", &r2), json!({ "route": "valid", "hops": [hx(&r1), hx(&r2)] }), None);
+    out.case(&mut fresh(&l1), "the same, followed forward: the route stops at the swap's hop, owing only the shortfall", "Money rules 24 and 27: the stop shows only the shortfall",
+        "The records naming the forward add up to 4900 of 5000: the swap's open obligation is the 100 sat still owed.",
         facts(&[(r1, swap_ptr), (r2, pool_ptr)], &[]), ask_route("route from", &r1),
-        json!({ "route": "stopped", "hops": [hx(&r1)], "at": hx(&r1), "owed": { "debtor": hx(&sid), "creditor": hx(&pid), "amount": [hx(&spec(SAT)), 5000], "agreement": hx(&swap_pub) }, "near": [hx(&r2)] }), None);
+        json!({ "route": "stopped", "hops": [hx(&r1), hx(&r2)], "at": hx(&r1), "owed": { "debtor": hx(&sid), "creditor": hx(&pid), "amount": [hx(&spec(SAT)), 100], "agreement": hx(&swap_pub) }, "near": [] }), None);
+    // The rest in a second payment: the forward carried in two parts.
+    let mut w1b = fresh(&l1);
+    let p2b = b"a second on-chain payment to the pool, the rest".to_vec();
+    let r2b = hop_receipt(&mut w1b, &mut pool, onchain(), &p2b, sid, sat(100), pool_ptr, Some(r1), None, None);
+    let mut pays_b = pays.clone();
+    pays_b.push((p2b.clone(), b"on-chain output f2".to_vec()));
+    out.case(&mut w1b, "the same, the swap paying the 100 sat rest in a second payment: the forward carried in two parts, the route valid", "Money rules 24 and 12: the records naming a forward add up to it, one payment counted once",
+        "Two receipts of two payments name the swap's receipt: 4900 and 100 sat add up to the forward of 5000.",
+        Facts { rail_valid: vec![(r1, swap_ptr), (r2, pool_ptr), (r2b, pool_ptr)], rail_payments: pays_b, ..Default::default() }, ask_route("route from", &r1),
+        json!({ "route": "valid", "hops": [hx(&r1), hx(&r2.min(r2b)), hx(&r2.max(r2b))] }), None);
 
     // The next hop's rail answer not held.
     let mut w2 = fresh(&base);
@@ -498,10 +508,10 @@ fn buyer_routes(out: &mut Out) {
     // The first service forwards short.
     let mut w4 = fresh(&after_b1);
     let b2s = hop_receipt(&mut w4, &mut c2, stable(), &q2, c1id, cent(94), tag2, Some(b1), fwd(sid, sat(900), pub2), None);
-    out.case(&mut w4, "the first service forwards 94 cents where it declared 95: the route stops at the first hop, the short receipt beside it", "Money rules 24, 27 and 28",
-        "The second service's receipt names the first hop's but shows 94 cents: the first forward is not carried on as rule 24 reads it.",
+    out.case(&mut w4, "the first service forwards 94 cents where it declared 95: the route stops at the first hop, owing the one cent short", "Money rules 24 and 27: the stop shows only the shortfall",
+        "The second service's receipt names the first hop's and shows 94 cents, a part of the forward: the first service owes the one cent still short. (The route stops at the first forward not wholly carried; the second service's own open forward is read with \"forward owed\".)",
         f2(&[(b1, c1_ptr), (b2s, c2_ptr)]), ask_route("route from", &b1),
-        json!({ "route": "stopped", "hops": [hx(&b1)], "at": hx(&b1), "owed": { "debtor": hx(&c1id), "creditor": hx(&c2id), "amount": [hx(&spec(CENT)), 95], "agreement": hx(&pub1) }, "near": [hx(&b2s)] }), None);
+        json!({ "route": "stopped", "hops": [hx(&b1), hx(&b2s)], "at": hx(&b1), "owed": { "debtor": hx(&c1id), "creditor": hx(&c2id), "amount": [hx(&spec(CENT)), 1], "agreement": hx(&pub1) }, "near": [] }), None);
     // A hop paid to another than the forward's next payee.
     let mut w5 = fresh(&after_b1);
     let b2x = hop_receipt(&mut w5, &mut sw, stable(), &q2, c1id, cent(95), tags, Some(b1), None, None);

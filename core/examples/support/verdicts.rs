@@ -37,6 +37,9 @@ mod scenario9;
 #[path = "s7i.rs"]
 mod s7i;
 
+#[path = "s7j.rs"]
+mod s7j;
+
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
     Mirs {
@@ -655,6 +658,16 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             let mut v = view(w);
             facts.apply_view(&mut v);
             s7i::route_json(&v.route_to(&h("act")))
+        }
+        "route buyer" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7j::route_buyer_json(&v.route_buyer(&h("act")))
+        }
+        "refund along" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            s7j::refund_along_json(v.refund_along(&h("act")))
         }
         "route from" => {
             let mut v = view(w);
@@ -1415,9 +1428,9 @@ pub fn money(out: &mut Out) {
         w7.add(a);
     }
     out.case(&mut w7, "a vow's sale whose buyer's claim has no verification answer: unknown, not pending", "Money rules 8 and 10; Agreements rule 13; Envelopes, \"Vows\"",
-        "A receipt or claim whose verification answer is not valid is no purchase and no sale; where the answer is pending or not held, whether the payment is a sale is unknown. No rail answer is stated for the club's receipt or the fan's claim, though the rail says they are one payment.",
+        "A receipt or claim whose verification answer is not valid is no purchase and no sale; where the answer is pending or not held, whether the payment is a sale is unknown. No rail answer is stated for the club's receipt or the fan's claim, though the rail says they are one payment: the vow's sales depend on two records not yet verified, so the list is unknown until they are (Money rule 8: an answer depending on two or more such records is unknown; a list is one answer).",
         Facts { rail_payments: stated.clone(), ..Default::default() }, json!({ "question": "vow", "vow": hx(&name) }),
-        json!({ "sales": [{ "act": hx(&c1), "buyer": hx(&fan.id), "state": "unknown" }], "unsigned": [], "unknown": [] }), None);
+        json!("unknown"), None);
     // A refund repaid: the fan's own receipt of money back, naming the fan's claim of the payment.
     let mut w5 = World::new();
     for (a, _) in &base {
@@ -1647,6 +1660,7 @@ pub fn money(out: &mut Out) {
     s7g_money(out);
     s7g_development_rails(out);
     s7i::money(out);
+    s7j::money(out);
 }
 
 pub fn agreements(out: &mut Out) {

@@ -875,3 +875,61 @@ async fn a_home_takes_a_collectives_keyless_genesis() {
         assert_eq!(e.code, mor_relay::wire::code::INVALID, "{name}: {e:?}");
     }
 }
+
+/// Identity rule 48 at a self-hosted home (F299, Q-I7): a homeless rotation
+/// of the identity that runs this home, where its own rotation already
+/// stands at that position, is not held as its rotation and not refused
+/// outright: it is kept as evidence and served, so a reader of this home
+/// meets the escape and asks the new homes it names for their receipts.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_self_hosted_home_keeps_an_escape_as_evidence() {
+    use mor_relay::node::OperatorSetup;
+    use mor_relay::operator::Keys;
+    use mor_relay::wire::Limits;
+    let (g, me) = genesis(
+        "self-hosted",
+        vec![Home {
+            operator: None,
+            hint: "https://self.example".into(),
+        }],
+        None,
+        None,
+    );
+    let keys = Keys {
+        identity: me.id,
+        binding: me.id,
+        signing_secret: sha256(b"self-hosted/sign/0"),
+        chain_key: None,
+    };
+    assert_eq!(keys.signing_key().key, me.sign.public().to_vec());
+    let own = Running::start_as(
+        Role::Home,
+        Policy::Open,
+        Limits::default(),
+        OperatorSetup::Existing {
+            keys,
+            chain: vec![g.encode()],
+        },
+    )
+    .await;
+    let fresh = Running::start(Role::Home, Policy::Open).await;
+    // The owner's rotation, held at its own home on its own signature.
+    let (mine, _) = rotation(&me, Rot::default());
+    let put = own.client.put_act(&mine.encode()).await.unwrap();
+    assert!(put.receipt.is_none(), "a self-hosted home signs no receipts");
+    // The escape: homeless, at the same position, to a new home.
+    let (escape, _) = rotation(
+        &me,
+        Rot {
+            homes: Some(vec![fresh.home()]),
+            homeless: true,
+            ..Default::default()
+        },
+    );
+    let put = own.client.put_act(&escape.encode()).await.unwrap();
+    assert!(put.receipt.is_none());
+    assert!(put.objection.is_none(), "its operator is the identity itself");
+    let rec = own.client.identity(&me.id, None).await.unwrap();
+    assert_eq!(rec.chain, vec![g.encode(), mine.encode()], "not held as its rotation");
+    assert!(rec.evidence.contains(&escape.encode()), "kept as evidence");
+}

@@ -198,9 +198,11 @@ impl<'a> AgreementsView<'a> {
 
     fn vow_answered(&self, name: &Hash) -> R<VowEval> {
         match self.answered(|| self.vow_unjudged(name)) {
-            (a, None) => a,
-            (Ok(a), Some(Ok(b))) => Ok(Self::vow_both(a, b)),
-            (Err(e), Some(Err(f))) if e == f => Err(e),
+            Answered::One(a) => a,
+            Answered::Both(Ok(a), Ok(b)) => Ok(Self::vow_both(a, b)),
+            Answered::Both(Err(e), Err(f)) if e == f => Err(e),
+            // Fable's bound (Money rule 8): a vow's sales are one list, and
+            // two or more records not yet verified leave it unknown.
             _ => Err(AgreementsError::RailUnanswered),
         }
     }
@@ -377,6 +379,12 @@ impl<'a> AgreementsView<'a> {
         }
         if h.inside.spec == self.mirs.money {
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return Ok(None) };
+            // A purchase paid through a route: its buyer is the route's
+            // first payer, by their claim of the first hop naming the tag
+            // the purchase names (Money rule 24; "A contest of a purchase").
+            if let Some(b) = self.route_claim_buyer(act)? {
+                return Ok(b);
+            }
             if !self.rail_counts(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return Ok(None);
             }
@@ -409,9 +417,9 @@ impl<'a> AgreementsView<'a> {
     /// is not stated (Money rule 12).
     pub fn purchase_contests(&self, purchase: &Hash) -> R<Vec<Hash>> {
         let buyer = match self.two_ways(|| match self.answered(|| self.purchase_buyer(purchase)) {
-            (b, None) => b,
-            (Ok(a), Some(Ok(b))) if a == b => Ok(a),
-            (Err(e), Some(Err(f))) if e == f => Err(e),
+            Answered::One(b) => b,
+            Answered::Both(Ok(a), Ok(b)) if a == b => Ok(a),
+            Answered::Both(Err(e), Err(f)) if e == f => Err(e),
             _ => Err(AgreementsError::RailUnanswered),
         }) {
             Ways::One(b) => b?,

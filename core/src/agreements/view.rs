@@ -55,7 +55,7 @@ mod owning;
 pub use owning::{TransferEval, WorkOwners};
 
 mod routes;
-pub use routes::{ForwardOwed, HopRecord, RouteVerdict};
+pub use routes::{ForwardOwed, HopRecord, RefundHop, RouteBuyer, RouteVerdict};
 /// The vow grammar (F237, F240): a vow's chain, the offers naming it, and
 /// each sale's state.
 mod vows;
@@ -143,9 +143,9 @@ pub struct AgreementsView<'a> {
     /// The one pair the answer being judged takes as one payment, on its
     /// second reading ([`Self::judged`]); every other pair is two.
     assumed: std::cell::RefCell<Option<(Payment, Payment)>>,
-    /// Set when an answer read a receipt or claim whose verification answer
-    /// is neither valid nor invalid: pending, or not held ([`Self::answered`]).
-    unanswered_read: std::cell::Cell<bool>,
+    /// The receipts and claims an answer read whose verification answer is
+    /// neither valid nor invalid: pending, or not held ([`Self::answered`]).
+    unanswered_read: std::cell::RefCell<BTreeSet<Hash>>,
     /// Set while an answer is read a second time, as if every such record's
     /// answer were valid ([`Self::answered`]).
     as_if_answered: std::cell::Cell<bool>,
@@ -6306,6 +6306,19 @@ pub(crate) enum Ways<T> {
     Unknown,
 }
 
+/// An answer read fail-closed and, where it read receipts or claims whose
+/// verification answer is pending or not held, again as if they were valid
+/// ([`AgreementsView::answered`], Money rule 8).
+pub(crate) enum Answered<T> {
+    /// No such record read: the answer.
+    One(T),
+    /// One such record: fail-closed, then as if valid.
+    Both(T, T),
+    /// Two or more: unknown until they are verified, whatever the two
+    /// readings say (both given, so the caller can show what is unknown).
+    Many(T, T),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Payment {
     /// An empty proof: no payment.
@@ -8332,46 +8345,67 @@ impl<'a> AgreementsView<'a> {
         if self.rail_invalid.contains(id) {
             return false;
         }
-        self.unanswered_read.set(true);
+        // Only a receipt or claim has a verification answer (Money rule 8):
+        // only those count toward Fable's bound.
+        if self.v.get(id).is_some_and(|h| h.inside.spec == self.mirs.money && (h.inside.type_ == crate::money::types::RECEIPT || h.inside.type_ == crate::money::types::CLAIM)) {
+            self.unanswered_read.borrow_mut().insert(*id);
+        }
         self.as_if_answered.get()
     }
 
     /// `f` read fail-closed, a record whose verification answer is not
-    /// valid counting toward no purchase and no sale; and, where it read a
-    /// record whose answer is pending or not held, `f` read again as if that
-    /// answer were valid. Where the two differ, the answer is unknown until
-    /// the rail's answer is given; the caller says how unknown is shown.
+    /// valid counting toward no purchase and no sale; and, where it read
+    /// one record whose answer is pending or not held, `f` read again as if
+    /// that answer were valid ([`Answered::Both`]): where the two differ, the
+    /// answer is unknown until the rail's answer is given. **Where it read
+    /// two or more such records, it is unknown until they are verified**
+    /// ([`Answered::Many`], Money rule 8, Fable's bound: with one record the
+    /// two readings are every case, so their agreement is a proof; with two
+    /// or more the mixed cases go untried). A record first read on the
+    /// second reading counts too. The caller says how unknown is shown.
     /// Inside a second reading, `f`'s answer alone.
-    pub(super) fn answered<T>(&self, f: impl Fn() -> T) -> (T, Option<T>) {
+    pub(super) fn answered<T>(&self, f: impl Fn() -> T) -> Answered<T> {
         if self.as_if_answered.get() {
-            return (f(), None);
+            return Answered::One(f());
         }
-        let outer = self.unanswered_read.replace(false);
+        let outer = self.unanswered_read.take();
         let closed = f();
-        if !self.unanswered_read.get() {
-            self.unanswered_read.set(outer);
-            return (closed, None);
+        let read = self.unanswered_read.take();
+        if read.is_empty() {
+            *self.unanswered_read.borrow_mut() = outer;
+            return Answered::One(closed);
         }
         self.as_if_answered.set(true);
         let open = f();
         self.as_if_answered.set(false);
-        self.unanswered_read.set(true);
-        (closed, Some(open))
+        let mut all = self.unanswered_read.take();
+        all.extend(read);
+        let many = all.len() >= 2;
+        let mut restored = outer;
+        restored.extend(all);
+        *self.unanswered_read.borrow_mut() = restored;
+        if many {
+            Answered::Many(closed, open)
+        } else {
+            Answered::Both(closed, open)
+        }
     }
 
-    /// [`Self::answered`] for a list: each entry found both ways stands;
-    /// each found one way only is given back marked (`mark`). Unknown
-    /// ([`AgreementsError::RailUnanswered`]) where one reading fails and the
-    /// other does not.
+    /// [`Self::answered`] for a list: with one record not yet verified,
+    /// each entry found both ways stands, and each found one way only is
+    /// given back marked (`mark`). Unknown ([`AgreementsError::RailUnanswered`])
+    /// where one reading fails and the other does not, and where the list
+    /// depends on two or more such records (a list is one answer, Money
+    /// rule 8).
     pub(super) fn answered_list<T: PartialEq + Clone>(&self, f: impl Fn() -> R<Vec<T>>, mark: impl Fn(T) -> T) -> R<Vec<T>> {
         match self.answered(f) {
-            (a, None) => a,
-            (Ok(a), Some(Ok(b))) => {
+            Answered::One(a) => a,
+            Answered::Both(Ok(a), Ok(b)) => {
                 let mut out: Vec<T> = a.iter().map(|x| if b.contains(x) { x.clone() } else { mark(x.clone()) }).collect();
                 out.extend(b.iter().filter(|x| !a.contains(x)).map(|x| mark(x.clone())));
                 Ok(out)
             }
-            (Err(e), Some(Err(g))) if e == g => Err(e),
+            Answered::Both(Err(e), Err(g)) if e == g => Err(e),
             _ => Err(AgreementsError::RailUnanswered),
         }
     }
@@ -8417,7 +8451,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         self.v
             .held_acts()
-            .filter(|h| h.inside.spec == self.mirs.money && answered(&h.id) && self.payers_claim(h))
+            .filter(|h| h.inside.spec == self.mirs.money && self.payers_claim(h) && answered(&h.id))
             .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if self.same_payment_of((Some(&h.id), &c.proof), rec)))
             .map(|h| h.id)
             .collect()
@@ -9307,14 +9341,20 @@ impl<'a> AgreementsView<'a> {
     /// ([`PurchaseVerdict::Unknown`]; Money rules 8 and 10).
     pub(super) fn purchase_unjudged(&self, id: &Hash) -> R<Option<PurchaseEval>> {
         match self.answered(|| self.purchase_read(id)) {
-            (closed, None) => closed,
-            (closed, Some(open)) => {
+            Answered::One(closed) => closed,
+            Answered::Both(closed, open) => {
                 let (closed, open) = (closed?, open?);
                 if closed == open {
                     return Ok(closed);
                 }
                 Ok(closed.or(open).map(|e| PurchaseEval { verdict: PurchaseVerdict::Unknown, ..e }))
             }
+            // Fable's bound (Money rule 8): two or more records not yet
+            // verified, unknown until they are.
+            Answered::Many(closed, open) => match closed.ok().flatten().or(open.ok().flatten()) {
+                Some(e) => Ok(Some(PurchaseEval { verdict: PurchaseVerdict::Unknown, ..e })),
+                None => Err(AgreementsError::RailUnanswered),
+            },
         }
     }
 
