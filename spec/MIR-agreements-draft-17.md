@@ -630,7 +630,7 @@ A sale through a publication is divided once, by its split service: **partners f
 
 **Any agreement may be a party to another.**
 
-- **Any agreement may be a party of any agreement**, consenting by its own rule. An ownership agreement signs a publication where every party of its version in force signs it, a party that is itself an agreement signing the same way (a deal); a collective signs through a member, under its rule for Agreements (rule 60).
+- **Any agreement may be a party of any agreement**, consenting by its own rule. An ownership agreement signs a publication where every party of its version in force signs it, a party that is itself an agreement signing the same way (a deal): it signs where every party of its version in force at that consent signs; a consent so given stands for every later version (below), and a version no longer in force gives none. *Without a clock, "in force at that consent" is read from the acts: a consent its parties gave under an earlier version stands where the version in force holds their signature acts in its history.* A collective signs through a member, under its rule for Agreements (rule 60).
 - **As a party it holds what the agreement gives it**: an owner's share, a partner's share.
 - **It is named by its line**: its founding version, never a single later version. Every later version of the inner agreement carries what it signed outward, and cannot escape it by re-versioning. *What happens in that envelope is separate from the publishing deal.*
 - **No loops.** An agreement is never a party of itself, nor an owner of itself, directly or through others: terms making one so are refused; a verifier that cannot follow every layer of it answers unknown.
@@ -1761,7 +1761,7 @@ Which powers a clone needs, from its changes alone:
 
    *A key grammar's holdings name only parties, and in most collectives every member holds a share of the chain key, so a seat could never pass without the keys; a plan left in field 16 for someone no longer a party would make the clone invalid. The thresholds stay as the members chose them; the rotation declaring the clone re-deals the keys (rule 83). Where this leaves a case undecided, a verifier answers unknown rather than guessing.*
 
-4. **The owners' matters**: where a change is an owners' matter of a stake (rule 95) whose holders' rule is by share (field 30), and that rule is how its holders consent, the clone needs that stake's holders' rule, `[5, stake]`, beside the members' powers above, its mark naming it with the holders whose signatures meet it, so that a false claim sinks the clone (rule 46). Where the stake's holders' rule is every holder, its holders sign as rule 45 asks, outside the mark. *No declared tier is needed: the owners' matters are counted among a stake's holders, not by moving a field among the members' powers.*
+4. **The owners' matters**: where a change is an owners' matter of a stake (rule 95) whose holders' rule is by share (field 30), and that rule is how its holders consent, the clone needs that stake's holders' rule, `[5, stake]`, beside the members' powers above, its mark naming it with the holders whose signatures meet it, so that a false claim sinks the clone (rule 46). Where the stake's holders' rule is every holder, the mark names every holder, and each signs as rule 45 asks. *No declared tier is needed: the owners' matters are counted among a stake's holders, not by moving a field among the members' powers.*
 
 A clone needing several powers comes into force only when each is met, all at once or not at all.
 

@@ -3643,6 +3643,61 @@ impl Verifier {
         to_js(&route_out(&r))
     }
 
+    /// Who buys the purchase a route's last record is (Money rule 24;
+    /// Agreements, "A contest of a purchase"): `{ buyer, payer, claim,
+    /// service, astray, route }`, `buyer` one of "no route" (the record
+    /// names no previous hop: the ordinary rule), "the first payer" (with
+    /// `payer` and `claim`, their claim of the first hop naming the tag:
+    /// the claim a contest names), "the service, for its own account"
+    /// (with `service`, and `astray`: the first payer's claims naming
+    /// another tag), "none" (the route stopped or broken: no purchase at
+    /// the seller, with `route`), or "unknown" (not yet: a contest shows
+    /// nothing yet).
+    #[wasm_bindgen(js_name = moneyRouteBuyer)]
+    pub fn money_route_buyer(&self, specs: JsValue, last: &str) -> R<JsValue> {
+        use agreements::RouteBuyer as B;
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            buyer: &'static str,
+            payer: Option<String>,
+            claim: Option<String>,
+            service: Option<String>,
+            astray: Vec<String>,
+            route: Option<RouteOut>,
+        }
+        let none = |buyer| Out { buyer, payer: None, claim: None, service: None, astray: vec![], route: None };
+        to_js(&match view.route_buyer(&unhex(last)?) {
+            B::NoRoute => none("no route"),
+            B::FirstPayer { payer, claim } => Out { payer: Some(hx(&payer)), claim: Some(hx(&claim)), ..none("the first payer") },
+            B::OwnAccount { service, astray } => Out { service: service.map(|x| hx(&x)), astray: astray.iter().map(hx).collect(), ..none("the service, for its own account") },
+            B::Failed(r) => Out { route: Some(route_out(&r)), ..none("none") },
+            B::Unknown => none("unknown"),
+        })
+    }
+
+    /// A refund owed on a purchase paid through a route, back hop by hop
+    /// (Money rule 28), last hop first: `[{ record, debtor, creditor,
+    /// amount, agreement, repaid }]`, `repaid` null where it cannot be
+    /// told; empty where the route is not valid or no refund is owed.
+    #[wasm_bindgen(js_name = moneyRefundAlong)]
+    pub fn money_refund_along(&self, specs: JsValue, last: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            record: String,
+            debtor: String,
+            creditor: Option<String>,
+            amount: AmountOut,
+            agreement: String,
+            repaid: Option<u64>,
+        }
+        let v = view.refund_along(&unhex(last)?).map_err(lerr)?;
+        to_js(&v.iter().map(|x| Out { record: hx(&x.record), debtor: hx(&x.debtor), creditor: x.creditor.map(|c| hx(&c)), amount: AmountOut { unit: hx(&x.amount.unit), value: x.amount.value }, agreement: hx(&x.agreement), repaid: x.repaid }).collect::<Vec<_>>())
+    }
+
     /// The forward a receipt declares that no valid record of the next hop
     /// carries on (Money rule 27): that hop's open obligation, under the
     /// agreement the forward names, `{ debtor, creditor, amount, agreement }`;

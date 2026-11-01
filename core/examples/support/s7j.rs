@@ -228,6 +228,7 @@ fn route_refund(out: &mut Out) {
 pub fn agreements(out: &mut Out) {
     price_change(out);
     spec_claims(out);
+    inner_deal_consent(out);
 }
 
 /// A price tag's price changed on a push rail, settled as a withdrawal is
@@ -347,4 +348,68 @@ pub fn closing_refund(out: &mut Out, family: &[(mor_core::act::Act, Option<[u8; 
     out.case(&mut w2, "the same, the fan's own receipt of the refund held: the closing complete", rule,
         "The fan receipts 300 back, naming the payment refunded: the refund is repaid, and the band owes nothing.",
         Facts { rail_valid: vec![(paid, tag), (rec, tag)], rail_payments: pays2, ..Default::default() }, json!({ "question": "closing", "act": hx(&closing) }), json!({ "complete": true }), None);
+}
+
+/// An inner deal consents by its version in force (Agreements, "Any
+/// agreement may be a party to another"): a consent an earlier version's
+/// parties gave stands only where the version in force carries it.
+pub fn inner_deal_consent(out: &mut Out) {
+    let mark_all = |ids: &[Hash]| {
+        let mut s = ids.to_vec();
+        s.sort();
+        Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers: s }])
+    };
+    let mut w = World::new();
+    let mut jo = w.genesis("jo, of an inner deal re-versioned", vec![own_home()], None, None);
+    let mut kai = w.genesis("kai, who leaves the inner deal", vec![own_home()], None, None);
+    let lu = w.genesis("lu, who takes kai's place", vec![own_home()], None, None);
+    let mut mo = w.genesis("mo, of the outer deal", vec![own_home()], None, None);
+    let mut t0 = deal(&[jo.id, kai.id], None);
+    t0.text = "Jo and Kai's inner deal, before Lu.".into();
+    let inner = ag_act(&mut w, &mut jo, agreements::types::TERMS, t0.to_map(), None);
+    sign(&mut w, &mut jo, &inner);
+    sign(&mut w, &mut kai, &inner);
+    let mut t = deal(&[inner, mo.id], None);
+    t.text = "An outer deal naming Jo and Kai's deal, signed before the inner deal changes.".into();
+    let outer = ag_act(&mut w, &mut mo, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut mo, &outer);
+    let base0 = w.log.clone();
+    let (jo0, kai0, lu0) = (jo.clone(), kai.clone(), lu.clone());
+    sign(&mut w, &mut jo, &outer);
+    sign(&mut w, &mut kai, &outer);
+    let base = w.log.clone();
+    let clone_inner = |w: &mut World, jo: &mut Person, kai: &mut Person, lu: &mut Person, acks: Option<Vec<Hash>>, text: &str| {
+        let mut c = t0.clone();
+        c.parent = Some(inner);
+        c.parties = vec![jo.id, lu.id];
+        c.text = text.into();
+        c.field4 = mark_all(&[jo.id, kai.id]);
+        let v2 = { let a = w.everyday_act(jo, mirs().agreements, agreements::types::TERMS, c.to_map(), obj(inner), acks); w.add(&a) };
+        sign(w, jo, &v2);
+        sign(w, kai, &v2);
+        sign(w, lu, &v2);
+        v2
+    };
+    let rule = "Agreements rule 15: an inner deal signs by its version in force at that consent; a consent so given stands for every later version";
+    out.case(&mut fresh(&base), "a deal one of whose parties is a deal, signed by every party of that deal's version in force at the time: exists", rule,
+        "Jo and Kai, the inner deal's parties while its founding is in force, sign the outer deal.",
+        Facts::default(), ask_route("agreement exists", &outer), json!("exists"), None);
+    // The inner deal re-versioned first, Lu in Kai's place; Jo and Kai sign
+    // the outer deal only after: a version no longer in force gives none.
+    let mut w2 = fresh(&base0);
+    let (mut j2, mut k2, mut l2) = (jo0.clone(), kai0.clone(), lu0.clone());
+    clone_inner(&mut w2, &mut j2, &mut k2, &mut l2, None, "The inner deal, Lu in Kai's place, before any consent to the outer deal.");
+    sign(&mut w2, &mut j2, &outer);
+    sign(&mut w2, &mut k2, &outer);
+    out.case(&mut w2, "an inner deal already re-versioned, Lu in Kai's place, the outer deal then signed by Jo and Kai: it does not exist", rule,
+        "When Jo and Kai sign, the inner deal's version in force names Jo and Lu: the founding, no longer in force, gives no consent, and nothing in the version in force carries theirs.",
+        Facts::default(), ask_route("agreement exists", &outer), json!("does not exist"), None);
+    // Signed under the founding, then re-versioned by parties who signed
+    // after their consent: the version in force carries it.
+    let mut w3 = fresh(&base);
+    let (mut j3, mut k3, mut l3) = (jo.clone(), kai.clone(), lu.clone());
+    clone_inner(&mut w3, &mut j3, &mut k3, &mut l3, None, "The inner deal, Lu in Kai's place, after its consent to the outer deal.");
+    out.case(&mut w3, "the outer deal signed by Jo and Kai under the inner deal's founding, the inner deal then re-versioned: the consent stands, the outer deal exists", rule,
+        "Jo and Kai signed the new version after their consent, so the version in force carries it in its history: a consent so given stands for every later version.",
+        Facts::default(), ask_route("agreement exists", &outer), json!("exists"), None);
 }

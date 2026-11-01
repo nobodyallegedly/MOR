@@ -61,18 +61,64 @@ impl<'a> AgreementsView<'a> {
             return false;
         }
         path.push(*party);
-        let signed = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok()).is_some_and(|versions| {
+        // Rule 15: the version in force gives a new consent; a consent an
+        // earlier version gave stands where the version in force carries
+        // it in its history (each signature act held there), and a version
+        // no longer in force gives none otherwise.
+        let signed = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok().map(|l| (v, l))).is_some_and(|(in_force, versions)| {
+            let carried = std::cell::OnceCell::new();
             versions.iter().any(|(id, t)| {
                 if t.is_collective() || t.parties.is_empty() || self.agreement_refused(id) {
                     return false;
                 }
-                let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
-                t.parties.iter().all(|p| own.contains(p) || self.line_signed(act, p, depth + 1, path))
+                let sigs = self.valid_sigs(act, &t.parties);
+                if id != &in_force {
+                    let history = carried.get_or_init(|| {
+                        // The version in force and the signature acts
+                        // making it: what the inner deal knew when it moved.
+                        let mut h = self.cited_history(&in_force);
+                        for x in self.v.held_acts().filter(|x| self.is_agreements(x, types::SIGNATURE) && decode_signature(&x.inside).ok() == Some(in_force)) {
+                            h.extend(self.cited_history(&x.id));
+                        }
+                        h
+                    });
+                    if !sigs.iter().all(|(_, s)| history.contains(s)) {
+                        return false;
+                    }
+                }
+                let own: Vec<Hash> = sigs.into_iter().map(|(p, _)| p).collect();
+                t.parties.iter().all(|p| own.contains(p) || (id == &in_force && self.line_signed(act, p, depth + 1, path)))
             })
         });
         path.pop();
         self.consenting.borrow_mut().remove(party);
         signed
+    }
+
+    /// What `act` holds through its citations, followed back as far as
+    /// held: its `prev`, `objects`, `acks` and `refs` (Money rule 17's
+    /// "holds"), as rule 15 reads a consent a version carries.
+    fn cited_history(&self, act: &Hash) -> BTreeSet<Hash> {
+        let mut seen = BTreeSet::new();
+        let mut todo = vec![*act];
+        while let Some(a) = todo.pop() {
+            let Some(x) = self.v.get(&a) else { continue };
+            let cited = x
+                .inside
+                .prev
+                .iter()
+                .flatten()
+                .copied()
+                .chain(x.inside.objects.iter().flatten().flat_map(|o| [o.chain, o.predecessor]))
+                .chain(x.inside.acks.iter().flatten().copied())
+                .chain(x.inside.refs.iter().flatten().filter_map(|r| r.act()));
+            for p in cited.collect::<Vec<_>>() {
+                if seen.insert(p) {
+                    todo.push(p);
+                }
+            }
+        }
+        seen
     }
 
     /// The layer this verifier cannot follow behind `party`, which has not

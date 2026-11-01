@@ -1096,10 +1096,9 @@ impl<'a> AgreementsView<'a> {
         for e in mark {
             // A stake's holders' rule, `[5, stake]` (rule 64.4; F307): its
             // signers are that stake's holders at the line, counted there.
-            if let Power::Holders(stake) = e.power {
-                if !matches!(parent.holders_rule(stake).0, HoldersRule::Share(_)) {
-                    return Ok(Err("the mark names a stake's holders' rule, and that stake's holders' rule is every holder (rule 64.4, F307)".into()));
-                }
+            // Where the stake's holders' rule is every holder, the mark
+            // names every holder, checked at the line (rule 64.4).
+            if let Power::Holders(_) = e.power {
                 continue;
             }
             let base = power_base(parent, &e.power);
@@ -3463,18 +3462,37 @@ impl<'a> AgreementsView<'a> {
             }
             return self.plan_at(col, at, &lineage, party, signers, &by, own);
         }
+        // Rule 64.4: where a change is an owners' matter of a stake whose
+        // declared holders' rule is every holder, the mark names
+        // `[5, stake]` with every holder: one shape for every verifier.
+        if self.founding_of(&col.id).is_some() {
+            for p in super::tiers::owners_powers(parent, clone) {
+                let Power::Holders(i) = p else { continue };
+                if parent.holders_rule(i).0 == HoldersRule::Every && !mark.iter().any(|e| e.power == p) {
+                    return Ok(CloneState::Invalid("an owners' matter of a stake whose holders' rule is every holder: its mark names that rule with every holder (rule 64.4)".into()));
+                }
+            }
+        }
         let mut missing = false;
         for e in mark {
             // Agreements draft 14 (rules 65, 94; F307, F308, F311): a stake's
             // holders' rule, and the rules by share or "all of", counted with
             // the roster at this line.
             if let Power::Holders(stake) = e.power {
-                let HoldersRule::Share(need) = parent.holders_rule(stake).0 else {
-                    return Ok(CloneState::Invalid("the mark names a stake's holders' rule, and that rule is every holder (rule 64.4)".into()));
-                };
                 let roster = self.roster_at(col, at, &pid, stake)?;
-                if let Err(w) = holders_met(&roster, &e.signers, need) {
-                    return Ok(CloneState::Invalid(w));
+                match parent.holders_rule(stake).0 {
+                    HoldersRule::Share(need) => {
+                        if let Err(w) = holders_met(&roster, &e.signers, need) {
+                            return Ok(CloneState::Invalid(w));
+                        }
+                    }
+                    // Every holder: the mark names every holder at the
+                    // line, and each signs (rule 64.4).
+                    HoldersRule::Every => {
+                        if roster.iter().any(|(h, n)| *n > 0 && !e.signers.contains(h)) {
+                            return Ok(CloneState::Invalid("the stake's holders' rule is every holder, and the mark does not name every holder at the line (rule 64.4)".into()));
+                        }
+                    }
                 }
                 // A holder who is no member may vote by its proxy (rule 97;
                 // new in draft 14, F327): members vote in person.

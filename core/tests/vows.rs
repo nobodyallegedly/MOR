@@ -227,7 +227,13 @@ fn a_sale_is_pending_then_confirmed_by_what_the_buyer_acknowledges() {
     let mut v = view_with(&c.w, &c.claims[..1]);
     v.rail_invalid.insert(ack);
     assert_eq!(v.vow(&name).unwrap().sales[0].state, SaleState::Pending, "a claim the rail answered invalid acknowledges nothing");
-    let e = view_with(&c.w, &c.claims[..1]).vow(&name).unwrap();
+    // Two claims whose answers are not held (the acknowledging one and the
+    // unrelated one): Fable's bound (Money rule 8), the vow unknown until
+    // they are verified.
+    assert!(view_with(&c.w, &c.claims[..1]).vow(&name).is_err(), "two claims not yet verified: the vow is unknown");
+    // One claim whose answer is not held: judged both ways, the sale's
+    // state unknown.
+    let e = view_with(&c.w, &[c.claims[0], unrelated]).vow(&name).unwrap();
     assert_eq!(e.sales[0].state, SaleState::Unknown, "a claim whose answer is not held leaves the sale's state unknown");
 }
 
@@ -459,7 +465,7 @@ fn draft_11_q2_a_vows_reference_to_another_vow_confirms_nothing() {
     let v2 = Vow { words: "A concert in the hall, 13 December".into(), cmip: None };
     let a = c.w.everyday_act(&mut c.club, mirs().envelopes, mor_core::envelopes::types::VOW, v2.to_map(), Some(vec![Object { chain: name, predecessor: name }]), None);
     let later = c.w.add(&a);
-    assert!(view(&c.w).vow(&name).unwrap().versions.contains(&later));
+    assert!(view_with(&c.w, &c.claims).vow(&name).unwrap().versions.contains(&later));
 }
 
 /// A checker for a test cMIP: a proof is the bytes `b"delivered"`.

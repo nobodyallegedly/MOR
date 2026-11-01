@@ -486,6 +486,30 @@ fn verdict_vectors() {
                     .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
                 "route to" => route_json(&with_facts(&v, &mirs, facts).route_to(&h(&ask["act"]))),
                 "route from" => route_json(&with_facts(&v, &mirs, facts).route_from(&h(&ask["act"]))),
+                "route buyer" => {
+                    use mor_core::agreements::RouteBuyer as B;
+                    match with_facts(&v, &mirs, facts).route_buyer(&h(&ask["act"])) {
+                        B::NoRoute => json!("no route"),
+                        B::FirstPayer { payer, claim } => json!({ "buyer": "the first payer", "payer": hex::encode(payer), "claim": hex::encode(claim) }),
+                        B::OwnAccount { service, astray } => json!({ "buyer": "the service, for its own account", "service": service.map(hex::encode), "astray": astray.iter().map(hex::encode).collect::<Vec<_>>() }),
+                        B::Failed(r) => json!({ "buyer": "none: no purchase at the seller", "route": route_json(&r) }),
+                        B::Unknown => json!("unknown"),
+                    }
+                }
+                "refund along" => match with_facts(&v, &mirs, facts).refund_along(&h(&ask["act"])) {
+                    Ok(x) => J::Array(
+                        x.iter()
+                            .map(|r| json!({ "record": hex::encode(r.record), "debtor": hex::encode(r.debtor), "creditor": r.creditor.map(hex::encode), "amount": [hex::encode(r.amount.unit), r.amount.value], "agreement": hex::encode(r.agreement), "repaid": r.repaid }))
+                            .collect(),
+                    ),
+                    Err(_) => json!("unknown"),
+                },
+                "specification claim, reading Agreements" => json!(match with_facts(&v, &mirs, facts).specification_claim(&h(&ask["act"]), &h(&ask["creator"])) {
+                    mor_core::chain::SpecClaim::Claimed => "claimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                    mor_core::chain::SpecClaim::Unknown => "unknown",
+                }),
                 "work owners" => match with_facts(&v, &mirs, facts).work_owners(&h(&ask["work"])) {
                     Ok(o) => {
                         let mut c: Vec<String> = o.claims.iter().map(hex::encode).collect();

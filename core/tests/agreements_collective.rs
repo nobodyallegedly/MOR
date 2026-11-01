@@ -15039,3 +15039,74 @@ fn s7g_a_split_that_does_not_sum_matches_no_receipt() {
     numbered_split(&mut l, r2, whole, 2, vec![]);
     assert!(!unsplit(&l, r2), "a split summing exactly matches it");
 }
+
+/// S7j, Fable's sentence for rule 64.4 (`[5, stake]` where every holder
+/// signs): where a stake's declared holders' rule is every holder, a clone
+/// that is an owners' matter of it (here an issuance in it, rule 96) names
+/// `[5, stake]` in its mark with every holder, each signing; its holders
+/// signing outside the mark is not that shape, and a mark leaving a holder
+/// out is false. Before, the core refused `[5, stake]` under every holder.
+#[test]
+fn s7j_an_every_holder_rule_is_named_in_the_mark_with_every_holder() {
+    let (mut lab, mut dana, k) = owned_label_with(100_000, false, None);
+    let ids = lab.ids();
+    let did = dana.id;
+    let kst = lab.view().terms(&k).unwrap().stakes.clone();
+    let mut t = lab.clone_terms(&k, vec![], &|t| {
+        t.stakes = kst.clone();
+        t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Every, waived: true }]);
+    });
+    let needs = lab.view().powers_needed(&t).unwrap();
+    t.field4 = Field4::Mark(needs.iter().map(|p| MarkEntry { power: p.clone(), signers: sorted(ids.clone()) }).collect());
+    let y = lab.propose(ANA, &t);
+    let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &y)).collect();
+    s.push(sign(&mut lab.w, &mut dana, &y));
+    let r = lab.record(0, Some((y, s)), &[], vec![], y);
+    assert_eq!(puts(&lab, &r), Some(y), "{:?}", clone_state(&lab, &r));
+    let yt = lab.view().terms(&y).unwrap();
+    let (st, hr) = (yt.stakes.clone(), yt.holders_rules.clone());
+    let eve = lab.w.genesis("eve, issued a share", vec![own_home()], None, None).id;
+    // An issuance in the stake: Eve takes a tenth from Ana's part.
+    let f = |t: &mut Terms| {
+        let mut x = st.clone().unwrap();
+        let a = x[0].holders.iter().position(|(w, _)| *w == Who::Id(ids[ANA])).unwrap();
+        x[0].holders[a].1 -= 100_000;
+        x[0].holders.push((Who::Id(eve), 100_000));
+        t.stakes = Some(x);
+        t.holders_rules = hr.clone();
+        t.issues_under = Some(agreements::IssuesUnder::Waived);
+    };
+    let probe = lab.clone_terms(&y, vec![], &f);
+    let needs = lab.view().powers_needed(&probe).unwrap();
+    assert!(needs.contains(&Power::Holders(0)), "the every-holder rule is a power the mark names: {needs:?}");
+    let mut every: Vec<Hash> = ids.clone();
+    every.push(did);
+    let mark = |holders: &[Hash], with: bool| {
+        Field4::Mark(
+            needs
+                .iter()
+                .filter(|p| with || !matches!(p, Power::Holders(_)))
+                .map(|p| MarkEntry { power: p.clone(), signers: if matches!(p, Power::Holders(_)) { sorted(holders.to_vec()) } else { sorted(ids.clone()) } })
+                .collect(),
+        )
+    };
+    let mark_problem = |st: &CloneState| matches!(st, CloneState::Invalid(w) if w.contains("rule 64.4"));
+    let mut run = |lab: &mut Lab, dana: &mut Person, m: Field4| {
+        let mut t = lab.clone_terms(&y, vec![], &f);
+        t.field4 = m;
+        let x = lab.propose(ANA, &t);
+        let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+        s.push(sign(&mut lab.w, dana, &x));
+        let r = lab.record(0, Some((x, s)), &[], vec![], x);
+        clone_state(lab, &r)
+    };
+    // 1. Naming every holder, every holder signing: no fault in the mark.
+    let st1 = run(&mut lab, &mut dana, mark(&every, true));
+    assert!(!mark_problem(&st1), "{st1:?}");
+    // 2. The holders sign, the mark not naming their rule: invalid.
+    let st2 = run(&mut lab, &mut dana, mark(&every, false));
+    assert!(matches!(st2, CloneState::Invalid(_)), "holders signing outside the mark: {st2:?}");
+    // 3. The mark naming the rule without Dana: invalid.
+    let st3 = run(&mut lab, &mut dana, mark(&ids, true));
+    assert!(mark_problem(&st3), "a mark leaving a holder out: {st3:?}");
+}
