@@ -454,7 +454,7 @@ A refund owed on a payment is owed to the payer it names, an anonymous payer's f
 
 The obligation stays open and visible until claimed and discharged. A seller who refuses a valid claim is visibly in the wrong.
 
-**The vault's limit protects refunds too.** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rule 17, with rule 3's limit). A payer that declares no vault has no vault rule (Money rule 3). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; the vault exists partly to protect large debts.* A refund owed to a bare key (Money rule 19) has no vault, so the limit does not reach it (Money rule 17).
+**The vault's limit protects refunds too.** A refund paid to the refund rail a payer's claim names counts as repaid only up to the payer's vault limit for its unit; above it, only once it reaches the payer's vault (Money rule 17, with rule 3's limit). A payer that declares no vault has no vault rule (Money rule 3). *Why: a thief holding the payer's signing key during a theft window could sign a claim naming their own refund rail; the vault exists partly to protect large debts.*
 
 The publication's terms MAY say how long a refund stays claimable, on its time reference. The core sets no lapse. **A refund past the terms the buyer accepted by paying is ended**: the obligation closes there, the owners keep the money, and it does not block a closing. The terms are a fixed point on the time reference (publication field 8). Terms written in bad faith are not refused: they stay public, for anyone to judge.
 
@@ -480,7 +480,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 **A payment is a purchase under a publication when its receipt or claim names, as what it fulfils** (the receipt's field 5, the claim's field 4), **a price tag the publication counts**: one signed by its split service or by the party it designates, naming it (Money rule 18). *A wallet that reads only Money can pay it, and its purchase is valid: the tag names the publication, and a verifier reading Agreements reads the rest.*
 
-**A payment naming a tag the publication does not count** (a tag on it signed by anyone else, or a version carrying no price) **is no purchase: money received for nothing, owed back to the payer as a refund** by whoever received it (Money rule 17: to the payer named, or nothing where none is, a payment naming no payer being a gift). A payment naming the publication itself, and no tag, is **a tip through the publication**: no purchase, paid to the split service its field 3 names, divided by its split plan as a sale is, owed back to nobody. *A Money-only wallet cannot read field 3: it tips through a tag, or not at all.* *A tip to a work goes through the publication where it was found, which pays its partners and gives the owners their line.*
+**A payment naming a tag the publication does not count** (a tag on it signed by anyone else, or a version carrying no price) **is no purchase: money received for nothing, owed back to the payer as a refund** by whoever received it (Money rule 17: to the payer named, or nothing where none is, a payment naming no payer being a gift, Money rule 11). A payment naming the publication itself, and no tag, is **a tip through the publication**: no purchase, paid to the split service its field 3 names, divided by its split plan as a sale is, nothing owed back. *A Money-only wallet cannot read field 3: it tips through a tag, or not at all.* *A tip to a work goes through the publication where it was found, which pays its partners and gives the owners their line.*
 
 *Stated here alone: Money carries field 9 and the payment commitment, and pays the refund (Money rule 17); whether a payment is a purchase, and what is owed when it is not, is this rule's.*
 
@@ -510,7 +510,7 @@ Until a verifier has the rail's answer, receipts of one payment naming different
 
 *Client conformance:* a split service whose publication has ended issues no payment request. So on rails where the payee's side issues each request (invoices), a payment to an ended publication cannot happen.
 
-*Stated cost: a wallet that reads only Money can pay a publication's tag and make a valid purchase, but cannot itself tell whether the publication still counts: a payment racing its ending is owed back to it, and it can receive the refund (Money rule 19).*
+*Stated cost: a wallet that reads only Money can pay a publication's tag and make a valid purchase, but cannot itself tell whether the publication still counts: a payment racing its ending is owed back to it, and it can receive the refund as the payer named, a fresh identity included (Money rule 17).*
 
 *Client conformance, a strong SHOULD:* **before paying, a buyer's client finds the publication and its tag and verifies that each is truly the latest in its chain**, fetching the latest version from the seller's homes or relays, **and warns where what it shows is outdated.**
 
@@ -772,7 +772,7 @@ One no claim acknowledges is evidence of nothing. A claim may acknowledge severa
 
 **The payer is the one the payment's own commitment names** (payment cMIP: an identity, or nobody): a claim of the same rail payment whose rail proof carries the commitment recomputed from it, its signer as payer. **It is never the payer a receipt names**, which the split service writes. Where the commitment names nobody, or the rail binds no payer, nothing can be acknowledged, and the share is one nobody fills. *Stated cost: a payment whose payer signed no claim the verifier holds has no buyer, and acknowledges nothing (rule 13).* **For a purchase paid through a route whose buyer is the first payer (Money rule 24), the payer is that first payer, by their claims of the first hop, for every kind of evidence (Money rule 20).**
 
-*Stated cost: a payer who names no payer cannot reward a relay or a service; one who wishes to stay unknown and still reward them names a fresh identity (Money rule 11).*
+*Stated cost: a payment naming no payer rewards no relay or service; one who wishes to stay unknown and still reward them names a fresh identity (Money rule 11).*
 
 **No service is paid on its own record alone**:
 
@@ -2525,12 +2525,9 @@ A collective may also set the amount aside with a named holder that outlives the
 
 **A broken collective cannot fork or close before it is fixed.** A fork or closing made during the broken stretch counts for nothing, then and after the rollback (rule 91). And while a collective is broken, no fork or closing counts, whatever line it names, the last good link before the broken act included.
 
-Money owed back from the broken stretch is a debt for a closing's "owes nothing": the collective cannot close until those payers are settled. Two kinds are the exception, and the closing names them as left open:
+Money owed back from the broken stretch is a debt for a closing's "owes nothing": the collective cannot close until those payers are settled. One kind is the exception, and the closing names it as left open: money owed back to a payer who gave no address and let a notice's deadline pass. A gift owes nothing back (Money rule 11).
 
-- money owed back to nobody;
-- money owed back to a payer who gave no address and let a notice's deadline pass.
-
-The same two exceptions, with the same tests ("a payer who gave no address", a notice, a verifier that cannot resolve the payer's chain answering unknown), apply to a refund owed on a payment to the collective ("Closing (type 20)": owes nothing).
+The same exception, with the same tests ("a payer who gave no address", a notice, a verifier that cannot resolve the payer's chain answering unknown), apply to a refund owed on a payment to the collective ("Closing (type 20)": owes nothing).
 
 *An emergency has emergency rules: all that happened under it is settled by the rules before the emergency is lifted. A closing on an old line was a quiet way out of the refunds owed for the stretch.*
 
@@ -3136,7 +3133,7 @@ A version that does not count sells nothing, and a price tag naming it buys noth
 
 **A service sold under a cMIP's terms.** *Paying for a service is an agreement.* A publication selling access under a cMIP (`[ 2, [ cmip, terms ] ]`) carries that cMIP's terms as its own. The access form is the form of every proven delivery, any delivery whose proof a verifier checks from data alone (rule 11); the verifier checks the proof, never the cMIP's say-so. Its deadlines are points on the publication's time reference (field 6). What a default owes (a refund of the price, to the payer the payment committed to) is judged under them, by a client that holds that cMIP. Its refund terms (field 8) end a refund unpaid past their point.
 
-A pooled anchoring service sells so, a proven delivery: its tiers, prices or price scheme, and deadlines are its cMIP's terms, and its tickets and batches its acts under it. Money carries the refund's payment and shows it repaid (Money rules 19 and 17). *Money says how money moves and that it has moved; Agreements say what must happen, in return or in consequence.*
+A pooled anchoring service sells so, a proven delivery: its tiers, prices or price scheme, and deadlines are its cMIP's terms, and its tickets and batches its acts under it. Money carries the refund's payment and shows it repaid (Money rule 17). *Money says how money moves and that it has moved; Agreements say what must happen, in return or in consequence.*
 
 **Refund terms (terms field 17, a publication's field 8).** `refund-terms = { 0 => [ 0, point: any ] }`: the refund is claimable until this point on the time reference. Terms or a publication carrying it name a time reference (rule 33). Past the point, the refund is ended (rule 11).
 

@@ -87,10 +87,39 @@
    - *Options:* **(a)** the core reads the voices of the power making the change; it needs the power that made the act, which the core does not yet name for a transfer; **(b)** the texts say "no member", as the core does.
    - *Lean:* (a) for a transfer whose power the founding names; I did not guess at it.
 
+3. **The gift sentence reads the receipt, and the payer is the commitment's.** Money rule 11 (in Fable's and the decision's words) makes a payment a gift where it "names no payer, in its receipt and by no claim". Agreements rule 22 says the payer is never the one a receipt names, but the one the commitment names. Money rule 24 reads the first payer from "its receipt's field 2".
+   - *Plain words:* a split service writing a payer into its receipt could seem to turn a gift into a refund it owes.
+   - *Core, as built:* the payer is the receipt's field 2, or the signer of a payer's claim of the payment. On a rail binding the payer, a claim whose signer is not the committed payer is refused by the rail.
+   - *Lean:* one sentence in rule 11: "where the rail binds the payer, the payment's commitment says which". The words were decided, so I did not change them.
+4. **Whether a rail binds the payer is not stated anywhere a verifier can read.** Development field 13 lists payee, purpose and previous hop; "a proof binding the purpose binds the payer" is said only in Money's words list, in italics. Push rails have no request to commit a payer before paying.
+   - *Lean:* say in Money's words list, in normal text, that binding purpose binds the payer the commitment names. On a push rail, a claim makes its signer the payer as before, the stated cost being that anyone holding a public proof can claim it.
+   - This is older than this session; the bare key had the same reliance.
+5. **Shipping the fresh identity's genesis with its claim** is said in Money's reasoning (italic) only.
+   - *Lean:* a client conformance line: a payer's client paying as a fresh identity delivers its genesis with its claim, so the seller can check it and reach it for a refund.
+
 ## The stranger's reading
 
-PENDING
+A subagent read only the eight texts and the diff of every sentence changed since the last reading.
+
+- **Verdicts:** five of the decisions agree once the points below are fixed (the fresh identity, the gift, rule 19 retired, key 8 reserved, rule 95 item 3). Two agree with the tensions in questions 3 and 4.
+- **Its points, fixed in the texts:**
+  - leftovers of the old model: the MICS's broken-collective bullet (a refund to a bare key; money owed to nobody); Identity's example of a signature inside a payload (key 8); Agreements' bare-key vault sentence; rule 93's "two kinds" of exception, now one; and the journalist scenario's refund by "a signature with the key", now the fresh identity's claim;
+  - citations of the retired rule 19, now rule 17 (Agreements rule 12's stated cost, the anchoring paragraph, the suite's scenario 9);
+  - "owed back to nobody" for a tip, now "nothing owed back" (Agreements rule 12; the suite's checklist and 4k);
+  - Money rule 14: an absent payer is a gift, and a key delivery may go to a bare key either way;
+  - rule 17's sentence now ends before its list ("It is paid:");
+  - rule 22's stated cost: "a payment naming no payer rewards no relay or service";
+  - Identity's tag sentence carries no history.
+- **Its points, left as questions:** 1, and 3 to 5 below.
 
 ## Checks
 
-PENDING
+- `cargo test --workspace`, with the cMIP patch applied locally: green for core, relay, harness, the WebAssembly crate and the cMIPs' libraries. The suite's own tests in `cmips/*/tests` and `modules/` need the changes listed above. Without the patch, the core and relay build and pass alone.
+- `python3 core/vectors/check.py`: all 276 agree, 98 verdict cases judged.
+- The generator gives the same bytes again.
+- `scripts/c-box/make-c-box.sh`: 8 texts, 12 vector files.
+- No finding number or review label is in the texts.
+- **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`):
+  - `MICS_HASH = 'c1ced60231d44db71aa59585c9a145b2ddbbedfbecf39eb23b7b2148bce1b9b2'`
+  - `SUITE_HASH = '586d2f1df0f82f92517d869efbfc7464f976c23fb1df2cbcb2deb6bcc4d19b2e'`
+- GitHub: not read by me. It will be red until the suite applies the cMIP patch, which it needs anyway to build the binding.

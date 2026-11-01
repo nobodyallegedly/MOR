@@ -221,7 +221,7 @@ A receiver's identity is always public. The visibility of its incoming flows is 
 
 #### Rule 14. A sender is never required
 
-The core never requires a sender's identity. A receipt's payer field MAY be absent; delivery then goes to a key the payer supplies (Envelopes: a bare device or application key). A payer's claim, when made public, is the payer's own choice of disclosure.
+The core never requires a sender's identity. A receipt's payer field MAY be absent, a gift (rule 11); an anonymous payer names a fresh identity instead. Either way, a key delivery may go to a key the payer supplies (Envelopes: a bare device or application key). A payer's claim, when made public, is the payer's own choice of disclosure.
 
 ### 4. Debts
 
@@ -283,7 +283,7 @@ An obligation with no such act, such as one naming no agreement act (field 4 abs
 
 *There is no clock to say when an act was made; what it cites says what it saw. The pointer is judged by the act of the one it pays, never by the act of the one who pays or drafts: a debt re-signed to name a pointer the payee's own act never saw, such as a thief's newer one, names a version that does not count for it. A payment to an older flow of the payee's still counts; without a clock nothing can tell whether it came after the payee left that wallet, so a payee who abandons a wallet keeps it able to receive or moves what arrives there, a stated cost.*
 
-**Money owed back follows this rule exactly** (Agreements rule 93). A refund owed on a payment is owed to the payer it names, and paid to its payee pointer, or, where the payer's claim of the payment names a refund rail (key 7), there; a fresh identity with no pointer names one so:
+**Money owed back follows this rule exactly** (Agreements rule 93). A refund owed on a payment is owed to the payer it names, and paid to its payee pointer, or, where the payer's claim of the payment names a refund rail (key 7), there; a fresh identity with no pointer names one so. It is paid:
 
 - to the refund rail the payer's own claim on that payment names (key 7), where it names one, **counting as repaid only up to the payer's vault limit for its unit, as rule 3 reads it; above it, only once it reaches the payer's vault**;
 - otherwise, to the pointer this rule selects from the payer's own acts on that payment (its claims for it, its acts acknowledging a receipt or claim of it), or to the payer's pointer in force where they hold none.
