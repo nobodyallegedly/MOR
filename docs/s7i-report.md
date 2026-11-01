@@ -202,7 +202,7 @@ Each in plain words, then precisely, with options, my lean and the cost.
 3. **R3. A silent conversion service.**
    - *Plain words:* the core sees a forward only in the service's receipt, so a service that signs nothing is shown only as paid.
    - *Lean:* leave it to the conversion cMIP's order, as written, and say it as a stated cost in Money rule 27. One italic sentence, not yet written.
-4. **R4. Readings built into rule 24.**
+4. **R4. Readings built into rule 24** (and the stranger's O1 to O10 above).
    - *Plain words:* "the previous hop's forward" is read as its next payee and its amount; the paying hop is the previous hop's payee.
    - *Lean:* one clause in rule 24: "each hop paid by the previous hop's payee to the forward's next payee, its received amount the forward's".
 5. **How unknown spreads, with several unverified records.**
@@ -227,7 +227,36 @@ Each in plain words, then precisely, with options, my lean and the cost.
 
 ## The stranger's reading
 
-*(below, once the subagent's reading arrives)*
+A subagent was limited to the eight texts, the diff of every sentence written here, and the 47 new cases told as situations, each with the core's verdict. It read no code.
+
+**The verdicts:** of the 47 cases, 33 agree with the texts, 14 the texts leave silent, and none differs outright.
+- The claim, readPublication's subject, Q-I7, the private key and most route cases agree.
+- Silent, all but two in routes:
+  - who pays and who receives a hop: the payer, the forward's next payee, the "paying hop" of a claim (R4);
+  - a short forward: whether rule 27's "names it" includes the amount (R1);
+  - "broken" and "stopped" are not defined words, and a broken result names its hop but the texts don't say how (R4);
+  - which record of a route names a debt (R4);
+  - a receipt and a claim both answered valid on a rail binding the previous hop: the texts say it cannot happen, so the core's "neither" is its own (R4);
+  - the rotation built on a voided homeless rotation, said only in the re-homed-without-audit paragraph: **fixed** (rule 49 now says it).
+
+**Its points on my sentences, and what I did:**
+- *Fixed:*
+  - the MICS's "the home rule it declared" became "the homeless rotation declared";
+  - rule 82, "no other trigger", the seat successors still signing;
+  - "owes nothing": the refund, not the payment, not ended;
+  - Q-A21: the pointer is read from the acts held, the vault from the chain, as the closing is judged after the deadline;
+  - rule 10: "after the transfer's chain signature";
+  - Q-I0: invalid "while it stands", judged anew with the objection.
+- *Kept, with the reason:* the citation of rule 57, which does say "where a holder is a deal, the act is public" (I now cite those words). Q-A17 and the italic sentences are commentary as Fable asked.
+- *Its point on Money rule 8's new sentence is right, and serious.* Two pending records of one payment naming two forwards give "neither carries" both when all are valid and when all count for nothing, yet with only one valid the route is valid. So "every one together" can answer where the truth is unknown. This strengthens question 5: my lean is now firmly (b), Fable's bound. Until it is decided, the core's answer and the text agree, and both can be wrong in that case.
+
+**Points on the route rules, added to R4** (each a reading of the build):
+- **O1:** is a Lightning-satoshi to on-chain-satoshi swap a conversion hop? Rule 25 says a conversion forwards "in the next unit", and Money's "one name per unit" says such a hop is no conversion. The build lets any receipt with a forward forward, whatever the units.
+- **O6:** the suite's 4b stops a route "once the order's deadline has passed"; rule 27 has no deadline. The deadline is the conversion cMIP's order, and the core shows a forward unpaid at once.
+- **O7:** on a rail binding no purpose, the service's claim of the last hop decides which debt it pays (rule 11), not the debtor.
+- **O8:** a batch names nothing the texts define for a conversion service.
+- **O9:** a hop shown only by a claim can never forward, since claims carry no forward.
+- **O10:** the rate is never checked by the core (rule 25: the agreement's).
 
 ## The releases
 

@@ -560,7 +560,7 @@ A home of the old set that sees a homeless rotation for an identity it serves MU
 
 #### Rule 49. One objection voids it
 
-A single valid objection from a live home of the old set voids a homeless rotation.
+A single valid objection from a live home of the old set voids a homeless rotation, and with it every rotation built on it, void too, never invalid.
 
 *This is what stops a thief holding the chain key from using the homeless path to get past careful homes.* *An objection voided by its signer's rotation voids nothing, acknowledged or not.* *Stated cost: until the operator notices and rotates, an objection signed with a stolen operator key still voids the owner's homeless rotation; an owner holding both keys leaves at once by the escape (section 11).*
 
@@ -654,7 +654,7 @@ A rotation that counts under the old home rule always beats a homeless rotation 
 
 A homeless rotation that counts only through the verifier's own failed attempt (the last case of step 4) MUST be shown as "re-homed without audit", and nothing binding may rely on it, as the list after rule 35 says ("Every verifier gives the same answer"): no keeper record, payment, discharge of a debt, agreement, fork or closing. Reading and following the identity, and its everyday acts, may.
 
-It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one. **Such a rotation is void, with every rotation built on it; the acts bound to them fail everyday check 2 and are invalid.** Should the objection later lose its validity (its signer's rotation disowning it), the position is judged anew.
+It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one. **Such a rotation is void, with every rotation built on it; the acts bound to them fail everyday check 2 and are invalid while it stands.** Should the objection later lose its validity (its signer's rotation disowning it), the position is judged anew, and the acts bound to it with it.
 
 It is final like any other homeless rotation only once it counts through something other than the verifier's attempt: a closure by the old home's operator (step 4, first case), or an escape endorsement (section 11).
 
