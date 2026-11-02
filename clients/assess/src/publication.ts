@@ -4,102 +4,62 @@
 // labels, its split plan and its fees, its split service and its backups,
 // how it ends; and its risks, each with the rule it rests on.
 //
-// The publication's fields are read from its exact payload, field by field
-// as Agreements draft 17 writes them ("Publication (type 6)", "Split plan
-// and split (type 8)"): a reading, deciding nothing. Whether it counts, who
-// has not signed, its latest versions and which tags count under it are
-// the core's verdicts (`agreementsPublication`, `agreementsPublicationTip`,
-// `agreementsTagUnder`), passed in `found` where the relays were asked
-// (`gather.ts`). The owners are read from the ownership agreement's own
-// terms by the core (`readTerms`), never from a copy.
+// The publication's fields are read by the core library, strictly
+// (`readPublication`, S7i, F412): every check of the format that reads the
+// payload alone applied, a payload that is not a publication in Agreements'
+// format refused in the core's own words. Assess reads no field itself.
+// Whether it counts, who has not signed, its latest versions and which tags
+// count under it are the core's verdicts (`agreementsPublication`,
+// `agreementsPublicationTip`, `agreementsTagUnder`), passed in `found` where
+// the relays were asked (`gather.ts`). The owners are read from the
+// ownership agreement's own terms by the core (`readTerms`), never from a
+// copy.
 
-import { cborDecode, hex } from '../../genesis/src/core.ts';
+import { readPublication } from '../../genesis/src/core.ts';
 import { list, termsOf, type Line, type Names, type Plain, type Section, type TermsRead } from '../../collective/src/explain.ts';
-import { A, cap, pct, risksSection, unique, type Assessment, type Cite, type Flag } from './assess.ts';
+import { A, pct, risksSection, unique, type Assessment, type Cite, type Flag } from './assess.ts';
 
-/** A publication's fields, as read from its payload. */
-export interface PublicationFields {
-  /** What it sells; null in a split agreement (no field 0); empty in a version ending it. */
-  sold: ({ bake: string } | { vow: string } | { cmip: string })[] | null;
-  /** The ownership agreement whose holders take the owners' line, by its founding version; null: its drafter, the lone owner. */
-  owners: string | null;
-  partners: { identity: string; share: number; label: string | null }[];
+/**
+ * A publication's fields as the core's `readPublication` gives them (the
+ * binding is typed `any`; this is its shape, nothing converted). Hashes in
+ * hex; a field the payload leaves out is undefined.
+ */
+export interface PublicationRead {
+  /** What it sells; absent in a split agreement (no field 0); empty in a version ending it. */
+  sold?: { bake?: string; vow?: string; cmip?: string; params?: Uint8Array }[] | null;
+  splitAgreement: boolean;
+  /** The ownership agreement whose holders take the owners' line, by its founding version; absent: its drafter, the lone owner. */
+  owners?: string | null;
+  partners: { identity: string; share: number; label?: string | null }[];
   service: string;
+  /** The split plan, in `agreementsPublication`'s shape. */
   plan: {
-    roles: { role: string; part: number }[];
-    metrics: { metric: number; part: number }[];
+    /** By kind: a publication's plan carries role and metric shares. */
+    shares: { kind: 'role' | 'metric' | 'stake' | 'receiver' | 'own'; role?: string; metric?: number; stake?: number; receiver?: string; part: number }[];
     cmip: string;
-    unfilled: 'owners' | 'held-open' | 'to';
-    unfilledTo: string | null;
+    unfilled: 'stakes' | 'held-open' | 'to';
+    unfilledTo?: string | null;
+    top: number[];
     serviceBearsRailFees: boolean;
-    /** The maximum fee per payout: in millionths of the payout, or an absolute amount; null where the plan states none. */
-    maxRailFee: { millionths: number } | { unit: string; value: number } | null;
-    fees: { module: string; part: number; scope: 'every' | 'bake' | 'rail'; of: string | null }[];
+    /** The maximum fee per payout: in millionths of the payout, or an absolute amount; absent where the plan states none. */
+    maxRailFee?: { form: 'millionths' | 'absolute' | 'unread'; value: number; unit?: string | null } | null;
+    metrics: [string, string][];
+    /** No `scope`: on every payment. */
+    fees: { module: string; part: number; scope?: 'bake' | 'rail' | null; of?: string | null }[];
   };
-  words: string | null;
-  /** The time reference's cMIP, its deadline and its refund point, where present. */
-  time: string | null;
-  until: unknown;
-  refundUntil: unknown;
+  words?: string | null;
+  /** The time reference's cMIP, and its parameters' bytes. */
+  time?: string | null;
+  timeParams?: Uint8Array | null;
+  /** The point past which it takes no payment: a number where it is one; its bytes whatever it is. */
+  until?: number | null;
+  untilCbor?: Uint8Array | null;
+  refundUntil?: number | null;
+  refundUntilCbor?: Uint8Array | null;
   cmips: [number, string][];
-  designated: string | null;
+  designated?: string | null;
   backups: string[];
-}
-
-const h = (x: unknown): string => {
-  if (!(x instanceof Uint8Array)) throw new Error('a hash was expected');
-  return hex(x);
-};
-const arr = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
-
-/** Read a publication's fields from its exact payload. Throws where it is not a publication in Agreements' format, as far as these fields go. */
-export function readPublicationPayload(payload: Uint8Array): PublicationFields {
-  const m = cborDecode(payload);
-  if (!(m instanceof Map)) throw new Error('not a publication: its payload is no map');
-  const plan = m.get(4);
-  if (!(plan instanceof Map)) throw new Error('not a publication: it carries no split plan (field 4)');
-  const shares = arr(plan.get(0));
-  const max = plan.get(6);
-  const unfilled = arr(plan.get(3));
-  const time = arr(m.get(6));
-  const refund = m.get(8);
-  return {
-    sold: m.has(0)
-      ? arr(m.get(0)).map((x) => {
-          const s = arr(x);
-          if (s[0] === 0) return { bake: h(s[1]) };
-          if (s[0] === 3) return { vow: h(s[1]) };
-          return { cmip: h(arr(s[1])[0]) };
-        })
-      : null,
-    owners: m.has(1) ? h(m.get(1)) : null,
-    partners: arr(m.get(2)).map((p) => {
-      if (!(p instanceof Map)) throw new Error('not a publication: a partner is no map');
-      return { identity: h(p.get(0)), share: Number(p.get(1) ?? 0), label: typeof p.get(2) === 'string' ? (p.get(2) as string) : null };
-    }),
-    service: h(m.get(3)),
-    plan: {
-      roles: shares.filter((s) => arr(s)[0] === 1).map((s) => ({ role: String(arr(s)[1]), part: Number(arr(s)[2]) })),
-      metrics: shares.filter((s) => arr(s)[0] === 3).map((s) => ({ metric: Number(arr(s)[1]), part: Number(arr(s)[2]) })),
-      cmip: h(plan.get(1)),
-      unfilled: unfilled[0] === 1 ? 'held-open' : unfilled[0] === 2 ? 'to' : 'owners',
-      unfilledTo: unfilled[0] === 2 ? h(unfilled[1]) : null,
-      serviceBearsRailFees: plan.get(5) === 1,
-      maxRailFee: typeof max === 'number' ? { millionths: max } : Array.isArray(max) ? { unit: h(max[0]), value: Number(max[1]) } : null,
-      fees: arr(plan.get(9)).map((f) => {
-        const x = arr(f);
-        const sc = arr(x[2]);
-        return { module: h(x[0]), part: Number(x[1]), scope: sc[0] === 0 ? ('bake' as const) : sc[0] === 1 ? ('rail' as const) : ('every' as const), of: sc.length ? h(sc[1]) : null };
-      }),
-    },
-    words: typeof m.get(5) === 'string' ? (m.get(5) as string) : null,
-    time: time.length ? h(time[0]) : null,
-    until: m.get(7) ?? null,
-    refundUntil: refund instanceof Map ? (arr(refund.get(0))[1] ?? null) : null,
-    cmips: m.get(9) instanceof Map ? [...(m.get(9) as Map<number, unknown>)].map(([k, v]) => [Number(k), h(v)] as [number, string]) : [],
-    designated: m.has(10) ? h(m.get(10)) : null,
-    backups: arr(m.get(11)).map(h),
-  };
+  failed?: Uint8Array | null;
 }
 
 /** What else the tool knows of a publication: who drafted it, the owners' terms, its price tags, the core's verdicts. */
@@ -112,42 +72,79 @@ export interface PublicationContext {
   tags?: { id?: string; price: { unit: string; value: number } | null; payee: string; signer?: string }[];
   /** Words for a unit. */
   unit?: (unit: string, value: number) => string;
+  /**
+   * The person's own line for "Partners paid before the owners", as a
+   * percentage of each payment (30 or "30%"): flagged where that much or
+   * more comes off the top. Absent: half (`DEFAULT_PARTNERS_LINE`).
+   */
+  partnersLine?: number | string | null;
   /** The core's verdicts, where the relays were asked. */
   found?: { at: string[]; counts: boolean; unsigned: string[]; problems: string[]; latest: string[]; ends?: boolean } | null;
 }
 
 /** Every party of the publication, once each: the owners' side, each partner, the split service, each backup (rule 11). */
-function partiesOf(p: PublicationFields, ownerSide: string): string[] {
+function partiesOf(p: PublicationRead, ownerSide: string): string[] {
   return [...new Set([ownerSide, ...p.partners.map((x) => x.identity), p.service, ...p.backups])];
 }
 
 /** What comes off the top of each payment before the owners' line, in millionths: partners, roles, metrics, fees on every payment. */
-function offTop(p: PublicationFields): number {
+function offTop(p: PublicationRead): number {
   return (
     p.partners.reduce((s, x) => s + x.share, 0) +
-    p.plan.roles.reduce((s, x) => s + x.part, 0) +
-    p.plan.metrics.reduce((s, x) => s + x.part, 0) +
-    p.plan.fees.filter((f) => f.scope === 'every').reduce((s, x) => s + x.part, 0)
+    roles(p).reduce((s, x) => s + x.part, 0) +
+    metrics(p).reduce((s, x) => s + x.part, 0) +
+    p.plan.fees.filter((f) => !f.scope).reduce((s, x) => s + x.part, 0)
   );
 }
 
+/** The plan's role shares and metric shares, by kind as the core reads them. */
+const roles = (p: PublicationRead) => p.plan.shares.filter((s) => s.kind === 'role').map((s) => ({ role: s.role ?? '', part: s.part }));
+const metrics = (p: PublicationRead) => p.plan.shares.filter((s) => s.kind === 'metric').map((s) => ({ metric: s.metric ?? 0, part: s.part }));
+
+/** The line "Partners paid before the owners" is flagged at by default, as a percentage: half of each payment (the suite's round 9, reading 1; kept in round 10, F415). */
+export const DEFAULT_PARTNERS_LINE = 50;
+
+/**
+ * The person's line for "Partners paid before the owners", in millionths of
+ * each payment: their percentage (a number, or text such as "30" or
+ * "30%"), or half where none is set. Throws, in plain words, where it is
+ * not a percentage above 0 and below 100, to at most four decimals (a
+ * share is counted in millionths).
+ */
+export function partnersLine(setting?: number | string | null): number {
+  if (setting === undefined || setting === null || setting === '') return DEFAULT_PARTNERS_LINE * 10_000;
+  const text = typeof setting === 'string' ? setting.trim().replace(/\s*%$/, '') : String(setting);
+  const n = typeof setting === 'number' ? setting : /^\d+(\.\d+)?$/.test(text) ? Number(text) : NaN;
+  const m = Math.round(n * 10_000);
+  if (!Number.isFinite(n) || n <= 0 || n >= 100 || Math.abs(m - n * 10_000) > 1e-6) {
+    throw new Error(
+      `The line for “Partners paid before the owners” is a percentage of each payment above 0 and below 100, such as 50 or 12.5 (at most four decimals), not “${String(setting)}”. At 100% nothing is left to the owners, which Assess always flags as “No owner”.`,
+    );
+  }
+  return m;
+}
+
+/** The line used, in the warning's words: "half or more" at the default, "N% or more" otherwise. */
+const lineWords = (line: number): string => (line === DEFAULT_PARTNERS_LINE * 10_000 ? 'half or more, the line this warning is set at' : `${pct(line)} or more, the line set for this warning`);
+
 /** Explain and flag a publication, by its exact payload (or its fields already read). */
-export function assessPublication(payload: Uint8Array | PublicationFields, names: Names, ctx: PublicationContext = {}): Assessment {
-  const p = payload instanceof Uint8Array ? readPublicationPayload(payload) : payload;
+export function assessPublication(payload: Uint8Array | PublicationRead, names: Names, ctx: PublicationContext = {}): Assessment {
+  const line = partnersLine(ctx.partnersLine);
+  const p = payload instanceof Uint8Array ? (readPublication(payload) as PublicationRead) : payload;
   let owners: TermsRead | null = null;
   try {
     owners = ctx.owners ? termsOf(ctx.owners) : null;
   } catch {
     owners = null;
   }
-  const split = p.sold === null;
+  const split = p.splitAgreement;
   const drafter = ctx.drafter ?? null;
   const ownerSide = p.owners ?? drafter ?? '';
   const parties = partiesOf(p, ownerSide);
   const say = ctx.unit ?? ((u: string, v: number) => `${v} of ${names(u)}`);
   // A publication waiting for signatures is still judged: its risks are its terms', whoever has signed. The core's reasons it does not count are said under "Who signs".
   const problem: string | null = null;
-  const flags = flagsOf(p, owners, names, parties, ownerSide);
+  const flags = flagsOf(p, owners, names, parties, ownerSide, line);
 
   const sections: Section[] = [];
   // What it sells.
@@ -160,13 +157,13 @@ export function assessPublication(payload: Uint8Array | PublicationFields, names
       lines.push({ text: 'This version sells nothing: it ends the publication. Past sales stand; a payment racing the ending is owed back (Agreements rule 11).', tone: 'warn' });
     } else {
       for (const s of p.sold!) {
-        if ('bake' in s) lines.push({ text: `The upload ${names(s.bake)} (a bake): its bytes, its key delivered to each buyer once paid.` });
-        else if ('vow' in s) lines.push({ text: `The vow ${names(s.vow)}, a promised delivery: each sale is pending until those who signed onto it confirm it, or a buyer contests it (Agreements rule 13).` });
-        else lines.push({ text: `A proven delivery under the cMIP ${names(s.cmip)}: its proof is checked from data alone, never on the cMIP’s say-so (Agreements rule 11).` });
+        if (s.bake) lines.push({ text: `The upload ${names(s.bake)} (a bake): its bytes, its key delivered to each buyer once paid.` });
+        else if (s.vow) lines.push({ text: `The vow ${names(s.vow)}, a promised delivery: each sale is pending until those who signed onto it confirm it, or a buyer contests it (Agreements rule 13).` });
+        else lines.push({ text: `A proven delivery under the cMIP ${names(s.cmip ?? '')}: its proof is checked from data alone, never on the cMIP’s say-so (Agreements rule 11).` });
       }
     }
-    if (p.until != null) lines.push({ text: `It takes no payment after ${String(p.until)} on its time reference${p.time ? `, ${names(p.time)}` : ''}; a later payment is owed back (Agreements rule 11).` });
-    if (p.refundUntil != null) lines.push({ text: `A refund owed on a payment under it is claimable until ${String(p.refundUntil)} on its time reference; past that, it is ended (Agreements rule 11).` });
+    if (p.untilCbor) lines.push({ text: `It takes no payment after ${p.until != null ? String(p.until) : 'a point its time reference’s cMIP reads'} on its time reference${p.time ? `, ${names(p.time)}` : ''}; a later payment is owed back (Agreements rule 11).` });
+    if (p.refundUntilCbor) lines.push({ text: `A refund owed on a payment under it is claimable until ${p.refundUntil != null ? String(p.refundUntil) : 'a point its time reference’s cMIP reads'} on its time reference; past that, it is ended (Agreements rule 11).` });
     else if (!split) lines.push({ text: 'No refund terms: a refund owed stays open until claimed (Agreements rule 11; the core sets no lapse).' });
     sections.push({ heading: 'What it sells', lines });
   }
@@ -226,16 +223,16 @@ export function assessPublication(payload: Uint8Array | PublicationFields, names
   {
     const lines: Line[] = [];
     const top = offTop(p);
-    for (const r of p.plan.roles) lines.push({ text: `The role “${r.role}”: ${pct(r.part)} of each payment, off the top, to whoever fills it, with evidence the payer acknowledges (Agreements rule 22).` });
-    for (const m of p.plan.metrics) lines.push({ text: `Metric share ${m.metric}: ${pct(m.part)} of each payment, off the top, divided by a measure named in advance (Agreements rule 29).` });
-    for (const f of p.plan.fees) lines.push({ text: `A fee: ${names(f.module)} takes ${pct(f.part)} of ${f.scope === 'every' ? 'every payment' : f.scope === 'bake' ? `payments for ${names(f.of ?? '')}` : `payments by the rail ${names(f.of ?? '')}`}, off the top, borne alike by every share (Agreements rule 28).` });
-    if (p.plan.roles.length) lines.push({ text: p.plan.unfilled === 'owners' ? 'A role nobody fills goes to the owners’ line.' : p.plan.unfilled === 'held-open' ? 'A role nobody fills is held open, as an obligation.' : `A role nobody fills goes to ${names(p.plan.unfilledTo ?? '')}.` });
-    lines.push({ text: `Off the top of each payment: ${pct(top)}${p.plan.fees.some((f) => f.scope !== 'every') ? ', more on payments a scoped fee reaches' : ''}. What is left, ${pct(Math.max(0, 1_000_000 - top))}, is the owners’ line, divided by their shares (Agreements rule 22).` });
+    for (const r of roles(p)) lines.push({ text: `The role “${r.role}”: ${pct(r.part)} of each payment, off the top, to whoever fills it, with evidence the payer acknowledges (Agreements rule 22).` });
+    for (const m of metrics(p)) lines.push({ text: `Metric share ${m.metric}: ${pct(m.part)} of each payment, off the top, divided by a measure named in advance (Agreements rule 29).` });
+    for (const f of p.plan.fees) lines.push({ text: `A fee: ${names(f.module)} takes ${pct(f.part)} of ${!f.scope ? 'every payment' : f.scope === 'bake' ? `payments for ${names(f.of ?? '')}` : `payments by the rail ${names(f.of ?? '')}`}, off the top, borne alike by every share (Agreements rule 28).` });
+    if (roles(p).length) lines.push({ text: p.plan.unfilled === 'stakes' ? 'A role nobody fills goes to the owners’ line.' : p.plan.unfilled === 'held-open' ? 'A role nobody fills is held open, as an obligation.' : `A role nobody fills goes to ${names(p.plan.unfilledTo ?? '')}.` });
+    lines.push({ text: `Off the top of each payment: ${pct(top)}${p.plan.fees.some((f) => f.scope) ? ', more on payments a scoped fee reaches' : ''}. What is left, ${pct(Math.max(0, 1_000_000 - top))}, is the owners’ line, divided by their shares (Agreements rule 22).` });
     const bearer = p.plan.serviceBearsRailFees ? 'The split service bears each payout’s rail fee' : 'Each receiver bears its payout’s rail fee';
     const m = p.plan.maxRailFee;
     lines.push(
       m
-        ? { text: `${bearer}; no payout may lose more than ${'millionths' in m ? `${pct(m.millionths)} of it` : say(m.unit, m.value)} to it, and a shortfall beyond is the service’s open obligation (Agreements rule 25).` }
+        ? { text: `${bearer}; no payout may lose more than ${m.form === 'millionths' ? `${pct(m.value)} of it` : say(m.unit ?? '', m.value)} to it, and a shortfall beyond is the service’s open obligation (Agreements rule 25).` }
         : { text: `${bearer}; the plan states no maximum fee per payout: there is no cap (Agreements rule 25).`, tone: 'warn' },
     );
     lines.push({ text: `The amounts are computed by the split cMIP ${names(p.plan.cmip)}; a verifier checks each split against this plan, payout by payout, and each payout is paid with its own receipt (Agreements rules 17, 23, 27).` });
@@ -283,9 +280,9 @@ export function assessPublication(payload: Uint8Array | PublicationFields, names
   };
 }
 
-function flagsOf(p: PublicationFields, owners: TermsRead | null, names: Names, parties: string[], ownerSide: string): Flag[] {
+function flagsOf(p: PublicationRead, owners: TermsRead | null, names: Names, parties: string[], ownerSide: string, line: number): Flag[] {
   const out: Flag[] = [];
-  const split = p.sold === null;
+  const split = p.splitAgreement;
   const top = offTop(p);
   const who = (xs: string[]) => list(xs.map(names));
   const holders = (owners?.stakes?.[0]?.[1] ?? []).map(([x]) => x).filter((x): x is string => !!x);
@@ -334,14 +331,15 @@ function flagsOf(p: PublicationFields, owners: TermsRead | null, names: Names, p
     });
   }
 
-  // Partners paid before the owners, with no cap but 100%.
-  if (top >= 500_000 && top < 1_000_000) {
+  // Partners paid before the owners, with no cap but 100%: flagged from
+  // the person's line, half by default (round 10, F415).
+  if (top >= line && top < 1_000_000) {
     const takers = p.partners.map((x) => x.identity);
     out.push({
       code: 'partners-first',
       family: 'listed',
       who: takers.length ? takers : undefined,
-      text: `Partners paid before the owners: ${pct(top)} of each payment is taken off the top (${list([...p.partners.map((x) => `${names(x.identity)}${x.label ? ` (${x.label})` : ''} ${pct(x.share)}`), ...p.plan.roles.map((r) => `the role “${r.role}” ${pct(r.part)}`), ...p.plan.metrics.map((m) => `metric ${m.metric} ${pct(m.part)}`), ...p.plan.fees.filter((f) => f.scope === 'every').map((f) => `a fee ${pct(f.part)}`)])}), leaving the owners ${pct(1_000_000 - top)}. Nothing caps it below 100%: only the parties’ signatures do.`,
+      text: `Partners paid before the owners: ${pct(top)} of each payment is taken off the top (${list([...p.partners.map((x) => `${names(x.identity)}${x.label ? ` (${x.label})` : ''} ${pct(x.share)}`), ...roles(p).map((r) => `the role “${r.role}” ${pct(r.part)}`), ...metrics(p).map((m) => `metric ${m.metric} ${pct(m.part)}`), ...p.plan.fees.filter((f) => !f.scope).map((f) => `a fee ${pct(f.part)}`)])}), leaving the owners ${pct(1_000_000 - top)}: ${lineWords(line)}. Nothing caps it below 100%: only the parties’ signatures do.`,
       rests: 'Agreements rule 22: partners, role and metric shares and fees are paid off the top, the owners taking what is left; rule 11: the only cap is that they do not exceed 100% together',
       cites: A(22, 11),
     });
@@ -368,7 +366,7 @@ function flagsOf(p: PublicationFields, owners: TermsRead | null, names: Names, p
   }
 
   // Stated cost: the split service holds others' money between receiving and paying out.
-  const paidOthers = p.partners.some((x) => x.identity !== p.service) || p.plan.roles.length > 0 || holders.some((x) => x !== p.service) || (!p.owners && ownerSide && ownerSide !== p.service);
+  const paidOthers = p.partners.some((x) => x.identity !== p.service) || roles(p).length > 0 || holders.some((x) => x !== p.service) || (!p.owners && ownerSide && ownerSide !== p.service);
   if (paidOthers) {
     out.push({
       code: 'split-service-window',
@@ -382,8 +380,10 @@ function flagsOf(p: PublicationFields, owners: TermsRead | null, names: Names, p
   return out.map((f) => ({ ...f, cites: unique(f.cites as Cite[]) }));
 }
 
-/** What a signing client shows of the tool before a publication is signed: its plan and the risks. Empty where the payload is not a publication. */
+/** What a signing client shows of the tool before a publication is signed: its plan and the risks. Empty where the payload is not a publication; throws where `ctx.partnersLine` is refused. */
 export function beforeSigningPublication(payload: Uint8Array, names: Names, ctx: PublicationContext = {}): Section[] {
+  // A setting refused is said, never swallowed with a payload that is not a publication.
+  partnersLine(ctx.partnersLine);
   let a: Assessment;
   try {
     a = assessPublication(payload, names, ctx);

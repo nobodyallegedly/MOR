@@ -6,13 +6,13 @@
 import { short } from '../../collective/src/explain.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { answerText, ask, findKey, material, readingText, redact, settings } from './ask.ts';
-import { assess, assessPublication, type Assessment } from './assess.ts';
+import { assess, assessPublication, partnersLine, type Assessment } from './assess.ts';
 import { gather, gatherPublication, isPublication } from './gather.ts';
 
 const USAGE = `mor-assess: explain an agreement or a publication in plain words, and flag its obvious risks.
 
-  mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--json]
-  mor-assess ID --at URL [--at URL ...] --ask "QUESTION" [--json]
+  mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--partners-line PERCENT] [--json]
+  mor-assess ID --at URL [--at URL ...] [--partners-line PERCENT] --ask "QUESTION" [--json]
 
 ID is an ownership agreement's id (its terms act: a work's, or a
 collective's constitution) or a publication's. Every relay given with --at
@@ -21,6 +21,11 @@ versions, and, for a publication, the ownership agreement it names and its
 price tags; what they hold is judged by the core library. --via reaches an address another way (URL=LOCAL). --json prints
 the assessment as data. A flag is a risk worth reading before signing, each
 with the rule or stated cost it rests on; it is not a verdict on the deal.
+
+--partners-line sets your own line for the warning "Partners paid before
+the owners", as a percentage of each payment (30, or 30%): a publication
+taking that much or more off the top before the owners' line is flagged.
+Without it, the line is half (50%).
 
 --ask asks Claude a question about the deal, answered from this reading and
 the exact text of the rules its flags cite, nothing beyond them; each answer
@@ -54,6 +59,9 @@ async function main() {
     return;
   }
   if (!/^[0-9a-f]{64}$/.test(id)) throw new Error(`${id} is not an act id (64 hexadecimal characters)`);
+  // The person's line, refused in plain words before anything is fetched.
+  const line = opts['partners-line']?.at(-1);
+  if (line !== undefined) partnersLine(line);
   // The key and the settings first: with no key, say so before fetching anything.
   const question = opts.ask?.join('\n');
   const asking = question === undefined ? null : { key: findKey(), settings: settings() };
@@ -68,7 +76,7 @@ async function main() {
   let a: Assessment;
   if (await isPublication(id, at, via)) {
     const g = await gatherPublication(id, at, via);
-    a = assessPublication(g.payload, names, g.context);
+    a = assessPublication(g.payload, names, { ...g.context, partnersLine: line });
   } else {
     const g = await gather(id, at, via, names);
     a = assess(g.payload, names, g.found);

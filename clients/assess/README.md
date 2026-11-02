@@ -22,17 +22,29 @@ The risks it looks for:
 - **no judge of forks**: in a work's ownership agreement, nothing but every party's signature settles two versions standing side by side;
 - **a stake diluted without its holder**: a clause sharing an absent owner's stake, a release rule letting some holders end the work's earnings, a collective's holders' rule by share or a waived pre-emption, or a collective's publication signed under its Agreements rule without every holder;
 - **money divided with no owner**: a publication whose shares off the top take everything, or a split agreement naming a work's ownership agreement or none;
-- **partners paid before the owners, with no cap**: half or more of each payment taken off the top, nothing capping it below 100%;
+- **partners paid before the owners, with no cap**: half or more of each payment taken off the top, nothing capping it below 100%. Half is the line by default; you may set your own (see "Your own line" below), and the warning says which line it used;
 - **one member alone holding Money**: a constitution letting one member act alone in Money, or a Money area held by one with no cap;
 - **a stated cost one of its clauses brings**: absence judged on someone's word alone; a split service holding the money in between.
 
 It is the same code in four places: the command `mor-assess`; Edubba's "Its constitution, in plain words"; Edubba's read-backs before signing an ownership agreement or a publication (Publishing); and the collective client and the desk, beside their own readings, before anything is signed.
 
 ```
-mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--json]
+mor-assess ID --at URL [--at URL ...] [--via URL=LOCAL] [--partners-line PERCENT] [--json]
 ```
 
 ID is an ownership agreement (its terms act) or a publication.
+
+### Your own line for "Partners paid before the owners"
+
+*Round 10, F415. Nobody, allegedly: "I'm fine with default at 50% and custom setting".*
+
+**In plain words.** Assess warns when a publication pays others (partners, roles, metric shares, fees on every payment) so much before the owners that half or more of each payment is gone before the owners' line. Half is only where the warning starts: you can set your own line, say 30%, and Assess then warns from 30%. The warning says the line it used: "half or more, the line this warning is set at" by default, "30% or more, the line set for this warning" with yours. It stays a warning, never a block. Everything off the top (100%) is always flagged as "No owner", whatever your line, so a line is above 0% and below 100%; anything else is refused in plain words before anything is fetched.
+
+```
+mor-assess ID --at URL --partners-line 30
+```
+
+**Precisely.** `--partners-line` takes a percentage (`30`, `30%`, `12.5`), to at most four decimals, since shares are counted in millionths. In code, `PublicationContext.partnersLine` (a number or that text) is passed to `assessPublication` and `beforeSigningPublication`; absent or empty, the line is `DEFAULT_PARTNERS_LINE`, 50. `partnersLine(setting)` gives it in millionths, or throws ("The line for “Partners paid before the owners” is a percentage of each payment above 0 and below 100, such as 50 or 12.5 (at most four decimals), not “…”."). `beforeSigningPublication` throws on a refused line rather than showing nothing, so a mistyped setting never hides the risks. The flag fires where the shares off the top reach the line and stay below 100%. Edubba's Publishing read-back uses the default for now: Edubba's settings have no place for it yet.
 
 ## Ask about this deal
 
@@ -81,13 +93,13 @@ The instructions tell Claude: answer only from what is given; name the rules rel
 
 ## Precisely
 
-Every fact is the core library's: terms are read from their exact bytes by `readTerms`; who signed, whether it exists and the version in force are the verifier's (`agreementsAgreement`, `agreementsVersionInForce`, `agreementsDealFork`, `agreementsOwes`, `agreementsOwedBack`). For a publication, whether it counts, who has not signed and its latest versions are `agreementsPublication`'s; the tags that count under it and the ownership agreement's latest version are `agreementsPublicationTip`'s. A publication's own fields are read from its payload field by field as Agreements draft 17 writes them (the core has no pure reader of a publication's payload; said for the MOR lead in round 9's report). The tool decides no rule; it puts the core's answers into words, and flags.
+Every fact is the core library's: terms are read from their exact bytes by `readTerms`; who signed, whether it exists and the version in force are the verifier's (`agreementsAgreement`, `agreementsVersionInForce`, `agreementsDealFork`, `agreementsOwes`, `agreementsOwedBack`). For a publication, whether it counts, who has not signed and its latest versions are `agreementsPublication`'s; the tags that count under it and the ownership agreement's latest version are `agreementsPublicationTip`'s. A publication's own fields are the core's too: `readPublication(payload)` (S7i, F412) decodes the payload strictly, every check of the format that reads the payload alone applied, and refuses one that is not a publication in Agreements' format in its own words (for example "not in the Agreements format: publication 2: the partners"), which Assess passes on unchanged. Assess no longer reads the format itself; `PublicationRead` only types what the binding returns (its `plan` in `agreementsPublication`'s shape: `shares` by kind, `unfilled` "stakes", "held-open" or "to", a fee with no `scope` on every payment). The tool decides no rule; it puts the core's answers into words, and flags.
 
 | File | What |
 | --- | --- |
 | `src/assess.ts` | `assess(payload, names, found?)`: terms (a work's ownership agreement, a constitution, other terms), explained in sections (Who signed, What each party is bound to, Who owns what, How the owners decide, Who judges, How it ends, What is still owed, then the collective client's own sections on layers, areas and absence) and flagged. `beforeSigning(payload, names)`: who owns what, how the owners decide, and the risks. |
-| `src/publication.ts` | `readPublicationPayload(payload)`; `assessPublication(payload, names, context)` (What it sells, Its price, The owners, Partners and their labels, The split plan and its fees, The split service and its backups, Who signs and how it ends, Risks); `beforeSigningPublication`. |
+| `src/publication.ts` | `PublicationRead` (the type of the core's `readPublication`); `partnersLine`, `DEFAULT_PARTNERS_LINE`; `assessPublication(payload, names, context)` (What it sells, Its price, The owners, Partners and their labels, The split plan and its fees, The split service and its backups, Who signs and how it ends, Risks); `beforeSigningPublication`. |
 | `src/gather.ts` | `gather(id, hints)` for terms; `gatherPublication(id, hints)` for a publication: fetches it, its ownership agreement, every act its parties published (signatures, later versions, price tags) and hands them to the core's verifier. "As far as the relays asked show." |
 | `src/cli.ts` | The command. Words signed by others are fenced as data, as the connector does. |
 
-Tests (`npm test`, in CI since round 9): `test/flags.test.ts` (each risk present and absent on the smallest act that carries it), `test/deals.test.ts` (the freeze suite's and case studies' agreements, as ownership agreements, constitutions and publications), `test/cli.test.ts` (a home and a relay: an ownership agreement and a publication read from the relay), `test/ask.test.ts` (asking, against a fake API).
+Tests (`npm test`, in CI since round 9): `test/flags.test.ts` (each risk present and absent on the smallest act that carries it; the partners' line at 50% and 49%, a line of 30%, lines refused; a malformed publication refused by the core's reader in its words), `test/deals.test.ts` (the freeze suite's and case studies' agreements, as ownership agreements, constitutions and publications), `test/cli.test.ts` (a home and a relay: an ownership agreement and a publication read from the relay, with `--partners-line`), `test/ask.test.ts` (asking, against a fake API).

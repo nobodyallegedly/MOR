@@ -541,4 +541,4 @@ export function beforeSigning(payload: Uint8Array, names: Names): Section[] {
   ];
 }
 
-export { assessPublication, beforeSigningPublication, readPublicationPayload, type PublicationContext, type PublicationFields } from './publication.ts';
+export { DEFAULT_PARTNERS_LINE, assessPublication, beforeSigningPublication, partnersLine, type PublicationContext, type PublicationRead } from './publication.ts';

@@ -4,7 +4,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assess, assessPublication, beforeSigning, beforeSigningPublication, type Flag, type FlagCode } from '../src/assess.ts';
+import { assess, assessPublication, beforeSigning, beforeSigningPublication, partnersLine, type Flag, type FlagCode, type PublicationContext } from '../src/assess.ts';
+import { cborDecode, cborEncode } from '../../genesis/src/core.ts';
 import { MIRS } from '../../genesis/src/core.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { P, names } from './deals.ts';
@@ -33,7 +34,7 @@ function collective(over: Partial<Terms>): Terms {
 }
 
 const flagsOf = (t: Terms): Flag[] => assess(encode(t), names).flags;
-const pubFlags = (p: Pub, owners: Terms | null = base): Flag[] => assessPublication(encodePub(p), names, { owners: owners ? encode(owners) : null, drafter: P.ana }).flags;
+const pubFlags = (p: Pub, owners: Terms | null = base, ctx: PublicationContext = {}): Flag[] => assessPublication(encodePub(p), names, { owners: owners ? encode(owners) : null, drafter: P.ana, ...ctx }).flags;
 const one = (fs: Flag[], code: FlagCode) => {
   const f = fs.filter((x) => x.code === code);
   assert.equal(f.length, 1, `one ${code} flag: ${JSON.stringify(fs.map((x) => x.code))}`);
@@ -130,6 +131,57 @@ test('partners paid before the owners with no cap but 100%: half or more off the
   assert.match(f.rests, /rule 22/);
   assert.deepEqual(f.who, [P.label]);
   none(pubFlags({ ...pub, partners: [{ identity: P.label, share: 400_000 }] }), 'partners-first');
+});
+
+test('partners paid before the owners: flagged at half by default, at 50% and not at 49%; the warning says “half or more”', () => {
+  const at = (share: number, ctx: PublicationContext = {}) => pubFlags({ ...pub, partners: [{ identity: P.label, share }] }, base, ctx);
+  assert.match(one(at(500_000), 'partners-first').text, /50% of each payment.*leaving the owners 50%: half or more, the line this warning is set at\./);
+  none(at(490_000), 'partners-first');
+  // The default named, or left empty, is the same line.
+  assert.match(one(at(500_000, { partnersLine: 50 }), 'partners-first').text, /half or more/);
+  none(at(490_000, { partnersLine: '' }), 'partners-first');
+});
+
+test('partners paid before the owners: the person’s own line, 30%, flags at 30% and says so', () => {
+  for (const line of [30, '30', '30%', ' 30 % ']) {
+    const f = one(pubFlags({ ...pub, partners: [{ identity: P.label, share: 300_000 }] }, base, { partnersLine: line }), 'partners-first');
+    assert.match(f.text, /30% or more, the line set for this warning\./);
+    assert.doesNotMatch(f.text, /half/);
+  }
+  none(pubFlags({ ...pub, partners: [{ identity: P.label, share: 299_999 }] }, base, { partnersLine: 30 }), 'partners-first');
+  assert.match(one(pubFlags({ ...pub, partners: [{ identity: P.label, share: 125_000 }] }, base, { partnersLine: '12.5%' }), 'partners-first').text, /12\.5% or more/);
+  // Everything off the top is "No owner", whatever the line.
+  none(pubFlags({ ...pub, partners: [{ identity: P.label, share: 1_000_000 }] }, base, { partnersLine: 30 }), 'partners-first');
+});
+
+test('partners paid before the owners: a line that is not a percentage above 0 and below 100 is refused in plain words', () => {
+  assert.equal(partnersLine(), 500_000);
+  assert.equal(partnersLine('30%'), 300_000);
+  assert.equal(partnersLine(0.0001), 1);
+  for (const bad of [0, -5, 100, 150, 'half', '30%%', '1e1', NaN, Infinity, 12.34567]) {
+    assert.throws(() => partnersLine(bad), /The line for “Partners paid before the owners” is a percentage of each payment above 0 and below 100, such as 50 or 12\.5/, String(bad));
+  }
+  assert.throws(() => partnersLine('half'), /not “half”/);
+  // Refused by the assessment and before signing, never swallowed as "not a publication".
+  assert.throws(() => pubFlags(pub, base, { partnersLine: 100 }), /At 100% nothing is left to the owners/);
+  assert.throws(() => beforeSigningPublication(encodePub(pub), names, { partnersLine: 'abc' }), /not “abc”/);
+});
+
+test('a malformed publication is refused by the core’s reader, in its words', () => {
+  // Field 2 (the partners) is no array: the core says which field.
+  const m = cborDecode(encodePub(pub)) as Map<number, unknown>;
+  m.set(2, 5);
+  assert.throws(() => assessPublication(cborEncode(m), names), /not in the Agreements format: publication 2: the partners/);
+  // A field the format does not define.
+  const extra = cborDecode(encodePub(pub)) as Map<number, unknown>;
+  extra.set(99, 1);
+  assert.throws(() => assessPublication(cborEncode(extra), names), /publication: a field its format does not define/);
+  // A check the core applies to the payload alone: a partner's share above zero.
+  const zero = cborDecode(encodePub({ ...pub, partners: [{ identity: P.label, share: 1 }] })) as Map<number, unknown>;
+  ((zero.get(2) as Map<number, unknown>[])[0]).set(1, 0);
+  assert.throws(() => assessPublication(cborEncode(zero), names), /a partner's share is above zero/);
+  // Before signing, a payload the core refuses shows nothing.
+  assert.deepEqual(beforeSigningPublication(cborEncode(m), names), []);
 });
 
 test('one member alone holding Money: the layer’s rule (rule 60), or an uncapped Money area held by one', () => {
