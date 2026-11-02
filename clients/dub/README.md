@@ -118,6 +118,16 @@ The kit's (`clients/kit`, decided 20–21 October 2026): dominantly black, Dub's
 
 Tests: `test/notes.test.ts` (H122, by clicks: a note, a new version, Earlier drafts, Retire; another Dub holding the identity reading the same notes; nothing in the clear at the homes); `../desk/test/every-app.test.ts` (H93 across Dub, Edubba and Ummia; H102, H82, H83, H105 in every app).
 
+## Round 10 (F415): signing for a collective
+
+### In plain words
+
+A collective is one owner among a work's owners: it consents once, by its own constitution, and its members are not owners of the work. When someone asks a collective you belong to to sign their ownership agreement or publication, the Signing tab (and Edubba's To sign, the same code) opens it with "You sign for the collective": you sign for the collective with your own key, naming it, and you are told that you are not an owner of the work yourself. Where the collective's rule for Agreements asks more than one member, each of the others is asked to add their signature; they read "Sign the collective's signature", with the agreement it signs, and sign with their own key. A claim of a collective (the collective its opener and a creator) reads as the collective's claim; signing it counts toward the collective's rule and binds you where you are listed beside the collective.
+
+### Precisely
+
+`src/dub.ts`: a proposal's references name the acts to sign, then `[collective, collective]` for a collective asked as one party (`actsOf` leaves that chain out of the acts signed). `partyCollective`: for a deal's act (a work's ownership agreement or a publication) that is not the collective's own act, that collective; then `forCollective` puts "You sign for the collective" first in the reading (the area reaching Agreements type 1, `areaReaching`; blocked where you have no voice in it), and `signProposal` signs with `signForCollective` (`../grants/src/member.ts`: a signature act per act asked, made with `signAsMember`, published at the collective's places), then asks the area's other holders, refs `[[signature, collective], [collective, collective]]`. `src/signing.ts`, `readProposal`: an Agreements signature act whose `objects` name a chain besides the act it signs is read as the collective's signature (kind "act", with `readPublishingProposal` of the act it signs) and co-signed with `cosignAsMember`. Tests: `../desk/test/publishing.test.ts` (round 10).
+
 ## Round 9 (F411): the tip, always
 
 ### In plain words

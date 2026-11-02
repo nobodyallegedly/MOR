@@ -77,6 +77,17 @@ export async function readPublishingProposal(act: Uint8Array, names: Names, hint
     const m = cborDecode(d.payload) as Map<number, unknown>;
     const work = m.get(0) instanceof Uint8Array ? hex(m.get(0) as Uint8Array) : '?';
     const creators = ((m.get(1) as Uint8Array[]) ?? []).map(hex);
+    // A collective's claim (round 10, F412): signed by a member for the collective its `objects` name, the collective its opener and a creator.
+    const col = (d.objects ?? []).map(([chain]) => chain).find((x) => creators.includes(x)) ?? null;
+    if (col)
+      return base(
+        `A claim of the collective ${names(col)} to sign, signed for it by ${d.signer ? names(d.signer) : '?'}`,
+        [
+          'A claim: “we made this”, binding a work’s fingerprint to its creators (Agreements rule 7). The collective is its opener and a creator; where no ownership agreement targets it, the collective is the work’s default holder, never its members one by one.',
+          'Your signature act counts twice where it applies: toward the collective’s rule for Agreements, where it asks more than one member (rule 60), and as your own binding where you are listed beside the collective as a co-creator.',
+        ],
+        [{ heading: 'What it names', lines: [{ text: `The work whose fingerprint is ${work.slice(0, 16)}… (its bake, or a vow’s name).` }, { text: `Its creators: the collective ${names(col)}${creators.length > 1 ? `, and beside it ${creators.filter((x) => x !== col).map(names).join(', ')}` : ''}.` }, { text: 'Sign only if the collective made it, and, where you are named beside it, you with it.', tone: 'warn' }] }],
+      );
     return base(
       `A claim to sign: a work made with ${d.signer ? names(d.signer) : '?'}`,
       ['A claim: “we made this”, binding a work’s fingerprint to its creators (Agreements rule 7). It is bound once every creator it names has signed it.', 'It records who said it first on MOR, never who truly made it; it sells nothing, and gives nobody any money.'],

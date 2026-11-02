@@ -92,6 +92,24 @@ export async function cosignAsMember(me: TestIdentity, act: string): Promise<{ a
   return me.signNow(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, cborEncode(new Map<number, unknown>([[0, unhex(act)]])), { public: true, objects: [[act, act]] });
 }
 
+/**
+ * The collective's signature on another's act, one party of it (round 10,
+ * F415: a collective is one holder among a work's holders, consenting once
+ * by its own constitution): a member's signature act naming each act, made
+ * with their own key for the collective, naming it and citing its latest
+ * decision (rule 58), counted under its rule for Agreements (rule 60).
+ * Published at the collective's places and `hints`.
+ */
+export async function signForCollective(collective: string, me: TestIdentity, acts: string[], hints: string[], via: Via = {}): Promise<{ made: string[]; places: string[] }> {
+  const places = await collectivePlaces(collective, hints, via);
+  const at = await chainFor(collective, places, via);
+  const made: { act: Uint8Array; id: string }[] = [];
+  for (const act of acts) made.push(await signAsMember(collective, me, at, { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature, payload: cborEncode(new Map<number, unknown>([[0, unhex(act)]])), public: true, objects: [[act, act]] }));
+  const took = await publishAt(made.map((m) => m.act), places, via);
+  if (!took.length) throw new Error('No relay took the collective’s signature: nothing counts. Try again.');
+  return { made: made.map((m) => m.id), places: took };
+}
+
 /** Publish acts at places; returns where they were taken. */
 export async function publishAt(acts: Uint8Array[], places: string[], via: Via = {}): Promise<string[]> {
   const ok: string[] = [];

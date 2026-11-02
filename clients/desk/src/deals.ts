@@ -21,6 +21,20 @@
 // the split service, its payee pointer), is gone: a publication's split
 // service receives in its own name (Agreements draft 17, rule 16).
 //
+// A collective is one holder among a work's holders (round 10, F415,
+// decided by Nobody, allegedly): where the people asked include a
+// collective, it is asked once, as the collective. In plain words: its
+// members with a voice in its rule for Agreements are each sent the message,
+// naming the collective; one of them signs it for the collective, the others
+// its rule asks adding theirs, inside the collective; its members are never
+// listed or waited on as holders of the work. Precisely: the message's
+// `refs` name every act to sign and then `[collective, collective]`; the
+// collective's signature is a member's signature act naming the act, made
+// for the collective (its `objects` name the collective's chain, rule 58),
+// and it is counted only where the core finds the collective's rule met
+// (`agreementsConsent`, rule 60), as the core reads a collective's signature
+// on a deal.
+//
 // TEST IDENTITIES ONLY, regtest only.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -33,6 +47,7 @@ import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { negotiate } from '../../repo/src/proposals.ts';
 import { allBy } from '../../grants/src/grant.ts';
+import { areaReaching, collectivePlaces, judgeCollective, type AreaHere } from '../../grants/src/member.ts';
 import { pct } from '../../grants/src/deal.ts';
 import type { Line } from '../../collective/src/explain.ts';
 import type { Store } from './store.ts';
@@ -54,6 +69,13 @@ export const SHARES_SAY = [
 /** Rows of people as a form gives them: the first is the identity in use. */
 export interface PeopleIn {
   rows: { who: string; share?: string; label?: string }[];
+}
+
+/** A collective among the people asked (F415): asked once, its members signing for it under its rule for Agreements. */
+export interface CollectiveAsked {
+  id: string;
+  places: string[];
+  area: AreaHere | null;
 }
 
 /** Something signed here and sent to others to sign, waiting or complete. */
@@ -104,6 +126,39 @@ export class Asking {
 
   get(id: string): Waiting | null {
     return this.list().find((w) => w.id === id) ?? null;
+  }
+
+  private collectivesSeen = new Map<string, Promise<CollectiveAsked | null>>();
+
+  /**
+   * Where `id` is a collective (round 10, F415): its places, and its rule for
+   * Agreements reaching signature acts, whose holders are its members asked
+   * inside it (null where it cannot be read). Null for a person.
+   */
+  collectiveOf(id: string): Promise<CollectiveAsked | null> {
+    let got = this.collectivesSeen.get(id);
+    if (!got) {
+      got = (async () => {
+        const s = this.settings();
+        const places = await collectivePlaces(id, list([...s.relays, ...s.homes]), s.via);
+        try {
+          const r = await areaReaching(id, places, { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature }, s.via);
+          return r.agreement ? { id, places, area: r.area } : null;
+        } catch {
+          return null;
+        }
+      })();
+      this.collectivesSeen.set(id, got);
+    }
+    return got;
+  }
+
+  /** How a collective among the people is asked, in plain words: once, as the collective, its members signing for it under its rule. */
+  collectiveWords(c: CollectiveAsked): string {
+    const names = this.names();
+    if (!c.area) return `${names(c.id)} is a collective: one party, asked once, as the collective. Its rule for Agreements could not be read, so who signs for it cannot be said.`;
+    const rule = c.area.name.startsWith('the ') ? c.area.name : `its area “${c.area.name}”`;
+    return `${names(c.id)} is a collective: one party, asked once, as the collective. One of its members signs for it, with their own key, naming it, under ${rule} (any ${c.area.number} of ${c.area.holders.map(names).join(', ')}); the others its rule asks add their signature, inside the collective. Its members are not owners of this work.`;
   }
 
   /** The names this Edubba gives: the identities held, then its contacts. */
@@ -193,6 +248,31 @@ export class Asking {
     const lines: Line[] = [];
     const threads: Record<string, string> = {};
     for (const id of w.people) {
+      // A collective, asked once as the collective: the message goes to its members with a voice in its rule, naming it (F415).
+      const col = await this.collectiveOf(id);
+      if (col) {
+        if (!col.area) {
+          lines.push({ text: `Not sent to ${names(id)}: ${this.collectiveWords(col)}`, tone: 'bad' });
+          continue;
+        }
+        const n = col.area.number;
+        const sent: string[] = [];
+        for (const m of col.area.holders) {
+          try {
+            const l = await lookUp(m, list([...col.places, ...s.relays, ...s.homes]), s.via);
+            const inbox = l.inbox(REPO_SPECS.agreements);
+            if (!l.encryptionKey || !inbox?.length) throw new Error('it publishes no encryption key or inbox');
+            const x = await negotiate(me, { id: m, key: l.encryptionKey, inbox }, { text: `${w.text} You are asked as a member of the collective ${short(id)}, one of its parties: one of you signs it for the collective, with your own key; its rule for Agreements asks ${n} of you.`, refs: [...w.acts.map((a) => [a, me.id] as [string, string]), [id, id]] });
+            if (x.left.length) sent.push(m);
+            threads[id] ??= x.id;
+          } catch {
+            // that member could not be reached: said below
+          }
+        }
+        const missed = col.area.holders.filter((m) => !sent.includes(m));
+        lines.push({ text: `Asked of the collective ${names(id)} once, as the collective: sent, sealed, to its members ${sent.map(names).join(', ') || 'none'}, who sign it for it under its rule (any ${n}), inside the collective.${missed.length ? ` Not reached: ${missed.map(names).join(', ')}.` : ''}`, tone: sent.length ? 'ok' : 'bad' });
+        continue;
+      }
       try {
         const l = await lookUp(id, list([...s.relays, ...s.homes]), s.via);
         const inbox = l.inbox(REPO_SPECS.agreements);
@@ -216,6 +296,8 @@ export class Asking {
 
   /** Each person's signature acts naming any of `acts`, found among what they published (their places looked up). */
   async signaturesOf(person: string, acts: string[]): Promise<Record<string, string>> {
+    const col = await this.collectiveOf(person);
+    if (col) return this.collectiveSignatures(col, acts);
     const s = this.settings();
     let places = list([...s.relays, ...s.homes]);
     try {
@@ -232,6 +314,31 @@ export class Asking {
       const act = named instanceof Uint8Array ? hex(named) : null;
       if (act && acts.includes(act)) out[act] = x.id;
     }
+    return out;
+  }
+
+  /**
+   * A collective's signature on each of `acts` (F415): a signature act by one
+   * of its members naming the act, made for the collective (its `objects`
+   * name the collective), counted only where the core finds its rule for
+   * Agreements met (`agreementsConsent`).
+   */
+  private async collectiveSignatures(c: CollectiveAsked, acts: string[]): Promise<Record<string, string>> {
+    const s = this.settings();
+    const found: [string, string][] = [];
+    for (const m of c.area?.holders ?? []) {
+      for (const a of await allBy(m, c.places, s.via).catch(() => [] as Uint8Array[])) {
+        const x = describeAct(a) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array; objects?: [string, string][] };
+        if (x.signer !== m || x.spec !== REPO_SPECS.agreements || x.type !== AGREEMENTS_TYPES.signature || !x.payload || !x.objects?.some(([chain]) => chain === c.id)) continue;
+        const named = (cborDecode(x.payload) as Map<number, unknown>).get(0);
+        const act = named instanceof Uint8Array ? hex(named) : null;
+        if (act && acts.includes(act)) found.push([act, x.id]);
+      }
+    }
+    if (!found.length) return {};
+    const judged = await judgeCollective(c.id, found.map(([, id]) => id), c.places, s.via);
+    const out: Record<string, string> = {};
+    for (const [act, id] of found) if (judged.get(id)?.met) out[act] = id;
     return out;
   }
 
