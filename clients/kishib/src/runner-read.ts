@@ -25,16 +25,10 @@ import { GRANT_LIMITS_SPEC } from '../../grants/src/limits.ts';
  * A request as the runner reads it (3.1): an everyday act of the identity,
  * on one of the app's lines or apart. An act for a collective is one of
  * these too (draft 5, 3.1a): the collective named only in its `objects`.
- * Draft 3's `as` and `line: 'member'` (a member key's own strand) are read
- * only to be refused: there are no member keys any more.
+ * Draft 6 (round 10): draft 3's member line and `as` are no longer read at
+ * all; a request naming them is refused as any malformed request is.
  */
-export type RunnerRequest = Omit<SignRequest, 'line'> & { line: SignRequest['line'] | 'member'; as?: string };
-
-/** Said where a request uses draft 3's member line or `as` (draft 5, 3.1a). */
-export const NO_MEMBER_KEYS_SAY = 'There are no member keys any more: an act for a collective is signed with the member’s own key, naming the collective. Nothing was signed.';
-
-/** Said where an app asks Kišib to hold a key for a collective (draft 5, 9.1). */
-export const NO_MEMBER_ASK_SAY = 'There are no member keys any more: Kišib signs for your collectives with your own key, through its panel. Nothing was kept.';
+export type RunnerRequest = SignRequest;
 
 /** The kinds of act (section 5.1). */
 export type Kind = 'posts' | 'messages' | 'names' | 'contacts' | 'money' | 'agreements' | 'keys' | 'other';
@@ -76,10 +70,10 @@ const MONEY = new Set<string>([MIRS.money, ...MESSAGES_SPECS, MONEY_SPECS.paymen
 /** Why the runner refuses a request outright, or null. */
 export function refusedOutright(r: RunnerRequest): string | null {
   if (r.spec === SPECS.identity && CHAIN.includes(r.type)) return 'This is an act of the identity’s chain: only its chain key signs it, from paper, and the runner never holds the chain key. Nothing was signed.';
+  if (r.line !== 'public' && r.line !== 'private' && r.line !== 'apart') return 'The request names no line: public, private or apart. Nothing was signed.';
   if (r.line === 'public' && !r.public) return 'A private act on the public line: each app keeps its private acts on its private line. Nothing was signed.';
   if (r.line === 'private' && r.public) return 'A public act on the private line: each app keeps its public acts on its public line. Nothing was signed.';
   if (r.line === 'apart' && r.public) return 'An act on a line of its own is a private act. Nothing was signed.';
-  if (r.line === 'member' || r.as !== undefined) return NO_MEMBER_KEYS_SAY;
   return null;
 }
 

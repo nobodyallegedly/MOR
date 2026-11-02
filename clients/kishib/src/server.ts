@@ -211,9 +211,6 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
           if (!Array.isArray(a.sealed) || a.sealed.some((x) => typeof x !== 'string')) throw new RunnerRefusal(400, 'The request names no sealed containers. Nothing was opened.');
           return json(res, 200, runner.open(token, { identity: text(a.identity), sealed: (a.sealed as string[]).map((x) => Uint8Array.from(Buffer.from(x, 'base64'))) })), true;
         }
-        case '/runner/member':
-          // Draft 3's ask to hold a key for a collective: refused, said plainly (draft 5, 9.1: there are no member keys).
-          return json(res, 200, runner.memberAsk(token, { identity: text(a.identity), collective: text(a.collective), places: list(a.places) })), true;
         case '/runner/drop':
           runner.drop(token, { request: text(a.request) });
           return json(res, 200, {}), true;
