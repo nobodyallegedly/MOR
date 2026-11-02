@@ -184,6 +184,14 @@ Each app makes or brings an identity the hard way (its ID and words).
 - **Decided on the core side since (S7j, S7k), for the suite to build:** anonymity is a fresh identity ("anonymity on MOR is a fresh identity, not a missing one", F416); paying through a route, the first payer's claim citing the seller's tag in `refs` (F414); a collective is one holder among a work's holders (F416); the escape on a position contested by two rotations revealing the same chain key, wherever served (F416); an owed-back list resting on two or more records with no rail answer is unknown as a whole (Fable's bound, F413).
 - *Q3 (the signing key's string, draft 1) is not answered in the brief:* still "approve after the hand test".
 
+## Built in round 10 (F415, 2 November 2026, `docs/suite-r10-report.md`)
+- **Anonymity is a fresh identity:** Damgar's "Pay without your name" makes a self-hosted identity for one payment, commits it as payer, signs with it, and delivers its genesis with its claim; a payment naming no payer is shown as a gift. The payment, conversion and anchoring cMIPs' next drafts say it.
+- **Paying through a converter:** Damgar's first-hop claim keeps the service's tag in key 4 and cites the seller's tag in `refs`; the buyer can contest, confirm a vow and carry a referral (tested; no screen yet).
+- **A collective, one holder:** asked once, as the collective, its members signing under its rule (Edubba's ownership agreement, publication and ending; the To sign of Dub and Edubba); a collective's claim in Publishing.
+- **One trusted wallet** answers a buyer's request made out to the collective, under its rule for Money.
+- **Fable's bound in the apps:** an owed-back list or a vow resting on two or more unanswered records reads "unknown, waiting for the rail", blocking a closing.
+- **The escape** wherever two rotations reveal one chain key (the Module's words and tests; Kišib's words). **Assess** on the core's reader, its partner line a setting. **Kišib's** old member-key refusal dropped (runner draft 6). **Ummia's** hashes.
+
 ## Still open
 - Question 2 of the H80 report: private lines Kišib cannot place (apps leaving each private act's locked act at the identity's homes).
 - **Two lines per app** (decided 21 October: "Agreed", option (a) of the private-lines report): each app keeps its public acts and its private acts on separate lines, so anyone can follow the public line after a change of keys. To build before round 2 (F376).
