@@ -1052,6 +1052,35 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Who made a work and who owns it as recorded (Agreements rule 15;
+   * F218; F412; F416), the core's `work_owners`: `{ work, claims,
+   * contested, agreements, defaultHolder, holders }`. `claims`, the
+   * claims that count and bind the work, ascending; `contested`, two or
+   * more; `agreements`, the ownership agreements targeting a claim of the
+   * work, each its version in force; `defaultHolder`, where no agreement
+   * writes shares and one claim binds it, that claim's opener (a
+   * collective, for a claim a member signed for it), else null;
+   * `holders`, for each agreement in force `{ agreement, holders:
+   * [[holder, share]] }`, its stake's holders as that version writes them
+   * (field 7, shares in millionths), a collective one holder among them.
+   * *Not applied here:* stake transfers since that version (rule 14):
+   * the core's as-held reading is not public (round 10, for the MOR
+   * lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+   * leave; no change to the core.
+   * @param {any} specs
+   * @param {string} work
+   * @returns {any}
+   */
+  agreementsWorkOwners(specs, work) {
+    const ptr0 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsWorkOwners(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Who uploaded a bake, as a verifier reading Money and Envelopes tells
    * it (Money, "Only identities have payee pointers"): the signer's
    * identity hash, or "unknown" where the bake names another chain, a
@@ -19362,9 +19391,9 @@ var Dub = class _Dub {
     reading.sections.unshift({
       heading: "You sign for the collective",
       lines: [
-        { text: `The collective ${names(collective)} is one party of this, one owner among the work\u2019s owners: it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ""} (Agreements rules 58, 60).` },
+        { text: `The collective ${names(collective)} is one party of this (a co-creator beside others, or one owner among a work\u2019s owners): it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ""} (Agreements rules 58, 60).` },
         ...area && area.number > 1 ? [{ text: `Its rule asks ${area.number} members: once you sign for it, ${area.holders.filter((h) => h !== me).map(names).join(", ")} ${area.holders.length - 1 === 1 ? "is" : "are"} asked to add their signature, inside the collective.` }] : [],
-        { text: "You are not an owner of this work yourself: the collective is. What it is paid, it pays its own holders under its constitution.", tone: "warn" }
+        { text: "You are not a party of this yourself: the collective is. What it is paid, it pays its own holders under its constitution.", tone: "warn" }
       ]
     });
     return area;

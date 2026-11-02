@@ -1052,6 +1052,35 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Who made a work and who owns it as recorded (Agreements rule 15;
+   * F218; F412; F416), the core's `work_owners`: `{ work, claims,
+   * contested, agreements, defaultHolder, holders }`. `claims`, the
+   * claims that count and bind the work, ascending; `contested`, two or
+   * more; `agreements`, the ownership agreements targeting a claim of the
+   * work, each its version in force; `defaultHolder`, where no agreement
+   * writes shares and one claim binds it, that claim's opener (a
+   * collective, for a claim a member signed for it), else null;
+   * `holders`, for each agreement in force `{ agreement, holders:
+   * [[holder, share]] }`, its stake's holders as that version writes them
+   * (field 7, shares in millionths), a collective one holder among them.
+   * *Not applied here:* stake transfers since that version (rule 14):
+   * the core's as-held reading is not public (round 10, for the MOR
+   * lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+   * leave; no change to the core.
+   * @param {any} specs
+   * @param {string} work
+   * @returns {any}
+   */
+  agreementsWorkOwners(specs, work) {
+    const ptr0 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsWorkOwners(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Who uploaded a bake, as a verifier reading Money and Envelopes tells
    * it (Money, "Only identities have payee pointers"): the signer's
    * identity hash, or "unknown" where the bake names another chain, a
@@ -9093,8 +9122,8 @@ async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new 
   return { cards: found, lines: lines2 };
 }
 var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
-var MICS_HASH = "c1ced60231d44db71aa59585c9a145b2ddbbedfbecf39eb23b7b2148bce1b9b2";
-var SUITE_HASH = "586d2f1df0f82f92517d869efbfc7464f976c23fb1df2cbcb2deb6bcc4d19b2e";
+var MICS_HASH = "435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c";
+var SUITE_HASH = "1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276";
 var BUILT_IN = [
   { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
   { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },

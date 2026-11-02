@@ -1358,6 +1358,35 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Who made a work and who owns it as recorded (Agreements rule 15;
+   * F218; F412; F416), the core's `work_owners`: `{ work, claims,
+   * contested, agreements, defaultHolder, holders }`. `claims`, the
+   * claims that count and bind the work, ascending; `contested`, two or
+   * more; `agreements`, the ownership agreements targeting a claim of the
+   * work, each its version in force; `defaultHolder`, where no agreement
+   * writes shares and one claim binds it, that claim's opener (a
+   * collective, for a claim a member signed for it), else null;
+   * `holders`, for each agreement in force `{ agreement, holders:
+   * [[holder, share]] }`, its stake's holders as that version writes them
+   * (field 7, shares in millionths), a collective one holder among them.
+   * *Not applied here:* stake transfers since that version (rule 14):
+   * the core's as-held reading is not public (round 10, for the MOR
+   * lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+   * leave; no change to the core.
+   * @param {any} specs
+   * @param {string} work
+   * @returns {any}
+   */
+  agreementsWorkOwners(specs, work) {
+    const ptr0 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsWorkOwners(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Who uploaded a bake, as a verifier reading Money and Envelopes tells
    * it (Money, "Only identities have payee pointers"): the signer's
    * identity hash, or "unknown" where the bake names another chain, a
@@ -7761,6 +7790,385 @@ async function record2(collective, r, relays) {
   });
 }
 
+// ../../modules/timestamp/src/stamp.ts
+var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+var STAMP_TYPE = 1;
+var MOST_PER_STAMP = 256;
+var NotAStamp = class extends Error {
+};
+function decodeStamp(payload) {
+  let m;
+  try {
+    m = cborDecode(payload);
+  } catch (e3) {
+    throw new NotAStamp(`not CBOR (${e3 instanceof Error ? e3.message : e3})`);
+  }
+  if (!(m instanceof Map)) throw new NotAStamp("not a map");
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
+  const time = m.get(0);
+  if (typeof time !== "number" || !Number.isSafeInteger(time) || time < 0) throw new NotAStamp("its time (field 0) is not a whole number of seconds");
+  const list11 = m.get(1);
+  if (!Array.isArray(list11) || !list11.length) throw new NotAStamp("its acts (field 1) are not a list of at least one");
+  if (list11.length > MOST_PER_STAMP) throw new NotAStamp(`it names more than ${MOST_PER_STAMP} acts`);
+  const acts = list11.map((x, i) => {
+    if (!(x instanceof Uint8Array) || x.length !== 32) throw new NotAStamp(`its act ${i + 1} is not an act id`);
+    return hex(x);
+  });
+  if (new Set(acts).size !== acts.length) throw new NotAStamp("it names an act twice");
+  return { time, acts };
+}
+
+// ../../modules/timestamp/src/read.ts
+function asStamp(d, clock) {
+  if (!d.public || d.signer !== clock || d.spec !== TIMESTAMP_SPEC || d.type !== STAMP_TYPE || !d.payload) return null;
+  try {
+    const s = decodeStamp(d.payload);
+    return { stamp: d.id, time: s.time, acts: s.acts };
+  } catch (e3) {
+    if (e3 instanceof NotAStamp) return null;
+    throw e3;
+  }
+}
+function earliest(stamps2) {
+  const out = /* @__PURE__ */ new Map();
+  for (const s of stamps2) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
+  return out;
+}
+function earliestByNames(acts, own) {
+  const ids = new Set(acts.map((a) => a.id));
+  const links = new Map(acts.map((a) => [a.id, a.links.filter((l) => ids.has(l) && l !== a.id)]));
+  const out = /* @__PURE__ */ new Map();
+  for (const [a, t] of own) if (ids.has(a)) out.set(a, t);
+  const work = [...out.keys()];
+  while (work.length) {
+    const a = work.pop();
+    const t = out.get(a);
+    for (const n of links.get(a) ?? []) {
+      if (!out.has(n) || t < out.get(n)) {
+        out.set(n, t);
+        work.push(n);
+      }
+    }
+  }
+  return out;
+}
+async function readStamps(clock, places, judge2, via = {}) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    let after2;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer: clock, after: after2 });
+      } catch {
+        break;
+      }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let s = null;
+        try {
+          s = asStamp(describeAct(it.item), clock);
+        } catch {
+          continue;
+        }
+        if (s && !seen.has(s.stamp)) seen.set(s.stamp, { s, act: it.item });
+      }
+      if (!page.items.length || page.next === after2) break;
+      after2 = page.next;
+    }
+  }
+  const verified = [];
+  for (const { s, act } of seen.values()) {
+    try {
+      if (await judge2.standing(act, s.stamp, clock) === "valid") verified.push(s);
+    } catch {
+    }
+  }
+  return { found: seen.size, verified, earliest: earliest(verified) };
+}
+
+// ../grants/src/limits.ts
+var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
+var CLOCKS = { timestamp: TIMESTAMP_SPEC };
+function encodeLimits(l) {
+  if (!l.cap && !l.expiry) throw new Error("Limits name a cap, an expiry, or both.");
+  const m = /* @__PURE__ */ new Map();
+  if (l.cap) {
+    if (!Number.isSafeInteger(l.cap.value) || l.cap.value < 0) throw new Error("The cap is a whole amount.");
+    m.set(0, [unhex(l.cap.unit), l.cap.value]);
+  }
+  if (l.expiry) {
+    if (l.expiry.clock === "timestamp") m.set(1, [unhex(CLOCKS.timestamp), unhex(l.expiry.identity), l.expiry.time]);
+    else m.set(1, [unhex(l.expiry.spec), l.expiry.network, l.expiry.height]);
+  }
+  return cborEncode(m);
+}
+function limitsValue(l) {
+  return cborDecode(encodeLimits(l));
+}
+var h32 = (v) => v instanceof Uint8Array && v.length === 32;
+function readLimits(v) {
+  if (!(v instanceof Map)) throw new Error("the limits are not a map");
+  const m = v;
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new Error(`the limits carry a key this cMIP does not define (${k})`);
+  if (!m.size) throw new Error("the limits name neither a cap nor an expiry");
+  const out = {};
+  if (m.has(0)) {
+    const c2 = m.get(0);
+    if (!Array.isArray(c2) || c2.length !== 2 || !h32(c2[0]) || typeof c2[1] !== "number" || c2[1] < 0) throw new Error("the cap is not [unit, value]");
+    out.cap = { unit: hex(c2[0]), value: c2[1] };
+  }
+  if (m.has(1)) {
+    const e3 = m.get(1);
+    if (!Array.isArray(e3) || e3.length !== 3 || !h32(e3[0]) || typeof e3[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
+    if (hex(e3[0]) === CLOCKS.timestamp) {
+      if (!h32(e3[1])) throw new Error("a timestamp clock is named by its identity");
+      out.expiry = { clock: "timestamp", identity: hex(e3[1]), time: e3[2] };
+    } else {
+      if (typeof e3[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
+      out.expiry = { clock: "height", spec: hex(e3[0]), network: e3[1], height: e3[2] };
+    }
+  }
+  return out;
+}
+var MESSAGES = { specs: [] };
+function amountOf(act, moneySpec) {
+  if (act.type === void 0 || !act.payload) return null;
+  if (act.spec && MESSAGES.specs.includes(act.spec)) {
+    try {
+      const m = cborDecode(act.payload);
+      const pair = (x) => Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null;
+      if (act.type === 1) return pair(m.get(2));
+      if (act.type === 2) return pair(m.get(0));
+      if (act.type === 4) return pair(m.get(4));
+      if (act.type !== 3) return null;
+      const c2 = readCommitment(cborEncode(m.get(0)));
+      return { unit: c2.amount.unit, value: c2.amount.value };
+    } catch {
+      return null;
+    }
+  }
+  if (act.spec !== moneySpec) return null;
+  try {
+    const r = moneyRead(act.type, act.payload);
+    return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;
+  } catch {
+    return null;
+  }
+}
+function judge(l, act, moneySpec, places = {}) {
+  if (l.cap) {
+    const a = amountOf(act, moneySpec);
+    if (a && a.unit !== l.cap.unit) return { within: false, why: `it moves an amount in another unit than the cap\u2019s (2.2): no conversion is assumed` };
+    if (a && a.value > l.cap.value) return { within: false, why: `it moves ${a.value}, above the cap of ${l.cap.value} per act (2.2)` };
+  }
+  if (l.expiry) {
+    if (l.expiry.clock === "timestamp") {
+      const t = places.stamps?.get(l.expiry.identity)?.get(act.id);
+      if (t === void 0) return { within: null, why: "no stamp of the clock the grant names places it yet: whether it came before the expiry is unknown (3.1)" };
+      if (t > l.expiry.time) return { within: false, why: `the clock the grant names stamped it at ${new Date(t * 1e3).toISOString()}, past the expiry ${new Date(l.expiry.time * 1e3).toISOString()} (3.1)` };
+    } else {
+      const h = places.heights?.get(act.id);
+      if (h === void 0) return { within: null, why: "no anchor placing it on the Bitcoin clock the grant names is checked here: unknown (3.2)" };
+      if (h > l.expiry.height) return { within: false, why: `anchored at height ${h}, past the expiry at height ${l.expiry.height} (3.2)` };
+    }
+  }
+  return { within: true };
+}
+function refuseBeforeSigning(l, act, moneySpec, nowSeconds) {
+  if (!l) return null;
+  if (l.cap) {
+    const a = amountOf(act, moneySpec);
+    if (a && a.unit !== l.cap.unit) return "The grant\u2019s cap is in another unit: an act moving this unit is outside it. Nothing was signed.";
+    if (a && a.value > l.cap.value) return `${a.value} is above the grant\u2019s cap of ${l.cap.value} per act. Nothing was signed.`;
+  }
+  if (l.expiry?.clock === "timestamp" && nowSeconds > l.expiry.time) return `The grant expired on ${new Date(l.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC (this device\u2019s clock). Nothing was signed.`;
+  return null;
+}
+
+// ../grants/src/grant.ts
+var GRANTABLE = [
+  { key: "posts", kind: { spec: SPECS.text, type: 0 }, words: "posts and messages (Text acts)" },
+  // Key 'publications' kept for the apps that store it; what it reaches is a bake (Envelopes type 0, F407).
+  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "bakes (uploads), a picture among them (Envelopes)" },
+  // The six layers (F407): 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development.
+  { key: "money", kind: { layer: 3 }, words: "money acts: promises to pay, claims, receipts and price tags (the Money layer)" }
+];
+var LAYER_WORDS = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
+var kindValue2 = (k) => "layer" in k ? [0, k.layer] : [1, unhex(k.spec), k.type];
+function personGrantPayload(g) {
+  const m = /* @__PURE__ */ new Map([
+    [0, unhex(g.grantee)],
+    [1, 2]
+  ]);
+  if (g.limits) {
+    m.set(3, limitsValue(g.limits));
+    m.set(4, unhex(GRANT_LIMITS_SPEC));
+  }
+  if (g.kinds?.length) m.set(6, g.kinds.map(kindValue2));
+  m.set(9, g.key);
+  return cborEncode(m);
+}
+function readGrant(payload) {
+  const m = cborDecode(payload);
+  if (!(m instanceof Map)) throw new Error("not a grant");
+  const grantee = m.get(0);
+  if (!(grantee instanceof Uint8Array)) throw new Error("a grant names its grantee");
+  const kinds = m.has(6) ? m.get(6).map((k) => {
+    const a = k;
+    return a[0] === 0 ? { layer: a[1] } : { spec: hex(a[1]), type: a[2] };
+  }) : null;
+  let limits = null;
+  let limitsProblem = null;
+  if (m.has(3) || m.has(4)) {
+    const cmip = m.get(4);
+    if (!(cmip instanceof Uint8Array) || hex(cmip) !== GRANT_LIMITS_SPEC) limitsProblem = "its limits are under a cMIP this app does not implement";
+    else {
+      try {
+        limits = readLimits(m.get(3));
+      } catch (e3) {
+        limitsProblem = `its limits cannot be read: ${e3 instanceof Error ? e3.message : String(e3)}`;
+      }
+    }
+  }
+  const key = m.get(9);
+  return { grantee: hex(grantee), scope: m.get(1), kinds, limits, limitsProblem, key: hex(key[1]) };
+}
+function kindWords(k) {
+  const g = GRANTABLE.find((x) => JSON.stringify(x.kind) === JSON.stringify(k));
+  if (g) return g.words;
+  if ("layer" in k) return `every act of ${LAYER_WORDS[k.layer] ? `the ${LAYER_WORDS[k.layer]} layer` : `layer ${k.layer}`}`;
+  return `acts of type ${k.type} of the specification ${k.spec.slice(0, 8)}\u2026`;
+}
+function grantInWords(g, grantor, names2, unitName = (u2) => `units ${u2.slice(0, 8)}\u2026`) {
+  const out = [`${names2(grantor)} grants ${names2(g.grantee)} authority to sign in ${names2(grantor)}\u2019s name, with a key of ${names2(g.grantee)}\u2019s own (Agreements rule 73; F128).`];
+  out.push(g.kinds?.length ? `What it may sign: ${g.kinds.map(kindWords).join("; ")}.` : "What it may sign: every act but a decision (no grant, revocation or record).");
+  if (g.limits?.cap) out.push(`How much one act may move: at most ${g.limits.cap.value} ${unitName(g.limits.cap.unit)} (the grant limits cMIP, 2).`);
+  if (g.limits?.expiry?.clock === "timestamp") out.push(`Until: ${new Date(g.limits.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC, by the timestamp clock ${names2(g.limits.expiry.identity)}; an act that clock has not stamped is unknown under the expiry (3.1).`);
+  if (g.limits?.expiry?.clock === "height") out.push(`Until: block ${g.limits.expiry.height} on the Bitcoin clock (3.2).`);
+  if (g.limitsProblem) out.push(`Its limits: ${g.limitsProblem}; its acts are unknown under them.`);
+  out.push("Every act it signs this way is shown as signed under this grant, naming both. It never signs a grant, a revocation or a record; it ends with one revocation (rule 76).");
+  out.push("Public: anyone who checks its acts reads the grant (rule 73: a private grant backs nothing).");
+  return out;
+}
+function acceptance(grant2) {
+  return { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature, payload: signaturePayload(grant2), objects: [[grant2, grant2]] };
+}
+var REVOCATION = 10;
+function revocationPayload(grant2) {
+  return cborEncode(/* @__PURE__ */ new Map([[0, unhex(grant2)]]));
+}
+function signUnderGrant(k, a) {
+  const made = makeEveryday({
+    signingSecret: unhex(k.secret),
+    signer: k.grantor,
+    binding: k.grant,
+    spec: a.spec,
+    type: a.type,
+    payload: a.payload,
+    sequence: k.strand,
+    public: a.public,
+    to: a.to?.length ? a.to : void 0,
+    objects: [[k.grantor, k.grant]],
+    refs: a.refs?.length ? a.refs : void 0,
+    acks: a.acks?.length ? a.acks : void 0
+  });
+  k.strand.push(made.id);
+  return made;
+}
+function makeGrantKey() {
+  const secret = newSigningSecret();
+  return { secret, public: [1, signingPublic(secret)] };
+}
+async function allBy(signer, hints, via) {
+  const out = [];
+  for (const h of hints) {
+    let after2;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ signer, after: after2 });
+        for (const it of page.items) if (it.kind === "act") out.push(it.item);
+        if (!page.items.length || page.next === after2) break;
+        after2 = page.next;
+      }
+    } catch {
+    }
+  }
+  return out;
+}
+var fetchAct = async (id, hints, via) => {
+  for (const h of hints) {
+    try {
+      const a = await relayAt(h, via).getAct(id);
+      if (a) return a;
+    } catch {
+    }
+  }
+  return null;
+};
+async function stampsOf(clock, hints, via = {}) {
+  const judgeStamp = {
+    standing: async (act, id, signer) => {
+      const l = await lookUp(signer, hints, via);
+      l.verifier.add(act);
+      return l.verifier.status(id);
+    }
+  };
+  return (await readStamps(clock, hints, judgeStamp, via)).earliest;
+}
+async function authorityOf(act, hints, via = {}, opts = {}) {
+  const d = opts.key ? openWithKey(act, opts.key) : describeAct(act);
+  if (!d.signer || !d.binding) return null;
+  const grantBytes = await fetchAct(d.binding, hints, via);
+  if (!grantBytes) return null;
+  const gd = describeAct(grantBytes);
+  if (gd.spec !== MIRS.agreements || gd.type !== AGREEMENTS_TYPES.grant || !gd.payload) return null;
+  const g = readGrant(gd.payload);
+  const names2 = opts.names ?? ((id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  for (const id of [d.signer, g.grantee]) {
+    try {
+      await lookUp(id, hints, via, v);
+    } catch {
+    }
+  }
+  v.add(grantBytes);
+  for (const a of await allBy(g.grantee, hints, via)) {
+    const x = describeAct(a);
+    if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
+  }
+  for (const a of await allBy(d.signer, hints, via)) {
+    const x = describeAct(a);
+    if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
+    const named2 = cborDecode(x.payload).get(0);
+    if (named2 instanceof Uint8Array && hex(named2) === d.binding) v.add(a);
+  }
+  if (opts.key) v.addWithKey(act, opts.key);
+  else v.add(act);
+  let limits = null;
+  if (g.limits) {
+    let stamps2 = opts.stamps;
+    if (g.limits.expiry?.clock === "timestamp" && !stamps2?.has(g.limits.expiry.identity)) {
+      stamps2 = new Map(stamps2 ?? []);
+      try {
+        stamps2.set(g.limits.expiry.identity, await stampsOf(g.limits.expiry.identity, hints, via));
+      } catch {
+      }
+    }
+    limits = judge(g.limits, d, MIRS.money, { stamps: stamps2 });
+  }
+  const verdicts = limits && limits.within !== null ? [[d.id, limits.within]] : [];
+  const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
+  const lane = g.grantee === d.signer;
+  const laneBy = `Signed under a lane of ${names2(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}\u2026, its key held by an app; F351)`;
+  const plain3 = b.kind === "backed" || b.kind === "binds" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under ${names2(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : b.kind === "disputed" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).` : `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
+  return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain3 };
+}
+async function authorityOfId(id, hints, via = {}, opts = {}) {
+  const act = await fetchAct(id, hints, via);
+  return act ? authorityOf(act, hints, via, opts) : null;
+}
+
 // ../longform/src/specs.ts
 var test2 = (s) => sha2562(s);
 var LONGFORM_SPECS = {
@@ -9097,7 +9505,7 @@ async function post(by, opts) {
   const recording = opts.m4a ? await publishAudio(by, opts.m4a, opts.relays) : null;
   await carryChain2(by, opts.relays);
   const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...recording ? [referenceTo(recording.act)] : [], ...opts.refs ?? []];
-  const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
+  const corrected = opts.corrects && opts.format === void 0 ? await fetchAct2(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, format), {
     public: true,
@@ -9121,7 +9529,7 @@ async function leaveInInbox(by, act, inbox) {
   }
   return out;
 }
-async function fetchAct(id, hints, via) {
+async function fetchAct2(id, hints, via) {
   return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
 }
 function describeChecked(act, id) {
@@ -9158,7 +9566,7 @@ var Judge = class {
   }
 };
 async function readPost(id, hints, via = {}, judging) {
-  const act = await fetchAct(id, hints, via);
+  const act = await fetchAct2(id, hints, via);
   if (!act) throw new Error(`the act ${id} was not found at ${hints.join(", ")}`);
   const d = describeChecked(act, id);
   if (!d.public) throw new Error("the post is not public");
@@ -9244,7 +9652,7 @@ async function soundBytes(bake2, signer, hints, via = {}) {
   }
 }
 async function mediaBytes(bake2, signer, hints, via, spec, what) {
-  const act = signer ? (await followRef([bake2, signer], hints, via)).act : await fetchAct(bake2, hints, via);
+  const act = signer ? (await followRef([bake2, signer], hints, via)).act : await fetchAct2(bake2, hints, via);
   if (!act) throw new Error(`the ${what}\u2019s bake was not found`);
   const d = describeChecked(act, bake2);
   const m = cborDecode(d.payload);
@@ -9500,385 +9908,6 @@ async function repost(by, a) {
     }
   }
   return by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.text), { public: true, relays: a.relays, refs: [referenceTo(a.publication), referenceTo(a.offer)] });
-}
-
-// ../../modules/timestamp/src/stamp.ts
-var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
-var STAMP_TYPE = 1;
-var MOST_PER_STAMP = 256;
-var NotAStamp = class extends Error {
-};
-function decodeStamp(payload) {
-  let m;
-  try {
-    m = cborDecode(payload);
-  } catch (e3) {
-    throw new NotAStamp(`not CBOR (${e3 instanceof Error ? e3.message : e3})`);
-  }
-  if (!(m instanceof Map)) throw new NotAStamp("not a map");
-  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
-  const time = m.get(0);
-  if (typeof time !== "number" || !Number.isSafeInteger(time) || time < 0) throw new NotAStamp("its time (field 0) is not a whole number of seconds");
-  const list11 = m.get(1);
-  if (!Array.isArray(list11) || !list11.length) throw new NotAStamp("its acts (field 1) are not a list of at least one");
-  if (list11.length > MOST_PER_STAMP) throw new NotAStamp(`it names more than ${MOST_PER_STAMP} acts`);
-  const acts = list11.map((x, i) => {
-    if (!(x instanceof Uint8Array) || x.length !== 32) throw new NotAStamp(`its act ${i + 1} is not an act id`);
-    return hex(x);
-  });
-  if (new Set(acts).size !== acts.length) throw new NotAStamp("it names an act twice");
-  return { time, acts };
-}
-
-// ../../modules/timestamp/src/read.ts
-function asStamp(d, clock) {
-  if (!d.public || d.signer !== clock || d.spec !== TIMESTAMP_SPEC || d.type !== STAMP_TYPE || !d.payload) return null;
-  try {
-    const s = decodeStamp(d.payload);
-    return { stamp: d.id, time: s.time, acts: s.acts };
-  } catch (e3) {
-    if (e3 instanceof NotAStamp) return null;
-    throw e3;
-  }
-}
-function earliest(stamps2) {
-  const out = /* @__PURE__ */ new Map();
-  for (const s of stamps2) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
-  return out;
-}
-function earliestByNames(acts, own) {
-  const ids = new Set(acts.map((a) => a.id));
-  const links = new Map(acts.map((a) => [a.id, a.links.filter((l) => ids.has(l) && l !== a.id)]));
-  const out = /* @__PURE__ */ new Map();
-  for (const [a, t] of own) if (ids.has(a)) out.set(a, t);
-  const work = [...out.keys()];
-  while (work.length) {
-    const a = work.pop();
-    const t = out.get(a);
-    for (const n of links.get(a) ?? []) {
-      if (!out.has(n) || t < out.get(n)) {
-        out.set(n, t);
-        work.push(n);
-      }
-    }
-  }
-  return out;
-}
-async function readStamps(clock, places, judge2, via = {}) {
-  const seen = /* @__PURE__ */ new Map();
-  for (const h of places) {
-    let after2;
-    for (; ; ) {
-      let page;
-      try {
-        page = await relayAt(h, via).feed({ signer: clock, after: after2 });
-      } catch {
-        break;
-      }
-      for (const it of page.items) {
-        if (it.kind !== "act") continue;
-        let s = null;
-        try {
-          s = asStamp(describeAct(it.item), clock);
-        } catch {
-          continue;
-        }
-        if (s && !seen.has(s.stamp)) seen.set(s.stamp, { s, act: it.item });
-      }
-      if (!page.items.length || page.next === after2) break;
-      after2 = page.next;
-    }
-  }
-  const verified = [];
-  for (const { s, act } of seen.values()) {
-    try {
-      if (await judge2.standing(act, s.stamp, clock) === "valid") verified.push(s);
-    } catch {
-    }
-  }
-  return { found: seen.size, verified, earliest: earliest(verified) };
-}
-
-// ../grants/src/limits.ts
-var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
-var CLOCKS = { timestamp: TIMESTAMP_SPEC };
-function encodeLimits(l) {
-  if (!l.cap && !l.expiry) throw new Error("Limits name a cap, an expiry, or both.");
-  const m = /* @__PURE__ */ new Map();
-  if (l.cap) {
-    if (!Number.isSafeInteger(l.cap.value) || l.cap.value < 0) throw new Error("The cap is a whole amount.");
-    m.set(0, [unhex(l.cap.unit), l.cap.value]);
-  }
-  if (l.expiry) {
-    if (l.expiry.clock === "timestamp") m.set(1, [unhex(CLOCKS.timestamp), unhex(l.expiry.identity), l.expiry.time]);
-    else m.set(1, [unhex(l.expiry.spec), l.expiry.network, l.expiry.height]);
-  }
-  return cborEncode(m);
-}
-function limitsValue(l) {
-  return cborDecode(encodeLimits(l));
-}
-var h32 = (v) => v instanceof Uint8Array && v.length === 32;
-function readLimits(v) {
-  if (!(v instanceof Map)) throw new Error("the limits are not a map");
-  const m = v;
-  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new Error(`the limits carry a key this cMIP does not define (${k})`);
-  if (!m.size) throw new Error("the limits name neither a cap nor an expiry");
-  const out = {};
-  if (m.has(0)) {
-    const c2 = m.get(0);
-    if (!Array.isArray(c2) || c2.length !== 2 || !h32(c2[0]) || typeof c2[1] !== "number" || c2[1] < 0) throw new Error("the cap is not [unit, value]");
-    out.cap = { unit: hex(c2[0]), value: c2[1] };
-  }
-  if (m.has(1)) {
-    const e3 = m.get(1);
-    if (!Array.isArray(e3) || e3.length !== 3 || !h32(e3[0]) || typeof e3[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
-    if (hex(e3[0]) === CLOCKS.timestamp) {
-      if (!h32(e3[1])) throw new Error("a timestamp clock is named by its identity");
-      out.expiry = { clock: "timestamp", identity: hex(e3[1]), time: e3[2] };
-    } else {
-      if (typeof e3[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
-      out.expiry = { clock: "height", spec: hex(e3[0]), network: e3[1], height: e3[2] };
-    }
-  }
-  return out;
-}
-var MESSAGES = { specs: [] };
-function amountOf(act, moneySpec) {
-  if (act.type === void 0 || !act.payload) return null;
-  if (act.spec && MESSAGES.specs.includes(act.spec)) {
-    try {
-      const m = cborDecode(act.payload);
-      const pair = (x) => Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null;
-      if (act.type === 1) return pair(m.get(2));
-      if (act.type === 2) return pair(m.get(0));
-      if (act.type === 4) return pair(m.get(4));
-      if (act.type !== 3) return null;
-      const c2 = readCommitment(cborEncode(m.get(0)));
-      return { unit: c2.amount.unit, value: c2.amount.value };
-    } catch {
-      return null;
-    }
-  }
-  if (act.spec !== moneySpec) return null;
-  try {
-    const r = moneyRead(act.type, act.payload);
-    return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;
-  } catch {
-    return null;
-  }
-}
-function judge(l, act, moneySpec, places = {}) {
-  if (l.cap) {
-    const a = amountOf(act, moneySpec);
-    if (a && a.unit !== l.cap.unit) return { within: false, why: `it moves an amount in another unit than the cap\u2019s (2.2): no conversion is assumed` };
-    if (a && a.value > l.cap.value) return { within: false, why: `it moves ${a.value}, above the cap of ${l.cap.value} per act (2.2)` };
-  }
-  if (l.expiry) {
-    if (l.expiry.clock === "timestamp") {
-      const t = places.stamps?.get(l.expiry.identity)?.get(act.id);
-      if (t === void 0) return { within: null, why: "no stamp of the clock the grant names places it yet: whether it came before the expiry is unknown (3.1)" };
-      if (t > l.expiry.time) return { within: false, why: `the clock the grant names stamped it at ${new Date(t * 1e3).toISOString()}, past the expiry ${new Date(l.expiry.time * 1e3).toISOString()} (3.1)` };
-    } else {
-      const h = places.heights?.get(act.id);
-      if (h === void 0) return { within: null, why: "no anchor placing it on the Bitcoin clock the grant names is checked here: unknown (3.2)" };
-      if (h > l.expiry.height) return { within: false, why: `anchored at height ${h}, past the expiry at height ${l.expiry.height} (3.2)` };
-    }
-  }
-  return { within: true };
-}
-function refuseBeforeSigning(l, act, moneySpec, nowSeconds) {
-  if (!l) return null;
-  if (l.cap) {
-    const a = amountOf(act, moneySpec);
-    if (a && a.unit !== l.cap.unit) return "The grant\u2019s cap is in another unit: an act moving this unit is outside it. Nothing was signed.";
-    if (a && a.value > l.cap.value) return `${a.value} is above the grant\u2019s cap of ${l.cap.value} per act. Nothing was signed.`;
-  }
-  if (l.expiry?.clock === "timestamp" && nowSeconds > l.expiry.time) return `The grant expired on ${new Date(l.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC (this device\u2019s clock). Nothing was signed.`;
-  return null;
-}
-
-// ../grants/src/grant.ts
-var GRANTABLE = [
-  { key: "posts", kind: { spec: SPECS.text, type: 0 }, words: "posts and messages (Text acts)" },
-  // Key 'publications' kept for the apps that store it; what it reaches is a bake (Envelopes type 0, F407).
-  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "bakes (uploads), a picture among them (Envelopes)" },
-  // The six layers (F407): 0 Identity, 1 Text, 2 Envelopes, 3 Money, 4 Agreements, 5 Development.
-  { key: "money", kind: { layer: 3 }, words: "money acts: promises to pay, claims, receipts and price tags (the Money layer)" }
-];
-var LAYER_WORDS = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
-var kindValue2 = (k) => "layer" in k ? [0, k.layer] : [1, unhex(k.spec), k.type];
-function personGrantPayload(g) {
-  const m = /* @__PURE__ */ new Map([
-    [0, unhex(g.grantee)],
-    [1, 2]
-  ]);
-  if (g.limits) {
-    m.set(3, limitsValue(g.limits));
-    m.set(4, unhex(GRANT_LIMITS_SPEC));
-  }
-  if (g.kinds?.length) m.set(6, g.kinds.map(kindValue2));
-  m.set(9, g.key);
-  return cborEncode(m);
-}
-function readGrant(payload) {
-  const m = cborDecode(payload);
-  if (!(m instanceof Map)) throw new Error("not a grant");
-  const grantee = m.get(0);
-  if (!(grantee instanceof Uint8Array)) throw new Error("a grant names its grantee");
-  const kinds = m.has(6) ? m.get(6).map((k) => {
-    const a = k;
-    return a[0] === 0 ? { layer: a[1] } : { spec: hex(a[1]), type: a[2] };
-  }) : null;
-  let limits = null;
-  let limitsProblem = null;
-  if (m.has(3) || m.has(4)) {
-    const cmip = m.get(4);
-    if (!(cmip instanceof Uint8Array) || hex(cmip) !== GRANT_LIMITS_SPEC) limitsProblem = "its limits are under a cMIP this app does not implement";
-    else {
-      try {
-        limits = readLimits(m.get(3));
-      } catch (e3) {
-        limitsProblem = `its limits cannot be read: ${e3 instanceof Error ? e3.message : String(e3)}`;
-      }
-    }
-  }
-  const key = m.get(9);
-  return { grantee: hex(grantee), scope: m.get(1), kinds, limits, limitsProblem, key: hex(key[1]) };
-}
-function kindWords(k) {
-  const g = GRANTABLE.find((x) => JSON.stringify(x.kind) === JSON.stringify(k));
-  if (g) return g.words;
-  if ("layer" in k) return `every act of ${LAYER_WORDS[k.layer] ? `the ${LAYER_WORDS[k.layer]} layer` : `layer ${k.layer}`}`;
-  return `acts of type ${k.type} of the specification ${k.spec.slice(0, 8)}\u2026`;
-}
-function grantInWords(g, grantor, names2, unitName = (u2) => `units ${u2.slice(0, 8)}\u2026`) {
-  const out = [`${names2(grantor)} grants ${names2(g.grantee)} authority to sign in ${names2(grantor)}\u2019s name, with a key of ${names2(g.grantee)}\u2019s own (Agreements rule 73; F128).`];
-  out.push(g.kinds?.length ? `What it may sign: ${g.kinds.map(kindWords).join("; ")}.` : "What it may sign: every act but a decision (no grant, revocation or record).");
-  if (g.limits?.cap) out.push(`How much one act may move: at most ${g.limits.cap.value} ${unitName(g.limits.cap.unit)} (the grant limits cMIP, 2).`);
-  if (g.limits?.expiry?.clock === "timestamp") out.push(`Until: ${new Date(g.limits.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC, by the timestamp clock ${names2(g.limits.expiry.identity)}; an act that clock has not stamped is unknown under the expiry (3.1).`);
-  if (g.limits?.expiry?.clock === "height") out.push(`Until: block ${g.limits.expiry.height} on the Bitcoin clock (3.2).`);
-  if (g.limitsProblem) out.push(`Its limits: ${g.limitsProblem}; its acts are unknown under them.`);
-  out.push("Every act it signs this way is shown as signed under this grant, naming both. It never signs a grant, a revocation or a record; it ends with one revocation (rule 76).");
-  out.push("Public: anyone who checks its acts reads the grant (rule 73: a private grant backs nothing).");
-  return out;
-}
-function acceptance(grant2) {
-  return { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature, payload: signaturePayload(grant2), objects: [[grant2, grant2]] };
-}
-var REVOCATION = 10;
-function revocationPayload(grant2) {
-  return cborEncode(/* @__PURE__ */ new Map([[0, unhex(grant2)]]));
-}
-function signUnderGrant(k, a) {
-  const made = makeEveryday({
-    signingSecret: unhex(k.secret),
-    signer: k.grantor,
-    binding: k.grant,
-    spec: a.spec,
-    type: a.type,
-    payload: a.payload,
-    sequence: k.strand,
-    public: a.public,
-    to: a.to?.length ? a.to : void 0,
-    objects: [[k.grantor, k.grant]],
-    refs: a.refs?.length ? a.refs : void 0,
-    acks: a.acks?.length ? a.acks : void 0
-  });
-  k.strand.push(made.id);
-  return made;
-}
-function makeGrantKey() {
-  const secret = newSigningSecret();
-  return { secret, public: [1, signingPublic(secret)] };
-}
-async function allBy(signer, hints, via) {
-  const out = [];
-  for (const h of hints) {
-    let after2;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via).feed({ signer, after: after2 });
-        for (const it of page.items) if (it.kind === "act") out.push(it.item);
-        if (!page.items.length || page.next === after2) break;
-        after2 = page.next;
-      }
-    } catch {
-    }
-  }
-  return out;
-}
-var fetchAct2 = async (id, hints, via) => {
-  for (const h of hints) {
-    try {
-      const a = await relayAt(h, via).getAct(id);
-      if (a) return a;
-    } catch {
-    }
-  }
-  return null;
-};
-async function stampsOf(clock, hints, via = {}) {
-  const judgeStamp = {
-    standing: async (act, id, signer) => {
-      const l = await lookUp(signer, hints, via);
-      l.verifier.add(act);
-      return l.verifier.status(id);
-    }
-  };
-  return (await readStamps(clock, hints, judgeStamp, via)).earliest;
-}
-async function authorityOf(act, hints, via = {}, opts = {}) {
-  const d = opts.key ? openWithKey(act, opts.key) : describeAct(act);
-  if (!d.signer || !d.binding) return null;
-  const grantBytes = await fetchAct2(d.binding, hints, via);
-  if (!grantBytes) return null;
-  const gd = describeAct(grantBytes);
-  if (gd.spec !== MIRS.agreements || gd.type !== AGREEMENTS_TYPES.grant || !gd.payload) return null;
-  const g = readGrant(gd.payload);
-  const names2 = opts.names ?? ((id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`);
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  for (const id of [d.signer, g.grantee]) {
-    try {
-      await lookUp(id, hints, via, v);
-    } catch {
-    }
-  }
-  v.add(grantBytes);
-  for (const a of await allBy(g.grantee, hints, via)) {
-    const x = describeAct(a);
-    if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
-  }
-  for (const a of await allBy(d.signer, hints, via)) {
-    const x = describeAct(a);
-    if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
-    const named2 = cborDecode(x.payload).get(0);
-    if (named2 instanceof Uint8Array && hex(named2) === d.binding) v.add(a);
-  }
-  if (opts.key) v.addWithKey(act, opts.key);
-  else v.add(act);
-  let limits = null;
-  if (g.limits) {
-    let stamps2 = opts.stamps;
-    if (g.limits.expiry?.clock === "timestamp" && !stamps2?.has(g.limits.expiry.identity)) {
-      stamps2 = new Map(stamps2 ?? []);
-      try {
-        stamps2.set(g.limits.expiry.identity, await stampsOf(g.limits.expiry.identity, hints, via));
-      } catch {
-      }
-    }
-    limits = judge(g.limits, d, MIRS.money, { stamps: stamps2 });
-  }
-  const verdicts = limits && limits.within !== null ? [[d.id, limits.within]] : [];
-  const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
-  const lane = g.grantee === d.signer;
-  const laneBy = `Signed under a lane of ${names2(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}\u2026, its key held by an app; F351)`;
-  const plain3 = b.kind === "backed" || b.kind === "binds" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under ${names2(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : b.kind === "disputed" ? `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).` : `${lane ? laneBy : `Signed by ${names2(g.grantee)} in ${names2(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
-  return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain3 };
-}
-async function authorityOfId(id, hints, via = {}, opts = {}) {
-  const act = await fetchAct2(id, hints, via);
-  return act ? authorityOf(act, hints, via, opts) : null;
 }
 
 // ../genesis/src/private.ts
@@ -13707,15 +13736,16 @@ var Publishing = class {
     const areaName = area ? area.name.startsWith("the ") ? area.name : `its area \u201C${area.name}\u201D` : "its rule for Agreements";
     if (!area) blocking.push(`The collective ${short4(c2.id)}: no rule of its agreement reaches claims (the Agreements layer).`);
     else if (!area.holders.includes(me2.id)) blocking.push(`The collective ${short4(c2.id)}: you have no voice in ${areaName}, which reaches claims.`);
-    const now11 = await collectiveNow(c2.id, c2.places, s.via).catch(() => ({ parties: [], departed: [] }));
-    const members = now11.parties.filter((x) => !now11.departed.includes(x));
-    for (const x of creators) if (x === c2.id || !members.includes(x)) blocking.push(`${names2(x)} is no member of the collective: beside the collective, its claim lists the members who made the work with it (Agreements, \u201CClaim (type 3)\u201D).`);
+    if (creators.includes(c2.id)) blocking.push("The collective is already its opener and a creator: name beside it only the others who made it with it.");
+    const cols = (await Promise.all(creators.filter((x) => x !== me2.id).map((x) => this.asking.collectiveOf(x)))).filter((x) => !!x);
+    for (const x of cols) if (!x.area) blocking.push(`${names2(x.id)} is a collective whose rule for Agreements could not be read: who signs for it cannot be said, so it cannot be asked.`);
     const cosigners = area && area.number > 1 ? area.holders.filter((h) => h !== me2.id) : [];
     const others = creators.filter((x) => x !== me2.id);
     const lines4 = [
       { text: `A claim of the collective ${short4(c2.id)} (Agreements), public: \u201Cwe made this\u201D, binding the work\u2019s fingerprint to its creators: the collective${creators.length ? `, and beside it ${creators.map(names2).join(", ")}` : " alone"}.` },
       { text: `The collective is its opener and a creator: you sign it for the collective, with your own key, naming it (rule 58), under ${areaName}${area && area.number > 1 ? `, which asks ${area.number} members: ${cosigners.map(names2).join(", ")} asked, each signing with their own key` : ": your act alone is its consent"} (rule 60).` },
-      creators.length ? { text: `Each member beside it binds it by a signature act of their own${creators.includes(me2.id) ? ", you included: Edubba signs yours at once, apart from your act for the collective" : ""}${others.length ? `; ${others.map(names2).join(", ")} ${others.length === 1 ? "signs" : "sign"} it in their own app (To sign)` : ""}. It is bound once each has.` } : { text: "No member beside it: it is bound by the collective\u2019s act alone." },
+      creators.length ? { text: `Each co-creator beside it, a member or not, binds it by a signature act of their own${creators.includes(me2.id) ? ", you included: Edubba signs yours at once, apart from your act for the collective" : ""}${others.length ? `; ${others.map(names2).join(", ")} ${others.length === 1 ? "signs" : "sign"} it in their own app (To sign)` : ""}. It is bound once each has.` } : { text: "Nobody beside it: it is bound by the collective\u2019s act alone." },
+      ...cols.map((x) => ({ text: this.asking.collectiveWords(x) })),
       { text: `Where no ownership agreement targets it, the work\u2019s default holder is the collective ${short4(c2.id)}, never its members one by one (Agreements, \u201CClaim (type 3)\u201D).` },
       { text: "A claim records who said it first on MOR, never who truly made it: another claim of the same work stays openly contested beside it (rule 7).", tone: "warn" }
     ];
@@ -13814,11 +13844,66 @@ var Publishing = class {
     const names2 = this.asking.names();
     try {
       const j = (await judgeCollective(c2.id, [claim], list5([...c2.places, ...this.settings().relays]), this.settings().via)).get(claim);
-      if (j.met) return [{ text: `The core reads it as the collective\u2019s claim: its rule is met (${j.areas.map((x) => `${x.name}: ${x.signers.map(names2).join(", ")}`).join("; ")}). The collective is a creator, and, where no ownership agreement targets it, the work\u2019s default holder.`, tone: "ok" }];
+      const kept2 = this.book().claims.find((x) => x.claim === claim);
+      const owners = kept2 ? await this.ownersLines(kept2.work, kept2.creators, [claim]) : [];
+      if (j.met) return [{ text: `The core reads it as the collective\u2019s claim: its rule is met (${j.areas.map((x) => `${x.name}: ${x.signers.map(names2).join(", ")}`).join("; ")}).`, tone: "ok" }, ...owners];
       const left = j.areas.filter((x) => !x.met).map((x) => `${x.name} asks ${x.needed}, ${x.signers.length} signed`);
       return [{ text: `The core does not count it for the collective yet${left.length ? `: ${left.join("; ")}` : j.reason ? `: ${j.reason}` : ""}. A claim naming the collective counts for nothing until its rule is met.`, tone: "warn" }];
     } catch (e3) {
       return [{ text: `The core\u2019s verdict could not be read: ${err2(e3)}`, tone: "warn" }];
+    }
+  }
+  /**
+   * A work's owners as the core reads them (`agreementsWorkOwners`, round
+   * 10): from the acts of `ids` (persons, and collectives with their chain,
+   * terms and members' acts) and `acts`, the claims that bind it, whether
+   * contested, its default holder, and the holders each ownership agreement
+   * in force writes (stake transfers not applied).
+   */
+  async workOwners(work, ids, acts = []) {
+    const s = this.settings();
+    const places = list5([...s.relays, ...s.homes]);
+    const cols = await Promise.all(list5(ids).map(async (id) => [id, await this.asking.collectiveOf(id)]));
+    const first = cols.find(([, c2]) => c2)?.[1] ?? null;
+    const v = first ? (await collectiveVerifier(first.id, first.places, s.via, acts)).v : new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+    const held = [];
+    const who4 = /* @__PURE__ */ new Set();
+    for (const [id, c2] of cols) {
+      who4.add(id);
+      if (c2 && c2 !== first) {
+        const cv = await collectiveVerifier(id, c2.places, s.via, acts).catch(() => null);
+        if (cv) {
+          held.push(...cv.acts);
+          for (const p of cv.parties) who4.add(p);
+        }
+      }
+    }
+    for (const id of who4) {
+      await lookUp(id, places, s.via, v).catch(() => null);
+      for (const a of await allBy(id, places, s.via).catch(() => [])) held.push(a);
+    }
+    for (const id of acts) {
+      const a = await actAt2(id, places, s.via);
+      if (a) held.push(a);
+    }
+    for (let pass = 0; pass < 3; pass++)
+      for (const a of held)
+        try {
+          v.add(a);
+        } catch {
+        }
+    return v.agreementsWorkOwners(AGREEMENTS_SPECS, work);
+  }
+  /** A work's owners as the core reads them, in plain words. */
+  async ownersLines(work, ids, acts = []) {
+    const names2 = this.asking.names();
+    try {
+      const o = await this.workOwners(work, ids, acts);
+      if (o.holders.length) return o.holders.map((h) => ({ text: `As the core reads the work\u2019s owners now: ${h.holders.map(([id, n]) => `${names2(id)} ${pct3(n)}`).join(", ")}, by the ownership agreement ${short4(h.agreement)} in force${o.contested ? "; its claim is contested" : ""}.`, tone: "ok" }));
+      if (o.defaultHolder) return [{ text: `As the core reads the work\u2019s owners now: its default holder is ${names2(o.defaultHolder)}, the opener of the one claim that binds it, no ownership agreement targeting it.`, tone: "ok" }];
+      return [{ text: o.claims.length ? `As the core reads the work now: ${o.claims.length} claims bind it, openly contested; no ownership agreement targets it, so it has no default holder.` : "As the core reads the work now: no claim binds it yet (every creator besides its opener must sign it), so it has no holder.", tone: "warn" }];
+    } catch (e3) {
+      return [{ text: `The core\u2019s reading of the work\u2019s owners could not be had: ${err2(e3)}`, tone: "warn" }];
     }
   }
   // ------------------------------------------------------------ way 3: an ownership agreement
@@ -13874,6 +13959,7 @@ var Publishing = class {
       const notCreators = r.shares.map(([id]) => id).filter((id) => creators.length && !creators.includes(id));
       const cols = (await Promise.all(r.shares.map(([id]) => id === acting ? null : this.asking.collectiveOf(id)))).filter((x) => !!x);
       for (const x of cols) if (!x.area) blocking.push(`${names2(x.id)} is a collective whose rule for Agreements could not be read: who signs for it cannot be said, so it cannot be asked.`);
+      const coreNow = work ? await this.ownersLines(work, list5([acting, ...creators]), claim ? [claim] : []) : [];
       const reading2 = {
         title: `An ownership agreement: \u201C${title2 || "\u2026"}\u201D`,
         summary: [`Who owns the work its claim names, and what share: ${r.shares.map(([id, n]) => `${names2(id)} ${pct3(n)}`).join(", ")}.`, "Ownership only: no split, no fees, no split service. How it is sold, with which partners and who takes what, is a publication\u2019s, which reads these shares (Agreements rule 7)."],
@@ -13888,6 +13974,7 @@ var Publishing = class {
               { text: "Changing it later needs every owner: nobody\u2019s share is lowered without them (rules 8, 47).", tone: "warn" }
             ]
           },
+          ...coreNow.length ? [{ heading: "The work now, as the core reads it", lines: coreNow }] : [],
           ...notCreators.length ? [{ heading: "Stated costs", lines: [{ text: `${notCreators.map(names2).join(", ")} ${notCreators.length === 1 ? "is" : "are"} not among the claim\u2019s creators: an owner need not be a creator, and the agreement says so in public.`, tone: "warn" }] }] : [],
           // The assessment tool's reading (round 9, F411): how the owners decide, and the risks, each with its rule.
           ...payload ? beforeSigning(payload, names2).filter((x) => x.heading !== "Who owns what") : []
@@ -14240,7 +14327,9 @@ var Publishing = class {
       if (!kept2) continue;
       for (const [o] of p.holders.filter(([x]) => x !== me2.id)) {
         const col = await this.asking.collectiveOf(o);
-        const to = col ? await collectiveNow(o, col.places, s.via).then((x) => x.parties.filter((m) => !x.departed.includes(m) && m !== me2.id)).catch(() => []) : [o];
+        const envelopes = col ? (await areaReaching(o, col.places, { spec: SPECS.envelopes, type: KEY_DELIVERY }, s.via).catch(() => ({ area: null }))).area : null;
+        if (col && !envelopes) lines4.push({ text: `The key of \u201C${kept2.title}\u201D is not sealed to the collective ${names2(o)}: its rule for Envelopes could not be read.`, tone: "warn" });
+        const to = col ? (envelopes?.holders ?? []).filter((m) => m !== me2.id) : [o];
         const sealed = [];
         for (const r of to) {
           try {
@@ -14250,7 +14339,7 @@ var Publishing = class {
             lines4.push({ text: `The key of \u201C${kept2.title}\u201D could not be sealed to ${names2(r)}: ${err2(e3)}`, tone: "warn" });
           }
         }
-        if (sealed.length) lines4.push({ text: col ? `The key of \u201C${kept2.title}\u201D is sealed to the collective ${names2(o)}, an owner: to each of its members (${sealed.map(names2).join(", ")}), as a collective keeps no secret from its members (rule 57).` : `The key of \u201C${kept2.title}\u201D is sealed to ${names2(o)}, an owner.`, tone: "ok" });
+        if (sealed.length) lines4.push({ text: col ? `The key of \u201C${kept2.title}\u201D is sealed to the collective ${names2(o)}, an owner: to the members acting for it in Envelopes (${sealed.map(names2).join(", ")}), and to no other member (F419).` : `The key of \u201C${kept2.title}\u201D is sealed to ${names2(o)}, an owner.`, tone: "ok" });
       }
     }
     this.save(b);
@@ -14426,7 +14515,10 @@ var Publishing = class {
       }
       const col = w.kind === "claim" ? this.book().claims.find((x) => x.claim === w.id)?.collective : null;
       if (col) return [{ text: `\u201C${w.title}\u201D: ${w.people.map(names2).join(", ")} signed it. The claim is bound.`, tone: "ok" }, ...await this.claimVerdict({ id: col, places: await collectivePlaces(col, list5([...this.settings().relays, ...this.settings().homes]), this.settings().via) }, w.id)];
-      return [{ text: `\u201C${w.title}\u201D: ${w.people.map(names2).join(", ")} signed it. ${w.kind === "claim" ? "The claim is bound." : "The ownership agreement counts: build a publication from it when you want."}`, tone: "ok" }];
+      const own = w.kind === "ownership" ? this.book().ownerships.find((x) => x.id === w.id) : null;
+      const work = own ? this.book().claims.find((x) => x.claim === own.claim)?.work : null;
+      const core = own && work ? await this.ownersLines(work, own.holders.map(([h]) => h), list5([own.claim, own.id, own.version])) : [];
+      return [{ text: `\u201C${w.title}\u201D: ${w.people.map(names2).join(", ")} signed it. ${w.kind === "claim" ? "The claim is bound." : "The ownership agreement counts: build a publication from it when you want."}`, tone: "ok" }, ...core];
     });
   }
   // ------------------------------------------------------------ vows (Agreements rule 13)
@@ -16779,7 +16871,7 @@ async function grant(act, d, judge2, hints, via) {
   });
 }
 async function underGrantSealed(id, d, hints, via) {
-  const gBytes = await fetchAct2(d.binding, hints, via);
+  const gBytes = await fetchAct(d.binding, hints, via);
   if (!gBytes) return null;
   const gd = describeAct(gBytes);
   if (gd.spec !== REPO_SPECS.agreements || gd.type !== AGREEMENTS_TYPES.grant || !gd.payload) return null;
@@ -32593,9 +32685,9 @@ var Dub = class _Dub {
     reading2.sections.unshift({
       heading: "You sign for the collective",
       lines: [
-        { text: `The collective ${names2(collective)} is one party of this, one owner among the work\u2019s owners: it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ""} (Agreements rules 58, 60).` },
+        { text: `The collective ${names2(collective)} is one party of this (a co-creator beside others, or one owner among a work\u2019s owners): it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ""} (Agreements rules 58, 60).` },
         ...area && area.number > 1 ? [{ text: `Its rule asks ${area.number} members: once you sign for it, ${area.holders.filter((h) => h !== me2).map(names2).join(", ")} ${area.holders.length - 1 === 1 ? "is" : "are"} asked to add their signature, inside the collective.` }] : [],
-        { text: "You are not an owner of this work yourself: the collective is. What it is paid, it pays its own holders under its constitution.", tone: "warn" }
+        { text: "You are not a party of this yourself: the collective is. What it is paid, it pays its own holders under its constitution.", tone: "warn" }
       ]
     });
     return area;
