@@ -482,6 +482,17 @@ pub fn closing_refund_placed(out: &mut Out) {
             Facts { rail_valid: valid, rail_payments: pays, ..Default::default() },
             json!({ "question": "closing", "act": hx(&k) }), json!({ "complete": !payer_named || repaid }), None);
     }
+    // Field 4's notice is required: an entry with null leaves nothing open
+    // and puts the closing outside its format.
+    let mut w = World::new();
+    let col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.id);
+    let mut m = agreements::Closing { agreement: f, collective: cid, open: vec![] }.to_map();
+    m.push((Value::Uint(4), Value::Array(vec![Value::Array(vec![Value::Bytes(spec("a payment owed back").to_vec()), Value::Null])])));
+    let k = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![]), agreements::types::CLOSING, m, obj(f));
+    out.case(&mut w, "a closing whose field 4 names a payment with a null notice: invalid", "Agreements, \"Closing (type 20)\": field 4's `notice: hash`",
+        "Field 4 leaves open only money owed back to a payer who gave no address, after a notice; an entry carries that notice, and a null in its place is outside the closing's format.",
+        Facts::default(), ask_status(&k), json!("invalid"), None);
 }
 
 

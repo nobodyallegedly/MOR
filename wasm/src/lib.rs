@@ -3554,7 +3554,7 @@ impl Verifier {
             signed: e.signed.iter().map(hx).collect(),
             holds: e.holds.iter().map(|(a, i)| (hx(a), *i)).collect(),
             open_debts: e.open_debts.iter().map(hx).collect(),
-            left_open: e.closing.open.iter().map(|o| (hx(&o.payment), o.notice.as_ref().map(hx), o.holder.as_ref().map(hx))).collect(),
+            left_open: e.closing.open.iter().map(|o| (hx(&o.payment), hx(&o.notice), o.holder.as_ref().map(hx))).collect(),
         })
     }
 
@@ -4017,9 +4017,9 @@ struct ClosingOut {
     signed: Vec<String>,
     holds: Vec<(String, u64)>,
     open_debts: Vec<String>,
-    /// The money owed back it names as left open (field 4; QG1, F197):
-    /// `[payment, notice or null, holder or null]`.
-    left_open: Vec<(String, Option<String>, Option<String>)>,
+    /// The money owed back it names as left open (field 4; F197, F416):
+    /// `[payment, notice, holder or null]`.
+    left_open: Vec<(String, String, Option<String>)>,
 }
 
 #[derive(Serialize)]

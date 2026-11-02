@@ -3678,23 +3678,22 @@ pub struct Closing {
     pub open: Vec<OpenOwed>,
 }
 
-/// `open-owed = [ payment: hash, notice: hash / null, ? holder: hash ]`: a
-/// payment owed back that a closing leaves open (rule 37d), by one receipt
-/// or claim of it; the notice sent to its payer (type 24, F197), or null
-/// where it is owed to nobody (QG1, F191: the payment committed no key);
-/// and, where the collective chose one, the holder that outlives the
+/// `open-owed = [ payment: hash, notice: hash, ? holder: hash ]`: a
+/// payment owed back that a closing leaves open (rule 93), by one receipt
+/// or claim of it; the notice sent to its payer (type 24, F197), required,
+/// null refused (F416: no money is owed back to nobody); and, where the collective chose one, the holder that outlives the
 /// closing and pays the payer when they turn up (F197: a cMIP's role; the
 /// core shows it, and requires none).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OpenOwed {
     pub payment: Hash,
-    pub notice: Option<Hash>,
+    pub notice: Hash,
     pub holder: Option<Hash>,
 }
 
 impl OpenOwed {
     pub fn to_value(&self) -> Value {
-        let mut v = vec![b(&self.payment), self.notice.as_ref().map_or(Value::Null, b)];
+        let mut v = vec![b(&self.payment), b(&self.notice)];
         if let Some(h) = &self.holder {
             v.push(b(h));
         }
@@ -3709,10 +3708,7 @@ impl OpenOwed {
         }
         Ok(OpenOwed {
             payment: hash(&a[0], w)?,
-            notice: match &a[1] {
-                Value::Null => None,
-                x => Some(hash(x, w)?),
-            },
+            notice: hash(&a[1], w)?,
             holder: a.get(2).map(|x| hash(x, w)).transpose()?,
         })
     }

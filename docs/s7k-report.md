@@ -1,4 +1,4 @@
-**Done. The binding changes: a receipt's payer is an identity or absent, and claim key 8 is gone (`moneyRead`, `paymentCommitment`, `readCommitment`, `anchoringCheckTicket`); `agreementsOwedBack` loses `toKind`, and a gift is never listed; `agreementsPurchase`'s `refundTo` is an identity or null; `agreementsClosing`'s field 4 leaves open only a payer with no address; `agreementsClonePlan` and `agreementsRecord` refuse `[5, stake]` under every holder again. The crate builds only once the payment cMIP's matching patch (`docs/s7k-cmips-payer.patch`) is applied. Ummia's final hashes are in "Checks".**
+**Done. The binding changes: a receipt's payer is an identity or absent, and claim key 8 is gone (`moneyRead`, `paymentCommitment`, `readCommitment`, `anchoringCheckTicket`); `agreementsOwedBack` loses `toKind`, and a gift is never listed; `agreementsPurchase`'s `refundTo` is an identity or null; `agreementsClosing`'s field 4 leaves open only a payer with no address, its notice required (a closing carrying null there is invalid; `leftOpen`'s notice is never null); `agreementsClonePlan` and `agreementsRecord` refuse `[5, stake]` under every holder again. The crate builds only once the payment cMIP's matching patch (`docs/s7k-cmips-payer.patch`) is applied. Ummia's final hashes are in "Checks", unchanged by the last round.**
 
 # S7k: the last text points before the redesign's second merge
 
@@ -49,12 +49,12 @@
 
 ## 3. The holders' rule (F416)
 
-- **Texts (Agreements):** field 30 says the one reading once, with the italic "Richer models of control are a cMIP's, built from this grammar". Rules 48, 94, 95 and 65 are back to S7i's wording. Rule 64 item 4: under every holder, declared or by default, the holders with no voice sign outside the mark, members consenting through the powers above. **Rule 95 item 3 now uses rule 94's words** ("each holder with no voice in the power making the change"), under delegation. See question 2.
+- **Texts (Agreements):** field 30 says the one reading once, with the italic "Richer models of control are a cMIP's, built from this grammar". Rules 48, 94, 95 and 65 are back to S7i's wording. Rule 64 item 4: under every holder, declared or by default, the holders who are no members of the agreement in force sign outside the mark, members consenting through the powers above. **Rules 94 and 95 (its lead-in and item 3), field 30 and rule 64 item 4 read "each holder who is no member of the agreement in force"**, as the core does, members consenting through the collective's own constitution (question 2, decided (b)). Rule 48's wording for publications and fees, outside a collective, is unchanged.
 - **Core:** this session's change in `owners_consent` and the split agreement's owners' matter is reverted, and so is S7j's Q-A11 core (`[5, stake]` under a declared every-holder rule). *Said plainly:* F414 had kept Q-A11 "as built"; F416's single reading leaves it nothing to stand on, so I reverted it rather than keep two readings. No vector held a declared every-holder rule.
 
 ## Vectors
 
-- 508 verdict cases. This session added 7: five for the escape, two for the fresh identity. One S7j case was replaced, as listed in section 1.
+- 509 verdict cases. This session added 8: five for the escape, two for the fresh identity, one for the closing's required notice ("a closing whose field 4 names a payment with a null notice: invalid"). One S7j case was replaced, as listed in section 1. No other verdict turned on the last round's decisions: no vector carried a null notice, and items 2 to 5 change no core reading.
 - Both vectors READMEs and the c-box's are updated.
 
 ## For the Dubsar Suite
@@ -75,27 +75,15 @@
   - tests in `tests/rule_29.rs` for a contest at two homes and for a rule 40 contest: the competing rotation opens the escape, and without it the escape is refused.
 - **Ummia's pinned hashes**, final for these texts: in "Checks".
 
-## Questions
+## Questions, decided
 
-1. **The closing's field 4 keeps `notice: hash / null`.**
-   - *Plain words:* null used to mean "owed to nobody". There is no such refund now, so a null entry leaves nothing open.
-   - *Options:* **(a)** keep the grammar, and say what null does (as written now); **(b)** make it `notice: hash` before the freeze. That is a format change, and the core would refuse null.
-   - *Lean:* (b), since a null entry has no use left. I did not take it: it changes a format beyond what F416 named.
-2. **Rule 95 item 3 and rule 94 now read "each holder with no voice in the power making the change". The core reads both as "each holder who is no member of the agreement in force"** (`owners_consent`, `owners_consent_problem`).
-   - *Plain words:* the two agree where every member has a voice in the power making the change, as the constitution's power gives them. They differ for a member with no voice in an area's power (a Money area's transfer, say). The texts ask that member to sign; the core asks nothing of them.
-   - This gap is older than this session, and is now visible in both rules.
-   - *Options:* **(a)** the core reads the voices of the power making the change; it needs the power that made the act, which the core does not yet name for a transfer; **(b)** the texts say "no member", as the core does.
-   - *Lean:* (a) for a transfer whose power the founding names; I did not guess at it.
+The MOR lead took all five under delegation (F416, "S7k done"); each is now in the texts.
 
-3. **The gift sentence reads the receipt, and the payer is the commitment's.** Money rule 11 (in Fable's and the decision's words) makes a payment a gift where it "names no payer, in its receipt and by no claim". Agreements rule 22 says the payer is never the one a receipt names, but the one the commitment names. Money rule 24 reads the first payer from "its receipt's field 2".
-   - *Plain words:* a split service writing a payer into its receipt could seem to turn a gift into a refund it owes.
-   - *Core, as built:* the payer is the receipt's field 2, or the signer of a payer's claim of the payment. On a rail binding the payer, a claim whose signer is not the committed payer is refused by the rail.
-   - *Lean:* one sentence in rule 11: "where the rail binds the payer, the payment's commitment says which". The words were decided, so I did not change them.
-4. **Whether a rail binds the payer is not stated anywhere a verifier can read.** Development field 13 lists payee, purpose and previous hop; "a proof binding the purpose binds the payer" is said only in Money's words list, in italics. Push rails have no request to commit a payer before paying.
-   - *Lean:* say in Money's words list, in normal text, that binding purpose binds the payer the commitment names. On a push rail, a claim makes its signer the payer as before, the stated cost being that anyone holding a public proof can claim it.
-   - This is older than this session; the bare key had the same reliance.
-5. **Shipping the fresh identity's genesis with its claim** is said in Money's reasoning (italic) only.
-   - *Lean:* a client conformance line: a payer's client paying as a fresh identity delivers its genesis with its claim, so the seller can check it and reach it for a refund.
+1. **(b) The closing's field 4 is `left-open = [ payment: hash, notice: hash, ? holder: hash ]`.** The notice is required; a null is outside the format. Core: `OpenOwed.notice` is a `Hash`, and decoding refuses null; the closing reads the notice directly. The binding's `leftOpen` notice is never null. A test that named a payment with no notice now leaves it unnamed (it still blocks). New vector: a closing whose field 4 carries a null notice is invalid.
+2. **(b) Rules 94 and 95 item 3 read "each holder who is no member of the agreement in force"**, as the core does. For one reading, the same words go into rule 95's lead-in, field 30 and rule 64 item 4. Core: no change.
+3. **Rule 11:** "Where the rail binds the payer, the payment's commitment says which." It sits after the gift sentence.
+4. **Money's words list, in normal text:** "A proof binding the purpose binds the payer the commitment names" and "On a push rail, a claim makes its signer the payer", with the stated cost that anyone holding a public push-rail proof can claim it, as its payer. Core: no change; it already reads a claim's signer as its payer.
+5. **Client conformance** beside "An anonymous payer" (receipt format): a payer's client paying as a fresh identity delivers its genesis with its claim.
 
 ## The stranger's reading
 
@@ -110,16 +98,17 @@ A subagent read only the eight texts and the diff of every sentence changed sinc
   - rule 17's sentence now ends before its list ("It is paid:");
   - rule 22's stated cost: "a payment naming no payer rewards no relay or service";
   - Identity's tag sentence carries no history.
-- **Its points, left as questions:** 1, and 3 to 5 below.
+- **Its points, left as questions and since decided:** 1, 3, 4 and 5 above.
 
 ## Checks
 
 - `cargo test --workspace`, with the cMIP patch applied locally: green for core, relay, harness, the WebAssembly crate and the cMIPs' libraries. The suite's own tests in `cmips/*/tests` and `modules/` need the changes listed above. Without the patch, the core and relay build and pass alone.
+- `cargo test -p mor-core`: green; the binding builds with the cMIP patch applied.
 - `python3 core/vectors/check.py`: all 276 agree, 98 verdict cases judged.
 - The generator gives the same bytes again.
 - `scripts/c-box/make-c-box.sh`: 8 texts, 12 vector files.
 - No finding number or review label is in the texts.
-- **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`):
+- **Ummia's pinned hashes, final for these texts** (`clients/ummia/src/cards.ts`), unchanged by the last round, which touched only Money and Agreements:
   - `MICS_HASH = 'c1ced60231d44db71aa59585c9a145b2ddbbedfbecf39eb23b7b2148bce1b9b2'`
   - `SUITE_HASH = '586d2f1df0f82f92517d869efbfc7464f976c23fb1df2cbcb2deb6bcc4d19b2e'`
 - GitHub: not read by me. It will be red until the suite applies the cMIP patch, which it needs anyway to build the binding.

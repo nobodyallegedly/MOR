@@ -10275,14 +10275,14 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
         lab.c[0] = dev;
         x
     };
-    // Named with no notice: it blocks.
-    let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: None, holder: None }], &[]);
+    // Not named, no notice: it blocks.
+    let (mut lab, label, _, _, rot1) = owed_back_lab(Some(carla), b"a penny");
+    let e = close_with(&mut lab, label, rot1, vec![], &[]);
     assert!(owed_why(&e), "{:?}", e.why);
     // A notice sealed to Carla, its deadline not passed: it blocks.
     let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![carla]);
-    let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
+    let open = vec![agreements::OpenOwed { payment: owed, notice: n, holder: None }];
     let e = close_with(&mut lab, label, rot1, open.clone(), &[]);
     assert!(owed_why(&e), "the deadline has not passed: {:?}", e.why);
     // Lapsed, as the time reference says, the payer's chain held and naming
@@ -10291,7 +10291,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let carla_id = carla_p.expect("a payer with a chain").id;
     let n = notice(&mut lab, owed, vec![carla_id]);
     let holder = spec("a holder that outlives the closing");
-    let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: Some(holder) }];
+    let open = vec![agreements::OpenOwed { payment: owed, notice: n, holder: Some(holder) }];
     let e = close_with(&mut lab, label, rot1, open, &[n]);
     assert!(!owed_why(&e), "{:?}", e.why);
     assert_eq!(e.closing.open[0].holder, Some(holder), "the holder chosen is shown");
@@ -10300,7 +10300,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     // chain the verifier cannot resolve leaves the closing unknown.
     let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![carla]);
-    let open = vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }];
+    let open = vec![agreements::OpenOwed { payment: owed, notice: n, holder: None }];
     let e = close_with_result(&mut lab, label, rot1, open, &[n]);
     assert!(e.is_err(), "the payer's chain not held: unknown for the closing, {e:?}");
     // A payer whose payee pointer the verifier holds gave an address: the
@@ -10311,12 +10311,12 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let a = lab.w.everyday_act(&mut carla_p, mirs().money, 0, ptr.to_map(), None, None);
     lab.w.add(&a);
     let n = notice(&mut lab, owed, vec![carla_p.id]);
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
+    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: n, holder: None }], &[n]);
     assert!(owed_why(&e), "a payer with a pointer held gave an address: {:?}", e.why);
     // A notice sealed to someone else only reached nobody: it blocks.
     let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(carla), b"a penny");
     let n = notice(&mut lab, owed, vec![spec("someone else")]);
-    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
+    let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: n, holder: None }], &[n]);
     assert!(owed_why(&e), "not sealed to the payer: {:?}", e.why);
 }
 

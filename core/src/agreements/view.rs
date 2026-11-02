@@ -7303,7 +7303,7 @@ impl<'a> AgreementsView<'a> {
             of.extend(self.same_payment(&o.payment).into_iter().map(|(h, _)| h));
             let named = c.open.iter().find(|x| of.contains(&x.payment));
             let left_open = match named {
-                Some(x) => x.notice.is_some_and(|n| self.notice_lapsed(&n, &c.collective, Some(&o.to), &of)) && self.gave_no_address(&o.to, &of)?,
+                Some(x) => self.notice_lapsed(&x.notice, &c.collective, Some(&o.to), &of) && self.gave_no_address(&o.to, &of)?,
                 None => false,
             };
             if !left_open {
@@ -7444,7 +7444,7 @@ impl<'a> AgreementsView<'a> {
             // Field 4 may leave it open, as for the broken stretch.
             let named_open = open.iter().find(|x| names.contains(&x.payment));
             let left_open = match named_open {
-                Some(x) => x.notice.is_some_and(|n| self.notice_lapsed(&n, collective, Some(&to), &names)) && self.gave_no_address(&to, &names)?,
+                Some(x) => self.notice_lapsed(&x.notice, collective, Some(&to), &names) && self.gave_no_address(&to, &names)?,
                 None => false,
             };
             if !left_open {
