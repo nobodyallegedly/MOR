@@ -46,8 +46,9 @@ A band's claim on a song may now name anyone beside the band as co-creators: a m
 
 ## Ummia's pinned hashes (the MICS and the suite moved)
 
-- `MICS_HASH = '9177b0b6bef92ed8c34ba6d403b1ce8243180376a2be548f63b5d864d048df53'`
-- `SUITE_HASH = '9243b014bd3594dfdb0e5df71fb2b4b5f477cda9e885560c444a5ce0bc7d47dc'`
+- `MICS_HASH = '435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c'`
+- `SUITE_HASH = '1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276'`
+- *Corrected by the MOR lead, 2 November: the values first printed here did not match the files; these are computed from the files on this branch as Ummia's test computes them (`tagged_hash("MOR/spec", {0: kind, 9: text})`), and are the values the suite pinned (09d2e4bf, dd3e5888).*
 
 ## For the Dubsar Suite
 
