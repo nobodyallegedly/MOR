@@ -1792,9 +1792,9 @@ export class Dub {
     reading.sections.unshift({
       heading: 'You sign for the collective',
       lines: [
-        { text: `The collective ${names(collective)} is one party of this, one owner among the work’s owners: it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ''} (Agreements rules 58, 60).` },
+        { text: `The collective ${names(collective)} is one party of this (a co-creator beside others, or one owner among a work’s owners): it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ''} (Agreements rules 58, 60).` },
         ...(area && area.number > 1 ? [{ text: `Its rule asks ${area.number} members: once you sign for it, ${area.holders.filter((h) => h !== me).map(names).join(', ')} ${area.holders.length - 1 === 1 ? 'is' : 'are'} asked to add their signature, inside the collective.` }] : []),
-        { text: 'You are not an owner of this work yourself: the collective is. What it is paid, it pays its own holders under its constitution.', tone: 'warn' as const },
+        { text: 'You are not a party of this yourself: the collective is. What it is paid, it pays its own holders under its constitution.', tone: 'warn' as const },
       ],
     });
     return area;
