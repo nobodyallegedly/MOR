@@ -28,7 +28,7 @@ use mor_anchoring::custody::{self, Anchoring, Coin, Paid};
 use mor_anchoring::service::{Offer, Payment, Price, Publication, Terms, Ticket, Tier};
 use mor_anchoring::tree::Batch;
 use mor_core::hash::Hash;
-use mor_core::money::{Amount, PayeePointer, Payer, Rail, Receipt, VaultEntry};
+use mor_core::money::{Amount, PayeePointer, Rail, Receipt, VaultEntry};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::LnAddress;
 use mor_onchain::chain::HeaderChain;
@@ -115,7 +115,7 @@ impl Service {
     /// payment buying it, paying the offer's price tag: its answer `answer`.
     fn paid(&self, who: &str, tier: u64, batch: u64, answer: Answer, repaid: u64) -> Paid {
         let price = self.offer.price(tier, None).unwrap();
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: self.id, amount: price, fulfils: self.offer.tag, payer: Some(Payer::Identity(h(who))), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 0 }, salt: [batch as u8; 16], purchase: None };
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: self.id, amount: price, fulfils: self.offer.tag, payer: Some(h(who)), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 0 }, salt: [batch as u8; 16], purchase: None };
         let ticket = Ticket { offer: self.offer.id, leaf: h(&format!("{who}'s leaf")), commitment: commitment.hash(), tier, batch, deadline: 200, quote: None };
         Paid { ticket, payment: Payment { commitment, answer }, shown_by: h(&format!("the service's receipt of {who}'s payment")), repaid }
     }
@@ -123,7 +123,7 @@ impl Service {
     /// A payment of the service to its own pointer's on-chain rail: the
     /// commitment, and the script it pays.
     fn to_itself(&self, amount: u64, salt: u8) -> (Commitment, Vec<u8>) {
-        let c = Commitment { rail: mor_onchain::spec(), payee: self.id, amount: sat(amount), fulfils: self.pointer_id, payer: Some(Payer::Identity(self.id)), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 1 }, salt: [salt; 16], purchase: None };
+        let c = Commitment { rail: mor_onchain::spec(), payee: self.id, amount: sat(amount), fulfils: self.pointer_id, payer: Some(self.id), paid_to: PaidTo::Flow { pointer: self.pointer_id, rail: 1 }, salt: [salt; 16], purchase: None };
         let script = self.pool.address(Network::Regtest).script(&c.hash()).unwrap();
         (c, script)
     }

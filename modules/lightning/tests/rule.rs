@@ -6,10 +6,7 @@
 use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Bolt11Invoice, Currency, InvoiceBuilder, PaymentSecret};
-use mor_core::act::Scheme;
-use mor_core::money::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
-use mor_core::identity::SigningKey;
-use mor_core::sig::SchnorrKey;
+use mor_core::money::{Amount, Citations, Claim, PayeePointer, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, Hash};
 use mor_lightning::bolt11::{self, Network};
 use mor_lightning::{unit, Lightning, LnAddress, LnProof};
@@ -222,7 +219,7 @@ fn paid(
     paid_to: PaidTo,
     node: &SecretKey,
     amount: Amount,
-    payer_in_commitment: Option<Payer>,
+    payer_in_commitment: Option<Hash>,
     preimage: Option<Hash>,
 ) -> (Receipt, Claim) {
     let fulfils = w.pointer_id;
@@ -276,7 +273,6 @@ fn paid(
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         },
@@ -307,7 +303,7 @@ fn a_complete_payment_is_valid_on_both_sides() {
         flow(&w),
         &w.flow_node,
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     assert_eq!(answers(&w, &r, &c, w.payer), (Answer::Valid, Answer::Valid));
@@ -321,7 +317,7 @@ fn a_complete_payment_is_valid_on_both_sides() {
         v,
         &w.vault_node,
         sat(50_000),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     assert_eq!(answers(&w, &r, &c, w.payer), (Answer::Valid, Answer::Valid));
@@ -330,7 +326,7 @@ fn a_complete_payment_is_valid_on_both_sides() {
 #[test]
 fn without_the_preimage_it_is_pending() {
     let w = world();
-    let (r, c) = paid(&w, flow(&w), &w.flow_node, sat(1234), Some(Payer::Identity(w.payer)), None);
+    let (r, c) = paid(&w, flow(&w), &w.flow_node, sat(1234), Some(w.payer), None);
     let (a, b) = answers(&w, &r, &c, w.payer);
     assert!(matches!(a, Answer::Pending(_)) && matches!(b, Answer::Pending(_)));
 }
@@ -344,7 +340,7 @@ fn neither_side_alone_can_fake_a_payment() {
         flow(&w),
         &w.flow_node,
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("guess")),
     );
     let (a, b) = answers(&w, &r, &c, w.payer);
@@ -356,7 +352,7 @@ fn neither_side_alone_can_fake_a_payment() {
         flow(&w),
         &secret("payer's node"),
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     assert!(matches!(
@@ -373,7 +369,7 @@ fn neither_side_alone_can_fake_a_payment() {
         v,
         &w.flow_node,
         sat(50_000),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     assert!(matches!(
@@ -387,7 +383,7 @@ fn neither_side_alone_can_fake_a_payment() {
         flow(&w),
         &w.flow_node,
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     assert!(matches!(
@@ -414,7 +410,7 @@ fn c_receipt(c: &Claim, w: &World) -> Receipt {
     Receipt {
         rail: c.rail,
         proof: c.proof.clone(),
-        payer: Some(Payer::Identity(w.payer)),
+        payer: Some(w.payer),
         payee: c.payee,
         amount: c.amount,
         fulfils: c.fulfils,
@@ -433,7 +429,7 @@ fn what_the_verifier_does_not_hold_is_unknown() {
         flow(&w),
         &w.flow_node,
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     w.pointer_id = h("another act");
@@ -456,7 +452,7 @@ fn another_identitys_pointer_or_another_unit_is_invalid() {
         flow(&w),
         &w.flow_node,
         sat(1234),
-        Some(Payer::Identity(w.payer)),
+        Some(w.payer),
         Some(h("preimage")),
     );
     w.pointer.payee = h("someone else");
@@ -472,62 +468,39 @@ fn another_identitys_pointer_or_another_unit_is_invalid() {
     ));
 }
 
-/// F113 (freeze suite 2.6): an anonymous payer commits a bare key of its
-/// own; its claim, signed with that key and carried by a one-time
-/// identity, verifies; a routing node holding the preimage cannot claim the
-/// payment, nor redirect its refund.
+/// F113, as F416 decided it: anonymity is a fresh identity, not a missing
+/// one. The payer commits a fresh identity of its own; its claim, signed by
+/// that identity, verifies and names where a refund goes. A routing node
+/// holding the preimage cannot claim the payment: claiming in its own name
+/// recomputes another commitment. A payment naming no payer is a gift,
+/// which nobody can claim.
 #[test]
-fn an_anonymous_refund_goes_to_the_committed_key_f113() {
+fn an_anonymous_payer_is_a_fresh_identity_f113_f416() {
     let w = world();
-    let key = SchnorrKey::from_secret(&h("the payer's one-time key")).unwrap();
-    let bare = SigningKey {
-        scheme: Scheme::Founding(1),
-        key: key.public().to_vec(),
-    };
-    let (r, mut c) = paid(
-        &w,
-        flow(&w),
-        &w.flow_node,
-        sat(1234),
-        Some(Payer::Key(bare.clone())),
-        Some(h("preimage")),
-    );
+    let fresh = h("the payer's fresh identity");
+    let (r, mut c) = paid(&w, flow(&w), &w.flow_node, sat(1234), Some(fresh), Some(h("preimage")));
     c.refund = Some(Rail {
         module: mor_lightning::spec(),
         address: b"the payer's refund address".to_vec(),
     });
-    let sign = |c: &Claim, k: &SchnorrKey| Anonymous {
-        key: bare.clone(),
-        sig: k.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig,
-    };
-    let mut payers = c.clone();
-    payers.anonymous = Some(sign(&c, &key));
-    // The receipt names the key; the claim, carried by a one-time identity,
-    // is the payer's.
-    assert_eq!(answers(&w, &r, &payers, h("a one-time identity")), (Answer::Valid, Answer::Valid));
-    // A routing node knows the preimage, but not the key. Claiming in its
-    // own name recomputes another commitment.
+    // The receipt names the fresh identity; its claim is the payer's.
+    assert_eq!(answers(&w, &r, &c, fresh), (Answer::Valid, Answer::Valid));
+    // A routing node knows the preimage, but is not the payer named.
     let router = h("a routing node");
     assert!(matches!(answers(&w, &r, &c, router).1, Answer::Invalid(_)));
-    // Naming the committed key without its signature, or redirecting the
-    // payer's signed refund to itself: invalid.
-    let mut forged = c.clone();
-    forged.anonymous = Some(sign(&c, &SchnorrKey::from_secret(&h("router key")).unwrap()));
-    assert!(matches!(answers(&w, &r, &forged, router).1, Answer::Invalid(_)));
-    let mut redirected = payers.clone();
+    let mut redirected = c.clone();
     redirected.refund = Some(Rail {
         module: mor_lightning::spec(),
         address: b"the router's address".to_vec(),
     });
     assert!(matches!(answers(&w, &r, &redirected, router).1, Answer::Invalid(_)));
-    // A payment that committed no key: nobody can claim it.
+    // A payment naming no payer, a gift: the receipt is valid, and nobody
+    // can claim it.
     let (r0, c0) = paid(&w, flow(&w), &w.flow_node, sat(1234), None, Some(h("preimage")));
     let (a, b) = answers(&w, &r0, &c0, w.payer);
     assert_eq!(a, Answer::Valid, "the payee's receipt, naming no payer");
     assert!(matches!(b, Answer::Invalid(_)), "{b:?}");
-    let mut c0k = c0.clone();
-    c0k.anonymous = Some(sign(&c0, &key));
-    assert!(matches!(answers(&w, &r0, &c0k, router).1, Answer::Invalid(_)));
+    assert!(matches!(answers(&w, &r0, &c0, router).1, Answer::Invalid(_)));
 }
 
 /// F115 (freeze suite 3.7g): a receipt counts only on a rail Module the
@@ -536,7 +509,7 @@ fn an_anonymous_refund_goes_to_the_committed_key_f113() {
 #[test]
 fn only_rails_the_payee_named_count_f115() {
     let w = world();
-    let (r, c) = paid(&w, flow(&w), &w.flow_node, sat(1234), Some(Payer::Identity(w.payer)), Some(h("preimage")));
+    let (r, c) = paid(&w, flow(&w), &w.flow_node, sat(1234), Some(w.payer), Some(h("preimage")));
     let ln = Lightning;
     let m = Modules::new().adopt(&ln);
     let ours = mor_payment::spec();

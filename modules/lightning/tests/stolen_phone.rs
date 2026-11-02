@@ -39,7 +39,7 @@ use mor_core::act::{Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::envelopes::anchoring::{AnchoringCmip, Anchors, Reference};
-use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, VaultEntry};
+use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, Obligation, PaidAt, PayeePointer, Payload, Rail, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use mor_core::identity::Payload as Id;
 use mor_core::agreements::{self, AgreementsView, Mirs};
@@ -245,7 +245,7 @@ impl Story {
     /// caller states it (`paid_at`). Returns the claim's act id and the
     /// claim.
     fn pay(&mut self, payer: &mut Person, debt: Hash, paid_to: PaidTo, wallet: &SecretKey, amount: Amount) -> (Hash, Claim) {
-        let c = Commitment { rail: mor_lightning::spec(), payee: self.ana.id, amount, fulfils: debt, payer: Some(Payer::Identity(payer.id)), paid_to, salt: [9; 16], purchase: None };
+        let c = Commitment { rail: mor_lightning::spec(), payee: self.ana.id, amount, fulfils: debt, payer: Some(payer.id), paid_to, salt: [9; 16], purchase: None };
         let preimage = h(&format!("preimage {debt:?}"));
         let invoice = InvoiceBuilder::new(Currency::Regtest)
             .description_hash(bh::Hash::from_byte_array(c.hash()))
@@ -258,7 +258,7 @@ impl Story {
             .unwrap()
             .to_string();
         let proof = Proof { paid_to, salt: [9; 16], rail: LnProof { invoice, preimage: Some(preimage) }.encode() }.encode();
-        let claim = Claim { rail: mor_lightning::spec(), proof, payee: self.ana.id, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+        let claim = Claim { rail: mor_lightning::spec(), proof, payee: self.ana.id, amount, fulfils: debt, disagrees: None, referral: None, refund: None, purchase: None, previous: None };
         let id = self.act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         // The rail's answer, by the cMIP and the rail Module.
         let ln = Lightning;

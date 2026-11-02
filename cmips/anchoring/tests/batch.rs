@@ -2,7 +2,7 @@
 //! one canonical proof per leaf (review 7d and section 9, item 6; F200).
 
 use mor_anchoring::tree::{self, Batch};
-use mor_core::money::{Amount, Payer};
+use mor_core::money::{Amount};
 use mor_core::hash::{sha256, Hash};
 use mor_payment::{Commitment, PaidTo};
 
@@ -85,7 +85,7 @@ fn a_batch_root_is_never_a_payment_commitment() {
         payee: h("the payee"),
         amount: Amount { unit: h("a unit"), value: 1_000 },
         fulfils: h("an offer"),
-        payer: Some(Payer::Identity(h("the payer"))),
+        payer: Some(h("the payer")),
         paid_to: PaidTo::Flow { pointer: h("a pointer"), rail: 0 },
         salt: [7; 16],
         purchase: None,

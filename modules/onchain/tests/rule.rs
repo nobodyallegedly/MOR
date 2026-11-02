@@ -8,10 +8,8 @@ mod support;
 
 use bitcoin::hashes::Hash as _;
 use bitcoin::{consensus, CompactTarget, Target, Transaction};
-use mor_core::money::{Amount, Anonymous, Citations, Claim, PayeePointer, Payer, Rail, Receipt, VaultEntry};
+use mor_core::money::{Amount, Citations, Claim, PayeePointer, Rail, Receipt, VaultEntry};
 use mor_core::hash::Hash;
-use mor_core::identity::SigningKey;
-use mor_core::sig::SchnorrKey;
 use mor_onchain::{block, p2c, tx, unit, Network, Onchain, OnchainAddress, OnchainProof};
 use mor_payment::{verify, Answer, Commitment, Held, Modules, PaidTo, Proof, RailInput, RailKind, RailModule, Record};
 use support::*;
@@ -460,7 +458,7 @@ const SALT: [u8; 16] = [5; 16];
 /// by `keys`' request key, committing to what the commitment says, the
 /// transaction paying the address that commitment gives, confirmed `n`
 /// times.
-fn paid(w: &World, paid_to: PaidTo, keys: &Keys, amount: Amount, payer: Option<Payer>, n: Option<usize>) -> (Receipt, Claim) {
+fn paid(w: &World, paid_to: PaidTo, keys: &Keys, amount: Amount, payer: Option<Hash>, n: Option<usize>) -> (Receipt, Claim) {
     let fulfils = w.pointer_id;
     let c = Commitment { rail: mor_onchain::spec(), payee: w.payee, amount, fulfils, payer: payer.clone(), paid_to, salt: SALT, purchase: None };
     let a = keys.address(Network::Regtest);
@@ -468,7 +466,7 @@ fn paid(w: &World, paid_to: PaidTo, keys: &Keys, amount: Amount, payer: Option<P
     let proof = Proof { paid_to, salt: SALT, rail: p.encode() }.encode();
     (
         Receipt { rail: mor_onchain::spec(), proof: proof.clone(), payer: payer.clone(), payee: w.payee, amount, fulfils, previous: None, forward: None, batch: None, purchase: None },
-        Claim { rail: mor_onchain::spec(), proof, payee: w.payee, amount, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None },
+        Claim { rail: mor_onchain::spec(), proof, payee: w.payee, amount, fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous: None },
     )
 }
 
@@ -490,7 +488,7 @@ fn vault(w: &World) -> PaidTo {
 #[test]
 fn a_confirmed_payment_is_valid_on_both_sides_to_the_flow_and_to_the_vault() {
     let w = world();
-    let me = Some(Payer::Identity(w.payer));
+    let me = Some(w.payer);
     let (r, c) = paid(&w, flow(&w), &w.flow, sat(1234), me.clone(), Some(N));
     assert_eq!(answers(&w, &r, &c, w.payer), (Answer::Valid, Answer::Valid));
     assert_eq!(r.proof, c.proof, "both sides hold the same proof");
@@ -502,7 +500,7 @@ fn a_confirmed_payment_is_valid_on_both_sides_to_the_flow_and_to_the_vault() {
 fn unconfirmed_both_sides_are_pending() {
     let w = world();
     for n in [None, Some(3)] {
-        let (r, c) = paid(&w, flow(&w), &w.flow, sat(1234), Some(Payer::Identity(w.payer)), n);
+        let (r, c) = paid(&w, flow(&w), &w.flow, sat(1234), Some(w.payer), n);
         let (a, b) = answers(&w, &r, &c, w.payer);
         assert!(matches!(a, Answer::Pending(_)) && matches!(b, Answer::Pending(_)), "{a:?} {b:?}");
     }
@@ -511,7 +509,7 @@ fn unconfirmed_both_sides_are_pending() {
 #[test]
 fn neither_side_alone_can_fake_a_payment_nor_relabel_it() {
     let w = world();
-    let me = Some(Payer::Identity(w.payer));
+    let me = Some(w.payer);
     let (r, c) = paid(&w, flow(&w), &w.flow, sat(1234), me.clone(), Some(N));
     // The payer relabels the payment: another amount, another purpose,
     // another payee. Each recomputes another commitment, so another
@@ -540,19 +538,16 @@ fn neither_side_alone_can_fake_a_payment_nor_relabel_it() {
     assert!(matches!(answers(&w, &r3, &c, w.payer).0, Answer::Invalid(_)));
 }
 
+/// Anonymity is a fresh identity (F416): the payment commits it as payer,
+/// and only a claim it signs counts.
 #[test]
-fn an_anonymous_payers_claim_counts_only_with_its_committed_key() {
+fn an_anonymous_payers_claim_counts_only_signed_by_its_fresh_identity() {
     let w = world();
-    let one_time = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
-    let bare = SigningKey { scheme: mor_core::act::Scheme::Founding(1), key: one_time.public().to_vec() };
-    let (r, mut c) = paid(&w, flow(&w), &w.flow, sat(777), Some(Payer::Key(bare.clone())), Some(N));
-    c.anonymous = Some(Anonymous { key: bare, sig: one_time.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
-    // Signed, as an act, by a one-time identity of the payer's.
-    assert_eq!(answers(&w, &r, &c, h("a one-time identity")), (Answer::Valid, Answer::Valid));
+    let fresh = h("a fresh identity");
+    let (r, c) = paid(&w, flow(&w), &w.flow, sat(777), Some(fresh), Some(N));
+    assert_eq!(answers(&w, &r, &c, fresh), (Answer::Valid, Answer::Valid));
     // The payee, who knows the commitment, claims the payment as its own.
-    let mut theirs = c.clone();
-    theirs.anonymous = None;
-    assert!(matches!(answers(&w, &r, &theirs, w.payee).1, Answer::Invalid(_)));
+    assert!(matches!(answers(&w, &r, &c, w.payee).1, Answer::Invalid(_)));
 }
 
 #[test]
