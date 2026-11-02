@@ -9776,7 +9776,10 @@ var Kishib = class {
   /**
    * Review an escape with both keys (Identity section 11): someone else
    * rotated with this identity's chain key (its paper words were stolen),
-   * or two rotations contest one position of a self-hosted identity. The
+   * or two rotations revealing the same chain key contest one position,
+   * wherever they are served: at a self-hosted home, at one home of several
+   * (Identity rule 44), or each missing the home rule (rule 40; rule 29 as
+   * F416 reads it). The
    * owner, holding the chain key's words and the signing key's words bound
    * before that position, signs a homeless rotation to new homes and an
    * escape endorsement listing every rotation served at that position as
@@ -11919,7 +11922,7 @@ function part(tab, key, web, r) {
       return f(
         "escape",
         "Escape a contested position",
-        "Last, and set apart: for when someone else has changed your identity\u2019s keys with your chain key\u2019s words (they were stolen), or two changes contest one position of a self-hosted identity. You need both papers: the chain key\u2019s words, and the signing key\u2019s words of the key you held before. You leave to new homes.",
+        "Last, and set apart: for when someone else has changed your identity\u2019s keys with your chain key\u2019s words (they were stolen), or two changes made with the same chain key contest one position, wherever your homes hold them. You need both papers: the chain key\u2019s words, and the signing key\u2019s words of the key you held before. You leave to new homes.",
         `${idField("id", "The identity")}${address}${words("words", "Its chain key\u2019s 24 words")}${words("signingWords", "Its signing key\u2019s 24 words, the key you held before the other change")}<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`
       );
     case "collectives/give":
