@@ -90,6 +90,12 @@ Verdicts an app may see change: an act a departed member drafts for the collecti
 
 **For the suite, to turn the anchoring tests green** (the binding cannot meet the old calls and follow draft 6): `clients/anchoring-service/src/service.ts` makes its publication with `anchoringOffer(3, TIERS, words, this.me.id, SPEC.split)` and signs each of `anchoringPriceTags(3, TIERS, o.id, this.me.id)` under Money, keeping the tag ids, and accepts a payment whose `fulfils` is the ticket's tier's tag (line 246); `clients/damgar/src/damgar.ts` (line 1935) looks up the tag act a payment fulfils and passes it to `anchoringCheckTicket`; `clients/desk/src/money.ts` (line 164) and `clients/ummia/src/anchor.ts` (line 89) pass the service's tag acts to `anchoringReadOffer` and pay `tags[tier].tag`.
 
+**Changed in round 10** (the Dubsar Suite's round 10, F415; written by the suite with the MOR lead's leave; no change to the core):
+
+| Old | New | Why |
+| --- | --- | --- |
+| none (the core's `work_owners` had no binding; apps said a work's default holder in words only) | `Verifier.agreementsWorkOwners(specs, work)` → `{ work, claims, contested, agreements, defaultHolder, holders }`: the claims that count and bind the work, ascending; `contested` (two or more); the ownership agreements targeting a claim of it, each its version in force; `defaultHolder`, where no agreement writes shares and one claim binds it, that claim's opener (a collective, for a claim a member signed for it), else null; `holders`, `[{ agreement, holders: [[holder, share]] }]`, the stake's holders as the version in force writes them (field 7, millionths), a collective one holder among them. **Stake transfers since that version are not applied** (the core's as-held reading is not public) | Agreements rule 15; F218, F412, F416: a collective one holder among a work's holders |
+
 **Changed in S7k** (rebuild against this commit; the payment cMIP's matching change first, below):
 
 | Old | New | Why |

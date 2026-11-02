@@ -3354,6 +3354,34 @@ impl Verifier {
         to_js(&out)
     }
 
+    /// Who made a work and who owns it as recorded (Agreements rule 15;
+    /// F218; F412; F416), the core's `work_owners`: `{ work, claims,
+    /// contested, agreements, defaultHolder, holders }`. `claims`, the
+    /// claims that count and bind the work, ascending; `contested`, two or
+    /// more; `agreements`, the ownership agreements targeting a claim of the
+    /// work, each its version in force; `defaultHolder`, where no agreement
+    /// writes shares and one claim binds it, that claim's opener (a
+    /// collective, for a claim a member signed for it), else null;
+    /// `holders`, for each agreement in force `{ agreement, holders:
+    /// [[holder, share]] }`, its stake's holders as that version writes them
+    /// (field 7, shares in millionths), a collective one holder among them.
+    /// *Not applied here:* stake transfers since that version (rule 14):
+    /// the core's as-held reading is not public (round 10, for the MOR
+    /// lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+    /// leave; no change to the core.
+    #[wasm_bindgen(js_name = agreementsWorkOwners)]
+    pub fn agreements_work_owners(&self, specs: JsValue, work: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let o = view.work_owners(&unhex(work)?).map_err(lerr)?;
+        let mut written = vec![];
+        for a in &o.agreements {
+            let t = view.terms(a).map_err(lerr)?;
+            written.push((*a, stake_holders(&t)));
+        }
+        to_js(&work_owners_out(&o, &written))
+    }
+
     /// The payments a collective received during a broken stretch and owes
     /// back, the sale not signed anew after the rollback (rule 37d, RB2):
     /// open obligations, each `{ payment, to, unit, value, stillBroken,
@@ -4047,6 +4075,46 @@ struct RollbackRegistersOut {
     departures: Vec<DepartureOut>,
 }
 
+/// A work's owners as recorded, for `agreementsWorkOwners`.
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct WorkOwnersOut {
+    work: String,
+    claims: Vec<String>,
+    contested: bool,
+    agreements: Vec<String>,
+    default_holder: Option<String>,
+    holders: Vec<HoldersOut>,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+struct HoldersOut {
+    agreement: String,
+    holders: Vec<(String, u64)>,
+}
+
+/// The holders an ownership agreement's version writes in its stake
+/// (field 7; one stake, rule 15), each named by its identity: a collective
+/// is one holder among them.
+fn stake_holders(t: &agreements::Terms) -> Vec<(Hash, u64)> {
+    holders_written(t.stakes.iter().flatten().next())
+}
+
+fn holders_written(stake: Option<&agreements::Stake>) -> Vec<(Hash, u64)> {
+    stake.map(|st| st.holders.iter().filter_map(|(w, n)| w.id().map(|h| (*h, *n))).collect()).unwrap_or_default()
+}
+
+fn work_owners_out(o: &agreements::WorkOwners, written: &[(Hash, Vec<(Hash, u64)>)]) -> WorkOwnersOut {
+    WorkOwnersOut {
+        work: hx(&o.work),
+        claims: o.claims.iter().map(hx).collect(),
+        contested: o.contested,
+        agreements: o.agreements.iter().map(hx).collect(),
+        default_holder: o.default_holder.as_ref().map(hx),
+        holders: written.iter().map(|(a, hs)| HoldersOut { agreement: hx(a), holders: hs.iter().map(|(h, n)| (hx(h), *n)).collect() }).collect(),
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OwedBackOut {
@@ -4606,5 +4674,37 @@ fn route_out(r: &agreements::RouteVerdict) -> RouteOut {
         },
         V::Broken { hops, at, agreement, why } => RouteOut { route: "broken", hops: hs(hops), at: Some(hx(at)), why: Some(why.clone()), agreement: agreement.as_ref().map(hx), owed: None, near: vec![] },
         V::Unknown { at, why } => RouteOut { route: "unknown", hops: vec![], at: Some(hx(at)), why: Some(why.clone()), agreement: None, owed: None, near: vec![] },
+    }
+}
+
+#[cfg(test)]
+mod work_owners_shape {
+    //! `agreementsWorkOwners`' shape (the Dubsar Suite's round 10, F415):
+    //! the core's `work_owners`, every hash as hex, the default holder null
+    //! where none, each agreement in force with its stake's holders as
+    //! written, a collective one holder among them.
+    use super::*;
+    use mor_core::hash::sha256;
+
+    #[test]
+    fn a_work_held_by_a_person_and_a_collective_reads_two_holders() {
+        let (river, collective, agreement, claim, work) = (sha256(b"river"), sha256(b"a collective"), sha256(b"the agreement in force"), sha256(b"the claim"), sha256(b"the work"));
+        let stake = agreements::Stake { object: agreements::Who::Id(work), holders: vec![(agreements::Who::Id(river), 500_000), (agreements::Who::Id(collective), 500_000)] };
+        let o = agreements::WorkOwners { work, claims: vec![claim], contested: false, agreements: vec![agreement], default_holder: None };
+        let out = work_owners_out(&o, &[(agreement, holders_written(Some(&stake)))]);
+        assert_eq!(out.default_holder, None);
+        assert_eq!(out.holders, vec![HoldersOut { agreement: hx(&agreement), holders: vec![(hx(&river), 500_000), (hx(&collective), 500_000)] }]);
+        assert_eq!((out.work, out.claims, out.contested, out.agreements), (hx(&work), vec![hx(&claim)], false, vec![hx(&agreement)]));
+    }
+
+    #[test]
+    fn a_collectives_claim_with_no_agreement_names_the_collective_the_default_holder() {
+        let (collective, claim, work) = (sha256(b"a collective"), sha256(b"its claim"), sha256(b"the work"));
+        let o = agreements::WorkOwners { work, claims: vec![claim], contested: false, agreements: vec![], default_holder: Some(collective) };
+        let out = work_owners_out(&o, &[]);
+        assert_eq!(out.default_holder, Some(hx(&collective)));
+        assert!(out.holders.is_empty());
+        // "This" (the agreement itself) is no holder a client can name.
+        assert!(holders_written(Some(&agreements::Stake { object: agreements::Who::This, holders: vec![(agreements::Who::This, 1_000_000)] })).is_empty());
     }
 }
