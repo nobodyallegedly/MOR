@@ -29,7 +29,7 @@ pub fn work_owners_json(e: Result<agreements::WorkOwners, agreements::Agreements
 }
 
 /// A collective's claim: a claim a member signs for the collective is the
-/// collective's, its opener and a creator; members may be listed beside it.
+/// collective's, its opener and a creator; any co-creators may be listed beside it.
 pub fn agreements(out: &mut Out) {
     let mut w = World::new();
     let col = collective(&mut w, &[1], 1);

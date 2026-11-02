@@ -45,6 +45,7 @@ mod s7j_identity;
 
 #[path = "s7k.rs"]
 mod s7k;
+mod s7l;
 
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -2686,6 +2687,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_c(out);
     scenario9::agreements(out);
     s7i::agreements(out);
+    s7l::agreements(out);
     s7j::agreements(out);
 }
 
