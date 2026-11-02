@@ -358,7 +358,7 @@ export function part(tab: Tab, key: string, web: boolean, r: RunnerView | null):
       return f(
         'escape',
         'Escape a contested position',
-        'Last, and set apart: for when someone else has changed your identity’s keys with your chain key’s words (they were stolen), or two changes contest one position of a self-hosted identity. You need both papers: the chain key’s words, and the signing key’s words of the key you held before. You leave to new homes.',
+        'Last, and set apart: for when someone else has changed your identity’s keys with your chain key’s words (they were stolen), or two changes made with the same chain key contest one position, wherever your homes hold them. You need both papers: the chain key’s words, and the signing key’s words of the key you held before. You leave to new homes.',
         `${idField('id', 'The identity')}${address}${words('words', 'Its chain key’s 24 words')}${words('signingWords', 'Its signing key’s 24 words, the key you held before the other change')}<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`,
       );
     case 'collectives/give':

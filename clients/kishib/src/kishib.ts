@@ -1038,7 +1038,10 @@ export class Kishib {
   /**
    * Review an escape with both keys (Identity section 11): someone else
    * rotated with this identity's chain key (its paper words were stolen),
-   * or two rotations contest one position of a self-hosted identity. The
+   * or two rotations revealing the same chain key contest one position,
+   * wherever they are served: at a self-hosted home, at one home of several
+   * (Identity rule 44), or each missing the home rule (rule 40; rule 29 as
+   * F416 reads it). The
    * owner, holding the chain key's words and the signing key's words bound
    * before that position, signs a homeless rotation to new homes and an
    * escape endorsement listing every rotation served at that position as

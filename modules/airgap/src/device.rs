@@ -160,10 +160,13 @@ pub enum Exception {
     /// One endorsed homeless rotation (an escape) after a normal rotation the
     /// homes refused; the endorsement must list it as abandoned.
     Escape { abandoned: Hash },
-    /// The same exception, out of a position contested at a self-hosted
-    /// home (Identity draft 13, rule 29, F299): granted only on the
+    /// The same exception, out of a contested position: two rotations
+    /// revealing the same chain key at the same position, wherever they are
+    /// served (Identity rule 29, F299, F416): at a self-hosted home, by one
+    /// home's conflict leaving the others short (rule 44), or as competing
+    /// rotations each missing the home rule (rule 40). Granted on the
     /// competing rotation's bytes, checked here; the endorsement must list
-    /// both rotations served there as abandoned.
+    /// both rotations as abandoned.
     EscapeContested { own: Hash, competing: Hash },
     /// The rotation this key signed failed the rotation checks, shown by
     /// the identity chain's bytes, checked here: it was never a rotation, so
@@ -187,7 +190,7 @@ impl fmt::Display for Exception {
             ),
             Exception::EscapeContested { own, competing } => write!(
                 f,
-                "this key already signed a normal rotation ({}), and this device checked a competing rotation revealing the same key at the same position ({}): the position is contested at a self-hosted home. Sign this escape to leave it; the escape endorsement MUST list both as abandoned. Allowed once.",
+                "this key already signed a normal rotation ({}), and this device checked a competing rotation revealing the same key at the same position ({}): the position is contested by two rotations revealing this key. Sign this escape to leave it; the escape endorsement MUST list both as abandoned. Allowed once.",
                 hexs(own),
                 hexs(competing)
             ),
@@ -509,8 +512,10 @@ fn open_chain_act(bytes: &[u8], cfg: &Config, what: &str) -> Result<(Act, Inside
     Ok((a, inside, payload))
 }
 
-/// Rule 29, F299 (Agreements round 2, Q7): the competing rotation served at
-/// a self-hosted identity's position, checked offline. Its signature
+/// Rule 29, F299 (Agreements round 2, Q7; F416): the competing rotation at
+/// the identity's position, wherever it is served (a self-hosted home, one
+/// home of several, or competing rotations each missing the home rule),
+/// checked offline. Its signature
 /// verifies under the chain key it revealed, and that key is the one this
 /// device's key commits to; its previous act is the same as that of the
 /// rotation the device signed; it is not a rotation the device signed.

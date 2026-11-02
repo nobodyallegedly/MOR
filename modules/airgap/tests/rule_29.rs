@@ -1,8 +1,10 @@
 //! Identity draft 13, rule 29's exceptions in the device, opened only by
 //! bytes the device checks itself (freeze suite v28, 5.7f and 5.7g):
 //!
-//! - F299 (Agreements round 2, Q7): the escape out of a position contested
-//!   at a self-hosted home, signed only on the competing rotation's bytes,
+//! - F299 (Agreements round 2, Q7), widened by F416: the escape out of a
+//!   position contested by two rotations revealing the same chain key,
+//!   wherever served (a self-hosted home, two homes, a rule 40 contest),
+//!   signed as the contested escape only on the competing rotation's bytes,
 //!   never on the online side's word.
 //! - Fable's I5 with F328 Q3: signing again after a rotation that failed the
 //!   rotation checks, shown by the identity chain's bytes from genesis to
@@ -94,6 +96,52 @@ fn the_escape_from_a_contested_self_hosted_position_needs_the_rivals_bytes_5_7f(
     again.homes = Some(vec![home("yet another home")]);
     let p = online::with_evidence(online::pending(&identity_spec(), &o.last, &again, None, true), Some(&rival), None);
     assert!(matches!(o.device.review(&p.encode(), &Choices::default(), &mut o.rng), Err(Refusal::AlreadySigned { .. })));
+}
+
+/// Identity rule 29, as F416 reads it: the escape opens on a position
+/// contested by two rotations revealing the same chain key, wherever they
+/// are served. At two operated homes, one home's conflict leaving the
+/// others short (rule 44), or competing rotations each missing the home
+/// rule (rule 40): the competing rotation's bytes open the contested
+/// escape; one that does not compete, or the device's own, is refused; and
+/// without the rival's bytes only the ordinary escape is offered, never
+/// the contested one.
+fn contested_at(label: &str, homes: Vec<mor_core::identity::Home>) {
+    let mut o = Owner::with_homes(label, SeedModule::Words, 2, homes);
+    let rival = thiefs_rotation(&o, label);
+    let own = o.sign(&o.pending(&o.plan()), &Choices::default());
+    let own_id = rotation_act(&own).id();
+    let esc = escape_plan(&o);
+    let bare = online::pending(&identity_spec(), &o.last, &esc, None, true);
+    // Without the rival's bytes: the ordinary escape (the homes refused the
+    // rotation), never the contested one.
+    let rv = o.device.review(&bare.encode(), &Choices::default(), &mut o.rng).unwrap();
+    assert_eq!(rv.standing, Standing::Exception(Exception::Escape { abandoned: own_id }), "{label}");
+    // Its own rotation as the rival, or one that does not compete: refused.
+    let own_as_rival = online::with_evidence(bare.clone(), Some(&rotation_act(&own)), None);
+    assert!(matches!(o.device.review(&own_as_rival.encode(), &Choices::default(), &mut o.rng), Err(Refusal::Evidence(_))), "{label}");
+    let mut other = Owner::with_homes("another identity", SeedModule::Words, 2, vec![home("elsewhere")]);
+    other.rotate();
+    let elsewhere = thiefs_rotation(&other, "elsewhere");
+    let not_rival = online::with_evidence(bare.clone(), Some(&elsewhere), None);
+    assert!(matches!(o.device.review(&not_rival.encode(), &Choices::default(), &mut o.rng), Err(Refusal::Evidence(_))), "{label}");
+    // The competing rotation, checked offline: the contested escape, said so.
+    let shown = online::with_evidence(bare, Some(&rival), None);
+    let rv = o.device.review(&shown.encode(), &Choices::default(), &mut o.rng).unwrap();
+    assert_eq!(rv.standing, Standing::Exception(Exception::EscapeContested { own: own_id, competing: rival.id() }), "{label}");
+    assert!(Exception::EscapeContested { own: own_id, competing: rival.id() }.to_string().contains("contested by two rotations revealing this key"));
+    let signed = o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap();
+    assert!(rotation_of(&rotation_act(&Message::SignedRotation(signed.message))).homeless, "{label}");
+}
+
+#[test]
+fn the_escape_from_a_position_contested_at_two_homes_rule_44() {
+    contested_at("two homes", vec![home("home one"), home("home two")]);
+}
+
+#[test]
+fn the_escape_from_competing_rotations_each_missing_the_home_rule_rule_40() {
+    contested_at("three homes", vec![home("home one"), home("home two"), home("home three")]);
 }
 
 /// 5.7g: the online device changes the homes and leaves in place a home rule
