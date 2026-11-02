@@ -319,11 +319,20 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
         unknown: e.unknown?.length ?? 0,
       });
     } catch (err) {
-      r.problems.push(`The vow ${x.name.slice(0, 8)}… could not be read: ${err instanceof Error ? err.message : String(err)}`);
+      r.problems.push(vowProblem(x.name, err));
     }
   }
   return { vows: out, asked: relays, problems: r.problems };
 }
+
+/** A vow whose sales rest on two or more records with no rail answer (Fable's bound): its words. */
+/** What is said of a vow the core would not read: Fable's bound (Money rule 8; S7j, F413) where two or more of its sales rest on records the rail has not answered (the whole vow unknown, never its sales one by one), else the core's words. */
+export function vowProblem(name: string, err: unknown): string {
+  const why = err instanceof Error ? err.message : String(err);
+  return /rail-unanswered/.test(why) ? `The vow ${name.slice(0, 8)}…: ${VOW_WAITING}` : `The vow ${name.slice(0, 8)}… could not be read: ${why}`;
+}
+
+export const VOW_WAITING = 'unknown, waiting for the rail: two or more of its sales rest on receipts or claims the rail has not answered yet, so none of them can be told on its own (Money rule 8).';
 
 /**
  * A contest of a purchase (Agreements type 14, rule 54, F386): signed by its
