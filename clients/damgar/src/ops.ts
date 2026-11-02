@@ -25,6 +25,8 @@ export const OPS = [
   'look',
   'to sign',
   'sign draft',
+  'pay tag',
+  'confirm purchase',
   'decline',
   'accept debt',
   'pay request',
@@ -87,6 +89,14 @@ const untilOf = (v: unknown): number | null => {
   return Math.floor(t / 1000);
 };
 
+/** Where a refund to a fresh identity goes, as the page sends it (F416): a Lightning node key, or a Bitcoin key; none where both are empty. */
+const refundOf = (a: Record<string, unknown>): { lightning?: string; onchain?: string } | null => {
+  const r = a.refund && typeof a.refund === 'object' ? (a.refund as Record<string, unknown>) : {};
+  const lightning = text(r.lightning).trim();
+  const onchain = text(r.onchain).trim();
+  return lightning || onchain ? { ...(lightning ? { lightning } : {}), ...(onchain ? { onchain } : {}) } : null;
+};
+
 /** What Settings saves (H45): once one of these succeeds from Settings, its sections start folded. */
 const SETTINGS_SAVES = new Set(['publish list', 'rails publish', 'relays', 'manual', 'clock', 'link']);
 
@@ -129,7 +139,11 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
     case 'to sign':
       return d.toSign();
     case 'sign draft':
-      return d.signDraft(text(a.id));
+      return d.signDraft(text(a.id), { anonymous: a.anonymous === true, refund: refundOf(a) });
+    case 'pay tag':
+      return d.payTag({ tag: text(a.tag), payee: text(a.payee) || undefined, cites: text(a.cites) || null, value: text(a.value) || null, whatFor: text(a.whatFor) || null, anonymous: a.anonymous === true, refund: refundOf(a), referral: a.referral && typeof a.referral === 'object' ? { identity: text((a.referral as Record<string, unknown>).identity), evidence: text((a.referral as Record<string, unknown>).evidence) } : null });
+    case 'confirm purchase':
+      return d.confirmPurchase(text(a.key), list(a.acks));
     case 'decline':
       return d.decline(text(a.id));
     case 'accept debt':
