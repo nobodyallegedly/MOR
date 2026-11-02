@@ -15,7 +15,11 @@
 //! - since draft 4 (F355), **step 4a** ([`transfer_to_oneself`]): a
 //!   commitment whose `fulfils` names the vault declaration it is paid to
 //!   is a transfer to oneself, paid by the payee's own identity and buying
-//!   nothing, or the answer is invalid.
+//!   nothing, or the answer is invalid;
+//! - since draft 6 (`cmips/cmip-payment-draft-6.md`, F416), the
+//!   commitment's **payer an identity or null**: an anonymous payer is a
+//!   fresh identity, a claim's payer its signer, and a payment naming no
+//!   payer a gift.
 //!
 //! Nothing here signs anything: receipts are signed by receivers, claims by
 //! payers (F112).

@@ -1,6 +1,8 @@
 //! # mor-conversion
 //!
-//! The conversion cMIP, draft 4 (`cmips/cmip-conversion-draft-4.md`):
+//! The conversion cMIP, draft 5 (`cmips/cmip-conversion-draft-5.md`; a
+//! hop's claim's payer its signer, the first payer's claim citing the
+//! seller's tag, F414, F416):
 //! Money's conversion task ("a cMIP defining how a conversion is offered
 //! and evidenced"). **Experimental**: an instrument for testing the core,
 //! never for real money.

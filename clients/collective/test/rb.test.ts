@@ -12,6 +12,7 @@ import { SPLIT_CMIP, receiptPayload, sign as agreementsSign } from '../../repo/s
 import { AGREEMENTS_TYPES, MONEY_TYPES, REPO_SPECS, TEST_RAIL } from '../../repo/src/specs.ts';
 import type { Governance } from '../../repo/src/collective.ts';
 import type { State } from '../src/page/api.ts';
+import { owedBackOf, UNKNOWN_OWED_BACK } from '../src/actions.ts';
 import { commit, lossy, prepare, sign, state, words, world, type World } from './setup.ts';
 
 let w: World;
@@ -119,7 +120,7 @@ test('RB2 with BQ2: a payment under an offer of the broken stretch is shown as o
   }
 });
 
-test('QG1 and F197: a closing names money owed back to nobody; a payer with no address is sent a notice with a deadline', async () => {
+test('QG1 and F197, under Fable\'s bound: one payer owed back is sent a notice and left open; a gift owes nothing; two records with no rail answer make the whole list unknown, waiting for the rail, and it blocks the closing', async () => {
   const c = w.client;
   let s = await state(c);
   const [ada, one, two, patron, splitter] = ['Ada', 'Sim One', 'Sim Two', 'A Patron', 'Splitter'].map((n) => idOf(s, n));
@@ -128,22 +129,22 @@ test('QG1 and F197: a closing names money owed back to nobody; a payer with no a
     commit(w.checkout, 'src/lib.rs', 'pub fn ledger() -> u8 { 22 }\n');
     const bake = (await sign(c, { kind: 'release', publisher: id, version: 'ledger.1' })).done.acts[0];
     await breakBy(id, relay, [ada, one], two, { safetyThreshold: 1, releaseThreshold: 1, cloneThreshold: 1, abandonmentOthers: 1 });
-    // Two payments under a sale of the broken stretch: one committing no key, one by the patron.
+    // One payment under a sale of the broken stretch, by the patron.
     const during = await saleOf(id, splitter, bake);
     const relays = w.app.store.collective(id).f.relays;
-    await paid(splitter, during.tag, 3, relays);
     await paid(splitter, during.tag, 9, relays, patron);
     const rb = await prepare(c, { kind: 'rollback', collective: id, rules: { safety: 1, release: 1, clone: 1, others: 1 } });
     assert.deepEqual(rb.reading.blocking, [], words(rb.reading));
     await c.ask('confirm', { plan: rb.plan, digest: rb.digest });
     s = await state(c);
+    // One record with no rail answer: the list is given, its one entry marked unknown (S7e).
     const owed = box(s, id).owedBack;
-    assert.equal(owed.length, 2, JSON.stringify(owed));
-    const toNobody = owed.find((o) => o.toKind === 'nobody')!;
-    const toPatron = owed.find((o) => o.toKind === 'identity')!;
-    assert.match(toNobody.text, /committed no key: nobody can claim it .*does not block a closing that names it/);
+    assert.equal(owed.length, 1, JSON.stringify(owed));
+    assert.equal(box(s, id).owedBackUnknown, null);
+    const toPatron = owed[0];
+    assert.equal(toPatron.to, patron, 'owed back to the payer named, an identity (S7k)');
     assert.equal(toPatron.notice, null);
-    // Before any notice, money owed back to a payer with an identity blocks the closing.
+    // Before any notice, money owed back to the patron blocks the closing.
     const early = await prepare(c, { kind: 'closing', collective: id });
     assert.ok(early.reading.blocking.some((b) => /owed back to A Patron .*send them a notice with a deadline \(F197\)/.test(b)), words(early.reading));
     // F197: a notice sealed to the patron, with a deadline on a time reference.
@@ -154,17 +155,21 @@ test('QG1 and F197: a closing names money owed back to nobody; a payer with no a
     await c.ask('confirm', { plan: n.plan, digest: n.digest });
     s = await state(c);
     assert.ok(box(s, id).owedBack.find((o) => o.payment === toPatron.payment)!.notice, 'the notice is shown beside the payment');
-    // The closing names both as left open; neither blocks it here (the
-    // patron's deadline is the time reference's answer, which the core
-    // judges). This fixture lost a record of the collective (breakBy), so
-    // the history an ending would cite is not all held: that alone blocks.
+    // The closing names it as left open, its notice required (S7k).
     const cl = await prepare(c, { kind: 'closing', collective: id });
-    assert.match(words(cl.reading), /leaves open, visibly, 1 payment owed back to nobody/);
     assert.match(words(cl.reading), /A Patron .*who gave no address: a notice was sent/);
+    assert.doesNotMatch(words(cl.reading), /owed back to nobody/, 'nothing is ever owed back to nobody');
     assert.ok(cl.reading.blocking.every((b) => !/owed back to/.test(b)), words(cl.reading));
-    // S7e: these receipts are on the test rail, which no rail Module answers, so whether each is owed back is unknown, and an
-    // unknown entry still blocks a closing, beside what the closing names as left open.
-    assert.equal(cl.reading.blocking.filter((b) => /is owed back from the broken stretch is unknown here/.test(b)).length, 2, words(cl.reading));
+    // S7e: this receipt is on the test rail, which no rail Module answers, so the entry is unknown, and it still blocks.
+    assert.equal(cl.reading.blocking.filter((b) => /is owed back from the broken stretch is unknown here/.test(b)).length, 1, words(cl.reading));
+    // A second payment of the stretch naming no payer: a gift, owing nothing (Money rule 11). Its receipt has no rail
+    // answer either, so the list now rests on two records with none: unknown as a whole (Fable's bound, Money rule 8),
+    // never the patron's entry alone. Waiting for the rail, said in plain words; it blocks the closing.
+    await paid(splitter, during.tag, 3, relays);
+    const later = await prepare(c, { kind: 'closing', collective: id });
+    assert.ok(later.reading.blocking.some((b) => /owes back from its broken stretch is unknown, waiting for the rail: it rests on two or more receipts or claims the rail has not answered yet/.test(b)), words(later.reading));
+    assert.match(later.reading.summary.join(' '), /unknown, waiting for the rail/);
+    assert.doesNotMatch(words(later.reading), /who gave no address: a notice was sent/, 'no part of an unknown list is named on its own');
   } finally {
     await relay.close();
   }
@@ -251,4 +256,17 @@ test('RB6: a broken collective cannot fork or close before it is fixed', async (
   } finally {
     await relay.close();
   }
+});
+
+test('Fable\'s bound on the page: an owed-back list the core answers unknown as a whole is shown as unknown, waiting for the rail, no entry on its own', () => {
+  const unknown = { agreementsOwedBack: () => { throw new Error('law/rail-unanswered: unknown: it rests on a receipt or claim whose verification answer is pending or not held'); } };
+  const r = owedBackOf(unknown, {}, 'ab'.repeat(32));
+  assert.deepEqual(r.list, []);
+  assert.match(r.unknown ?? '', /rail-unanswered/);
+  assert.match(UNKNOWN_OWED_BACK, /unknown, waiting for the rail/);
+  assert.match(UNKNOWN_OWED_BACK, /blocks the closing/);
+  const other = { agreementsOwedBack: () => { throw new Error('law/not-held: nothing here'); } };
+  assert.deepEqual(owedBackOf(other, {}, 'ab'.repeat(32)), { list: [], unknown: null });
+  const given = { agreementsOwedBack: () => [{ payment: 'p', to: 't', unit: 'u', value: 1, stillBroken: true, unknown: false }] };
+  assert.equal(owedBackOf(given, {}, 'ab'.repeat(32)).list.length, 1);
 });

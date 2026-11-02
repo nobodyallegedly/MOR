@@ -198,11 +198,13 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
           )
         : '';
       // RB2: payments received during a broken stretch, owed back.
-      const owedNote = (c.owedBack ?? []).length
+      const owedNote = c.owedBackUnknown
+        ? note('warn', `<strong>Owed back: unknown, waiting for the rail.</strong><br>${e(c.owedBackUnknown)}`)
+        : (c.owedBack ?? []).length
         ? note(
             'warn',
             `<strong>Owed back.</strong><br>${c.owedBack
-              .map((o) => `${fp(o.payment)}: ${e(o.text)}${o.toKind === 'identity' && !o.notice && !c.closed ? ` <button class="quiet" data-action="notice" data-collective="${e(c.id)}" data-payment="${e(o.payment)}">Send ${e(o.toName)} a notice</button>` : ''}`)
+              .map((o) => `${fp(o.payment)}: ${e(o.text)}${!o.notice && !c.closed ? ` <button class="quiet" data-action="notice" data-collective="${e(c.id)}" data-payment="${e(o.payment)}">Send ${e(o.toName)} a notice</button>` : ''}`)
               .join('<br>')}`,
           )
         : '';
