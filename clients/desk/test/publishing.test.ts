@@ -22,15 +22,29 @@
 // offer in the area reaching offers, each with the member's key" is now an
 // upload by a member with their own key naming the collective (no member
 // keys, Agreements rule 58), counted under the Envelopes layer's rule.
+//
+// Round 10 (F415), premise replaced: "a collective's claim is not offered"
+// (round 9) is gone; the collective's test now uploads with no claim, and a
+// test of its own makes the collective's claim (the collective its opener and
+// a creator; beside it a member, a person who is no member and another
+// collective, each binding it by their own signature, the other collective
+// through its member under its rule; the core's `agreementsWorkOwners` reads
+// the collective its default holder). A last test holds a work owned by a
+// person and a collective of three: two owners listed, the core reading two
+// holders; the collective asked once, only the members its Agreements rule
+// names asked; and the work's key sealed only to the members acting for it in
+// Envelopes (F419).
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { closeAll, dub as dubOf, edubba, person, start, testLink, type Relay } from '../../damgar/test/world.ts';
-import { describeAct, openSealed, unhex } from '../../genesis/src/core.ts';
+import { cborDecode, describeAct, openSealed, unhex } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { judgeCollective } from '../../grants/src/member.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
+import { collectiveVerifier, judgeCollective } from '../../grants/src/member.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { readKeyDelivery } from '../../barebone/src/sealed.ts';
 import { readTag } from '../../barebone/src/tag.ts';
 import { foundCollective } from './cast.ts';
@@ -199,9 +213,6 @@ test('way 1 as a collective: an upload and its price tag, made by a member with 
   assert.deepEqual(st.actors.map((a) => [a.id, a.kind, a.available]), [[A, 'self', true], [collective, 'collective', true]], JSON.stringify(st.actors));
   await e.c.ask('publishing act as', { id: collective });
 
-  // A collective's claim is not offered (the core reads a claim's opener, the member, as one of its creators): said in plain words, nothing signed.
-  const c = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Three verses.')), title: 'Verses', then: 'claim' });
-  assert.ok(c.reading.blocking.some((x: string) => /A collective’s claim is not offered: the core reads a claim’s opener/.test(x)), JSON.stringify(c.reading.blocking));
   const w = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Three verses, by three hands.')), title: 'Verses, by the collective', then: 'price', price: '3000' });
   assert.deepEqual(w.reading.blocking, []);
   assert.match(w.reading.summary.join(' '), /Uploaded by the collective .*, by you \(A .*\) with your own key, naming it/);
@@ -350,4 +361,260 @@ test('a vow published from Edubba, sold by a lone seller’s publication (you it
   const sale4 = (await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b4.id);
   await e.c.ask<Done>('publishing contest', { vow, sale: sale4.act, buyer: b4.id, promise: '' });
   assert.equal((await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b4.id).state, 'contested');
+});
+
+/** A wait for a condition, asked again until it holds. */
+async function waitFor<T>(f: () => Promise<T | undefined | null | false>, what: string, tries = 20): Promise<T> {
+  for (let i = 0; i < tries; i++) {
+    const x = await f();
+    if (x) return x;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`Never: ${what}`);
+}
+
+/**
+ * A work's owners as the core reads them (`agreementsWorkOwners`), from the
+ * acts of these collectives (their chain, terms and members' acts), these
+ * persons, and `acts`.
+ */
+async function coreOwners(work: string, collectives: string[], persons: string[], acts: string[], hints: string[]) {
+  const first = await collectiveVerifier(collectives[0], hints, {}, acts);
+  const v = first.v;
+  const held: Uint8Array[] = [];
+  const who = new Set<string>([...persons, ...collectives, ...first.parties]);
+  for (const c of collectives.slice(1)) {
+    const cv = await collectiveVerifier(c, hints, {}, acts);
+    held.push(...cv.acts);
+    for (const p of cv.parties) who.add(p);
+  }
+  for (const id of who) {
+    await lookUp(id, hints, {}, v).catch(() => null);
+    for (const h of hints) for (const it of (await relayAt(h).feed({ signer: id })).items) if (it.kind === 'act') held.push(it.item);
+  }
+  for (let pass = 0; pass < 3; pass++)
+    for (const x of held)
+      try {
+        v.add(x);
+      } catch {
+        // held, or waits
+      }
+  return v.agreementsWorkOwners(AGREEMENTS_SPECS, work) as { claims: string[]; contested: boolean; agreements: string[]; defaultHolder: string | null; holders: { agreement: string; holders: [string, number][] }[] };
+}
+
+test('a collective’s claim (round 10, F412, F415): made in Publishing by a member for the collective, the collective its opener and a creator; beside it a member, a person who is no member and another collective; bound only once each has signed, the other collective through its member under its rule; the core reads the collective its default holder', async () => {
+  const H = homes.map((h) => h.base);
+  const hints = [relay.base, ...H];
+  const e = await edubba(H, [relay.base]);
+  const A = (await e.c.ask<Done>('identity', { name: 'A', linked: false })).acts[0];
+  const iPa = await dubOf(H, [relay.base]);
+  const iPh = await dubOf(H, [relay.base]);
+  // Uploads and Agreements (its claims): any one member.
+  const { collective } = await foundCollective(e, A, [iPa, iPh], [
+    { name: 'Publishing', layer: [1, 2], holders: [A, iPa.id, iPh.id], number: 1 },
+    { name: 'Agreements', layer: 4, holders: [A, iPa.id, iPh.id], number: 1 },
+  ]);
+  // Another collective, of two, in an Edubba of its own: its Agreements, any one member.
+  const e2 = await edubba(H, [relay.base]);
+  const B1 = (await e2.c.ask<Done>('identity', { name: 'B1', linked: false })).acts[0];
+  const iY = await dubOf(H, [relay.base]);
+  const { collective: second } = await foundCollective(e2, B1, [iY], [{ name: 'Agreements', layer: 4, holders: [B1, iY.id], number: 1 }], { name: 'Second house' });
+  // A person who is no member of either.
+  const stranger = await dubOf(H, [relay.base]);
+  await stranger.c.ask('signing', { on: true });
+  await e.c.ask('real contact add', { id: iPa.id, name: 'Pa' });
+  await e.c.ask('real contact add', { id: stranger.id, name: 'Stranger' });
+  await e.c.ask('real contact add', { id: second, name: 'Second house' });
+  await e.c.ask('publishing act as', { id: collective });
+
+  // Read back: the collective its opener and a creator; beside it A, Pa, the stranger and the other collective.
+  const r = await e.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('Verses, by many hands.')), title: 'Verses', then: 'claim', creators: [{ who: 'A' }, { who: 'Pa' }, { who: 'Stranger' }, { who: 'Second house' }] });
+  assert.deepEqual(r.reading.blocking, []);
+  assert.match(r.reading.summary.join(' '), /Then the collective’s claim: the collective made it, with the members named beside it/);
+  const said = JSON.stringify(r.reading.sections.find((x: any) => x.heading === 'Then: the collective’s claim'));
+  assert.match(said, /binding the work’s fingerprint to its creators: the collective, and beside it A .*, Pa .*, Stranger .*, Second house /);
+  assert.match(said, /The collective is its opener and a creator: you sign it for the collective, with your own key, naming it \(rule 58\)/);
+  assert.match(said, /Each co-creator beside it, a member or not, binds it by a signature act of their own, you included: Edubba signs yours at once/);
+  assert.match(said, /Second house .* is a collective: one party, asked once, as the collective/);
+  assert.match(said, /the work’s default holder is the collective .*, never its members one by one/);
+
+  const done = await e.c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest });
+  const [bake, , claim, ownSig] = done.acts;
+  const said2 = done.lines.map((l) => l.text).join(' | ');
+  assert.match(said2, /The claim .* is public: “Verses”, the collective .*’s, made by/);
+  assert.match(said2, /Your own signature act .*, as a co-creator beside the collective, is public/);
+  assert.match(said2, /The core reads it as the collective’s claim: its rule is met/);
+  assert.match(said2, /no claim binds it yet/, 'not bound while the others have not signed');
+
+  // Its bytes: signed by A, naming the collective's chain; creators the collective and the four beside it.
+  const d = describeAct((await relayAt(relay.base).getAct(claim))!) as { signer: string; objects: [string, string][]; payload: Uint8Array };
+  assert.equal(d.signer, A);
+  assert.ok(d.objects.some(([chain]) => chain === collective), 'naming the collective');
+  const m = cborDecode(d.payload) as Map<number, unknown>;
+  assert.deepEqual((m.get(1) as Uint8Array[]).map((x) => Buffer.from(x).toString('hex')), [collective, A, iPa.id, stranger.id, second].sort());
+  const work = Buffer.from(m.get(0) as Uint8Array).toString('hex');
+  assert.equal(work, (await e.c.ask<any>('publishing')).bakes.find((x: any) => x.bake === bake).work);
+  assert.equal((await judgeCollective(collective, [claim], hints)).get(claim)!.met, true);
+  const own = describeAct((await relayAt(relay.base).getAct(ownSig))!) as { signer: string; type: number };
+  assert.deepEqual([own.signer, own.type], [A, 1], 'A’s own signature act, as a co-creator');
+  const owners = () => coreOwners(work, [collective, second], [iPa.id, stranger.id], [claim], hints);
+  let o = await owners();
+  assert.deepEqual([o.claims, o.defaultHolder ?? null], [[], null], 'the core: not bound yet');
+
+  // Waiting: Pa, the stranger, and the other collective, once.
+  let g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /“Verses”: waiting for Pa .*, Stranger .*, Second house /.test(l.text)), JSON.stringify(g.lines));
+  // Pa and the stranger sign in their own Dub, the claim read as the collective's.
+  for (const x of [iPa, stranger]) {
+    const pr = await waitFor(async () => (await x.c.ask<{ proposals: any[] }>('proposals')).proposals.find((y) => y.act === claim), 'the claim to sign');
+    assert.match(pr.reading.title, /A claim of the collective .* to sign, signed for it by/);
+    assert.match(JSON.stringify(pr.reading), /the collective is the work’s default holder, never its members one by one/);
+    await x.c.ask('accept', { thread: pr.thread });
+  }
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /“Verses”: waiting for Second house /.test(l.text)), JSON.stringify(g.lines));
+  assert.deepEqual((await owners()).claims, [], 'the core: still not bound, the other collective has not signed');
+  // Y signs it for the other collective, in their Dub, under its rule (any one).
+  const py = await waitFor(async () => (await iY.c.ask<{ proposals: any[] }>('proposals')).proposals.find((y) => y.act === claim), 'Y has the claim to sign for the other collective');
+  assert.equal(py.reading.sections[0].heading, 'You sign for the collective');
+  const ay = await iY.c.ask<{ lines: { text: string }[]; signature: string }>('accept', { thread: py.thread });
+  assert.match(ay.lines[0].text, /Signed for the collective .* with your own key, naming it/);
+  g = await e.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  const gSaid = g.lines.map((l) => l.text).join(' | ');
+  assert.match(gSaid, /“Verses”: Pa .*, Stranger .*, Second house .* signed it\. The claim is bound/);
+  assert.match(gSaid, /As the core reads the work’s owners now: its default holder is the collective|As the core reads the work’s owners now: its default holder is /);
+  // The core: bound, its default holder the collective.
+  o = await owners();
+  assert.deepEqual([o.claims, o.contested, o.agreements, o.defaultHolder ?? null, o.holders], [[claim], false, [], collective, []]);
+  const st = await e.c.ask<any>('publishing');
+  assert.deepEqual(st.claims.map((x: any) => [x.claim, x.collective, x.waiting.state]), [[claim, collective, 'complete']]);
+});
+
+test('a work held by a person and a collective of three (round 10, F415, F419): two owners listed, the collective asked once (only the members its Agreements rule names asked), signing for it under that rule inside it, never listed as owners of the work; the core reads the collective’s signature and the work’s two holders; the key sealed only to the members acting for it in Envelopes', async () => {
+  const H = homes.map((h) => h.base);
+  const e = await edubba(H, [relay.base]);
+  const A = (await e.c.ask<Done>('identity', { name: 'A', linked: false })).acts[0];
+  const iPa = await dubOf(H, [relay.base]);
+  const iPh = await dubOf(H, [relay.base]);
+  // Text: any one. Envelopes: A and Ph (Pa has no voice there). Agreements: Pa and Ph, both (A has no voice there).
+  const { collective } = await foundCollective(e, A, [iPa, iPh], [
+    { name: 'Text', layer: 1, holders: [A, iPa.id, iPh.id], number: 1 },
+    { name: 'Envelopes', layer: 2, holders: [A, iPh.id], number: 2 },
+    { name: 'Agreements', layer: 4, holders: [iPa.id, iPh.id], number: 2 },
+  ]);
+  const members = [A, iPa.id, iPh.id];
+  const hints = [relay.base, ...H];
+
+  // River, in an Edubba of their own: an upload, claimed alone, then owned with the collective, half each.
+  const r = await edubba(H, [relay.base]);
+  const River = (await r.c.ask<Done>('identity', { name: 'River', linked: false })).acts[0];
+  await r.c.ask('real contact add', { id: collective, name: 'Three tablets' });
+  const up = await r.c.ask<any>('publishing upload read', { media: 'text', data: b64(new TextEncoder().encode('A song for two.')), title: 'A song', then: 'claim' });
+  const [song, , claim] = (await r.c.ask<Done>('publishing confirm', { plan: up.plan, digest: up.digest })).acts;
+  const ow = await r.c.ask<any>('publishing ownership read', { claim, people: [{ who: 'River', share: '50' }, { who: 'Three tablets', share: '50' }] });
+  assert.deepEqual(ow.reading.blocking, []);
+  const owns = ow.reading.sections.find((x: any) => x.heading === 'Who owns it').lines.map((l: any) => l.text);
+  assert.equal(owns.length, 2, 'two owners: River and the collective');
+  assert.match(owns[0], /River .*: 50% \(you\)/);
+  assert.match(owns[1], /Three tablets .*: 50% \(a collective: one owner\)/);
+  const signs = JSON.stringify(ow.reading.sections.find((x: any) => x.heading === 'Who signs, and when it counts'));
+  assert.match(signs, /Three tablets .* is a collective: one party, asked once, as the collective\. One of its members signs for it, with their own key, naming it, under the Agreements layer \(any 2 of/);
+  assert.match(signs, /Its members are not owners of this work/);
+  for (const x of members) assert.ok(!owns.join(' ').includes(x.slice(0, 8)), 'no member listed as an owner');
+  // The work now, as the core reads it: River's claim alone binds it, River its default holder.
+  assert.match(JSON.stringify(ow.reading.sections.find((x: any) => x.heading === 'The work now, as the core reads it')), /its default holder is River/);
+
+  const made = await r.c.ask<Done>('publishing confirm', { plan: ow.plan, digest: ow.digest });
+  const terms = made.acts[0];
+  assert.ok(made.lines.some((l) => /Asked of the collective Three tablets .* once, as the collective: sent, sealed, to its members .*, who sign it for it under its rule \(any 2\), inside the collective/.test(l.text)), JSON.stringify(made.lines));
+  // Waited on: the collective, once; none of its members.
+  let st = await r.c.ask<any>('publishing');
+  assert.match(st.ownerships[0].waiting.signed, /^Three tablets .*: not yet$/);
+  const ws = JSON.parse(readFileSync(join(r.dir, 'publishing', 'waiting.json'), 'utf8')) as { id: string; people: string[] }[];
+  assert.deepEqual(ws.find((w) => w.id === terms)!.people, [collective], 'the collective, once');
+
+  // Pa signs it for the collective, in their own Dub: read as the collective's, its rule asking one more.
+  const p1 = await waitFor(async () => (await iPa.c.ask<{ proposals: any[] }>('proposals')).proposals.find((x) => x.act === terms), 'Pa has it to sign for the collective');
+  assert.equal(p1.reading.sections[0].heading, 'You sign for the collective');
+  assert.match(JSON.stringify(p1.reading.sections[0]), /one owner among a work’s owners\): it consents once, by its own constitution/);
+  assert.match(JSON.stringify(p1.reading.sections[0]), /You are not a party of this yourself/);
+  const a1 = await iPa.c.ask<{ lines: { text: string }[]; signature: string }>('accept', { thread: p1.thread });
+  assert.match(a1.lines[0].text, /Signed for the collective .* with your own key, naming it/);
+  assert.ok(a1.lines.some((l) => /is asked to add their signature, inside the collective/.test(l.text)), JSON.stringify(a1.lines));
+  const sig = describeAct((await relayAt(relay.base).getAct(a1.signature))!) as { signer: string; type: number; objects: [string, string][] };
+  assert.deepEqual([sig.signer, sig.type], [iPa.id, 1]);
+  assert.ok(sig.objects.some(([chain]) => chain === collective), 'a signature act for the collective');
+  // A, a member with no voice in its rule for Agreements, was never asked.
+  assert.equal((await e.c.ask<{ proposals: any[] }>('member proposals')).proposals.find((x) => x.act === terms || x.act === a1.signature), undefined, 'A not asked');
+
+  // One member is not the collective's rule: still waiting.
+  let g = await r.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /waiting for Three tablets/.test(l.text)), JSON.stringify(g.lines));
+
+  // Ph adds theirs to the collective's signature, inside the collective.
+  const p2 = await waitFor(async () => (await iPh.c.ask<{ proposals: any[] }>('proposals')).proposals.find((x) => x.act === a1.signature), 'Ph has the collective’s signature to sign');
+  assert.match(p2.reading.title, /Sign the collective’s signature/);
+  await iPh.c.ask('accept', { thread: p2.thread });
+  g = await r.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  assert.ok(g.lines.some((l) => /“A song”: Three tablets .* signed it\. The ownership agreement counts/.test(l.text)), JSON.stringify(g.lines));
+  st = await r.c.ask<any>('publishing');
+  assert.deepEqual(st.ownerships[0].holders.map(([h]: [string, number]) => h), [River, collective], 'two holders: River and the collective');
+
+  // The core: its parties are River and the collective; both signed, the collective by its members' acts for it.
+  const { v } = await collectiveVerifier(collective, hints, {}, [terms, a1.signature]);
+  await lookUp(River, hints, {}, v);
+  const rivers: Uint8Array[] = [];
+  for (const h of hints) for (const it of (await relayAt(h).feed({ signer: River })).items) if (it.kind === 'act') rivers.push(it.item);
+  for (let pass = 0; pass < 3; pass++)
+    for (const a of rivers)
+      try {
+        v.add(a);
+      } catch {
+        // held, or waits
+      }
+  const ag = v.agreementsAgreement(AGREEMENTS_SPECS, terms) as { parties: string[]; signed: string[]; exists: boolean };
+  assert.deepEqual([...ag.parties].sort(), [River, collective].sort(), 'two parties: no member');
+  assert.deepEqual([...ag.signed].sort(), [River, collective].sort());
+  assert.equal(ag.exists, true);
+  // The work's holders as the core reads them: River and the collective, two entries, no member.
+  const work = (await r.c.ask<any>('publishing')).bakes.find((x: any) => x.bake === song).work;
+  const wo = v.agreementsWorkOwners(AGREEMENTS_SPECS, work) as { claims: string[]; agreements: string[]; defaultHolder: string | null; holders: { agreement: string; holders: [string, number][] }[] };
+  assert.deepEqual([wo.claims, wo.agreements, wo.defaultHolder ?? null], [[claim], [terms], null]);
+  assert.equal(wo.holders.length, 1);
+  assert.deepEqual([...wo.holders[0].holders].sort(), [[River, 500_000], [collective, 500_000]].sort());
+  assert.match(g.lines.map((l) => l.text).join(' | '), /As the core reads the work’s owners now: (River .* 50%, Three tablets .* 50%|Three tablets .* 50%, River .* 50%)/);
+
+  // Its publication, River its split service: signed by its owners, the collective asked once again, as the collective.
+  const pr = await r.c.ask<any>('publishing publication read', { owners: terms, sold: [song], service: 'River', price: '700', tagBy: 'me', title: 'A song, sold' });
+  assert.deepEqual(pr.reading.blocking, []);
+  const prSaid = JSON.stringify(pr.reading.sections);
+  assert.match(prSaid, /The rest, to the owners: River .* 50%, Three tablets .* 50% \(a collective: one owner\)/);
+  assert.match(prSaid, /Asked to sign: Three tablets [^.]*\./);
+  assert.match(prSaid, /is a collective: one party, asked once, as the collective/);
+  for (const x of members) assert.ok(!JSON.stringify(pr.reading.sections.find((y: any) => y.heading === 'Who takes what')).includes(x.slice(0, 8)), 'no member among who takes what');
+  const pub = (await r.c.ask<Done>('publishing confirm', { plan: pr.plan, digest: pr.digest })).acts[0];
+  const q1 = await waitFor(async () => (await iPh.c.ask<{ proposals: any[] }>('proposals')).proposals.find((x) => x.act === pub), 'Ph has the publication to sign for the collective');
+  assert.equal(q1.reading.sections[0].heading, 'You sign for the collective');
+  const b1 = await iPh.c.ask<{ signature: string }>('accept', { thread: q1.thread });
+  const q2 = await waitFor(async () => (await iPa.c.ask<{ proposals: any[] }>('proposals')).proposals.find((x) => x.act === b1.signature), 'Pa has the collective’s signature on the publication');
+  await iPa.c.ask('accept', { thread: q2.thread });
+  g = await r.c.ask<{ lines: { text: string }[] }>('publishing gather');
+  const gSaid = g.lines.map((l) => l.text).join(' | ');
+  assert.match(gSaid, /“A song, sold” is published: every party signed it/);
+  assert.match(gSaid, /The key of “A song” is sealed to the collective Three tablets .*, an owner: to the members acting for it in Envelopes \([^)]*\), and to no other member/);
+  // Ph, in Envelopes, opens the key; Pa, outside it, has none (F419).
+  const keysOf = async (m: { dir: string; id: string }) => {
+    const secrets = (JSON.parse(readFileSync(join(m.dir, 'identities', m.id, 'identity.json'), 'utf8')).encryption as { secret: string }[]).map((x) => unhex(x.secret));
+    const items = (await relayAt(relay.base).feed({ to: m.id })).items.filter((i) => i.kind === 'sealed');
+    return items.flatMap((i) => secrets.flatMap((sec) => {
+      try {
+        const x = (openSealed(i.item, m.id, sec) as { described: { type?: number; payload?: Uint8Array } }).described;
+        return x.type === 1 ? [readKeyDelivery(x.payload!)?.publication] : [];
+      } catch {
+        return [];
+      }
+    }));
+  };
+  assert.ok((await keysOf(iPh)).includes(song), 'Ph opens the key');
+  assert.ok(!(await keysOf(iPa)).includes(song), 'Pa, outside Envelopes, has no key');
 });

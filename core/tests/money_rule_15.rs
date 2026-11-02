@@ -24,7 +24,7 @@ use mor_core::act::{Object, Ref};
 use mor_core::cbor::Value;
 use mor_core::chain::{Quorum, Status};
 use mor_core::envelopes::anchoring::{AnchoringCmip, Anchors, Reference};
-use mor_core::money::{self as fin, Amount, Claim, Clock, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Claim, Clock, Obligation, PaidAt, PayeePointer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use mor_core::identity::{Declaration, HomeRule};
 use mor_core::agreements::{self, AgreementsView, Mirs};
@@ -228,7 +228,6 @@ impl Lab {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         };
@@ -243,7 +242,7 @@ impl Lab {
         let r = Payload::Receipt(Receipt {
             rail: rail(),
             proof: proof.as_bytes().to_vec(),
-            payer: Some(Payer::Identity(payer)),
+            payer: Some(payer),
             payee,
             amount: amount(value),
             fulfils,

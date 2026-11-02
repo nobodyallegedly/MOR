@@ -81,47 +81,12 @@ fn every_payload_round_trips() {
             evidence: h("repost"),
         }),
         refund: Some(rail("ln")),
-        anonymous: None,
         purchase: Some(Purchase { agreement: h("claiming agreement"), line: h("its version") }),
         previous: None,
     }));
     // F126: the creditor's release, a Money act (type 4).
     roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![h("a receipt"), h("a deal")] }));
     roundtrip(Payload::Release(Release { obligation: h("a debt"), against: vec![] }));
-    // F113: a receipt naming an anonymous payer's bare key; a claim carrying it.
-    let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
-    let bare = SigningKey {
-        scheme: Scheme::Founding(1),
-        key: key.public().to_vec(),
-    };
-    roundtrip(Payload::Receipt(Receipt {
-        rail: h("ln"),
-        proof: vec![1],
-        payer: Some(Payer::Key(bare.clone())),
-        payee: h("bob"),
-        amount: sat(5),
-        fulfils: h("pointer 1"),
-        previous: None,
-        forward: None,
-        batch: None,
-        purchase: None,
-    }));
-    roundtrip(Payload::Claim(Claim {
-        rail: h("ln"),
-        proof: vec![4],
-        payee: h("bob"),
-        amount: sat(5),
-        fulfils: h("pointer 1"),
-        disagrees: None,
-        referral: None,
-        refund: Some(rail("ln")),
-        anonymous: Some(Anonymous {
-            key: bare,
-            sig: vec![7; 64],
-        }),
-        purchase: None,
-        previous: None,
-    }));
     // F267: a claim naming the previous hop's receipt (field 10).
     roundtrip(Payload::Claim(Claim {
         rail: h("chain"),
@@ -132,25 +97,38 @@ fn every_payload_round_trips() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: Some(h("the previous hop's receipt")),
     }));
 }
 
-/// F113, F135, F147: an anonymous claim's key 8 must be signed by the key
-/// it names, over this claim and its act's own citations: lifted onto
-/// another claim, changed in any field it covers, re-wrapped with other
-/// `objects`, `acks` or `refs`, or forged, it is invalid.
+/// The payer is an identity or absent (Money, receipt field 2): a bare
+/// signing key in field 2 is no receipt, and claim key 8 is no key of the
+/// claim. Anonymity is a fresh identity, not a missing one.
 #[test]
-fn an_anonymous_claim_is_signed_by_its_committed_key() {
-    use mor_core::act::{Object, Ref};
+fn a_receipt_names_an_identity_or_no_payer_and_a_claim_has_no_key_8() {
     let key = SchnorrKey::from_secret(&h("a one-time key")).unwrap();
-    let bare = SigningKey {
-        scheme: Scheme::Founding(1),
-        key: key.public().to_vec(),
-    };
-    let mut c = Claim {
+    let bare = SigningKey { scheme: Scheme::Founding(1), key: key.public().to_vec() };
+    let r = Payload::Receipt(Receipt {
+        rail: h("ln"),
+        proof: vec![1],
+        payer: Some(h("a fresh identity")),
+        payee: h("bob"),
+        amount: sat(5),
+        fulfils: h("pointer 1"),
+        previous: None,
+        forward: None,
+        batch: None,
+        purchase: None,
+    });
+    let mut m = r.to_map();
+    for (k, v) in m.iter_mut() {
+        if k == &Value::Uint(2) {
+            *v = bare.to_value();
+        }
+    }
+    assert!(Payload::decode(types::RECEIPT, &m).is_err(), "a bare key as payer");
+    let c = Payload::Claim(Claim {
         rail: h("ln"),
         proof: vec![4],
         payee: h("bob"),
@@ -159,129 +137,12 @@ fn an_anonymous_claim_is_signed_by_its_committed_key() {
         disagrees: None,
         referral: None,
         refund: Some(rail("ln")),
-        anonymous: None,
         purchase: None,
         previous: None,
-    };
-    // The claim act cites the publication it pays for and acknowledges it
-    // (freeze suite 2.5c).
-    let cited = Citations {
-        objects: Some(vec![Object { chain: h("the work"), predecessor: h("its publication") }]),
-        acks: Some(vec![h("its publication")]),
-        refs: None,
-    };
-    let signed = |c: &Claim, k: &SchnorrKey, cited: &Citations| Anonymous {
-        key: bare.clone(),
-        sig: k.sign(&c.anonymous_message(cited), &[0; 32]).sig,
-    };
-    c.anonymous = Some(signed(&c, &key, &cited));
-    // Signed by any identity: the payer is the key.
-    assert!(check_signer(&Payload::Claim(c.clone()), &h("a one-time identity"), &cited).is_ok());
-    assert_eq!(c.payer(&h("a one-time identity")), Payer::Key(bare.clone()));
-    // The refund redirected after signing: the signature no longer holds.
-    let mut moved = c.clone();
-    moved.refund = Some(rail("someone else's rail"));
-    assert!(check_signer(&Payload::Claim(moved), &h("x"), &cited).is_err());
-    // F135: every other field it covers, changed after signing.
-    let mut x = c.clone();
-    x.disagrees = Some(h("a receipt"));
-    assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 5");
-    let mut x = c.clone();
-    x.referral = Some(Referral { identity: h("a referrer"), evidence: h("a repost") });
-    assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 6");
-    let mut x = c.clone();
-    x.purchase = Some(Purchase { agreement: h("a claim"), line: h("a line") });
-    assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 9");
-    // F267: the previous hop's receipt, named after signing, or moved.
-    let mut x = c.clone();
-    x.previous = Some(h("another hop's receipt"));
-    assert!(check_signer(&Payload::Claim(x), &h("x"), &cited).is_err(), "field 10");
-    // F147: the same payload and key 8, re-wrapped in an act with other
-    // citations: one citing the owner's rotation, one stripped of the
-    // acknowledgement, one adding a reference, one with none at all.
-    let rewraps = [
-        Citations {
-            objects: Some(vec![
-                Object { chain: h("the work"), predecessor: h("its publication") },
-                Object { chain: h("the owner"), predecessor: h("the owner's rotation") },
-            ]),
-            ..cited.clone()
-        },
-        Citations { acks: None, ..cited.clone() },
-        Citations { refs: Some(vec![Ref::Act(h("the owner's rotation"))]), ..cited.clone() },
-        Citations::default(),
-    ];
-    for other in &rewraps {
-        assert!(check_signer(&Payload::Claim(c.clone()), &h("x"), other).is_err(), "re-wrapped: {other:?}");
-    }
-    // Another key signing in the committed key's name.
-    let thief = SchnorrKey::from_secret(&h("a routing node")).unwrap();
-    let mut forged = c.clone();
-    forged.anonymous = Some(signed(&c, &thief, &cited));
-    assert!(check_signer(&Payload::Claim(forged), &h("x"), &cited).is_err());
-    // Without key 8, the claim's signer is its payer.
-    let named = Claim { anonymous: None, ..c };
-    assert_eq!(named.payer(&h("alice")), Payer::Identity(h("alice")));
-}
-
-/// F147: the bytes an anonymous payer's key signs, exactly as the claim
-/// format shows them: fields 0 to 4, fields 5, 6, 7, 9 and 10 or null,
-/// then the act's inside keys 3, 7 and 8 or null, each encoded as the act
-/// encodes it. Field 10, the previous hop's receipt, extends the array
-/// (F267; in field order, after field 9: mechanic, the build's).
-#[test]
-fn the_anonymous_message_is_the_array_the_format_shows() {
-    use mor_core::act::{Inside, Object, Ref};
-    use mor_core::hash::tagged_hash;
-    let c = Claim {
-        rail: h("ln"),
-        proof: vec![4, 5],
-        payee: h("bob"),
-        amount: sat(5),
-        fulfils: h("an offer"),
-        disagrees: None,
-        referral: Some(Referral { identity: h("a referrer"), evidence: h("a repost") }),
-        refund: None,
-        anonymous: None,
-        purchase: Some(Purchase { agreement: h("a claim"), line: h("a line") }),
-        previous: Some(h("the previous hop's receipt")),
-    };
-    let inside = Inside {
-        spec: h("FINANCE"),
-        type_: types::CLAIM,
-        prev: Some(vec![h("the signer's previous act")]),
-        objects: Some(vec![Object { chain: h("the work"), predecessor: h("its publication") }]),
-        payload: Payload::Claim(c.clone()).to_map(),
-        position: Some(2),
-        summary: None,
-        acks: None,
-        refs: Some(vec![Ref::Act(h("an act")), Ref::Web { address: "https://example.org/a".into(), hash: Some(h("a page")) }]),
-        hint: None,
-        salt: [0; 16],
-    };
-    let Value::Map(m) = inside.to_value() else { panic!() };
-    let key = |k: u64| m.iter().find(|(x, _)| x == &Value::Uint(k)).map(|(_, v)| v.clone()).unwrap_or(Value::Null);
-    let b = |x: Hash| Value::Bytes(x.to_vec());
-    let expected = Value::Array(vec![
-        b(c.rail),
-        Value::Bytes(c.proof.clone()),
-        b(c.payee),
-        c.amount.to_value(),
-        b(c.fulfils),
-        Value::Null,
-        Value::Array(vec![b(h("a referrer")), b(h("a repost"))]),
-        Value::Null,
-        Value::Array(vec![b(h("a claim")), b(h("a line"))]),
-        b(h("the previous hop's receipt")),
-        key(3),
-        key(7),
-        key(8),
-    ]);
-    assert_eq!(key(7), Value::Null, "no acks: null");
-    assert_eq!(
-        c.anonymous_message(&Citations::of(&inside)),
-        tagged_hash(ANONYMOUS_CLAIM_TAG, &cbor::encode(&expected))
-    );
+    });
+    let mut m = c.to_map();
+    m.push((Value::Uint(8), Value::Array(vec![bare.to_value(), Value::Bytes(vec![7; 64])])));
+    assert!(Payload::decode(types::CLAIM, &m).is_err(), "claim key 8");
 }
 
 #[test]
@@ -323,7 +184,6 @@ fn shapes_are_strict() {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: None,
     })
@@ -354,7 +214,7 @@ fn who_signs() {
     let r = Payload::Receipt(Receipt {
         rail: h("ln"),
         proof: vec![],
-        payer: Some(Payer::Identity(h("alice"))),
+        payer: Some(h("alice")),
         payee: h("bob"),
         amount: sat(5),
         fulfils: h("p"),

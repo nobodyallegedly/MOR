@@ -295,7 +295,10 @@ pub fn powers_needed(
 /// The stakes' holders' rules a clone needs beside the members' powers
 /// (rule 64.4; new in draft 14, F307): where the change is an owners'
 /// matter of a stake (rule 95: what it is paid, or an issuance in it) whose
-/// holders' rule is by share, `[5, stake]`.
+/// holders' rule is by share, `[5, stake]`. Under every holder, default or
+/// declared, each holder with no voice signs as rule 48 asks, outside the
+/// mark, a collective among the holders counting once, by its own
+/// constitution (field 30).
 pub fn owners_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
     let mut out = vec![];
     let paid_less: Vec<super::formats::Who> = super::pay::stakes_paid_less(parent, clone).into_iter().map(|(o, _)| o).collect();

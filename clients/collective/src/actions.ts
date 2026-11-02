@@ -227,10 +227,34 @@ interface Shown {
   shares: { threshold: number; of: number };
   area: { holders: { id: string; voice: boolean; steppedDown: boolean }[]; threshold: number; needed: number; frozen: boolean; words: string };
   /** Payments received during a broken stretch, owed back until the sale is signed anew after the rollback (Agreements rule 37d, RB2). */
-  owedBack?: { payment: string; to: string | null; toKind: 'identity' | 'key' | 'nobody'; unit: string; value: number; stillBroken: boolean; /** S7e: whether it is owed rests on a record with no rail answer, or on two records not stated as one payment: unknown. It still blocks a closing. */ unknown?: boolean }[];
+  owedBack?: { payment: string; /** The payer's identity (S7k: a gift, naming no payer, is never listed). */ to: string; unit: string; value: number; stillBroken: boolean; /** S7e: whether it is owed rests on a record with no rail answer, or on two records not stated as one payment: unknown. It still blocks a closing. */ unknown?: boolean }[];
+  /** Fable's bound (Money rule 8; F413, decided by Nobody, allegedly): the list rests on two or more receipts or claims with no rail answer, so it is unknown as a whole, waiting for the rail; the core's words. It blocks a closing. */
+  owedBackUnknown?: string | null;
   /** Declarations of absence naming a member, as Agreements' verifier holds them (RB3, client conformance). */
   declared?: { member: string; act: string; signer: string; agreement: string; outcomes: number[]; contests?: string[] }[];
 }
+
+/**
+ * What a collective owes back from a broken stretch, as the core reads it
+ * (Agreements rule 93). Fable's bound (Money rule 8; F413, decided by
+ * Nobody, allegedly): where the list rests on two or more receipts or
+ * claims with no rail answer, the core answers unknown for the whole list
+ * (`law/rail-unanswered`), never a list with entries missing. That is
+ * shown as unknown, waiting for the rail, and it blocks a closing; any other
+ * refusal reads as nothing owed back, as before.
+ */
+export function owedBackOf(v: { agreementsOwedBack(specs: unknown, collective: string): unknown }, specs: unknown, collective: string): { list: NonNullable<Shown['owedBack']>; unknown: string | null } {
+  try {
+    return { list: (v.agreementsOwedBack(specs, collective) as NonNullable<Shown['owedBack']>) ?? [], unknown: null };
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    return /rail-unanswered/.test(why) ? { list: [], unknown: why } : { list: [], unknown: null };
+  }
+}
+
+/** The plain words for an owed-back list unknown as a whole (Fable's bound). */
+export const UNKNOWN_OWED_BACK =
+  'What the collective owes back from its broken stretch is unknown, waiting for the rail: it rests on two or more receipts or claims the rail has not answered yet, so no part of the list can be told on its own (Money rule 8). It blocks the closing until the rail answers.';
 
 const ruleNumber = (r: { form: string; threshold?: number | null } | null | undefined, all: number): number | undefined =>
   !r ? undefined : r.form === 'threshold' && r.threshold ? r.threshold : r.form === 'all' ? all : undefined;
@@ -3714,27 +3738,22 @@ export class Actions {
     const { v: v0, specs: s0 } = await this.agreementsVerifier(c, this.concerned(c));
     const gate = await this.endingGate(c, v0, s0, this.lineOf(c));
     blocking.push(...gate.blocking);
-    // Money owed back from a broken stretch (Agreements rule 37d; QG1, F191; F197):
-    // what is owed to nobody, and what is owed to a payer who gave no
-    // address and was sent a notice, the closing names as left open; the
-    // rest is repaid first.
-    let owedBack: NonNullable<Shown['owedBack']> = [];
-    try {
-      owedBack = v0.agreementsOwedBack(s0, c.identity) as NonNullable<Shown['owedBack']>;
-    } catch {
-      owedBack = [];
-    }
+    // Money owed back from a broken stretch (Agreements rule 37d; F191; F197):
+    // what is owed to a payer who gave no address and was sent a notice, the
+    // closing names as left open; the rest is repaid first. A gift (a
+    // payment naming no payer) owes nothing and is never listed (S7k).
+    const back = owedBackOf(v0, s0, c.identity);
+    const owedBack = back.list;
+    // Fable's bound (Money rule 8; F413): resting on two or more records with no rail answer, the whole list is unknown, and it blocks the closing.
+    if (back.unknown) blocking.push(UNKNOWN_OWED_BACK);
     const noticeOf = (p: string) => (c.f.notices ?? []).find((n) => n.payment === p);
     const leftOpen: LeftOpen[] = [];
     for (const o of owedBack) {
       // S7e: an entry the core answers unknown still blocks a closing, beside what the closing would otherwise say of it.
       if (o.unknown) blocking.push(`Whether ${o.value} (unit ${short(o.unit)}) is owed back from the broken stretch is unknown here: it rests on a receipt or claim with no rail answer read here. It blocks the closing until it is known (S7e).`);
-      if (o.toKind === 'nobody') leftOpen.push({ payment: o.payment, notice: null });
-      else if (o.toKind === 'identity' && noticeOf(o.payment)) leftOpen.push({ payment: o.payment, notice: noticeOf(o.payment)!.notice });
-      else
-        blocking.push(
-          `${o.value} (unit ${short(o.unit)}) is owed back to ${o.toKind === 'identity' && o.to ? names(o.to) : 'the key the payment committed to'} from the broken stretch: repay it first (Agreements rule 37d; F189, 7)${o.toKind === 'identity' ? ', or, where they gave no address, send them a notice with a deadline (F197)' : ''}.`,
-        );
+      const sent = noticeOf(o.payment);
+      if (sent) leftOpen.push({ payment: o.payment, notice: sent.notice });
+      else blocking.push(`${o.value} (unit ${short(o.unit)}) is owed back to ${names(o.to)} from the broken stretch: repay it first (Agreements rule 37d; F189, 7), or, where they gave no address, send them a notice with a deadline (F197).`);
     }
     const owes = v0.agreementsOwes(s0, c.identity);
     if (owes.length) {
@@ -3749,19 +3768,13 @@ export class Actions {
         'A closing ends a collective that holds nothing and owes nothing: every work sold or released, every debt paid or released by its creditor (F124 N9, F125 D5). After its line, anything the collective\'s keys sign counts for nothing in Agreements.',
         `Signed by ${list(signers.map(names))}, each with their own identity and their chain key, on their own identity chain (a chain signature, F132), under the constitutional change rule.`,
         owes.length ? `It owes ${owes.length === 1 ? 'one debt' : `${owes.length} debts`}, its own or as a fork's successor.` : 'It owes nothing: every debt it signed or owes as a successor is paid or released.',
-        ...(() => {
-          const nobody = leftOpen.filter((x) => !x.notice).length;
-          const noticed = owedBack.filter((o) => o.toKind === 'identity' && noticeOf(o.payment));
-          return [
-            ...(nobody
-              ? [`It leaves open, visibly, ${nobody} payment${nobody === 1 ? '' : 's'} owed back to nobody: the payer committed no key, so nobody can ever claim it (Money rule 10a). The closing act names ${nobody === 1 ? 'it' : 'them'}, and ${nobody === 1 ? 'it stays' : 'they stay'} shown after it (QG1).`]
-              : []),
-            ...noticed.map(
-              (o) =>
-                `It leaves open, visibly, ${o.value} (unit ${short(o.unit)}) owed back to ${o.to ? names(o.to) : 'its payer'}, who gave no address: a notice was sent, sealed to them, with a deadline at ${noticeOf(o.payment)!.deadline} on the test time reference (F197). The closing counts only once that deadline has passed with no address given, as the time reference shows; this program reads no time reference, so here it does not take effect.`,
-            ),
-          ];
-        })(),
+        ...(back.unknown ? [UNKNOWN_OWED_BACK] : []),
+        ...owedBack
+          .filter((o) => noticeOf(o.payment))
+          .map(
+            (o) =>
+              `It leaves open, visibly, ${o.value} (unit ${short(o.unit)}) owed back to ${names(o.to)}, who gave no address: a notice was sent, sealed to them, with a deadline at ${noticeOf(o.payment)!.deadline} on the test time reference (F197). The closing counts only once that deadline has passed with no address given, as the time reference shows; this program reads no time reference, so here it does not take effect.`,
+          ),
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: 'Test identities: consent simulated.', tone: 'warn' }] }],
       plain: [],
@@ -3828,7 +3841,6 @@ export class Actions {
     const o = (shown.owedBack ?? []).find((x) => x.payment === a.payment);
     const blocking: string[] = [...this.closedBlock(c)];
     if (!o) blocking.push(`No payment ${short(a.payment)} owed back by “${cname}” is held here.`);
-    else if (o.toKind !== 'identity' || !o.to) blocking.push('A notice is sealed to the payer\'s identity: this payment names none (a bare key, or nobody), so no notice can reach its payer (F197; QG1).');
     if ((c.f.notices ?? []).some((n) => n.payment === a.payment)) blocking.push('A notice was already sent for this payment.');
     if (!Number.isInteger(a.deadline) || a.deadline <= 0) blocking.push('The deadline is a point on the time reference: a whole number above zero.');
     const who = o?.to ? names(o.to) : 'the payer';
@@ -3942,11 +3954,9 @@ export class Actions {
     // RB3: every declaration of absence naming a member is shown, with the way
     // to contest it, broken collective or not (client conformance).
     if (!agreements.unread) {
-      try {
-        shown.owedBack = agreements.v.agreementsOwedBack(AGREEMENTS_SPECS, c.identity) as Shown['owedBack'];
-      } catch {
-        shown.owedBack = [];
-      }
+      const back = owedBackOf(agreements.v, AGREEMENTS_SPECS, c.identity);
+      shown.owedBack = back.list;
+      shown.owedBackUnknown = back.unknown;
       const parties = new Set([...c.f.members, ...departedOf(c).map((d) => d.member)]);
       shown.declared = [...parties].flatMap((m) =>
         ((agreements.v.agreementsDeclarationsNaming(AGREEMENTS_SPECS, m) as { act: string; signer: string; agreement: string; outcomes: number[]; contests: string[] }[]) ?? []).map((d) => ({ member: m, ...d })),
@@ -4236,13 +4246,13 @@ export class Actions {
           splitService: !!splitAgreementOf(c),
           splits: (c.f.splits ?? []).map((x) => x.id),
           debts: this.debtsOf(c).map((d) => ({ id: d.id, creditor: d.creditor, creditorName: names(d.creditor), creditorHeld: this.store.holds(d.creditor), inherited: d.inherited })),
+          owedBackUnknown: w.owedBackUnknown ? UNKNOWN_OWED_BACK : null,
           owedBack: (w.owedBack ?? []).map((o) => {
             const sent = (c.f.notices ?? []).find((n) => n.payment === o.payment);
-            const toName = o.to && /^[0-9a-f]{64}$/.test(o.to) ? names(o.to) : (o.to ?? 'nobody named');
+            const toName = names(o.to);
             return {
               payment: o.payment,
               to: o.to,
-              toKind: o.toKind,
               toName,
               value: o.value,
               unit: o.unit,
@@ -4250,13 +4260,9 @@ export class Actions {
               text:
                 (o.unknown ? 'Unknown: whether this is owed back rests on a receipt or claim with no rail answer read here (S7e); it blocks a closing until it is known. ' : '') +
                 `${o.value} (unit ${short(o.unit)}) paid under an offer made ${o.stillBroken ? 'while the collective is broken' : 'during a broken stretch since rolled back'}: no purchase, owed back to ${toName} unless the sale is signed anew after the rollback, by a receipt of the collective for the same payment (Agreements rule 37d, RB2). Shown here as an open obligation: the network records and shows it; it cannot force a payment back.` +
-                (o.toKind === 'nobody'
-                  ? ' The payment committed no key: nobody can claim it (Money rule 10a). It stays shown, and does not block a closing that names it (QG1).'
-                  : o.toKind === 'key'
-                    ? ' It is repaid where a claim signed with the key the payment committed to says (Money rule 10a, QG1).'
-                    : sent
-                      ? ` A notice was sent to ${toName}, sealed to them, with a deadline at ${sent.deadline} on the test time reference (F197): once it passes with no address given, the collective may close, the debt named in the closing act.`
-                      : ' It is repaid as a debt: where the payer\'s own claim on the payment says, or to the pointer their own acts on it hold, or their pointer in force (QG2). Where the payer gave no address, the collective sends a notice with a deadline before closing (F197).'),
+                (sent
+                  ? ` A notice was sent to ${toName}, sealed to them, with a deadline at ${sent.deadline} on the test time reference (F197): once it passes with no address given, the collective may close, the debt named in the closing act.`
+                  : ' It is repaid as a debt: where the payer\'s own claim on the payment says, or to the pointer their own acts on it hold, or their pointer in force (QG2). Where the payer gave no address, the collective sends a notice with a deadline before closing (F197).'),
             };
           }),
           declared: (w.declared ?? []).map((d) => ({

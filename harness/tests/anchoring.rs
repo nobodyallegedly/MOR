@@ -62,7 +62,7 @@ use mor_anchoring::tree::{self, Batch};
 use mor_core::act::{Act, Object};
 use mor_core::chain::Status;
 use mor_core::envelopes::anchoring::Anchors;
-use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, RefundTo, VaultEntry};
+use mor_core::money::{self, Amount, Citations, Claim, PaidAt, PayeePointer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{self, AgreementsView, Mirs};
 use mor_harness::net::{Http, Site};
@@ -354,7 +354,7 @@ fn state(rail_valid: &mut BTreeMap<Hash, PaidAt>, payments: &mut BTreeMap<Vec<u8
 }
 
 fn claim_of(c: &Commitment, ln: &LnProof) -> Claim {
-    Claim { rail: mor_lightning::spec(), proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None }
+    Claim { rail: mor_lightning::spec(), proof: Proof { paid_to: c.paid_to, salt: c.salt, rail: ln.encode() }.encode(), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous: None }
 }
 
 /// The service's receipt of a payment it received, carrying the same rail
@@ -387,7 +387,7 @@ impl Pool {
     }
     /// A payment of `svc` to its own pointer's on-chain rail (rail 1).
     fn to_itself(&self, svc: Hash, pointer: Hash, amount: u64) -> (Commitment, Vec<u8>) {
-        let c = Commitment { rail: mor_onchain::spec(), payee: svc, amount: sat(amount), fulfils: pointer, payer: Some(Payer::Identity(svc)), paid_to: PaidTo::Flow { pointer, rail: 1 }, salt: random::<16>(), purchase: None };
+        let c = Commitment { rail: mor_onchain::spec(), payee: svc, amount: sat(amount), fulfils: pointer, payer: Some(svc), paid_to: PaidTo::Flow { pointer, rail: 1 }, salt: random::<16>(), purchase: None };
         let script = self.address().script(&c.hash()).unwrap();
         (c, script)
     }
@@ -511,7 +511,7 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
         // The payment pays the price tag (F225; Money rule 18), at the
         // tier's price, to the service's flow.
         let paid_to = PaidTo::Flow { pointer: pointer_act.id(), rail: 0 };
-        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: price, fulfils: tag_act.id(), payer: Some(Payer::Identity(p.id)), paid_to, salt: random::<16>(), purchase: None };
+        let commitment = Commitment { rail: mor_lightning::spec(), payee: svc.id, amount: price, fulfils: tag_act.id(), payer: Some(p.id), paid_to, salt: random::<16>(), purchase: None };
         // The service's endpoint hands back the ticket, an act it signs
         // under the publication.
         let ticket = Ticket { offer: offer_act.id(), leaf, commitment: commitment.hash(), tier, batch, deadline: now + o.terms.tiers[tier as usize].blocks, quote: None };
@@ -633,12 +633,12 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
             let mut v = AgreementsView::new(&rd.v, mirs());
             v.rail_valid = rv.clone();
             v.payments = pm.clone();
-            v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit).unwrap()
+            v.refund_repaid(&b.claim.id(), r.to.as_ref().expect("a payer named"), &r.amount.unit).unwrap()
         };
         assert_eq!(service::standing(r, shown(&rail_valid, &payments, &eve), &bitcoin), Standing::Owed { left: r.amount.value });
         // The service pays the price back to the payer's own pointer,
         // naming the payment refunded (the payer's claim).
-        let back = Commitment { rail: mor_lightning::spec(), payee: b.p.id, amount: r.amount, fulfils: b.claim.id(), payer: Some(Payer::Identity(svc.id)), paid_to: PaidTo::Flow { pointer: b.pointer, rail: 0 }, salt: random::<16>(), purchase: None };
+        let back = Commitment { rail: mor_lightning::spec(), payee: b.p.id, amount: r.amount, fulfils: b.claim.id(), payer: Some(svc.id), paid_to: PaidTo::Flow { pointer: b.pointer, rail: 0 }, salt: random::<16>(), purchase: None };
         let proof = ln.pay(Side::Payer, r.amount.value, &back.hash()).await;
         let c = claim_of(&back, &proof);
         let act = svc.act(money_spec(), money::types::CLAIM, Payload::Claim(c).to_map(), None, None);
@@ -653,7 +653,7 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
     v.rail_valid = rail_valid.clone();
     v.payments = payments.clone();
     for (_, b, r) in &refund_claims {
-        let repaid = v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit).unwrap();
+        let repaid = v.refund_repaid(&b.claim.id(), r.to.as_ref().expect("a payer named"), &r.amount.unit).unwrap();
         assert_eq!(service::standing(r, repaid, &bitcoin), Standing::Repaid, "{}", b.name);
         eprintln!("{}: {} satoshis paid back over Lightning to {}'s own pointer; the service's claim names the payment refunded, with the rail's proof: shown repaid", b.name, repaid, b.name);
     }
@@ -686,7 +686,7 @@ async fn test_identities_buy_anchors_under_a_publication_and_defaults_are_refund
         .map(|t| {
             let (id, r) = receipts.iter().find(|(_, r)| commitment_of(r).hash() == t.commitment).expect("a receipt of each ticket's payment");
             let b = buyers.iter().find(|b| b.ticket == *t).unwrap();
-            Sold { ticket: t.clone(), payment: Payment { commitment: commitment_of(r), answer: verify(Record::Receipt(r), &held, &both).answer }, shown_by: *id, repaid: v.refund_repaid(&b.claim.id(), &RefundTo::Identity(b.p.id), &unit).unwrap() }
+            Sold { ticket: t.clone(), payment: Payment { commitment: commitment_of(r), answer: verify(Record::Receipt(r), &held, &both).answer }, shown_by: *id, repaid: v.refund_repaid(&b.claim.id(), &b.p.id, &unit).unwrap() }
         })
         .collect();
     let pool_coins: Vec<(Hash, OnchainProof, u64)> = receipts

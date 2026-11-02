@@ -53,7 +53,7 @@
 
 use mor_core::cbor::{self, Value};
 use mor_core::envelopes::anchoring::Reference;
-use mor_core::money::{Amount, Payer, PriceTag, Priced, RefundTo};
+use mor_core::money::{Amount, PriceTag, Priced};
 use mor_core::hash::Hash;
 use mor_core::agreements::{self, RefundTerms, Sold, SplitPlan, Unfilled};
 use mor_payment::{Answer, Commitment, PaidTo};
@@ -543,7 +543,8 @@ pub struct Payment {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Refund {
     pub amount: Amount,
-    pub to: RefundTo,
+    /// The payer the payment names; none, a gift, owed nothing.
+    pub to: Option<Hash>,
     pub until: Option<u64>,
 }
 
@@ -621,11 +622,7 @@ pub(crate) fn bought(offer: &Offer, ticket: &Ticket, c: &Commitment) -> Result<R
     if c.amount != price {
         return Err("the payment is not the tier's price".into());
     }
-    let to = match &c.payer {
-        Some(Payer::Identity(h)) => RefundTo::Identity(*h),
-        Some(Payer::Key(k)) => RefundTo::Key(k.clone()),
-        None => RefundTo::Nobody,
-    };
+    let to = c.payer;
     Ok(Refund { amount: price, to, until: offer.refund_until })
 }
 

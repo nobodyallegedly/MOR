@@ -1052,6 +1052,35 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * Who made a work and who owns it as recorded (Agreements rule 15;
+   * F218; F412; F416), the core's `work_owners`: `{ work, claims,
+   * contested, agreements, defaultHolder, holders }`. `claims`, the
+   * claims that count and bind the work, ascending; `contested`, two or
+   * more; `agreements`, the ownership agreements targeting a claim of the
+   * work, each its version in force; `defaultHolder`, where no agreement
+   * writes shares and one claim binds it, that claim's opener (a
+   * collective, for a claim a member signed for it), else null;
+   * `holders`, for each agreement in force `{ agreement, holders:
+   * [[holder, share]] }`, its stake's holders as that version writes them
+   * (field 7, shares in millionths), a collective one holder among them.
+   * *Not applied here:* stake transfers since that version (rule 14):
+   * the core's as-held reading is not public (round 10, for the MOR
+   * lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+   * leave; no change to the core.
+   * @param {any} specs
+   * @param {string} work
+   * @returns {any}
+   */
+  agreementsWorkOwners(specs, work) {
+    const ptr0 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsWorkOwners(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Who uploaded a bake, as a verifier reading Money and Envelopes tells
    * it (Money, "Only identities have payee pointers"): the signer's
    * identity hash, or "unknown" where the bake names another chain, a
@@ -1230,6 +1259,25 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The forward a receipt declares that no valid record of the next hop
+   * carries on (Money rule 27): that hop's open obligation, under the
+   * agreement the forward names, `{ debtor, creditor, amount, agreement }`;
+   * null where it declares none, or it is carried on. Throws, coded as
+   * a rail's answer not given, where that cannot be told yet.
+   * @param {any} specs
+   * @param {string} receipt
+   * @returns {any}
+   */
+  moneyForwardOwed(specs, receipt) {
+    const ptr0 = passStringToWasm0(receipt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyForwardOwed(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Judge a receipt or claim this verifier holds, as a Money-only client
    * with the person's accepted cMIPs and Modules (F338): the act's
    * standing; the rail's answer, by the rail Module its field 0 names,
@@ -1263,6 +1311,78 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_moneyPointer(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A refund owed on a purchase paid through a route, back hop by hop
+   * (Money rule 28), last hop first: `[{ record, debtor, creditor,
+   * amount, agreement, repaid }]`, `repaid` null where it cannot be
+   * told; empty where the route is not valid or no refund is owed.
+   * @param {any} specs
+   * @param {string} last
+   * @returns {any}
+   */
+  moneyRefundAlong(specs, last) {
+    const ptr0 = passStringToWasm0(last, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyRefundAlong(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who buys the purchase a route's last record is (Money rule 24;
+   * Agreements, "A contest of a purchase"): `{ buyer, payer, claim,
+   * service, astray, route }`, `buyer` one of "no route" (the record
+   * names no previous hop: the ordinary rule), "the first payer" (with
+   * `payer` and `claim`, their claim of the first hop naming the tag:
+   * the claim a contest names), "the service, for its own account"
+   * (with `service`, and `astray`: the first payer's claims naming
+   * another tag), "none" (the route stopped or broken: no purchase at
+   * the seller, with `route`), or "unknown" (not yet: a contest shows
+   * nothing yet).
+   * @param {any} specs
+   * @param {string} last
+   * @returns {any}
+   */
+  moneyRouteBuyer(specs, last) {
+    const ptr0 = passStringToWasm0(last, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyRouteBuyer(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A route across rails (Money rules 24 to 28), the rail answers in
+   * `specs` (`railValid`, `railInvalid`, `railPayments`,
+   * `rails`): `direction` "to" reads the route ending at the receipt or
+   * claim `act`, as its final creditor does, back through the previous
+   * hop each record names (receipt field 6, claim key 10); "from"
+   * follows it forward from the receipt `act`. `{ route, hops, at, why,
+   * agreement, owed, near }`: `route` "valid" (`hops` first to last),
+   * "stopped" (rule 27: at the receipt `at`, whose forward no valid
+   * record of the next hop carries on, `owed` its open obligation:
+   * `{ debtor, creditor, amount: { unit, value }, agreement }`; `near`
+   * the records naming it that do not carry it on, each `[act, why]`),
+   * "broken" (rule 28: at the record `at`, under `agreement`, `why`) or
+   * "unknown" (a rail's answer on it pending or not held).
+   * @param {any} specs
+   * @param {string} act
+   * @param {string} direction
+   * @returns {any}
+   */
+  moneyRoute(specs, act, direction) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(direction, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyRoute(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -9002,8 +9122,8 @@ async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new 
   return { cards: found, lines: lines2 };
 }
 var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
-var MICS_HASH = "30add49a7b90d0ff98971b136706ee399e41941481998363bc54f2ad3bf6f646";
-var SUITE_HASH = "4485bf65b1307db72ef37f2e33dfd60e8a3fd84c14ccf5216dfef8614be382d5";
+var MICS_HASH = "435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c";
+var SUITE_HASH = "1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276";
 var BUILT_IN = [
   { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
   { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },

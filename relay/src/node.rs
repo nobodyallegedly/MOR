@@ -236,6 +236,12 @@ enum Plan {
     /// home: never held as the identity's rotation; objected to, and kept as
     /// evidence (Identity rule 11a).
     Object { identity: Hash },
+    /// A homeless rotation of a self-hosted identity, at its own home: never
+    /// held as the identity's rotation, kept as evidence (Identity rule 48;
+    /// a self-hosted home is never gone, step 4), so that a reader of this
+    /// home meets an escape and asks the new homes it names for receipts.
+    /// The home signs no objection: its operator is the identity itself.
+    Keep,
 }
 
 /// Who runs a home.
@@ -1040,6 +1046,7 @@ impl Node {
                     }
                 }
             }
+            Some(Plan::Keep) => {}
             Some(Plan::Object { identity }) => {
                 let o = Payload::Objection(Objection { identity });
                 let objects = vec![Object {
@@ -1149,6 +1156,11 @@ impl Node {
         }
         if r.homeless && old_names_us {
             return Ok(Plan::Object { identity });
+        }
+        // Rule 48 for a self-hosted home: the home of the old set is this
+        // one, operated by the identity itself (a home with no operator).
+        if r.homeless && own && before.homes.iter().any(|h| h.operator.is_none()) {
+            return Ok(Plan::Keep);
         }
         if let Some((held, _)) = states.get(p) {
             // First held wins at this home (rule 11); the error carries the

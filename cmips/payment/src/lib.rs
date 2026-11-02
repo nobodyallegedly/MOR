@@ -15,13 +15,17 @@
 //! - since draft 4 (F355), **step 4a** ([`transfer_to_oneself`]): a
 //!   commitment whose `fulfils` names the vault declaration it is paid to
 //!   is a transfer to oneself, paid by the payee's own identity and buying
-//!   nothing, or the answer is invalid.
+//!   nothing, or the answer is invalid;
+//! - since draft 6 (`cmips/cmip-payment-draft-6.md`, F416), the
+//!   commitment's **payer an identity or null**: an anonymous payer is a
+//!   fresh identity, a claim's payer its signer, and a payment naming no
+//!   payer a gift.
 //!
 //! Nothing here signs anything: receipts are signed by receivers, claims by
 //! payers (F112).
 
 use mor_core::cbor::{self, Value};
-use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Payer, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidInto, PayeePointer, Receipt, VaultEntry};
 use mor_core::hash::{sha256, tagged_hash, Hash};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -101,9 +105,9 @@ pub struct Commitment {
     /// The obligation, agreement, offer or payee-pointer act it follows
     /// (Money's open parameter: this is how a payment carries it).
     pub fulfils: Hash,
-    /// The payer: an identity, an anonymous payer's bare key (F113), or
-    /// `None` for an anonymous payment that committed no key.
-    pub payer: Option<Payer>,
+    /// The payer's identity (an anonymous payer's fresh identity), or
+    /// `None` for a payment naming no payer, a gift.
+    pub payer: Option<Hash>,
     pub paid_to: PaidTo,
     /// Chosen by the payer, so the commitment cannot be guessed.
     pub salt: [u8; 16],
@@ -123,7 +127,7 @@ impl Commitment {
             Value::Bytes(self.fulfils.to_vec()),
             self.payer
                 .as_ref()
-                .map(Payer::to_value)
+                .map(|p| Value::Bytes(p.to_vec()))
                 .unwrap_or(Value::Null),
             self.paid_to.to_value(),
             Value::Bytes(self.salt.to_vec()),
@@ -483,12 +487,12 @@ fn address(
 /// answer is invalid (decided by Nobody, allegedly, 21 October 2026: not an
 /// ordinary payment that fulfils nothing). Checked from the act alone: step
 /// 3 has already found the declaration counting on the payee's chain.
-pub fn transfer_to_oneself(fulfils: &Hash, payee: &Hash, payer: Option<&Payer>, purchase: bool, paid_to: &PaidTo) -> Result<(), Answer> {
+pub fn transfer_to_oneself(fulfils: &Hash, payee: &Hash, payer: Option<&Hash>, purchase: bool, paid_to: &PaidTo) -> Result<(), Answer> {
     let PaidTo::Vault { declared_by, .. } = paid_to else { return Ok(()) };
     if declared_by != fulfils {
         return Ok(());
     }
-    if !matches!(payer, Some(Payer::Identity(p)) if p == payee) {
+    if payer != Some(payee) {
         return Err(Answer::Invalid(
             "it names the vault declaration it is paid to as what it fulfils, a transfer to oneself, but its payer is not the payee's own identity (the payment cMIP draft 4, step 4a)".into(),
         ));
@@ -548,7 +552,7 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
             &c.payee,
             &c.amount,
             &c.fulfils,
-            Some(c.payer(signer)),
+            Some(*signer),
             c.purchase.clone(),
         ),
     };
@@ -584,17 +588,11 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         salt: p.salt,
         purchase,
     };
-    // A claim's anonymous key must have signed it (Money rule 1, F113);
-    // a claim signed by anyone else as payer recomputes another commitment,
-    // which the rail's rule refuses: a node that learnt the proof on the
-    // route cannot claim the payment, nor its refund.
-    if let Record::Claim(c, signer, cited) = &record {
-        if fin::check_signer(&fin::Payload::Claim((*c).clone()), signer, cited).is_err() {
-            return out(Answer::Invalid(
-                "the anonymous payer's key did not sign this claim (Money rule 1, F113)".into(),
-            ));
-        }
-    }
+    // A claim's payer is its signer (F416: anonymity is a fresh identity):
+    // a claim signed by anyone other than the payer the payment committed
+    // recomputes another commitment, which the rail's rule refuses, so a
+    // node that learnt the proof on the route cannot claim the payment, nor
+    // its refund.
     m.check(&RailInput {
         commitment: commitment.hash(),
         amount,

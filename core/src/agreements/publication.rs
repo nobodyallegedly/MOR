@@ -192,8 +192,43 @@ impl Publication {
 
     /// The checks that need no other act ("Publication (type 6)").
     pub fn decode(inside: &Inside) -> R<PublicationAct> {
+        let publication = Self::decode_payload(&inside.payload)?;
+        let owners = publication.owners;
+        let sold = &publication.sold;
+        // Objects: a later version names `[first, previous]` first; where
+        // field 1 is present, the ownership agreement as
+        // `[agreement, agreement]`; then a collective's chain citations.
+        let objects = inside.objects.as_deref().unwrap_or(&[]);
+        let mut rest = objects;
+        let follows = match objects.first() {
+            Some(o) if !(Some(o.chain) == owners && o.chain == o.predecessor) => {
+                rest = &objects[1..];
+                Some((o.chain, o.predecessor))
+            }
+            _ => None,
+        };
+        if let Some(a) = &owners {
+            match rest.first() {
+                Some(o) if o.chain == *a && o.predecessor == *a => {}
+                _ => return Err(AgreementsError::Shape("publication: objects name its ownership agreement, [agreement, agreement]")),
+            }
+        }
+        if sold.as_ref().is_some_and(|s| s.is_empty()) && follows.is_none() {
+            return Err(AgreementsError::Check("publication: only a later version sells nothing, ending it; a first version selling nothing omits field 0, a split agreement"));
+        }
+        Ok(PublicationAct { publication, follows })
+    }
+
+    /// A publication's payload decoded strictly, every check of its format
+    /// that reads the payload alone applied ("Publication (type 6)"): a
+    /// field it does not define, a value of the wrong kind, or a check its
+    /// fields fail, refused. What its `objects` must name (the version it
+    /// follows, its ownership agreement) is read with the act, by
+    /// [`Self::decode`]. For a client reading a publication back before it
+    /// is signed.
+    pub fn decode_payload(payload: &[(Value, Value)]) -> R<Publication> {
         let mut f: Vec<(u64, &Value)> = vec![];
-        for (k, v) in &inside.payload {
+        for (k, v) in payload {
             match k {
                 Value::Uint(n) if *n <= 12 && !f.iter().any(|(m, _)| m == n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("publication: a field its format does not define")),
@@ -270,30 +305,6 @@ impl Publication {
         if words.is_none() && sold.iter().flatten().any(|s| matches!(s, Sold::Vow(_))) {
             return Err(AgreementsError::Check("publication: one selling a vow carries its words (field 5)"));
         }
-        // Objects: a later version names `[first, previous]` first; where
-        // field 1 is present, the ownership agreement as
-        // `[agreement, agreement]`; then a collective's chain citations.
-        let objects = inside.objects.as_deref().unwrap_or(&[]);
-        let mut rest = objects;
-        let follows = match objects.first() {
-            Some(o) if !(Some(o.chain) == owners && o.chain == o.predecessor) => {
-                rest = &objects[1..];
-                Some((o.chain, o.predecessor))
-            }
-            _ => None,
-        };
-        if let Some(a) = &owners {
-            match rest.first() {
-                Some(o) if o.chain == *a && o.predecessor == *a => {}
-                _ => return Err(AgreementsError::Shape("publication: objects name its ownership agreement, [agreement, agreement]")),
-            }
-        }
-        if sold.as_ref().is_some_and(|s| s.is_empty()) && follows.is_none() {
-            return Err(AgreementsError::Check("publication: only a later version sells nothing, ending it; a first version selling nothing omits field 0, a split agreement"));
-        }
-        Ok(PublicationAct {
-            publication: Publication { sold, owners, partners, service, plan, words, time, until, refund, cmips, designated, backups, failed },
-            follows,
-        })
+        Ok(Publication { sold, owners, partners, service, plan, words, time, until, refund, cmips, designated, backups, failed })
     }
 }

@@ -173,7 +173,9 @@ export interface State {
     holdersToBe: { id: string; name: string }[];
     splitService: boolean;
     /** Payments received during a broken stretch and owed back: open obligations (Agreements rule 37d, RB2). */
-    owedBack: { payment: string; to: string | null; toKind: 'identity' | 'key' | 'nobody'; toName: string; value: number; unit: string; notice: string | null; text: string }[];
+    owedBack: { payment: string; to: string; toName: string; value: number; unit: string; notice: string | null; text: string }[];
+    /** The owed-back list unknown as a whole, waiting for the rail (Fable's bound, Money rule 8): the words to show, or null. */
+    owedBackUnknown?: string | null;
     /** Declarations of absence naming a member, each with the way to contest it (RB3, client conformance). */
     declared: { member: string; name: string; held: boolean; act: string; by: string; text: string; contested: boolean }[];
     splits: string[];

@@ -22,7 +22,7 @@ mod common;
 use common::{own_home, Person, World};
 use mor_core::act::{Object, Ref};
 use mor_core::chain::Status;
-use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt};
+use mor_core::money::{self as fin, Amount, Claim, Obligation, PaidAt, PayeePointer, Payload, Rail, Receipt};
 use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{self, Disagreement, AgreementsView, Mirs};
 use std::collections::{BTreeMap, BTreeSet};
@@ -171,7 +171,7 @@ impl Lab {
         let r = Payload::Receipt(Receipt {
             rail: rail(),
             proof: proof.as_bytes().to_vec(),
-            payer: Some(Payer::Identity(payer)),
+            payer: Some(payer),
             payee: payee.id,
             amount: amount(value),
             fulfils,
@@ -202,7 +202,6 @@ fn claim_payload(payee: Hash, fulfils: Hash, value: u64, proof: &str) -> Claim {
         disagrees: None,
         referral: None,
         refund: None,
-        anonymous: None,
         purchase: None,
         previous: None,
     }

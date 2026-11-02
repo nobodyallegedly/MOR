@@ -38,10 +38,10 @@ import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../m
 import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
-import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
+import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
 
 export type { Kind, RunnerRequest };
-export { KIND_NAME, KINDS, ALWAYS_ASKS, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY };
+export { KIND_NAME, KINDS, ALWAYS_ASKS };
 
 /** Said before the runner is turned on, and read (6.2; draft 2: the passphrase). */
 export const RISK_SAY = [
@@ -832,19 +832,10 @@ export class Runner {
     return out;
   }
 
-  // ------------------------------------------------------------ member keys: none (draft 5, section 9)
-
-  /** An app asks Kišib to hold a key for a collective (draft 3's 9.1): refused, said plainly; nothing kept, nothing waiting (draft 5, 9.1). */
-  memberAsk(token: string | undefined, _a: { identity: string; collective: string; places: string[] }): never {
-    this.pairingOf(token);
-    throw new RunnerRefusal(410, NO_MEMBER_ASK_SAY);
-  }
-
   /** Sign, keep what is signed, and the line's act for its card. */
   private sign(h: HeldId, p: Pairing, req: RunnerRequest, kind: Kind, words: string[], o: { standing?: boolean; of?: string; lane?: boolean; for?: string } = {}) {
     const f = this.file();
-    // Draft 5: always the identity's own key, an act for a collective among them (the collective named in its objects).
-    if (req.as !== undefined || req.line === 'member') throw new RunnerRefusal(400, NO_MEMBER_KEYS_SAY);
+    // Always the identity's own key, an act for a collective among them (the collective named in its objects).
     const made = makeEveryday({
       signingSecret: unhex(h.secret),
       signer: h.id,
@@ -1191,7 +1182,7 @@ export function readRequest(v: unknown): RunnerRequest {
   };
   const list = (x: unknown, what: string): string[] | undefined => (x === undefined || x === null ? undefined : Array.isArray(x) ? x.map((y) => h64(y, what)) : (() => { throw new RunnerRefusal(400, `The request’s ${what} is not a list. Nothing was signed.`); })());
   const line = str(o.line, 'line');
-  if (line !== 'public' && line !== 'private' && line !== 'apart' && line !== 'member') throw new RunnerRefusal(400, 'The request names no line: public, private, apart or member. Nothing was signed.');
+  if (line !== 'public' && line !== 'private' && line !== 'apart') throw new RunnerRefusal(400, 'The request names no line: public, private or apart. Nothing was signed.');
   const type = o.type;
   if (typeof type !== 'number' || !Number.isInteger(type) || type < 0) throw new RunnerRefusal(400, 'The request’s type is not a number. Nothing was signed.');
   const payload = Uint8Array.from(Buffer.from(str(o.payload, 'payload'), 'base64'));
@@ -1210,7 +1201,6 @@ export function readRequest(v: unknown): RunnerRequest {
     ...(Array.isArray(o.objects) ? { objects: o.objects.map(pair) } : {}),
     ...(refs ? { refs } : {}),
     ...(list(o.acks, 'acks') ? { acks: list(o.acks, 'acks') } : {}),
-    ...(o.as !== undefined && o.as !== null ? { as: h64(o.as, 'collective') } : {}),
   };
 }
 

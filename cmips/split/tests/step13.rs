@@ -31,7 +31,7 @@ use mor_core::act::Object;
 use mor_core::agreements::{self, AgreementsView, Mirs, Partner, Publication, Sold, Split, SplitPlan, Unfilled};
 use mor_core::cbor::Value;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{Amount, PaidAt, Payer, Payload as Fin, PayeePointer, Priced, Purchase, Rail, Receipt};
+use mor_core::money::{Amount, PaidAt, Payload as Fin, PayeePointer, Priced, Purchase, Rail, Receipt};
 use mor_split::{route, Attempt, Facts, Failure, Owners, Route};
 
 fn mirs() -> Mirs {
@@ -80,7 +80,7 @@ fn receipt(w: &mut World, by: &mut Person, payer: Hash, value: u64, fulfils: Has
     let r = Fin::Receipt(Receipt {
         rail: spec("a rail Module"),
         proof: proof.as_bytes().to_vec(),
-        payer: Some(Payer::Identity(payer)),
+        payer: Some(payer),
         payee: by.id,
         amount: Amount { unit: spec("a unit"), value },
         fulfils,

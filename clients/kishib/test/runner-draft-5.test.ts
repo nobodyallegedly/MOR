@@ -19,7 +19,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { dub, everything, kishib, PASS, refused, runnerOn, start, stopAll, type Relay } from './world.ts';
-import { FOR_COLLECTIVE_SAY, MEMBER_KEYS_ERASED_SAY, NO_MEMBER_ASK_SAY, NO_MEMBER_KEYS_SAY, Runner, type RunnerView } from '../src/runner.ts';
+import { FOR_COLLECTIVE_SAY, MEMBER_KEYS_ERASED_SAY, Runner, type RunnerView } from '../src/runner.ts';
 import type { RunnerRequest } from '../src/runner-read.ts';
 
 let homes: Relay[];
@@ -117,18 +117,16 @@ test('draft 5: an act for a collective, signed with the member’s own key throu
   void MIRS;
 });
 
-test('draft 5: draft 3’s member line, its `as`, and its ask to hold a key are refused, said plainly; nothing kept, nothing waiting', async () => {
+test('draft 6: draft 3’s member line is read as no line at all, and no ask to hold a key exists; nothing kept, nothing waiting', async () => {
   const H = homes.map((h) => h.base);
   const a = await dub(H, [relay.base]);
   const words = (await a.c.ask<{ words: string[] }>('carry')).words.join(' ');
   const { k, token, bindingOf } = await runnerFor([{ id: a.id, words }]);
   const base: RunnerRequest = { identity: a.id, binding: bindingOf(a.id), line: 'public', sequence: [], spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload('x'), public: true };
-  await refused(k.app.runner.ask(token, { ...base, line: 'member', as: 'cd'.repeat(32) }, ORIGIN), new RegExp(NO_MEMBER_KEYS_SAY.slice(0, 40)));
-  await refused(k.app.runner.ask(token, { ...base, as: 'cd'.repeat(32) }, ORIGIN), /There are no member keys any more/);
-  assert.throws(() => k.app.runner.memberAsk(token, { identity: a.id, collective: 'cd'.repeat(32), places: H }), (e: Error) => e.message === NO_MEMBER_ASK_SAY);
+  await refused(k.app.runner.ask(token, { ...base, line: 'member' } as unknown as RunnerRequest, ORIGIN), /names no line: public, private or apart/);
+  assert.equal((k.app.runner as unknown as Record<string, unknown>).memberAsk, undefined, 'no ask to hold a key for a collective');
   const v = await k.c.ask<RunnerView>('runner state');
   assert.deepEqual(v.waiting, []);
-  assert.equal((v as unknown as Record<string, unknown>).memberAsks, undefined, 'no member asks kept');
   // What an app learns of the identity: its own key, nothing of any member key.
   assert.deepEqual(Object.keys(k.app.runner.paired(token).identities[0]).sort(), ['binding', 'homes', 'id', 'key', 'name', 'spent']);
 });

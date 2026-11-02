@@ -476,7 +476,7 @@ export function uploadPane(o: { who: string; media: string; unit: string; say: s
 <label class="k-check"><input type="radio" name="then" value="price"> A price tag on it: whoever pays it pays you, the uploader, unsplit</label>
 <div class="e-then-price"><label>Price (${e(o.unit)})</label><input name="price" inputmode="numeric" autocomplete="off"></div>
 <label class="k-check"><input type="radio" name="then" value="claim"> A claim: you made it (with others, if so); then an ownership agreement and a publication, if you want</label>
-<div class="e-then-claim"><p class="k-small k-soft">Made with (optional): each signs the claim in their own Edubba.</p>${peopleRows({ id: 'upload-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}</div>
+<div class="e-then-claim"><p class="k-small k-soft">Made with (optional): each signs the claim in their own Edubba. Acting for a collective: the collective made it; name beside it the members who made it with it, yourself too, by your own name, if you did.</p>${peopleRows({ id: 'upload-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}</div>
 </fieldset>
 <p class="k-small k-soft">${e(o.bakeStays)}</p>
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
@@ -489,7 +489,7 @@ export function claimPane(o: { who: string; me: string; names: string[]; bakes: 
 <div class="k-row"><input name="work" class="k-grow" list="e-bakes" autocomplete="off" spellcheck="false">${contactsButtonFor('work')}</div>
 <datalist id="e-bakes">${o.bakes.map((b) => `<option value="${e(b.id)}">${e(b.title)}</option>`).join('')}</datalist>
 <label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off" placeholder="How it is called here and in To sign">
-<p class="k-small k-soft">Its creators: you, and those you made it with (optional), each signing it in their own Edubba.</p>${peopleRows({ id: 'claim-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}
+<p class="k-small k-soft">Its creators: you, and those you made it with (optional), each signing it in their own Edubba. Acting for a collective: the collective is its opener and a creator, signed for it by you; name beside it the members who made it with it, yourself too, by your own name, if you did (each binds it by a signature act of their own).</p>${peopleRows({ id: 'claim-creators', me: o.me, names: o.names, other: 'Made with… (a name in your contacts, or nobody)' })}
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
 }
 

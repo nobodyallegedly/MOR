@@ -5,9 +5,9 @@
 // "As far as the relays asked show" (the connector's reading 2): a relay
 // that holds less shows less.
 
-import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex, readPublication } from '../../genesis/src/core.ts';
 import { readTag } from '../../barebone/src/tag.ts';
-import { readPublicationPayload, type PublicationContext } from './publication.ts';
+import type { PublicationContext, PublicationRead } from './publication.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -188,7 +188,8 @@ export async function gatherPublication(id: string, hints: string[], via: Via = 
   if (d.id !== id) throw new Error(`The act fetched is not ${id}.`);
   if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.publication) throw new Error(`Act ${id} is not a publication (Agreements type 6).`);
   if (!d.payload) throw new Error(`Act ${id} is private: it cannot be read here.`);
-  const fields = readPublicationPayload(d.payload);
+  // Read by the core, strictly: a payload not in Agreements' format is refused in its words.
+  const fields = readPublication(d.payload) as PublicationRead;
 
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const held = new Map<string, Uint8Array>();

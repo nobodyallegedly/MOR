@@ -3,7 +3,7 @@
 //! a publication judged, and whether a price tag counts under one. As
 //! everywhere in these bindings, the core library decides.
 
-use super::{err, from_js, hx, lerr, plan_out, specs_of, to_js, unhex, PlanOut, Verifier, R};
+use super::{err, from_js, hx, lerr, payload_of, plan_out, specs_of, to_js, unhex, PlanOut, Verifier, R};
 use mor_core::agreements::{self, Partner, Publication, RefundTerms, ShareRule, Sold, SplitPlan, Unfilled};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::Hash;
@@ -210,6 +210,86 @@ pub fn publication_payload(input: JsValue) -> R<JsValue> {
     to_js(&MadeOut { type_: agreements::types::PUBLICATION, payload: bytes })
 }
 
+/// A publication's fields, as `readPublication` gives them.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicationRead {
+    /// What it sells; null in a split agreement (no field 0); empty in a
+    /// later version ending the publication.
+    sold: Option<Vec<SoldIn>>,
+    split_agreement: bool,
+    /// The ownership agreement it names, by its founding version (field 1);
+    /// null: a lone seller's, its drafter the owners' side.
+    owners: Option<String>,
+    partners: Vec<PartnerIn>,
+    service: String,
+    plan: PlanOut,
+    words: Option<String>,
+    /// The time reference's cMIP (field 6), and its parameters as
+    /// deterministic CBOR bytes.
+    time: Option<String>,
+    time_params: Option<serde_bytes::ByteBuf>,
+    /// The point past which it takes no payment (field 7), a number where
+    /// the point is one; its bytes in `untilCbor` whatever it is.
+    until: Option<u64>,
+    until_cbor: Option<serde_bytes::ByteBuf>,
+    /// The refund point (field 8), a number where the point is one.
+    refund_until: Option<u64>,
+    refund_until_cbor: Option<serde_bytes::ByteBuf>,
+    cmips: Vec<(u64, String)>,
+    designated: Option<String>,
+    backups: Vec<String>,
+    /// What counts as a failed attempt (field 12), as deterministic CBOR bytes.
+    failed: Option<serde_bytes::ByteBuf>,
+}
+
+fn sold_out(x: &Sold) -> SoldIn {
+    match x {
+        Sold::Bake(b) => SoldIn { bake: Some(hx(b)), vow: None, cmip: None, params: None },
+        Sold::Vow(v) => SoldIn { bake: None, vow: Some(hx(v)), cmip: None, params: None },
+        Sold::Access(c, params) => SoldIn { bake: None, vow: None, cmip: Some(hx(c)), params: Some(serde_bytes::ByteBuf::from(params.clone())) },
+    }
+}
+
+/// Read a publication's payload (Agreements type 6) as the core decodes
+/// it, strictly, before it is signed: every check of its format that reads
+/// the payload alone applied ("Publication (type 6)"), so a client says in
+/// plain words what signing it means from the exact bytes signed, without
+/// reading the format itself. Throws where the payload is not a
+/// publication in Agreements' format. What its `objects` must name (the
+/// version it follows, `[first, previous]`; its ownership agreement,
+/// `[agreement, agreement]`) is read with the act, by
+/// `agreementsPublication`, once signed; so is whether a version selling
+/// nothing is a later one.
+#[wasm_bindgen(js_name = readPublication)]
+pub fn read_publication(payload: &[u8]) -> R<JsValue> {
+    let p = Publication::decode_payload(&payload_of(payload)?).map_err(lerr)?;
+    let uint = |v: &Value| match v {
+        Value::Uint(n) => Some(*n),
+        _ => None,
+    };
+    let bytes = |v: &Value| serde_bytes::ByteBuf::from(cbor::encode(v));
+    to_js(&PublicationRead {
+        sold: p.sold.as_ref().map(|s| s.iter().map(sold_out).collect()),
+        split_agreement: p.is_split_agreement(),
+        owners: p.owners.as_ref().map(hx),
+        partners: p.partners.iter().map(|q| PartnerIn { identity: hx(&q.identity), share: q.share, label: q.label.clone() }).collect(),
+        service: hx(&p.service),
+        plan: plan_out(&p.plan),
+        words: p.words.clone(),
+        time: p.time.as_ref().map(|(h, _)| hx(h)),
+        time_params: p.time.as_ref().map(|(_, v)| bytes(v)),
+        until: p.until.as_ref().and_then(uint),
+        until_cbor: p.until.as_ref().map(bytes),
+        refund_until: p.refund.as_ref().and_then(|r| uint(&r.until)),
+        refund_until_cbor: p.refund.as_ref().map(|r| bytes(&r.until)),
+        cmips: p.cmips.iter().map(|(t, h)| (*t, hx(h))).collect(),
+        designated: p.designated.as_ref().map(hx),
+        backups: p.backups.iter().map(hx).collect(),
+        failed: p.failed.as_ref().map(bytes),
+    })
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PublicationOut {
@@ -259,16 +339,7 @@ impl Verifier {
             split_agreement: p.is_split_agreement(),
             outside_claims: e.outside_claims.iter().map(hx).collect(),
             owners: p.owners.as_ref().map(hx),
-            sold: p
-                .sold
-                .iter()
-                .flatten()
-                .map(|x| match x {
-                    Sold::Bake(b) => SoldIn { bake: Some(hx(b)), vow: None, cmip: None, params: None },
-                    Sold::Vow(v) => SoldIn { bake: None, vow: Some(hx(v)), cmip: None, params: None },
-                    Sold::Access(c, params) => SoldIn { bake: None, vow: None, cmip: Some(hx(c)), params: Some(serde_bytes::ByteBuf::from(params.clone())) },
-                })
-                .collect(),
+            sold: p.sold.iter().flatten().map(sold_out).collect(),
             partners: p.partners.iter().map(|q| PartnerIn { identity: hx(&q.identity), share: q.share, label: q.label.clone() }).collect(),
             service: hx(&p.service),
             backups: p.backups.iter().map(hx).collect(),

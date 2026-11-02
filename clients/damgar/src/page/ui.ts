@@ -487,7 +487,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return `<h2>Shared deals</h2>${v.say('The deals you share in with other people: what was paid to each, and what its split service paid you.', ['Each payment to a deal is receipted by its split service in the name of the deal’s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here.'])}${
           ds
             .map((d) => `<h3>“${v.e(d.name)}” ${v.actId(d.version)}</h3><div class="k-feed">${[
-              ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: d.collective ? `${x.kind === 'a tip' ? 'A tip' : 'A sale'} of the collective’s work · your share ${x.amount.said}` : `${x.kind === 'a tip' ? 'A tip' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing, ...(x.rail.answer === 'valid' ? {} : { tone: 'warn' as const }) }], verified: x.rail.answer === 'valid', lines: [] })),
+              ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: d.collective ? `${x.kind === 'a tip' ? 'A tip' : x.kind === 'a gift' ? 'A gift, naming no payer,' : 'A sale'} of the collective’s work · your share ${x.amount.said}` : `${x.kind === 'a tip' ? 'A tip' : x.kind === 'a gift' ? 'A gift, naming no payer,' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing, ...(x.rail.answer === 'valid' ? {} : { tone: 'warn' as const }) }], verified: x.rail.answer === 'valid', lines: [] })),
               ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: '', me: true }, kind: 'your payout', text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ''}`, labels: [{ text: x.paid ? 'paid to you by its split service, its rail answer valid' : 'named in its split; its payment here is not yet shown valid by its rail: unknown' }], verified: x.paid, lines: [] })),
             ].join('') || '<p class="k-empty">Nothing yet.</p>'}</div>`)
             .join('') || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'
@@ -765,7 +765,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'grant lane':
       case 'answer address':
       case 'sign receipt': {
-        const r = await act(() => b.ask<Lines>(a, a === 'sign receipt' ? { key: id } : { id }));
+        // Pay without your name (F416): the option beside "Sign it", where the person ticked it.
+        const anon = a === 'sign draft' ? app.querySelector<HTMLInputElement>(`[data-anon="${CSS.escape(id ?? '')}"]`) : null;
+        const refund = a === 'sign draft' ? (app.querySelector<HTMLInputElement>(`[data-refund="${CSS.escape(id ?? '')}"]`)?.value ?? '').trim() : '';
+        const r = await act(() => b.ask<Lines>(a, a === 'sign receipt' ? { key: id } : anon?.checked ? { id, anonymous: true, ...(refund ? { refund: { lightning: refund } } : {}) } : { id }));
         if (r) {
           state = await b.ask<State>('state');
           await fill();

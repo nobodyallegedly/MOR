@@ -985,7 +985,7 @@ impl Gauntlet {
                 && imported > 0
                 && rd.chain(&j.id) == vec![j.id]
                 && rd.status(&last.id()) == Status::Valid
-                && rd.status(&t2.id()) == Status::Invalid,
+                && rd.status(&t2.id()) == Status::Void,
             format!("chain {} long", rd.chain(&j.id).len()),
         );
         self.done(&rd);

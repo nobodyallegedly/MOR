@@ -291,13 +291,25 @@ ${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span>${who({ id: c.id,
 const verdict = (v: Verdict) => `<span class="damgar-v ${e(v.answer)}" title="${e(v.why)}">${e(v.answer)}</span>`;
 const btn = (action: string, id: string, label: string, primary = false, key = 'id') => `<button type="button" class="k-btn${primary ? ' k-p' : ' k-q'}" data-action="${e(action)}" data-${key}="${e(id)}">${e(label)}</button>`;
 
+/**
+ * Paying without one's name (decided by Nobody, allegedly, F416: "anonymity
+ * on MOR is a fresh identity, not a missing one"): an option on paying, said
+ * plainly with its cost, read when "Sign it" is pressed.
+ */
+function anonymousOption(id: string): string {
+  return `<details class="damgar-anon"><summary>Pay without your name</summary>
+<p class="k-small k-soft">Damgar makes a fresh identity for this payment alone and pays as it: the payee sees that identity, not you. Damgar keeps its keys, so a refund owed to it can be claimed here. It carries no reputation, the relays it is reached at are yours, and the rail itself may still tell who you are.</p>
+<label class="k-row"><input type="checkbox" data-anon="${e(id)}"> Pay as a fresh identity</label>
+<label>Where a refund goes (optional): a Lightning node key of your wallet, best one not in your own pointer</label><input class="k-grow" data-refund="${e(id)}" placeholder="02… or 03…" autocomplete="off" spellcheck="false"></details>`;
+}
+
 /** The buttons and forms of one thing waiting (inside its card). */
 export function itemActs(t: ToSign): string {
   const offers = t.offers
     .map((o) => {
       switch (o) {
         case 'sign':
-          return btn('sign draft', t.id, t.kind === 'draft' && t.title.startsWith('A request') ? 'Sign and send the request' : 'Sign it', true);
+          return t.kind === 'draft' && t.title.startsWith('A payment') ? `${btn('sign draft', t.id, 'Sign it', true)}${anonymousOption(t.id)}` : btn('sign draft', t.id, t.kind === 'draft' && t.title.startsWith('A request') ? 'Sign and send the request' : 'Sign it', true);
         case 'decline':
           return btn('decline', t.id, t.kind === 'unknown' ? 'Set it aside' : 'Decline');
         case 'debt':

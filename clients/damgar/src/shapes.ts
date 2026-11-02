@@ -103,7 +103,7 @@ export interface SharedShown {
   /** A collective's money agreement, not a deal: its sales are shown with your share only (its receipts sealed to the collective). */
   collective?: boolean;
   /** Every payment the service receipted in the deal's payee's name, sealed to every party: a sale or a tip. */
-  payments: { receipt: string; payer: Who; amount: Shown; kind: 'a sale' | 'a tip'; standing: string; /** Its rail answer here (S7e): anything but valid is shown unknown, with its reason. */ rail: Verdict }[];
+  payments: { receipt: string; payer: Who; amount: Shown; /** `a gift`: its receipt names no payer (Money rule 11): no refund is owed on it. */ kind: 'a sale' | 'a tip' | 'a gift'; standing: string; /** Its rail answer here (S7e): anything but valid is shown unknown, with its reason. */ rail: Verdict }[];
   /** Your payouts, as each split the service sealed to you names them; `paid` where your Damgar holds a payment of that amount from the service. */
   payouts: { split: string; amount: Shown; role: string | null; paid: boolean }[];
 }

@@ -109,7 +109,7 @@ fn salt() -> [u8; 16] {
     random::<16>()
 }
 
-fn payload_of(bytes: &[u8]) -> R<Vec<(Value, Value)>> {
+pub(crate) fn payload_of(bytes: &[u8]) -> R<Vec<(Value, Value)>> {
     match cbor::decode(bytes).map_err(err)? {
         Value::Map(m) => Ok(m),
         _ => Err(err("a payload is a map")),
@@ -3354,6 +3354,34 @@ impl Verifier {
         to_js(&out)
     }
 
+    /// Who made a work and who owns it as recorded (Agreements rule 15;
+    /// F218; F412; F416), the core's `work_owners`: `{ work, claims,
+    /// contested, agreements, defaultHolder, holders }`. `claims`, the
+    /// claims that count and bind the work, ascending; `contested`, two or
+    /// more; `agreements`, the ownership agreements targeting a claim of the
+    /// work, each its version in force; `defaultHolder`, where no agreement
+    /// writes shares and one claim binds it, that claim's opener (a
+    /// collective, for a claim a member signed for it), else null;
+    /// `holders`, for each agreement in force `{ agreement, holders:
+    /// [[holder, share]] }`, its stake's holders as that version writes them
+    /// (field 7, shares in millionths), a collective one holder among them.
+    /// *Not applied here:* stake transfers since that version (rule 14):
+    /// the core's as-held reading is not public (round 10, for the MOR
+    /// lead). Added in the Dubsar Suite's round 10 (F415), by the MOR lead's
+    /// leave; no change to the core.
+    #[wasm_bindgen(js_name = agreementsWorkOwners)]
+    pub fn agreements_work_owners(&self, specs: JsValue, work: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let o = view.work_owners(&unhex(work)?).map_err(lerr)?;
+        let mut written = vec![];
+        for a in &o.agreements {
+            let t = view.terms(a).map_err(lerr)?;
+            written.push((*a, stake_holders(&t)));
+        }
+        to_js(&work_owners_out(&o, &written))
+    }
+
     /// The payments a collective received during a broken stretch and owes
     /// back, the sale not signed anew after the rollback (rule 37d, RB2):
     /// open obligations, each `{ payment, to, unit, value, stillBroken,
@@ -3370,17 +3398,7 @@ impl Verifier {
             .iter()
             .map(|o| OwedBackOut {
                 payment: hx(&o.payment),
-                to: match &o.to {
-                    money::RefundTo::Identity(h) => Some(hx(h)),
-                    money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-                    money::RefundTo::Nobody => None,
-                },
-                to_kind: match &o.to {
-                    money::RefundTo::Identity(_) => "identity",
-                    money::RefundTo::Key(_) => "key",
-                    money::RefundTo::Nobody => "nobody",
-                }
-                .into(),
+                to: hx(&o.to),
                 unit: hx(&o.amount.unit),
                 value: o.amount.value,
                 still_broken: o.still_broken,
@@ -3564,7 +3582,7 @@ impl Verifier {
             signed: e.signed.iter().map(hx).collect(),
             holds: e.holds.iter().map(|(a, i)| (hx(a), *i)).collect(),
             open_debts: e.open_debts.iter().map(hx).collect(),
-            left_open: e.closing.open.iter().map(|o| (hx(&o.payment), o.notice.as_ref().map(hx), o.holder.as_ref().map(hx))).collect(),
+            left_open: e.closing.open.iter().map(|o| (hx(&o.payment), hx(&o.notice), o.holder.as_ref().map(hx))).collect(),
         })
     }
 
@@ -3615,6 +3633,99 @@ impl Verifier {
         let s = specs_of(specs)?;
         let view = s.view(&self.inner)?;
         view.paid(&unhex(id)?).map_err(lerr)
+    }
+
+    /// A route across rails (Money rules 24 to 28), the rail answers in
+    /// `specs` (`railValid`, `railInvalid`, `railPayments`,
+    /// `rails`): `direction` "to" reads the route ending at the receipt or
+    /// claim `act`, as its final creditor does, back through the previous
+    /// hop each record names (receipt field 6, claim key 10); "from"
+    /// follows it forward from the receipt `act`. `{ route, hops, at, why,
+    /// agreement, owed, near }`: `route` "valid" (`hops` first to last),
+    /// "stopped" (rule 27: at the receipt `at`, whose forward no valid
+    /// record of the next hop carries on, `owed` its open obligation:
+    /// `{ debtor, creditor, amount: { unit, value }, agreement }`; `near`
+    /// the records naming it that do not carry it on, each `[act, why]`),
+    /// "broken" (rule 28: at the record `at`, under `agreement`, `why`) or
+    /// "unknown" (a rail's answer on it pending or not held).
+    #[wasm_bindgen(js_name = moneyRoute)]
+    pub fn money_route(&self, specs: JsValue, act: &str, direction: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let id = unhex(act)?;
+        let r = match direction {
+            "to" => view.route_to(&id),
+            "from" => view.route_from(&id),
+            _ => return Err(err("a route is read \"to\" a record or \"from\" a receipt")),
+        };
+        to_js(&route_out(&r))
+    }
+
+    /// Who buys the purchase a route's last record is (Money rule 24;
+    /// Agreements, "A contest of a purchase"): `{ buyer, payer, claim,
+    /// service, astray, route }`, `buyer` one of "no route" (the record
+    /// names no previous hop: the ordinary rule), "the first payer" (with
+    /// `payer` and `claim`, their claim of the first hop naming the tag:
+    /// the claim a contest names), "the service, for its own account"
+    /// (with `service`, and `astray`: the first payer's claims naming
+    /// another tag), "none" (the route stopped or broken: no purchase at
+    /// the seller, with `route`), or "unknown" (not yet: a contest shows
+    /// nothing yet).
+    #[wasm_bindgen(js_name = moneyRouteBuyer)]
+    pub fn money_route_buyer(&self, specs: JsValue, last: &str) -> R<JsValue> {
+        use agreements::RouteBuyer as B;
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            buyer: &'static str,
+            payer: Option<String>,
+            claim: Option<String>,
+            service: Option<String>,
+            astray: Vec<String>,
+            route: Option<RouteOut>,
+        }
+        let none = |buyer| Out { buyer, payer: None, claim: None, service: None, astray: vec![], route: None };
+        to_js(&match view.route_buyer(&unhex(last)?) {
+            B::NoRoute => none("no route"),
+            B::FirstPayer { payer, claim } => Out { payer: Some(hx(&payer)), claim: Some(hx(&claim)), ..none("the first payer") },
+            B::OwnAccount { service, astray } => Out { service: service.map(|x| hx(&x)), astray: astray.iter().map(hx).collect(), ..none("the service, for its own account") },
+            B::Failed(r) => Out { route: Some(route_out(&r)), ..none("none") },
+            B::Unknown => none("unknown"),
+        })
+    }
+
+    /// A refund owed on a purchase paid through a route, back hop by hop
+    /// (Money rule 28), last hop first: `[{ record, debtor, creditor,
+    /// amount, agreement, repaid }]`, `repaid` null where it cannot be
+    /// told; empty where the route is not valid or no refund is owed.
+    #[wasm_bindgen(js_name = moneyRefundAlong)]
+    pub fn money_refund_along(&self, specs: JsValue, last: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        #[derive(Serialize)]
+        struct Out {
+            record: String,
+            debtor: String,
+            creditor: Option<String>,
+            amount: AmountOut,
+            agreement: String,
+            repaid: Option<u64>,
+        }
+        let v = view.refund_along(&unhex(last)?).map_err(lerr)?;
+        to_js(&v.iter().map(|x| Out { record: hx(&x.record), debtor: hx(&x.debtor), creditor: x.creditor.map(|c| hx(&c)), amount: AmountOut { unit: hx(&x.amount.unit), value: x.amount.value }, agreement: hx(&x.agreement), repaid: x.repaid }).collect::<Vec<_>>())
+    }
+
+    /// The forward a receipt declares that no valid record of the next hop
+    /// carries on (Money rule 27): that hop's open obligation, under the
+    /// agreement the forward names, `{ debtor, creditor, amount, agreement }`;
+    /// null where it declares none, or it is carried on. Throws, coded as
+    /// a rail's answer not given, where that cannot be told yet.
+    #[wasm_bindgen(js_name = moneyForwardOwed)]
+    pub fn money_forward_owed(&self, specs: JsValue, receipt: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        to_js(&view.forward_owed(&unhex(receipt)?).map_err(lerr)?.map(|o| owed_out(&o)))
     }
 
     /// The payee's pointer acts its own acts hold, for what a payment
@@ -3698,11 +3809,7 @@ impl Verifier {
             agreements::PurchaseVerdict::WrongReceipt { why } => ("wrong-receipt", Some(why.clone())),
             agreements::PurchaseVerdict::Unknown => ("unknown", None),
         };
-        let refund_to = match &e.refund_to {
-            money::RefundTo::Identity(h) => Some(hx(h)),
-            money::RefundTo::Key(_) => Some("the key the payment committed to".into()),
-            money::RefundTo::Nobody => None,
-        };
+        let refund_to = e.refund_to.as_ref().map(hx);
         to_js(&PurchaseOut {
             verdict: verdict.into(),
             why,
@@ -3938,9 +4045,9 @@ struct ClosingOut {
     signed: Vec<String>,
     holds: Vec<(String, u64)>,
     open_debts: Vec<String>,
-    /// The money owed back it names as left open (field 4; QG1, F197):
-    /// `[payment, notice or null, holder or null]`.
-    left_open: Vec<(String, Option<String>, Option<String>)>,
+    /// The money owed back it names as left open (field 4; F197, F416):
+    /// `[payment, notice, holder or null]`.
+    left_open: Vec<(String, String, Option<String>)>,
 }
 
 #[derive(Serialize)]
@@ -3968,15 +4075,53 @@ struct RollbackRegistersOut {
     departures: Vec<DepartureOut>,
 }
 
+/// A work's owners as recorded, for `agreementsWorkOwners`.
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct WorkOwnersOut {
+    work: String,
+    claims: Vec<String>,
+    contested: bool,
+    agreements: Vec<String>,
+    default_holder: Option<String>,
+    holders: Vec<HoldersOut>,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+struct HoldersOut {
+    agreement: String,
+    holders: Vec<(String, u64)>,
+}
+
+/// The holders an ownership agreement's version writes in its stake
+/// (field 7; one stake, rule 15), each named by its identity: a collective
+/// is one holder among them.
+fn stake_holders(t: &agreements::Terms) -> Vec<(Hash, u64)> {
+    holders_written(t.stakes.iter().flatten().next())
+}
+
+fn holders_written(stake: Option<&agreements::Stake>) -> Vec<(Hash, u64)> {
+    stake.map(|st| st.holders.iter().filter_map(|(w, n)| w.id().map(|h| (*h, *n))).collect()).unwrap_or_default()
+}
+
+fn work_owners_out(o: &agreements::WorkOwners, written: &[(Hash, Vec<(Hash, u64)>)]) -> WorkOwnersOut {
+    WorkOwnersOut {
+        work: hx(&o.work),
+        claims: o.claims.iter().map(hx).collect(),
+        contested: o.contested,
+        agreements: o.agreements.iter().map(hx).collect(),
+        default_holder: o.default_holder.as_ref().map(hx),
+        holders: written.iter().map(|(a, hs)| HoldersOut { agreement: hx(a), holders: hs.iter().map(|(h, n)| (hx(h), *n)).collect() }).collect(),
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OwedBackOut {
     payment: String,
-    to: Option<String>,
-    /// Who it is owed to: "identity", "key" (an anonymous payer's bare
-    /// key, Money rule 10a) or "nobody" (no key committed: it does not
-    /// block a closing that names it, QG1).
-    to_kind: String,
+    /// The payer the payment names, owed it back (Money rule 17). A
+    /// payment naming no payer is a gift and owes nothing back.
+    to: String,
     unit: String,
     value: u64,
     still_broken: bool,
@@ -4478,4 +4623,88 @@ pub fn form_read(s: &str, want: &str) -> R<JsValue> {
     let k = form_kind(want)?;
     let r = mor_core::textual::read(s, k).map_err(|e| err(e.to_string()))?;
     to_js(&FormRead { label: r.kind.label(), data: hex::encode(&r.data), hints: r.hints, bare: r.bare })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AmountOut {
+    unit: String,
+    value: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OwedOut {
+    declared_by: String,
+    debtor: String,
+    creditor: String,
+    amount: AmountOut,
+    agreement: String,
+}
+
+fn owed_out(o: &agreements::ForwardOwed) -> OwedOut {
+    OwedOut { declared_by: hx(&o.declared_by), debtor: hx(&o.debtor), creditor: hx(&o.creditor), amount: AmountOut { unit: hx(&o.amount.unit), value: o.amount.value }, agreement: hx(&o.agreement) }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RouteOut {
+    route: &'static str,
+    hops: Vec<String>,
+    at: Option<String>,
+    why: Option<String>,
+    agreement: Option<String>,
+    owed: Option<OwedOut>,
+    near: Vec<(String, String)>,
+}
+
+fn route_out(r: &agreements::RouteVerdict) -> RouteOut {
+    use agreements::RouteVerdict as V;
+    let hs = |v: &[Hash]| v.iter().map(hx).collect::<Vec<_>>();
+    match r {
+        V::Valid { hops } => RouteOut { route: "valid", hops: hs(hops), at: None, why: None, agreement: None, owed: None, near: vec![] },
+        V::Stopped { hops, at, owed, near } => RouteOut {
+            route: "stopped",
+            hops: hs(hops),
+            at: Some(hx(at)),
+            why: None,
+            agreement: Some(hx(&owed.agreement)),
+            owed: Some(owed_out(owed)),
+            near: near.iter().map(|(x, w)| (hx(x), w.clone())).collect(),
+        },
+        V::Broken { hops, at, agreement, why } => RouteOut { route: "broken", hops: hs(hops), at: Some(hx(at)), why: Some(why.clone()), agreement: agreement.as_ref().map(hx), owed: None, near: vec![] },
+        V::Unknown { at, why } => RouteOut { route: "unknown", hops: vec![], at: Some(hx(at)), why: Some(why.clone()), agreement: None, owed: None, near: vec![] },
+    }
+}
+
+#[cfg(test)]
+mod work_owners_shape {
+    //! `agreementsWorkOwners`' shape (the Dubsar Suite's round 10, F415):
+    //! the core's `work_owners`, every hash as hex, the default holder null
+    //! where none, each agreement in force with its stake's holders as
+    //! written, a collective one holder among them.
+    use super::*;
+    use mor_core::hash::sha256;
+
+    #[test]
+    fn a_work_held_by_a_person_and_a_collective_reads_two_holders() {
+        let (river, collective, agreement, claim, work) = (sha256(b"river"), sha256(b"a collective"), sha256(b"the agreement in force"), sha256(b"the claim"), sha256(b"the work"));
+        let stake = agreements::Stake { object: agreements::Who::Id(work), holders: vec![(agreements::Who::Id(river), 500_000), (agreements::Who::Id(collective), 500_000)] };
+        let o = agreements::WorkOwners { work, claims: vec![claim], contested: false, agreements: vec![agreement], default_holder: None };
+        let out = work_owners_out(&o, &[(agreement, holders_written(Some(&stake)))]);
+        assert_eq!(out.default_holder, None);
+        assert_eq!(out.holders, vec![HoldersOut { agreement: hx(&agreement), holders: vec![(hx(&river), 500_000), (hx(&collective), 500_000)] }]);
+        assert_eq!((out.work, out.claims, out.contested, out.agreements), (hx(&work), vec![hx(&claim)], false, vec![hx(&agreement)]));
+    }
+
+    #[test]
+    fn a_collectives_claim_with_no_agreement_names_the_collective_the_default_holder() {
+        let (collective, claim, work) = (sha256(b"a collective"), sha256(b"its claim"), sha256(b"the work"));
+        let o = agreements::WorkOwners { work, claims: vec![claim], contested: false, agreements: vec![], default_holder: Some(collective) };
+        let out = work_owners_out(&o, &[]);
+        assert_eq!(out.default_holder, Some(hx(&collective)));
+        assert!(out.holders.is_empty());
+        // "This" (the agreement itself) is no holder a client can name.
+        assert!(holders_written(Some(&agreements::Stake { object: agreements::Who::This, holders: vec![(agreements::Who::This, 1_000_000)] })).is_empty());
+    }
 }

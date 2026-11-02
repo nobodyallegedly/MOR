@@ -312,10 +312,10 @@ export function forkPayload(f: ForkAct): Uint8Array {
   return cborEncode(m);
 }
 
-/** Money owed back a closing leaves open (Agreements type 20, field 4; QG1, F197): the payment, by one receipt or claim of it; the notice sent to its payer (type 24), or null where it is owed to nobody; and a holder that outlives the closing, where the collective chose one. */
+/** Money owed back a closing leaves open (Agreements type 20, field 4; F197, S7k): the payment, by one receipt or claim of it; the notice sent to its payer (type 24), required: only money owed to a payer who gave no address, after a lapsed notice, is left open (a gift owes nothing, so it is never named); and a holder that outlives the closing, where the collective chose one. */
 export interface LeftOpen {
   payment: string;
-  notice: string | null;
+  notice: string;
   holder?: string;
 }
 
@@ -327,7 +327,7 @@ export function closingPayload(c: { agreement: string; collective: string; open?
   ]);
   if (c.open?.length) {
     const open = [...c.open].sort((a, b) => (a.payment < b.payment ? -1 : a.payment > b.payment ? 1 : 0));
-    m.set(4, open.map((o) => [unhex(o.payment), o.notice ? unhex(o.notice) : null, ...(o.holder ? [unhex(o.holder)] : [])]));
+    m.set(4, open.map((o) => [unhex(o.payment), unhex(o.notice), ...(o.holder ? [unhex(o.holder)] : [])]));
   }
   return cborEncode(m);
 }

@@ -572,8 +572,13 @@ impl WorkClaim {
         if creators.is_empty() || !creators.windows(2).all(|w| w[0] < w[1]) {
             return Err(AgreementsError::Check("work claim: the creators, ascending, none twice"));
         }
-        if signer.is_some_and(|s| !creators.contains(s)) {
-            return Err(AgreementsError::Check("work claim: signed by one of its creators (rule 15)"));
+        // Its opener among the creators: its signer, or, for a claim a member
+        // signs for a collective, the collective, which its `objects` name
+        // (rule 58). Whether a chain so named is a collective, and whether
+        // the member may act for it there, is the view's to judge.
+        let named = |c: &Hash| inside.objects.iter().flatten().any(|o| &o.chain == c && Some(c) != signer);
+        if signer.is_some_and(|s| !creators.contains(s)) && !creators.iter().any(named) {
+            return Err(AgreementsError::Check("work claim: its opener among its creators: its signer, or the collective it is signed for (rules 15 and 58)"));
         }
         let commitment = get(&f, 2)
             .map(|v| {

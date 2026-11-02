@@ -20,7 +20,7 @@ use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::envelopes::anchoring::{AnchoringCmip, Anchors, Reference};
 use mor_onchain::chain::HeaderChain;
-use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, LockPoint, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Citations, Claim, Clock, Holding, LockPoint, Obligation, PaidAt, PayeePointer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{tagged_hash, Hash};
 use mor_core::identity::Payload as Id;
 use mor_core::agreements::{self, AgreementsView, Mirs};
@@ -276,12 +276,12 @@ fn the_payee_alone_holds_a_valid_receipt_naming_any_payer() {
     };
     let paid_to = PaidTo::Flow { pointer: w.pointer_id, rail: 0 };
     let salt = [9; 16];
-    let c = Commitment { rail: mor_onchain::spec(), payee: bob, amount: sat(5_000), fulfils: w.pointer_id, payer: Some(Payer::Identity(alice)), paid_to, salt, purchase: None };
+    let c = Commitment { rail: mor_onchain::spec(), payee: bob, amount: sat(5_000), fulfils: w.pointer_id, payer: Some(alice), paid_to, salt, purchase: None };
     let a = flow.address(Network::Regtest);
     // Bob's own coins, to Bob's address for "Alice's" payment.
     let t = bytes(&tx("Bob's own coins", &[(a.script(&c.hash()).unwrap(), 5_000)]));
     let p = OnchainProof { request: request(&flow.request, &c.hash()), confirmations: None, paid: Some(Paid { tx: t.clone(), output: 0, block: Some(support::confirm(&t, N)) }) };
-    let r = Receipt { rail: mor_onchain::spec(), proof: Proof { paid_to, salt, rail: p.encode() }.encode(), payer: Some(Payer::Identity(alice)), payee: bob, amount: sat(5_000), fulfils: w.pointer_id, previous: None, forward: None, batch: None, purchase: None };
+    let r = Receipt { rail: mor_onchain::spec(), proof: Proof { paid_to, salt, rail: p.encode() }.encode(), payer: Some(alice), payee: bob, amount: sat(5_000), fulfils: w.pointer_id, previous: None, forward: None, batch: None, purchase: None };
     let held = support::held(&p).unwrap();
     let onchain = Onchain::on(&held);
     assert_eq!(verify(Record::Receipt(&r), &w, &Modules::new().adopt(&onchain)).answer, Answer::Valid, "Bob's receipt 'Alice paid me 5,000' verifies, Alice having paid nothing");
@@ -469,7 +469,7 @@ impl Story {
 
     fn claim(&mut self, payer: &mut Person, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
-        let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+        let claim = Claim { rail: mor_onchain::spec(), proof, payee: self.payee, amount, fulfils: debt, disagrees: None, referral: None, refund: None, purchase: None, previous: None };
         let id = self.act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(claim.clone()).to_map(), None, None);
         let rec = Record::Claim(&claim, payer.id, &Citations::default());
         let answer = {
@@ -483,7 +483,7 @@ impl Story {
 
     fn receipt(&mut self, payee: &mut Person, payer: Hash, debt: Hash, paid_to: PaidTo, salt: [u8; 16], amount: Amount, rail_proof: &OnchainProof) -> (Hash, Answer) {
         let proof = Proof { paid_to, salt, rail: rail_proof.encode() }.encode();
-        let r = Receipt { rail: mor_onchain::spec(), proof, payer: Some(Payer::Identity(payer)), payee: self.payee, amount, fulfils: debt, previous: None, forward: None, batch: None, purchase: None };
+        let r = Receipt { rail: mor_onchain::spec(), proof, payer: Some(payer), payee: self.payee, amount, fulfils: debt, previous: None, forward: None, batch: None, purchase: None };
         let id = self.act(payee, mirs().money, fin::types::RECEIPT, Payload::Receipt(r.clone()).to_map(), None, None);
         let rec = Record::Receipt(&r);
         let answer = {
@@ -527,7 +527,7 @@ struct Payment {
 impl Payment {
     fn new(payee: Hash, payer: Hash, debt: Hash, paid_to: PaidTo, keys: &Keys, amount: Amount, label: &str) -> Self {
         let salt = h(label)[..16].try_into().unwrap();
-        let c = Commitment { rail: mor_onchain::spec(), payee, amount, fulfils: debt, payer: Some(Payer::Identity(payer)), paid_to, salt, purchase: None };
+        let c = Commitment { rail: mor_onchain::spec(), payee, amount, fulfils: debt, payer: Some(payer), paid_to, salt, purchase: None };
         Payment { salt, request: request(&keys.request, &c.hash()), c }
     }
     fn script(&self, keys: &Keys) -> Vec<u8> {
@@ -751,7 +751,7 @@ fn a_weak_salt_lets_an_observer_of_the_chain_name_the_payer_the_payee_and_the_wo
     // A careless wallet: the salt is a one-byte counter.
     let mut salt = [0u8; 16];
     salt[0] = 37;
-    let secret = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(Payer::Identity(payers[1])), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt, purchase: None };
+    let secret = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(payers[1]), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt, purchase: None };
     let on_chain = a.script(&secret.hash()).unwrap();
     // The observer holds Bob's public pointer and offer, the price, and a
     // list of three people who might buy; it tries every salt.
@@ -760,7 +760,7 @@ fn a_weak_salt_lets_an_observer_of_the_chain_name_the_payer_the_payee_and_the_wo
         for n in 0..=255u8 {
             let mut s = [0u8; 16];
             s[0] = n;
-            let guess = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(Payer::Identity(payer)), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt: s, purchase: None };
+            let guess = Commitment { rail: mor_onchain::spec(), payee: bob, amount: price, fulfils: offer, payer: Some(payer), paid_to: PaidTo::Flow { pointer, rail: 0 }, salt: s, purchase: None };
             if a.script(&guess.hash()).unwrap() == on_chain {
                 found = Some((payer, n));
             }

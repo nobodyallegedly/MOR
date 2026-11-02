@@ -52,8 +52,8 @@ import { shownAct, shownId } from '../../genesis/src/shown.ts';
 import { newChainKey } from './chainwords.ts';
 import { readMessage, acceptanceText, negotiate, openShare, DECLINED, RESIGNED } from '../../repo/src/proposals.ts';
 import { resign as resignAct, sign as signAct } from '../../repo/src/agreements.ts';
-import { REPO_SPECS } from '../../repo/src/specs.ts';
-import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY, type Reading } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import type { Named, NameShown } from '../../kit/src/html.ts';
@@ -63,7 +63,7 @@ import { sendDraft } from '../../damgar/src/messages.ts';
 import { anchoringLeaf, randomBytes } from '../../genesis/src/core.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
-import { areaReaching, chainFor, collectiveNow, collectivePlaces, cosignAsMember, publishAt, signAsMember } from '../../grants/src/member.ts';
+import { areaReaching, chainFor, collectiveNow, collectivePlaces, cosignAsMember, publishAt, signAsMember, signForCollective, type AreaHere } from '../../grants/src/member.ts';
 import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
@@ -1697,10 +1697,15 @@ export class Dub {
         const later = laterKept.map((x) => x.text ?? '');
         let reading: Awaited<ReturnType<typeof readProposal>> | null = null;
         let problem: string | null = null;
+        let party: string | null = null;
         try {
           const got = await fetchAct(act, places, s.via);
           if (!got) problem = `The act it asks you to sign (${act}) was not found at ${places.join(', ')}.`;
-          else reading = await readProposal(got.act, names, places, s.via, k.refs.slice(1).map((r) => r.id));
+          else {
+            reading = await readProposal(got.act, names, places, s.via, actsOf(k.refs));
+            party = partyCollective(got.act, reading, k.refs);
+            if (party) await this.forCollective(me.id, reading, party, places, s.via, names);
+          }
         } catch (e) {
           problem = `It could not be read: ${message(e)}`;
         }
@@ -1723,7 +1728,7 @@ export class Dub {
           text: k.text ?? '',
           later,
           act,
-          collective: reading?.kind === 'deal' ? null : (this.collectiveOf(p, k.key) ?? reading?.collective ?? null),
+          collective: reading?.kind === 'deal' ? party : (this.collectiveOf(p, k.key) ?? reading?.collective ?? null),
           reading: reading ? { kind: reading.kind, title: reading.title, summary: reading.summary, sections: reading.sections, plain: reading.plain, risks: reading.risks, blocking: reading.blocking } : null,
           problem,
           answer: ans ? { verdict: ans.verdict, signature: ans.signature } : null,
@@ -1762,10 +1767,37 @@ export class Dub {
     const places = [...new Set([...hints, ...(await this.placesOf(k.refs[0].signer ?? k.from!, hints, s.via))])];
     const got = await fetchAct(act, places, s.via);
     if (!got) throw new Error(`The act it asks you to sign (${act}) was not found. Nothing was signed.`);
-    const also = k.refs.slice(1).map((r) => r.id);
+    const also = actsOf(k.refs);
     const reading = await readProposal(got.act, this.namer(me.id, p), places, s.via, also);
     const collective = reading.kind === 'deal' ? null : (k.refs[1]?.id ?? reading.collective);
-    return { k, act, places, reading, collective, proposer: k.from!, also: reading.kind === 'deal' ? also : [] };
+    // Round 10 (F415): a collective asked as one party of someone else's agreement (an owner of a work): you sign for it.
+    const party = partyCollective(got.act, reading, k.refs);
+    const area = party ? await this.forCollective(me.id, reading, party, places, s.via, this.namer(me.id, p)) : null;
+    return { k, act, places, reading, collective, party, area, proposer: k.from!, also: reading.kind === 'deal' ? also : [] };
+  }
+
+  /**
+   * A collective asked to sign as one party (an owner of a work, a party of
+   * a publication; round 10, F415): its member signs for it with their own
+   * key, naming it, under its rule for Agreements (rules 58, 60); the member
+   * is not an owner of the work. Said first in the reading; blocked where
+   * this identity has no voice in that rule.
+   */
+  private async forCollective(me: string, reading: Reading, collective: string, places: string[], via: Via, names: (id: string) => string): Promise<AreaHere | null> {
+    const at = await collectivePlaces(collective, places, via);
+    const area = (await areaReaching(collective, at, { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature }, via).catch(() => ({ area: null }))).area;
+    const rule = area ? (area.name.startsWith('the ') ? area.name : `its area “${area.name}”`) : 'its rule for Agreements';
+    if (!area) reading.blocking.push(`The collective ${names(collective)}: its rule for Agreements could not be read, so you cannot sign for it here.`);
+    else if (!area.holders.includes(me)) reading.blocking.push(`You have no voice in ${rule} of the collective ${names(collective)}: another member signs for it.`);
+    reading.sections.unshift({
+      heading: 'You sign for the collective',
+      lines: [
+        { text: `The collective ${names(collective)} is one party of this (a co-creator beside others, or one owner among a work’s owners): it consents once, by its own constitution. You sign for it with your own key, naming it, under ${rule}${area ? ` (${area.number} of ${area.holders.length} members)` : ''} (Agreements rules 58, 60).` },
+        ...(area && area.number > 1 ? [{ text: `Its rule asks ${area.number} members: once you sign for it, ${area.holders.filter((h) => h !== me).map(names).join(', ')} ${area.holders.length - 1 === 1 ? 'is' : 'are'} asked to add their signature, inside the collective.` }] : []),
+        { text: 'You are not a party of this yourself: the collective is. What it is paid, it pays its own holders under its constitution.', tone: 'warn' as const },
+      ],
+    });
+    return area;
   }
 
   /**
@@ -1783,7 +1815,7 @@ export class Dub {
       const { me, s, p, hints } = await this.ctx();
       const st = await this.store.signing(me.id);
       if (st.answered[thread]) throw new Error(`You already ${st.answered[thread].verdict} it. Nothing more was signed.`);
-      const { act, places, reading, collective, proposer, also } = await this.proposal(me, s, p, hints, thread);
+      const { act, places, reading, collective, party, area, proposer, also } = await this.proposal(me, s, p, hints, thread);
       if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(' ')} Nothing was signed.`);
       await this.current(me);
       const where = [...new Set([...s.relays, ...places, ...(collective ? await this.placesOf(collective, hints, s.via) : [])])];
@@ -1792,19 +1824,39 @@ export class Dub {
       // with your own identity's key, a plain signature act naming it.
       const forCollective = (reading.kind === 'act' || reading.kind === 'release') && !!collective;
       let made: { id: string };
-      if (forCollective) {
-        const x = await this.signed(me, () => cosignAsMember(me, act));
-        const took = await publishAt([x.act], where, s.via);
-        if (!took.length) throw new Error('No relay took your signature. Nothing counts yet: try again.');
-        made = { id: x.id };
-      } else made = await this.signed(me, () => signAct(me, act, where));
-      const lines: Line[] = [{ text: forCollective ? `Signed for the collective with your own key: the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
-      // A deal between separate people: every act it names is signed too, each its own signature act (Agreements rule 47; Standing offer: every party).
       const more: string[] = [];
-      for (const x of also) {
-        const sx = await this.signed(me, () => signAct(me, x, where));
-        more.push(sx.id);
-        lines.push({ text: `Signed too: ${x.slice(0, 12)}…, your signature act ${sx.id}.`, tone: 'ok' });
+      let lines: Line[];
+      if (party) {
+        // For the collective, one party (F415): its signature act on every act asked, made by you with your own key, naming it.
+        const x = await this.signed(me, () => signForCollective(party, me, [act, ...also], where, s.via));
+        made = { id: x.made[0] };
+        more.push(...x.made.slice(1));
+        lines = [{ text: `Signed for the collective ${party.slice(0, 8)}… with your own key, naming it: its signature act ${made.id} is published at ${x.places.join(', ')}.`, tone: 'ok' }];
+        for (const sx of more) lines.push({ text: `Signed for it too: its signature act ${sx}.`, tone: 'ok' });
+        // Its rule asks more members: each is asked to add their signature to the collective's, inside the collective (rule 60).
+        for (const h of area && area.number > 1 ? area.holders.filter((y) => y !== me.id) : []) {
+          try {
+            const r = await this.reach(h, where, s.via);
+            for (const sig of x.made) await this.signed(me, () => negotiate(me, r, { text: `The collective’s signature, made by ${me.id.slice(0, 8)}… for it, on act ${act}: its rule asks ${area!.number} members. Read it in your Signing tab, then sign or decline.`, refs: [[sig, party], [party, party]] }));
+            lines.push({ text: `${h.slice(0, 8)}… is asked to add their signature, inside the collective.`, tone: 'ok' });
+          } catch (e) {
+            lines.push({ text: `${h.slice(0, 8)}… could not be asked: ${message(e)}`, tone: 'warn' });
+          }
+        }
+      } else {
+        if (forCollective) {
+          const x = await this.signed(me, () => cosignAsMember(me, act));
+          const took = await publishAt([x.act], where, s.via);
+          if (!took.length) throw new Error('No relay took your signature. Nothing counts yet: try again.');
+          made = { id: x.id };
+        } else made = await this.signed(me, () => signAct(me, act, where));
+        lines = [{ text: forCollective ? `Signed for the collective with your own key: the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+        // A deal between separate people: every act it names is signed too, each its own signature act (Agreements rule 47; Standing offer: every party).
+        for (const x of also) {
+          const sx = await this.signed(me, () => signAct(me, x, where));
+          more.push(sx.id);
+          lines.push({ text: `Signed too: ${x.slice(0, 12)}…, your signature act ${sx.id}.`, tone: 'ok' });
+        }
       }
       let oneTime: Uint8Array | undefined;
       if (reading.kind === 'founding' || reading.kind === 'clone') {
@@ -3092,6 +3144,29 @@ export class Dub {
       return { id: r.id, ended: r.ended, lines: r.lines.map((text, i) => ({ text, tone: i === 0 ? ('ok' as const) : undefined })) };
     });
   }
+}
+
+/**
+ * The acts a proposal asks to sign: its references, less a chain it names
+ * (a reference whose act is its own signer, `[collective, collective]`: the
+ * collective the proposal is about, never an act to sign).
+ */
+function actsOf(refs: { id: string; signer: string | null }[]): string[] {
+  return refs.slice(1).filter((r) => r.id !== r.signer).map((r) => r.id);
+}
+
+/**
+ * The collective a proposal asks to sign for as one party of someone else's
+ * agreement (round 10, F415: a collective is one holder among a work's
+ * holders): a chain it names, where the act asked is a deal's (a work's
+ * ownership agreement, a publication) and is not the collective's own act.
+ * A collective's own act waiting for a second member's signature names its
+ * chain in its `objects`: that is a co-signature, not this.
+ */
+function partyCollective(act: Uint8Array, reading: Reading, refs: { id: string; signer: string | null }[]): string | null {
+  if (reading.kind !== 'deal') return null;
+  const own = ((describeAct(act) as { objects?: [string, string][] }).objects ?? []).map(([c]) => c);
+  return refs.slice(1).find((r) => r.id === r.signer && !own.includes(r.id))?.id ?? null;
 }
 
 /** The Relay lens's layers (H55): text and envelope acts by default; the others behind the filter. */

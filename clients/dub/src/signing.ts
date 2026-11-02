@@ -157,6 +157,32 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
       collective: d.signer ?? null,
     };
   }
+  // Round 10 (F415): the collective's signature on another's act (a work's
+  // ownership agreement, a publication), made for it by one member, its rule
+  // for Agreements asking more: read with the act it signs, then signed as
+  // the collective's act with your own key (Agreements rules 58, 60).
+  const named = d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.signature ? (cborDecode(d.payload) as Map<number, unknown>).get(0) : null;
+  const signed = named instanceof Uint8Array ? hex(named) : null;
+  // Its `objects`: the act it signs, then the collective's chain (rule 58).
+  const collective = signed ? ((d.objects ?? []).find(([chain]) => chain !== signed)?.[0] ?? null) : null;
+  if (signed && collective) {
+    const got = signed ? await fetchAct(signed, hints, via) : null;
+    const inner = got ? await readPublishingProposal(got.act, names, hints, via) : null;
+    return {
+      kind: 'act',
+      title: `Sign the collective’s signature${inner ? `: ${inner.title.replace(/ to sign/, '')}` : ''}`,
+      summary: [
+        `The collective ${names(collective)} signs this as one party, one owner among a work’s owners: it consents once, by its own constitution. ${d.signer ? names(d.signer) : 'A member'} signed for it; its rule for Agreements asks more members, and your signature, with your own key, adds yours (Agreements rules 58, 60).`,
+        'You are not an owner of the work yourself: the collective is.',
+        ...(inner?.summary ?? []),
+      ],
+      sections: inner?.sections ?? [],
+      plain: inner?.plain ?? [],
+      risks: [],
+      blocking: [...(signed && !got ? [`The act it signs (${signed}) was not found, so it cannot be read.`] : []), ...(got && !inner ? ['The act it signs is no work’s ownership agreement or publication: Dub does not sign it for the collective here.'] : [])],
+      collective,
+    };
+  }
   // Round 3 (F353): an act of a collective an area reaches, made with one
   // member's key, waiting for another holder's key (rule 60): read in plain
   // words from its bytes, then signed as the collective with your own key.

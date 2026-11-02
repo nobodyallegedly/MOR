@@ -37,7 +37,7 @@ use mor_conversion::{acceptable, delivery_proof, judge, ordered, Checker, Hop, J
 use mor_core::act::{Object, Ref};
 use mor_core::agreements::{self, AgreementsView, Mirs, ProofChecker, ProofVerdict};
 use mor_core::hash::Hash;
-use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payer, Payload, PriceTag, Priced, Rail, Receipt, VaultEntry};
+use mor_core::money::{self as fin, Amount, Citations, Claim, Forward, PayeePointer, Payload, PriceTag, Priced, Rail, Receipt, VaultEntry};
 use mor_lightning::bolt11::Network as LnNetwork;
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::chain::HeaderChain;
@@ -194,7 +194,7 @@ impl Story {
     /// the order the service signs for it: the forward to the owners'
     /// split service, following its pointer, by `deadline`.
     fn order(&self, label: &str, paid: u64, quote: Option<(u64, u64)>, deadline: u64) -> (Commitment, Order) {
-        let c = Commitment { rail: mor_lightning::spec(), payee: self.service, amount: sat(paid), fulfils: self.offer.tag, payer: Some(Payer::Identity(self.ana)), paid_to: PaidTo::Flow { pointer: self.service_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
+        let c = Commitment { rail: mor_lightning::spec(), payee: self.service, amount: sat(paid), fulfils: self.offer.tag, payer: Some(self.ana), paid_to: PaidTo::Flow { pointer: self.service_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
         let out = self.offer.out(&c.amount, quote).unwrap_or(sat(paid));
         let order = Order { offer: self.offer.id, commitment: c.hash(), forward: Forward { next_payee: self.owners, amount: out, agreement: self.offer.id }, onward: self.owners_pointer, deadline, quote };
         (c, order)
@@ -222,7 +222,7 @@ impl Story {
     /// following `onward`, mined on the chain's tip and buried at the
     /// rail's depth: the commitment and the rail proof.
     fn pay_on(&mut self, amount: u64, onward: Hash, label: &str) -> (Commitment, Vec<u8>) {
-        let c = Commitment { rail: mor_onchain::spec(), payee: self.owners, amount: sat(amount), fulfils: onward, payer: Some(Payer::Identity(self.service)), paid_to: PaidTo::Flow { pointer: self.owners_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
+        let c = Commitment { rail: mor_onchain::spec(), payee: self.owners, amount: sat(amount), fulfils: onward, payer: Some(self.service), paid_to: PaidTo::Flow { pointer: self.owners_pointer, rail: 0 }, salt: h(label)[..16].try_into().unwrap(), purchase: None };
         let script = self.owners_keys.address(Network::Regtest).script(&c.hash()).unwrap();
         let t = bytes(&tx(&format!("the service's coins, {label}"), &[(script, amount)]));
         let txids = [h(&format!("a coinbase under {:?}", self.chain.tip())), txid(&t)];
@@ -249,7 +249,7 @@ impl Story {
     /// `objects`, checked by the on-chain rail Module on the chain
     /// followed. The next payee signs nothing.
     fn claim_on(&self, c: &Commitment, proof: Vec<u8>, previous: &Hash, cites: bool, id: &str) -> Hop {
-        let claim = Claim { rail: c.rail, proof, payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: Some(*previous) };
+        let claim = Claim { rail: c.rail, proof, payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous: Some(*previous) };
         let cited = Citations { objects: cites.then(|| vec![Object { chain: *previous, predecessor: *previous }]), acks: None, refs: None };
         let onchain = Onchain::on(&self.chain);
         let modules = Modules::new().adopt(&onchain);
@@ -330,7 +330,7 @@ fn a_swap_to_the_payer_itself_reads_as_the_same_route() {
     // The owners' split service converts its own Lightning takings.
     s.ana = s.owners;
     let (c, order) = s.order("a swap to itself", 50_000, None, s.now() + 6);
-    assert_eq!(c.payer, Some(Payer::Identity(order.forward.next_payee)), "the next payee is the payer");
+    assert_eq!(c.payer, Some(order.forward.next_payee), "the next payee is the payer");
     let first = s.first(&c, s.pay_in(&c, "a swap to itself"), Some(order.forward.clone()), "the service's receipt");
     let (c2, p2) = s.pay_on(49_900, order.onward, "a swap to itself, on");
     let onward = s.onward(&c2, p2, &first.id, true, "its own receipt of the coins");
@@ -373,7 +373,7 @@ fn a_silent_service_still_owes_what_its_order_promised() {
     let mut s = Story::new(swap_terms());
     let deadline = s.now() + 6;
     let (c, order) = s.order("cal's swap", 5_000, None, deadline);
-    let claim = Claim { rail: c.rail, proof: s.pay_in(&c, "cal's swap"), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+    let claim = Claim { rail: c.rail, proof: s.pay_in(&c, "cal's swap"), payee: c.payee, amount: c.amount, fulfils: c.fulfils, disagrees: None, referral: None, refund: None, purchase: None, previous: None };
     let ln = Lightning;
     let answer = verify(Record::Claim(&claim, s.ana, &Citations::default()), &s.pointers, &Modules::new().adopt(&ln)).answer;
     assert_eq!(answer, Answer::Valid, "the payer's claim alone shows the money arrived");
@@ -542,7 +542,7 @@ fn an_onward_payment_the_offers_clock_cannot_place_is_unknown() {
     let (c, mut order) = s.order("kai's swap", 2_000, None, s.now() + 6);
     order.onward = s.owners_pointer;
     let first = s.first(&c, s.pay_in(&c, "kai's swap"), Some(order.forward.clone()), "the service's receipt");
-    let c2 = Commitment { rail: mor_lightning::spec(), payee: s.owners, amount: sat(1_900), fulfils: s.owners_pointer, payer: Some(Payer::Identity(s.service)), paid_to: PaidTo::Flow { pointer: s.owners_pointer, rail: 0 }, salt: [3; 16], purchase: None };
+    let c2 = Commitment { rail: mor_lightning::spec(), payee: s.owners, amount: sat(1_900), fulfils: s.owners_pointer, payer: Some(s.service), paid_to: PaidTo::Flow { pointer: s.owners_pointer, rail: 0 }, salt: [3; 16], purchase: None };
     let preimage = h("kai's onward preimage");
     let ln = LnProof { invoice: invoice(&owners_node, 1_900_000, &c2.hash(), &preimage), preimage: Some(preimage) };
     let r = Receipt { rail: c2.rail, proof: Proof { paid_to: c2.paid_to, salt: c2.salt, rail: ln.encode() }.encode(), payer: c2.payer.clone(), payee: s.owners, amount: c2.amount, fulfils: c2.fulfils, previous: Some(first.id), forward: None, batch: None, purchase: None };

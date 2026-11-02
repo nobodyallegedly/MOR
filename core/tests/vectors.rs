@@ -364,7 +364,7 @@ fn verdict_vectors() {
                     .purchase_contests(&h(&ask["purchase"]))
                     .map_or(json!("unknown"), |x| json!(x.iter().map(hex::encode).collect::<Vec<_>>())),
                 "refund repaid" => with_facts(&v, &mirs, facts)
-                    .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
+                    .refund_repaid(&h(&ask["payment"]), &h(&ask["to"]), &h(&ask["unit"]))
                     .map_or(json!("unknown"), |x| json!(x)),
                 "version in force" => with_facts(&v, &mirs, facts).version_in_force(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(hex::encode(x))),
                 "fork" => match with_facts(&v, &mirs, facts).fork(&h(&ask["act"])) {
@@ -484,6 +484,40 @@ fn verdict_vectors() {
                 "owed back by" => with_facts(&v, &mirs, facts)
                     .owed_back_by(&h(&ask["act"]))
                     .map_or(json!("unknown"), |x| json!(x.iter().map(|(who, n)| json!([hex::encode(who), n])).collect::<Vec<_>>())),
+                "route to" => route_json(&with_facts(&v, &mirs, facts).route_to(&h(&ask["act"]))),
+                "route from" => route_json(&with_facts(&v, &mirs, facts).route_from(&h(&ask["act"]))),
+                "route buyer" => {
+                    use mor_core::agreements::RouteBuyer as B;
+                    match with_facts(&v, &mirs, facts).route_buyer(&h(&ask["act"])) {
+                        B::NoRoute => json!("no route"),
+                        B::FirstPayer { payer, claim } => json!({ "buyer": "the first payer", "payer": hex::encode(payer), "claim": hex::encode(claim) }),
+                        B::OwnAccount { service, astray } => json!({ "buyer": "the service, for its own account", "service": service.map(hex::encode), "astray": astray.iter().map(hex::encode).collect::<Vec<_>>() }),
+                        B::Failed(r) => json!({ "buyer": "none: no purchase at the seller", "route": route_json(&r) }),
+                        B::Unknown => json!("unknown"),
+                    }
+                }
+                "refund along" => match with_facts(&v, &mirs, facts).refund_along(&h(&ask["act"])) {
+                    Ok(x) => J::Array(
+                        x.iter()
+                            .map(|r| json!({ "record": hex::encode(r.record), "debtor": hex::encode(r.debtor), "creditor": r.creditor.map(hex::encode), "amount": [hex::encode(r.amount.unit), r.amount.value], "agreement": hex::encode(r.agreement), "repaid": r.repaid }))
+                            .collect(),
+                    ),
+                    Err(_) => json!("unknown"),
+                },
+                "specification claim, reading Agreements" => json!(match with_facts(&v, &mirs, facts).specification_claim(&h(&ask["act"]), &h(&ask["creator"])) {
+                    mor_core::chain::SpecClaim::Claimed => "claimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                    mor_core::chain::SpecClaim::Unknown => "unknown",
+                }),
+                "work owners" => match with_facts(&v, &mirs, facts).work_owners(&h(&ask["work"])) {
+                    Ok(o) => {
+                        let mut c: Vec<String> = o.claims.iter().map(hex::encode).collect();
+                        c.sort();
+                        json!({ "claims": c, "default_holder": o.default_holder.map(hex::encode) })
+                    }
+                    Err(_) => json!("unknown"),
+                },
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -535,6 +569,9 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     // A rail Module's kind and binding, read from its specification (fields
     // 11 and 13), under the specification's hash.
+    for x in facts["rail_invalid"].as_array().into_iter().flatten() {
+        av.rail_invalid.insert(h(x));
+    }
     for x in facts["rail_specifications"].as_array().into_iter().flatten() {
         use mor_core::development::{Known, Spec};
         if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(&b(x), &Known::default()) {
@@ -542,4 +579,23 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
         }
     }
     av
+}
+
+/// A route as the vectors write it (Money rules 24 to 28): its verdict, its
+/// records first to last, and where it stops or breaks; a stop's open
+/// obligation (rule 27); the agreement a failure names (rule 28).
+fn route_json(r: &mor_core::agreements::RouteVerdict) -> J {
+    use mor_core::agreements::RouteVerdict as V;
+    use serde_json::json;
+    let hs = |v: &[Hash]| v.iter().map(hex::encode).collect::<Vec<_>>();
+    match r {
+        V::Valid { hops } => json!({ "route": "valid", "hops": hs(hops) }),
+        V::Stopped { hops, at, owed, near } => json!({
+            "route": "stopped", "hops": hs(hops), "at": hex::encode(at),
+            "owed": { "debtor": hex::encode(owed.debtor), "creditor": hex::encode(owed.creditor), "amount": [hex::encode(owed.amount.unit), owed.amount.value], "agreement": hex::encode(owed.agreement) },
+            "near": near.iter().map(|(x, _)| hex::encode(x)).collect::<Vec<_>>(),
+        }),
+        V::Broken { hops, at, agreement, .. } => json!({ "route": "broken", "hops": hs(hops), "at": hex::encode(at), "agreement": agreement.map(hex::encode) }),
+        V::Unknown { at, .. } => json!({ "route": "unknown", "at": hex::encode(at) }),
+    }
 }

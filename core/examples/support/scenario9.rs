@@ -53,7 +53,7 @@ fn sale(w: &mut World, svc: &mut Person, buyer: Hash, tag: Hash, owners: Hash, v
     let r = Fin::Receipt(Receipt {
         rail: rail(),
         proof: proof.to_vec(),
-        payer: Some(Payer::Identity(buyer)),
+        payer: Some(buyer),
         payee: svc.id,
         amount: Amount { unit: spec(UNIT), value },
         fulfils: tag,
@@ -132,7 +132,7 @@ fn decisions(out: &mut Out) {
     let pid = platform.id;
     let tag = price_tag(&mut w, &mut platform, mirs().money, money::Priced::Publication(pb), 300, spec(UNIT), pid);
     let proof = b"a customer books the cleaning";
-    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(Payer::Identity(fan.id)), payee: pid, amount: Amount { unit: spec(UNIT), value: 300 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
+    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(fan.id), payee: pid, amount: Amount { unit: spec(UNIT), value: 300 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
     let rec = { let a = w.everyday_act(&mut platform, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let facts = Facts { rail_valid: vec![(rec, pid)], rail_payments: vec![(proof.to_vec(), b"the booking".to_vec())], ..Default::default() };
     out.case(&mut w, "a platform's publication of a worker's vow, no ownership agreement claiming it: a purchase, its drafter the owners' side", "Agreements rule 14, \"A vow has an owner\"; rule 11",
@@ -175,7 +175,7 @@ fn decisions(out: &mut Out) {
     sign(&mut w, &mut bk, &pb);
     let tag = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 200, spec(UNIT), sid);
     let proof = b"a payment the first service could not take";
-    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(Payer::Identity(buyer.id)), payee: bid, amount: Amount { unit: spec(UNIT), value: 200 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
+    let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(buyer.id), payee: bid, amount: Amount { unit: spec(UNIT), value: 200 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: None });
     let rec = { let a = w.everyday_act(&mut bk, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let facts = Facts { rail_valid: vec![(rec, bid)], rail_payments: vec![(proof.to_vec(), b"the backed-up payment".to_vec())], ..Default::default() };
     out.case(&mut w, "a payment to a backup the publication lists, still naming the tag, receipted by the backup in its own name: a purchase", "Agreements rule 17; rule 12",
@@ -473,7 +473,7 @@ fn walk_1(out: &mut Out) {
     // A payout receipt Ana signs for the share, bound to a rotation later
     // than her chain signature: a wrong receipt.
     let payout_receipt = |w: &mut World, p: &mut Person, s: Hash, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(Payer::Identity(sid)), payee: p.id, amount: Amount { unit: spec(UNIT), value: 340 }, fulfils: s, previous: None, forward: None, batch: None, purchase: None });
+        let r = Fin::Receipt(Receipt { rail: rail(), proof: proof.to_vec(), payer: Some(sid), payee: p.id, amount: Amount { unit: spec(UNIT), value: 340 }, fulfils: s, previous: None, forward: None, batch: None, purchase: None });
         let a = w.everyday_act(p, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -623,7 +623,7 @@ fn walk_4(out: &mut Out) {
     let tag = price_tag(&mut w, &mut svc, mirs().money, money::Priced::Publication(pb), 500, spec(UNIT), sid);
     let buy = |w: &mut World, svc: &mut Person, fan: &mut Person, proof: &[u8]| {
         let purchase = Some(Purchase { agreement: f, line: f });
-        let c = Fin::Claim(Claim { rail: rail(), proof: proof.to_vec(), payee: sid, amount: Amount { unit: spec(UNIT), value: 500 }, fulfils: tag, disagrees: None, referral: None, refund: None, anonymous: None, purchase: purchase.clone(), previous: None });
+        let c = Fin::Claim(Claim { rail: rail(), proof: proof.to_vec(), payee: sid, amount: Amount { unit: spec(UNIT), value: 500 }, fulfils: tag, disagrees: None, referral: None, refund: None, purchase: purchase.clone(), previous: None });
         let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, None);
         let claim = w.add(&a);
         let r = sale(w, svc, fan.id, tag, f, f, 500, proof);
@@ -780,7 +780,7 @@ fn walk_6(out: &mut Out) {
     ]));
     let push = mor_core::development::Spec::hash_of(&rail_content);
     let receipt = |w: &mut World, svc: &mut Person, proof: &[u8]| {
-        let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
+        let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
         let a = w.everyday_act(svc, mirs().money, 2, r.to_map(), None, None);
         w.add(&a)
     };
@@ -820,7 +820,7 @@ fn walk_6(out: &mut Out) {
     let t2 = Fin::PriceTag(money::PriceTag { priced: money::Priced::Publication(pb), version: 2, previous: Some(tag), price: None, payee: sid });
     let wd = { let a = w2.everyday_act(&mut svc2, mirs().money, money::types::PRICE_TAG, t2.to_map(), Some(vec![Object { chain: tag, predecessor: tag }]), None); w2.add(&a) };
     let after_wd = {
-        let r = Fin::Receipt(Receipt { rail: push, proof: b"paid after the tag was withdrawn".to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: wd, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
+        let r = Fin::Receipt(Receipt { rail: push, proof: b"paid after the tag was withdrawn".to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: wd, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
         let a = w2.everyday_act(&mut svc2, mirs().money, 2, r.to_map(), None, None);
         w2.add(&a)
     };
@@ -831,7 +831,7 @@ fn walk_6(out: &mut Out) {
     // A payment naming the earlier, priced version, which the service
     // receipts on the push rail after its withdrawal is in its history.
     let late = {
-        let r = Fin::Receipt(Receipt { rail: push, proof: b"paid at the old price after the withdrawal".to_vec(), payer: Some(Payer::Identity(spec("a fan"))), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
+        let r = Fin::Receipt(Receipt { rail: push, proof: b"paid at the old price after the withdrawal".to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec(UNIT), value: 1000 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: own, line: own }) });
         let a = w2.everyday_act(&mut svc2, mirs().money, 2, r.to_map(), None, None);
         w2.add(&a)
     };

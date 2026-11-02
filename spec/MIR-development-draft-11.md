@@ -72,7 +72,7 @@ The types a specification defines are those its text defines, as a verifier impl
 
 #### Rule 3. Creator signature
 
-A cMIP or Module counts as its creator's only when uploaded in an act signed by the creator named inside it. A MIR names no creator.
+A cMIP or Module counts as its creator's only when uploaded in an act signed by the creator named inside it. **An act for a collective that Agreements counts (Agreements rule 58), or an act under a grant key Agreements backs (Agreements rule 80), is the creator's for this rule**; a client that does not read Agreements shows whether such a specification is its creator's as unknown. A MIR names no creator.
 
 A specification naming a creator that never uploaded it is shown as unclaimed by that creator; fee terms and reputation displays MUST NOT assume the named creator consented.
 
@@ -322,7 +322,7 @@ The content is decoded as an act's payload is, under the encoding and the CDDL c
 1. The content is deterministic CBOR, holding one map. Bytes that are not, or a map key twice, make it no specification.
 2. Every key of the content map is an unsigned integer from 0 to 13 (arrays and maps inside it follow their own CDDL). Any other key, a key the format does not define, makes it no specification.
 3. Every text string in it, field 9 and every `type-def` included, is canonical text (Text MIR, the pinned Unicode version).
-4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` carried as given; field 12 the value `true` alone.
+4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` any item, carried as given; field 12 the value `true` alone.
 5. Field 0 is a kind from 0 to 8, and field 9 is present.
 6. **By kind**:
    - field 1 is absent on kinds 4, 6 and 7 (a MIR, the MICS document, a test suite) and present on every other kind;

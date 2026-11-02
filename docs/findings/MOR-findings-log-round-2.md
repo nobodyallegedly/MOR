@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F415. The Dubsar Suite's round 10: anonymity a fresh identity, the route buyer's claim, a collective one holder, the escape, Fable's bound in the apps, round 9's remainder (2 November 2026)
+
+**Built** (`docs/suite-r10-report.md`, on pull request 116 beside S7i to S7k; app-only: nothing in `core/`, `wasm/`, `spec/`, `relay/` or the vectors). The payment cMIP's commitment takes an identity (S7k's patch applied; the payment cMIP draft 6, conversion draft 5, anchoring draft 8); Damgar pays without your name as a fresh self-hosted identity, its genesis delivered with its claim, and shows a gift as owing nothing (F416); Damgar's first-hop claim through a converter cites the seller's tag in `refs`, with a contest, a vow's confirmation and a referral tested (F414); a collective is asked once as one holder in Edubba and Dub (F416); the air-gapped Module's and Kišib's words for the escape on a position contested wherever served (F416); the collective's owed-back list and Dub's vows unknown as a whole, waiting for the rail (Fable's bound, F413); Ummia's hashes; a collective's claim in Publishing (F412); Assess on the core's `readPublication`; one trusted wallet answering for a collective; Kišib's member-key refusal dropped (the runner cMIP draft 6); Assess's partner line at half with a setting.
+
+**Left, said:** the shared-sale test stays on the split service (a collective's publication in Edubba names one; question 1 of the report). The default holder is said in words only (no binding reads a work's owners).
+
 ## F411. The Dubsar Suite's round 9: Assess on what people now sign; a collective publishing; every hop receipted; the tip; the signing key as a string (31 October 2026)
 
 **Asked by Nobody, allegedly** (the suite's round 9 prompt, app-only, on main after pull request 113). **Built** on the suite's apps, Modules, cMIP records and CI; nothing in `core/`, `wasm/`, `spec/`, `relay/` or the vectors changed. Report: `docs/suite-r9-report.md`; design note: `docs/design/suite-redesign.md`, "Built in round 9".

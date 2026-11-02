@@ -1,6 +1,8 @@
 //! # mor-conversion
 //!
-//! The conversion cMIP, draft 4 (`cmips/cmip-conversion-draft-4.md`):
+//! The conversion cMIP, draft 5 (`cmips/cmip-conversion-draft-5.md`; a
+//! hop's claim's payer its signer, the first payer's claim citing the
+//! seller's tag, F414, F416):
 //! Money's conversion task ("a cMIP defining how a conversion is offered
 //! and evidenced"). **Experimental**: an instrument for testing the core,
 //! never for real money.
@@ -51,7 +53,7 @@ use mor_core::agreements::{self, Sold, SplitPlan, Unfilled};
 use mor_core::cbor::{self, Value};
 use mor_core::envelopes::anchoring::Reference;
 use mor_core::hash::{sha256, Hash};
-use mor_core::money::{Amount, Citations, Claim, Forward, Payer, PriceTag, Priced, Receipt};
+use mor_core::money::{Amount, Citations, Claim, Forward, PriceTag, Priced, Receipt};
 use mor_payment::{Answer, Commitment, Held, PaidTo, Proof, Record};
 
 /// This cMIP's spec hash. A test value until its creator is named at step
@@ -501,7 +503,7 @@ impl Hop {
         let receipt = Receipt {
             rail: claim.rail,
             proof: claim.proof.clone(),
-            payer: Some(claim.payer(&signer)),
+            payer: Some(signer),
             payee: claim.payee,
             amount: claim.amount,
             fulfils: claim.fulfils,
@@ -765,6 +767,6 @@ impl agreements::ProofChecker for Checker<'_> {
 }
 
 /// Whether `payer` names the identity `who`.
-pub(crate) fn is(payer: &Option<Payer>, who: &Hash) -> bool {
-    matches!(payer, Some(Payer::Identity(h)) if h == who)
+pub(crate) fn is(payer: &Option<Hash>, who: &Hash) -> bool {
+    payer.as_ref() == Some(who)
 }

@@ -52,8 +52,19 @@
 // owners are its constitution, read back (way 3: nothing new to sign); its
 // publication names that founding agreement, made and ended by a member
 // under the rule reaching publications, the others its rule asks signing in
-// their own Edubba (round 9, F411). A collective's claim is not offered: the
-// core reads a claim's opener, the member, as one of its creators.
+// their own Edubba (round 9, F411); and its claim (round 10, F415): a claim
+// the member signs for the collective, naming it, the collective its opener
+// and a creator, the members who made it with it listed beside it, each
+// binding it by a signature act of their own (the member who signs it for
+// the collective included). Where no ownership agreement targets it, the
+// collective is the work's default holder (Agreements, "Claim (type 3)",
+// rule 58).
+//
+// A collective is one holder among a work's holders (round 10, decided by
+// Nobody, allegedly): where an ownership agreement names a collective as an
+// owner, Edubba lists it once, asks it once (its members sign for it under
+// its rule for Agreements, inside the collective), and never lists its
+// members as owners of the work (`deals.ts`, `Asking`).
 //
 // Nothing is signed before it is read back in plain words, with its digest.
 //
@@ -66,6 +77,7 @@ import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { AGREEMENTS_SPECS, SPLIT_CMIP, carryChain, sign } from '../../repo/src/agreements.ts';
+import { allBy } from '../../grants/src/grant.ts';
 import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import { KEY_DELIVERY, MEDIA_WORDS, keyDeliveryPayload, lockWork, readPublication, readSealed, type SealedMedia } from '../../barebone/src/sealed.ts';
 import { putTag, readTag, tagPayload, tagsOf, withdrawTag, type TagRead } from '../../barebone/src/tag.ts';
@@ -74,7 +86,7 @@ import { NotSound } from '../../../modules/audio/src/audio.ts';
 import { BAKE, POST_SPECS, PRICE_TAG, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
-import { areaReaching, chainFor, collectiveNow, collectivePlaces, collectiveVerifier, publishAt, signAsMember, termsAt, type AreaHere } from '../../grants/src/member.ts';
+import { areaReaching, chainFor, collectiveNow, collectivePlaces, collectiveVerifier, judgeCollective, publishAt, signAsMember, termsAt, type AreaHere } from '../../grants/src/member.ts';
 import { negotiate } from '../../repo/src/proposals.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverKey, deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
@@ -88,7 +100,7 @@ import { assess, beforeSigning, beforeSigningPublication } from '../../assess/sr
 import type { Desk, Done } from './desk.ts';
 import type { Real } from './real.ts';
 import type { Store } from './store.ts';
-import { Asking, PARTS, SHARES_SAY, actAt, ownershipOf, type PeopleIn, type Waiting } from './deals.ts';
+import { Asking, PARTS, SHARES_SAY, actAt, ownershipOf, type CollectiveAsked, type PeopleIn, type Waiting } from './deals.ts';
 import { claimPayload, dealClonePayload, dealTermsPayload, pct, readDeal, type DealDraft } from '../../grants/src/deal.ts';
 
 const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -104,7 +116,7 @@ export const MAX_WORK = 20 * 1024 * 1024;
 export const PUBLISHING_SAY = [
   'Four ways in, each stopping where you choose. Upload: a file locked and uploaded, then, if you want, a price tag on it (paying you, the uploader, unsplit) or a claim that you made it. Claim: a work already uploaded. An ownership agreement: who owns what share of a claimed work. A publication: how it is sold, with which partners, through which split service, at what price.',
   'A text, a JPEG picture, an MP4 film or an M4A recording: the kinds Edubba and Dub carry, each checked and stripped by its Module before it is locked. Its bytes open only with its key, delivered to each buyer once paid.',
-  'As a collective you belong to, you act with your own key, naming it: an upload and its price tag; its publication, whose owners are its constitution (its founding agreement), and that publication’s ending, the other members its rule asks signing in their own Edubba. A collective’s claim is not offered yet.',
+  'As a collective you belong to, you act with your own key, naming it: an upload and its price tag; its claim, the collective its opener and a creator, the members who made it with it beside it; its publication, whose owners are its constitution (its founding agreement), and that publication’s ending, the other members its rule asks signing in their own Edubba.',
 ];
 
 /** Said where a bake would be withdrawn (decided with the MOR lead, 28 October 2026: one withdrawal per layer). */
@@ -154,6 +166,8 @@ export interface ClaimHere {
   bake: string | null;
   vow: string | null;
   by: string;
+  /** A collective's claim (F412): the collective, its opener and a creator, signed for it by `by`; or null. */
+  collective?: string | null;
   creators: string[];
   at: number;
 }
@@ -250,6 +264,23 @@ interface CollectiveHere {
   tags: AreaHere | null;
   vows: AreaHere | null;
   why: string | null;
+}
+
+/** `Verifier.agreementsWorkOwners` (round 10): a work's owners as the core reads them. */
+interface WorkOwnersRead {
+  work: string;
+  claims: string[];
+  contested: boolean;
+  agreements: string[];
+  defaultHolder: string | null;
+  holders: { agreement: string; holders: [string, number][] }[];
+}
+
+/** A collective's claim as read back: its lines, the rule reaching claims, the other members that rule asks. */
+interface CollectiveClaimRead {
+  lines: Line[];
+  area: AreaHere | null;
+  cosigners: string[];
 }
 
 /** What way 1 does after the upload: nothing more, a price tag, or a claim. */
@@ -485,12 +516,14 @@ export class Publishing {
       const title = (a.title ?? '').trim();
       if (!title) blocking.push('Give it a title: the public words of the post that shows it in a feed.');
       const price = then === 'price' ? this.priceOf(a.price, blocking) : null;
-      const creators = then === 'claim' ? this.others(acting, a.creators ?? [], blocking) : [];
+      const creators = then === 'claim' ? (collective ? this.coCreators(a.creators ?? [], blocking) : this.others(acting, a.creators ?? [], blocking)) : [];
       let c: CollectiveHere | null = null;
+      let claimRead: CollectiveClaimRead | null = null;
       if (collective) {
         c = await this.collectiveHere(me, as);
         if (c.why) blocking.push(`The collective ${short(as)}: ${c.why}.`);
-        if (then === 'claim') blocking.push('A collective’s claim is not offered: the core reads a claim’s opener, the member who signs it, as one of its creators. Upload it for the collective, then sell it through the collective’s publication, its owners its constitution.');
+        // Round 10 (F415): a collective's claim, the collective its opener and a creator (Agreements, "Claim (type 3)").
+        if (then === 'claim' && !c.why) claimRead = await this.collectiveClaimRead(me, c, creators, blocking);
         if (then === 'price' && c.tags && !c.tags.holders.includes(acting)) blocking.push(`The collective ${short(as)}: you have no voice in ${c.tags.name}, which reaches price tags.`);
       }
       let work: ReturnType<typeof lockWork> | null = null;
@@ -521,7 +554,8 @@ export class Publishing {
             { text: collective ? 'A buyer pays the collective; its key is sealed at once to every member, so any member’s app can deliver it.' : 'A buyer pays from Dub or Damgar; once your Damgar signs the receipt, Edubba delivers the key, sealed to the buyer.' },
           ],
         });
-      if (then === 'claim')
+      if (then === 'claim' && collective) sections.push({ heading: 'Then: the collective’s claim', lines: [...(claimRead?.lines ?? []), { text: 'Next, if you want: the collective’s publication. Until then, nothing is for sale.' }] });
+      else if (then === 'claim')
         sections.push({
           heading: 'Then: a claim',
           lines: [
@@ -540,7 +574,7 @@ export class Publishing {
       });
       const reading: Reading = {
         title: `Upload ${MEDIA_WORDS[media] === 'picture' ? 'a picture' : `a ${MEDIA_WORDS[media]}`}: “${title || '…'}”`,
-        summary: [`Uploaded by ${uploader}: anyone sees its title and that it was uploaded; its ${MEDIA_WORDS[media]} opens only with its key.`, then === 'none' ? 'Nothing more: no price, no claim. You may add either later.' : then === 'price' ? `Then a price tag on it: ${this.said(price)}, paid to the uploader, unsplit.` : 'Then a claim: you made it, with the people named.'],
+        summary: [`Uploaded by ${uploader}: anyone sees its title and that it was uploaded; its ${MEDIA_WORDS[media]} opens only with its key.`, then === 'none' ? 'Nothing more: no price, no claim. You may add either later.' : then === 'price' ? `Then a price tag on it: ${this.said(price)}, paid to the uploader, unsplit.` : collective ? 'Then the collective’s claim: the collective made it, with the members named beside it.' : 'Then a claim: you made it, with the people named.'],
         sections,
         plain: [],
         blocking,
@@ -548,7 +582,7 @@ export class Publishing {
       const digest = sha256(cborEncode(['MOR Edubba upload, version 1', acting, as, media, work?.work ?? '', title, then, price ?? 0, creators, s.relays]));
       const plan = this.plan(digest, async () => {
         if (blocking.length || !work) throw new Error('This cannot be signed while a reason above stands. Nothing was signed.');
-        return collective ? this.uploadAsCollective(me, c!, { media, title, work, price }) : this.uploadAsSelf(me, { media, title, work, price, creators: then === 'claim' ? creators : null });
+        return collective ? this.uploadAsCollective(me, c!, { media, title, work, price, claim: then === 'claim' ? { creators, read: claimRead! } : null }) : this.uploadAsSelf(me, { media, title, work, price, creators: then === 'claim' ? creators : null });
       });
       return { plan, digest, reading };
     });
@@ -584,7 +618,7 @@ export class Publishing {
     }
   }
 
-  private async uploadAsCollective(me: TestIdentity, c: CollectiveHere, a: { media: SealedMedia; title: string; work: ReturnType<typeof lockWork>; price: number | null }): Promise<Done> {
+  private async uploadAsCollective(me: TestIdentity, c: CollectiveHere, a: { media: SealedMedia; title: string; work: ReturnType<typeof lockWork>; price: number | null; claim?: { creators: string[]; read: CollectiveClaimRead } | null }): Promise<Done> {
     const s = this.settings();
     await this.desk.keyCurrent(me.id);
     try {
@@ -612,14 +646,22 @@ export class Publishing {
       const b = this.book();
       b.bakes.unshift({ bake: bake.id, post: post.id, as: c.id, member: me.id, collective: true, media: a.media, title: a.title, work: a.work.work, size: a.work.size, relays: took, at: now(), key: a.work.key, delivered: {}, toMembers, tag: tag ? { first: tag.id, latest: tag.id, versions: [tag.id], price: a.price, signer: c.id } : null, claim: null });
       this.save(b);
+      const acts = [bake.id, ...(tag ? [tag.id] : []), post.id];
+      const more: Line[] = [];
+      if (a.claim) {
+        const r = await this.claimForCollective(me, c, { work: a.work.work, title: a.title, bake: bake.id, vow: null, creators: a.claim.creators, read: a.claim.read });
+        more.push(...r.lines);
+        acts.push(r.claim, ...r.more);
+      }
       return {
         title: 'Uploaded for the collective',
         lines: [
           { text: `“${a.title}” is uploaded for the collective ${short(c.id)}, by you with your own key, naming it${tag ? `, its price tag ${this.said(a.price)}, paid to the collective` : ''}.`, tone: 'ok' },
           ...lines,
           ...((c.bakes?.number ?? 1) > 1 ? [{ text: 'Its rule asks more members than you: they sign it in their own apps before it counts.', tone: 'warn' as const }] : []),
+          ...more,
         ],
-        acts: [bake.id, ...(tag ? [tag.id] : []), post.id],
+        acts,
       };
     } finally {
       this.store.saveIdentity(me);
@@ -781,11 +823,11 @@ export class Publishing {
   prepareClaim(a: { work: string; title?: string; creators?: { who: string }[] }): Promise<{ plan: string; digest: string; reading: Reading }> {
     return this.desk.serial(async () => {
       const b = this.book();
-      const { acting, me, collective } = this.who(b);
+      const { acting, as, me, collective } = this.who(b);
       const names = this.asking.names();
       const blocking: string[] = [];
-      if (collective) blocking.push('A collective’s claim is not offered: the core reads a claim’s opener, the member who signs it, as one of its creators, and a collective has no key of its own. Its owners are its constitution, and its publication names that (A publication). To claim a work yourself, act as yourself.');
       const w = await this.workOf(a.work ?? '', blocking);
+      if (collective) return this.prepareCollectiveClaim(me, as, w, a, blocking);
       const creators = this.others(acting, a.creators ?? [], blocking);
       const title = (a.title ?? '').trim() || w.title || '';
       if (!title) blocking.push('Give it a title: how it is called here and in the people’s To sign.');
@@ -836,6 +878,213 @@ export class Publishing {
       lines.push(...r.lines);
     } else this.asking.keep({ id: made.id, kind: 'claim', title: a.title, by: me.id, acts: [made.id], people: [], signed: {}, threads: {}, state: 'complete', at: now() });
     return { claim: made.id, lines };
+  }
+
+  /** The members named beside a collective as its co-creators: by a contact's name or an identity held here, yourself included (F412). */
+  private coCreators(rows: { who: string }[], blocking: string[]): string[] {
+    const out: string[] = [];
+    for (const r of rows) {
+      if (!r.who.trim()) continue;
+      const p = this.asking.person(r.who, '');
+      if ('why' in p) blocking.push(p.why);
+      else if (!out.includes(p.id)) out.push(p.id);
+    }
+    return out;
+  }
+
+  /**
+   * A collective's claim, read back (round 10, F415; Agreements, "Claim
+   * (type 3)", rules 58, 60): the collective its opener and a creator, the
+   * members beside it, who signs it for the collective and under which rule,
+   * and who binds it as a co-creator.
+   */
+  private async collectiveClaimRead(me: TestIdentity, c: CollectiveHere, creators: string[], blocking: string[]): Promise<CollectiveClaimRead> {
+    const s = this.settings();
+    const names = this.asking.names();
+    const area = (await areaReaching(c.id, c.places, { spec: MIRS.agreements, type: AGREEMENTS_TYPES.claim }, s.via).catch(() => ({ area: null }))).area;
+    const areaName = area ? (area.name.startsWith('the ') ? area.name : `its area “${area.name}”`) : 'its rule for Agreements';
+    if (!area) blocking.push(`The collective ${short(c.id)}: no rule of its agreement reaches claims (the Agreements layer).`);
+    else if (!area.holders.includes(me.id)) blocking.push(`The collective ${short(c.id)}: you have no voice in ${areaName}, which reaches claims.`);
+    // Co-productions (Nobody, allegedly, round 10: "ownership can be multiple IDs (collectives or individual)"): any co-creator,
+    // a member or not, a person or another collective; a collective co-creator signs through its members under its own rule.
+    if (creators.includes(c.id)) blocking.push('The collective is already its opener and a creator: name beside it only the others who made it with it.');
+    const cols = (await Promise.all(creators.filter((x) => x !== me.id).map((x) => this.asking.collectiveOf(x)))).filter((x): x is CollectiveAsked => !!x);
+    for (const x of cols) if (!x.area) blocking.push(`${names(x.id)} is a collective whose rule for Agreements could not be read: who signs for it cannot be said, so it cannot be asked.`);
+    const cosigners = area && area.number > 1 ? area.holders.filter((h) => h !== me.id) : [];
+    const others = creators.filter((x) => x !== me.id);
+    const lines: Line[] = [
+      { text: `A claim of the collective ${short(c.id)} (Agreements), public: “we made this”, binding the work’s fingerprint to its creators: the collective${creators.length ? `, and beside it ${creators.map(names).join(', ')}` : ' alone'}.` },
+      { text: `The collective is its opener and a creator: you sign it for the collective, with your own key, naming it (rule 58), under ${areaName}${area && area.number > 1 ? `, which asks ${area.number} members: ${cosigners.map(names).join(', ')} asked, each signing with their own key` : ': your act alone is its consent'} (rule 60).` },
+      creators.length
+        ? { text: `Each co-creator beside it, a member or not, binds it by a signature act of their own${creators.includes(me.id) ? ', you included: Edubba signs yours at once, apart from your act for the collective' : ''}${others.length ? `; ${others.map(names).join(', ')} ${others.length === 1 ? 'signs' : 'sign'} it in their own app (To sign)` : ''}. It is bound once each has.` }
+        : { text: 'Nobody beside it: it is bound by the collective’s act alone.' },
+      ...cols.map((x) => ({ text: this.asking.collectiveWords(x) })),
+      { text: `Where no ownership agreement targets it, the work’s default holder is the collective ${short(c.id)}, never its members one by one (Agreements, “Claim (type 3)”).` },
+      { text: 'A claim records who said it first on MOR, never who truly made it: another claim of the same work stays openly contested beside it (rule 7).', tone: 'warn' },
+    ];
+    return { lines, area, cosigners };
+  }
+
+  /** Way 2 as a collective (round 10, F415): the collective's claim of a work already uploaded, read back. */
+  private async prepareCollectiveClaim(me: TestIdentity, as: string, w: Awaited<ReturnType<Publishing['workOf']>>, a: { title?: string; creators?: { who: string }[] }, blocking: string[]): Promise<{ plan: string; digest: string; reading: Reading }> {
+    const names = this.asking.names();
+    const c = await this.collectiveHere(me, as);
+    if (c.why) blocking.push(`The collective ${short(as)}: ${c.why}.`);
+    const creators = this.coCreators(a.creators ?? [], blocking);
+    const title = (a.title ?? '').trim() || w.title || '';
+    if (!title) blocking.push('Give it a title: how it is called here and in the people’s To sign.');
+    const read = c.why ? { lines: [], area: null, cosigners: [] } : await this.collectiveClaimRead(me, c, creators, blocking);
+    const reading: Reading = {
+      title: `The collective’s claim “${title || '…'}”`,
+      summary: [
+        `A claim of the collective ${short(as)}, public: “we made this”, binding ${w.vow ? 'the vow’s name' : 'the work’s fingerprint'} to the collective${creators.length ? ` and, beside it, ${creators.map(names).join(', ')}` : ''}.`,
+        `Signed for the collective by you (${names(me.id)}) with your own key, naming it: the collective its opener and a creator, and the work’s default holder where no ownership agreement targets it.`,
+      ],
+      sections: [
+        {
+          heading: 'What it names',
+          lines: [{ text: w.bake ? `The work of the bake ${short(w.bake)}${w.signer ? `, uploaded by ${names(w.signer)}` : ''}: fingerprint ${w.work.slice(0, 16)}…` : w.vow ? `The vow ${short(w.vow)}, by its name.` : w.work ? `The work whose fingerprint is ${w.work.slice(0, 16)}…` : 'Nothing yet.' }],
+        },
+        { heading: 'Who made it, who signs', lines: read.lines },
+      ],
+      plain: [],
+      blocking,
+    };
+    const digest = sha256(cborEncode(['MOR Edubba collective claim, version 1', me.id, as, w.work, title, creators]));
+    const plan = this.plan(digest, async () => {
+      if (blocking.length || !w.work) throw new Error('This cannot be signed while a reason above stands. Nothing was signed.');
+      const r = await this.claimForCollective(me, c, { work: w.work, title, bake: w.bake, vow: w.vow, creators, read });
+      return { title: 'Claimed for the collective', lines: r.lines, acts: [r.claim, ...r.more] };
+    });
+    return { plan, digest, reading };
+  }
+
+  /**
+   * Sign a collective's claim for it (rule 58: the member's own key, naming
+   * the collective), publish it at its places, ask the members its rule
+   * asks, sign the acting member's own signature where they are a
+   * co-creator, ask every other co-creator, and say the core's verdict.
+   */
+  private async claimForCollective(me: TestIdentity, c: CollectiveHere, a: { work: string; title: string; bake: string | null; vow: string | null; creators: string[]; read: CollectiveClaimRead }): Promise<{ claim: string; more: string[]; lines: Line[] }> {
+    const s = this.settings();
+    const names = this.asking.names();
+    await this.desk.keyCurrent(me.id);
+    try {
+      await carryChain(me, s.relays);
+      const at = await chainFor(c.id, c.places, s.via);
+      const made = await signAsMember(c.id, me, at, { spec: MIRS.agreements, type: AGREEMENTS_TYPES.claim, payload: claimPayload(a.work, [c.id, ...a.creators]), public: true });
+      const places = list([...c.places, ...s.relays]);
+      if (!(await publishAt([made.act], places, s.via)).length) throw new Error('No relay took the claim: nothing counts. Try again.');
+      const lines: Line[] = [{ text: `The claim ${short(made.id)} is public: “${a.title}”, the collective ${short(c.id)}’s, made by ${[c.id, ...a.creators].map(names).join(', ')}, signed for the collective by you, with your own key, naming it.`, tone: 'ok' }];
+      const more: string[] = [];
+      // The member who signs for the collective, listed beside it, binds it by a signature act of their own.
+      if (a.creators.includes(me.id)) {
+        const own = await sign(me, made.id, places);
+        more.push(own.id);
+        lines.push({ text: `Your own signature act ${short(own.id)}, as a co-creator beside the collective, is public.`, tone: 'ok' });
+      }
+      for (const h of a.read.cosigners) {
+        try {
+          const l = await lookUp(h, c.places, s.via);
+          const inbox = l.inbox(MIRS.agreements) ?? [];
+          if (!l.encryptionKey || !inbox.length) throw new Error('no inbox or encryption key');
+          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `${names(me.id)} made a claim of the collective, “${a.title}”: act ${made.id}. Its rule asks ${a.read.area!.number} members: read it in your Signing tab, then sign or decline.`, refs: [[made.id, c.id], [c.id, c.id]] });
+          lines.push({ text: `${names(h)} is asked, in their own app, under the collective’s rule.`, tone: 'ok' });
+        } catch (e) {
+          lines.push({ text: `${names(h)} could not be asked: ${err(e)}`, tone: 'warn' });
+        }
+      }
+      const b = this.book();
+      b.claims.unshift({ claim: made.id, work: a.work, title: a.title, bake: a.bake, vow: a.vow, by: me.id, collective: c.id, creators: [c.id, ...a.creators], at: now() });
+      const bk = b.bakes.find((x) => x.bake === a.bake);
+      if (bk) bk.claim = made.id;
+      this.save(b);
+      const others = a.creators.filter((x) => x !== me.id);
+      const asked = await this.asking.ask(me, { id: made.id, kind: 'claim', title: a.title, acts: [made.id], people: others, text: `A claim of the collective ${short(c.id)} to sign: “${a.title}”, made with you, signed for the collective by ${short(me.id)}. Read it in To sign, from its exact bytes, and sign it, or decline.` });
+      lines.push(...asked.lines);
+      const w = asked.waiting;
+      const waitOn = list([...others, ...a.read.cosigners]);
+      if (waitOn.length) {
+        w.people = waitOn;
+        w.state = 'waiting';
+        this.asking.keep(w);
+      }
+      lines.push(...(await this.claimVerdict(c, made.id)));
+      return { claim: made.id, more, lines };
+    } finally {
+      this.store.saveIdentity(me);
+    }
+  }
+
+  /** The core's verdict on a collective's claim (`agreementsConsent`): whether it is the collective's act, under its rule. */
+  private async claimVerdict(c: { id: string; places: string[] }, claim: string): Promise<Line[]> {
+    const names = this.asking.names();
+    try {
+      const j = (await judgeCollective(c.id, [claim], list([...c.places, ...this.settings().relays]), this.settings().via)).get(claim)!;
+      const kept = this.book().claims.find((x) => x.claim === claim);
+      const owners = kept ? await this.ownersLines(kept.work, kept.creators, [claim]) : [];
+      if (j.met) return [{ text: `The core reads it as the collective’s claim: its rule is met (${j.areas.map((x) => `${x.name}: ${x.signers.map(names).join(', ')}`).join('; ')}).`, tone: 'ok' }, ...owners];
+      const left = j.areas.filter((x) => !x.met).map((x) => `${x.name} asks ${x.needed}, ${x.signers.length} signed`);
+      return [{ text: `The core does not count it for the collective yet${left.length ? `: ${left.join('; ')}` : j.reason ? `: ${j.reason}` : ''}. A claim naming the collective counts for nothing until its rule is met.`, tone: 'warn' }];
+    } catch (e) {
+      return [{ text: `The core’s verdict could not be read: ${err(e)}`, tone: 'warn' }];
+    }
+  }
+
+  /**
+   * A work's owners as the core reads them (`agreementsWorkOwners`, round
+   * 10): from the acts of `ids` (persons, and collectives with their chain,
+   * terms and members' acts) and `acts`, the claims that bind it, whether
+   * contested, its default holder, and the holders each ownership agreement
+   * in force writes (stake transfers not applied).
+   */
+  private async workOwners(work: string, ids: string[], acts: string[] = []): Promise<WorkOwnersRead> {
+    const s = this.settings();
+    const places = list([...s.relays, ...s.homes]);
+    const cols = await Promise.all(list(ids).map(async (id) => [id, await this.asking.collectiveOf(id)] as const));
+    const first = cols.find(([, c]) => c)?.[1] ?? null;
+    const v = first ? (await collectiveVerifier(first.id, first.places, s.via, acts)).v : new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+    const held: Uint8Array[] = [];
+    const who = new Set<string>();
+    for (const [id, c] of cols) {
+      who.add(id);
+      if (c && c !== first) {
+        const cv = await collectiveVerifier(id, c.places, s.via, acts).catch(() => null);
+        if (cv) {
+          held.push(...cv.acts);
+          for (const p of cv.parties) who.add(p);
+        }
+      }
+    }
+    for (const id of who) {
+      await lookUp(id, places, s.via, v).catch(() => null);
+      for (const a of await allBy(id, places, s.via).catch(() => [] as Uint8Array[])) held.push(a);
+    }
+    for (const id of acts) {
+      const a = await actAt(id, places, s.via);
+      if (a) held.push(a);
+    }
+    for (let pass = 0; pass < 3; pass++)
+      for (const a of held)
+        try {
+          v.add(a);
+        } catch {
+          // held, or waits
+        }
+    return v.agreementsWorkOwners(AGREEMENTS_SPECS, work) as WorkOwnersRead;
+  }
+
+  /** A work's owners as the core reads them, in plain words. */
+  private async ownersLines(work: string, ids: string[], acts: string[] = []): Promise<Line[]> {
+    const names = this.asking.names();
+    try {
+      const o = await this.workOwners(work, ids, acts);
+      if (o.holders.length) return o.holders.map((h) => ({ text: `As the core reads the work’s owners now: ${h.holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}, by the ownership agreement ${short(h.agreement)} in force${o.contested ? '; its claim is contested' : ''}.`, tone: 'ok' as const }));
+      if (o.defaultHolder) return [{ text: `As the core reads the work’s owners now: its default holder is ${names(o.defaultHolder)}, the opener of the one claim that binds it, no ownership agreement targeting it.`, tone: 'ok' }];
+      return [{ text: o.claims.length ? `As the core reads the work now: ${o.claims.length} claims bind it, openly contested; no ownership agreement targets it, so it has no default holder.` : 'As the core reads the work now: no claim binds it yet (every creator besides its opener must sign it), so it has no holder.', tone: 'warn' }];
+    } catch (e) {
+      return [{ text: `The core’s reading of the work’s owners could not be had: ${err(e)}`, tone: 'warn' }];
+    }
   }
 
   // ------------------------------------------------------------ way 3: an ownership agreement
@@ -894,19 +1143,26 @@ export class Publishing {
         if (!r.problems.length) blocking.push(`Agreements refuse these terms: ${err(e)}`);
       }
       const notCreators = r.shares.map(([id]) => id).filter((id) => creators.length && !creators.includes(id));
+      // A collective among the owners (round 10, F415): one owner, asked once, as the collective; its members are not owners of the work.
+      const cols = (await Promise.all(r.shares.map(([id]) => (id === acting ? null : this.asking.collectiveOf(id))))).filter((x): x is CollectiveAsked => !!x);
+      for (const x of cols) if (!x.area) blocking.push(`${names(x.id)} is a collective whose rule for Agreements could not be read: who signs for it cannot be said, so it cannot be asked.`);
+      // The work's owners as the core reads them now, before this agreement (round 10).
+      const coreNow = work ? await this.ownersLines(work, list([acting, ...creators]), claim ? [claim] : []) : [];
       const reading: Reading = {
         title: `An ownership agreement: “${title || '…'}”`,
         summary: [`Who owns the work its claim names, and what share: ${r.shares.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}.`, 'Ownership only: no split, no fees, no split service. How it is sold, with which partners and who takes what, is a publication’s, which reads these shares (Agreements rule 7).'],
         sections: [
-          { heading: 'Who owns it', lines: r.shares.map(([id, n]) => ({ text: `${names(id)}: ${pct(n)}${id === acting ? ' (you)' : ''}.` })) },
+          { heading: 'Who owns it', lines: r.shares.map(([id, n]) => ({ text: `${names(id)}: ${pct(n)}${id === acting ? ' (you)' : cols.some((x) => x.id === id) ? ' (a collective: one owner)' : ''}.` })) },
           {
             heading: 'Who signs, and when it counts',
             lines: [
               { text: 'You sign it first; each other owner is sent it, sealed, and signs it in their own Edubba (To sign). It counts once every one has signed (rule 1).' },
+              ...cols.map((x) => ({ text: this.asking.collectiveWords(x) })),
               ...(vow ? [{ text: 'It claims a vow: its first version writes the whole stake to you, the vow’s signer (rule 14); a second version, signed by everyone, shares it.' }] : []),
               { text: 'Changing it later needs every owner: nobody’s share is lowered without them (rules 8, 47).', tone: 'warn' as const },
             ],
           },
+          ...(coreNow.length ? [{ heading: 'The work now, as the core reads it', lines: coreNow }] : []),
           ...(notCreators.length ? [{ heading: 'Stated costs', lines: [{ text: `${notCreators.map(names).join(', ')} ${notCreators.length === 1 ? 'is' : 'are'} not among the claim’s creators: an owner need not be a creator, and the agreement says so in public.`, tone: 'warn' as const }] }] : []),
           // The assessment tool's reading (round 9, F411): how the owners decide, and the risks, each with its rule.
           ...(payload ? beforeSigning(payload, names).filter((x) => x.heading !== 'Who owns what') : []),
@@ -1122,6 +1378,9 @@ export class Publishing {
         ownersPayload = act ? ((describeAct(act) as { payload?: Uint8Array }).payload ?? null) : null;
       }
       const people = list([...(collective ? [] : parties.filter((x) => x !== acting)), ...partners.map((p) => p.identity).filter((x) => x !== acting), ...(service && service !== acting ? [service] : [])]);
+      // A collective among the owners or partners (round 10, F415): asked once, as the collective.
+      const ownerCols = collective ? [] : (await Promise.all(people.filter((x) => x !== service).map((x) => this.asking.collectiveOf(x)))).filter((x): x is CollectiveAsked => !!x);
+      for (const x of ownerCols) if (!x.area) blocking.push(`${names(x.id)} is a collective whose rule for Agreements could not be read: who signs for it cannot be said, so it cannot be asked.`);
       // A collective's: the other members its rule asks, each signing with their own key in their own app (rules 6, 60).
       const cosigners = collective && area && area.number > 1 ? area.holders.filter((h) => h !== acting) : [];
       const barePriced = bakes.map((x) => b.bakes.find((y) => y.bake === x)).filter((x) => x?.tag?.price);
@@ -1130,7 +1389,7 @@ export class Publishing {
         title: `A publication: “${title || '…'}”`,
         summary: [
           collective
-            ? `Sold by the collective ${short(as)}, made by you (${names(acting)}) with your own key for it, under ${area ? (area.name.startsWith('the ') ? area.name : `its area “${area.name}”`) : 'its rule for publications'}; its owners its constitution in force (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read by reference at each payment.`
+            ? `Sold by the collective ${short(as)}, made by you (${names(acting)}) with your own key for it, under ${area ? (area.name.startsWith('the ') ? area.name : `its area “${area.name}”`) : 'its rule for publications'}; its owners its constitution in force: the collective is the work’s one holder, and pays its own holders by its stake in itself (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read by reference at each payment.`
             : owners
               ? `Sold by the owners of “${ownTitle || short(owners)}” (${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}), read from their ownership agreement in force.`
               : 'Sold by you alone: a lone seller’s publication, you its only owner.',
@@ -1143,7 +1402,7 @@ export class Publishing {
             lines: [
               ...partners.map((p) => ({ text: `${names(p.identity)}${p.label ? ` (“${p.label}”)` : ''}: ${pct(p.share)} off the top, a partner.` })),
               ...(referral ? [{ text: `Off the top: ${pct(referral)} of each payment to whoever reposted it where the buyer found it.` }] : []),
-              { text: `The rest, to the owners: ${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}.` },
+              { text: collective ? `The rest, to the collective ${short(as)}, the work’s one holder, which pays its own holders by its constitution: ${holders.map(([id, n]) => `${names(id)} ${pct(n)}`).join(', ')}.` : `The rest, to the owners: ${holders.map(([id, n]) => `${names(id)} ${pct(n)}${ownerCols.some((x) => x.id === id) ? ' (a collective: one owner)' : ''}`).join(', ')}.` },
             ],
           },
           {
@@ -1151,6 +1410,7 @@ export class Publishing {
             lines: [
               { text: 'You draft it, which is your signature. Each other party signs it: every owner (the ownership agreement consents through every one of them), each partner, and the split service in its own app. It sells once every one has signed (rule 11).' },
               ...(people.length ? [{ text: `Asked to sign: ${people.map(names).join(', ')}.` }] : []),
+              ...ownerCols.map((x) => ({ text: this.asking.collectiveWords(x) })),
               ...(collective ? [{ text: area && area.number > 1 ? `Its rule asks ${area.number} members: ${cosigners.map(names).join(', ')} asked, each signing with their own key.` : 'For the collective, your act alone is its consent under its rule.' }] : []),
               { text: 'Once it counts: its price tag, a post announcing it, and the work’s key sealed to each owner.' },
             ],
@@ -1278,12 +1538,23 @@ export class Publishing {
       const kept = b.bakes.find((x) => x.bake === bake && x.key && !x.collective);
       if (!kept) continue;
       for (const [o] of p.holders.filter(([x]) => x !== me.id)) {
-        try {
-          await deliverKey(me, o, bake, kept.key!, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
-          lines.push({ text: `The key of “${kept.title}” is sealed to ${names(o)}, an owner.`, tone: 'ok' });
-        } catch (e) {
-          lines.push({ text: `The key of “${kept.title}” could not be sealed to ${names(o)}: ${err(e)}`, tone: 'warn' });
+        // A collective owner (F415): the key goes to the collective, sealed only to the members acting for it in Envelopes
+        // (decided, F419: "It's envelope layer business, it should be only the members on that layer"): the area reaching
+        // key deliveries, else the Envelopes layer's rule.
+        const col = await this.asking.collectiveOf(o);
+        const envelopes = col ? (await areaReaching(o, col.places, { spec: SPECS.envelopes, type: KEY_DELIVERY }, s.via).catch(() => ({ area: null }))).area : null;
+        if (col && !envelopes) lines.push({ text: `The key of “${kept.title}” is not sealed to the collective ${names(o)}: its rule for Envelopes could not be read.`, tone: 'warn' });
+        const to = col ? (envelopes?.holders ?? []).filter((m) => m !== me.id) : [o];
+        const sealed: string[] = [];
+        for (const r of to) {
+          try {
+            await deliverKey(me, r, bake, kept.key!, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
+            sealed.push(r);
+          } catch (e) {
+            lines.push({ text: `The key of “${kept.title}” could not be sealed to ${names(r)}: ${err(e)}`, tone: 'warn' });
+          }
         }
+        if (sealed.length) lines.push({ text: col ? `The key of “${kept.title}” is sealed to the collective ${names(o)}, an owner: to the members acting for it in Envelopes (${sealed.map(names).join(', ')}), and to no other member (F419).` : `The key of “${kept.title}” is sealed to ${names(o)}, an owner.`, tone: 'ok' });
       }
     }
     this.save(b);
@@ -1327,6 +1598,11 @@ export class Publishing {
         const page = await relayAt(h, s.via).feed({ signer: x }).catch(() => null);
         for (const it of page?.items ?? []) if (it.kind === 'act') held.push(it.item);
       }
+    }
+    // A collective among its holders signs by a member's act for it (F415): its chain, terms and members' acts held too.
+    for (const [h] of p.collective ? [] : p.holders) {
+      const col = await this.asking.collectiveOf(h);
+      if (col) held.push(...(await collectiveVerifier(h, col.places, s.via, [p.latest]).catch(() => ({ acts: [] as Uint8Array[] }))).acts);
     }
     for (let pass = 0; pass < 3; pass++)
       for (const a of held)
@@ -1461,7 +1737,12 @@ export class Publishing {
         this.save(b);
         return [{ text: `“${p?.title ?? w.title}” is ended: every party signed its ending. It sells nothing now.`, tone: 'ok' }];
       }
-      return [{ text: `“${w.title}”: ${w.people.map(names).join(', ')} signed it. ${w.kind === 'claim' ? 'The claim is bound.' : 'The ownership agreement counts: build a publication from it when you want.'}`, tone: 'ok' }];
+      const col = w.kind === 'claim' ? this.book().claims.find((x) => x.claim === w.id)?.collective : null;
+      if (col) return [{ text: `“${w.title}”: ${w.people.map(names).join(', ')} signed it. The claim is bound.`, tone: 'ok' }, ...(await this.claimVerdict({ id: col, places: await collectivePlaces(col, list([...this.settings().relays, ...this.settings().homes]), this.settings().via) }, w.id))];
+      const own = w.kind === 'ownership' ? this.book().ownerships.find((x) => x.id === w.id) : null;
+      const work = own ? this.book().claims.find((x) => x.claim === own.claim)?.work : null;
+      const core = own && work ? await this.ownersLines(work, own.holders.map(([h]) => h), list([own.claim, own.id, own.version])) : [];
+      return [{ text: `“${w.title}”: ${w.people.map(names).join(', ')} signed it. ${w.kind === 'claim' ? 'The claim is bound.' : 'The ownership agreement counts: build a publication from it when you want.'}`, tone: 'ok' }, ...core];
     });
   }
 

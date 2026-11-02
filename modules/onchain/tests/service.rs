@@ -29,7 +29,7 @@ use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_anchoring::service::{self, Judgment, Offer, Payment, Price, Publication, Refund, Scheme, Standing, Terms, Ticket, Tier};
 use mor_anchoring::tree::{self, Batch};
 use mor_core::envelopes::anchoring::Anchors;
-use mor_core::money::{Amount, Citations, Claim, PayeePointer, Payer, Rail, RefundTo, VaultEntry};
+use mor_core::money::{Amount, Citations, Claim, PayeePointer, Rail, VaultEntry};
 use mor_core::agreements;
 use mor_core::money::PriceTag;
 use mor_core::hash::{sha256, Hash};
@@ -181,10 +181,10 @@ fn buy_quoted(w: &World, who: &str, tier: u64, paid: u64, settled: bool, batch: 
     let blind = h(&format!("{who}'s blind, 32 random bytes"));
     let paid_to = PaidTo::Flow { pointer: w.pointer_id, rail: 0 };
     let salt = [tier as u8 + 1; 16];
-    let commitment = Commitment { rail: mor_lightning::spec(), payee: w.service, amount: sat(paid), fulfils: follows, payer: Some(Payer::Identity(h(who))), paid_to, salt, purchase: None };
+    let commitment = Commitment { rail: mor_lightning::spec(), payee: w.service, amount: sat(paid), fulfils: follows, payer: Some(h(who)), paid_to, salt, purchase: None };
     let preimage = h(&format!("{who}'s preimage"));
     let ln = LnProof { invoice: invoice(&w.node, paid * 1000, &commitment.hash(), &preimage), preimage: settled.then_some(preimage) };
-    let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: w.service, amount: sat(paid), fulfils: follows, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None };
+    let claim = Claim { rail: mor_lightning::spec(), proof: Proof { paid_to, salt, rail: ln.encode() }.encode(), payee: w.service, amount: sat(paid), fulfils: follows, disagrees: None, referral: None, refund: None, purchase: None, previous: None };
     let deadline = now + w.offer.terms.tiers[tier as usize].blocks;
     let ticket = Ticket { offer: w.offer_id, leaf: tree::leaf(&act, &blind), commitment: commitment.hash(), tier, batch, deadline, quote };
     Bought { act, blind, commitment, claim, ticket }
@@ -229,7 +229,7 @@ fn judge(w: &World, b: &Bought, pay: &Payment, pubs: &[Publication], anchor: Opt
 /// payer the payment committed to, claimable without end (the tests' offer
 /// sets no refund terms).
 fn refund(who: &str, n: u64) -> Refund {
-    Refund { amount: sat(n), to: RefundTo::Identity(h(who)), until: None }
+    Refund { amount: sat(n), to: Some(h(who)), until: None }
 }
 
 // ---------------------------------------------------------------- the tests
@@ -480,7 +480,7 @@ fn f225_a_default_owes_the_price_back_under_the_offers_terms() {
     let pay = payment(&w, &ana, "ana");
     grow(&mut c, (ana.ticket.deadline - now) as usize + N - 1);
     let Judgment::Default { refund } = judge(&w, &ana, &pay, &[], None, &c) else { panic!("a default") };
-    assert_eq!(refund, Refund { amount: sat(50), to: RefundTo::Identity(h("ana")), until: Some(START + 40) });
+    assert_eq!(refund, Refund { amount: sat(50), to: Some(h("ana")), until: Some(START + 40) });
     {
         let clock = BitcoinClock { chain: &c };
         assert_eq!(service::standing(&refund, 0, &clock), Standing::Owed { left: 50 });
@@ -494,13 +494,13 @@ fn f225_a_default_owes_the_price_back_under_the_offers_terms() {
     grow(&mut c, 1);
     assert_eq!(service::standing(&refund, 0, &BitcoinClock { chain: &c }), Standing::Ended { left: 50 }, "past the terms the payer accepted by paying (F219)");
     assert_eq!(service::standing(&refund, 50, &BitcoinClock { chain: &c }), Standing::Repaid, "repaid in time stays repaid");
-    // A payment committing to no payer: owed to nobody, unclaimable.
+    // A payment committing to no payer: a gift, owed nothing (F416).
     let mut anon = buy(&w, "ben", 0, 50, true, 0, now);
     anon.commitment.payer = None;
     anon.ticket.commitment = anon.commitment.hash();
     let p = Payment { commitment: anon.commitment.clone(), answer: Answer::Valid };
     let Judgment::Default { refund } = judge(&w, &anon, &p, &[], None, &c) else { panic!("a default") };
-    assert_eq!(refund.to, RefundTo::Nobody);
+    assert_eq!(refund.to, None);
 }
 
 /// F228 (decided by Nobody, allegedly, 10 October 2026: "the service makes
@@ -544,5 +544,5 @@ fn f228_a_price_scheme_tied_to_an_onchain_measure() {
     // the 46 Ana paid. Nothing in the terms moves the deadline: undelivered,
     // it is a default, and the price is owed back. The loss is the service's.
     grow(&mut c, (ana.ticket.deadline - now) as usize + N - 1);
-    assert_eq!(judge(&w, &ana, &pay, &[], None, &c), Judgment::Default { refund: Refund { amount: sat(46), to: RefundTo::Identity(h("ana")), until: None } });
+    assert_eq!(judge(&w, &ana, &pay, &[], None, &c), Judgment::Default { refund: Refund { amount: sat(46), to: Some(h("ana")), until: None } });
 }

@@ -61,13 +61,26 @@ impl<'a> AgreementsView<'a> {
             return false;
         }
         path.push(*party);
-        let signed = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok()).is_some_and(|versions| {
-            versions.iter().any(|(id, t)| {
+        // Rule 15: it signs where every party of its version in force at
+        // that consent signs, read as for keepers (rule 1): the latest
+        // version of its line each signature act's history holds. A
+        // consent so given stands for every later version; one given while
+        // a later version was in force counts for that version only.
+        let signed = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok().map(|l| (v, l))).is_some_and(|(in_force, versions)| {
+            versions.iter().enumerate().any(|(k, (id, t))| {
                 if t.is_collective() || t.parties.is_empty() || self.agreement_refused(id) {
                     return false;
                 }
-                let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
-                t.parties.iter().all(|p| own.contains(p) || self.line_signed(act, p, depth + 1, path))
+                let later: Vec<Hash> = versions[..k].iter().map(|(v, _)| *v).collect();
+                let sigs = self.valid_sigs(act, &t.parties);
+                if sigs.iter().any(|(_, s)| {
+                    let hist = self.act_history(s);
+                    later.iter().any(|v| hist.contains(v))
+                }) {
+                    return false;
+                }
+                let own: Vec<Hash> = sigs.into_iter().map(|(p, _)| p).collect();
+                t.parties.iter().all(|p| own.contains(p) || (id == &in_force && self.line_signed(act, p, depth + 1, path)))
             })
         });
         path.pop();

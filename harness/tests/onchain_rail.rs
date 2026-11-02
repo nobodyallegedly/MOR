@@ -24,7 +24,7 @@ use bitcoin::{absolute, consensus, transaction, Address, CompressedPublicKey, Ou
 use mor_core::act::{Act, Inside};
 use mor_core::chain::Status;
 use mor_core::envelopes::{self, DecKey, EncryptionKey, Recipient, Routes, SealRandom, Sealed};
-use mor_core::money::{self, choose, Amount, Choice, Citations, Claim, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self, choose, Amount, Choice, Citations, Claim, PayeePointer, Payload, Rail, Receipt, VaultEntry};
 use mor_core::hash::{sha256, Hash};
 use mor_core::identity::Payload as Id;
 use mor_harness::net::{Http, Site};
@@ -435,7 +435,7 @@ impl Wallet<'_> {
             }
             Choice::Undeliverable(why) => return Err(Refused::Undeliverable(why)),
         };
-        let c = Commitment { rail: mor_onchain::spec(), payee: view.id, amount, fulfils, payer: Some(Payer::Identity(self.alice.p.id)), paid_to, salt: random::<16>(), purchase: None };
+        let c = Commitment { rail: mor_onchain::spec(), payee: view.id, amount, fulfils, payer: Some(self.alice.p.id), paid_to, salt: random::<16>(), purchase: None };
         let request = side.request(&c, &address).expect("a request");
         // Before paying: the request checks out (pending: not paid yet).
         let before = Onchain::rule(&RailInput {
@@ -481,7 +481,6 @@ impl Wallet<'_> {
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         });
@@ -672,7 +671,7 @@ async fn a_test_identity_pays_another_on_chain() {
     eprintln!("an address not tweaked by the commitment: Alice's wallet refused before paying");
     // A careless wallet pays it anyway: once confirmed, the rule refuses
     // the proof, so Bob signs no receipt and the claim counts for nothing.
-    let c = Commitment { rail: mor_onchain::spec(), payee: bob.p.id, amount: sat(2_000), fulfils: tip_pointer, payer: Some(Payer::Identity(alice.p.id)), paid_to: PaidTo::Flow { pointer: tip_pointer, rail: 0 }, salt: random::<16>(), purchase: None };
+    let c = Commitment { rail: mor_onchain::spec(), payee: bob.p.id, amount: sat(2_000), fulfils: tip_pointer, payer: Some(alice.p.id), paid_to: PaidTo::Flow { pointer: tip_pointer, rail: 0 }, salt: random::<16>(), purchase: None };
     let rq = side.request(&c, &flow.encode()).unwrap();
     let coin = coins.unspent.remove(0);
     let t = coins.pay(coin, &wrong, 2_000);

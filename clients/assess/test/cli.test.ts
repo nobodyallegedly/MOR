@@ -88,6 +88,11 @@ test('mor-assess reads a publication from the relay: its owners by reference, it
   assert.match(out, /Uncapped fee/);
   assert.match(out, /No party can change or end it alone/);
   assert.match(out, /BEGIN WORDS SIGNED BY OTHERS[^\n]*\nOur song, sold by its service\.\n----- END/);
+  // 10% off the top: under the default line (half), over the person's own line of 10%.
+  assert.doesNotMatch(out, /Partners paid before the owners/);
+  const mine = (await cli(pub, '--at', relay.base, '--partners-line', '10%')).stdout;
+  assert.match(mine, /Partners paid before the owners: 10% of each payment.*10% or more, the line set for this warning/);
+  await assert.rejects(cli(pub, '--at', relay.base, '--partners-line', 'half'), (e: { stderr: string; code: number }) => e.code === 1 && /is a percentage of each payment above 0 and below 100.*not “half”/.test(e.stderr));
 });
 
 test('mor-assess says plainly when there is nothing to assess', async () => {

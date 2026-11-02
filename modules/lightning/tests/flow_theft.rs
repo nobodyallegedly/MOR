@@ -20,7 +20,7 @@ use bitcoin::hashes::{sha256 as bh, Hash as _};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
 use mor_core::money::{
-    self, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payer, Payload, Rail, Receipt,
+    self, Amount, Citations, Claim, Holding, Obligation, PaidAt, PayeePointer, Payload, Rail, Receipt,
     VaultEntry,
 };
 use mor_core::hash::{sha256, Hash};
@@ -209,7 +209,7 @@ fn paid(s: &Story, payer: Hash, fulfils: Hash, paid_to: PaidTo, node: &SecretKey
         payee: s.c.id,
         amount,
         fulfils,
-        payer: Some(Payer::Identity(payer)),
+        payer: Some(payer),
         paid_to,
         salt: SALT,
         purchase: None,
@@ -239,7 +239,7 @@ fn paid(s: &Story, payer: Hash, fulfils: Hash, paid_to: PaidTo, node: &SecretKey
         Receipt {
             rail: mor_lightning::spec(),
             proof: proof.clone(),
-            payer: Some(Payer::Identity(payer)),
+            payer: Some(payer),
             payee: s.c.id,
             amount,
             fulfils,
@@ -257,7 +257,6 @@ fn paid(s: &Story, payer: Hash, fulfils: Hash, paid_to: PaidTo, node: &SecretKey
             disagrees: None,
             referral: None,
             refund: None,
-            anonymous: None,
             purchase: None,
             previous: None,
         },

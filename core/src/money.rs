@@ -19,11 +19,10 @@
 //! the payee's own, and which lock changes affect a payment, is Agreements' to
 //! read (the Agreements view).
 
-use crate::act::{Inside, Object, Ref, Signature};
-use crate::cbor::{self, Value};
-use crate::hash::{tagged_hash, Hash};
-use crate::identity::{self, Declaration, SigningKey};
-use crate::sig::{self, Verdict};
+use crate::act::{Inside, Object, Ref};
+use crate::cbor::Value;
+use crate::hash::Hash;
+use crate::identity::Declaration;
 use crate::chain::Quorum;
 use crate::envelopes::anchoring::{Anchors, Reference};
 use std::fmt;
@@ -111,57 +110,6 @@ pub struct Forward {
     pub agreement: Hash,
 }
 
-/// `payer = hash / signing-key`: an identity, or an anonymous payer's bare
-/// signing key, used for one payment only (F113).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Payer {
-    Identity(Hash),
-    Key(SigningKey),
-}
-
-impl Payer {
-    pub fn decode(v: &Value) -> R<Self> {
-        match v {
-            Value::Bytes(_) => Ok(Payer::Identity(hash(v, "payer")?)),
-            Value::Array(_) => Ok(Payer::Key(
-                identity::signing_key(v).map_err(|_| FinError::Shape("payer: signing-key"))?,
-            )),
-            _ => Err(FinError::Shape("payer")),
-        }
-    }
-    pub fn to_value(&self) -> Value {
-        match self {
-            Payer::Identity(h) => b(h),
-            Payer::Key(k) => k.to_value(),
-        }
-    }
-}
-
-/// The tag an anonymous payer's key signs a claim under (F113).
-pub const ANONYMOUS_CLAIM_TAG: &str = "MOR/finance/anonymous-claim";
-
-/// `anonymous = [ key: signing-key, sig: bstr ]`: the key an anonymous
-/// payment committed to as its payer, and its signature binding it to one
-/// claim (claim key 8, F113).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Anonymous {
-    pub key: SigningKey,
-    pub sig: Vec<u8>,
-}
-
-impl Anonymous {
-    fn decode(v: &Value) -> R<Self> {
-        let a = tuple(v, 2, "anonymous")?;
-        Ok(Anonymous {
-            key: identity::signing_key(&a[0]).map_err(|_| FinError::Shape("anonymous key"))?,
-            sig: bytes(&a[1], "anonymous sig")?,
-        })
-    }
-    fn to_value(&self) -> Value {
-        Value::Array(vec![self.key.to_value(), Value::Bytes(self.sig.clone())])
-    }
-}
-
 /// `referral = [ identity: hash, evidence: hash ]`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Referral {
@@ -202,9 +150,9 @@ pub struct Receipt {
     pub rail: Hash,
     /// The rail's proof, as the payment cMIP and that Module define it.
     pub proof: Vec<u8>,
-    /// Absent if the payer stays anonymous and committed no key; an
-    /// anonymous payer's bare key where it committed one (F113).
-    pub payer: Option<Payer>,
+    /// The payer's identity, or absent: a payment naming no payer, a gift
+    /// (Money rule 17). An anonymous payer names a fresh identity.
+    pub payer: Option<Hash>,
     pub payee: Hash,
     pub amount: Amount,
     /// The obligation, agreement, offer or payee-pointer act this hop follows.
@@ -229,9 +177,6 @@ pub struct Claim {
     pub referral: Option<Referral>,
     /// Where a refund owed on this payment is to be paid (F80).
     pub refund: Option<Rail>,
-    /// An anonymous payer's key and signature (F113): the claim's payer is
-    /// then this key, not the act's signer.
-    pub anonymous: Option<Anonymous>,
     /// 9: for a purchase, the claim it pays under (F126).
     pub purchase: Option<Purchase>,
     /// 10: the previous hop's receipt, where this claim records a hop of a
@@ -244,9 +189,7 @@ pub struct Claim {
 }
 
 /// An act's own citations other than `prev`: its inside keys 3
-/// (`objects`), 7 (`acks`) and 8 (`refs`), as the act carries them. An
-/// anonymous payer's key signs them with its claim (F147), and they are
-/// all of that claim's history (rules 14 and 15).
+/// (`objects`), 7 (`acks`) and 8 (`refs`), as the act carries them.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Citations {
     pub objects: Option<Vec<Object>>,
@@ -276,56 +219,6 @@ impl Citations {
         out.extend(self.acks.iter().flatten().copied());
         out.extend(self.refs.iter().flatten().filter_map(Ref::act));
         out
-    }
-}
-
-impl Claim {
-    /// What an anonymous payer's key signs (F135, F147):
-    /// `tagged_hash(ANONYMOUS_CLAIM_TAG, [ field 0, field 1, field 2, field
-    /// 3, field 4, field 5 or null, field 6 or null, field 7 or null, field
-    /// 9 or null, field 10 or null, inside key 3 or null, inside key 7 or
-    /// null, inside key 8 or null ])`, field 10 added by F267 (the array
-    /// "extended by it"; *mechanic, the build's: in field order, after
-    /// field 9*), the inside keys being the claim act's own `objects`,
-    /// `acks` and `refs`, encoded exactly as the act encodes them. *So
-    /// nobody can lift the signature onto another claim, nor re-wrap this
-    /// claim with other citations or acknowledgements.*
-    pub fn anonymous_message(&self, cited: &Citations) -> Hash {
-        let or_null = |v: Option<Value>| v.unwrap_or(Value::Null);
-        let v = Value::Array(vec![
-            b(&self.rail),
-            Value::Bytes(self.proof.clone()),
-            b(&self.payee),
-            self.amount.to_value(),
-            b(&self.fulfils),
-            or_null(self.disagrees.as_ref().map(b)),
-            or_null(self.referral.as_ref().map(Referral::to_value)),
-            or_null(self.refund.as_ref().map(Rail::to_value)),
-            or_null(self.purchase.as_ref().map(Purchase::to_value)),
-            or_null(self.previous.as_ref().map(b)),
-            or_null(cited.objects.as_deref().map(crate::act::objects_value)),
-            or_null(cited.acks.as_deref().map(crate::act::acks_value)),
-            or_null(cited.refs.as_deref().map(crate::act::refs_value)),
-        ]);
-        tagged_hash(ANONYMOUS_CLAIM_TAG, &cbor::encode(&v))
-    }
-
-    /// The signature an anonymous payer's key makes over this claim.
-    pub fn anonymous_signature(&self) -> Option<Signature> {
-        self.anonymous.as_ref().map(|a| Signature {
-            scheme: a.key.scheme,
-            key: a.key.key.clone(),
-            sig: a.sig.clone(),
-        })
-    }
-
-    /// Who paid, as the payment committed to it: the key in field 8 where
-    /// present, otherwise the claim's signer.
-    pub fn payer(&self, signer: &Hash) -> Payer {
-        match &self.anonymous {
-            Some(a) => Payer::Key(a.key.clone()),
-            None => Payer::Identity(*signer),
-        }
     }
 }
 
@@ -630,7 +523,7 @@ impl Payload {
                 Payload::Receipt(Receipt {
                     rail: hash(req(&f, 0, "receipt 0: rail")?, "receipt 0")?,
                     proof: bytes(req(&f, 1, "receipt 1: proof")?, "receipt 1")?,
-                    payer: get(&f, 2).map(Payer::decode).transpose()?,
+                    payer: get(&f, 2).map(|v| hash(v, "receipt 2: payer, an identity")).transpose()?,
                     payee: hash(req(&f, 3, "receipt 3: payee")?, "receipt 3")?,
                     amount: Amount::decode(req(&f, 4, "receipt 4: amount")?)?,
                     fulfils: hash(req(&f, 5, "receipt 5: fulfils")?, "receipt 5")?,
@@ -642,6 +535,9 @@ impl Payload {
             }
             CLAIM => {
                 let f = fields(p, 11, "claim: unknown key")?;
+                if get(&f, 8).is_some() {
+                    return Err(FinError::Shape("claim: unknown key 8"));
+                }
                 Payload::Claim(Claim {
                     rail: hash(req(&f, 0, "claim 0: rail")?, "claim 0")?,
                     proof: bytes(req(&f, 1, "claim 1: proof")?, "claim 1")?,
@@ -651,7 +547,6 @@ impl Payload {
                     disagrees: get(&f, 5).map(|v| hash(v, "claim 5")).transpose()?,
                     referral: get(&f, 6).map(Referral::decode).transpose()?,
                     refund: get(&f, 7).map(Rail::decode).transpose()?,
-                    anonymous: get(&f, 8).map(Anonymous::decode).transpose()?,
                     purchase: get(&f, 9).map(Purchase::decode).transpose()?,
                     previous: get(&f, 10).map(|v| hash(v, "claim 10")).transpose()?,
                 })
@@ -740,7 +635,7 @@ impl Payload {
                 put(&mut m, 0, b(&r.rail));
                 put(&mut m, 1, Value::Bytes(r.proof.clone()));
                 if let Some(x) = &r.payer {
-                    put(&mut m, 2, x.to_value());
+                    put(&mut m, 2, b(x));
                 }
                 put(&mut m, 3, b(&r.payee));
                 put(&mut m, 4, r.amount.to_value());
@@ -772,9 +667,6 @@ impl Payload {
                 }
                 if let Some(x) = &c.refund {
                     put(&mut m, 7, x.to_value());
-                }
-                if let Some(x) = &c.anonymous {
-                    put(&mut m, 8, x.to_value());
                 }
                 if let Some(x) = &c.purchase {
                     put(&mut m, 9, x.to_value());
@@ -820,22 +712,14 @@ fn put(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {
 
 /// Who must sign a Money act (Money: a pointer by its payee, F46; an
 /// obligation by its debtor, F66; a receipt by the payee of the hop; a
-/// claim by its payer, who is the claim's signer by definition, or, for an
-/// anonymous payer, the key in its field 8, whose signature must verify:
-/// Money rule 1, F113).
+/// claim by its payer, who is the claim's signer by definition: Money
+/// rule 1).
 ///
 /// `cited` is the act's own `objects`, `acks` and `refs`
-/// ([`Citations::of`] its inside): an anonymous payer's key signs them
-/// with the claim (F147). Other acts ignore it.
+/// ([`Citations::of`] its inside): a collective's act names the collective
+/// there.
 pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()> {
-    if let Payload::Claim(c) = payload {
-        if let Some(s) = c.anonymous_signature() {
-            if sig::verify(&s, &c.anonymous_message(cited)) != Verdict::Valid {
-                return Err(FinError::Check(
-                    "an anonymous claim's key 8 must verify under the key it names (Money rule 1, F113)",
-                ));
-            }
-        }
+    if let Payload::Claim(_) = payload {
         return Ok(());
     }
     // A collective's Money act is signed by a member or grantee for it,
@@ -872,52 +756,12 @@ pub fn check_signer(payload: &Payload, signer: &Hash, cited: &Citations) -> R<()
 
 // ---------------------------------------------------------------- rule 10a: who a refund is owed to
 
-/// Who a refund owed on a payment is owed to (rule 10a, F80, F113; Agreements
-/// rule 32).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum RefundTo {
-    /// The payer the receipt names.
-    Identity(Hash),
-    /// Whoever signs with the key the payment committed to as its payer.
-    Key(SigningKey),
-    /// The payment committed to no key: nobody can claim it.
-    Nobody,
-}
-
-/// Who a refund owed on the payment this receipt records is owed to. Never
-/// whoever presents the rail proof: others on the route may hold it.
-pub fn refund_owed_to(receipt: &Receipt) -> RefundTo {
-    match &receipt.payer {
-        Some(Payer::Identity(h)) => RefundTo::Identity(*h),
-        Some(Payer::Key(k)) => RefundTo::Key(k.clone()),
-        None => RefundTo::Nobody,
-    }
-}
-
-/// Whether a claim, signed by `signer`, claims the refund owed on the
-/// payment this receipt records (rule 10a, F113; Agreements rule 32): it names the
-/// same rail, proof, payee and amount, says where to be paid (key 7), and
-/// is made by the payer the payment committed to: the named payer, or a
-/// claim carrying a valid signature of the committed key (key 8), whoever
-/// signs the act, over the claim act's own citations, `cited` (F147). A
-/// claim on a payment that committed no key never does.
-pub fn claims_refund(receipt: &Receipt, claim: &Claim, signer: &Hash, cited: &Citations) -> bool {
-    if claim.rail != receipt.rail
-        || claim.proof != receipt.proof
-        || claim.payee != receipt.payee
-        || claim.amount != receipt.amount
-        || claim.refund.is_none()
-    {
-        return false;
-    }
-    match refund_owed_to(receipt) {
-        RefundTo::Identity(h) => claim.anonymous.is_none() && &h == signer,
-        RefundTo::Key(k) => match (&claim.anonymous, claim.anonymous_signature()) {
-            (Some(a), Some(s)) => a.key == k && sig::verify(&s, &claim.anonymous_message(cited)) == Verdict::Valid,
-            _ => false,
-        },
-        RefundTo::Nobody => false,
-    }
+/// Who a refund owed on the payment this receipt records is owed to
+/// (Money rule 17; Agreements rule 32): the payer it names, never whoever
+/// presents the rail proof, as others on the route may hold it. None for a
+/// payment naming no payer, a gift: no refund is owed on it.
+pub fn refund_owed_to(receipt: &Receipt) -> Option<Hash> {
+    receipt.payer
 }
 
 // ---------------------------------------------------------------- rule 12: the pointer that counts
@@ -1212,17 +1056,9 @@ pub fn holds_own(v: &crate::chain::Verifier, from: Vec<Hash>, own: &Hash) -> Hol
 }
 
 /// The history of an act, as rules 14 and 15 read it: what its citations
-/// hold, the act itself left out. For an anonymous payer's claim (claim
-/// key 8, `anonymous`), only what its `objects`, `acks` and `refs` hold,
-/// the citations its key signed: its `prev` belongs to whoever signed the
-/// act, not to the payer, and does not count (F147).
-pub fn history(v: &crate::chain::Verifier, inside: &Inside, anonymous: bool) -> Holds {
-    let from = if anonymous {
-        Citations::of(inside).acts()
-    } else {
-        cites(inside)
-    };
-    holds(v, from)
+/// hold, the act itself left out.
+pub fn history(v: &crate::chain::Verifier, inside: &Inside) -> Holds {
+    holds(v, cites(inside))
 }
 
 /// The payee's pointer acts that the payee's own act, or acts, hold, for
