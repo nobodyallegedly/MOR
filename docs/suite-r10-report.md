@@ -2,7 +2,7 @@
 
 # The Dubsar Suite, round 10 (F415): anonymity a fresh identity, the route buyer's claim, a collective one holder, the escape, Fable's bound in the apps, round 9's remainder
 
-*Session of 2 November 2026, on the MOR lead's branch `claude/s7i-routes` (pull request 116), after S7i, S7j and S7k. App-only: nothing in `core/`, `wasm/`, `spec/`, `relay/` or the vectors was changed (the generator gives the same bytes). Author of record: Nobody, allegedly. The finding is F415; no other number was taken.*
+*Session of 2 November 2026, on the MOR lead's branch `claude/s7i-routes` (pull request 116), after S7i, S7j and S7k, and beside S7l (F417, F419), taken in before the releases were rebuilt. Nothing in `core/`, `spec/`, `relay/` or the vectors was changed (the generator gives the same bytes). In `wasm/`, one binding, `agreementsWorkOwners`, by the MOR lead's leave (the suite lead's answers of 2 November), with no change to the core. Author of record: Nobody, allegedly. The finding is F415; no other number was taken.*
 
 **Readings taken** (the session ran alone; each is open to change):
 1. **"The apps' anonymous paths"**: no app had a path where a payer stayed unnamed (Damgar always paid as the person's identity). Read as: build one, in Damgar, the wallet, as a fresh identity. The visitor's note on a gateway (`clients/site`, `clients/reader`) already signs with a one-time identity born at the homes the gateway names: a fresh identity already, not self-hosted, left as it is.
@@ -15,7 +15,8 @@
 - **You can pay without your name** (Damgar, "Pay without your name" beside "Sign it"). Damgar makes a new identity for that one payment, hosted by itself, and pays as it. The seller sees an ID that is not yours. If a refund is owed, it is owed to that identity, and Damgar keeps its key so you can receive it. A payment that names no payer at all is a gift: shown so, with no refund to wait for.
 - **Paying through a converter gives you your rights as a buyer.** When Damgar pays a conversion service on its way to a seller, your claim names the seller's price tag, so you, not the service, can contest the sale, confirm a vow and carry a referral. (No screen yet: an app reaches it through Damgar's `pay tag`.)
 - **A collective that owns part of a work is one owner.** Edubba lists it once, asks it once, and its members sign for it under its rule; they are never shown as owners of the work. In Dub's and Edubba's To sign, a request for the collective opens with "You sign for the collective".
-- **A collective can claim a work** in Edubba's Publishing: the collective is its creator, the members who made it with it beside it.
+- **A collective can claim a work** in Edubba's Publishing: the collective is its creator; anyone who made it with it can be listed beside it, persons, members or not, and other collectives (asked once each). Edubba then shows the work's owners as the core reads them.
+- **A collective that owns part of a work gets its key only through the members acting for it in Envelopes**, and only the members its rule names for Agreements are asked to sign for it.
 - **A collective with one trusted wallet can be paid:** the member whose wallet it is answers a buyer's request made out to the collective, and signs the receipt for it.
 - **When the rail has not answered yet, the apps say so for the whole list.** A collective's money owed back, or a vow's sales, resting on two or more payments the rail has not confirmed, reads "unknown, waiting for the rail", and a collective cannot close until it is known.
 - **The escape** (Kišib and the air-gapped signer): if someone holding your stolen chain key changes your keys at the same place as you, you can leave, whatever your homes are, once the device has checked their change itself.
@@ -71,7 +72,10 @@ Every place, in plain words:
 | S7k: `[5, stake]` not listed under every holder | no app named it |
 
 ### 8. Round 9's remainder: built, save the shared-sale test
-- **A collective's claim** (F412): Publishing, acting as the collective, makes it (after an upload or alone): the collective opener and creator, the member signing for it under its rule, members beside it as co-creators each signing their own act (only members may be listed). Read back; the core's verdict shown. Test: "a collective's claim (round 10, F412)". The default holder is said in words: no binding reads a work's owners (For the MOR lead, 1).
+- **A collective's claim** (F412, F417): Publishing, acting as the collective, makes it (after an upload or alone): the collective opener and creator, the member signing for it under its rule, any co-creators beside it ("Co productions are common, ownership can be multiple IDs (collectives or individual)", Nobody, allegedly): persons, members or not, and other collectives, each binding it by its own signature act, a collective by a member's under its rule. The core refused no case. Test: "a collective's claim (round 10, F412)": beside the collective a member, a stranger and a second collective of two, bound only once the second collective's member signs for it; the core then reads `defaultHolder` the collective.
+- **The binding `agreementsWorkOwners`** (the suite lead's answer 1, the MOR lead's leave), in `wasm/src/lib.rs`, the core's `work_owners`: `{ work, claims, contested, agreements, defaultHolder, holders }`, each agreement in force with its stake's holders as written, a collective one holder. Tested in `wasm/` (its shape) and through Edubba (its read-backs: "The work now, as the core reads it"). *Not applied:* stake transfers since the version in force (the core's as-held reading is `pub(super)`; For the MOR lead, 1). `wasm/README.md`, "Changed in round 10". When no default holder exists the field is absent rather than null, as the binding's serialiser writes `None`.
+- **Who is asked for a collective** (answer 3: "every member is asked (can we make it members on that layer only) then once the collective conditions are met (single or multiple signature) it is considered signed"): only the members its rule names for signature acts (the Agreements layer's, or a finer area for them); once met, it has signed. Asserted: a member with no voice in Agreements is never asked.
+- **A collective owner's content key** (F419: "It's envelope layer business, it should be only the members on that layer"): sealed only to the members acting for it on key deliveries, its finer area for them where it has one, else the Envelopes layer's rule; its acts themselves still sealed to every member. Asserted: a member outside Envelopes gets no key.
 - **Assess on the core's reader**: its own payload reader removed; the core's words shown for a malformed publication (a new test).
 - **One trusted wallet**: the payer's Damgar seals the request to the member whose own pointer names the collective's address; the member's Damgar answers by hand where it acts for the collective, its rule for Money counts the member, and the pointer is the collective's in force; the receipt is the collective's, signed by the member, sealed to every member (F126; a bug the test found). Test `clients/damgar/test/trusted-wallet.test.ts`. **The shared-sale test is not moved**: Edubba's publication for a collective requires a split service, so a sale under it always pays the service (question 1).
 - **Kišib's refusal dropped**, with `cmip-runner-draft-6.md` (reading 3).
@@ -79,7 +83,8 @@ Every place, in plain words:
 
 ### 9. Last
 - Main had not moved (`14520bb`, already in the branch): the merge was empty.
-- The six web releases rebuilt (`npm run release` in `clients/site`, `dub`, `kishib`, `damgar`, `ummia`, `desk`), each built again to the same bytes (`npm run test:build`, all green). Kišib's air-gapped WebAssembly changed with the Module's words.
+- **S7l taken in** (its first line "Done", twice: F417 at `d20677fa`, F419 at `e61a82eb`): no binding's shape moved; `agreementsConsent` and `agreementsDone` now count a collective's key delivery sealed to its Envelopes members, as Edubba now seals it; Ummia's hashes re-pinned (For the MOR lead, 3).
+- The six web releases rebuilt after S7l (`npm run release` in `clients/site`, `dub`, `kishib`, `damgar`, `ummia`, `desk`), each built again to the same bytes (`npm run test:build`, all green). Kišib's air-gapped WebAssembly changed with the Module's words.
 
 ### Tests
 TESTS_TABLE
@@ -87,8 +92,9 @@ TESTS_TABLE
 GITHUB_LINES
 
 ## 3. For the MOR lead
-1. **A binding for a work's owners.** `work_owners` and its default holder exist in the core (`core/src/agreements/view/owning.rs`), but no binding exposes them, so Edubba says "the collective is the default holder" in words only. A small `agreementsWorkOwners(specs, work)` would let the apps show it as the core reads it.
+1. **`agreementsWorkOwners` gives holders as written, not as held.** Applying stake transfers since the version in force needs `holders_as_held` (`core/src/agreements/view/owning.rs`, `pub(super)`) made public, or the as-held reading added to `WorkOwners`: a core change, so left to you. Until then the binding's `holders` are field 7's, said so in its README line.
 2. **Several first-hop claims are read by the smallest id** (S7j's question 4): a buyer's later confirming claim can become the vow's sale act and `moneyRouteBuyer`'s `claim`, so a contest naming the first claim may fall out of step. The first in time on the payer's line would not shift. The route test accepts either.
+3. **Ummia's pinned hashes: S7l's printed values do not match the texts.** At `d20677fa` and again at `e61a82eb`, the MICS and suite hashes `clients/ummia/test/cards.test.ts` computes from the files (kind 6 and 7, the text without its last newline, as for S7k, whose values matched) differ from those S7l's report prints. Ummia pins the computed ones: MICS `435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c`, suite `1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276`. Perhaps they were computed before the texts' last edit.
 
 ## 4. Questions for Nobody, allegedly
 One at a time, each with a lean.
@@ -97,10 +103,10 @@ One at a time, each with a lean.
    - *Plain words:* Edubba sells a collective's work only through a split service, so the shared-sale test cannot yet move to the one wallet.
    - *Options:* (a) a priced bare bake uploaded for the collective, its tag signed by a member for it, paid to the collective unsplit; (b) a publication naming the collective as its own split service.
    - *Lean:* (a); Edubba then offers it, and the test moves.
-2. **Who may be listed beside a collective on its claim?**
-   - *Lean:* its members only, as "Claim (type 3)" says; Edubba refuses anyone else today.
-3. **A collective asked as an owner:** every member with a voice in its rule receives the request, and whoever signs first signs for the collective, the others adding theirs.
-   - *Lean:* keep it so, rather than naming one member to be asked.
+2. **A collective's own uploads** (F419's reach): a member uploading for a collective still seals the work's key to every member. Should only its Envelopes members receive it there too?
+   - *Lean:* yes, "envelope layer business" reads the same; left as it was, since the brief kept the collective's acts sealed to every member.
+3. **The key to a finer area:** Edubba seals a collective owner's key to the finer area covering key deliveries where the collective has one, else to the Envelopes layer.
+   - *Lean:* keep it: the finer area is the collective's own, narrower choice (S7l says the same).
 4. **A refund rail the anonymous payer gives that their own pointer already names** would link them.
    - *Lean:* refuse it, saying why (today Damgar only warns in the field's words).
 5. **Dub's own publication reader** (`clients/barebone/src/sealed.ts`), used to find works, reads signed acts by hand.
@@ -118,6 +124,8 @@ They join the hand test that follows the merge.
 2. **One trusted wallet.** Edubba: a collective whose Money is held by A alone; Money, one trusted pointer with A's wallet. A's Damgar: publish A's rails; Settings, act for the collective. From another Damgar, tip the collective's ID: A's Waiting says you answer for the collective; make the invoice, then sign the receipt by hand. The payer's Account shows it settled.
 3. **A collective's claim.** Edubba, a collective of three (2 of 3 for Agreements). Publishing, act as the collective, upload a text, "Then: a claim", naming yourself and another member beside it: read back (the collective the opener, the default holder); sign; the second member is asked; the co-creator signs in Dub; "Look for signatures": bound, with the core's verdict.
 4. **A shared work.** A second Edubba (River) adds the collective as a contact, uploads, claims, an ownership agreement River 50%, the collective 50%: two owners, "asked once, as the collective". One member signs for it in Dub ("You sign for the collective"), another adds theirs; River's "Look for signatures": it counts. Then a publication from it.
+4b. **Any co-creators.** Acting as a collective, list beside it a person outside it and a second collective (founded in another Edubba): the read-back says the second collective is asked once; its member signs for it in Dub ("You sign for the collective"); "Look for signatures": bound, "its default holder is" the collective.
+4c. **The key, by layer.** A collective whose Envelopes rule names A and Ph, its Agreements rule Pa and Ph: as River's co-owner, A is never asked to sign; after the publication counts, Ph opens the work's key, Pa has none.
 5. **Waiting for the rail.** In the collective client, a broken collective with two payments the test rail never answers: its card says "Owed back: unknown, waiting for the rail", and Close is blocked with the same words.
 6. **The escape.** Kišib, Paper, "Escape a contested position": the form's words now say "two changes made with the same chain key contest one position, wherever your homes hold them".
 7. **Assess.** `mor-assess <publication> --at <relay>` with a 10% partner: no warning; with `--partners-line 10`: "10% or more, the line set for this warning"; `--partners-line half`: refused in plain words.
