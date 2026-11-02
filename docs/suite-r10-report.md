@@ -1,4 +1,4 @@
-**Ready to merge on the suite's side: STATUS_LINE**
+**Ready to merge on the suite's side: all green on GitHub at `5ab41747` (every check: all, regtest, release, seal, mac, linux, browsers), the head holding all of round 10's code and S7l; this report's own commit follows it, its checks read in the comment on pull request 116.**
 
 # The Dubsar Suite, round 10 (F415): anonymity a fresh identity, the route buyer's claim, a collective one holder, the escape, Fable's bound in the apps, round 9's remainder
 
@@ -83,18 +83,39 @@ Every place, in plain words:
 
 ### 9. Last
 - Main had not moved (`14520bb`, already in the branch): the merge was empty.
-- **S7l taken in** (its first line "Done", twice: F417 at `d20677fa`, F419 at `e61a82eb`): no binding's shape moved; `agreementsConsent` and `agreementsDone` now count a collective's key delivery sealed to its Envelopes members, as Edubba now seals it; Ummia's hashes re-pinned (For the MOR lead, 3).
+- **S7l taken in** (its first line "Done", twice: F417 at `d20677fa`, F419 at `e61a82eb`): no binding's shape moved; `agreementsConsent` and `agreementsDone` now count a collective's key delivery sealed to its Envelopes members, as Edubba now seals it; Ummia's hashes re-pinned to the values computed from the files, since printed in S7l's report too (For the MOR lead, 3).
 - The six web releases rebuilt after S7l (`npm run release` in `clients/site`, `dub`, `kishib`, `damgar`, `ummia`, `desk`), each built again to the same bytes (`npm run test:build`, all green). Kišib's air-gapped WebAssembly changed with the Module's words.
 
 ### Tests
-TESTS_TABLE
+Run on this machine (Linux x86-64; Chromium named by `MOR_CHROMIUM`, as in round 9), every app's `npm test` after the last rebuild:
 
-GITHUB_LINES
+| Suite | Passed | Failed |
+| --- | --- | --- |
+| Rust workspace (`cargo test --workspace --locked`), with the cMIPs, Modules, the binding's new tests and `modules/airgap`'s rule 29 | 792 | 0 |
+| Edubba (desk) | 119 | 0 |
+| display client (site) | 86 | 0 |
+| Assess | 60 | 0 |
+| Dub | 48 | 0 |
+| collective | 46 | 0 |
+| Damgar (4 regtest skipped without `MOR_LN_REGTEST`) | 44 | 0 |
+| Kišib | 44 | 0 |
+| genesis | 41 | 0 |
+| Ummia | 35 | 0 |
+| longform, reader, repo, kit, barebone, connector | 26, 22, 21, 18, 15, 13 | 0 |
+| reports, grants, manage, testwallet (1 skipped), split service | 9, 8, 7, 4, 2 | 0 |
+| Modules: jpeg, carry, audio, video, timestamp | 14, 11, 8, 6, 5 | 0 |
+| Nakišib | 10 (on its one re-run) | 1, then 0 |
+
+- The vectors' generator gives the same bytes; each release built again gives the same bytes (`npm run test:build`, six of six).
+- **Failed on one run only: Nakišib's "every screen by clicks".** *What:* it waited 30 seconds for "Written again to", failed, and its process did not exit, so the run hit its time limit. *When:* with all 29 suites running at once on this machine. *Seen before:* the same test, wait and hang, in rounds 8b and 9. *The one re-run, alone:* 10 of 10. *Why:* a fixed 30-second wait on a loaded machine, and a test that does not stop its program when that wait fails; Nakišib's code was not touched this round. *Lean, for a later round:* wait until the words show, and stop the program in `after` whatever the outcome.
+- Earlier in the session, before S7l's hashes were taken in, Ummia's "the eight texts" test failed (the S7k hashes against S7l's texts): fixed as above. Repo's "the MOR repository itself" fails whenever the tree holds uncommitted edits (as in round 9); green once committed.
+
+**On GitHub**, at `5ab41747` (pull request 116's head when read): **all green**: "all" (every app, Assess, the Rust workspace), "regtest", release, seal, mac, linux and browsers. At `0451fb25`, the commit before, likewise. No check failed on GitHub this round, and none was re-run.
 
 ## 3. For the MOR lead
 1. **`agreementsWorkOwners` gives holders as written, not as held.** Applying stake transfers since the version in force needs `holders_as_held` (`core/src/agreements/view/owning.rs`, `pub(super)`) made public, or the as-held reading added to `WorkOwners`: a core change, so left to you. Until then the binding's `holders` are field 7's, said so in its README line.
 2. **Several first-hop claims are read by the smallest id** (S7j's question 4): a buyer's later confirming claim can become the vow's sale act and `moneyRouteBuyer`'s `claim`, so a contest naming the first claim may fall out of step. The first in time on the payer's line would not shift. The route test accepts either.
-3. **Ummia's pinned hashes: S7l's printed values do not match the texts.** At `d20677fa` and again at `e61a82eb`, the MICS and suite hashes `clients/ummia/test/cards.test.ts` computes from the files (kind 6 and 7, the text without its last newline, as for S7k, whose values matched) differ from those S7l's report prints. Ummia pins the computed ones: MICS `435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c`, suite `1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276`. Perhaps they were computed before the texts' last edit.
+3. **Ummia's pinned hashes** (done): S7l's report first printed values that did not match the texts; the suite pinned the values computed from the files (`435bfb07…0d56c`, `1d6ae968…5276`), and the MOR lead corrected S7l's report to them (`5ab41747`). Nothing left.
 
 ## 4. Questions for Nobody, allegedly
 One at a time, each with a lean.
