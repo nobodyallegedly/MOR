@@ -175,6 +175,15 @@ Each app makes or brings an identity the hard way (its ID and words).
 - **Clean-ups:** the `publishing work read` alias gone; the member keys cMIP marked retired.
 - **The signing key as a string** (H104, "Chain key, only words in dubsar apps. Signing key, users choses"): `morsk1…`, Bech32m; 24 words or the string wherever a signing key is brought; the string beside the words on request.
 
+## Round 9 (F411, #115): his answers
+*Recorded in round 10 (F415) from the round's brief: this section was named there but not yet written in the note.*
+- **Q1, a collective's claim:** built in the core (F412, S7i): a claim a member signs for a collective is the collective's, the collective its opener and a creator, members listed beside it as co-creators where they are. Edubba's Publishing offers it in round 10.
+- **Q2, a sale to a collective with one trusted wallet:** "A collective can rely on a single wallet if they wish. The core is more about what can be built on top, rather than what it can do itself." Option (a): the trusted member's Damgar answers a buyer's request made out to the collective, under its rule for Money; the shared-sale test moves to it.
+- **Q4, "partners before the owners":** "I'm fine with default at 50% and custom setting."
+- **Q5, Kišib's refusal of old member-key asks:** "We're the only ones who know it once existed, can be dropped now."
+- **Decided on the core side since (S7j, S7k), for the suite to build:** anonymity is a fresh identity ("anonymity on MOR is a fresh identity, not a missing one", F416); paying through a route, the first payer's claim citing the seller's tag in `refs` (F414); a collective is one holder among a work's holders (F416); the escape on a position contested by two rotations revealing the same chain key, wherever served (F416); an owed-back list resting on two or more records with no rail answer is unknown as a whole (Fable's bound, F413).
+- *Q3 (the signing key's string, draft 1) is not answered in the brief:* still "approve after the hand test".
+
 ## Still open
 - Question 2 of the H80 report: private lines Kišib cannot place (apps leaving each private act's locked act at the identity's homes).
 - **Two lines per app** (decided 21 October: "Agreed", option (a) of the private-lines report): each app keeps its public acts and its private acts on separate lines, so anyone can follow the public line after a change of keys. To build before round 2 (F376).
