@@ -1,8 +1,8 @@
-**Done. The WebAssembly and every binding's answer are unchanged: the core already let any co-creators sit beside a collective, so only the texts and the vectors moved. The MICS and the suite's texts moved, so Ummia's pinned hashes are new (below).**
+**Done. The WebAssembly's code is unchanged, but binding answers move: `agreementsConsent` and `agreementsDone` on a collective's key delivery sealed only to the members acting for it in Envelopes now count, and are done (they read "not done" before); one sealed to every member but missing an Envelopes member is now not done. The co-creators point moved no answer. The MICS and the suite moved: Ummia's pinned hashes are new (below).**
 
 # S7l: a claim's co-creators, any identities
 
-*Session S7l, 2 November 2026, on `claude/s7i-routes` (pull request 116), beside the Dubsar Suite's round 10. The decision is F417 (`claude/lead-records`). Only `spec/`, `core/` (vectors only) and `docs/` are touched, and the c-box's vectors README. No release is rebuilt, and this session records no finding of its own.*
+*Session S7l, 2 November 2026, on `claude/s7i-routes` (pull request 116), beside the Dubsar Suite's round 10. The decisions are F417 and F419 (`claude/lead-records`). Only `spec/`, `core/` and `docs/` are touched, and the c-box's vectors README. No release is rebuilt, and this session records no finding of its own.*
 
 ## In plain words
 
@@ -26,14 +26,32 @@ A band's claim on a song may now name anyone beside the band as co-creators: a m
   - The same, a stranger's signature act naming the other collective: not bound.
 - Both vectors READMEs and the c-box's are updated. `python3 core/vectors/check.py`: all 276 agree, 98 verdict cases judged. The box assembles: 8 texts, 12 vector files.
 
+## A collective's content key (F419, decided by Nobody, allegedly)
+
+*Plain words:* when a band holds a locked work, its content key goes to the members the band's founding names for Envelopes, not to every member. A key delivery commits the band to nothing, so the rule that every member must see every act does not reach it.
+
+- **Texts:**
+  - Agreements, beside rule 57: "A key delivery binds the collective to nothing, so this rule does not reach it." It is sealed to the members acting for the collective in Envelopes (rule 60), or public. Its commentary says rule 57 keeps a debt or a decision from being hidden, and a key delivery is neither.
+  - Envelopes, the `to` field's comment.
+  - The MICS's "done" bullet.
+  - The suite's 1f gains the two cases.
+- **Core:** `not_done` (`core/src/agreements/view.rs`) reads a collective's key delivery (Envelopes type 1) apart from rule 57. It is done where public, or sealed to every holder of the finer areas reaching it, or of the Envelopes layer's rule where none does. Before, it asked for every member.
+- **Vectors:** 2 new cases, judged by "consent counts".
+  - Sealed only to the member the Envelopes rule names (Ana): counts. The old core gave false.
+  - Sealed to the other members, and not to Ana: not done.
+
+## Vectors, in all
+
+516 cases, 7 added this session. Every earlier case keeps its verdict, acts and ids. Both READMEs and the c-box's are updated. `python3 core/vectors/check.py`: all 276 agree, 98 verdict cases judged. `cargo test -p mor-core`: green.
+
 ## Ummia's pinned hashes (the MICS and the suite moved)
 
-- `MICS_HASH = '09aeabbfb7ddb636b43f34bf8bbf649726fd45220e60ed58e661329771993736'`
-- `SUITE_HASH = 'df0bdd86bc9c271c8a421a26c676aa7d1f65f9b5790fedb17951adbc9f162486'`
+- `MICS_HASH = '9177b0b6bef92ed8c34ba6d403b1ce8243180376a2be548f63b5d864d048df53'`
+- `SUITE_HASH = '9243b014bd3594dfdb0e5df71fb2b4b5f477cda9e885560c444a5ce0bc7d47dc'`
 
 ## For the Dubsar Suite
 
-Edubba may now allow a collective's claim with any co-creators; the core already answered it. `agreementsWorkOwners` (yours) gives the same answers as the vectors.
+Edubba may now allow a collective's claim with any co-creators; the core already answered it. `agreementsWorkOwners` (yours) gives the same answers as the vectors. An app delivering a collective's content key seals it to the members its Envelopes rule (or a finer area reaching key deliveries) names.
 
 ## Question
 

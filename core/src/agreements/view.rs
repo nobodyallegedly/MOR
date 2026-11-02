@@ -6737,6 +6737,28 @@ impl<'a> AgreementsView<'a> {
     /// `agreement` is not done (F126, F128), if it is not.
     fn not_done(&self, x: &Held, agreement: &Hash) -> R<Option<String>> {
         let t = self.terms(agreement)?;
+        // A key delivery binds the collective to nothing, so rule 57 does not
+        // reach it: it is sealed to the members acting for the collective in
+        // Envelopes (rule 60; F419), those of a finer area reaching it, or of
+        // the layer's rule, or public.
+        if x.inside.spec == self.mirs.envelopes && x.inside.type_ == crate::envelopes::types::KEY_DELIVERY {
+            if x.act.outside.content_key.is_some() {
+                return Ok(None);
+            }
+            let (spec, ty) = (&x.inside.spec, x.inside.type_);
+            let mut reaching: Vec<Area> = t.areas().iter().filter(|a| a.kinds.iter().flatten().any(|k| t.kind_reaches(&self.mirs, k, spec, ty))).cloned().collect();
+            if reaching.is_empty() {
+                reaching.extend(t.lane(layers::ENVELOPES));
+            }
+            let to = x.act.outside.to.clone().unwrap_or_default();
+            let missing = reaching.iter().flat_map(|a| a.holders.iter()).filter(|p| !to.contains(p)).count();
+            if missing > 0 {
+                return Ok(Some(format!(
+                    "not done: a key delivery for the collective is not sealed to every member acting for it in Envelopes ({missing} missing), nor public (rule 60)"
+                )));
+            }
+            return Ok(None);
+        }
         if !self.sealed_to_all(x, &t) {
             let to = x.act.outside.to.clone().unwrap_or_default();
             let missing = t.parties.iter().filter(|p| !to.contains(p)).count();

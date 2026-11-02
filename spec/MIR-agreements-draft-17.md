@@ -1472,6 +1472,8 @@ An act for a collective, signed by a member or a grantee naming it (rule 58), is
 
 Before that, even signed, it is planning. It binds no one, its signer included. It counts for nothing in Agreements: signatures on it complete nothing, and an obligation it carries binds no one.
 
+**A key delivery binds the collective to nothing, so this rule does not reach it:** a delivery of the content key for a locked work the collective holds or co-holds is sealed to the members acting for the collective in Envelopes (rule 60), or public, and is done once so sealed and on its chain. *This rule keeps a debt or a decision from being hidden from members; a key delivery is neither.*
+
 *A counterparty is safe once a later act of the collective cites its act, against everything but the collusion of an ending's signers, which stays visible* (rules 76, 79).
 
 *Client conformance:* the member's client drafts the act, signs it, seals it to every member, and uploads it where the collective's clients look.

@@ -69,3 +69,28 @@ pub fn agreements(out: &mut Out) {
         "A stranger's act naming the studio is nobody's (rule 58): the studio has not signed, and nothing binds.",
         Facts::default(), ask_owners.clone(), json!({ "claims": [], "default_holder": null }), None);
 }
+
+/// A content key for a locked work a collective holds goes to the members
+/// acting for it in Envelopes (rule 60): a key delivery binds the
+/// collective to nothing, so rule 57's "sealed to every member" does not
+/// reach it.
+pub fn key_delivery(out: &mut Out) {
+    let mut w = World::new();
+    let col = collective(&mut w, &[1], 1);
+    let cid = col.id;
+    let base = w.log.clone();
+    let rule = "Agreements rule 57, beside it, and rule 60: a collective's key delivery is sealed to the members acting for it in Envelopes";
+    let deliver = |w: &mut World, to: Vec<Hash>, locked: Hash| {
+        let kd = mor_core::envelopes::KeyDelivery { target: locked, key: spec("the work's content key, a test value"), media: false };
+        w.private_act(&mut member_for(&col, 0), mirs().envelopes, mor_core::envelopes::types::KEY_DELIVERY, kd.to_map(), None, to)
+    };
+    for (to, name, why, counts) in [
+        (vec![col.m[0].id], "a collective's key delivery sealed only to the member its Envelopes rule names: counts", "The band's founding names Ana alone for Envelopes. Ana delivers the key sealed to herself, not to Ben or Cy: a key delivery binds the collective to nothing, so it need not reach every member.", true),
+        (vec![col.m[1].id, col.m[2].id], "a collective's key delivery sealed to the other members but not to the one its Envelopes rule names: not done", "Sealed to Ben and Cy, not to Ana, who acts for the band in Envelopes: not done, counting for nothing.", false),
+    ] {
+        let mut w1 = fresh(&base);
+        let x = deliver(&mut w1, to, spec(&format!("a locked work the collective holds, its act ({counts})")));
+        let _ = cid;
+        out.case(&mut w1, name, rule, why, Facts::default(), ask("consent counts", &x), json!(counts), None);
+    }
+}

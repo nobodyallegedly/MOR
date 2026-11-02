@@ -2688,6 +2688,7 @@ pub fn agreements(out: &mut Out) {
     scenario9::agreements(out);
     s7i::agreements(out);
     s7l::agreements(out);
+    s7l::key_delivery(out);
     s7j::agreements(out);
 }
 

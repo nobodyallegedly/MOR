@@ -332,7 +332,7 @@ outside = {
   3 => hash,            ; locked hash: SHA-256 of the locked bytes
   4 => bstr .size 24,   ; nonce for the lock
   ? 5 => bstr .size 32, ; content key: present on a public act, absent on a private one
-  ? 6 => [+ hash]       ; to: recipients' identity hashes (key deliveries, and acts addressed to someone); for a collective's act, every member among them, or the act public (Agreements rule 57)
+  ? 6 => [+ hash]       ; to: recipients' identity hashes (key deliveries, and acts addressed to someone); for a collective's act, every member among them, or the act public (Agreements rule 57); for its key delivery, the members acting for it in Envelopes (Agreements rule 60)
 }
 
 inside = {
