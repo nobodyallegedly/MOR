@@ -307,8 +307,8 @@ export interface BuiltIn {
  * computes from the current drafts' text (MICS v30, the freeze test suite
  * v30); `test/cards.test.ts` computes them again from the files.
  */
-export const MICS_HASH = 'bed51a2927ed2505c9740d5f472678449a8ff9248105b3469cd3c9f04ee3b8d0';
-export const SUITE_HASH = 'c7639e2657626183bf7cc89ac7df6806c6cf75d06cb30f2b061c6ab8cd10e081';
+export const MICS_HASH = '435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c';
+export const SUITE_HASH = '1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276';
 
 export const BUILT_IN: BuiltIn[] = [
   { hash: MIRS.identity, title: 'MIR: Identity', kind: 'MIR', summary: 'Who signs: identities, their keys, homes, rotations, receipts and succession.' },
