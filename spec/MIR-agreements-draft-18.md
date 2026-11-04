@@ -2748,7 +2748,7 @@ Terms breaking any of these are invalid. How a chain passes is rule 35.
 
 *A period is compulsory for every link, a specification's included, though a specification always answers.*
 
-*The chain is signed with the terms, by everyone: in a deal by every party, in a collective as its control model, or else its constitutional change rule, asks (rules 98, 99). So nobody signs again when a judge fails.*
+*The chain is signed with the terms, by everyone: in a deal by every party, in a collective as part of the judicial tier (rule 67). So nobody signs again when a judge fails.*
 
 *The split service is not in the chain: its backups are a publication's (publication field 11). A chain of judgment has stages; a chain of backups has attempts.*
 

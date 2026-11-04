@@ -195,7 +195,7 @@ Fields 4 and 11 are never compared, nor field 23: a clone never carries it ("Ter
 Each change is in the tier of its field or entry (rule 62). An operational change lies:
 - for an entry of field 2: under the parent's rule for that task's layer, `[6, layer]`; or, where an area of the parent names that task by a field reference, `[1, task]`, in that area instead. Where the specification the clone names for that task is also named in the clone for a task of another layer, it lies under that layer's rule too. A clone naming one specification for a judicial task and for another task is invalid, whatever its mark;
 - for an entry of field 15: under the parent's rule for Development, and the rule of each layer that the extension added or dropped declares in its specification (Development, field 10). Dropping an extension needs the same powers as adopting it. A clone naming as an extension a specification it names as a judge is invalid, whatever its mark;
-- for an entry of parameter 20: in the area whose id it carries;
+- for an entry of parameter 20: none: a change of the control model's parameters is constitutional, the core's (Agreements rule 98);
 - otherwise: in the parent's area whose field references name that field.
 
 Any other operational change lies under no layer's rule and in no area.
