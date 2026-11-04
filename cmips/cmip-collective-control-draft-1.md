@@ -168,9 +168,9 @@ Every field belongs to one tier.
 | 27 | The judge of forks | None: a deal only; deals have no tiers |
 | 28 | *Withdrawn*: once the fees, now a publication's split plan's; never reused | — |
 | 29 | *Withdrawn*: once the split service's backups, now a publication's; never reused | — |
-| 30 | Holders' rules, per stake (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 30 | Holders' rules, per stake (a parameter of field 35) | Constitutional, as every parameter: the core's (Agreements rule 98). A stake it names no rule for: every holder signs, the core's default restated (Agreements rule 98.2); a change binds no holder without its signature (Agreements rule 45) |
 | 31 | Transfers counted | None: a deal's clone states its own; deals have no tiers |
-| 32 | Issues under (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 32 | Issues under (a parameter of field 35, per version) | None: each issuance names its own offer; an issuance is a reduction judged by Agreements rule 98.2 under rule 48, never a change of the constitution; this cMIP's rule 96 is its way of collecting that consent |
 | 33 | Target: a claim, or the collective itself | None: founding terms set it, and every clone repeats it |
 | 34 | Areas, finer than a layer (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 35 | The control model: this cMIP | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
