@@ -602,6 +602,12 @@ impl<'a> AgreementsView<'a> {
         self
     }
 
+    /// Hold no control model (a verifier that holds none: rule 98's
+    /// collective whose model is not held).
+    pub fn drop_control(&mut self) {
+        self.control.clear();
+    }
+
     pub fn new(v: &'a Verifier, mirs: Mirs) -> Self {
         AgreementsView {
             v,
@@ -933,10 +939,11 @@ impl<'a> AgreementsView<'a> {
         }
         let mut t = Terms::decode(&h.inside.payload)?;
         check_terms_inside(&h.inside, &t)?;
-        if !super::control::fill(&mut t, &self.control)? {
-            // A control model this verifier does not hold: unknown.
-            return Err(AgreementsError::Missing(t.control.as_ref().expect("named").cmip));
-        }
+        // A control model this verifier does not hold answers nothing: the
+        // terms are read without its answers, and what needs them (an
+        // everyday act's consent, an operational clone) is unknown, never
+        // the way out (rule 98).
+        super::control::fill(&mut t, &self.control)?;
         t.check(&self.mirs)?;
         Ok(t)
     }
@@ -4418,6 +4425,13 @@ impl<'a> AgreementsView<'a> {
             return Ok(Consent::RailNotAccepted { agreement: ag, rail });
         }
         let t = self.terms(&ag)?;
+        // An everyday act whose power the collective's control model decides
+        // is unknown to a verifier that does not hold it (rule 98).
+        if let Some(c) = &t.control {
+            if !self.control.iter().any(|(h, _)| *h == c.cmip) {
+                return Err(AgreementsError::Missing(c.cmip));
+            }
+        }
         let mut reaching: Vec<Area> = vec![];
         // A revocation is judged, like the grant it names, by that grant's
         // area alone, or, naming none, by the rule for Agreements (rule 74).

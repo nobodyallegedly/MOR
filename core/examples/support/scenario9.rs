@@ -948,3 +948,109 @@ fn keyless_agreements(out: &mut Out) {
     out.case(&mut w, "the rotation declaring that clone, Dee's share dealt: valid", "Agreements rule 69; Identity rule 7",
         "The chain key, rebuilt, declares the clone with the signature acts that complete it.", Facts::default(), ask_status(&rot), json!("valid"), None);
 }
+
+/// Agreements draft 18, rules 67, 98 and 99 (S7m; F421 to F424): a
+/// collective naming no control model, one whose model the verifier does
+/// not hold, an area's power for the constitution, a judge swapped by a
+/// one-word constitutional change, and an issuance as a reduction.
+pub fn control_models(out: &mut Out) {
+    let draw = |w: &mut World, by: &Person, cid: Hash, k: Hash, sigs: Vec<Hash>, cite: Hash| {
+        let mut d = by.acting_for(cid, vec![cite]);
+        let r = agreements::Record { clone: Some(k), signatures: Some(sigs), registers: None };
+        let a = w.everyday_act(&mut d, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(k), None);
+        w.add(&a)
+    };
+    let not_held = Facts { no_control: true, ..Default::default() };
+
+    // No control model: the last resort (rule 98).
+    let mut w = World::new();
+    let mut col = collective_with(&mut w, &[1], 1, &|t| t.control = None);
+    let (f, cid) = (col.founding, col.id);
+    let (k1, s1) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Clone, vec![0, 1])], &[0, 1], vec![cid], &|_| {});
+    let cy = col.m[2].clone();
+    let r1 = draw(&mut w, &cy, cid, k1, s1, cid);
+    out.case(&mut w, "a collective naming no control model: a clone marked with the clone rule, nothing in force", "Agreements rule 98",
+        "With no control model, every clone of a collective's agreement needs its constitutional change rule: the clone rule is no power a model names, and the mark is false.", Facts::default(), ask_record(&cid, &r1), json!({ "line": true, "puts": null }), None);
+    let (k2, s2) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2])], &[0, 1, 2], vec![cid], &|_| {});
+    let r2 = draw(&mut w, &cy, cid, k2, s2, cid);
+    out.case(&mut w, "the same collective: the same clone marked with the constitutional change rule, every member signing: in force", "Agreements rule 98",
+        "The last resort: the constitutional change rule, every party by default.", Facts::default(), ask_record(&cid, &r2), json!({ "line": true, "puts": hx(&k2) }), None);
+
+    // A model the verifier does not hold (rule 98): an operational clone
+    // unknown; a constitutional one judged by the core alone.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.id);
+    let (k3, s3) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Layer(agreements::layers::AGREEMENTS), vec![0])], &[0], vec![cid], &|t| t.cmips.push((13, spec("a claims cMIP"))));
+    let cy = col.m[2].clone();
+    let r3 = draw(&mut w, &cy, cid, k3, s3, cid);
+    out.case(&mut w, "a collective's operational clone, at a verifier that does not hold its control model: unknown", "Agreements rules 98 and 99",
+        "What an operational change needs is the control model's answer; a verifier that does not hold the model answers unknown.", Facts { no_control: true, ..Default::default() }, ask_record(&cid, &r3), json!("unknown"), None);
+    let dee = w.genesis("dee, a new member", vec![own_home()], None, None);
+    let mut new_ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+    new_ids.push(dee.id);
+    let (k4, mut s4) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2])], &[0, 1, 2], vec![cid], &|t| {
+        t.parties = new_ids.clone();
+        t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: new_ids.iter().map(|h| (agreements::Who::Id(*h), 250_000)).collect() }]);
+    });
+    s4.push(sign(&mut w, &mut dee.acting_for(cid, vec![cid]), &k4));
+    let ana = col.m[0].clone();
+    let r4 = draw(&mut w, &ana, cid, k4, s4, cid);
+    out.case(&mut w, "a constitutional clone adding a member, at a verifier that does not hold the collective's control model: in force", "Agreements rule 98",
+        "Membership is the constitution's, judged by the core alone under the constitutional change rule, whether the verifier holds the model or not.", not_held, ask_record(&cid, &r4), json!({ "line": true, "puts": hx(&k4) }), None);
+
+    // An area's power for the constitution: none (rules 98, 99).
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.id);
+    let (k5, s5) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Layer(agreements::layers::AGREEMENTS), vec![0])], &[0], vec![cid], &|t| t.text = "A test collective of three members, reworded.".into());
+    let cy = col.m[2].clone();
+    let r5 = draw(&mut w, &cy, cid, k5, s5, cid);
+    out.case(&mut w, "a clone changing the constitution's words, marked with a power a model names: nothing in force", "Agreements rule 98",
+        "The words are the constitution's: the constitutional change rule alone, a model naming no power for them.", Facts::default(), ask_record(&cid, &r5), json!({ "line": true, "puts": null }), None);
+
+    // A judge swapped by a one-word constitutional change (rules 67, 98).
+    let mut w = World::new();
+    let mut col = collective_with(&mut w, &[1], 1, &|t| t.constitutional = Some(Rule::Threshold(2)));
+    let (f, cid) = (col.founding, col.id);
+    let swap = |t: &mut Terms| {
+        t.text = "A test collective of three members; one word changed.".into();
+        t.arbitrators = Some(vec![spec("a friendlier arbitrator")]);
+    };
+    let (k6, s6) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], vec![cid], &swap);
+    let cy = col.m[2].clone();
+    let r6 = draw(&mut w, &cy, cid, k6, s6, cid);
+    out.case(&mut w, "two of three change one word of the constitution and the arbitrator, marked with the constitutional change rule alone: nothing in force", "Agreements rules 67 and 98",
+        "The arbitrator is the judicial tier's: every member whose voice remains, whatever field 18 says; a clone changing it and the constitution needs both rules.", Facts::default(), ask_record(&cid, &r6), json!({ "line": true, "puts": null }), None);
+    let (k7, s7) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1]), (agreements::Power::Judicial, vec![0, 1, 2])], &[0, 1, 2], vec![cid], &swap);
+    let r7 = draw(&mut w, &cy, cid, k7, s7, cid);
+    out.case(&mut w, "the same, marked with both rules and signed by every member: in force", "Agreements rules 67 and 98",
+        "Both rules met: the constitutional change rule by two, the judicial tier's by all three.", Facts::default(), ask_record(&cid, &r7), json!({ "line": true, "puts": hx(&k7) }), None);
+
+    // An issuance is a reduction (rule 98.2): under no holders' rule,
+    // every holder signs.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.id);
+    let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+    let newcomer = w.genesis("an investor", vec![own_home()], None, None);
+    let nid = newcomer.id;
+    let issue = |t: &mut Terms| {
+        let mut holders: Vec<(agreements::Who, u64)> = ids.iter().map(|h| (agreements::Who::Id(*h), 300_000)).collect();
+        holders[0].1 = 300_000 + 100_000 * 0;
+        holders.push((agreements::Who::Id(nid), 100_000));
+        t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders }]);
+        t.issues_under = Some(agreements::IssuesUnder::Offer(spec("no offer needed under every holder")));
+    };
+    let (k8, mut s8) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Clone, vec![0, 1])], &[0, 1], vec![cid], &issue);
+    s8.push(sign(&mut w, &mut newcomer.acting_for(cid, vec![cid]), &k8));
+    let cy = col.m[2].clone();
+    let r8 = draw(&mut w, &cy, cid, k8, s8.clone(), cid);
+    out.case(&mut w, "an issuance under no holders' rule, one holder not signing: nothing in force", "Agreements rules 48 and 98.2",
+        "An issuance is a reduction of every holder's share: where the terms name no rule, every holder signs.", Facts::default(), ask_record(&cid, &r8), json!({ "line": true, "puts": null }), None);
+    let mut s9 = s8;
+    s9.push(sign(&mut w, &mut col.m[2].acting_for(cid, vec![cid]), &k8));
+    let r9 = draw(&mut w, &cy, cid, k8, s9, cid);
+    out.case(&mut w, "the same issuance, every holder signing: in force", "Agreements rules 48 and 98.2",
+        "Every holder signed: the reduction has each holder's consent.", Facts::default(), ask_record(&cid, &r9), json!({ "line": true, "puts": hx(&k8) }), None);
+}

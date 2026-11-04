@@ -551,6 +551,10 @@ fn verdict_vectors() {
 fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements::Mirs, facts: &J) -> mor_core::agreements::AgreementsView<'a> {
     use mor_core::envelopes::anchoring::{Anchor, Reference};
     let mut av = mor_core::agreements::AgreementsView::new(v, mirs.clone()).with_control(mor_control::held());
+    // The verifier holds no control model (Agreements rule 98).
+    if facts["control_models_held"] == serde_json::Value::Bool(false) {
+        av.drop_control();
+    }
     for a in facts["anchors"].as_array().into_iter().flatten() {
         let r = Reference::decode(&cbor::decode(&b(&a["clock"])).unwrap()).unwrap();
         av.anchored.add(&Anchor { act: h(&a["act"]), reference: r, point: a["point"].as_u64().unwrap() });
