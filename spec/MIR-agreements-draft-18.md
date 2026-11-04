@@ -299,7 +299,7 @@ Where claims from different identities conflict, priority can only be decided wh
 
 Any act that changes the size of a share of a stake requires its holder's signature.
 
-**An issuance is such an act**: new holders added to a stake, every existing holder's share scaled by the same factor, a reduction of every holder's share, counting only as rule 48 lets a stake shrink (rule 98.2). A share added any other way still needs every holder whose share it lowers. **A holder is whoever field 7 and the transfers placed say** (rule 10): a buyer who completed a transfer is the holder of what it bought, for this rule as for rule 48.
+**An issuance is such an act**: new holders added to a stake, every existing holder's share scaled by the same factor, a reduction of every holder's share, counting only as rule 48 lets a stake shrink (rule 98.2). A change of field 7 by any other act than a placed transfer, a succession, an absence outcome or such an issuance is a false mark (rules 46, 98.2). **A holder is whoever field 7 and the transfers placed say** (rule 10): a buyer who completed a transfer is the holder of what it bought, for this rule as for rule 48.
 
 A signature on an agreement is consent to everything it defines, including pre-authorised changes such as abandonment outcomes. Clients SHOULD make such terms prominent.
 
