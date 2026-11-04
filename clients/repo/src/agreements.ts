@@ -16,6 +16,7 @@ import {
   describeAct,
   hex,
   agreementsClonePlan,
+  agreementsControlPack,
   publicationPayload,
   recordPayload,
   resignationPayload,
@@ -248,7 +249,9 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   if (t.keepers?.ids.length) m.set(3, [[...t.keepers.ids].sort().map(unhex), ruleValue(t.keepers.rule)]);
   if (t.departed?.length) m.set(22, t.departed.map(unhex));
   if (t.forkedFrom) m.set(23, unhex(t.forkedFrom));
-  return cborEncode(m);
+  // Agreements draft 18 (F420 to F423): the areas (34), their words (20), the holders' rules (30) and an
+  // issuance's offer (32) are the default control cMIP's parameters, in field 35, [cmip, params].
+  return agreementsControlPack(cborEncode(m));
 }
 
 /** Even shares in millionths among `holders`, the first taking what rounding leaves (the Shares band's default until touched). */
