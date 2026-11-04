@@ -6,7 +6,7 @@
 
 Normal text is the protocol. Italic text is commentary: reasons, examples and plain summaries. Where the two seem to differ, the normal text decides.
 
-A rule of another MIR is cited by that MIR's name and the rule's number ("Money rule 17"). Rules keep their numbers wherever they stand, so the numbers do not run in reading order. A retired rule, type or field keeps its number, which is never reused. Rules 62 to 64, 66 to 68 and 94 to 97 are the default control cMIP's (rule 99): this MIR keeps each number as a pointer to that cMIP (section 23), and no rule of this MIR reuses them.
+A rule of another MIR is cited by that MIR's name and the rule's number ("Money rule 17"). Rules keep their numbers wherever they stand, so the numbers do not run in reading order. A retired rule, type or field keeps its number, which is never reused. Rules 62 to 64, 66, 68 and 94 to 97 are the default control cMIP's (rule 99): this MIR keeps each number as a pointer to that cMIP (section 23), and no rule of this MIR reuses them.
 
 Some marks recur:
 
@@ -889,7 +889,8 @@ A grant whose field 6 reaches beyond its area, or beyond what its signers could 
 - the constitutional change rule: among the parent's parties, under the parent's field 18, or every party when the parent has none; a constitutional change rule counted among a stake's holders, among that stake's holders at the line, by share;
 - a layer's rule, `[6, layer]`: among the parent's parties, under the parent's field 19 entry for that layer;
 - a succession plan, `[3, party]`: as rule 83 says;
-- a power the collective's control model names (rule 99), such as the default control cMIP's clone rule `[1]`, an area's power `[2, area]`, its judicial tier's rule `[4]` and a stake's holders' rule `[5, stake]`: among the parties, the area's holders or the stake's holders the model gives for it, by the rule it gives; an area's holders at least its threshold of them, a stake's holders by share.
+- the judicial tier's rule, `[4]`: among the parent's parties, every one of them (rule 67);
+- a power the collective's control model names (rule 99), such as the default control cMIP's clone rule `[1]`, an area's power `[2, area]` and a stake's holders' rule `[5, stake]`: among the parties, the area's holders or the stake's holders the model gives for it, by the rule it gives; an area's holders at least its threshold of them, a stake's holders by share.
 
 In each, only parties whose voice remains are counted, a stake's holders aside, who are counted by what they hold. This is judged on the collective's chain at the act, or, for a clone, at the record or rotation that puts it in force ("Made before, made after"). Left out are:
 - a party whose resignation (rule 70) or declaration with outcome 0 (rule 89) the collective registered on a line before it;
@@ -937,7 +938,7 @@ A holder's share counts once, whoever signs: a seller and its buyer never both c
 
 Keepers are chosen by the parties when they sign, so neither side can later substitute a friendly one.
 
-- In a collective, the keepers change only under its constitutional change rule (rule 98).
+- In a collective, the keepers change only with every member's signature (rule 67).
 - A deal's keepers change only with every party (rule 47).
 
 #### Rule 37. Records
@@ -1223,7 +1224,7 @@ A sale through a publication is divided once, by its split service: **partners f
 
 **An owner that is another ownership agreement** (a manifest's parts, rule 7) **is paid through it**: the split service divides that owner's part among that agreement's holders by their shares, read by reference as the owners' line is (rule 12), the receipt naming that agreement's version too. A part holding nothing on its line of the split is paid nothing.
 
-**A collective's own split agreement.** A collective names the service that receives its income by a split agreement: a publication whose first version sells nothing (field 0 absent), naming the collective's ownership agreement (field 1), a split service and a split plan, with partners where it pays any. *The split service is an agreement that points to the ownership of the collective, to attribute shares, as a publication does.* It is part of the collective's constitution, signed for the collective under its constitutional change rule (rule 98), since it can move money. **A version of it that pays the stake less, the collective's own part off the top among it, counts once the owners' consent is given** (rule 98): each holder it pays less who has no voice, by a signature act naming the version, or as the control model lets holders consent together, beside the members' signatures (rule 48). *A collective that operates with a single wallet names none; its income stays at its pointer, and spending it is its business under its rule for Money.*
+**A collective's own split agreement.** A collective names the service that receives its income by a split agreement: a publication whose first version sells nothing (field 0 absent), naming the collective's ownership agreement (field 1), a split service and a split plan, with partners where it pays any. *The split service is an agreement that points to the ownership of the collective, to attribute shares, as a publication does.* It is the collective's protected clause: signed for the collective under the judicial tier's rule, every member whose voice remains (rule 67), since it can move money. **A version of it that pays the stake less, the collective's own part off the top among it, counts once the owners' consent is given** (rule 98): each holder it pays less who has no voice, by a signature act naming the version, or as the control model lets holders consent together, beside the members' signatures (rule 48). *A collective that operates with a single wallet names none; its income stays at its pointer, and spending it is its business under its rule for Money.*
 
 **Where a collective names a split agreement, its payee pointer counts, for Agreements, only where its addresses and vault entries are the split service's** (rule 16).
 
@@ -1486,7 +1487,7 @@ The old service still owes payouts on everything it received before.
 
 #### Rule 48. No stake reduced without its holder
 
-A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it.
+A clone can never reduce a stake without its holder's signature, unless the agreement pre-authorised it, and the only advance permissions are those rule 98 names: succession, the declaration of absence's two outcomes, and an issuance first offered to every holder.
 
 **A stake moved by succession is not a reduction, and the only advance permissions that move a stake without its holder are rule 89's**: a declaration of absence passes the stake to the stake successors the holder's succession plan names, or, where it names none, outcome 1 redistributes it.
 
@@ -1536,7 +1537,7 @@ Any other constitutional change (the change rules, the layers' rules, the contro
 
 Each agreement the chain declares after the founding one MUST:
 
-- be a clone of the agreement in force at the rotation (the one declared before it, or recorded since, rule 72), its parent (field 11) naming it;
+- be a clone of the agreement in force at the rotation (the one declared before it, or recorded since, rule 72), its parent (field 11) naming it; for the way out and for whether the collective is broken, that parent is read as the latest constitutional clone or any clone recorded after it, so an operational clone recorded in between never makes a rotation broken;
 - be complete with the signature acts the declaration names;
 - make a constitutional change (rule 98).
 
@@ -1621,7 +1622,7 @@ The replacement signs the clone too (rule 45). Until one of them completes, the 
 
 *Mechanically the first two are one clone, signed by the leaving holder and meeting the constitutional change rule, started from either side; the third needs no signature of the holder, since an area's holders and rules change by a constitutional change.*
 
-**Stepping down at once.** A holder may instead give up an area at once, alone, by a resignation naming that area (type 16, field 1). *It says: I am done, and will do nothing more in this area.*
+**Stepping down at once.** A holder may instead give up an area at once, alone, by a resignation naming that area (type 16, field 1). Whether it counts is read without the control model: a member's step-down from an area id its terms name is registered as any resignation is, and one by a non-holder changes nothing. *It says: I am done, and will do nothing more in this area.*
 
 **The resignation names the drafts its signer had signed and leaves behind** (field 2). A version it names never gives the signer the area back, whichever line puts it in force. A draft it fails to name does: the signer's stated cost. *Client conformance:* the holder's client names them, as for a resignation.
 
@@ -1684,7 +1685,7 @@ Stake and seat successors may be the same identity or different ones.
 
 **A seat successor carries no voting weight**: plan key 2 lists the seat successors alone; a plan writing a weight beside a successor is invalid, as field 24's head count is. Where a rule counts by share, a seat successor weighs what it holds of the stake, read from field 7, which the plan's stake part gives it; a weight written as a free number is refused. *A successor already a party holds two seats and counts once for each wherever seats are counted (rule 83): two seats, never a weight the plan writes.*
 
-Changing a plan takes a clone, which needs the party's signature, and, in a collective, its constitutional change rule (rule 98).
+Changing a plan takes a clone, which needs every member's signature, the party's included (rule 67).
 
 #### Rule 82. Triggers
 
@@ -1916,7 +1917,7 @@ The power it needs. **A rollback needs the constitutional change rule of the agr
 
 Where every voice that remains for that rule has resigned, nothing meets it (rule 65): no rollback is possible, and the collective stays broken (rule 70, "The last voice").
 
-The rollback's mark (field 4) names the constitutional change rule, `[0]`, with its signers. Where the clone also changes what the collective's control model governs, it names besides the powers the model names for that change (rule 99), and a verifier that does not hold the model answers unknown for it; **a rollback copying the agreement in force just before the broken act, or changing only what rule 98 calls constitutional, names `[0]` alone and is judged by this MIR alone, whatever model the collective names.** It names nothing else, whatever its changes: a rollback may change nothing, or may redo correctly the change the broken act failed. *Its mark is checked against these powers, not those a control model gives an ordinary clone, so a rollback copying its parent unchanged is no false mark (rule 46). Rule 69's "MUST make a constitutional change" does not apply to it: a rollback is a rotation by its nature, since only a rotation fences off the broken stretch's keys.*
+The rollback's mark (field 4) names the constitutional change rule, `[0]`, with its signers. Where the clone also changes the judicial tier, it names the judicial tier's rule, `[4]`, too, every party whose voice remains (rule 67). Where the clone also changes what the collective's control model governs, it names besides the powers the model names for that change (rule 99), and a verifier that does not hold the model answers unknown for it; **a rollback copying the agreement in force just before the broken act, or changing only what rule 98 calls constitutional, names `[0]` alone and is judged by this MIR alone, whatever model the collective names.** It names nothing else, whatever its changes: a rollback may change nothing, or may redo correctly the change the broken act failed. *Its mark is checked against these powers, not those a control model gives an ordinary clone, so a rollback copying its parent unchanged is no false mark (rule 46). Rule 69's "MUST make a constitutional change" does not apply to it: a rollback is a rotation by its nature, since only a rotation fences off the broken stretch's keys.*
 
 What it registers. **The rollback may register a declaration of absence made during the broken stretch** under the clause of the agreement in force just before the broken act, exactly as a record does outside the stretch, so that a member who dies or vanishes during the stretch does not block the way back. *A faction that is the absence authority could already declare a member absent falsely with no break: the break adds steps, not power; the new risk was attention, which rule 88's client conformance closes.*
 
@@ -1986,8 +1987,8 @@ Its legal effect lies outside the core.
 **Whatever any cMIP answers, these decide, and nothing a cMIP decides reaches them:**
 
 1. **A deal changes only with every party** whose voice remains (rule 47).
-2. **A stake moves, shrinks or is paid less only with its holder**, save by succession and the declaration of absence's two outcomes (rules 8, 10, 48, 89). A holder who has no say on a change that pays it less signs it. **An issuance a collective's control model allows counts only where every holder of the stake was first offered its share in proportion, at the same price, for the same period; without that, the stake shrinks without its holders, and the issuance counts for nothing.**
-3. **A collective's membership, and its way out, change only under its constitutional change rule** (terms field 18), every party whose voice remains when the terms name none (rules 65, 69). **A constitutional change is a change of the collective's constitution: fields 0, 1, 3, 5, 6, 9, 12, 13, 16, 17, 18, 19, 21, 22, 24 and 35 (its cMIP and its parameters alike), and the collective's split agreement. A clone making one needs the constitutional change rule, `[0]`, whatever its control model asks; a model names no power for it and adds none to it; only this MIR reads which change is constitutional. A control model governs the collective's everyday acts, and which operational changes need which power, and nothing else.** *The fields are the parties, the words, the keepers, the clone rule, the time reference, the abandonment clause, the key grammar, the arbitrators or verifiers, the succession plans, the refund terms, the constitutional change rule, the layers, the chain of judgment, the departed members entry, the release rule and the control model.* A rotation declares only a clone making a constitutional change (rule 69), and whether a collective is broken never depends on a model (rule 93).
+2. **A stake moves, shrinks or is paid less only with its holder**, save by succession and the declaration of absence's two outcomes (rules 8, 10, 48, 89). A holder who has no say on a change that pays it less signs it, or consents under a rule binding it that it accepted, as rule 48 says. **An issuance a collective's control model allows counts only where every holder of the stake was first offered its share in proportion, at the same price, for the same period; without that, the stake shrinks without its holders, and the issuance counts for nothing.** The offer *reached* a holder where it is public, or sealed to that holder among its recipients (Envelopes, `to`); its period is on the agreement's time reference, whose answer the caller states (rule 33); a holder's take-up counts where the time reference places it within the period, placed by the collective's line or anchored. An offer that did not reach a holder starts no period for it.
+3. **A collective's membership, and its way out, change only under its constitutional change rule** (terms field 18), every party whose voice remains when the terms name none (rules 65, 69). **A constitutional change is a change of the collective's constitution: fields 0, 1, 3, 5, 6, 9, 12, 13, 16, 17, 18, 19, 21, 22, 24 and 35 (its cMIP and its parameters alike), and the collective's split agreement. A clone making one needs the constitutional change rule, `[0]`, whatever its control model asks, and, where it also changes the judicial tier, the judicial tier's rule, `[4]`, beside it, needing both (rule 67); a model names no power for it and adds none to it; only this MIR reads which change is constitutional. A control model governs the collective's everyday acts, and which operational changes need which power, and nothing else.** *The fields are the parties, the words, the keepers, the clone rule, the time reference, the abandonment clause, the key grammar, the arbitrators or verifiers, the succession plans, the refund terms, the constitutional change rule, the layers, the chain of judgment, the departed members entry, the release rule and the control model.* A rotation declares only a clone making a constitutional change (rule 69), and whether a collective is broken never depends on a model (rule 93).
 4. **A vanished party's absence** is declared only by the authority its clause names, and moves its stake only by succession or by sharing it out among the remaining holders (rules 85 to 89).
 5. **Who acts for a collective in each layer** is its layer's rule (field 19, rule 60), save where its control model narrows it for some acts (rule 99).
 
@@ -2002,6 +2003,34 @@ Its legal effect lies outside the core.
 **A collective that names no control model** (terms without field 35) is judged by this rule alone: every clone of its agreement needs its constitutional change rule, `[0]`, save a clone changing only the cMIPs it names for a layer's tasks or its extensions, which needs the rule of each layer it touches (`[6, layer]`, rule 60), besides the signatures rule 45 lists; every act for it counts under the rule of its layer (rule 60); and each holder whose consent a change needs signs for itself (rule 48). *Every member, by head, under the constitutional rule: the last resort was always this.*
 
 **A collective whose control model's cMIP a verifier does not hold is judged under the constitutional rule alone for its way out.** The way out is a resignation (rule 70) and a stepping down (rule 71), a succession executed under a plan (rule 83), a declaration of absence and its outcomes (rules 85 to 89), a fork or a closing (rule 91), a rollback that copies the agreement in force just before the broken act (rule 93), a holder's transfer of its own share (rule 10) and a release to the public domain by owners who each sign for themselves (rule 55): each is judged by this MIR alone, whatever model the collective names and whether the verifier holds it or not, and no model's answer is asked for it. Where such an act needs the consent of holders who have no say (a fork's successors paying a kept holder less, rule 91), each holder's own signature act is judged by this MIR alone; holders consenting together under the model's rule instead are unknown to a verifier that does not hold the model, and so is the act that needs that consent: unknown, never incomplete. **Every other act whose power its model decides** (an act for the collective its model may narrow, a clone changing what its model governs) **is unknown to that verifier**, as an act of a specification it does not implement is (Dependencies). **For the way out, and for whether a collective is broken, the agreement in force is read along the line's constitutional clones alone, each judged by this MIR under the constitutional change rule; a clone changing only what the control model governs changes nothing those read.** *Client conformance:* **a client acting for or reading a collective holds the default control cMIP.** *Stated cost: a verifier without the collective's control model sees that collective's way out and its money's guarantees, and little of its everyday acts.*
+
+#### Rule 67. Protected clauses: the judicial tier
+
+Collectives only. **The judicial tier changes only with the signature of every member whose voice remains, whatever field 18 says, and there is one version of it for everyone; no control model names or adds a power for it.** The judicial tier is:
+- the abandonment clause;
+- the succession plans;
+- the keepers;
+- outside the terms, the collective's split agreement (rule 15), naming its split service and backups;
+- the time reference;
+- the arbitrators or verifiers (field 13);
+- the condition, time reference and anchoring cMIPs (field 2, tasks 9, 10 and 11), and the absence-proof cMIP (task 14, named in the abandonment clause's key 3);
+- the chain of judgment (field 21).
+
+*The concurrency rule (field 10) is withdrawn: rule 90's default stands. Task 14 is judicial in its own entry ("Tasks").*
+
+A clone changing any of them names the judicial tier's rule, `[4]`, in its mark, with every party of the parent whose voice remains, counted as rule 65 says. A version that also changes the constitution names the constitutional change rule beside it, and needs both (rule 98).
+
+A clause naming only the member a version removes goes with the removal. This is only the seat part of their succession plan, which needs no judicial power. The plan for their stake stays with the stake, as a departed holder's plan (field 16 may carry it; it names stake successors only). No other judicial clause changes that way.
+
+A departed holder's stake plan changes only with that holder's signature too.
+
+Every member, and every departed holder, is judged by the version in force.
+
+*It is the joint signature that matters. If a member who did not sign a change kept the version they signed, two members could hold different judges, and where one joined after a change the other never signed, no judge would be signed by both: nothing would say who decides between them. With one version for everyone, every dispute has one judge both signed. Arbitrators, the condition cMIP and the anchoring cMIP can each decide who wins a dispute, so a majority still cannot pick a friendlier judge after the fact.*
+
+*Stated cost: one member can hold a change back, leverage being part of life; a judge that dies cannot trap the collective, the chain of judgment taking over (rule 35); and a holdout makes a standoff, which is good: communication becomes the only channel to solve it, with a collective fork as an option to settle it (rule 91).*
+
+In a deal no clone completes without everyone, so the question never arises.
 
 #### Rule 47. A deal changes only with everyone's signature
 
@@ -2191,7 +2220,7 @@ An act of a MIR is never such an act.
 
 *Otherwise an unlisted specification would be a way around every rule: a member could act under a specification nobody adopted, around the rule of its layer. A rail is not adopted this way: it is named by the collective's own pointer or vault (Money rule 4). With adoption under the layer's own rule, waiting costs little.*
 
-**The judicial tasks.** The judicial tasks (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof) stay outside every layer's rule. Neither the rule for Agreements nor any other layer's rule changes them. They change only under the power the collective's control model names for them, or its constitutional change rule where it names none (rules 98, 99).
+**The judicial tasks.** The tasks of the judicial tier (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof) stay judicial, outside every layer's rule. Neither the rule for Agreements nor any other changes them, nor any power a control model names. They change only with every member's signature (rule 67). That includes a version that also changes the constitution, which needs the constitutional change rule too (rule 98).
 
 The rule for Agreements adopts the cMIPs for Agreements' other tasks (12 grant limits, 13 claims). *The split task (8) is a publication's: a collective names its split cMIP in its split agreement (rule 15).*
 
@@ -2345,7 +2374,7 @@ For each judge it names, an agreement may name, in its terms (field 21), the one
 
 *The split service is no judge: its backups are attempts per payment, not stages (rule 17, publication field 11), and this rule's periods and deadlines do not apply to them.*
 
-Everyone signs the chain with the terms: every party in a deal, every member in a collective; a collective changes it under its constitutional change rule (rule 98).
+Everyone signs the chain with the terms: every party in a deal, every member in a collective; a collective as part of the judicial tier (rule 67).
 
 *How it runs most of the time.*
 
@@ -2421,13 +2450,13 @@ The rule is the chain's, so it holds for every judge the chain serves, one activ
 - **for a clone**: the powers the clone needs, each a power in the mark's grammar ("Terms", `power`) with the parties it is counted among and its rule; and, for each holder whose consent a change needs (rule 98), whether holders consenting together under a rule that holder accepted stand in for its signature;
 - or **refused** (the act or the clone is outside what the model allows: invalid, whatever it gathers), or **unknown**.
 
-**The queries a model answers**, so that the core judges by itself what rules 65, 71, 74 and 83 ask of an area: for each area the model gives, its **id**, its **holders**, its **number** (how many of them decide together) and its **reach** (the act types it reaches, and the operational fields and tasks it decides); and, for each power it names, **the parties it is counted among**. The core reads these from the model's answer on the agreement in force, and uses them as rule 65 counts any power.
+**The queries a model answers**, so that the core judges by itself what rules 65, 71, 74 and 83 ask of an area: for each area the model gives, its **id**, its **holders**, its **number** (how many of them decide together) and its **reach** (the act types it reaches, and the operational fields and tasks it decides); for each power it names, **the parties it is counted among**; and, for each stake of the collective, **its holders' rule**: how its holders consent together, and which holders it binds. *Client conformance:* a buyer's client shows that rule before paying for a share. A change of it binds no holder without that holder's signature (rule 45). The core reads these from the model's answer on the agreement in force, and uses them as rule 65 counts any power.
 
 **The core counts; the model never does.** Every power a model names is counted as rule 65 counts a power, on the collective's line, by the signature acts the verifier holds; a mark naming it is checked as rule 46 checks any mark. So two verifiers holding the same acts and the same model reach the same verdict, and a model's answer is checked from the terms, the parameters and the line, never taken on the model's word. *As a proven delivery's checker is asked for a proof's verdict and the verifier checks the proof (rule 11), a control model is asked which powers an act needs and the verifier counts the signatures.*
 
 **What a control model may never decide:**
 
-- **anything in parts two and three, or absence**: what a keeper's record places, what a line placed, a grant's fate, conservation, only the plan, open obligations, money passing layer by layer; leaving, stepping down, how a succession executes, a fork, a closing, a broken collective and its rollback, the public domain; a declaration of absence and its outcomes (rules 85 to 89). **It names no power for a constitutional change, and adds none to one** (rule 98).
+- **anything in parts two and three, or absence**: what a keeper's record places, what a line placed, a grant's fate, conservation, only the plan, open obligations, money passing layer by layer; leaving, stepping down, how a succession executes, a fork, a closing, a broken collective and its rollback, the public domain; a declaration of absence and its outcomes (rules 85 to 89). **It names no power for a constitutional change or a change of the judicial tier, and adds none to one** (rules 67, 98).
 - **the last resort** (rule 98): it never lowers the constitutional change rule for a constitutional change, never lets a stake move, shrink or be paid less without its holder or a rule that holder accepted, never reaches what one holder is paid unlike the others, and never changes who acts in a layer beyond narrowing it for the acts its powers reach;
 - **who signed**: it counts no signature itself, reads no clock (a time reference does, rule 33), and judges no proof of absence (task "Absence proof").
 
@@ -2455,10 +2484,6 @@ The default control cMIP's rule 64 (rule 99).
 #### Rule 66. Protections still hold
 
 The default control cMIP's rule 66 (rule 99).
-
-#### Rule 67. Protected clauses: the judicial tier
-
-The default control cMIP's rule 67 (rule 99).
 
 #### Rule 68. Departed holders
 
@@ -2661,8 +2686,8 @@ power = [ 0 ]                             ; the parent's constitutional change r
       / [ 2, area: uint ]                 ; the power over an area of this id, as a control model gives it
       / [ 3, party: hash ]                ; the succession plan of this party, signed in advance by every voice
                                           ; (rule 83); its signers are the seat successors entering
-      / [ 4 ]                             ; a judicial tier's rule, as a control model names it (the default's: every
-                                          ; party of the parent whose voice remains)
+      / [ 4 ]                             ; the judicial tier's rule: every party of the parent whose voice remains
+                                          ; (rule 67)
       / [ 5, stake: uint ]                ; a rule by which the parent's stake of this index's holders consent together,
                                           ; as a control model gives it: its signers the holders whose signatures
                                           ; meet it (rules 65, 98)
@@ -2670,7 +2695,7 @@ power = [ 0 ]                             ; the parent's constitutional change r
                                           ; that layer's tasks and the extensions it declares (rule 60)
 ```
 
-*Powers `[1]`, `[2, area]`, `[4]` and `[5, stake]` are written here so that every mark has one grammar; in a collective, what each means and who it is counted among is its control model's (rule 99). A deal's clone names `[1]`, its clone rule, every party (rule 47); a mark naming `[2, area]`, `[4]` or `[5, stake]` in a deal, or any of the four in a collective naming no control model, is false (rule 46).*
+*Powers `[1]`, `[2, area]` and `[5, stake]` are written here so that every mark has one grammar; in a collective, what each means and who it is counted among is its control model's (rule 99). `[4]`, the judicial tier's rule, is this MIR's (rule 67). A deal's clone names `[1]`, its clone rule, every party (rule 47); a mark naming `[2, area]`, `[4]` or `[5, stake]` in a deal, or `[1]`, `[2, area]` or `[5, stake]` in a collective naming no control model, is false (rule 46).*
 
 *A rule's threshold is between 1 and the number of parties; named parties are parties. In a key grammar, members of a holding are parties.*
 
@@ -3154,7 +3179,7 @@ Only a party to an agreement founding a collective may resign or step down. A de
 What it gives up:
 
 - Without field 1, it gives up the signer's voice in that agreement and in every agreement descending from it by clones (rule 70).
-- With field 1, it is a stepping down. It gives up only the signer's place among that area's holders, in that agreement and its descendants, until a constitutional clone refits the area (rule 71). The signer must hold that area there.
+- With field 1, it is a stepping down. It gives up only the signer's place among that area's holders, in that agreement and its descendants, until a constitutional clone refits the area (rule 71). Any member may step down from any area id the agreement's control model parameters name, read from no model's answer; a step-down by a member who does not hold that area changes nothing.
 
 It takes effect for the collective's acts at the collective's line registering it (record field 3). It never takes effect at its place in its signer's own sequences, which are not read ("Made before, made after").
 
