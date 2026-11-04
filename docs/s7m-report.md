@@ -119,10 +119,10 @@ On whether the boundary can be built from the texts alone: partly. It named thes
 
 **Succeeds** (each is a flaw to decide, not mine to fix):
 1. **The judicial clauses are left to the model.** The model can hand the abandonment clause, its authority and the absence-proof cMIP to one member. That member's accomplice then declares the others absent, removes their voices, and shares out the stakes of any member with no named stake successor. This is the two-step attack the judicial tier existed for. **Question 4 below; my lean is now firmly to keep the judicial tier's sentence in the core.**
-2. **Dilution.** A holders' rule of one millionth plus issuance with no pre-emption lets one member issue itself almost the whole stake. Rule 8 lets "an issuance a collective's control model allows" through, and pre-emption lives only in the default cMIP. **Question 10.**
+2. **Dilution.** A holders' rule of one millionth plus issuance with no pre-emption lets one member issue itself almost the whole stake. Rule 8 lets "an issuance a collective's control model allows" through, and pre-emption lives only in the default cMIP. **Question 9.**
 3. **Changes to the parameters alone** escape `[0]`: areas are redrawn and words moved into the parameters by the model's own power. That is my own exception in rule 98.3, and it contradicts rule 71 and the definition of voice. **Question 3.**
-4. **A publication paying a member's company 95%**: the stated cost "prices and publications are no owners' matter" is now only in the cMIP. **Question 11.**
-5. **The buyer bait** (a transfer held back while the holders' rule changes) is older than this draft: rule 10 of draft 17 reads the same. **Question 12.**
+4. **A publication paying a member's company 95%**: the stated cost "prices and publications are no owners' matter" is now only in the cMIP. **Question 10.**
+5. **The buyer bait** (a transfer held back while the holders' rule changes) is older than this draft: rule 10 of draft 17 reads the same. **Question 11.**
 6. **The future keeper or time reference chosen by one member's model power.** This follows from 1.
 
 **Ambiguous:**
@@ -172,17 +172,17 @@ On whether the boundary can be built from the texts alone: partly. It named thes
    - *Alternative:* move it to the parameters, which changes the bytes of every collective.
    - *Lean:* keep it.
 8. **Money's pointer.** Money draft 11 lists "a take-up of an issuance (Agreements rule 96)". Draft 18's pointer keeps it readable. The suggested wording for Money's next draft is "(a control model's, Agreements rule 99)". No other MIR was changed.
-10. **A floor under owners consenting together, and under issuance.**
+9. **A floor under owners consenting together, and under issuance.**
     - The core accepts any rule binding only holders who accepted it, with no floor on its form.
     - *Options:* (a) pre-emption into the core (rule 8's exception only for a pre-emptive issuance) and a floor on the share (for example a majority of the stake); (b) leave forms free, and add client conformance showing at founding and at purchase who can consent for a holder.
     - *Lean:* (a) for pre-emption, (b) for the share.
-11. **The publications stated cost** ("prices and publications are no owners' matter; owners are protected by sight and exit") moved with rule 95. It is true whatever the model, so it belongs back in the core, beside rule 48. *Lean:* move it back, as a sentence.
-12. **The buyer bait** (older than this draft). *Lean:* a change to the rules binding a stake's holders, made after a transfer was signed and before the line placed it, binds that buyer only with its signature.
-13. **Powers a model adds to a constitutional clone.**
+10. **The publications stated cost** ("prices and publications are no owners' matter; owners are protected by sight and exit") moved with rule 95. It is true whatever the model, so it belongs back in the core, beside rule 48. *Lean:* move it back, as a sentence.
+11. **The buyer bait** (older than this draft). *Lean:* a change to the rules binding a stake's holders, made after a transfer was signed and before the line placed it, binds that buyer only with its signature.
+12. **Powers a model adds to a constitutional clone.**
     - *Options:* (a) forbid models from adding any power to a constitutional change, and from refusing a change of field 35; (b) allow it, with rule 61 coverage for every added power.
     - *Lean:* (a). Constitutional changes are the core's, all the way.
-14. **What the boundary must expose** so that the core can judge stepping down, succession and grants within an area by itself: the holders, id, number and reach of an area, and the list of parties a power is counted among. With these, the task can be built from the texts alone. Write them into rule 99 as queries the model answers. *Lean:* yes, next texts pass.
-9. **The size.** A pass that says each rule once is needed to reach Fable's estimate. Should it be the next texts session, or folded into the code session?
+13. **What the boundary must expose** so that the core can judge stepping down, succession and grants within an area by itself: the holders, id, number and reach of an area, and the list of parties a power is counted among. With these, the task can be built from the texts alone. Write them into rule 99 as queries the model answers. *Lean:* yes, next texts pass.
+14. **The size.** A pass that says each rule once is needed to reach Fable's estimate. Should it be the next texts session, or folded into the code session?
 
 ## What remains
 
@@ -195,7 +195,7 @@ On whether the boundary can be built from the texts alone: partly. It named thes
 2. **The vectors.** Regenerate the four area cases (bytes change; verdicts must not). Add cases for a model not held, an overreaching model, and no model. Update both READMEs and the Python check.
 3. **The binding**, and Edubba on the default cMIP.
 4. **The six web releases** rebuilt in the branch, then green on GitHub; then the final merge of main (to be announced first).
-5. **The texts' say-it-once pass** (question 9).
+5. **The texts' say-it-once pass** (question 14).
 
 ## Checks
 
