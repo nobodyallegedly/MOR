@@ -66,11 +66,9 @@ kind = [ 0, layer: uint ]                 ; every act of this layer ("Layer"): 1
 field-ref = [ 0, field: uint ]            ; a whole operational field: 7 the stake, 17 refund terms
           / [ 1, task: uint ]             ; one entry of field 2: the cMIP for this task, where the task is operational
 
-field-ref = [ 0, field: uint ]            ; a whole operational field: 7 the stake, 17 refund terms
-          / [ 1, task: uint ]             ; one entry of field 2: the cMIP for this task, where the task is operational
 ```
 
-`holders-rule` and `kind` are the Agreements MIR's ("Terms (type 0)"). Parameters outside this format make every act and clone of the collective **refused** under this cMIP.
+`holders-rule` is the Agreements MIR's ("Terms (type 0)"); `kind` and `field-ref` are this cMIP's, above ("Terms (type 0)"). Parameters outside this format make every act and clone of the collective **refused** under this cMIP.
 
 **The holders' rules** (parameter 30) appear only in terms carrying a key grammar: terms of a deal carrying parameter 30 are invalid. **A holder is whoever field 7 and the placed transfers name: a person, or a collective, which is one holder, giving one consent decided by its own constitution; its members are not holders of what it holds. The holders' rule every holder, `[0]` or no entry, means each holder, a collective counting once, and reads the same declared as by default**: each holder who is no member of the agreement in force signs, a member of the collective whose terms these are consenting through its own constitution (rules 48, 94). *Elsewhere, "every holder of the stake signs" (a change of parameter 30, of the release rule, of a waiver) means each holder by its own signature, members included, a collective once.* *Richer models of control are a cMIP's, built from this grammar.* Each entry names the stake the terms' field 7 defines, index 0, once; a rule by share has its share above zero and at most 1,000,000. An entry may carry a standing waiver of pre-emption, `true` as its third element (rule 96), and parameter 32 written `[0]` is valid only where the parent's entry for the stake issued carries it. A clone whose entry for a stake differs from its parent's is a draft until every holder of that stake signs it (rule 45). **Field 31** appears only in a deal's clone, and names stake transfers of the stake its parent defines. **Field 32** appears only in a collective's clone, which is then an issuance and is judged as rule 96 says.
 
