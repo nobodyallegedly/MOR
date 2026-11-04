@@ -1983,7 +1983,7 @@ Its legal effect lies outside the core.
 
 1. **A deal changes only with every party** whose voice remains (rule 47).
 2. **A stake moves, shrinks or is paid less only with its holder**, save by succession and the declaration of absence's two outcomes (rules 8, 10, 48, 89). A holder who has no say on a change that pays it less signs it.
-3. **A collective's membership, and its way out, change only under its constitutional change rule** (terms field 18), every party whose voice remains when the terms name none (rules 65, 69). *A constitutional change* is a change of field 0 (the parties), 1 (the words), 5 (the clone rule), 12 (the key grammar), 18, 19 (the layers), 22 (the departed members entry) or 35 (the control model, its cMIP or its parameters). A clone making one needs the constitutional change rule, `[0]`, whatever else its control model asks; a rotation declares only a clone making one (rule 69); and only the core reads which change is constitutional for a rotation, a record or a broken collective (rule 93).
+3. **A collective's membership, and its way out, change only under its constitutional change rule** (terms field 18), every party whose voice remains when the terms name none (rules 65, 69). *A constitutional change* is a change of field 0 (the parties), 1 (the words), 5 (the clone rule), 12 (the key grammar), 18, 19 (the layers), 22 (the departed members entry) or 35 (the control model, its cMIP or its parameters). A clone making one needs the constitutional change rule, `[0]`, whatever else its control model asks, save a change of the control model's parameters alone, which needs the powers that model names for it (rule 99); a rotation declares only a clone making a constitutional change (rule 69); and only this MIR reads which change is constitutional for a rotation, a record or a broken collective (rule 93), never a model.
 4. **A vanished party's absence** is declared only by the authority its clause names, and moves its stake only by succession or by sharing it out among the remaining holders (rules 85 to 89).
 5. **Who acts for a collective in each layer** is its layer's rule (field 19, rule 60), save where its control model narrows it for some acts (rule 99).
 
@@ -2402,7 +2402,7 @@ The rule is the chain's, so it holds for every judge the chain serves, one activ
 
 *A control model is how a collective decides what its constitution leaves to some of its members: which change needs which power, which acts some members may do alone, how owners consent together. The core defines none of them; it defines what one accepts, what it produces, and what it may never decide.*
 
-**A collective names its control model in its terms (field 35)**: a cMIP and its parameters, `[cmip, params]`, as the time reference names its own (field 6). Naming it, or changing it or its parameters, is a constitutional change (rule 98). A collective names at most one; a deal names none, and terms of a deal carrying field 35 are invalid.
+**A collective names its control model in its terms (field 35)**: a cMIP and its parameters, `[cmip, params]`, as the time reference names its own (field 6). Naming it, or changing it or its parameters, is a constitutional change (rule 98): naming or changing the cMIP needs the constitutional change rule; changing its parameters alone needs the powers the model names for that change. A collective names at most one; a deal names none, and terms of a deal carrying field 35 are invalid.
 
 **What a control model accepts:**
 
