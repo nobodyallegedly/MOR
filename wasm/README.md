@@ -15,6 +15,19 @@ with `wasm-bindgen-cli` of the version pinned in `Cargo.toml` (0.2.129), and wit
 
 ## For the Dubsar Suite
 
+### Agreements draft 18: control models (S7m, F420 to F423)
+
+A collective's areas, their words, the holders' rules and an issuance's offer are no longer terms fields. They are the parameters of the collective's **control model**, terms field 35, `[cmip, params]` (Agreements rule 99). The core never reads the parameters; the default control cMIP (`cmips/control`, `mor-control`) does, and the binding holds it.
+
+| Old | New |
+| --- | --- |
+| Terms fields 34 (areas), 20 (area words), 30 (holders' rules), 32 (issues under) | Field 35, `[defaultCmip, {20, 30, 32, 34}]`: the same encodings, as the default cMIP's parameters keyed by the old field numbers. A terms payload carrying 20, 30, 32 or 34 is refused: "terms fields 20, 30, 32 and 34 are a control model's parameters" |
+| A collective's terms with none of them | The same terms with field 35 naming the default cMIP and empty parameters, `{}`, so that its tiers, areas and owners' matters apply. **A collective naming no model is judged by the core's last resort** (rule 98): every clone needs the constitutional change rule, and a mark naming the clone rule `[1]` is false |
+| — | **`agreementsControlPack(payload: Uint8Array): Uint8Array`**: moves a collective's keys 20, 30, 32 and 34 into field 35 under the default cMIP (empty parameters where it carries none), and returns the payload; a deal's, or one already carrying field 35, is returned as it came |
+| `agreementsPowersNeeded`, `checkTerms`, every reading of terms | Unchanged in shape. Terms are read through the default model, and the JSON keeps `areas`, `areaWords`, `holdersRules`, `issuesUnder`, now the model's answers. Powers follow F421 and F422: the constitution (fields 0, 1, 5, 12, 17, 18, 19, 22, 24, 35 and the model's parameters) needs `[0]`; the judicial tier (3, 6, 9, 13, 16, 21, field 2's tasks 9, 10, 11 and 14) needs `[4]`; both, both. An area's words, the refund terms and the release rule are now constitutional |
+
+**What an app must do before signing a collective's terms** (a founding or any clone): build the payload as before, then call `agreementsControlPack` on it, and sign what it returns. Or write field 35 itself in its encoder (`clients/repo/src/agreements.ts`, `encodeTerms`). Until then, every collective an app founds or clones is refused by the core, and CI's app steps fail with "What was shown cannot be signed". **Edubba, Dub, Kišib, Damgar, Ummia and the desk all build collective terms through `encodeTerms`**, so the one change there covers them.
+
 The core moved to the bake-to-publication texts (MICS v30 with Identity 15, Text 11, Envelopes 11, Money 11, Agreements 17, Development 11, as rewritten in S7h). What a client names differently, old name first:
 
 | Old | New | Where |
