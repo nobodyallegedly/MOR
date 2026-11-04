@@ -214,18 +214,10 @@ Which powers a clone needs, from its changes alone:
    - and the judicial tier's rule, `[4]`, if some change is judicial (rule 67).
 
    So a clone that changes an area and something outside every area and layer's rule needs both, its mark naming both.
-3. A clone that executes a party's succession plan may instead name that plan, `[3, party]`, alone, where rule 83 allows a seat to pass automatically. It may do so provided it changes nothing but what the plan gives:
-   - the party out of the parties (field 0), its seat successors in;
-   - the party out of the holders of every area it held, nothing else in the areas changed;
-   - **the seat successors in the party's place in every holding of the key grammar (field 12), every threshold unchanged**;
-   - **the party's stakes passed to its stake successors, in the plan's parts (field 7)**, every other holder as it was;
-   - **the seat successors in the party's place in every layer's rule naming it (field 19, `[2, [+ hash]]`), written once for each seat, as in field 0, nothing else in the layers' rules changed**;
-   - the executed plan dropped from field 16, every other plan as it was;
-   - where the party held the chain key alone (`[0, party]`), a succession plan for the seat successor in the executed plan's place, naming at least one seat successor of theirs, as rule 59 requires. The seat successor signs the clone as the plan's signer, so that plan is signed by them in the same clone.
+3. A clone that executes a party's succession plan: Agreements rule 83 (the core's), with no other power; this cMIP names none for it, and leaves its own parameters as they are, reading the departed party out of its areas itself.
 
-   *A key grammar's holdings name only parties, and in most collectives every member holds a share of the chain key, so a seat could never pass without the keys; a plan left in field 16 for someone no longer a party would make the clone invalid. The thresholds stay as the members chose them; the rotation declaring the clone re-deals the keys (rule 83). Where this leaves a case undecided, a verifier answers unknown rather than guessing.*
-
-4. **The owners' matters**: where a change is an owners' matter of a stake (rule 95) whose holders' rule is by share (parameter 30), and that rule is how its holders consent, the clone needs that stake's holders' rule, `[5, stake]`, beside the members' powers above, its mark naming it with the holders whose signatures meet it, so that a false claim sinks the clone (rule 46). Where the stake's holders' rule is every holder, declared or by default, its holders who are no members of the agreement in force sign as rule 48 asks, outside the mark, its members consenting through the powers above. *No declared tier is needed: the owners' matters are counted among a stake's holders, not by moving a field among the members' powers.*
+4. **A reduction of a share** (an issuance, a sale or release of a work): each member is a holder too, signing it or bound by a holders' rule it accepted, as Agreements rule 98.2 says.
+5. **The owners' matters**: where a change is an owners' matter of a stake (rule 95) whose holders' rule is by share (parameter 30), and that rule is how its holders consent, the clone needs that stake's holders' rule, `[5, stake]`, beside the members' powers above, its mark naming it with the holders whose signatures meet it, so that a false claim sinks the clone (rule 46). Where the stake's holders' rule is every holder, declared or by default, its holders who are no members of the agreement in force sign as rule 48 asks, outside the mark, its members consenting through the powers above. *No declared tier is needed: the owners' matters are counted among a stake's holders, not by moving a field among the members' powers.*
 
 A clone needing several powers comes into force only when each is met, all at once or not at all.
 
