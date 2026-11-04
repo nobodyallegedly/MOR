@@ -3638,6 +3638,13 @@ The scenario numbers after each colon are those of the freeze test suite.
 - A collective with departed holders pays a member from its reserve: the payout is done only sealed to every holder of its stake in itself, or public; sealed to members alone, it binds no one: 3.
 - A collective's stake in itself held in part by a deal and in part by another collective: a payout is done only public, a holder being a deal; with no deal among the holders, sealed to every member of the other collective and every other holder: 3.
 
+#### The deciders
+
+- A collective naming no control model: every clone under its constitutional change rule; a mark naming the clone rule invalid; an act under its layer's rule; a sale of a work waiting for a departed holder's own signature: 3.
+- A verifier not holding a collective's control model judging its resignation, fork and rollback under the constitutional rule alone, as one holding it does; an act in an area of that model, and a clone changing what it alone governs, unknown to it: 3.
+- A control model answering for a resignation, or for a clone adding a member, refused; the core judging alone; its answer for an everyday act its area reaches counting: 3.
+- Tiers, areas, the owners' matters, issuance and proxies: run against the default control cMIP, its own freeze scenarios: 3.
+
 #### Members joining and leaving
 
 - A collective whose chain key is held as shares; a member signs a receipt for it under its rule for Money; a member leaves, a record registers it, and the others rotate the chain key; the member who left, with another, signs an act for it, and it does not count; their own acts stay theirs: 3, 9.
