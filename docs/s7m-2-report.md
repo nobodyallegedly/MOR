@@ -70,16 +70,16 @@ A subagent limited to draft 18, the MICS v31 and the default cMIP wrote the wors
 **Still succeeds:**
 1. **Choosing the clock or a judge alone through field 2's judicial tasks** (9, 10, 11; and 14 by rule 60's wording), where field 6 is absent. This is question 2; the MICS already says the opposite of the MIR here.
 2. **A judge swapped by tacking it onto a constitutional change, where field 18 is below everyone.** This is F421's own consequence: "a model adds no power", so `[4]` no longer joins `[0]`. *Fixed in the texts:* the default cMIP's rule 66, a reasoning bullet and a scenario still said "both". Whether the constitution should keep "every member for a judge" whatever field 18 says is question 4.
-3. **Paying holders less or selling works under a tiny holders' rule.** Whether a holder accepted a rule, and what the rule says, is answered by the model from parameters the core cannot read, and the members can change those parameters under `[0]`. Question 5.
+3. **Paying holders less or selling works under a tiny holders' rule.** Whether a holder accepted a rule, and what the rule says, is answered by the model from parameters the core cannot read, and the members can change those parameters under `[0]`. Question 4.
 
 **Ambiguous:**
-- "Offered" and "reached" in pre-emption are undefined in the core (question 6).
+- "Offered" and "reached" in pre-emption are undefined in the core (question 5).
 - A model's refusal of a constitutional clone other than field 35's. *Fixed:* a model is never asked about a constitutional change, so any refusal of one is void.
 - Extensions adopted by one area holder.
 - Area holders moving along the line by the model's own acts.
 - Absence proof via field 2's task 14.
 
-**Two verifiers can still disagree on what the way out reads** (question 7):
+**Two verifiers can still disagree on what the way out reads** (question 6):
 - stepping down and an area's freeze read who holds an area from the model;
 - a fork whose kept holders consented under a holders' rule;
 - "broken" read along constitutional clones, against rule 69's parent requirement when an operational clone was recorded in between;
@@ -131,6 +131,8 @@ A subagent limited to draft 18, the MICS v31 and the default cMIP wrote the wors
 
 Nothing changed in the binding this session. The default cMIP's text is updated for F421: constitutional fields are the core's, and areas no longer reach the refund terms. Its handover still holds: the crate does not exist yet. The apps' display strings citing Agreements rules 64, 67 and 94 to 96 still resolve through draft 18's pointers.
 
+**One app needs a line:** `clients/reader/src/mirs.ts` pins Agreements draft 17, and its test requires the newest draft. It should name `MIR-agreements-draft-18.md`. CI fails on it until then.
+
 ## Edubba on the default cMIP
 
 Not testable until the code moves. One thing to watch: any Edubba collective whose area reaches the refund terms (field 17), or whose operational clone changes keepers or judges, gets a different verdict under F421. That is F421's decision, not a regression.
@@ -147,18 +149,18 @@ Not testable until the code moves. One thing to watch: any Edubba collective who
    - *Options:* (a) add "field 2's entries for tasks 9, 10 and 11" to the constitution; (b) leave them to models, a stated cost.
    - *Lean:* (a), since they decide who wins a dispute, as Fable's principle says.
    - *Cost:* one more clause in the list.
-4. **A judge and the constitution together.** Under F421, a clone changing the constitution and a judge needs `[0]` alone. Where field 18 is below every member, a majority can swap a judge by adding a one-word change, which draft 17's rule 64.1 had stopped.
+3. **A judge and the constitution together.** Under F421, a clone changing the constitution and a judge needs `[0]` alone. Where field 18 is below every member, a majority can swap a judge by adding a one-word change, which draft 17's rule 64.1 had stopped.
    - *Options:* (a) add to rule 98 "a change of fields 3, 6, 9, 13, 16 or 21 needs every member whose voice remains, whatever field 18 says"; (b) leave it to field 18, a stated cost.
    - *Lean:* (a), as the old judicial tier did.
-5. **The core cannot read the holders' rule.**
+4. **The core cannot read the holders' rule.**
    - Today it lives in the model's parameters, so "a rule binding only holders who accepted it" is checked on the model's word.
    - *Options:* (a) the holders' rule of a collective's stake becomes a core query answer (rule 99), shown to a buyer at purchase, and a change of it binds no departed holder without its signature (rule 45 already asks every holder of the stake to sign a change of it); (b) move it back to a core field.
    - *Lean:* (a); the question is whether rule 45's "every holder signs a change of it" is enough once the parameters are constitutional.
-6. **"Offered" and "reached" in pre-emption.** *Lean:* define them in rule 98.2 as the default cMIP's issuance does: public or sealed to the holder, its period on the agreement's time reference, a take-up placed by the line or anchored.
-7. **What the way out reads from a model.** Who holds an area, for stepping down and an area's freeze; and the agreement in force when an operational clone sits between constitutional ones.
+5. **"Offered" and "reached" in pre-emption.** *Lean:* define them in rule 98.2 as the default cMIP's issuance does: public or sealed to the holder, its period on the agreement's time reference, a take-up placed by the line or anchored.
+6. **What the way out reads from a model.** Who holds an area, for stepping down and an area's freeze; and the agreement in force when an operational clone sits between constitutional ones.
    - *Lean:* stepping down judged without the area's holders: any member may step down from any area id its terms name, and a step-down by a non-holder changes nothing.
    - *Lean:* rule 69's parent read as "the latest constitutional clone, or any clone recorded after it".
-8. **Field 24's name.** Fable's review calls field 24 "the holders' rule of the stake in itself". In the texts, field 24 is the release rule. I wrote it as the release rule. Please confirm that was meant.
+7. **Field 24's name.** Fable's review calls field 24 "the holders' rule of the stake in itself". In the texts, field 24 is the release rule. I wrote it as the release rule. Please confirm that was meant.
 
 ## Checks
 
@@ -167,6 +169,10 @@ Not testable until the code moves. One thing to watch: any Edubba collective who
   - `cargo test -p mor-core --test spec_texts` passes;
   - `clients/assess` passes 60 of 60.
 - No core or WebAssembly change, so the releases need no rebuild.
-- CI on pull request 121: see below.
+- **CI on pull request 121, checked myself** (runs 1368 to 1370):
+  - every step green but one: `clients/reader`, test 8, "the texts shipped are the newest draft of each MIR under spec/";
+  - `clients/reader/src/mirs.ts` lists `MIR-agreements-draft-17.md`, and draft 18 is now the newest;
+  - **a one-line change in `clients/` (`'MIR-agreements-draft-17.md'` to `'MIR-agreements-draft-18.md'`), not mine to make: for the Dubsar Suite, before this branch can be green.**
+  - The regtest job, the reproducible display client and the vectors are green.
 
 Draft 18 is now 81,001 words (65,513 without italics); the say-it-once pass is a later texts session.
