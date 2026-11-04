@@ -100,6 +100,8 @@ The suite's changes are on the branch: `encodeTerms` writes field 35, and the ar
   - **`clients/repo`**, test 13, "an ordinary change is recorded at once, without a rotation": the app changes its release area's words as an ordinary change, and its own check now refuses that ("not an ordinary change of the release area"). Under F421 an area's words are the control model's parameters, the constitution's, so this verdict moved by decision. The app's test is the suite's to update; I did not change `clients/`;
   - **`clients/collective`** and the display client's test 2: `mor_wasm_bg.wasm` differs from the released copy in `built/`, expected until the releases are rebuilt.
 
+- **CI on this part's latest head, read myself** (head `98b5811`, the suite's commit on top of this part's work; read 4 November, 21:36 UTC): **all green**: "tests" (run 1404: the Rust workspace, both vector steps, every app and module, the regtest job, the reproducible display client), Nakišib and site in WebKit. The suite's changes to `clients/repo` and its walk (an area's words under the constitutional rule, F421) cleared run 1394's app failures.
+
 ## What remains, in order
 
 1. Questions 1 to 3 (types 26 to 28; `check_areas`; the core's excused and buyer-bait checks), and the three vectors that wait on them.
