@@ -262,8 +262,10 @@ test('the author, without a terminal: identities, a release, a collective founde
   commit(w.checkout, 'src/lib.rs', 'pub fn six() -> u8 { 6 }\n');
   const frozen = await prepare(c, { kind: 'release', publisher: col.id, version: '11b.5' });
   assert.match(frozen.reading.blocking.join(' '), /The Releases area has no holder left whose voice remains: it is frozen, and a release would count for nothing until the members refit it/);
-  const noWords = await prepare(c, { kind: 'words', collective: col.id, text: 'Other words.' });
-  assert.match(noWords.reading.blocking.join(' '), /The Releases area is frozen/);
+  // A frozen area's words still change, as any constitutional change (Agreements draft 18, F421): rewording is not the area's holders' to block.
+  const frozenWords = await prepare(c, { kind: 'words', collective: col.id, text: 'Other words.' });
+  assert.doesNotMatch(frozenWords.reading.blocking.join(' '), /frozen/);
+  assert.match(words(frozenWords.reading), /A constitutional change/);
 
   // Everything signed is on record, newest first, with the digest that was shown.
   s = await state(c);
