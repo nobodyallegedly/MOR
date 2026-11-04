@@ -239,7 +239,7 @@ Counted as Agreements rule 65 counts a power: this cMIP names, for each power, t
 
 Protections still hold. Whatever power brings a clone into force, it cannot:
 - reduce a stake without its holder's signature (rule 48), a departed holder's included (rule 68), nor lower what it pays a departed holder without that holder's signature (rule 48), or the stake's holders' rule where that holder accepted one (rule 94);
-- nor change the judicial tier without every member, a version changing the constitution included (rules 64.1, 67).
+- nor change the judicial tasks of field 2 without every member (rule 67); a constitutional change needs the constitutional change rule alone (Agreements rule 98).
 
 *Stated cost: by default a member who is present but unwanted cannot be removed; the others can leave, each alone (rule 70), or use the abandonment clause where it applies. A group that wants expulsion writes a constitutional change rule below everyone at founding, where every founder signs it; even then, removal takes the voice, never the stake. A member who dies or vanishes never freezes the constitution: the abandonment clause every collective carries can remove their voice (rule 61).*
 
@@ -379,7 +379,7 @@ A holder the offer did not reach had no period: an issuance naming that offer st
 
 **A proxy is revocable by the holder at any time**, by a revocation of the proxy (type 28), placed as the proxy was.
 
-**The fence.** A proxy only votes, and only on matters a majority of the stake decides under a holders' rule: an owners' matter under the stake's holders' rule by share (rules 94 to 96), or a constitutional change counted among the stake's holders (rule 69). Never:
+**The fence.** A proxy only votes, and only on matters a majority of the stake decides under a holders' rule: an owners' matter under the stake's holders' rule by share (rules 94 to 96); never a constitutional change, which is the core's alone (Agreements rule 98). Never:
 
 - on anything that needs every holder: changing the holders' rule (parameter 30), waiving pre-emption (rule 96), or a change that needs the holder's own signature (rules 8, 48);
 - on the owner's money or property: taking up an issuance, selling or transferring the stake, signing a deal;
@@ -452,7 +452,7 @@ A later proxy of the same holder on the same stake, placed by the collective's l
 
 - **Protected clauses, one version for everyone.** *A stake cannot be reduced without its holder's signature. But the clause that decides absence, the keeper who judges it and the service that receives the collective's income could move the stake in two steps; and an arbitrator, a condition cMIP or an anchoring cMIP chosen after the fact could decide who wins. So in a collective they change only with every member's signature. Keepers and the collective's split agreement are protected for the same reason.*
 - **A departed holder is paid, and consulted on the owners' matters by its holders' rule.** *A stake is a share of income, not a say, save on what touches every owner alike. Whoever keeps a stake after leaving accepts the collective's decisions, and is protected by what company law protects: the stake never shrinks without them, and no term treats it worse than a member's. Keeping their old judges would leave a split service keeping two sets of terms for one payment.*
-- **A judge and the constitution together need both rules.** *Otherwise two members of three could change a judge by adding a one-word change to the constitution.*
+- **A judge is the constitution's.** *The keepers, judges and clock are the collective's constitution (Agreements rule 98), changed under its constitutional change rule alone; this cMIP keeps every member only for field 2's judicial tasks (rule 67).*
 - **Nobody is left holding an area they no longer have, and no hire outlives an emptied area.** *A clone that removes a member takes them off their areas, and an area may wait, empty and frozen, for the collective to refit it, keeping the founders' number for the refit. An empty area is an emergency: its grants end at the line that emptied it, which places every act under them like any act for the collective; the refit reinstates, by cloning, only what is still wanted.*
 - **A judge is never chosen by one area.** *The time reference, the condition cMIP and the anchoring cMIP can decide who wins a dispute; they stay judicial, as every member signed them, whoever runs Agreements' other tasks. And a judge never handles what it judges: a specification chosen as a judge serves no other task and is no extension, however it is named and in a deal as in a collective. This removes a conflict of interest and keeps every area out of the choice of judges.*
 - **Nobody loses their say by default.** *Protecting the abandonment clause guards one route to removing a party's voice; rewriting the clone rule is another, which would be unguarded. So the rules that decide who decides form their own tier, changed by their own rule, which is everyone unless the founders, all of them, agreed otherwise. What judges the members changes only with all of them. Everything else is operational, and can be handed to the members who run it, as areas: they decide there without asking the rest, and can hire, but never give more than they hold.*
@@ -470,7 +470,7 @@ A later proxy of the same holder on the same stake, placed by the collective's l
 - A founding naming every layer's rule, the client showing first what one member can do alone in Money; a founding lacking a layer, or naming a seventh, founds nothing; under `[1, 1]` for Money one member's payee pointer counts, under `[1, 2]` it needs another member's signature; a grant from a member acting alone in Money reaching Money, valid, and from one whose rule is two together, invalid; a record any member draws: 3.
 - A clone whose mark names a rule it did not meet, or another rule than the one its changes require, is invalid; a clone changing two areas, each area's power met and named, comes into force at once; an operational clone needs no rotation: 3.
 - A clone changing an area and a judicial clause needs both powers: 3.
-- A version changing the constitution and a judge needs the constitutional change rule and every member for the judge, its mark naming both: 3.
+- A version changing the constitution and a judge needs the constitutional change rule alone, its mark naming `[0]` (Agreements rule 98): 3.
 - A mark whose signers are not ascending by hash is invalid: 3.
 - The collective's receipts and price tags, Money acts, fall under its rule for Money, and count only on a rail Module its pointer or vault names, implementing the payment cMIP named for it; an act of a cMIP its terms name nowhere falls in no layer and counts for nothing, whoever signs it, until the layer's members adopt it: 3.
 - The members named for Money adopt a second payment cMIP under its rule; the clone is recorded at once, without a rotation, and governs the collective's acts from the record on; a new rail needs no clone, only a payee pointer: 3.
