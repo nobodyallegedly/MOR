@@ -174,6 +174,19 @@ impl ControlModel for Default {
     fn issuance(&self, parent: &Terms, clone: &Terms, facts: &mor_core::agreements::control::IssuanceFacts) -> R<Result<Option<Vec<Hash>>, mor_core::agreements::CloneState>> {
         issuance::issuance(parent, clone, facts)
     }
+
+    /// Rule 97: the holder's own vote beats its proxy's; its latest proxy
+    /// the line placed, unrevoked, scoped to this version or standing, votes
+    /// where the proxy's signature act is among those the line names.
+    fn proxy_votes(&self, facts: &mor_core::agreements::control::ProxyFacts, version: &Hash, proxy_signed: &dyn Fn(&Hash) -> bool) -> bool {
+        if facts.own_vote {
+            return false;
+        }
+        match &facts.latest {
+            Some((p, revoked)) => !revoked && !p.scoped.is_some_and(|v| v != *version) && proxy_signed(&p.proxy),
+            None => false,
+        }
+    }
 }
 
 /// This cMIP as terms name it, its parameters packed fresh from the terms'
