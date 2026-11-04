@@ -124,6 +124,11 @@ Each needs a sentence, or a small format, before a second model can be written. 
 - **`scripts/c-box/make-c-box.sh`** into a scratch folder: it refused nothing (S7m-4's run; rerun before the third box).
 - **CI** on `76a3a40`, read myself: Nakišib green, site in WebKit green; "tests" running at the time of writing (recorded below when done).
 
+- **CI, read myself** (run 1394, head `81746bc`, S7m-5's last; read 4 November, 20:55 UTC):
+  - every step green but two app steps: the Rust workspace, both vector steps, desk, Kišib, Damgar, Ummia, Dub, Edubba's paths through them, the regtest job (Damgar and the desk on regtest), the reproducible display client and the other apps;
+  - **`clients/repo`**, test 13, "an ordinary change is recorded at once, without a rotation": the app changes its release area's words as an ordinary change, and its own check now refuses that ("not an ordinary change of the release area"). Under F421 an area's words are the control model's parameters, the constitution's, so this verdict moved by decision. The app's test is the suite's to update; I did not change `clients/`;
+  - **`clients/collective`** and the display client's test 2: `mor_wasm_bg.wasm` differs from the released copy in `built/`, expected until the releases are rebuilt.
+
 ## What remains, in order
 
 1. Issuance, proxies, `owners.rs` and `check_areas` into the crate, as pure functions of the line's data; the core's issuance-as-reduction and buyer-bait checks for any model.

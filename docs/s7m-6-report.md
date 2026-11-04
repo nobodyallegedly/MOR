@@ -95,6 +95,11 @@ The suite's changes are on the branch: `encodeTerms` writes field 35, and the ar
 - **`scripts/c-box/make-c-box.sh`** into a scratch folder: it refused nothing (8 texts, 12 vector files).
 - **CI:** on `76a3a40`, Nakišib and site in WebKit green. The main "tests" run on this part's heads is to be read; locally, every test in the core, the crate and the binding passes, the vectors regenerate byte for byte, and the Python check agrees.
 
+- **CI, read myself** (run 1394, head `81746bc`, S7m-5's last; read 4 November, 20:55 UTC):
+  - every step green but two app steps: the Rust workspace, both vector steps, desk, Kišib, Damgar, Ummia, Dub, Edubba's paths through them, the regtest job (Damgar and the desk on regtest), the reproducible display client and the other apps;
+  - **`clients/repo`**, test 13, "an ordinary change is recorded at once, without a rotation": the app changes its release area's words as an ordinary change, and its own check now refuses that ("not an ordinary change of the release area"). Under F421 an area's words are the control model's parameters, the constitution's, so this verdict moved by decision. The app's test is the suite's to update; I did not change `clients/`;
+  - **`clients/collective`** and the display client's test 2: `mor_wasm_bg.wasm` differs from the released copy in `built/`, expected until the releases are rebuilt.
+
 ## What remains, in order
 
 1. Questions 1 to 3 (types 26 to 28; `check_areas`; the core's excused and buyer-bait checks), and the three vectors that wait on them.
