@@ -205,12 +205,12 @@ test('what a clone changes, by tier, and the powers its mark must name', () => {
   assert.match(w, /A change to the abandonment clause: judicial, a protected clause/);
   assert.match(w, /So its mark must name the constitutional change rule and the judicial tier's rule, every member whose voice remains \(Agreements rule 44c\)\.\nIts mark names exactly that\./);
 
-  // An ordinary change: the release area's words, operational in that area.
-  const words = encodeTerms(collectiveTerms(g({ releaseWords: 'Ours.' }), [a, b, c], parent, [{ power: { area: 1 }, signers: [a, b] }]));
+  // The release area's words: constitutional since Agreements draft 18 (F421).
+  const words = encodeTerms(collectiveTerms(g({ releaseWords: 'Ours.' }), [a, b, c], parent, [{ power: { constitutional: true }, signers: [a, b, c] }]));
   const ww = readChanges(before, words, names);
   const wt = ww.map((l) => l.text).join('\n');
-  assert.match(wt, /A change to the “Releases” area's own words: operational, in the “Releases” area\./);
-  assert.match(wt, /So its mark must name the power of the “Releases” area \(area 1\)/);
+  assert.match(wt, /A change to the “Releases” area's own words: constitutional\./);
+  assert.match(wt, /So its mark must name the constitutional change rule/);
   assert.ok(!ww.some((l) => l.tone === 'bad'));
 
   // A false mark: the clone rule claimed for a member change.

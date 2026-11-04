@@ -724,10 +724,12 @@ export class TestCollective {
   }
 
   /**
-   * An ordinary change (Agreements rule 37c): the release area's own words, which
-   * its holders change alone. A clone marked with the release area's power
-   * and the members who sign it; the collective records it at once with
-   * their signature acts (A2), with its signing key: no rotation (Q8).
+   * A change of the release area's own words. Since Agreements draft 18
+   * (F421) an area's words are among the control model's parameters, which
+   * are constitutional: a clone marked with the constitutional change rule
+   * (field 18; every member unless the founding wrote otherwise), so an
+   * area's holders can no longer widen their own area. The collective
+   * records it at once with the signature acts (A2): no rotation (Q8).
    */
   async changeReleaseWords(opts: {
     words: string;
@@ -737,7 +739,7 @@ export class TestCollective {
     expect?: Uint8Array;
   } & Gates): Promise<{ clone: string; record: string; signed: Signed[]; stopped?: string }> {
     const governance = { ...this.f.governance, releaseWords: opts.words };
-    return this.recordChange({ ...opts, governance, power: { area: 1 }, what: 'not an ordinary change of the release area' });
+    return this.recordChange({ ...opts, governance, power: { constitutional: true }, what: 'not a constitutional change of the release area\'s words (Agreements draft 18, F421)' });
   }
 
   /**

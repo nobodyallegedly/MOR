@@ -162,8 +162,8 @@ function releaseArea(s: State, c: Col): string {
 <dt>Who decides</dt><dd>${a.frozen ? '<strong>Frozen</strong>: nobody holds it any more. A release counts for nothing until the members refit it (a change of members or rules).' : `Any ${a.needed} of the holders who remain${a.needed < a.threshold ? ` (the rule asks for ${a.threshold}; fewer remain, so all of them)` : ''}`}</dd>
 <dt>Its own words</dt><dd>${a.words ? e(a.words) : '<span class="small">none</span>'}</dd></dl>
 ${down ? `<div class="row">${down}</div><p class="small">A holder may step down at once, alone; the other holders carry on. With nobody left, the area is frozen until the members refit it.</p>` : ''}
-${a.frozen ? '' : `<form class="words row" data-collective="${e(c.id)}"><input name="text" type="text" class="wide" placeholder="New words for the ${e(a.name)} area" required><button type="submit">Review the new words</button></form>
-<p class="small">An ordinary change: signed by enough holders and written on the collective's record at once, with no rotation.</p>`}</div>`;
+<form class="words row" data-collective="${e(c.id)}"><input name="text" type="text" class="wide" placeholder="New words for the ${e(a.name)} area" required><button type="submit">Review the new words</button></form>
+<p class="small">A constitutional change: an area's words are signed under the constitutional change rule (every member, unless the founding said otherwise), not by the area's holders alone, so that nobody widens their own area. Written on the collective's record at once, with no rotation.</p></div>`;
     })
     .join('');
 }

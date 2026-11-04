@@ -2171,10 +2171,12 @@ export class Actions {
   }
 
   /**
-   * An ordinary change (Agreements rule 37c, Q8): the release area's own words,
-   * changed by enough of its holders, marked with the area's power, and
-   * written on the collective's record at once, drawn by a member. No
-   * rotation.
+   * The release area's own words (Agreements draft 18, F421): an area's words
+   * are among the control model's parameters, which are constitutional, so the
+   * clone is marked with the constitutional change rule (field 18) and signed
+   * under it, not by the area's holders alone. Written on the collective's
+   * record at once, drawn by a member. No rotation. The stated cost: one more
+   * signature round for a rewording.
    */
   async prepareWords(a: { collective: string; text: string; signers?: string[] }) {
     const names = this.store.names();
@@ -2186,23 +2188,23 @@ export class Actions {
     if (!text) blocking.push('Write the words.');
     if (text && text === (c.f.governance.releaseWords ?? '')) blocking.push('Nothing changes: these are the area’s words already.');
     const g: Governance = { ...c.f.governance, releaseWords: text };
-    // Who must sign, as Agreements count the area's holders whose voice remains (rules 37b, 44d).
+    // Who must sign, as Agreements count the constitutional change rule's voices (field 18; F421).
     const agreements = await this.agreementsOf(c);
     const lm = this.agreementsMark(c, agreements, (m) => encodeTerms(collectiveTerms(g, c.f.members, c.f.agreement, m)), [], names, 'needed');
-    const areaCount = lm.counts.find((x) => 'area' in x.power);
-    const voices: string[] = areaCount?.voices ?? [];
-    const k = areaCount?.needed ?? 0;
-    if (agreements.agreement && !agreements.broken && !voices.length) blocking.push('The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Agreements rule 37b).');
+    const ruleCount = lm.counts.find((x) => 'constitutional' in x.power);
+    const voices: string[] = ruleCount?.voices ?? [];
+    const k = ruleCount?.needed ?? 0;
+    if (agreements.agreement && !agreements.broken && !voices.length) blocking.push('Nobody whose voice remains can meet the constitutional change rule, so the area’s words cannot change.');
     else blocking.push(...lm.blocking);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : (lm.mark.find((e) => 'area' in e.power)?.signers ?? []);
+    const signers = a.signers?.length ? [...new Set(a.signers)] : (lm.mark.find((e) => 'constitutional' in e.power)?.signers ?? []);
     if (a.signers?.length) {
       for (const s of signers) {
-        if (!voices.includes(s)) blocking.push(`${names(s)} does not hold the Releases area with a voice that remains, as Agreements count it, so their signature cannot meet its power.`);
+        if (!voices.includes(s)) blocking.push(`${names(s)} has no voice that remains under the constitutional change rule, as Agreements count it, so their signature cannot meet it.`);
         else if (!this.store.holds(s)) blocking.push(`${names(s)} is not held by this program, so it cannot sign here.`);
       }
-      if (voices.length && signers.length < k) blocking.push(`Its words change with ${anyOf(k, voices, names)}; only ${signers.length} sign here.`);
+      if (voices.length && signers.length < k) blocking.push(`The area’s words change with ${anyOf(k, voices, names)}; only ${signers.length} sign here.`);
     }
-    const mark: MarkEntry[] = [{ power: { area: RELEASE_AREA }, signers }];
+    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c.f.members, c.f.agreement, mark));
     let changes: Line[] = [];
     let after: TermsRead | null = null;
@@ -2220,8 +2222,8 @@ export class Actions {
     const reading: Reading = {
       title: `New words for the Releases area of “${cname}”`,
       summary: [
-        "An ordinary change: it changes only the Releases area's own words, an operational matter in that area (Agreements rules 44a, 44b).",
-        `The clone is marked with the Releases area's power and signed by ${list(signers.map(names))}: enough of the area's holders (${anyOf(k, voices, names)}) (Agreements rules 44c, 45a).`,
+        "A constitutional change: an area's own words are part of the collective's control model, which only the constitutional change rule changes, so that an area's holders cannot widen their own area (Agreements draft 18, F421). The cost: one more signature round than an area's holders alone.",
+        `The clone is marked with the constitutional change rule and signed by ${list(signers.map(names))}: enough under that rule (${anyOf(k, voices, names)}) (Agreements rules 44c, 45a).`,
         "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective (Agreements rule 60): no rotation, no new keys (Agreements rule 37c, Q8).",
       ],
       sections: [

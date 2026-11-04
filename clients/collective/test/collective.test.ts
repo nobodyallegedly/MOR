@@ -219,15 +219,16 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.equal(checked.ok, true);
   assert.match(checked.reading.title, /^VERIFIED: MOR 11b\.3/);
 
-  // 8. An ordinary change: the release area's own words, recorded at once, no rotation.
+  // 8. The release area's own words: a constitutional change (F421), recorded at once, no rotation.
   const ww = await sign(c, { kind: 'words', collective: col.id, text: 'We release only what we both checked.' });
   const www = words(ww.review.reading);
   assert.match(ww.review.reading.title, /New words for the Releases area of “Makers”/);
-  assert.match(www, /An ordinary change: it changes only the Releases area's own words, an operational matter in that area/);
-  assert.match(www, /marked with the Releases area's power and signed by Sim Two .* and Sim Three/);
+  assert.match(www, /A constitutional change: an area's own words are part of the collective's control model/);
+  assert.match(www, /The cost: one more signature round/);
+  assert.match(www, /marked with the constitutional change rule and signed by Sim Two .* and Sim Three/);
   // The record is drawn by a member with their own key (Agreements rule 60; was: "signed with its signing key").
   assert.match(www, /The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective \(Agreements rule 60\): no rotation, no new keys \(Agreements rule 37c, Q8\)/);
-  assert.match(www, /A change to the “Releases” area's own words: operational, in the “Releases” area/);
+  assert.match(www, /A change to the “Releases” area's own words: constitutional/);
   assert.match(www, /Its mark names exactly that/);
   assert.equal(ww.review.reading.plain[0].text, 'We release only what we both checked.');
   s = await state(c);

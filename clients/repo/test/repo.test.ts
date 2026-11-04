@@ -231,11 +231,13 @@ test('the next release is signed under the new rules', async () => {
   assert.match(vl.problems[0], /on no chain of the collective.*rule 58/);
 });
 
-test('an ordinary change is recorded at once, without a rotation', async () => {
+test('a change of the release area\'s words (constitutional, F421) is recorded at once, without a rotation', async () => {
   const [m1, , , m4] = m;
+  // Since Agreements draft 18 an area's words are constitutional: every member whose voice remains signs.
+  const all = m.filter((x) => c.f.members.includes(x.id));
   const before = c.f.agreement;
   const position = c.f.identity.position;
-  const got = await c.changeReleaseWords({ words: 'Releases are signed after a fresh checkout.', proposer: m1, signers: [m1, m4] });
+  const got = await c.changeReleaseWords({ words: 'Releases are signed after a fresh checkout.', proposer: m1, signers: all });
   assert.equal(c.f.identity.position, position, 'no rotation');
   assert.equal(c.f.agreement, got.clone);
   assert.notEqual(got.clone, before);
