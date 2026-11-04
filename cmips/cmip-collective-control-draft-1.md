@@ -23,11 +23,11 @@
 
 This cMIP is a control model (Agreements rule 99). A collective names it in its terms' field 35 as `[ this cMIP's hash, params ]`. It answers the task as rule 99 asks:
 
-- **for a clone**, the powers it needs are those rule 64 gives, each counted as Agreements rule 65 counts it among the parties, an area's holders or a stake's holders this cMIP names; and, for a change that is an owners' matter (rule 95), whether the stake's holders' rule stands in for each holder's signature (rule 94);
+- **for a clone making no constitutional change** (Agreements rule 98, which alone judges one), the powers it needs are those rule 64 gives, each counted as Agreements rule 65 counts it among the parties, an area's holders or a stake's holders this cMIP names; and, for a change that is an owners' matter (rule 95), whether the stake's holders' rule stands in for each holder's signature (rule 94);
 - **for an act for the collective**, whether an area reaches it (section 3; Agreements rule 60), and then that area's holders and its number;
 - **refused** where the parameters are outside section 2's format, or the clone or act breaks a rule below that makes it invalid; **unknown** where a check it needs reads an act or a fact the verifier does not hold.
 
-It decides nothing Agreements rule 98 or rule 99 keeps for the core: where a rule below seems to, the core's rule decides.
+It decides nothing Agreements rule 98 or rule 99 keeps for the core: where a rule below seems to, the core's rule decides. **Every rule below that speaks of a constitutional field, or of the judicial tier's clauses other than field 2's judicial tasks, is a pointer to Agreements rule 98**: such a change needs the constitutional change rule, `[0]`, alone, and this cMIP names no power for it and adds none.
 
 ## 2. Parameters
 
@@ -137,42 +137,42 @@ Every field belongs to one tier.
 
 | Field | Content | Tier |
 | --- | --- | --- |
-| 0 | Parties | Constitutional (membership) |
-| 1 | The words: the constitution's and general words | Constitutional |
+| 0 | Parties | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 1 | The words: the constitution's and general words | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 2 | cMIPs, per task | Tasks 9 (condition evaluation), 10 (time reference), 11 (anchoring) and 14 (absence proof; its cMIP named in the abandonment clause's key 3): judicial, outside the rule for Agreements. Every other task: operational, under the rule of the task's layer (field 19), or in an area naming the task, and under the rule of each other layer the same specification serves. Task 8 (split) is never named here: it is a publication's. A specification named for a judicial task, or in field 6, is named for no other task and as no extension |
-| 3 | Keepers | Judicial |
+| 3 | Keepers | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 4 | Signing rule, or a clone's mark | None: each version states its own |
-| 5 | Clone rule | Constitutional |
-| 6 | Time reference | Judicial |
+| 5 | Clone rule | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 6 | Time reference | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 7 | The stake: its holders and their shares in the target | Operational |
 | 8 | *Withdrawn*: once the split plan, now a publication's; never reused | — |
-| 9 | Abandonment clause | Judicial |
+| 9 | Abandonment clause | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 10 | *Withdrawn*: once the concurrency rule; rule 90's default stands; never reused | — |
 | 11 | Parent | None: every clone names its own |
-| 12 | Key grammar | Constitutional |
-| 13 | Arbitrators or verifiers | Judicial |
+| 12 | Key grammar | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 13 | Arbitrators or verifiers | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 14 | *Withdrawn*: once the split service's grant, now a publication's split service; never reused | — |
 | 15 | Extensions | Operational, per extension, added or dropped: under the rule of Development, and of each layer the extension declares in its specification (Development field 10) |
-| 16 | Succession plans | Judicial |
-| 17 | Refund terms | Operational |
-| 18 | Constitutional change rule | Constitutional |
-| 19 | Layers: who acts for the collective in each of the five layers | Constitutional |
-| 20 | Area words, per area | Operational, in the area whose id it carries |
-| 21 | Chain of judgment | Judicial |
-| 22 | Departed members entry | Constitutional; it records only who is departed, the stake being in field 7 |
+| 16 | Succession plans | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 17 | Refund terms | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 18 | Constitutional change rule | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 19 | Layers: who acts for the collective in each of the five layers | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 20 | Area words, per area (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 21 | Chain of judgment | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 22 | Departed members entry | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 23 | Forked from | None: founding terms only |
-| 24 | Release rule | Operational, in no area: the clone rule, and every owner's signature |
+| 24 | Release rule | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 25 | *Withdrawn*: once the relays; never reused | — |
 | 26 | Settles: the tips a deal's settling version drops | None: a deal's clone only; deals have no tiers |
 | 27 | The judge of forks | None: a deal only; deals have no tiers |
 | 28 | *Withdrawn*: once the fees, now a publication's split plan's; never reused | — |
 | 29 | *Withdrawn*: once the split service's backups, now a publication's; never reused | — |
-| 30 | Holders' rules, per stake | Operational, in no area, as field 24: the clone rule, and every holder of the stake whose entry changes; changed by nobody's majority (rules 45, 94) |
+| 30 | Holders' rules, per stake (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 31 | Transfers counted | None: a deal's clone states its own; deals have no tiers |
-| 32 | Issues under | None: each issuance names its own offer; its change of field 7 is an owners' matter (rules 95, 96) |
+| 32 | Issues under (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 33 | Target: a claim, or the collective itself | None: founding terms set it, and every clone repeats it |
-| 34 | Areas, finer than a layer | Constitutional |
-| 35 | The control model: this cMIP | Constitutional (Agreements rule 98); its parameters 20, 30, 32 and 34 as their rows say |
+| 34 | Areas, finer than a layer (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
+| 35 | The control model: this cMIP | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 
 An area's field references (area key 4) name only operational fields and tasks: fields 7 and 17, and tasks of field 2 other than 8, 9, 10, 11 and 14 (fields 8, 10, 14, 25, 28 and 29 are withdrawn).
 
@@ -205,7 +205,7 @@ Any other operational change lies under no layer's rule and in no area.
 
 Which powers a clone needs, from its changes alone:
 
-1. If any change is constitutional: the constitutional change rule, `[0]`. Where some change is also judicial, the judicial tier's rule, `[4]`, is needed too: the version stays a draft until both are met, its mark naming both. *Without this, two members of three could change a judge by adding a one-word change to the constitution. The constitutional change rule still changes every other tier alone; a judge needs every member as well.*
+1. If any change is constitutional (Agreements rule 98, which alone reads it): the constitutional change rule, `[0]`, alone; this cMIP names no other power for that clone.
 2. Otherwise:
    - the rule of each layer under which some change lies, `[6, layer]`, one for each such layer;
    - the power of each area in which some change lies, `[2, area]`, one for each such area;
@@ -244,33 +244,9 @@ Protections still hold. Whatever power brings a clone into force, it cannot:
 
 #### Rule 67. Protected clauses: the judicial tier
 
-*In short: the clauses that decide disputes change only with every member, and there is one version of them for everyone.*
+The abandonment clause, the succession plans, the keepers, the collective's split agreement, the time reference, the arbitrators or verifiers, the absence-proof cMIP and the chain of judgment are the collective's constitution, and change only under its constitutional change rule (Agreements rule 98). **What this cMIP keeps of the judicial tier is the judicial tasks of field 2** (9 condition evaluation, 10 time reference, 11 anchoring): a clone changing one names the judicial tier's rule, `[4]`, every party of the parent whose voice remains, counted as Agreements rule 65 says, one version for everyone. A clone that also makes a constitutional change needs the constitutional change rule alone (Agreements rule 98), and names no `[4]`.
 
-Collectives only. **The judicial tier changes only with the signature of every member whose voice remains, and there is one version of it for everyone.** The judicial tier is:
-- the abandonment clause;
-- the succession plans;
-- the keepers;
-- outside the terms, the collective's split agreement (rule 15), naming its split service and backups;
-- the time reference;
-- the arbitrators or verifiers (field 13);
-- the condition, time reference and anchoring cMIPs (field 2, tasks 9, 10 and 11), and the absence-proof cMIP (task 14, named in the abandonment clause's key 3);
-- the chain of judgment (field 21).
-
-*The concurrency rule (field 10) is withdrawn: rule 90's default stands. Task 14 is judicial in its own entry ("Tasks").*
-
-A clone changing any of them names the judicial tier's rule, `[4]`, in its mark, with every party of the parent whose voice remains, counted as rule 65 says. A version that also changes the constitution names the constitutional change rule beside it, and needs both (rule 64.1).
-
-A clause naming only the member a version removes goes with the removal. This is only the seat part of their succession plan, which needs no judicial power (rule 63). The plan for their stake stays with the stake, as a departed holder's plan (field 16 may carry it; it names stake successors only). No other judicial clause changes that way.
-
-A departed holder's stake plan changes only with that holder's signature too.
-
-Every member, and every departed holder (rule 68), is judged by the version in force.
-
-*It is the joint signature that matters. If a member who did not sign a change kept the version they signed, two members could hold different judges, and where one joined after a change the other never signed, no judge would be signed by both: nothing would say who decides between them. With one version for everyone, every dispute has one judge both signed. Arbitrators, the condition cMIP and the anchoring cMIP can each decide who wins a dispute, so a majority still cannot pick a friendlier judge after the fact.*
-
-*Stated cost: one member can hold a change back, leverage being part of life; a judge that dies cannot trap the collective, the chain of judgment taking over (rule 35); and a holdout makes a standoff, which is good: communication becomes the only channel to solve it, with a collective fork as an option to settle it (rule 91).*
-
-In a deal no clone completes without everyone, so the question never arises.
+*It is the joint signature that matters: arbitrators, the condition cMIP and the anchoring cMIP can each decide who wins a dispute, so a majority still cannot pick a friendlier judge after the fact.*
 
 #### Rule 68. Departed holders
 
