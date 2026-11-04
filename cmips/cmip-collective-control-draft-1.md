@@ -63,7 +63,8 @@ kind = [ 0, layer: uint ]                 ; every act of this layer ("Layer"): 1
                                           ; 4 Agreements, 5 Development; in a grant's field 6 only (an area
                                           ; reaches act types, a layer's rule the whole layer)
      / [ 1, spec: hash, type: uint ]      ; every act of this type in this specification
-field-ref = [ 0, field: uint ]            ; a whole operational field: 7 the stake, 17 refund terms
+field-ref = [ 0, field: uint ]            ; a whole operational field: 7 the stake (17, the refund terms, is constitutional:
+                                          ; Agreements rule 98)
           / [ 1, task: uint ]             ; one entry of field 2: the cMIP for this task, where the task is operational
 
 ```
@@ -174,7 +175,7 @@ Every field belongs to one tier.
 | 34 | Areas, finer than a layer (a parameter of field 35) | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 | 35 | The control model: this cMIP | Constitutional: the core's, under the constitutional change rule alone (Agreements rule 98); this cMIP names no power for it |
 
-An area's field references (area key 4) name only operational fields and tasks: fields 7 and 17, and tasks of field 2 other than 8, 9, 10, 11 and 14 (fields 8, 10, 14, 25, 28 and 29 are withdrawn).
+An area's field references (area key 4) name only operational fields and tasks: field 7, and tasks of field 2 other than 8, 9, 10, 11 and 14 (fields 8, 10, 14, 25, 28 and 29 are withdrawn).
 
 
 *Field 4 belongs to no tier: in a clone it is a mark of fact, written fresh each time; founding terms are signed by everyone, and the tiers govern only later changes. Who signs what for the collective is its layer rules and its areas, which are constitutional. Each area carries its own words, changed by its holders with it, so the words never go stale and no area's holder rewrites the constitution's.*
