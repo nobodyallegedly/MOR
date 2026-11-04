@@ -1798,7 +1798,9 @@ impl<'a> AgreementsView<'a> {
         }
         // F424: and nothing but constitutional changes, so that telling a
         // broken collective from one that is not never needs the model.
-        if changes(&parent, &k_terms).iter().any(|c| c.tier() == super::tiers::Tier::Operational) {
+        // Field 7 changes only by its placed acts, a succession's and an
+        // absence outcome's among them (rule 98.2): no operational part.
+        if changes(&parent, &k_terms).iter().any(|c| c.tier() == super::tiers::Tier::Operational && *c != Change::Field(7)) {
             return Ok(Some("a rotation declares only a clone whose every change is constitutional; its operational part is recorded separately (rules 69, 98; F424)".into()));
         }
         if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
