@@ -38,7 +38,71 @@ use super::formats::{Area, AgreementsError, HoldersEntry, IssuesUnder, Power, Te
 use super::tiers::Change;
 use crate::cbor::Value;
 use crate::hash::Hash;
+use std::collections::BTreeSet;
 use std::rc::Rc;
+
+/// What the core reads, at the line that would put an issuance in force, for
+/// a model to judge it (the line as data; Agreements rules 98.2 and 99).
+/// Each fact the core could not read is an error the model returns where its
+/// judgment reaches it, never earlier.
+pub struct IssuanceFacts {
+    /// The one stake the clone changes, where exactly one changes.
+    pub stake: Option<usize>,
+    /// That stake's holders and shares at the line (field 7 with the placed
+    /// transfers applied, rule 10).
+    pub roster: R<Vec<(Hash, u64)>>,
+    /// The holders whose signature acts on the clone the line places.
+    pub signed: BTreeSet<Hash>,
+    /// The act the issuance names as its offer, where it names one.
+    pub offer: Option<R<OfferFacts>>,
+}
+
+/// An issuance offer as the line places it (the default control cMIP's
+/// type 26), read by the core.
+pub struct OfferFacts {
+    /// Whether the act is of the offer's type.
+    pub is_offer: bool,
+    /// Its payload, decoded.
+    pub offer: R<super::owners::IssuanceOffer>,
+    /// Whether it offers the stake changed, of a version of this agreement.
+    pub ours: bool,
+    /// The rest, read where the offer is the collective's own: `Err` where
+    /// the version it names cannot be read.
+    pub placed: R<OfferPlaced>,
+}
+
+/// What the line shows of an offer.
+pub struct OfferPlaced {
+    /// An act of the collective that is done (rule 57).
+    pub done: bool,
+    /// Placed before the line putting the issuance in force.
+    pub before: bool,
+    /// The agreement names a time reference for its period.
+    pub has_time: bool,
+    /// It reached every holder at its own line, in order: `Ok(false)` at the
+    /// first it did not reach.
+    pub reached_all: R<bool>,
+    /// The caller states its period lapsed (rule 33).
+    pub lapsed: bool,
+    /// For each holder at the issuance's line, in the roster's order,
+    /// whether it took up its proportion: a signature act naming the offer,
+    /// kept at the line, within the period where it lapsed, paid at least
+    /// its part of the price.
+    pub took_up: Vec<(Hash, R<bool>)>,
+}
+
+/// What the core reads of a holder's proxy on a stake, at a line (the line
+/// as data; the default control cMIP's rule 97).
+pub struct ProxyFacts {
+    /// The holder placed a signature act of its own on the version at or
+    /// before the line.
+    pub own_vote: bool,
+    /// The holder's latest proxy on the stake the line placed, a holder of
+    /// the stake where it was placed, and whether a revocation of it was
+    /// placed before the line.
+    pub latest: Option<(super::owners::Proxy, bool)>,
+}
+
 
 /// A model's answers to the queries of rule 99, read from its parameters.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -71,6 +135,21 @@ pub trait ControlModel {
     fn clone_powers(&self, parent: &Terms, clone: &Terms, ops: &[Change], ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>) -> R<Vec<Power>> {
         let _ = (parent, clone, ops, ext_layers);
         Err(AgreementsError::Check("this control model names no powers for clones"))
+    }
+    /// A clone that is an issuance (its answers name what it issues under),
+    /// judged from the line's facts: `Ok(Some(excused))`, the holders whose
+    /// share it scales down under a holders' rule they accepted (who then do
+    /// not sign for themselves, rule 98.2); `Err(state)` where it fails.
+    fn issuance(&self, parent: &Terms, clone: &Terms, facts: &IssuanceFacts) -> R<Result<Option<Vec<Hash>>, super::view::CloneState>> {
+        let _ = (parent, clone, facts);
+        Ok(Ok(None))
+    }
+    /// Whether a holder's vote is cast by its proxy, from the line's facts
+    /// (`proxy_signed`: whether the proxy's signature act is among those the
+    /// line names; `version`: the version voted on).
+    fn proxy_votes(&self, facts: &ProxyFacts, version: &Hash, proxy_signed: &dyn Fn(&Hash) -> bool) -> bool {
+        let _ = (facts, version, proxy_signed);
+        false
     }
 }
 
