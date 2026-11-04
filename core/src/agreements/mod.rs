@@ -40,7 +40,7 @@ pub use open_formats::{
 pub use publication::{Partner, Publication, PublicationAct};
 pub use pay::{owners_line_lowered, pay_signers, stakes_paid_less, PaidLess};
 pub use proofs::{delivery_checkers, OfferClass, ProofChecker, ProofVerdict};
-pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
+pub use tiers::{changes, constitutional, judicial_changes, powers_needed, rollback_powers, Change, Tier, CONSTITUTION, JUDICIAL_FIELDS};
 pub use view::{
     Deadline, KeeperSequence, Agreement, AreaCount, AreaLimits, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement, Payment,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,

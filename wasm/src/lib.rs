@@ -2569,7 +2569,7 @@ pub fn agreements_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<J
     let ext = s.ext()?;
     let needs = agreements::powers_needed(&p, &c, &s.mirs()?, &|e: &Hash| {
         ext.get(e).cloned().ok_or(agreements::AgreementsError::Missing(*e))
-    })
+    }, &mor_control::held())
     .map_err(lerr)?;
     let tier = |t: agreements::Tier| match t {
         agreements::Tier::Constitutional => "constitutional",

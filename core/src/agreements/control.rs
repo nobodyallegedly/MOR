@@ -10,7 +10,8 @@
 //! A model the verifier does not hold answers nothing, and what depends on
 //! it is unknown to that verifier.
 
-use super::formats::{Area, HoldersEntry, IssuesUnder, Terms, R};
+use super::formats::{Area, AgreementsError, HoldersEntry, IssuesUnder, Power, Terms, R};
+use super::tiers::Change;
 use crate::cbor::Value;
 use crate::hash::Hash;
 use std::rc::Rc;
@@ -36,6 +37,26 @@ pub trait ControlModel {
     fn pack(&self) -> Option<fn(&Terms) -> Value> {
         None
     }
+    /// The powers a clone of a collective's agreement needs for its
+    /// operational changes `ops` (never a constitutional or judicial one,
+    /// which the core reads itself, rules 67 and 98): each a power in the
+    /// mark's grammar, which the core counts (rule 65). `ops` empty: what a
+    /// clone changing nothing needs. `ext_layers` gives the layers an
+    /// extension declares. An answer naming the constitutional change rule
+    /// or the judicial tier's rule is refused.
+    fn clone_powers(&self, parent: &Terms, clone: &Terms, ops: &[Change], ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>) -> R<Vec<Power>> {
+        let _ = (parent, clone, ops, ext_layers);
+        Err(AgreementsError::Check("this control model names no powers for clones"))
+    }
+}
+
+/// The model's answer for an operational clone, refused where it reaches
+/// the constitution or the judicial tier (rule 99).
+pub fn checked(powers: Vec<Power>) -> R<Vec<Power>> {
+    if powers.iter().any(|p| matches!(p, Power::Constitutional | Power::Judicial | Power::Plan(_))) {
+        return Err(AgreementsError::Check("a control model names no power for the constitution or the judicial tier (rules 67, 98, 99): refused"));
+    }
+    Ok(powers)
 }
 
 /// The control models a verifier holds, by cMIP.

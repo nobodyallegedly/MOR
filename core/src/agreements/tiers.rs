@@ -1,17 +1,18 @@
-//! Tiers (Agreements draft 7, rules 44a to 44c): what a clone changes, the tier of
-//! each change, the area it lies in, and so which powers its mark must name.
+//! What a clone changes, and the core's floor (Agreements draft 18, rules
+//! 67, 98 and 99; F421, F422).
 //!
 //! In plain words: compare the clone with its parent field by field (and
-//! fields 2, 15 and 20 entry by entry). Any constitutional change needs the
-//! constitutional change rule alone (F120). Otherwise each area in which a
-//! change lies needs its holders' power; an operational change no area
-//! holds needs the clone rule; and a judicial change needs every member
-//! whose voice remains, one version for everyone (F121). A clone that
-//! changes nothing needs the clone rule. Which power is
-//! needed is read from the bytes, never from what the clone says of itself.
+//! fields 2, 15 and the areas' words entry by entry). A change of the
+//! constitution needs the constitutional change rule; a change of the
+//! judicial tier, every member whose voice remains; both, both. The core
+//! reads these itself and never asks a model. What an operational change
+//! needs is the collective's control model's answer (its areas, its layer
+//! rules, its clone rule: `cmips/control`), or, with no model, the last
+//! resort. Which power is needed is read from the bytes, never from what the
+//! clone says of itself.
 
 use super::formats::{
-    layers, task_layer, FieldRef, AgreementsError, Mirs, Power, Terms, JUDICIAL_TASKS, R,
+    layers, task_layer, AgreementsError, Mirs, Power, Terms, JUDICIAL_TASKS, R,
 };
 use crate::cbor;
 use crate::hash::Hash;
@@ -41,18 +42,31 @@ impl Change {
     /// The tier of the change (rule 44a's table).
     pub fn tier(&self) -> Tier {
         match self {
-            Change::Field(f) => match f {
-                // 19, the layers' rules, and 34, the areas: who decides.
-                0 | 1 | 5 | 12 | 18 | 19 | 22 | 34 | 35 => Tier::Constitutional,
-                3 | 6 | 9 | 13 | 16 | 21 => Tier::Judicial,
-                // 7, 8, 17; 24, the release rule, in no area: the clone
-                // rule, with every owner's signature besides (N8).
-                _ => Tier::Operational,
-            },
+            // F422: the judicial tier, the core's, every member whatever
+            // field 18 says (Agreements rule 67).
+            Change::Field(f) if JUDICIAL_FIELDS.contains(f) => Tier::Judicial,
             Change::Task(t) if JUDICIAL_TASKS.contains(t) => Tier::Judicial,
-            Change::Task(_) | Change::Extension(_) | Change::Words(_) => Tier::Operational,
+            // F421: the rest of the constitution, the core's (rule 98): its
+            // fields, and the control model with its parameters (34 the
+            // areas, 30 the holders' rules, 20 the areas' words).
+            Change::Field(f) if CONSTITUTION.contains(f) || [20, 30, 34].contains(f) => Tier::Constitutional,
+            Change::Words(_) => Tier::Constitutional,
+            Change::Field(_) | Change::Task(_) | Change::Extension(_) => Tier::Operational,
         }
     }
+}
+
+/// The collective's constitution (Agreements rule 98, F421): terms fields
+/// changed only under the constitutional change rule.
+pub const CONSTITUTION: [u64; 16] = [0, 1, 3, 5, 6, 9, 12, 13, 16, 17, 18, 19, 21, 22, 24, 35];
+/// The judicial tier's fields (Agreements rule 67, F422), with field 2's
+/// judicial tasks ([`JUDICIAL_TASKS`]): every member whose voice remains.
+pub const JUDICIAL_FIELDS: [u64; 6] = [3, 6, 9, 13, 16, 21];
+
+/// Whether a clone of a collective's agreement makes a constitutional
+/// change, the judicial tier's included (rule 98: only the core reads it).
+pub fn constitutional(parent: &Terms, clone: &Terms) -> bool {
+    changes(parent, clone).iter().any(|c| c.tier() != Tier::Operational)
 }
 
 /// The changes a clone makes to its parent (rule 44b): a field differs when
@@ -163,74 +177,6 @@ fn removal_only(parent: &Terms, clone: &Terms) -> bool {
     expected == got
 }
 
-/// Where an operational change lies (rule 63): the parent's layer rules
-/// and areas it lies under, as the powers they are, and whether some part
-/// of it lies under neither.
-fn lies_in(
-    parent: &Terms,
-    clone: &Terms,
-    change: &Change,
-    ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>,
-) -> R<(Vec<Power>, bool)> {
-    let mut powers = vec![];
-    let mut nowhere = false;
-    // A layer's rule (field 19), for layers 1 to 5; Identity's tasks lie
-    // under none, a collective's Identity acts being its chain acts (rule
-    // 60): the clone rule (reading).
-    let mut layer_rule = |l: u64, powers: &mut Vec<Power>| {
-        if (layers::TEXT..=layers::DEVELOPMENT).contains(&l) {
-            powers.push(Power::Layer(l));
-        } else {
-            nowhere = true;
-        }
-    };
-    match change {
-        Change::Task(t) => {
-            let layer = task_layer(*t).expect("tasks are checked");
-            // An area naming the task by a field reference, or else the
-            // task's layer rule.
-            let by_ref = parent.areas().iter().find(|a| a.fields.iter().flatten().any(|f| *f == FieldRef::Task(*t)));
-            match by_ref {
-                Some(a) => powers.push(Power::Area(a.id)),
-                None => layer_rule(layer, &mut powers),
-            }
-            // A specification the clone also names for a task of another
-            // layer answers to that layer's rule too.
-            if let Some(spec) = clone.cmip(*t) {
-                for (t2, h) in &clone.cmips {
-                    if h == spec {
-                        let l2 = task_layer(*t2).expect("tasks are checked");
-                        if l2 != layer {
-                            layer_rule(l2, &mut powers);
-                        }
-                    }
-                }
-            }
-        }
-        Change::Extension(e) => {
-            layer_rule(layers::DEVELOPMENT, &mut powers);
-            for l in ext_layers(e)? {
-                layer_rule(l, &mut powers);
-            }
-        }
-        Change::Words(id) => match parent.area(*id) {
-            Some(a) => powers.push(Power::Area(a.id)),
-            None => layer_rule(0, &mut powers),
-        },
-        Change::Field(f) => match parent
-            .areas()
-            .iter()
-            .find(|a| a.fields.iter().flatten().any(|x| *x == FieldRef::Field(*f)))
-        {
-            Some(a) => powers.push(Power::Area(a.id)),
-            None => layer_rule(0, &mut powers),
-        },
-    }
-    powers.sort_by_key(|p| p.encoding());
-    powers.dedup();
-    Ok((powers, nowhere))
-}
-
 /// The powers a rollback's mark names (rule 37d, F185): the constitutional
 /// change rule of the agreement in force just before the broken act, its
 /// parent, and, where the rollback also changes the judicial tier, the
@@ -245,62 +191,91 @@ pub fn rollback_powers(parent: &Terms, clone: &Terms) -> Vec<Power> {
     out
 }
 
-/// The powers a clone of a collective's agreement needs, from its changes
-/// alone (rule 44c, 1 and 2), ascending as a mark lists them. A deal's
-/// clone needs the clone rule, every party (rule 45b). `ext_layers` gives
-/// the layers an extension declares in its specification (Development,
-/// field 10); an extension whose specification the caller does not hold is
-/// an error, never a guess.
+/// The powers a clone needs (Agreements rules 47, 67, 98, 99), ascending as
+/// a mark lists them. A deal's clone: the clone rule, every party. A
+/// collective's: the core reads the constitution and the judicial tier
+/// itself (`[0]`, `[4]`) and never asks a model about them; what an
+/// operational change needs is the control model's answer, asked of the
+/// model the verifier holds (unknown, `Missing`, where it holds none), and,
+/// for a collective naming no model, the last resort: a layer's rule for a
+/// change of the cMIPs it adopts or its extensions, the constitutional
+/// change rule for anything else. The owners' consent a change needs is the
+/// core's guarantee (rule 98), beside whatever powers.
 pub fn powers_needed(
     parent: &Terms,
     clone: &Terms,
     mirs: &Mirs,
     ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>,
+    held: &super::control::Held,
 ) -> R<Vec<Power>> {
     let _ = mirs;
     if !parent.is_collective() {
         return Ok(vec![Power::Clone]);
     }
     let ch = changes(parent, clone);
-    if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
-        // F122 (flaw K1, revising F120): the constitutional change rule,
-        // and, where the same version also changes the judicial tier, every
-        // member for it: the mark names both, and the version stays a draft
-        // until both are met.
-        let mut out = vec![Power::Constitutional];
-        if ch.iter().any(|c| c.tier() == Tier::Judicial) {
-            out.push(Power::Judicial);
-        }
-        out.extend(owners_powers(parent, clone));
-        out.sort_by_key(|p| p.encoding());
-        return Ok(out);
-    }
-    let mut areas: Vec<Power> = vec![];
-    let mut clone_rule = ch.is_empty();
-    let mut judicial = false;
-    for c in &ch {
-        match c.tier() {
-            Tier::Judicial => judicial = true,
-            Tier::Operational => {
-                let (a, nowhere) = lies_in(parent, clone, c, ext_layers)?;
-                areas.extend(a);
-                clone_rule |= nowhere;
-            }
-            Tier::Constitutional => unreachable!(),
-        }
-    }
-    areas.sort_by_key(|p| p.encoding());
-    areas.dedup();
+    let judicial = ch.iter().any(|c| c.tier() == Tier::Judicial);
     let mut out: Vec<Power> = vec![];
-    if clone_rule {
-        out.push(Power::Clone);
+    if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
+        out.push(Power::Constitutional);
+    } else {
+        let ops: Vec<Change> = ch.iter().filter(|c| c.tier() == Tier::Operational).cloned().collect();
+        if !ops.is_empty() || ch.is_empty() {
+            match &parent.control {
+                Some(c) => match held.iter().find(|(h, _)| *h == c.cmip) {
+                    Some((_, m)) => out.extend(super::control::checked(m.clone_powers(parent, clone, &ops, ext_layers)?)?),
+                    None => return Err(AgreementsError::Missing(c.cmip)),
+                },
+                None => out.extend(last_resort(clone, &ops, ext_layers)?),
+            }
+        }
     }
-    out.extend(areas);
     if judicial {
         out.push(Power::Judicial);
     }
     out.extend(owners_powers(parent, clone));
     out.sort_by_key(|p| p.encoding());
+    out.dedup();
+    Ok(out)
+}
+
+/// A collective naming no control model (rule 98): a change of the cMIP it
+/// names for a layer's task needs that layer's rule (and the rule of each
+/// other layer the same specification serves); an extension, the rule of
+/// Development and of each layer it declares; anything else, and a clone
+/// changing nothing, the constitutional change rule.
+fn last_resort(clone: &Terms, ops: &[Change], ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>) -> R<Vec<Power>> {
+    let mut out = vec![];
+    if ops.is_empty() {
+        return Ok(vec![Power::Constitutional]);
+    }
+    for c in ops {
+        match c {
+            Change::Task(t) => {
+                let l = task_layer(*t).expect("tasks are checked");
+                if !(layers::TEXT..=layers::DEVELOPMENT).contains(&l) {
+                    return Ok(vec![Power::Constitutional]);
+                }
+                out.push(Power::Layer(l));
+                if let Some(spec) = clone.cmip(*t) {
+                    for (t2, h) in &clone.cmips {
+                        let l2 = task_layer(*t2).expect("tasks are checked");
+                        if h == spec && l2 != l && (layers::TEXT..=layers::DEVELOPMENT).contains(&l2) {
+                            out.push(Power::Layer(l2));
+                        }
+                    }
+                }
+            }
+            Change::Extension(e) => {
+                out.push(Power::Layer(layers::DEVELOPMENT));
+                for l in ext_layers(e)? {
+                    if (layers::TEXT..=layers::DEVELOPMENT).contains(&l) {
+                        out.push(Power::Layer(l));
+                    }
+                }
+            }
+            _ => return Ok(vec![Power::Constitutional]),
+        }
+    }
     Ok(out)
 }
 

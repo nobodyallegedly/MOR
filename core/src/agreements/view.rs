@@ -32,7 +32,7 @@
 //!    ([`AgreementsView::binding`]).
 
 use super::formats::*;
-use super::tiers::{changes, powers_needed, rollback_powers, Change, Tier};
+use super::tiers::{changes, powers_needed, rollback_powers, Change};
 use crate::chain::{Resolution, Status, Verifier, Held};
 use crate::hash::Hash;
 use crate::identity::Payload;
@@ -1089,7 +1089,7 @@ impl<'a> AgreementsView<'a> {
         let needs = if rollback {
             rollback_powers(parent, clone)
         } else {
-            powers_needed(parent, clone, &self.mirs, &self.ext())?
+            powers_needed(parent, clone, &self.mirs, &self.ext(), &self.control)?
         };
         let named: Vec<Power> = mark.iter().map(|e| e.power.clone()).collect();
         if named != needs {
@@ -1616,7 +1616,7 @@ impl<'a> AgreementsView<'a> {
     /// The powers a clone needs (rule 44c).
     pub fn powers_needed(&self, clone: &Terms) -> R<Vec<Power>> {
         let p = clone.parent.ok_or(AgreementsError::Check("not a clone"))?;
-        powers_needed(&self.terms(&p)?, clone, &self.mirs, &self.ext())
+        powers_needed(&self.terms(&p)?, clone, &self.mirs, &self.ext(), &self.control)
     }
 
     // ------------------------------------------------------------ the collective
@@ -1793,10 +1793,7 @@ impl<'a> AgreementsView<'a> {
             ));
         }
         let parent = self.terms(&at.agreement)?;
-        if !changes(&parent, &k_terms)
-            .iter()
-            .any(|c| c.tier() == Tier::Constitutional)
-        {
+        if !super::tiers::constitutional(&parent, &k_terms) {
             return Ok(Some("a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into()));
         }
         if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
@@ -3196,7 +3193,7 @@ impl<'a> AgreementsView<'a> {
                 Some(a) => t.area(a).is_some_and(|ar| ar.holders.contains(p)),
             };
             let constitutional = match &t.parent {
-                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == Tier::Constitutional),
+                Some(pp) => super::tiers::constitutional(&self.terms(pp)?, &t),
                 None => false,
             };
             if named && constitutional && !self.valid_sigs(v, &[*p]).is_empty() {
@@ -3262,9 +3259,7 @@ impl<'a> AgreementsView<'a> {
             // Named again: by a constitutional clone (rule 37b's refit), never
             // by an ordinary clone that only copies the list (build question B10).
             let constitutional = match &t.parent {
-                Some(pp) => changes(&self.terms(pp)?, &t)
-                    .iter()
-                    .any(|c| c.tier() == Tier::Constitutional),
+                Some(pp) => super::tiers::constitutional(&self.terms(pp)?, &t),
                 None => false,
             };
             if !named || !constitutional {

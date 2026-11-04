@@ -18,6 +18,9 @@ use mor_core::cbor::Value;
 use mor_core::hash::{sha256, Hash};
 use std::rc::Rc;
 
+/// What an operational clone needs (rules 63, 64).
+pub mod tiers;
+
 type R<T> = Result<T, AgreementsError>;
 
 /// The stand-in hash of this cMIP's specification (test data).
@@ -159,6 +162,10 @@ impl ControlModel for Default {
 
     fn pack(&self) -> Option<fn(&Terms) -> Value> {
         Some(params)
+    }
+
+    fn clone_powers(&self, parent: &Terms, clone: &Terms, ops: &[mor_core::agreements::Change], ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>) -> R<Vec<mor_core::agreements::Power>> {
+        tiers::clone_powers(parent, clone, ops, ext_layers)
     }
 }
 

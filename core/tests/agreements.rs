@@ -131,7 +131,7 @@ fn ext_layers(e: &Hash) -> Result<Vec<u64>, AgreementsError> {
 }
 
 fn needs(parent: &Terms, clone: &Terms) -> Vec<Power> {
-    powers_needed(parent, clone, &mirs(), &ext_layers).unwrap()
+    powers_needed(parent, clone, &mirs(), &ext_layers, &mor_control::held()).unwrap()
 }
 
 fn roundtrip(t: &Terms) -> Terms {
@@ -517,7 +517,7 @@ fn extensions_need_every_lane_they_declare() {
     // An extension whose specification is not held: asked for, never guessed.
     t.extensions = Some(vec![h(EXT), h(99)]);
     assert!(matches!(
-        powers_needed(&p, &t, &mirs(), &ext_layers),
+        powers_needed(&p, &t, &mirs(), &ext_layers, &mor_control::held()),
         Err(AgreementsError::Missing(_))
     ));
     // 3.7j: one declaring Money needs the rule for Money too.
@@ -855,7 +855,7 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
     let mut c2 = c.clone();
     c2.constitutional = Some(Rule::Threshold(2));
     assert_eq!(
-        powers_needed(&p2, &c2, &mirs(), &ext_layers),
+        powers_needed(&p2, &c2, &mirs(), &ext_layers, &mor_control::held()),
         Ok(vec![Power::Constitutional, Power::Judicial])
     );
     // A constitutional version that changes no judge needs that rule alone.
