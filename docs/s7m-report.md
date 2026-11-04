@@ -83,7 +83,58 @@ None changed: the core did not change. On the next session's plan, four publishe
 
 ## The two readings
 
-*(Filled in below once both subagents report.)*
+**(a) A stranger** (a subagent limited to the eight texts and the default cMIP) told back the four parts correctly.
+
+It found that every scar is still answered in the core, with two leaks:
+- **(e) The broken collective's way back with the model not held.** Which agreement is in force rests on earlier clones, whose completeness may need the model's powers.
+- **(i) A token price or a greedy partner through a publication.** This remains a stated cost that only the cMIP writes.
+
+On whether the boundary can be built from the texts alone: partly. It named these gaps:
+- there is no wire format for a model's answer, so in practice the verifier runs the model;
+- "refused" has two meanings;
+- "narrowing" is undefined;
+- the act output names one power, while an act can belong to two layers;
+- the core reads area holders, ids and reach (rules 65, 71, 83, grant field 5) without the task defining those queries;
+- a split agreement's version, a publication, carries no mark to name `[5, stake]` in;
+- `kind` is defined only in the cMIP.
+
+**Fixed on this branch:**
+- a deal's mark was made false by my new italic sentence (deals name `[1]`);
+- with no model, a clone adopting a layer's cMIP now needs `[6, layer]`, not `[0]`;
+- rule 99's "never decides" list now names absence, and says a model may name the power over keepers, judges and plans but never what they do;
+- stale pointers in draft 18, the MICS and the suite.
+
+**Left as listed:** suite steps 1.9e and 1.9g speak of a deal's "holders' rule (field 30)"; Money draft 11's "Agreements rule 96" (now a pointer).
+
+**(b) A hostile reader** wrote the worst control model it could ("ops", held by one member) and tested it against the texts.
+
+**Blocked:**
+- gating any way-out act;
+- gating the record that registers a departure;
+- paying one holder unlike the others;
+- hiding a role share;
+- re-reading a past line;
+- voiding an adopted grant act;
+- undoing past keeper records.
+
+**Succeeds** (each is a flaw to decide, not mine to fix):
+1. **The judicial clauses are left to the model.** The model can hand the abandonment clause, its authority and the absence-proof cMIP to one member. That member's accomplice then declares the others absent, removes their voices, and shares out the stakes of any member with no named stake successor. This is the two-step attack the judicial tier existed for. **Question 4 below; my lean is now firmly to keep the judicial tier's sentence in the core.**
+2. **Dilution.** A holders' rule of one millionth plus issuance with no pre-emption lets one member issue itself almost the whole stake. Rule 8 lets "an issuance a collective's control model allows" through, and pre-emption lives only in the default cMIP. **Question 10.**
+3. **Changes to the parameters alone** escape `[0]`: areas are redrawn and words moved into the parameters by the model's own power. That is my own exception in rule 98.3, and it contradicts rule 71 and the definition of voice. **Question 3.**
+4. **A publication paying a member's company 95%**: the stated cost "prices and publications are no owners' matter" is now only in the cMIP. **Question 11.**
+5. **The buyer bait** (a transfer held back while the holders' rule changes) is older than this draft: rule 10 of draft 17 reads the same. **Question 12.**
+6. **The future keeper or time reference chosen by one member's model power.** This follows from 1.
+
+**Ambiguous:**
+- whether a model may *add* powers to a constitutional clone; an added power is not covered by rule 61, so a vanished holder of it freezes the constitution;
+- a model refusing every change of field 35 locks the collective into it, save by breaking the collective and rolling back.
+
+**Checks:**
+- With the model not held, a verifier can still be left unknown about the way out, indirectly, through which agreement is in force.
+- Two honest verifiers could disagree on a fork whose kept holders consented under the model's rule, because "waits" read as incomplete. **Fixed:** the act is unknown, never incomplete.
+- The default cMIP, read literally, answers for plan successions (its rule 64.3, which rule 83 duplicates), lets the holders' rule complete a fork (rule 95.4, which rule 98 sanctions), and reads receipts and clocks for issuance (rule 96), outside rule 99's "accepts" list.
+
+**What the two readings show:** the boundary holds for the doors out themselves and for the record. It does not yet hold for the clauses that decide who is gone, nor for owners' consent and issuance, both of which the core handed out whole. Those two points are where Fable's "a module that holds the constitution holds the collective" bites, and they should be decided before any code moves.
 
 ## Questions (for the MOR lead and Fable, before anything is decided)
 
@@ -102,7 +153,7 @@ None changed: the core did not change. On the next session's plan, four publishe
    - No vector covers it.
    - *Alternative:* keep fields 20, 30 and 32 as terms fields only the model reads. This moves no verdict, but leaves model fields in the core's format.
    - *Lean:* as written, so that whether a collective is broken never depends on a model. **Needs a decision**, since a moved verdict is a bug unless decided.
-4. **The judicial protections when a collective names no model.**
+4. **The judicial protections (now: whatever the model).** The hostile reading shows this is not only about collectives with no model.
    - *Written, following the prompt:* keepers, judges, the abandonment clause, succession plans, the chain of judgment and the collective's split agreement change under the constitutional change rule. That is every member by default, as before, but less if the founders chose less.
    - *Lean, the other way:* keep one core sentence, "a collective's judges and keepers change only with every member whose voice remains, whatever its model". Keepers underwrite what others relied on.
    - *Cost:* one more core sentence; the default cMIP is unchanged either way.
@@ -121,6 +172,16 @@ None changed: the core did not change. On the next session's plan, four publishe
    - *Alternative:* move it to the parameters, which changes the bytes of every collective.
    - *Lean:* keep it.
 8. **Money's pointer.** Money draft 11 lists "a take-up of an issuance (Agreements rule 96)". Draft 18's pointer keeps it readable. The suggested wording for Money's next draft is "(a control model's, Agreements rule 99)". No other MIR was changed.
+10. **A floor under owners consenting together, and under issuance.**
+    - The core accepts any rule binding only holders who accepted it, with no floor on its form.
+    - *Options:* (a) pre-emption into the core (rule 8's exception only for a pre-emptive issuance) and a floor on the share (for example a majority of the stake); (b) leave forms free, and add client conformance showing at founding and at purchase who can consent for a holder.
+    - *Lean:* (a) for pre-emption, (b) for the share.
+11. **The publications stated cost** ("prices and publications are no owners' matter; owners are protected by sight and exit") moved with rule 95. It is true whatever the model, so it belongs back in the core, beside rule 48. *Lean:* move it back, as a sentence.
+12. **The buyer bait** (older than this draft). *Lean:* a change to the rules binding a stake's holders, made after a transfer was signed and before the line placed it, binds that buyer only with its signature.
+13. **Powers a model adds to a constitutional clone.**
+    - *Options:* (a) forbid models from adding any power to a constitutional change, and from refusing a change of field 35; (b) allow it, with rule 61 coverage for every added power.
+    - *Lean:* (a). Constitutional changes are the core's, all the way.
+14. **What the boundary must expose** so that the core can judge stepping down, succession and grants within an area by itself: the holders, id, number and reach of an area, and the list of parties a power is counted among. With these, the task can be built from the texts alone. Write them into rule 99 as queries the model answers. *Lean:* yes, next texts pass.
 9. **The size.** A pass that says each rule once is needed to reach Fable's estimate. Should it be the next texts session, or folded into the code session?
 
 ## What remains
