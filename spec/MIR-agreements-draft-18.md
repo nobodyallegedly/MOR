@@ -6,7 +6,7 @@
 
 Normal text is the protocol. Italic text is commentary: reasons, examples and plain summaries. Where the two seem to differ, the normal text decides.
 
-A rule of another MIR is cited by that MIR's name and the rule's number ("Money rule 17"). Rules keep their numbers wherever they stand, so the numbers do not run in reading order. A retired rule, type or field keeps its number, which is never reused. Rules 62 to 64, 66 to 68 and 94 to 97 are not in this MIR: their numbers are those of the default control cMIP, which carries them (rule 99), and no rule of this MIR reuses them.
+A rule of another MIR is cited by that MIR's name and the rule's number ("Money rule 17"). Rules keep their numbers wherever they stand, so the numbers do not run in reading order. A retired rule, type or field keeps its number, which is never reused. Rules 62 to 64, 66 to 68 and 94 to 97 are the default control cMIP's (rule 99): this MIR keeps each number as a pointer to that cMIP (section 23), and no rule of this MIR reuses them.
 
 Some marks recur:
 
@@ -2429,6 +2429,50 @@ The rule is the chain's, so it holds for every judge the chain serves, one activ
 **The default control cMIP** (`cmip-collective-control`) carries the tiers of a collective's fields and what a clone needs by tier (its rules 62 to 64, 66 to 68), areas finer than a layer, the owners' matters, the holders' rule by share, issuance with pre-emption and proxies (its rules 94 to 97), each as its terms and parameters. A collective founded under it does what a collective did before control models were handed out, and nothing else.
 
 *Stated cost: models compete, and a verifier holds only some; what it does not hold it shows unknown, save the way out and the guarantees, which it always judges.*
+### 23. Numbers kept by the default control cMIP
+
+Each of these numbers names a rule of the default control cMIP (`cmip-collective-control`, rule 99), which holds it for collectives that name that cMIP. This MIR holds no rule of these numbers; what any collective keeps whatever its model is rule 98's.
+
+#### Rule 62. Every field belongs to one tier
+
+The default control cMIP's rule 62 (rule 99).
+
+#### Rule 63. What a clone changes
+
+The default control cMIP's rule 63 (rule 99).
+
+#### Rule 64. Which powers a clone needs
+
+The default control cMIP's rule 64 (rule 99).
+
+#### Rule 66. Protections still hold
+
+The default control cMIP's rule 66 (rule 99).
+
+#### Rule 67. Protected clauses: the judicial tier
+
+The default control cMIP's rule 67 (rule 99).
+
+#### Rule 68. Departed holders
+
+The default control cMIP's rule 68 (rule 99).
+
+#### Rule 94. The holders' rule
+
+The default control cMIP's rule 94 (rule 99).
+
+#### Rule 95. The owners' matters
+
+The default control cMIP's rule 95 (rule 99).
+
+#### Rule 96. Issuance, with pre-emption
+
+The default control cMIP's rule 96 (rule 99).
+
+#### Rule 97. Proxies
+
+The default control cMIP's rule 97 (rule 99).
+
 ## Part five: act formats
 
 All acts are Envelopes MIR acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise.
