@@ -289,6 +289,8 @@ pub struct AgreementsView<'a> {
     /// attempts to reach homes are taken as they are. Never for a view a
     /// caller makes: only for the comparison [`Self::binding`] runs.
     trust_own_attempts: bool,
+    /// The control models this verifier holds (Agreements rule 99).
+    control: super::control::Held,
 }
 
 /// What a decision cites on the collective's chain (F127): every act it
@@ -592,6 +594,14 @@ struct InForce {
 }
 
 impl<'a> AgreementsView<'a> {
+    /// Hold these control models (Agreements rule 99): a collective naming
+    /// one of them is read through its answers; one naming a model not held
+    /// is unknown wherever its acts need the model.
+    pub fn with_control(mut self, held: super::control::Held) -> Self {
+        self.control.extend(held);
+        self
+    }
+
     pub fn new(v: &'a Verifier, mirs: Mirs) -> Self {
         AgreementsView {
             v,
@@ -637,6 +647,7 @@ impl<'a> AgreementsView<'a> {
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts: false,
+            control: Vec::new(),
         }
     }
 
@@ -708,6 +719,7 @@ impl<'a> AgreementsView<'a> {
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts,
+            control: self.control.clone(),
         }
     }
 
@@ -919,8 +931,12 @@ impl<'a> AgreementsView<'a> {
         if !self.is_agreements(h, types::TERMS) {
             return Err(AgreementsError::Check("not a terms act"));
         }
-        let t = Terms::decode(&h.inside.payload)?;
+        let mut t = Terms::decode(&h.inside.payload)?;
         check_terms_inside(&h.inside, &t)?;
+        if !super::control::fill(&mut t, &self.control)? {
+            // A control model this verifier does not hold: unknown.
+            return Err(AgreementsError::Missing(t.control.as_ref().expect("named").cmip));
+        }
         t.check(&self.mirs)?;
         Ok(t)
     }

@@ -43,7 +43,7 @@ impl Change {
         match self {
             Change::Field(f) => match f {
                 // 19, the layers' rules, and 34, the areas: who decides.
-                0 | 1 | 5 | 12 | 18 | 19 | 22 | 34 => Tier::Constitutional,
+                0 | 1 | 5 | 12 | 18 | 19 | 22 | 34 | 35 => Tier::Constitutional,
                 3 | 6 | 9 | 13 | 16 | 21 => Tier::Judicial,
                 // 7, 8, 17; 24, the release rule, in no area: the clone
                 // rule, with every owner's signature besides (N8).
@@ -87,6 +87,18 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
         if a != b {
             out.push(Change::Field(n));
         }
+    }
+    // The control model's answers (Agreements rule 99): areas and holders'
+    // rules are compared as the fields 34 and 30 they once were; a change of
+    // the model itself (its cMIP) is a change of field 35.
+    if parent.areas != clone.areas {
+        out.push(Change::Field(34));
+    }
+    if parent.holders_rules != clone.holders_rules {
+        out.push(Change::Field(30));
+    }
+    if parent.control.as_ref().map(|c| c.cmip) != clone.control.as_ref().map(|c| c.cmip) {
+        out.push(Change::Field(35));
     }
     for t in 1..=super::formats::LAST_TASK {
         if parent.cmip(t) != clone.cmip(t) {

@@ -10,6 +10,9 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 mor-core = { path = "../core" }
+# The default control cMIP (Agreements rule 99): the binding holds it, as a
+# client does, and packs legacy area fields into field 35.
+mor-control = { path = "../cmips/control" }
 # Split chain keys for test collectives (share dealing, checks, rebuild):
 # the air-gapped Module's own code, without its command line.
 mor-airgap = { path = "../modules/airgap", default-features = false }

@@ -181,6 +181,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     f(&mut t);
     t
@@ -304,7 +305,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
+        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()).with_control(mor_control::held()));
         v.ext_layers.insert(ext(), vec![]);
         v.ext_layers
             .insert(spec("an extension declaring Money"), vec![agreements::layers::MONEY]);
@@ -667,7 +668,7 @@ fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+    common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
 }
 
 /// A fork's successor signs it as a member does, by a chain signature with
@@ -2367,7 +2368,7 @@ fn abandonment_key_2_is_retired_and_key_3_names_a_cmip() {
     // Key 3: a cMIP and any parameters, carried as they are.
     let params = Value::Map(vec![(Value::Text("period".into()), Value::Uint(30))]);
     let pair = Value::Array(vec![Value::Bytes(spec("an absence-proof cMIP").to_vec()), params.clone()]);
-    let got = Terms::decode(&(with((Value::Uint(3), pair)))).unwrap();
+    let got = mor_control::decode(&(with((Value::Uint(3), pair)))).unwrap();
     assert_eq!(got.abandonment.as_ref().unwrap().proof, Some((spec("an absence-proof cMIP"), params)));
     assert_eq!(got.check(&mirs()), Ok(()));
     // Not a pair, or no hash: invalid.
@@ -2416,7 +2417,7 @@ fn absence_proof_is_task_14_in_the_chain_of_judgment() {
     t.chain = Some(vec![ChainLink { judge: Judge::Task(14), next: vec![(next.into(), 30)] }]);
     assert_eq!(t.check(&mirs()), Ok(()));
     assert_eq!(t.chain_of(&Judge::Task(14)), Some(vec![proof, next]));
-    let back = Terms::decode(&t.to_map()).unwrap();
+    let back = mor_control::decode(&t.to_map()).unwrap();
     assert_eq!(back.chain_of(&Judge::Task(14)), Some(vec![proof, next]), "read back from its bytes");
     // The one taking over is named nowhere else.
     let mut u = t.clone();
@@ -3225,6 +3226,7 @@ fn a_deal_changes_only_with_everyone() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3309,6 +3311,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
+            control: Some(mor_control::control()),
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3410,6 +3413,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3584,6 +3588,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -4397,7 +4402,7 @@ fn a_split_service_cannot_steer_ties_by_grinding_salts() {
             v.add_with_key(a.clone(), key.as_ref()).unwrap();
         }
     }
-    let mut lv = common::stand_in_payments(AgreementsView::new(&v, mirs()));
+    let mut lv = common::stand_in_payments(AgreementsView::new(&v, mirs()).with_control(mor_control::held()));
     lv.ext_layers.insert(ext(), vec![]);
     let e = lv.split(&s4).unwrap();
     assert!(matches!(e.breaks.as_slice(), [agreements::ChainBreak::Count { .. }]), "{:?}", e.breaks);
@@ -5622,6 +5627,7 @@ fn a_work_is_released_to_the_public_domain() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5927,6 +5933,7 @@ fn a_timed_release() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
+            control: Some(mor_control::control()),
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -6511,7 +6518,7 @@ fn a_payment_racing_a_publications_ending_is_settled_by_the_split_service() {
     assert!(e.counts && e.ends, "{:?}", e.problems);
     let after = receipt(&mut w, &mut svc, push, b"after the service's signature");
     let on_request = receipt(&mut w, &mut svc, spec("a request rail"), b"on a request rail, after");
-    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())));
     v.rails.insert(push, push_rail_spec());
     assert_eq!(v.purchase(&before).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
     assert_eq!(v.purchase(&pending).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "before the service's own signature on the ending");
@@ -6652,7 +6659,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     let cited = post(&mut w, &mut s1);
     let racing = post(&mut w, &mut s2);
     fn view(w: &World) -> AgreementsView<'_> {
-        common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+        common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
     }
     assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Backed { grant: g });
     // A person is no collective: Agreements read the act by its backing.
@@ -7859,7 +7866,7 @@ fn push_sale(w: &mut World, ana: &mut Person, ben: &mut Person, owners: Hash, li
     let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line }) });
     let a = w.everyday_act(&mut svc, mirs().money, 2, r.to_map(), None, None);
     let x = w.add(&a);
-    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())));
     v.rails.insert(push, push_rail_spec());
     v.purchase(&x).unwrap().unwrap().verdict
 }
@@ -9622,7 +9629,7 @@ fn f192_a_version_held_back_and_published_late_reopens_nothing() {
     let b2 = l.version(b1, "B: a small change, signed by both, kept back.", None);
     let s = l.version(a1, "Settled for A, naming B's tip as everyone could see it.", Some(b1));
     let before = held_without(&l.w, &[b2]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
     assert_eq!(view(&l.w).agreement(&b2).unwrap().exists, Some(true));
     assert_eq!(l.in_force().unwrap(), s, "published late, it reopens nothing");
 }
@@ -9762,7 +9769,7 @@ fn f196_once_held_the_settlement_counts() {
     let b1 = l.version(b0, "B grows.", None);
     let s = l.version(a1, "Settled: A, naming B's tip.", Some(b1));
     let partial = held_without(&l.w, &[b1]);
-    let v = common::stand_in_payments(AgreementsView::new(&partial, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&partial, mirs()).with_control(mor_control::held()));
     assert_eq!(v.version_in_force(&d).unwrap(), d, "B's tip not held: the settlement is a plain version, the deal forked");
     assert!(v.deal_fork(&d).unwrap().is_some_and(|f| f.branches.iter().any(|b| b.contains(&s))));
     assert_eq!(l.in_force().unwrap(), s, "held: the settlement counts");
@@ -10347,7 +10354,7 @@ fn review_fdb_1_today_a_hidden_sibling_revealed_after_a_settlement_reopens_nothi
     let s = l.version(a1, "Repaired for A, naming B, the only other branch anyone could see.", Some(b1));
     let s2 = l.version(s, "Life goes on under the repair: Ben delivers.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
     // Ana publishes C.
     assert_eq!(l.in_force().unwrap(), s2, "today, under F192: C reopens nothing, Ben's raise stands");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none(), "today: not forked, not broken");
@@ -10372,7 +10379,7 @@ fn review_fdb_2_today_a_hidden_child_and_a_hidden_sibling_lose_alike() {
     let c1 = l.version(d, "C: hidden sibling at the reference.", None);
     let s = l.version(a1, "Repaired for A, naming B1.", Some(b1));
     let before = held_without(&l.w, &[b2, c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s);
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s);
     // Both surface.
     assert_eq!(l.in_force().unwrap(), s, "today: the hidden child and the hidden sibling lose alike (F192)");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none());
@@ -10398,7 +10405,7 @@ fn review_fdb_3_before_any_settlement_a_hidden_sibling_already_sends_the_deal_to
     let a3 = l.version(a2, "A3: Ben's share raised for more work.", None);
     let c1 = l.version(d, "C1: a sibling of A1, from a device out of step at the time.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
     // C1 surfaces, however late.
     assert_eq!(l.in_force().unwrap(), d, "today: forked at d, the reference in force (A1 beside A4)");
     let f = view(&l.w).deal_fork(&d).unwrap().expect("forked");
@@ -13996,7 +14003,7 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
 /// status; each record's verdict (what it puts in force, its clone's state);
 /// each transfer's effect; the label's agreement in force.
 fn owners_verdicts(v: &mor_core::chain::Verifier, label: &Hash) -> std::collections::BTreeMap<Hash, String> {
-    let mut lv = common::stand_in_payments(AgreementsView::new(v, mirs()));
+    let mut lv = common::stand_in_payments(AgreementsView::new(v, mirs()).with_control(mor_control::held()));
     lv.ext_layers.insert(ext(), vec![]);
     let mut out = std::collections::BTreeMap::new();
     let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
@@ -14173,7 +14180,7 @@ fn a_post_under_a_grant_names_its_grant_f343() {
     let text = |s: &str| vec![(Value::Uint(0), Value::Text(s.into()))];
     let one = |chain: Hash, predecessor: Hash| Some(vec![Object { chain, predecessor }]);
     fn view(w: &World) -> AgreementsView<'_> {
-        common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+        common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
     }
 
     // A person's grant: an owner grants its agent posting in its name.
@@ -14249,7 +14256,7 @@ fn a_grants_limits_take_a_clients_verdict_f345() {
     strand.cite = Some((oid, vec![g]));
     let a = w.everyday_act(&mut strand, mirs().text, 0, vec![(Value::Uint(0), Value::Text("Within?".into()))], None, None);
     let post = w.add(&a);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     assert!(matches!(v.backing(&post).unwrap(), Backing::Unknown { .. }));
     v.grant_limits.insert(post, true);
     assert_eq!(v.backing(&post).unwrap(), Backing::Backed { grant: g });
@@ -14310,7 +14317,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
         w.add(&a)
     };
     assert_eq!(w.v.status(&claim), Status::Scoped, "a Money-only client: scoped, shown unknown, never valid (Identity rule 8)");
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(claim, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.backing(&claim).unwrap(), Backing::Backed { grant: pl });
     assert_eq!(v.payers_claims(&proof), vec![claim], "the payer's claim, under its lane, counts");
@@ -14321,7 +14328,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let mut ws = strand(&q, wrong, &wk);
     let bad = receipt(&mut w, &mut ws);
     assert_eq!(w.v.status(&bad), Status::Scoped);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
     assert!(matches!(v.backing(&bad).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("reach")));
     assert_eq!(v.paid_toward(&debt).unwrap(), 0, "a grant not reaching receipts signs none that counts");
@@ -14332,7 +14339,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let mut rs = strand(&q, rl, &rk);
     let good = receipt(&mut w, &mut rs);
     assert_eq!(w.v.status(&good), Status::Scoped, "a Money-only client: scoped, shown unknown");
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
     v.rail_valid.insert(good, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.backing(&good).unwrap(), Backing::Backed { grant: rl });
@@ -14344,7 +14351,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let rev = agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: rl }.to_map(), Some(vec![Object { chain: qid, predecessor: good }]));
     assert_eq!(w.v.status(&rev), Status::Valid);
     let late = receipt(&mut w, &mut rs);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert!(!matches!(v.backing(&late).unwrap(), Backing::Backed { .. }), "after its revocation, a lane backs nothing");
     // Paid toward the debt: the receipt its revocation's history holds, as Money counts payments (rule 76).
@@ -14352,7 +14359,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     assert!(matches!(v.backing(&good).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "{:?}", v.backing(&good));
     assert_eq!(v.paid_toward(&debt).unwrap(), 1000);
     drop(v);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.paid_toward(&debt).unwrap(), 0, "a receipt under a revoked lane pays nothing");
 
@@ -14383,18 +14390,18 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: all }.to_map(), Some(objects));
     for own in acts {
         let f = payee_of(&w, own, &acts);
-        let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()));
+        let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()).with_control(mor_control::held()));
         assert!(matches!(v.backing(&own).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "each payee, holding only its own act, finds it counted: {:?}", v.backing(&own));
     }
     let (last, acts) = chained(&mut w, &mut q, "a lane revoked citing its last act only");
     agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: last }.to_map(), Some(vec![Object { chain: qid, predecessor: acts[2] }]));
-    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     for a in acts {
         assert!(matches!(v.backing(&a).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "a reader holding every act follows the chain: {:?}", v.backing(&a));
     }
     drop(v);
     let f = payee_of(&w, acts[0], &acts);
-    let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()).with_control(mor_control::held()));
     assert!(
         matches!(v.backing(&acts[0]).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("tie rule")),
         "the first payee cannot follow the chain through acts it cannot open: its act is void"

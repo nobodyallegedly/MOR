@@ -15,6 +15,8 @@
 //!   what a verifier holds.
 
 pub mod formats;
+/// Control models (Agreements draft 18, rule 99): the boundary.
+pub mod control;
 pub mod open_formats;
 /// The publication (Agreements type 6): the offer, with its partners, split
 /// service and split plan.

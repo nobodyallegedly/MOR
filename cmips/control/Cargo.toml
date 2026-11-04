@@ -1,0 +1,9 @@
+[package]
+name = "mor-control"
+version = "0.1.0"
+description = "The default control cMIP, draft 1 (Agreements rule 99): a collective's areas finer than a layer, the tiers of what an operational clone needs, the owners' matters and the holders' rule by share, issuance with pre-emption and proxies, behind the core's boundary."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }

@@ -103,6 +103,7 @@ fn label() -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     }
 }
 
@@ -138,7 +139,12 @@ fn roundtrip(t: &Terms) -> Terms {
     let Value::Map(m) = cbor::decode(&bytes).unwrap() else {
         panic!()
     };
-    Terms::decode(&m).unwrap()
+    let mut back = mor_control::decode(&m).unwrap();
+    // A model packed in memory names itself only for a collective (rule 99).
+    if !t.names_control() && back.control.is_none() {
+        back.control = t.control.clone();
+    }
+    back
 }
 
 fn check(t: &Terms) -> Result<(), AgreementsError> {
@@ -968,7 +974,7 @@ fn decode_raw(t: &Terms, f: &dyn Fn(&mut Vec<(Value, Value)>)) -> Result<Terms, 
     f(&mut m);
     let bytes = cbor::encode(&Value::Map(m));
     let Value::Map(m) = cbor::decode(&bytes).unwrap() else { panic!() };
-    Terms::decode(&m)
+    mor_control::decode(&m)
 }
 
 fn set(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {

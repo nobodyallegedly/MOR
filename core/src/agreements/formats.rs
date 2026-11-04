@@ -1154,6 +1154,39 @@ impl Stake {
 
 // ---------------------------------------------------------------- terms
 
+/// A collective's control model (terms field 35, Agreements rule 99): a
+/// cMIP and its parameters, `[cmip, params]`. The core never reads the
+/// parameters: the model the verifier holds answers its queries from them
+/// ([`crate::agreements::control::ControlModel`]). `pack`, where set, is the
+/// model's own encoder of its answers held in these terms (the areas, their
+/// words, the holders' rules, an issuance's offer), so that terms built in
+/// memory encode their parameters fresh; terms decoded from an act carry
+/// none, and their parameters as they came.
+#[derive(Clone, Debug)]
+pub struct Control {
+    pub cmip: Hash,
+    pub params: Value,
+    pub pack: Option<fn(&Terms) -> Value>,
+}
+
+impl Control {
+    /// The parameters to encode for `t`.
+    pub fn params_for(&self, t: &Terms) -> Value {
+        match self.pack {
+            Some(f) => f(t),
+            None => self.params.clone(),
+        }
+    }
+}
+
+impl PartialEq for Control {
+    fn eq(&self, o: &Control) -> bool {
+        // The answers themselves are compared as the terms' own fields.
+        self.cmip == o.cmip && (self.pack.is_some() || o.pack.is_some() || self.params == o.params)
+    }
+}
+impl Eq for Control {}
+
 /// Terms (type 0), in the fields Agreements draft 7 fixes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Terms {
@@ -1242,9 +1275,20 @@ pub struct Terms {
     /// it follows, or none under the stake's standing waiver (rule 96; F309,
     /// F328).
     pub issues_under: Option<IssuesUnder>,
+    /// 35: the control model, `[cmip, params]` (Agreements rule 99). The
+    /// four fields above it that a model answers (`areas`, `area_words`,
+    /// `holders_rules`, `issues_under`) are its answers, never terms fields:
+    /// filled from the model the verifier holds, or packed by it.
+    pub control: Option<Control>,
 }
 
 impl Terms {
+    /// Whether these terms carry field 35, a control model (rule 99): a
+    /// model packed in memory names itself only for a collective.
+    pub fn names_control(&self) -> bool {
+        matches!(&self.control, Some(c) if c.pack.is_none() || self.is_collective())
+    }
+
     /// Whether these terms found or continue a collective (field 12).
     pub fn is_collective(&self) -> bool {
         self.grammar.is_some()
@@ -1414,19 +1458,6 @@ impl Terms {
         if let Some(l) = &self.layers {
             m.push((Value::Uint(19), Value::Map(l.iter().map(|(k, r)| (Value::Uint(*k), r.to_value())).collect())));
         }
-        if let Some(a) = &self.areas {
-            m.push((Value::Uint(34), Value::Array(a.iter().map(Area::to_value).collect())));
-        }
-        if let Some(w) = &self.area_words {
-            m.push((
-                Value::Uint(20),
-                Value::Map(
-                    w.iter()
-                        .map(|(id, t)| (Value::Uint(*id), Value::Text(t.clone())))
-                        .collect(),
-                ),
-            ));
-        }
         if let Some(c) = &self.chain {
             m.push((Value::Uint(21), Value::Array(c.iter().map(ChainLink::to_value).collect())));
         }
@@ -1459,29 +1490,18 @@ impl Terms {
         if let Some(x) = &self.refund {
             m.push((Value::Uint(17), x.to_value()));
         }
-        if let Some(x) = &self.holders_rules {
-            m.push((
-                Value::Uint(30),
-                Value::Array(
-                    x.iter()
-                        .map(|e| {
-                            let mut a = vec![Value::Uint(e.stake), e.rule.to_value()];
-                            if e.waived {
-                                a.push(Value::Bool(true));
-                            }
-                            Value::Array(a)
-                        })
-                        .collect(),
-                ),
-            ));
-        }
         if let Some(x) = &self.transfers_counted {
             m.push((Value::Uint(31), hashes_value(x)));
         }
-        match &self.issues_under {
-            Some(IssuesUnder::Offer(h)) => m.push((Value::Uint(32), b(h))),
-            Some(IssuesUnder::Waived) => m.push((Value::Uint(32), Value::Array(vec![Value::Uint(0)]))),
-            None => {}
+        match &self.control {
+            // A model's packer names it only for a collective: terms built
+            // in memory that found none carry no field 35.
+            Some(_) if !self.names_control() => {}
+            Some(c) => m.push((Value::Uint(35), Value::Array(vec![b(&c.cmip), c.params_for(self)]))),
+            None => assert!(
+                self.areas.is_none() && self.area_words.is_none() && self.holders_rules.is_none() && self.issues_under.is_none(),
+                "areas, area words, holders' rules and an issuance's offer are a control model's answers: name the model (field 35), packed by its install"
+            ),
         }
         m
     }
@@ -1539,7 +1559,14 @@ impl Terms {
                         "terms fields 8, 14, 28 and 29 are withdrawn: the split plan, the split service, the fees and the backups are a publication's",
                     ));
                 }
-                Value::Uint(n) if *n <= 24 || (26..=34).contains(n) => f.push((*n, v)),
+                // 20, 30, 32 and 34 are a control model's parameters, never
+                // terms fields (Agreements rule 99, field 35).
+                Value::Uint(20 | 30 | 32 | 34) => {
+                    return Err(AgreementsError::Shape(
+                        "terms fields 20, 30, 32 and 34 are a control model's parameters (field 35, Agreements rule 99)",
+                    ))
+                }
+                Value::Uint(n) if *n <= 24 || (26..=35).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1603,25 +1630,8 @@ impl Terms {
                         .collect::<R<Vec<_>>>()
                 })
                 .transpose()?,
-            areas: get(34)
-                .map(|v| nonempty(v, "terms areas")?.iter().map(area).collect())
-                .transpose()?,
-            area_words: get(20)
-                .map(|v| {
-                    let Value::Map(m) = v else {
-                        return Err(AgreementsError::Shape("terms area words"));
-                    };
-                    if m.is_empty() {
-                        return Err(AgreementsError::Shape("terms area words"));
-                    }
-                    m.iter()
-                        .map(|(k, v)| match v {
-                            Value::Text(t) => Ok((uint(k, "area words id")?, t.clone())),
-                            _ => Err(AgreementsError::Shape("area words")),
-                        })
-                        .collect()
-                })
-                .transpose()?,
+            areas: None,
+            area_words: None,
             chain: get(21)
                 .map(|v| nonempty(v, "chain of judgment")?.iter().map(chain_link).collect())
                 .transpose()?,
@@ -1648,30 +1658,13 @@ impl Terms {
             plan: None,
             fees: None,
             refund: get(17).map(super::open_formats::RefundTerms::decode).transpose()?,
-            holders_rules: get(30)
-                .map(|v| {
-                    nonempty(v, "holders' rules")?
-                        .iter()
-                        .map(|e| {
-                            let Value::Array(a) = e else { return Err(AgreementsError::Shape("holders' rules: an entry is [stake, holders-rule, ? waived: true]")) };
-                            if a.len() < 2 || a.len() > 3 {
-                                return Err(AgreementsError::Shape("holders' rules: an entry is [stake, holders-rule, ? waived: true]"));
-                            }
-                            let waived = match a.get(2) {
-                                None => false,
-                                Some(Value::Bool(true)) => true,
-                                Some(_) => return Err(AgreementsError::Shape("holders' rules: a standing waiver is written true (F328)")),
-                            };
-                            Ok(HoldersEntry { stake: uint(&a[0], "holders' rules: the stake")?, rule: holders_rule(&a[1])?, waived })
-                        })
-                        .collect()
-                })
-                .transpose()?,
+            holders_rules: None,
             transfers_counted: get(31).map(|v| hashes(v, "transfers counted")).transpose()?,
-            issues_under: get(32)
-                .map(|v| match v {
-                    Value::Array(a) if a.len() == 1 && a[0] == Value::Uint(0) => Ok(IssuesUnder::Waived),
-                    _ => Ok(IssuesUnder::Offer(hash(v, "issues under: the issuance offer, or [0] (F309, F328)")?)),
+            issues_under: None,
+            control: get(35)
+                .map(|v| {
+                    let a = tuple(v, 2, "terms field 35: [cmip, params]")?;
+                    Ok(Control { cmip: hash(&a[0], "terms field 35: the control model's cMIP")?, params: a[1].clone(), pack: None })
                 })
                 .transpose()?,
         })
@@ -1725,6 +1718,7 @@ impl Terms {
                             || self.forked_from.is_some()
                             || self.holders_rules.is_some()
                             || self.issues_under.is_some()
+                            || self.names_control()
                         {
                             return Err(AgreementsError::Check(
                                 "a work's ownership agreement ([0, claim]) carries none of a collective's fields (12, 18, 19, 20, 22, 23, 30, 32, 34)",
@@ -1819,7 +1813,7 @@ impl Terms {
                     "a deal changes only with every party's signature: its clone rule must be every party",
                 ));
             }
-            if self.constitutional.is_some() || self.layers.is_some() || self.areas.is_some() || self.area_words.is_some() {
+            if self.constitutional.is_some() || self.layers.is_some() || self.areas.is_some() || self.area_words.is_some() || self.names_control() {
                 return Err(AgreementsError::Check(
                     "tiers, layers and areas belong to collectives: a deal carries no field 18, 19, 20 or 34",
                 ));
@@ -4248,7 +4242,7 @@ fn head_rule(v: &Value, w: &'static str) -> R<Rule> {
     Ok(r)
 }
 
-pub(crate) fn holders_rule(v: &Value) -> R<HoldersRule> {
+pub fn holders_rule(v: &Value) -> R<HoldersRule> {
     let a = nonempty(v, "holders' rule")?;
     match (uint(&a[0], "holders' rule form")?, a.len()) {
         (0, 1) => Ok(HoldersRule::Every),
@@ -4357,7 +4351,8 @@ fn field_ref(v: &Value) -> R<FieldRef> {
     }
 }
 
-fn area(v: &Value) -> R<Area> {
+/// An area, in the default control cMIP's parameter 34 (its codec, reused).
+pub fn area(v: &Value) -> R<Area> {
     let f = map_fields(v, 7, "area")?;
     let Some(Value::Text(name)) = field(&f, 0) else {
         return Err(AgreementsError::Shape("area name"));

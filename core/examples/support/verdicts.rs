@@ -88,7 +88,7 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mirs())
+    AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())
 }
 
 fn status_name(s: Status) -> &'static str {
@@ -193,6 +193,7 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     }
 }
 
