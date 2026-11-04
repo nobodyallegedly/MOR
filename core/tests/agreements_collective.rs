@@ -747,6 +747,20 @@ fn clone_state(lab: &Lab, r: &Hash) -> CloneState {
     lab.view().record(&lab.col.id, r).unwrap().clone.unwrap().1
 }
 
+/// An operational change any one member makes alone under the label's rule
+/// for Agreements: adopting a claims cMIP (task 13). Since F421, an area's
+/// words are the control model's parameters, the constitution's.
+fn adopt_claims(t: &mut Terms) {
+    adopt(t, "a claims cMIP");
+}
+
+/// The same, the claims cMIP named by `w`, so that clones differ.
+fn adopt(t: &mut Terms, w: &str) {
+    t.cmips.retain(|(k, _)| *k != 13);
+    t.cmips.push((13, spec(w)));
+    t.cmips.sort();
+}
+
 fn words(t: &mut Terms, area: u64, w: &str) {
     let mut v = t.area_words.clone().unwrap_or_default();
     v.retain(|(i, _)| *i != area);
@@ -925,7 +939,7 @@ fn the_treasurer_adopts_a_cmip_and_the_record_places_it() {
     lab.sign(BEN, &x);
     assert_eq!(lab.in_force(&x), k2);
     // A record naming an act that is no signature on the clone: invalid.
-    let k3 = lab.clone_terms(&k2, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k3 = lab.clone_terms(&k2, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k3 = lab.propose(BEN, &k3);
     lab.sign(BEN, &k3);
     let r5 = lab.record(0, Some((k3, vec![sb])), &[1, 2], vec![], k3);
@@ -974,21 +988,25 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     let k = lab.propose(BEN, &t);
     assert!(lab.view().agreement(&k).unwrap().invalid.is_some(), "the area is hers alone (Q5)");
 
-    // 3.7e: two areas at once: each holder.
-    let t = lab.clone_terms(
-        &f,
-        vec![(Power::Area(1), vec![ANA]), (Power::Area(2), vec![BEN])],
-        &|t| {
-            words(t, 1, "Mondays.");
-            words(t, 2, "Weekly.");
-        },
-    );
+    // 3.7e, F421: two areas' words at once are the control model's
+    // parameters, the constitution's: the areas' powers are no power for
+    // them (Agreements rule 98), and every member signs, as the
+    // constitutional change rule (every party) asks.
+    let words2 = |t: &mut Terms| {
+        words(t, 1, "Mondays.");
+        words(t, 2, "Weekly.");
+    };
+    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA]), (Power::Area(2), vec![BEN])], &words2);
+    let k = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&k).unwrap().invalid.is_some(), "a model names no power for the constitution (F421)");
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &words2);
     let k = lab.propose(ANA, &t);
     let sa = lab.sign(ANA, &k);
-    let r = lab.record(0, Some((k, vec![sa])), &[], vec![], k);
-    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)));
     let sb = lab.sign(BEN, &k);
     let r = lab.record(0, Some((k, vec![sa, sb])), &[], vec![], k);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)));
+    let sc = lab.sign(CY, &k);
+    let r = lab.record(0, Some((k, vec![sa, sb, sc])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k), "in force at once, no rotation (Q7, Q8)");
 
     // 3.7f (F121): two of three change the arbitrator: the judicial tier
@@ -1019,16 +1037,24 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     let r = lab.record(0, Some((k2, vec![s1, s2, s3])), &[], vec![], k2);
     assert_eq!(puts(&lab, &r), Some(k2), "one version, for everyone");
 
-    // 3.7l, Q12: the manager's words and the keepers: both powers.
+    // 3.7l, F421 and F422: the manager's words (the constitution's) and
+    // the keepers (the judicial tier's): the constitutional change rule
+    // and the judicial tier's rule, both, never an area's power.
     let t = lab.clone_terms(&k2, vec![(Power::Area(1), vec![ANA])], &|t| {
         words(t, 1, "Tuesdays.");
         t.keepers = None;
     });
     let k3 = lab.propose(ANA, &t);
     assert!(lab.view().agreement(&k3).unwrap().invalid.is_some());
+    let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, BEN, CY]), (Power::Area(1), vec![ANA])], &|t| {
+        words(t, 1, "Tuesdays.");
+        t.keepers = None;
+    });
+    let k3 = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&k3).unwrap().invalid.is_some(), "an area's power is none for the constitution (F421)");
     let t = lab.clone_terms(
         &k2,
-        vec![(Power::Judicial, vec![ANA, BEN, CY]), (Power::Area(1), vec![ANA])],
+        vec![(Power::Constitutional, vec![ANA, BEN, CY]), (Power::Judicial, vec![ANA, BEN, CY])],
         &|t| {
             words(t, 1, "Tuesdays.");
             t.keepers = None;
@@ -1060,7 +1086,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     sign(&mut lab.w, &mut ben_tablet, &x2); // tablet, never mentioned
 
     // A clone signed from the tablet, recorded before the line (Flaw F).
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = sign(&mut lab.w, &mut ben_tablet, &k);
     let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -1121,7 +1147,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     let sb3 = sign(&mut lab.w, &mut ben_tablet, &k3);
     let sc3 = lab.sign(CY, &k3);
     let r3 = lab.record(0, Some((k3, vec![sa3, sb3, sc3])), &[], vec![], k3);
-    assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(_)));
+    assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(_)), "{:?}", clone_state(&lab, &r3));
     // ... and the clone needs the voices that remain: Ana and Cy.
     let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, CY])], &|t| {
         t.arbitrators = Some(vec![spec("arbitrator three")]);
@@ -1138,7 +1164,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
 fn a_records_registrations_stand_without_its_clone() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Mondays."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Mondays."));
     let k = lab.propose(ANA, &t);
     let sc = lab.sign(CY, &k);
     let mut ben = lab.m[BEN].clone();
@@ -1842,7 +1868,7 @@ fn concurrent_lines() {
     let f = lab.founding;
     let mut ks = vec![];
     for (d, w) in [(0, "Weekly."), (1, "Daily.")] {
-        let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+        let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
         let k = lab.propose(BEN, &t);
         let s = lab.sign(BEN, &k);
         let r = lab.record(d, Some((k, vec![s])), &[], vec![], k);
@@ -1857,7 +1883,7 @@ fn concurrent_lines() {
     let f = lab.founding;
     let mut rs = vec![];
     for w in ["Weekly.", "Daily."] {
-        let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+        let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
         let k = lab.propose(BEN, &t);
         let s = lab.sign(BEN, &k);
         rs.push((lab.record(0, Some((k, vec![s])), &[], vec![], k), k));
@@ -1937,13 +1963,13 @@ fn a_members_own_rotation_is_registered_on_the_line() {
     let p0 = lab.m[BEN].clone();
     let x = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut tablet, &x);
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(ANA, &t);
     let sk = sign(&mut lab.w, &mut tablet, &k);
     let r = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k));
     // A clone the tablet signs that no act of the label places before the line.
-    let t2 = lab.clone_terms(&k, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Daily."));
+    let t2 = lab.clone_terms(&k, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, "Daily."));
     let k2 = lab.propose(ANA, &t2);
     let sk2 = sign(&mut lab.w, &mut tablet, &k2);
     // Ben rotates his own key and forgets the tablet.
@@ -2011,7 +2037,7 @@ fn a_rotation_declaring_nothing_carries_the_agreement_forward() {
     // B5: a rotation declares only a constitutional clone.
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     lab.rotate(Some((k, vec![s])), &[0]);
@@ -2068,7 +2094,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
         let f = lab.founding;
         let mut ks = vec![];
         for (d, w) in [(0, "Weekly."), (1, "Daily.")] {
-            let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+            let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
             let k = lab.propose(BEN, &t);
             let s = lab.sign(BEN, &k);
             lab.record(d, Some((k, vec![s])), &[], vec![], k);
@@ -2077,7 +2103,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
         let x = lab.cmip_act(2, pay());
         assert_eq!(lab.in_force(&x), f, "a fork: the parent stays");
         // A clone of the weekly branch.
-        let t = lab.clone_terms(&ks[0], vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly, on Mondays."));
+        let t = lab.clone_terms(&ks[0], vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, "Weekly, on Mondays."));
         let k3 = lab.propose(BEN, &t);
         let s3 = lab.sign(BEN, &k3);
         // After both lines: on device 0, naming device 1's tip. After one
@@ -2106,7 +2132,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
 fn a_fork_is_resolved_from_the_latest_clone_of_a_branch() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let area = |lab: &Lab, parent: &Hash, w: &str| lab.clone_terms(parent, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+    let area = |lab: &Lab, parent: &Hash, w: &str| lab.clone_terms(parent, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
     let t1 = area(&lab, &f, "Weekly.");
     let k1 = lab.propose(BEN, &t1);
     let s1 = lab.sign(BEN, &k1);
@@ -2514,7 +2540,7 @@ fn under_an_absence_proof_cmip_a_declaration_counts_only_where_accepted() {
 fn a_later_act_of_the_party_never_undoes_the_line() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = lab.sign(BEN, &k);
     let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -2537,7 +2563,7 @@ fn a_later_act_of_the_party_never_undoes_the_line() {
     // she signed: the declaration then names the wrong version there.
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = lab.sign(BEN, &k);
     lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -6357,7 +6383,7 @@ fn a_collective_keeps_two_chains() {
     lab.sign(ANA, &join);
     assert!(lab.counts(&join));
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Releases go out on Mondays."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Releases go out on Mondays."));
     let k = lab.propose(ANA, &t);
     let sk = lab.sign(ANA, &k);
     let line = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -6396,7 +6422,7 @@ fn deal_terms(a: Hash, b: Hash) -> Terms {
 fn a_record_not_done_is_no_line() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
@@ -12461,7 +12487,7 @@ fn what_the_line_placed_stays_placed_3_7z() {
     let line = lab.record(0, None, &[], vec![res], f);
     assert!(lab.view().record(&label, &line).unwrap().line);
     // The label lives on under that line: a later clone, and its record.
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Monthly releases."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Monthly releases."));
     let k = lab.propose(ANA, &t);
     let s = lab.sign(ANA, &k);
     let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
@@ -13012,7 +13038,9 @@ fn counting_by_share_3_7ah() {
     let by_share = Rule::ByShare { stake: 0, share: 600_000 };
     let attempt = |lab: &mut Lab, who: &[usize]| -> CloneState {
         let f = lab.founding;
-        let t = lab.clone_terms(&f, vec![(Power::Clone, who.to_vec())], &|t| t.refund = Some(agreements::RefundTerms { until: Value::Uint(5) }));
+        // F421: the refund terms are the constitution's now; a clone
+        // changing nothing needs the clone rule, counted by share here.
+        let t = lab.clone_terms(&f, vec![(Power::Clone, who.to_vec())], &|_| {});
         let k = lab.propose(ANA, &t);
         let s: Vec<Hash> = who.iter().map(|i| lab.sign(*i, &k)).collect();
         let r = lab.record(0, Some((k, s)), &[], vec![], k);

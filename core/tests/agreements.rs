@@ -461,26 +461,28 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         }))),
         vec![Power::Judicial]
     );
-    // 3.7c: an area's words are its holders'.
+    // 3.7c, F421: an area's words are the control model's parameters, the
+    // constitution's (Agreements rule 98).
     assert_eq!(
         needs(&p, &c(&|t| t.area_words.as_mut().unwrap()[0].1 = "Releases on Mondays.".into())),
-        vec![Power::Area(1)]
+        vec![Power::Constitutional]
     );
-    // 3.7e: an area's words and a layer's cMIP: both powers.
+    // 3.7e, F421: an area's words and a layer's cMIP: the constitutional
+    // change rule alone, a model naming no power beside it.
     assert_eq!(
         needs(&p, &c(&|t| {
             t.area_words = Some(vec![(1, "a".into())]);
             t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
         })),
-        vec![Power::Area(1), Power::Layer(agreements::layers::MONEY)]
+        vec![Power::Constitutional]
     );
-    // 3.7l, Q12: an area and a judicial clause: both.
+    // 3.7l, F421 and F422: the constitution and a judicial clause: both.
     assert_eq!(
         needs(&p, &c(&|t| {
             t.area_words.as_mut().unwrap()[0].1 = "a".into();
             t.arbitrators = Some(vec![h(92)]);
         })),
-        vec![Power::Judicial, Power::Area(1)]
+        vec![Power::Constitutional, Power::Judicial]
     );
     // 3.7g: the payment cMIP is the Money layer's rule's, [6, 3].
     assert_eq!(
@@ -774,7 +776,8 @@ fn stakes_are_written_in_millionths() {
     assert_eq!(roundtrip(&x), x);
     let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
     c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
-    assert_eq!(needs(&t, &c), vec![Power::Clone]);
+    // F421: the release rule (field 24) is the constitution's.
+    assert_eq!(needs(&t, &c), vec![Power::Constitutional]);
     // Forked from (field 23): a back-link in founding terms of a collective.
     x.forked_from = Some(h(80));
     assert_eq!(check(&x), Ok(()));

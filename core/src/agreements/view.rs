@@ -3193,7 +3193,9 @@ impl<'a> AgreementsView<'a> {
                 Some(a) => t.area(a).is_some_and(|ar| ar.holders.contains(p)),
             };
             let constitutional = match &t.parent {
-                Some(pp) => super::tiers::constitutional(&self.terms(pp)?, &t),
+                // Named again by a clone changing the constitution beyond
+                // the judicial tier (rule 65; draft 17's reading kept).
+                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == super::tiers::Tier::Constitutional),
                 None => false,
             };
             if named && constitutional && !self.valid_sigs(v, &[*p]).is_empty() {
@@ -3259,7 +3261,9 @@ impl<'a> AgreementsView<'a> {
             // Named again: by a constitutional clone (rule 37b's refit), never
             // by an ordinary clone that only copies the list (build question B10).
             let constitutional = match &t.parent {
-                Some(pp) => super::tiers::constitutional(&self.terms(pp)?, &t),
+                // Named again by a clone changing the constitution beyond
+                // the judicial tier (rule 65; draft 17's reading kept).
+                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == super::tiers::Tier::Constitutional),
                 None => false,
             };
             if !named || !constitutional {
