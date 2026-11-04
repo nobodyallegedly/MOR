@@ -1796,6 +1796,11 @@ impl<'a> AgreementsView<'a> {
         if !super::tiers::constitutional(&parent, &k_terms) {
             return Ok(Some("a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into()));
         }
+        // F424: and nothing but constitutional changes, so that telling a
+        // broken collective from one that is not never needs the model.
+        if changes(&parent, &k_terms).iter().any(|c| c.tier() == super::tiers::Tier::Operational) {
+            return Ok(Some("a rotation declares only a clone whose every change is constitutional; its operational part is recorded separately (rules 69, 98; F424)".into()));
+        }
         if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
             return Ok(Some(w));
         }

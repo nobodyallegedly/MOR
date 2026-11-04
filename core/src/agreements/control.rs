@@ -10,6 +10,30 @@
 //! A model the verifier does not hold answers nothing, and what depends on
 //! it is unknown to that verifier.
 
+//! ## The line as data (S7m-5's design; the code still to follow it)
+//!
+//! A model never calls back into the view. Where it needs the collective's
+//! line to answer (an issuance's offer and take-ups, a proxy's vote), the
+//! core computes, at the line that would put the act or clone in force, and
+//! hands over as plain data:
+//!
+//! - **the voices**: the parties whose voice remains there (rule 65);
+//! - **the roster**: for each stake, its holders and shares, field 7 of
+//!   the agreement in force with the transfers the line placed applied
+//!   (rule 10);
+//! - **the signatures**: for the act or clone judged, each signature act
+//!   the line places on it, by its signer (rules 6, 58);
+//! - **the model's placed acts**: every act of the model's own
+//!   specification (an offer, a take-up, a proxy and its revocation) the
+//!   line placed, each with its signer, its payload and whether it lies
+//!   before that line ("Made before, made after");
+//! - **the facts the caller states**: what was paid toward each act a
+//!   payment names (Money), and, on the agreement's time reference, which
+//!   acts lie within a period and which periods lapsed (rule 33).
+//!
+//! The model answers from these alone; the core counts (rule 65). These
+//! are rule 99's "collective's line at the act", spelled out.
+
 use super::formats::{Area, AgreementsError, HoldersEntry, IssuesUnder, Power, Terms, R};
 use super::tiers::Change;
 use crate::cbor::Value;

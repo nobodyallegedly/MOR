@@ -2339,7 +2339,10 @@ impl Terms {
             for f in a.fields.iter().flatten() {
                 let ok = match f {
                     // 28, fees, placed on their own (F213).
-                    FieldRef::Field(n) => [7, 17].contains(n),
+                    // F421 to F423: field 17 is the constitution's and
+                    // field 7 changes only by its four placed acts: no
+                    // operational field remains for an area.
+                    FieldRef::Field(_) => false,
                     FieldRef::Task(t) => (1..=LAST_TASK).contains(t) && !JUDICIAL_TASKS.contains(t),
                 };
                 if !ok {
