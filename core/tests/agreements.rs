@@ -467,14 +467,16 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         needs(&p, &c(&|t| t.area_words.as_mut().unwrap()[0].1 = "Releases on Mondays.".into())),
         vec![Power::Constitutional]
     );
-    // 3.7e, F421: an area's words and a layer's cMIP: the constitutional
-    // change rule alone, a model naming no power beside it.
+    // 3.7e, F421: an area's words and a layer's cMIP. Since Agreements
+    // draft 19 (F425, 5; moved by decision): the constitutional change rule
+    // and the rule for Money the payment cMIP lies under, never the clone
+    // rule beside it.
     assert_eq!(
         needs(&p, &c(&|t| {
             t.area_words = Some(vec![(1, "a".into())]);
             t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
         })),
-        vec![Power::Constitutional]
+        vec![Power::Constitutional, Power::Layer(3)]
     );
     // 3.7l, F421 and F422: the constitution and a judicial clause: both.
     assert_eq!(

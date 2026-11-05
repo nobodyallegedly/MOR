@@ -215,19 +215,36 @@ pub fn powers_needed(
     let ch = changes(parent, clone);
     let judicial = ch.iter().any(|c| c.tier() == Tier::Judicial);
     let mut out: Vec<Power> = vec![];
+    let ops: Vec<Change> = ch.iter().filter(|c| c.tier() == Tier::Operational).cloned().collect();
+    // The powers the operational changes need: the model's answer, or, with
+    // no model, the last resort's; an overreaching answer is set aside and
+    // the clone judged as this MIR alone judges it (rule 99).
+    let operational = |ops: &[Change]| -> R<Vec<Power>> {
+        match &parent.control {
+            Some(c) => match held.iter().find(|(h, _)| *h == c.cmip) {
+                Some((_, m)) => match super::control::checked(m.clone_powers(parent, clone, ops, ext_layers)?) {
+                    Ok(p) => Ok(p),
+                    Err(_) => last_resort(clone, ops, ext_layers),
+                },
+                None => Err(AgreementsError::Missing(c.cmip)),
+            },
+            None => last_resort(clone, ops, ext_layers),
+        }
+    };
     if ch.iter().any(|c| c.tier() == Tier::Constitutional) {
         out.push(Power::Constitutional);
-    } else {
-        let ops: Vec<Change> = ch.iter().filter(|c| c.tier() == Tier::Operational).cloned().collect();
-        if !ops.is_empty() || ch.is_empty() {
-            match &parent.control {
-                Some(c) => match held.iter().find(|(h, _)| *h == c.cmip) {
-                    Some((_, m)) => out.extend(super::control::checked(m.clone_powers(parent, clone, &ops, ext_layers)?)?),
-                    None => return Err(AgreementsError::Missing(c.cmip)),
-                },
-                None => out.extend(last_resort(clone, &ops, ext_layers)?),
-            }
+        // A clone with constitutional and operational changes needs too the
+        // power of each layer's rule and each area those lie under, never
+        // the clone rule beside the constitutional change rule (Agreements
+        // draft 19, rule 99; F425, 5).
+        // Only a change of a task's cMIP or of an extension lies under a
+        // layer's rule or an area (rule 60); the stake (field 7) under none.
+        let laid: Vec<Change> = ops.iter().filter(|c| matches!(c, Change::Task(_) | Change::Extension(_))).cloned().collect();
+        if !laid.is_empty() {
+            out.extend(operational(&laid)?.into_iter().filter(|p| matches!(p, Power::Layer(_) | Power::Area(_))));
         }
+    } else if !ops.is_empty() || ch.is_empty() {
+        out.extend(operational(&ops)?);
     }
     if judicial {
         out.push(Power::Judicial);

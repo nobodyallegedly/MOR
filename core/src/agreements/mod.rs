@@ -15,14 +15,12 @@
 //!   what a verifier holds.
 
 pub mod formats;
-/// Control models (Agreements draft 18, rule 99): the boundary.
+/// Control models (Agreements draft 19, rule 99): the boundary.
 pub mod control;
 pub mod open_formats;
 /// The publication (Agreements type 6): the offer, with its partners, split
 /// service and split plan.
 pub mod publication;
-/// The owners' acts of draft 14: the issuance offer and proxies (F309, F327).
-pub mod owners;
 /// What a version pays a stake less (Agreements draft 12, rule 48: F270,
 /// F274, F279, F280).
 pub mod pay;
@@ -32,9 +30,8 @@ pub mod tiers;
 pub mod view;
 
 pub use formats::*;
-pub use owners::{decode_proxy_revocation, in_format, owner_types, proxy_revocation_payload, IssuanceOffer, Proxy};
 pub use open_formats::{
-    new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, RefundTerms, ShareRule, Sold, SplitPlan,
+    in_format, new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, RefundTerms, ShareRule, Sold, SplitPlan,
     StakeTransfer, Unfilled, WorkClaim, FEES_FIELD, RETIRED_TYPES, WITHDRAWN_FIELDS,
 };
 pub use publication::{Partner, Publication, PublicationAct};

@@ -2436,7 +2436,7 @@ The rule is the chain's, so it holds for every judge the chain serves, one activ
 
 *A control model is how a collective decides what its constitution leaves to some of its members: which change needs which power, which acts some members may do alone, how owners consent together. The core defines none of them; it defines what one accepts, what it produces, and what it may never decide.*
 
-**A collective names its control model in its terms (field 35)**: a cMIP and its parameters, `[cmip, params]`, as the time reference names its own (field 6). Naming it, or changing it or its parameters, is a constitutional change (rule 98). A model is never asked about a constitutional change, so its refusal of one, field 35's included, is void. A collective names at most one; a deal names none, and terms of a deal carrying field 35 are invalid.
+**A collective names its control model in its terms (field 35)**: a cMIP and its parameters, `[cmip, params]`, as the time reference names its own (field 6). Naming it, or changing it or its parameters, is a constitutional change (rule 98). A model is never asked about a constitutional change, so its refusal of one, field 35's included, is void; for a clone that also makes operational changes, it is asked about those alone (below). A collective names at most one; a deal names none, and terms of a deal carrying field 35 are invalid.
 
 **What a control model accepts**, as data the core computes and hands it, never a call back into the verifier:
 

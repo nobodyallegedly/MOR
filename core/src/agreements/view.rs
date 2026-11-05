@@ -2851,9 +2851,13 @@ impl<'a> AgreementsView<'a> {
             // the owners' matters (rules 94, 96, 97; new in draft 14, F316,
             // F327; the take-up placed as a transfer is, a reading of the
             // build), each judged where the owners' matters read it.
+            // A control model's own proxy, revocation or other act, of the
+            // model the agreement in force names (rule 99), is placed so too.
             if self.is_agreements(a, crate::agreements::open_formats::new_types::STAKE_TRANSFER)
-                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY)
-                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY_REVOCATION)
+                || matches!(
+                    self.model_kind(at_terms.control.as_ref().map(|c| &c.cmip), a),
+                    Some(crate::agreements::control::ActKind::Proxy | crate::agreements::control::ActKind::Revocation | crate::agreements::control::ActKind::Other)
+                )
                 || self.takes_up(a)
             {
                 if !self.kept_at(col, a, Line::Record(h))? {
@@ -4412,7 +4416,22 @@ impl<'a> AgreementsView<'a> {
         // grant is the consent, given once.
         if let Some((g, _)) = self.col_grant(&col, x) {
             return Ok(match self.backing(act)? {
-                Backing::Backed { grant } | Backing::Binds { grant } => Consent::Granted { agreement: self.in_force(act)?.unwrap_or(g.id), grant },
+                Backing::Backed { grant } | Backing::Binds { grant } => {
+                    let agreement = self.in_force(act)?.unwrap_or(g.id);
+                    // Entering an agreement as a party under a grant within
+                    // an area: the rule for Agreements too, its members
+                    // signing (rule 98; F425, 6).
+                    let in_area = self.v.get(&grant).and_then(|h| Grant::decode(&h.inside.payload).ok()).is_some_and(|d| d.area.is_some());
+                    if in_area && self.enters_as_party(&col, x) {
+                        if let Some(l) = self.terms(&agreement)?.lane(layers::AGREEMENTS) {
+                            let c = self.count_areas(&col, act, Point::Act(x), agreement, vec![l])?;
+                            if !c.counts() {
+                                return Ok(c);
+                            }
+                        }
+                    }
+                    Consent::Granted { agreement, grant }
+                }
                 Backing::NotBacked { grant, reason } | Backing::Disputed { grant, reason } => Consent::Ungranted { grant, reason },
                 Backing::Unknown { grant, reason } => Consent::Unknown { grant, reason },
                 Backing::NotUnderGrant => Consent::Ungranted { grant: g.id, reason: "not signed by the grant's grantee".into() },
@@ -4594,7 +4613,33 @@ impl<'a> AgreementsView<'a> {
                 });
             }
         }
+        // Entering an agreement as a party is an act of the Agreements layer
+        // under its rule, never of a control model's power alone: an area
+        // reaching it adds to that rule (rules 60, 98; F425, 6).
+        if self.enters_as_party(&col, x) {
+            if let Some(l) = t.lane(layers::AGREEMENTS) {
+                if !reaching.iter().any(|r| r.id == l.id) {
+                    reaching.push(l);
+                }
+            }
+        }
         self.count_areas(&col, act, Point::Act(x), ag, reaching)
+    }
+
+    /// Whether `x` is an act by which collective `col` enters an agreement
+    /// as a party (rule 98): its publication (type 6), save its own split
+    /// agreement (the judicial tier's, rule 67), or its signature act on a
+    /// publication or on terms naming it among their parties.
+    fn enters_as_party(&self, col: &Col, x: &Held) -> bool {
+        let publication = |h: &Held| self.is_agreements(h, types::PUBLICATION) && !self.pub_act(&h.id).is_some_and(|(_, a)| a.publication.is_split_agreement());
+        if publication(x) {
+            return true;
+        }
+        if !self.is_agreements(x, types::SIGNATURE) {
+            return false;
+        }
+        let Some(o) = decode_signature(&x.inside).ok().and_then(|s| self.v.get(&s)) else { return false };
+        publication(o) || (self.is_agreements(o, types::TERMS) && Terms::decode(&o.inside.payload).is_ok_and(|t| t.parties.contains(&col.id)))
     }
 
     /// Rule 36a: each area reaching `act` counted, under the agreement `ag`

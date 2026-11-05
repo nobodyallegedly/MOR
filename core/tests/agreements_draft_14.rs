@@ -1,12 +1,12 @@
 //! Agreements draft 14, judged by the core library: Fable's A6 (F295 for
-//! Agreements acts, at the verifier) and the owners' new acts (types 26 to
-//! 28). The flows of the owners' matters are in `agreements_owners.rs`.
+//! Agreements acts, at the verifier) and the owners' acts (types 26 to 28,
+//! the default control cMIP's own since Agreements draft 19). The flows of the owners' matters are in `agreements_owners.rs`.
 
 mod common;
 
 use common::{agreements_spec, own_home, World};
 use mor_core::act::Object;
-use mor_core::agreements::{self, owner_types, IssuanceOffer, Proxy};
+use mor_core::agreements;
 use mor_core::cbor::Value;
 use mor_core::chain::Status;
 use mor_core::hash::{sha256, Hash};
@@ -74,6 +74,13 @@ fn an_agreements_act_outside_its_format_is_invalid_a6() {
 /// naming the agreement (or the proxy) as chain and predecessor.
 #[test]
 fn the_owners_acts_have_their_formats() {
+    // Agreements draft 19 (F426, 1): the issuance offer, the proxy and its
+    // revocation are the default control cMIP's own acts, of its
+    // specification; their formats are its own (`mor_control::acts`), the
+    // same as when they were Agreements types 26 to 28. Under the
+    // Agreements MIR's hash, an act of these types is invalid.
+    use mor_control::acts::{self, types, IssuanceOffer, Proxy};
+    let spec = mor_control::cmip();
     let mut w = World::new();
     let mut col = w.genesis("a collective", vec![own_home()], None, None);
     let mut dana = w.genesis("dana", vec![own_home()], None, None);
@@ -88,33 +95,44 @@ fn the_owners_acts_have_their_formats() {
         words: Some("New shares, for the studio.".into()),
         more: None,
     };
-    let a = w.everyday_act(&mut col, agreements_spec(), owner_types::ISSUANCE_OFFER, offer.to_map(), obj(ag), None);
+    let inside = |w: &World, x: &Hash| w.v.get(x).unwrap().inside.clone();
+    let a = w.everyday_act(&mut col, spec, types::ISSUANCE_OFFER, offer.to_map(), obj(ag), None);
     let o = w.add(&a);
     assert_eq!(w.v.status(&o), Status::Valid);
-    let got = IssuanceOffer::decode(&w.v.get(&o).unwrap().inside).unwrap();
+    assert!(acts::in_format(&inside(&w, &o)).is_ok());
+    let got = IssuanceOffer::decode(&inside(&w, &o)).unwrap();
     assert_eq!(got, offer);
+    let a = w.everyday_act(&mut col, agreements_spec(), types::ISSUANCE_OFFER, offer.to_map(), obj(ag), None);
+    let old = w.add(&a);
+    assert_eq!(w.v.status(&old), Status::Invalid, "type 26 is no Agreements type since draft 19");
     for bad in [
         IssuanceOffer { size: 0, ..offer.clone() },
         IssuanceOffer { size: 1_000_000, ..offer.clone() },
         IssuanceOffer { new_holders: vec![(h("an investor"), 600_000)], ..offer.clone() },
         IssuanceOffer { new_holders: descending(vec![(h("b"), 500_000), (h("a"), 500_000)]), ..offer.clone() },
     ] {
-        let a = w.everyday_act(&mut col, agreements_spec(), owner_types::ISSUANCE_OFFER, bad.to_map(), obj(ag), None);
+        let a = w.everyday_act(&mut col, spec, types::ISSUANCE_OFFER, bad.to_map(), obj(ag), None);
         let x = w.add(&a);
-        assert_eq!(w.v.status(&x), Status::Invalid, "{bad:?}");
+        assert!(acts::in_format(&inside(&w, &x)).is_err(), "{bad:?}");
     }
     let p = Proxy { version: ag, stake: 0, proxy: h("a friend"), scoped: None };
-    let a = w.everyday_act(&mut dana, agreements_spec(), owner_types::PROXY, p.to_map(), obj(ag), None);
+    let a = w.everyday_act(&mut dana, spec, types::PROXY, p.to_map(), obj(ag), None);
     let px = w.add(&a);
-    assert_eq!(w.v.status(&px), Status::Valid);
-    assert_eq!(Proxy::decode(&w.v.get(&px).unwrap().inside).unwrap(), p);
-    let a = w.everyday_act(&mut dana, agreements_spec(), owner_types::PROXY, p.to_map(), None, None);
+    assert!(acts::in_format(&inside(&w, &px)).is_ok());
+    assert_eq!(Proxy::decode(&inside(&w, &px)).unwrap(), p);
+    let a = w.everyday_act(&mut dana, agreements_spec(), types::PROXY, p.to_map(), obj(ag), None);
+    let old = w.add(&a);
+    assert_eq!(w.v.status(&old), Status::Invalid, "type 27 is no Agreements type since draft 19");
+    let a = w.everyday_act(&mut dana, spec, types::PROXY, p.to_map(), None, None);
     let unanchored = w.add(&a);
-    assert_eq!(w.v.status(&unanchored), Status::Invalid, "names the agreement as chain and predecessor");
-    let a = w.everyday_act(&mut dana, agreements_spec(), owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px), None);
+    assert!(acts::in_format(&inside(&w, &unanchored)).is_err(), "names the agreement as chain and predecessor");
+    let a = w.everyday_act(&mut dana, spec, types::PROXY_REVOCATION, acts::proxy_revocation_payload(&px), obj(px), None);
     let r = w.add(&a);
-    assert_eq!(w.v.status(&r), Status::Valid);
-    let a = w.everyday_act(&mut dana, agreements_spec(), owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(ag), None);
+    assert!(acts::in_format(&inside(&w, &r)).is_ok());
+    let a = w.everyday_act(&mut dana, spec, types::PROXY_REVOCATION, acts::proxy_revocation_payload(&px), obj(ag), None);
     let r2 = w.add(&a);
-    assert_eq!(w.v.status(&r2), Status::Invalid, "names the proxy as chain and predecessor");
+    assert!(acts::in_format(&inside(&w, &r2)).is_err(), "names the proxy as chain and predecessor");
+    let a = w.everyday_act(&mut dana, spec, 29, vec![], obj(ag), None);
+    let undeclared = w.add(&a);
+    assert!(acts::in_format(&inside(&w, &undeclared)).is_err(), "a type the cMIP does not declare");
 }

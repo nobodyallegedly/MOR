@@ -667,6 +667,13 @@ fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value
     w.add(&a)
 }
 
+/// An act of the default control cMIP's own specification (Agreements draft
+/// 19, rule 99): an issuance offer, a proxy or its revocation.
+fn model_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let a = w.everyday_act(p, mor_control::cmip(), type_, payload, objects, None);
+    w.add(&a)
+}
+
 fn view(w: &World) -> AgreementsView<'_> {
     common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
 }
@@ -13253,7 +13260,7 @@ fn an_issuance_3_7ac() {
     let ids = lab.ids();
     let mut ivy = lab.w.genesis("ivy, the new holder", vec![own_home()], None, None);
     let unit = spec("a unit");
-    let offer = agreements::IssuanceOffer {
+    let offer = mor_control::acts::IssuanceOffer {
         version: k,
         stake: 0,
         size: 200_000,
@@ -13263,7 +13270,7 @@ fn an_issuance_3_7ac() {
         words: Some("A fifth, for the studio.".into()),
         more: None,
     };
-    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, offer.to_map(), obj(k), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, offer.to_map(), obj(k), None);
     let o = lab.w.add(&a);
     // Ben takes up; no line of the label places it: within the period, it
     // counts all the same (F329 Q3).
@@ -13307,8 +13314,8 @@ fn an_issuance_3_7ac() {
     let got = state_at(&lab, &r_plain, &[o], &[up]);
     assert!(matches!(&got, CloneState::Draft(w) if w.contains("lowers a holder's stake")), "{got:?}");
     // An offer sealed to the members alone did not reach Dana.
-    let sealed = agreements::IssuanceOffer { period: Value::Uint(11), ..offer.clone() };
-    let o2 = lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
+    let sealed = mor_control::acts::IssuanceOffer { period: Value::Uint(11), ..offer.clone() };
+    let o2 = lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
     let scaled = vec![(a_, 240_000), (b_, 240_000), (c_, 240_000), (d_, 80_000), (i_, 200_000)];
     let y = issuance(&mut lab, &k, agreements::IssuesUnder::Offer(o2), scaled.clone(), &[a_, b_]);
     let r_sealed = issuance_record(&mut lab, y, &mut [&mut ivy]);
@@ -13335,8 +13342,8 @@ fn an_issuance_3_7ac() {
     let ids = lab.ids();
     let mut ivy = lab.w.genesis("ivy, the new holder", vec![own_home()], None, None);
     let (a_, b_, c_, d_, i_) = (ids[ANA], ids[BEN], ids[CY], dana.id, ivy.id);
-    let sealed = agreements::IssuanceOffer { version: k, new_holders: vec![(i_, 1_000_000)], ..offer.clone() };
-    let o3 = lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
+    let sealed = mor_control::acts::IssuanceOffer { version: k, new_holders: vec![(i_, 1_000_000)], ..offer.clone() };
+    let o3 = lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
     let scaled = vec![(a_, 240_000), (b_, 240_000), (c_, 240_000), (d_, 80_000), (i_, 200_000)];
     let y = issuance(&mut lab, &k, agreements::IssuesUnder::Offer(o3), scaled.clone(), &[a_, b_]);
     let r = issuance_record(&mut lab, y, &mut [&mut ivy, &mut dana]);
@@ -13387,8 +13394,8 @@ fn an_issuance_3_7ac() {
 /// A proxy act of `holder` (rule 97), public, on the label's stake in
 /// itself (stake 0 of `k`), naming `proxy`, scoped to `scoped` or standing.
 fn proxy_act(lab: &mut Lab, holder: &mut Person, k: Hash, proxy: Hash, scoped: Option<Hash>) -> Hash {
-    let p = agreements::Proxy { version: k, stake: 0, proxy, scoped };
-    agreements_act(&mut lab.w, holder, agreements::owner_types::PROXY, p.to_map(), obj(k))
+    let p = mor_control::acts::Proxy { version: k, stake: 0, proxy, scoped };
+    model_act(&mut lab.w, holder, mor_control::acts::types::PROXY, p.to_map(), obj(k))
 }
 
 /// Freeze suite v28, 3.7ak (F327): Dana, holding half the label's stake in
@@ -13439,7 +13446,7 @@ fn proxies_3_7ak() {
     let (mut lab, mut dana, k, mut pat, mut svc, sa) = fresh();
     let px = proxy_act(&mut lab, &mut dana, k, pat.id, None);
     lab.acknowledge(0, px);
-    let rv = agreements_act(&mut lab.w, &mut dana, agreements::owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px));
+    let rv = model_act(&mut lab.w, &mut dana, mor_control::acts::types::PROXY_REVOCATION, mor_control::acts::proxy_revocation_payload(&px), obj(px));
     lab.acknowledge(0, rv);
     assert!(!vote(&mut lab, &mut svc, sa, &mut pat), "revoked");
     // Replaced by a newer proxy: Quinn votes, Pat does not.
@@ -13936,8 +13943,8 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
             OwnerOp::Proxy { holder, proxy, scoped, placed } => {
                 let h = *holder as usize % 5;
                 let to = ids[5 + *proxy as usize % 2];
-                let p = agreements::Proxy { version: cur, stake: 0, proxy: to, scoped: scoped.then_some(cur) };
-                let x = with(&mut lab, &mut others, h, |w, q| agreements_act(w, q, agreements::owner_types::PROXY, p.to_map(), obj(cur)));
+                let p = mor_control::acts::Proxy { version: cur, stake: 0, proxy: to, scoped: scoped.then_some(cur) };
+                let x = with(&mut lab, &mut others, h, |w, q| model_act(w, q, mor_control::acts::types::PROXY, p.to_map(), obj(cur)));
                 proxies.push(x);
                 if *placed {
                     lab.acknowledge(0, x);
@@ -13947,19 +13954,19 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
                 let Some(px) = proxies.last().copied() else { continue };
                 let Some(h) = lab.w.v.get(&px).and_then(|a| a.act.outside.signer) else { continue };
                 let Some(i) = ids.iter().position(|x| *x == h) else { continue };
-                let r = with(&mut lab, &mut others, i, |w, q| agreements_act(w, q, agreements::owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px)));
+                let r = with(&mut lab, &mut others, i, |w, q| model_act(w, q, mor_control::acts::types::PROXY_REVOCATION, mor_control::acts::proxy_revocation_payload(&px), obj(px)));
                 if *placed {
                     lab.acknowledge(0, r);
                 }
             }
             OwnerOp::Offer { public } => {
-                let o = agreements::IssuanceOffer { version: cur, stake: 0, size: 100_000, new_holders: vec![(ids[5], 1_000_000)], period: Value::Uint(9), price: None, words: None, more: None };
+                let o = mor_control::acts::IssuanceOffer { version: cur, stake: 0, size: 100_000, new_holders: vec![(ids[5], 1_000_000)], period: Value::Uint(9), price: None, words: None, more: None };
                 let x = if *public {
-                    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), None);
+                    let a = lab.w.everyday_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, o.to_map(), obj(cur), None);
                     lab.w.add(&a)
                 } else {
                     let to = sorted(lab.ids());
-                    lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), to)
+                    lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, o.to_map(), obj(cur), to)
                 };
                 offer = Some(x);
             }
