@@ -1907,6 +1907,17 @@ function agreementsClonePlan(parent2, clone, specs) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
+function agreementsControlPack(payload) {
+  const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.agreementsControlPack(ptr0, len0);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v2;
+}
 function agreementsDivideStake(input) {
   const ret = wasm.agreementsDivideStake(input);
   if (ret[3]) {
@@ -7520,7 +7531,7 @@ function encodeTerms(t) {
   if (t.keepers?.ids.length) m.set(3, [[...t.keepers.ids].sort().map(unhex), ruleValue(t.keepers.rule)]);
   if (t.departed?.length) m.set(22, t.departed.map(unhex));
   if (t.forkedFrom) m.set(23, unhex(t.forkedFrom));
-  return cborEncode(m);
+  return agreementsControlPack(cborEncode(m));
 }
 function evenShares(holders2) {
   if (!holders2.length) return [];
@@ -19801,14 +19812,16 @@ var TestCollective = class _TestCollective {
     return { clone: proposed.id, rotation: id, signed, sent };
   }
   /**
-   * An ordinary change (Agreements rule 37c): the release area's own words, which
-   * its holders change alone. A clone marked with the release area's power
-   * and the members who sign it; the collective records it at once with
-   * their signature acts (A2), with its signing key: no rotation (Q8).
+   * A change of the release area's own words. Since Agreements draft 18
+   * (F421) an area's words are among the control model's parameters, which
+   * are constitutional: a clone marked with the constitutional change rule
+   * (field 18; every member unless the founding wrote otherwise), so an
+   * area's holders can no longer widen their own area. The collective
+   * records it at once with the signature acts (A2): no rotation (Q8).
    */
   async changeReleaseWords(opts) {
     const governance = { ...this.f.governance, releaseWords: opts.words };
-    return this.recordChange({ ...opts, governance, power: { area: 1 }, what: "not an ordinary change of the release area" });
+    return this.recordChange({ ...opts, governance, power: { constitutional: true }, what: "not a constitutional change of the release area's words (Agreements draft 18, F421)" });
   }
   /**
    * A judicial change (Agreements rules 44a, 46a; Agreements draft 8, B13): only who
@@ -21746,10 +21759,12 @@ var Actions = class {
     });
   }
   /**
-   * An ordinary change (Agreements rule 37c, Q8): the release area's own words,
-   * changed by enough of its holders, marked with the area's power, and
-   * written on the collective's record at once, drawn by a member. No
-   * rotation.
+   * The release area's own words (Agreements draft 18, F421): an area's words
+   * are among the control model's parameters, which are constitutional, so the
+   * clone is marked with the constitutional change rule (field 18) and signed
+   * under it, not by the area's holders alone. Written on the collective's
+   * record at once, drawn by a member. No rotation. The stated cost: one more
+   * signature round for a rewording.
    */
   async prepareWords(a) {
     const names2 = this.store.names();
@@ -21763,20 +21778,20 @@ var Actions = class {
     const g = { ...c2.f.governance, releaseWords: text4 };
     const agreements = await this.agreementsOf(c2);
     const lm = this.agreementsMark(c2, agreements, (m) => encodeTerms(collectiveTerms(g, c2.f.members, c2.f.agreement, m)), [], names2, "needed");
-    const areaCount = lm.counts.find((x) => "area" in x.power);
-    const voices = areaCount?.voices ?? [];
-    const k = areaCount?.needed ?? 0;
-    if (agreements.agreement && !agreements.broken && !voices.length) blocking.push("The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Agreements rule 37b).");
+    const ruleCount = lm.counts.find((x) => "constitutional" in x.power);
+    const voices = ruleCount?.voices ?? [];
+    const k = ruleCount?.needed ?? 0;
+    if (agreements.agreement && !agreements.broken && !voices.length) blocking.push("Nobody whose voice remains can meet the constitutional change rule, so the area\u2019s words cannot change.");
     else blocking.push(...lm.blocking);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : lm.mark.find((e3) => "area" in e3.power)?.signers ?? [];
+    const signers = a.signers?.length ? [...new Set(a.signers)] : lm.mark.find((e3) => "constitutional" in e3.power)?.signers ?? [];
     if (a.signers?.length) {
       for (const s of signers) {
-        if (!voices.includes(s)) blocking.push(`${names2(s)} does not hold the Releases area with a voice that remains, as Agreements count it, so their signature cannot meet its power.`);
+        if (!voices.includes(s)) blocking.push(`${names2(s)} has no voice that remains under the constitutional change rule, as Agreements count it, so their signature cannot meet it.`);
         else if (!this.store.holds(s)) blocking.push(`${names2(s)} is not held by this program, so it cannot sign here.`);
       }
-      if (voices.length && signers.length < k) blocking.push(`Its words change with ${anyOf(k, voices, names2)}; only ${signers.length} sign here.`);
+      if (voices.length && signers.length < k) blocking.push(`The area\u2019s words change with ${anyOf(k, voices, names2)}; only ${signers.length} sign here.`);
     }
-    const mark = [{ power: { area: RELEASE_AREA }, signers }];
+    const mark = [{ power: { constitutional: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c2.f.members, c2.f.agreement, mark));
     let changes = [];
     let after2 = null;
@@ -21793,8 +21808,8 @@ var Actions = class {
     const reading2 = {
       title: `New words for the Releases area of \u201C${cname}\u201D`,
       summary: [
-        "An ordinary change: it changes only the Releases area's own words, an operational matter in that area (Agreements rules 44a, 44b).",
-        `The clone is marked with the Releases area's power and signed by ${list3(signers.map(names2))}: enough of the area's holders (${anyOf(k, voices, names2)}) (Agreements rules 44c, 45a).`,
+        "A constitutional change: an area's own words are part of the collective's control model, which only the constitutional change rule changes, so that an area's holders cannot widen their own area (Agreements draft 18, F421). The cost: one more signature round than an area's holders alone.",
+        `The clone is marked with the constitutional change rule and signed by ${list3(signers.map(names2))}: enough under that rule (${anyOf(k, voices, names2)}) (Agreements rules 44c, 45a).`,
         "The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective (Agreements rule 60): no rotation, no new keys (Agreements rule 37c, Q8)."
       ],
       sections: [
@@ -38015,8 +38030,8 @@ function releaseArea(s, c2) {
 <dt>Who decides</dt><dd>${a.frozen ? "<strong>Frozen</strong>: nobody holds it any more. A release counts for nothing until the members refit it (a change of members or rules)." : `Any ${a.needed} of the holders who remain${a.needed < a.threshold ? ` (the rule asks for ${a.threshold}; fewer remain, so all of them)` : ""}`}</dd>
 <dt>Its own words</dt><dd>${a.words ? e2(a.words) : '<span class="small">none</span>'}</dd></dl>
 ${down ? `<div class="row">${down}</div><p class="small">A holder may step down at once, alone; the other holders carry on. With nobody left, the area is frozen until the members refit it.</p>` : ""}
-${a.frozen ? "" : `<form class="words row" data-collective="${e2(c2.id)}"><input name="text" type="text" class="wide" placeholder="New words for the ${e2(a.name)} area" required><button type="submit">Review the new words</button></form>
-<p class="small">An ordinary change: signed by enough holders and written on the collective's record at once, with no rotation.</p>`}</div>`;
+<form class="words row" data-collective="${e2(c2.id)}"><input name="text" type="text" class="wide" placeholder="New words for the ${e2(a.name)} area" required><button type="submit">Review the new words</button></form>
+<p class="small">A constitutional change: an area's words are signed under the constitutional change rule (every member, unless the founding said otherwise), not by the area's holders alone, so that nobody widens their own area. Written on the collective's record at once, with no rotation.</p></div>`;
   }).join("");
 }
 function collectives(s, only2) {
