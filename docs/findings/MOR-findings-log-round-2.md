@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F428. Everyday acts by share; S7n's questions (5 November 2026)
+
+**From S7n's report** (`docs/s7n-report.md`, pull request 124): a second control model, "Majority and treasury", was written on paper from the texts alone, and a second outsider's five verdicts under it matched the core's. Sixteen guesses; two closed in the text, the rest S7n's seven questions.
+
+**Decided by Nobody, allegedly, 5 November 2026** (question 1): **a control model may make an everyday act count by share.** `act-answer` gains a power counted by share for one act, `[2, counted]`, counted by rule 65 as clones are. In his words: "B) with all the simulation we have prepared we're taking time for a solid MOR1." *Why (the MOR lead's lean, which he took):* his ask that collectives be buildable with mechanisms that resemble companies, votes by head or by share among them (paper notes, 24 October); a frozen answer format without it would rule it out for everyday acts for all of MOR 1.
+
+**Settled by the MOR lead under delegation**, along the session's leans: 2, the mixed clone as written (`[0]`, `[4]` where rule 67 asks, plus each layer's rule and each area), the stated cost named in rule 99 (bundling a working change with a constitutional one skips what a model asks beyond layers and areas); 3, a model says when `[1]` is needed, never by which rule: field 5 counts it, one clause; 4, an area's number may be below its layer's threshold, the founders' choice shown Money first, one clause in rule 98.5; 5, a grant within an area ends at the line where the agreement in force names another model, one rule and a vector; 6, the line as data covers the three shapes the default model uses, enough for MOR 1, another shape added when a cMIP lead asks; 7, the default cMIP goes into the third box (`make-c-box.sh`). For the suite, on S7n's branch: the desk's type generator reads `cmips/control/src/acts.rs`'s `pub mod types` and lists types 26 to 28 under the collective's control model (`agreementsControlCmip()`); `clients/reader/src/mirs.ts` names Agreements draft 19.
+
 ## F426. S7m-6's questions, settled (5 November 2026)
 
 **From S7m-6's report** (`docs/s7m-6-report.md`, pull request 121; CI all green on `98b5811`).
