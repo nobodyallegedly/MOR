@@ -16,7 +16,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { MIRS, cborEncode } from '../../genesis/src/core.ts';
 import { specHash } from '../../site/src/listing.ts';
 import { BUILT_IN, CARD_HEAD, MICS_HASH, SUITE_HASH, cardText, readCardText } from '../src/cards.ts';
@@ -73,8 +73,13 @@ test('the eight texts: built-in titles, keyed by their test hashes; the MICS doc
     if (t.endsWith('\n')) t = t.slice(0, -1);
     return { hash: specHash(cborEncode(new Map<number, unknown>([[0, kind], [9, t]]))), heading: t.split('\n')[0].replace(/^#\s*/, '') };
   };
-  const mics = file('02-MOR-MICS-v30.md', 6);
-  const suite = file('03-MOR-freeze-test-suite-v30.md', 7);
+  // The newest draft of each under spec/, so the pins are checked against the texts as they stand.
+  const newest = (prefix: string) => readdirSync(new URL('../../../spec/', import.meta.url))
+    .filter((f) => f.startsWith(prefix) && /-v\d+\.md$/.test(f))
+    .sort((a, b) => Number(a.match(/-v(\d+)\.md$/)![1]) - Number(b.match(/-v(\d+)\.md$/)![1]))
+    .pop()!;
+  const mics = file(newest('02-MOR-MICS-'), 6);
+  const suite = file(newest('03-MOR-freeze-test-suite-'), 7);
   assert.equal(MICS_HASH, mics.hash);
   assert.equal(SUITE_HASH, suite.hash);
   assert.equal(BUILT_IN.length, 8);
