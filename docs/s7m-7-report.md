@@ -60,6 +60,10 @@ The trim moved the models behind a boundary. It did not shrink the core: the cor
 
 ## Releases
 
+The six web releases were rebuilt on the branch as their READMEs say (`cd clients/genesis && npm run wasm`, then `npm run release` in `site`, `dub`, `kishib`, `damgar`, `ummia` and `desk`), with the tools `built/BUILT-WITH.txt` names: rustc 1.97.0, wasm-bindgen 0.2.129, esbuild 0.25.12. Commit `6b4f57f`: the display client, Dub, Kišib (its air-gapped WebAssembly too), Damgar, Ummia and Edubba.
+
+The release workflows were not dispatched: each pushes its build to `main` (`git push origin HEAD:main`). The display client's reproducibility test (`npm run test:build`, 2 tests) passes locally: two builds in two folders give the same bytes, and they match `built/`.
+
 ## CI, checked myself
 
 - **Before this part**, on the remote head `98b5811`: all green. That covers "tests" (jobs "all" and "regtest"), Nakišib (linux and mac) and the browsers job.
