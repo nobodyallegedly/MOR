@@ -134,4 +134,15 @@ Run into a scratch folder, it refused nothing: 8 texts, 1 cMIP, 12 vector files.
 
 ## Releases and CI
 
-See the first line.
+- **The final merge of main:** main had not moved since `b3c900e`, which this branch already holds, so the merge was a no-op ("Already up to date").
+- **The six releases**, rebuilt as their READMEs say (`cd clients/genesis && npm run wasm`, then `npm run release` in `site`, `dub`, `kishib`, `damgar`, `ummia` and `desk`), with rustc 1.97.0, wasm-bindgen 0.2.129 and esbuild 0.25.12: commit `4a31c8a`. That covers the display client, Dub, Kišib (its air-gapped WebAssembly too), Damgar, Ummia and Edubba.
+  - The desk's `mor_wasm_bg.wasm` (`6e24ee12…`) matches the bytes GitHub's machine printed in Edubba's release check.
+  - The display client's reproducibility test passes locally (`npm run test:build`).
+- **CI on `4a31c8a`, read myself** (5 November, after 11:27 UTC): **all green**, the desk's step included (the suite's fix is in):
+  - "tests" (run 42014885716): jobs "all" (the Rust workspace, both vector steps, every app and module, the reproducible display client) and "regtest";
+  - Nakišib, linux and mac;
+  - the browsers;
+  - Kišib's seal;
+  - Edubba's release check.
+- **Locally:** the whole workspace passes, 799 tests in 95 suites.
+- The pull request is marked ready for review, not merged.
