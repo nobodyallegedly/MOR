@@ -1,4 +1,4 @@
-**I am starting the final merge of main.** CI on `62dcbd1`: green but one step. `clients/reader`'s test 8 ("the texts shipped are the newest draft of each MIR") fails because `clients/reader/src/mirs.ts` still names Money draft 12 and Agreements draft 19. Two lines, the suite's: I did not change `clients/`.
+**I started the final merge of main** (main had not moved; the merge was a no-op). The first CI, on `62dcbd1`, was green but one step. `clients/reader`'s test 8 ("the texts shipped are the newest draft of each MIR") fails because `clients/reader/src/mirs.ts` still names Money draft 12 and Agreements draft 19. Two lines, the suite's: I did not change `clients/`.
 
 # S7n-3 report: three small points
 
@@ -77,9 +77,15 @@ The default cMIP gives no power by share, so nothing an app does today changes.
 
 ## Releases and CI
 
-- **The final merge of main:** main had not moved since `db20305`, from which this branch starts, so the merge was a no-op.
-- **The six releases**, rebuilt as their READMEs say, with rustc 1.97.0, wasm-bindgen 0.2.129 and esbuild 0.25.12: commit `aecd9d9`. That covers the display client, Dub, Kišib (its air-gapped WebAssembly too), Damgar, Ummia and Edubba. The display client's reproducibility test passes locally, and GitHub's machine built the same WebAssembly (`ceee4ad9…`).
-- **CI on `aecd9d9`, read myself** (5 November, 14:28 UTC): **green but one step.**
-  - Green: the Rust workspace; both vector steps; every app and module but the reader; the reproducible display client; the regtest job; Nakišib (linux and mac); the browsers; Kišib's seal; Edubba's release check.
-  - **Red: `clients/reader`**, test 8, "the texts shipped are the newest draft of each MIR under spec/". `clients/reader/src/mirs.ts` names `MIR-money-draft-12.md` and `MIR-agreements-draft-19.md`, and the newest are 13 and 20. Two lines, the suite's. I did not change `clients/`.
-- **The pull request stays a draft** until the suite's two lines land on this branch and CI is green. Then I mark it ready, as asked, or the MOR lead does.
+- **The final merge of main:** main had not moved since `db20305`, so the merge was a no-op.
+- **The six releases** were rebuilt twice, as their READMEs say (rustc 1.97.0, wasm-bindgen 0.2.129, esbuild 0.25.12): first `aecd9d9`, then `e7f8656` after the listed-power check changed the core. Each covers the display client, Dub, Kišib (its air-gapped WebAssembly too), Damgar, Ummia and Edubba. The display client's reproducibility test passes locally.
+- **The suite's reader lines** (`0e0b745`, Money draft 13 and Agreements draft 20) are on the branch.
+- **CI on `046a05e`, read myself** (5 November, 17:28 UTC): **all green.**
+  - "tests": jobs "all" (the Rust workspace, both vector steps, every app and module, the reader included, the reproducible display client) and "regtest";
+  - Nakišib, linux and mac;
+  - the browsers;
+  - Kišib's seal;
+  - Edubba's release check.
+- **Locally:** 800 tests in 95 suites; the Python check agrees (291 vectors).
+- **The box** into a scratch folder refused nothing: 8 texts, 1 cMIP, 12 vector files.
+- The pull request is marked ready for review, not merged.
