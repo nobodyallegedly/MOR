@@ -8,7 +8,7 @@
 // Claims of works stay under Agreements, where the core puts them (his
 // words: "My bad, move claim where it belongs.").
 
-import { MIRS } from './mirs.ts';
+import { CONTROL_CMIP, MIRS } from './mirs.ts';
 import { CORE_TYPES } from './core-types.ts';
 
 /** Each type's words, by layer and the core's constant. */
@@ -51,9 +51,12 @@ export const KIND_WORDS: Record<keyof typeof CORE_TYPES, Record<string, string>>
     FORK_SETTLEMENT: 'settlements of a deal’s fork',
     NOTICE: 'notices to a payer owed money back',
     JUDGE_REQUEST: 'requests to a judge',
-    ISSUANCE_OFFER: 'issuance offers',
-    PROXY: 'proxies',
-    PROXY_REVOCATION: 'revocations of a proxy',
+  },
+  // Agreements draft 19: the default control cMIP's own acts, no longer the Agreements MIR's.
+  control: {
+    ISSUANCE_OFFER: 'issuance offers (the collective’s control model)',
+    PROXY: 'proxies (the collective’s control model)',
+    PROXY_REVOCATION: 'revocations of a proxy (the collective’s control model)',
   },
 };
 
@@ -72,7 +75,11 @@ export const GRID_LAYERS: { key: keyof typeof CORE_TYPES | 'development'; layer:
   { key: 'text', layer: 1, name: 'Text', say: 'posts and messages (the Text layer)', kinds: CORE_TYPES.text.map((t) => ({ spec: MIRS.text, type: t.type, name: KIND_WORDS.text[t.constant] ?? plain(t.constant) })) },
   { key: 'envelopes', layer: 2, name: 'Envelopes', say: 'bakes, their keys, vows (the Envelopes layer)', kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
   { key: 'money', layer: 3, name: 'Money', say: 'money (the Money layer)', kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
-  { key: 'agreements', layer: 4, name: 'Agreements', say: 'collectives, ownership agreements, publications, claims of works (the Agreements layer)', kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
+  { key: 'agreements', layer: 4, name: 'Agreements', say: 'collectives, ownership agreements, publications, claims of works (the Agreements layer)', kinds: [
+    ...CORE_TYPES.agreements.map((t) => ({ spec: MIRS.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })),
+    // The collective's control model's own acts (the default cMIP's specification, Agreements draft 19), offered with the Agreements layer.
+    ...CORE_TYPES.control.map((t) => ({ spec: CONTROL_CMIP, type: t.type, name: KIND_WORDS.control[t.constant] ?? plain(t.constant) })),
+  ] },
   // The Development MIR defines no act type of its own: a specification is published as a publication. Chosen whole.
   { key: 'development', layer: 5, name: 'Development', say: 'specifications (the Development layer)', kinds: [] },
 ];
