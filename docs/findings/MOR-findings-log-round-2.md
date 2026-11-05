@@ -28,6 +28,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F432 (reserved for S7p). S7o's contradictions, three settled (6 November 2026)
+
+**From S7o's report** (`docs/s7o-report.md`, pull request 126, merged; the say-it-once pass cut Agreements by about 8%, 84,414 to 77,567 words, the rest being rules said once). **Settled by the MOR lead under delegation**, along S7o's leans: 1, rule 10's reading of which version binds a buyer of a stake, rule 48 corrected to say it; 2, a change of control model ends a grant within an area in the grant format and rule 79 as in rule 74; 3, the fork's scenario line follows rule 91. S7o's older inconsistencies: wording slips fixed in S7p, the rest written up for Fable's last read of the eight texts.
+
 ## F429. S7n-2's questions, settled (5 November 2026)
 
 **From S7n-2's report** (`docs/s7n-2-report.md`, pull request 124, merged): everyday acts by share written and checked on paper (five verdicts matching the core's).
