@@ -1,3 +1,5 @@
+**I am starting the final merge of main.** CI on `62dcbd1`: green but one step. `clients/reader`'s test 8 ("the texts shipped are the newest draft of each MIR") fails because `clients/reader/src/mirs.ts` still names Money draft 12 and Agreements draft 19. Two lines, the suite's: I did not change `clients/`.
+
 # S7n-3 report: three small points
 
 Branch `claude/s7n-3-three-points`, from main at `db20305`. Not to be merged by me. No finding of my own; F430 unused.
