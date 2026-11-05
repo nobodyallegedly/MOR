@@ -103,6 +103,7 @@ fn label() -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     }
 }
 
@@ -130,7 +131,7 @@ fn ext_layers(e: &Hash) -> Result<Vec<u64>, AgreementsError> {
 }
 
 fn needs(parent: &Terms, clone: &Terms) -> Vec<Power> {
-    powers_needed(parent, clone, &mirs(), &ext_layers).unwrap()
+    powers_needed(parent, clone, &mirs(), &ext_layers, &mor_control::held()).unwrap()
 }
 
 fn roundtrip(t: &Terms) -> Terms {
@@ -138,11 +139,16 @@ fn roundtrip(t: &Terms) -> Terms {
     let Value::Map(m) = cbor::decode(&bytes).unwrap() else {
         panic!()
     };
-    Terms::decode(&m).unwrap()
+    let mut back = mor_control::decode(&m).unwrap();
+    // A model packed in memory names itself only for a collective (rule 99).
+    if !t.names_control() && back.control.is_none() {
+        back.control = t.control.clone();
+    }
+    back
 }
 
 fn check(t: &Terms) -> Result<(), AgreementsError> {
-    t.check(&mirs())
+    mor_control::check(t, &mirs())
 }
 
 // ---------------------------------------------------------------- formats
@@ -455,26 +461,28 @@ fn the_powers_a_clone_needs_are_read_from_its_changes() {
         }))),
         vec![Power::Judicial]
     );
-    // 3.7c: an area's words are its holders'.
+    // 3.7c, F421: an area's words are the control model's parameters, the
+    // constitution's (Agreements rule 98).
     assert_eq!(
         needs(&p, &c(&|t| t.area_words.as_mut().unwrap()[0].1 = "Releases on Mondays.".into())),
-        vec![Power::Area(1)]
+        vec![Power::Constitutional]
     );
-    // 3.7e: an area's words and a layer's cMIP: both powers.
+    // 3.7e, F421: an area's words and a layer's cMIP: the constitutional
+    // change rule alone, a model naming no power beside it.
     assert_eq!(
         needs(&p, &c(&|t| {
             t.area_words = Some(vec![(1, "a".into())]);
             t.cmips = vec![(6, h(PAY2)), (11, h(ANCHOR))];
         })),
-        vec![Power::Area(1), Power::Layer(agreements::layers::MONEY)]
+        vec![Power::Constitutional]
     );
-    // 3.7l, Q12: an area and a judicial clause: both.
+    // 3.7l, F421 and F422: the constitution and a judicial clause: both.
     assert_eq!(
         needs(&p, &c(&|t| {
             t.area_words.as_mut().unwrap()[0].1 = "a".into();
             t.arbitrators = Some(vec![h(92)]);
         })),
-        vec![Power::Judicial, Power::Area(1)]
+        vec![Power::Constitutional, Power::Judicial]
     );
     // 3.7g: the payment cMIP is the Money layer's rule's, [6, 3].
     assert_eq!(
@@ -511,7 +519,7 @@ fn extensions_need_every_lane_they_declare() {
     // An extension whose specification is not held: asked for, never guessed.
     t.extensions = Some(vec![h(EXT), h(99)]);
     assert!(matches!(
-        powers_needed(&p, &t, &mirs(), &ext_layers),
+        powers_needed(&p, &t, &mirs(), &ext_layers, &mor_control::held()),
         Err(AgreementsError::Missing(_))
     ));
     // 3.7j: one declaring Money needs the rule for Money too.
@@ -768,7 +776,8 @@ fn stakes_are_written_in_millionths() {
     assert_eq!(roundtrip(&x), x);
     let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
     c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
-    assert_eq!(needs(&t, &c), vec![Power::Clone]);
+    // F421: the release rule (field 24) is the constitution's.
+    assert_eq!(needs(&t, &c), vec![Power::Constitutional]);
     // Forked from (field 23): a back-link in founding terms of a collective.
     x.forked_from = Some(h(80));
     assert_eq!(check(&x), Ok(()));
@@ -849,7 +858,7 @@ fn a_constitutional_version_changing_a_judge_needs_both_rules() {
     let mut c2 = c.clone();
     c2.constitutional = Some(Rule::Threshold(2));
     assert_eq!(
-        powers_needed(&p2, &c2, &mirs(), &ext_layers),
+        powers_needed(&p2, &c2, &mirs(), &ext_layers, &mor_control::held()),
         Ok(vec![Power::Constitutional, Power::Judicial])
     );
     // A constitutional version that changes no judge needs that rule alone.
@@ -968,7 +977,7 @@ fn decode_raw(t: &Terms, f: &dyn Fn(&mut Vec<(Value, Value)>)) -> Result<Terms, 
     f(&mut m);
     let bytes = cbor::encode(&Value::Map(m));
     let Value::Map(m) = cbor::decode(&bytes).unwrap() else { panic!() };
-    Terms::decode(&m)
+    mor_control::decode(&m)
 }
 
 fn set(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {

@@ -190,10 +190,10 @@ test('the author, without a terminal, from the page alone', async () => {
   await done(page, ': done');
   await eventually('Ada no longer a member', async () => !/Ada/.test((await card.locator('dt:text-is("Members") + dd').textContent()) ?? 'Ada'));
 
-  // An ordinary change: the release area's own words, recorded at once.
+  // The release area's own words: a constitutional change (F421), recorded at once.
   await card.locator('form.words input[name=text]').fill('We release only what we both checked.');
   await card.locator('form.words button').click();
-  await review(page, /New words for the Releases area of “Makers”/, '11-words', ['An ordinary change', 'no rotation']);
+  await review(page, /New words for the Releases area of “Makers”/, '11-words', ['A constitutional change', 'one more signature round', 'no rotation']);
   await done(page, 'has new words');
   await eventually('the new words shown', async () => /We release only what we both checked/.test((await card.locator('.area dt:text-is("Its own words") + dd').textContent()) ?? ''));
 

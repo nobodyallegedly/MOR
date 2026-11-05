@@ -181,6 +181,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     f(&mut t);
     t
@@ -304,7 +305,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
+        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()).with_control(mor_control::held()));
         v.ext_layers.insert(ext(), vec![]);
         v.ext_layers
             .insert(spec("an extension declaring Money"), vec![agreements::layers::MONEY]);
@@ -667,7 +668,7 @@ fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+    common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
 }
 
 /// A fork's successor signs it as a member does, by a chain signature with
@@ -744,6 +745,20 @@ fn puts(lab: &Lab, r: &Hash) -> Option<Hash> {
 
 fn clone_state(lab: &Lab, r: &Hash) -> CloneState {
     lab.view().record(&lab.col.id, r).unwrap().clone.unwrap().1
+}
+
+/// An operational change any one member makes alone under the label's rule
+/// for Agreements: adopting a claims cMIP (task 13). Since F421, an area's
+/// words are the control model's parameters, the constitution's.
+fn adopt_claims(t: &mut Terms) {
+    adopt(t, "a claims cMIP");
+}
+
+/// The same, the claims cMIP named by `w`, so that clones differ.
+fn adopt(t: &mut Terms, w: &str) {
+    t.cmips.retain(|(k, _)| *k != 13);
+    t.cmips.push((13, spec(w)));
+    t.cmips.sort();
 }
 
 fn words(t: &mut Terms, area: u64, w: &str) {
@@ -924,7 +939,7 @@ fn the_treasurer_adopts_a_cmip_and_the_record_places_it() {
     lab.sign(BEN, &x);
     assert_eq!(lab.in_force(&x), k2);
     // A record naming an act that is no signature on the clone: invalid.
-    let k3 = lab.clone_terms(&k2, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let k3 = lab.clone_terms(&k2, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k3 = lab.propose(BEN, &k3);
     lab.sign(BEN, &k3);
     let r5 = lab.record(0, Some((k3, vec![sb])), &[1, 2], vec![], k3);
@@ -973,21 +988,25 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     let k = lab.propose(BEN, &t);
     assert!(lab.view().agreement(&k).unwrap().invalid.is_some(), "the area is hers alone (Q5)");
 
-    // 3.7e: two areas at once: each holder.
-    let t = lab.clone_terms(
-        &f,
-        vec![(Power::Area(1), vec![ANA]), (Power::Area(2), vec![BEN])],
-        &|t| {
-            words(t, 1, "Mondays.");
-            words(t, 2, "Weekly.");
-        },
-    );
+    // 3.7e, F421: two areas' words at once are the control model's
+    // parameters, the constitution's: the areas' powers are no power for
+    // them (Agreements rule 98), and every member signs, as the
+    // constitutional change rule (every party) asks.
+    let words2 = |t: &mut Terms| {
+        words(t, 1, "Mondays.");
+        words(t, 2, "Weekly.");
+    };
+    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA]), (Power::Area(2), vec![BEN])], &words2);
+    let k = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&k).unwrap().invalid.is_some(), "a model names no power for the constitution (F421)");
+    let t = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &words2);
     let k = lab.propose(ANA, &t);
     let sa = lab.sign(ANA, &k);
-    let r = lab.record(0, Some((k, vec![sa])), &[], vec![], k);
-    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)));
     let sb = lab.sign(BEN, &k);
     let r = lab.record(0, Some((k, vec![sa, sb])), &[], vec![], k);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)));
+    let sc = lab.sign(CY, &k);
+    let r = lab.record(0, Some((k, vec![sa, sb, sc])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k), "in force at once, no rotation (Q7, Q8)");
 
     // 3.7f (F121): two of three change the arbitrator: the judicial tier
@@ -1018,16 +1037,24 @@ fn false_marks_sink_clones_and_areas_are_exclusive() {
     let r = lab.record(0, Some((k2, vec![s1, s2, s3])), &[], vec![], k2);
     assert_eq!(puts(&lab, &r), Some(k2), "one version, for everyone");
 
-    // 3.7l, Q12: the manager's words and the keepers: both powers.
+    // 3.7l, F421 and F422: the manager's words (the constitution's) and
+    // the keepers (the judicial tier's): the constitutional change rule
+    // and the judicial tier's rule, both, never an area's power.
     let t = lab.clone_terms(&k2, vec![(Power::Area(1), vec![ANA])], &|t| {
         words(t, 1, "Tuesdays.");
         t.keepers = None;
     });
     let k3 = lab.propose(ANA, &t);
     assert!(lab.view().agreement(&k3).unwrap().invalid.is_some());
+    let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, BEN, CY]), (Power::Area(1), vec![ANA])], &|t| {
+        words(t, 1, "Tuesdays.");
+        t.keepers = None;
+    });
+    let k3 = lab.propose(ANA, &t);
+    assert!(lab.view().agreement(&k3).unwrap().invalid.is_some(), "an area's power is none for the constitution (F421)");
     let t = lab.clone_terms(
         &k2,
-        vec![(Power::Judicial, vec![ANA, BEN, CY]), (Power::Area(1), vec![ANA])],
+        vec![(Power::Constitutional, vec![ANA, BEN, CY]), (Power::Judicial, vec![ANA, BEN, CY])],
         &|t| {
             words(t, 1, "Tuesdays.");
             t.keepers = None;
@@ -1059,7 +1086,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     sign(&mut lab.w, &mut ben_tablet, &x2); // tablet, never mentioned
 
     // A clone signed from the tablet, recorded before the line (Flaw F).
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = sign(&mut lab.w, &mut ben_tablet, &k);
     let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -1120,7 +1147,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
     let sb3 = sign(&mut lab.w, &mut ben_tablet, &k3);
     let sc3 = lab.sign(CY, &k3);
     let r3 = lab.record(0, Some((k3, vec![sa3, sb3, sc3])), &[], vec![], k3);
-    assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(_)));
+    assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(_)), "{:?}", clone_state(&lab, &r3));
     // ... and the clone needs the voices that remain: Ana and Cy.
     let t = lab.clone_terms(&k2, vec![(Power::Judicial, vec![ANA, CY])], &|t| {
         t.arbitrators = Some(vec![spec("arbitrator three")]);
@@ -1137,7 +1164,7 @@ fn a_departure_takes_effect_at_the_labels_line() {
 fn a_records_registrations_stand_without_its_clone() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Mondays."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Mondays."));
     let k = lab.propose(ANA, &t);
     let sc = lab.sign(CY, &k);
     let mut ben = lab.m[BEN].clone();
@@ -1841,7 +1868,7 @@ fn concurrent_lines() {
     let f = lab.founding;
     let mut ks = vec![];
     for (d, w) in [(0, "Weekly."), (1, "Daily.")] {
-        let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+        let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
         let k = lab.propose(BEN, &t);
         let s = lab.sign(BEN, &k);
         let r = lab.record(d, Some((k, vec![s])), &[], vec![], k);
@@ -1856,7 +1883,7 @@ fn concurrent_lines() {
     let f = lab.founding;
     let mut rs = vec![];
     for w in ["Weekly.", "Daily."] {
-        let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+        let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
         let k = lab.propose(BEN, &t);
         let s = lab.sign(BEN, &k);
         rs.push((lab.record(0, Some((k, vec![s])), &[], vec![], k), k));
@@ -1936,13 +1963,13 @@ fn a_members_own_rotation_is_registered_on_the_line() {
     let p0 = lab.m[BEN].clone();
     let x = lab.cmip_act(0, pay());
     sign(&mut lab.w, &mut tablet, &x);
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(ANA, &t);
     let sk = sign(&mut lab.w, &mut tablet, &k);
     let r = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
     assert_eq!(puts(&lab, &r), Some(k));
     // A clone the tablet signs that no act of the label places before the line.
-    let t2 = lab.clone_terms(&k, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Daily."));
+    let t2 = lab.clone_terms(&k, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, "Daily."));
     let k2 = lab.propose(ANA, &t2);
     let sk2 = sign(&mut lab.w, &mut tablet, &k2);
     // Ben rotates his own key and forgets the tablet.
@@ -2010,7 +2037,7 @@ fn a_rotation_declaring_nothing_carries_the_agreement_forward() {
     // B5: a rotation declares only a constitutional clone.
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     lab.rotate(Some((k, vec![s])), &[0]);
@@ -2067,7 +2094,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
         let f = lab.founding;
         let mut ks = vec![];
         for (d, w) in [(0, "Weekly."), (1, "Daily.")] {
-            let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+            let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
             let k = lab.propose(BEN, &t);
             let s = lab.sign(BEN, &k);
             lab.record(d, Some((k, vec![s])), &[], vec![], k);
@@ -2076,7 +2103,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
         let x = lab.cmip_act(2, pay());
         assert_eq!(lab.in_force(&x), f, "a fork: the parent stays");
         // A clone of the weekly branch.
-        let t = lab.clone_terms(&ks[0], vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly, on Mondays."));
+        let t = lab.clone_terms(&ks[0], vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, "Weekly, on Mondays."));
         let k3 = lab.propose(BEN, &t);
         let s3 = lab.sign(BEN, &k3);
         // After both lines: on device 0, naming device 1's tip. After one
@@ -2105,7 +2132,7 @@ fn a_clone_of_one_branch_recorded_after_both_lines_resolves_the_fork() {
 fn a_fork_is_resolved_from_the_latest_clone_of_a_branch() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let area = |lab: &Lab, parent: &Hash, w: &str| lab.clone_terms(parent, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, w));
+    let area = |lab: &Lab, parent: &Hash, w: &str| lab.clone_terms(parent, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &|t| adopt(t, w));
     let t1 = area(&lab, &f, "Weekly.");
     let k1 = lab.propose(BEN, &t1);
     let s1 = lab.sign(BEN, &k1);
@@ -2367,7 +2394,7 @@ fn abandonment_key_2_is_retired_and_key_3_names_a_cmip() {
     // Key 3: a cMIP and any parameters, carried as they are.
     let params = Value::Map(vec![(Value::Text("period".into()), Value::Uint(30))]);
     let pair = Value::Array(vec![Value::Bytes(spec("an absence-proof cMIP").to_vec()), params.clone()]);
-    let got = Terms::decode(&(with((Value::Uint(3), pair)))).unwrap();
+    let got = mor_control::decode(&(with((Value::Uint(3), pair)))).unwrap();
     assert_eq!(got.abandonment.as_ref().unwrap().proof, Some((spec("an absence-proof cMIP"), params)));
     assert_eq!(got.check(&mirs()), Ok(()));
     // Not a pair, or no hash: invalid.
@@ -2416,7 +2443,7 @@ fn absence_proof_is_task_14_in_the_chain_of_judgment() {
     t.chain = Some(vec![ChainLink { judge: Judge::Task(14), next: vec![(next.into(), 30)] }]);
     assert_eq!(t.check(&mirs()), Ok(()));
     assert_eq!(t.chain_of(&Judge::Task(14)), Some(vec![proof, next]));
-    let back = Terms::decode(&t.to_map()).unwrap();
+    let back = mor_control::decode(&t.to_map()).unwrap();
     assert_eq!(back.chain_of(&Judge::Task(14)), Some(vec![proof, next]), "read back from its bytes");
     // The one taking over is named nowhere else.
     let mut u = t.clone();
@@ -2513,7 +2540,7 @@ fn under_an_absence_proof_cmip_a_declaration_counts_only_where_accepted() {
 fn a_later_act_of_the_party_never_undoes_the_line() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = lab.sign(BEN, &k);
     let r0 = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -2536,7 +2563,7 @@ fn a_later_act_of_the_party_never_undoes_the_line() {
     // she signed: the declaration then names the wrong version there.
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let sk = lab.sign(BEN, &k);
     lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -3225,6 +3252,7 @@ fn a_deal_changes_only_with_everyone() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3309,6 +3337,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
+            control: Some(mor_control::control()),
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3410,6 +3439,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3584,6 +3614,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -3736,10 +3767,10 @@ fn an_identity_area_shows_its_consent_on_a_rotation() {
     let mut t = lab.view().terms(&lab.founding).unwrap();
     let keys = |kinds: Vec<Kind>| Area { name: "Keys".into(), holders: vec![ids[BEN], ids[CY]], threshold: 2, kinds: Some(kinds), fields: None, id: 3, limits: None };
     t.areas.as_mut().unwrap().push(keys(vec![Kind::Type { spec: common::identity_spec(), type_: 1 }]));
-    assert!(t.check(&mirs()).is_err(), "rotations are never in an area's reach");
+    assert!(mor_control::check(&t, &mirs()).is_err(), "rotations are never in an area's reach");
     t.areas.as_mut().unwrap().pop();
     t.areas.as_mut().unwrap().push(keys(vec![Kind::Layer(agreements::layers::IDENTITY)]));
-    assert!(t.check(&mirs()).is_err(), "a whole layer is field 19's");
+    assert!(mor_control::check(&t, &mirs()).is_err(), "a whole layer is field 19's");
     lab.publish(0);
     let r = lab.rotate(None, &[0]);
     let got = lab.view().rotation_consent(&r).unwrap();
@@ -4397,7 +4428,7 @@ fn a_split_service_cannot_steer_ties_by_grinding_salts() {
             v.add_with_key(a.clone(), key.as_ref()).unwrap();
         }
     }
-    let mut lv = common::stand_in_payments(AgreementsView::new(&v, mirs()));
+    let mut lv = common::stand_in_payments(AgreementsView::new(&v, mirs()).with_control(mor_control::held()));
     lv.ext_layers.insert(ext(), vec![]);
     let e = lv.split(&s4).unwrap();
     assert!(matches!(e.breaks.as_slice(), [agreements::ChainBreak::Count { .. }]), "{:?}", e.breaks);
@@ -5622,6 +5653,7 @@ fn a_work_is_released_to_the_public_domain() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5927,6 +5959,7 @@ fn a_timed_release() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
+            control: Some(mor_control::control()),
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -6272,7 +6305,7 @@ fn terms_field_25_is_withdrawn() {
     assert!(Terms::decode(&m).unwrap_err().to_string().contains("F128"));
     let mut reach = t.clone();
     reach.areas.as_mut().unwrap()[0].fields = Some(vec![agreements::FieldRef::Field(25)]);
-    assert!(reach.check(&mirs()).is_err());
+    assert!(mor_control::check(&reach, &mirs()).is_err());
 }
 
 /// F126 (E2): a collective forgives a debt owed to it by its Money lane
@@ -6350,7 +6383,7 @@ fn a_collective_keeps_two_chains() {
     lab.sign(ANA, &join);
     assert!(lab.counts(&join));
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Releases go out on Mondays."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Releases go out on Mondays."));
     let k = lab.propose(ANA, &t);
     let sk = lab.sign(ANA, &k);
     let line = lab.record(0, Some((k, vec![sk])), &[], vec![], k);
@@ -6389,7 +6422,7 @@ fn deal_terms(a: Hash, b: Hash) -> Terms {
 fn a_record_not_done_is_no_line() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
-    let t = lab.clone_terms(&f, vec![(Power::Area(2), vec![BEN])], &|t| words(t, 2, "Weekly."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![BEN])], &adopt_claims);
     let k = lab.propose(BEN, &t);
     let s = lab.sign(BEN, &k);
     let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
@@ -6511,7 +6544,7 @@ fn a_payment_racing_a_publications_ending_is_settled_by_the_split_service() {
     assert!(e.counts && e.ends, "{:?}", e.problems);
     let after = receipt(&mut w, &mut svc, push, b"after the service's signature");
     let on_request = receipt(&mut w, &mut svc, spec("a request rail"), b"on a request rail, after");
-    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())));
     v.rails.insert(push, push_rail_spec());
     assert_eq!(v.purchase(&before).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
     assert_eq!(v.purchase(&pending).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "before the service's own signature on the ending");
@@ -6652,7 +6685,7 @@ fn a_persons_grant_key_is_added_and_revoked_by_everyday_acts() {
     let cited = post(&mut w, &mut s1);
     let racing = post(&mut w, &mut s2);
     fn view(w: &World) -> AgreementsView<'_> {
-        common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+        common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
     }
     assert_eq!(view(&w).backing(&cited).unwrap(), Backing::Backed { grant: g });
     // A person is no collective: Agreements read the act by its backing.
@@ -7859,7 +7892,7 @@ fn push_sale(w: &mut World, ana: &mut Person, ben: &mut Person, owners: Hash, li
     let r = Fin::Receipt(Receipt { rail: push, proof: proof.to_vec(), payer: Some(spec("a fan")), payee: sid, amount: Amount { unit: spec("a unit"), value: 5 }, fulfils: tag, previous: None, forward: None, batch: None, purchase: Some(Purchase { agreement: owners, line }) });
     let a = w.everyday_act(&mut svc, mirs().money, 2, r.to_map(), None, None);
     let x = w.add(&a);
-    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())));
     v.rails.insert(push, push_rail_spec());
     v.purchase(&x).unwrap().unwrap().verdict
 }
@@ -9622,7 +9655,7 @@ fn f192_a_version_held_back_and_published_late_reopens_nothing() {
     let b2 = l.version(b1, "B: a small change, signed by both, kept back.", None);
     let s = l.version(a1, "Settled for A, naming B's tip as everyone could see it.", Some(b1));
     let before = held_without(&l.w, &[b2]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s, "before Ana publishes it: settled");
     assert_eq!(view(&l.w).agreement(&b2).unwrap().exists, Some(true));
     assert_eq!(l.in_force().unwrap(), s, "published late, it reopens nothing");
 }
@@ -9762,7 +9795,7 @@ fn f196_once_held_the_settlement_counts() {
     let b1 = l.version(b0, "B grows.", None);
     let s = l.version(a1, "Settled: A, naming B's tip.", Some(b1));
     let partial = held_without(&l.w, &[b1]);
-    let v = common::stand_in_payments(AgreementsView::new(&partial, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&partial, mirs()).with_control(mor_control::held()));
     assert_eq!(v.version_in_force(&d).unwrap(), d, "B's tip not held: the settlement is a plain version, the deal forked");
     assert!(v.deal_fork(&d).unwrap().is_some_and(|f| f.branches.iter().any(|b| b.contains(&s))));
     assert_eq!(l.in_force().unwrap(), s, "held: the settlement counts");
@@ -10347,7 +10380,7 @@ fn review_fdb_1_today_a_hidden_sibling_revealed_after_a_settlement_reopens_nothi
     let s = l.version(a1, "Repaired for A, naming B, the only other branch anyone could see.", Some(b1));
     let s2 = l.version(s, "Life goes on under the repair: Ben delivers.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s2, "before C surfaces: the repaired line is in force");
     // Ana publishes C.
     assert_eq!(l.in_force().unwrap(), s2, "today, under F192: C reopens nothing, Ben's raise stands");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none(), "today: not forked, not broken");
@@ -10372,7 +10405,7 @@ fn review_fdb_2_today_a_hidden_child_and_a_hidden_sibling_lose_alike() {
     let c1 = l.version(d, "C: hidden sibling at the reference.", None);
     let s = l.version(a1, "Repaired for A, naming B1.", Some(b1));
     let before = held_without(&l.w, &[b2, c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), s);
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), s);
     // Both surface.
     assert_eq!(l.in_force().unwrap(), s, "today: the hidden child and the hidden sibling lose alike (F192)");
     assert!(view(&l.w).deal_fork(&d).unwrap().is_none());
@@ -10398,7 +10431,7 @@ fn review_fdb_3_before_any_settlement_a_hidden_sibling_already_sends_the_deal_to
     let a3 = l.version(a2, "A3: Ben's share raised for more work.", None);
     let c1 = l.version(d, "C1: a sibling of A1, from a device out of step at the time.", None);
     let before = held_without(&l.w, &[c1]);
-    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs())).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
+    assert_eq!(common::stand_in_payments(AgreementsView::new(&before, mirs()).with_control(mor_control::held())).version_in_force(&d).unwrap(), a3, "a deal that never visibly forked: A3 in force");
     // C1 surfaces, however late.
     assert_eq!(l.in_force().unwrap(), d, "today: forked at d, the reference in force (A1 beside A4)");
     let f = view(&l.w).deal_fork(&d).unwrap().expect("forked");
@@ -12454,7 +12487,7 @@ fn what_the_line_placed_stays_placed_3_7z() {
     let line = lab.record(0, None, &[], vec![res], f);
     assert!(lab.view().record(&label, &line).unwrap().line);
     // The label lives on under that line: a later clone, and its record.
-    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Monthly releases."));
+    let t = lab.clone_terms(&f, vec![(Power::Layer(agreements::layers::AGREEMENTS), vec![ANA])], &|t| adopt(t, "Monthly releases."));
     let k = lab.propose(ANA, &t);
     let s = lab.sign(ANA, &k);
     let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
@@ -13005,7 +13038,9 @@ fn counting_by_share_3_7ah() {
     let by_share = Rule::ByShare { stake: 0, share: 600_000 };
     let attempt = |lab: &mut Lab, who: &[usize]| -> CloneState {
         let f = lab.founding;
-        let t = lab.clone_terms(&f, vec![(Power::Clone, who.to_vec())], &|t| t.refund = Some(agreements::RefundTerms { until: Value::Uint(5) }));
+        // F421: the refund terms are the constitution's now; a clone
+        // changing nothing needs the clone rule, counted by share here.
+        let t = lab.clone_terms(&f, vec![(Power::Clone, who.to_vec())], &|_| {});
         let k = lab.propose(ANA, &t);
         let s: Vec<Hash> = who.iter().map(|i| lab.sign(*i, &k)).collect();
         let r = lab.record(0, Some((k, s)), &[], vec![], k);
@@ -13996,7 +14031,7 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
 /// status; each record's verdict (what it puts in force, its clone's state);
 /// each transfer's effect; the label's agreement in force.
 fn owners_verdicts(v: &mor_core::chain::Verifier, label: &Hash) -> std::collections::BTreeMap<Hash, String> {
-    let mut lv = common::stand_in_payments(AgreementsView::new(v, mirs()));
+    let mut lv = common::stand_in_payments(AgreementsView::new(v, mirs()).with_control(mor_control::held()));
     lv.ext_layers.insert(ext(), vec![]);
     let mut out = std::collections::BTreeMap::new();
     let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
@@ -14173,7 +14208,7 @@ fn a_post_under_a_grant_names_its_grant_f343() {
     let text = |s: &str| vec![(Value::Uint(0), Value::Text(s.into()))];
     let one = |chain: Hash, predecessor: Hash| Some(vec![Object { chain, predecessor }]);
     fn view(w: &World) -> AgreementsView<'_> {
-        common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
+        common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
     }
 
     // A person's grant: an owner grants its agent posting in its name.
@@ -14249,7 +14284,7 @@ fn a_grants_limits_take_a_clients_verdict_f345() {
     strand.cite = Some((oid, vec![g]));
     let a = w.everyday_act(&mut strand, mirs().text, 0, vec![(Value::Uint(0), Value::Text("Within?".into()))], None, None);
     let post = w.add(&a);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     assert!(matches!(v.backing(&post).unwrap(), Backing::Unknown { .. }));
     v.grant_limits.insert(post, true);
     assert_eq!(v.backing(&post).unwrap(), Backing::Backed { grant: g });
@@ -14310,7 +14345,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
         w.add(&a)
     };
     assert_eq!(w.v.status(&claim), Status::Scoped, "a Money-only client: scoped, shown unknown, never valid (Identity rule 8)");
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(claim, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.backing(&claim).unwrap(), Backing::Backed { grant: pl });
     assert_eq!(v.payers_claims(&proof), vec![claim], "the payer's claim, under its lane, counts");
@@ -14321,7 +14356,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let mut ws = strand(&q, wrong, &wk);
     let bad = receipt(&mut w, &mut ws);
     assert_eq!(w.v.status(&bad), Status::Scoped);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
     assert!(matches!(v.backing(&bad).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("reach")));
     assert_eq!(v.paid_toward(&debt).unwrap(), 0, "a grant not reaching receipts signs none that counts");
@@ -14332,7 +14367,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let mut rs = strand(&q, rl, &rk);
     let good = receipt(&mut w, &mut rs);
     assert_eq!(w.v.status(&good), Status::Scoped, "a Money-only client: scoped, shown unknown");
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
     v.rail_valid.insert(good, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.backing(&good).unwrap(), Backing::Backed { grant: rl });
@@ -14344,7 +14379,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let rev = agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: rl }.to_map(), Some(vec![Object { chain: qid, predecessor: good }]));
     assert_eq!(w.v.status(&rev), Status::Valid);
     let late = receipt(&mut w, &mut rs);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert!(!matches!(v.backing(&late).unwrap(), Backing::Backed { .. }), "after its revocation, a lane backs nothing");
     // Paid toward the debt: the receipt its revocation's history holds, as Money counts payments (rule 76).
@@ -14352,7 +14387,7 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     assert!(matches!(v.backing(&good).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "{:?}", v.backing(&good));
     assert_eq!(v.paid_toward(&debt).unwrap(), 1000);
     drop(v);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.paid_toward(&debt).unwrap(), 0, "a receipt under a revoked lane pays nothing");
 
@@ -14383,18 +14418,18 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: all }.to_map(), Some(objects));
     for own in acts {
         let f = payee_of(&w, own, &acts);
-        let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()));
+        let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()).with_control(mor_control::held()));
         assert!(matches!(v.backing(&own).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "each payee, holding only its own act, finds it counted: {:?}", v.backing(&own));
     }
     let (last, acts) = chained(&mut w, &mut q, "a lane revoked citing its last act only");
     agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: last }.to_map(), Some(vec![Object { chain: qid, predecessor: acts[2] }]));
-    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()));
     for a in acts {
         assert!(matches!(v.backing(&a).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "a reader holding every act follows the chain: {:?}", v.backing(&a));
     }
     drop(v);
     let f = payee_of(&w, acts[0], &acts);
-    let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()));
+    let v = common::stand_in_payments(AgreementsView::new(&f.v, mirs()).with_control(mor_control::held()));
     assert!(
         matches!(v.backing(&acts[0]).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("tie rule")),
         "the first payee cannot follow the chain through acts it cannot open: its act is void"

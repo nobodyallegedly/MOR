@@ -98,7 +98,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
+        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()).with_control(mor_control::held()));
         v.rail_valid = self.rail_valid.clone();
         v.rails = self.rails.clone();
         v

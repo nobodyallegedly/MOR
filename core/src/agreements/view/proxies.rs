@@ -3,6 +3,7 @@
 //! fence.
 
 use super::*;
+use crate::agreements::control::ProxyFacts;
 use crate::agreements::owners::{decode_proxy_revocation, owner_types, Proxy};
 
 impl<'a> AgreementsView<'a> {
@@ -26,7 +27,7 @@ impl<'a> AgreementsView<'a> {
         // review, G5); one named by the line is the holder's own vote.
         for s in self.v.signed_by(h) {
             if self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*k) && self.sig_before(col, s, at)? {
-                return Ok(false);
+                return self.proxy_decides(ag, &ProxyFacts { own_vote: true, latest: None }, k, by);
             }
         }
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(v, _)| v).collect();
@@ -54,22 +55,33 @@ impl<'a> AgreementsView<'a> {
         // The latest so placed replaces the others (one proxy per owner per
         // stake at a time): placed after every other.
         let later = |a: &[&'a Held], b: &[&'a Held]| a.iter().any(|x| b.iter().all(|y| self.before_struct(col, y, Line::Record(x))));
-        let Some((x, p, _)) = placed.iter().find(|(_, _, pa)| placed.iter().all(|(_, _, pb)| std::ptr::eq(pa, pb) || later(pa, pb))) else {
-            return Ok(false);
-        };
-        if p.scoped.is_some_and(|v| v != *k) {
-            return Ok(false);
-        }
-        // Revoked by a revocation of the holder's, placed before the line.
-        for r in self.v.signed_by(h) {
-            if self.is_agreements(r, owner_types::PROXY_REVOCATION)
-                && decode_proxy_revocation(&r.inside).ok() == Some(x.id)
-                && self.kept_at(col, r, at)?
-                && self.placed_by_line(col, r, at)?
-            {
-                return Ok(false);
+        let latest = match placed.iter().find(|(_, _, pa)| placed.iter().all(|(_, _, pb)| std::ptr::eq(pa, pb) || later(pa, pb))) {
+            None => None,
+            Some((x, p, _)) => {
+                // Revoked by a revocation of the holder's, placed before the line.
+                let mut revoked = false;
+                for r in self.v.signed_by(h) {
+                    if self.is_agreements(r, owner_types::PROXY_REVOCATION)
+                        && decode_proxy_revocation(&r.inside).ok() == Some(x.id)
+                        && self.kept_at(col, r, at)?
+                        && self.placed_by_line(col, r, at)?
+                    {
+                        revoked = true;
+                        break;
+                    }
+                }
+                Some((p.clone(), revoked))
             }
-        }
-        Ok(by.contains_key(&p.proxy))
+        };
+        self.proxy_decides(ag, &ProxyFacts { own_vote: false, latest }, k, by)
+    }
+
+    /// The model's answer (its rule 97) on the line's facts.
+    fn proxy_decides(&self, ag: &Hash, facts: &ProxyFacts, k: &Hash, by: &BTreeMap<Hash, Hash>) -> R<bool> {
+        let Some(c) = self.terms(ag)?.control else { return Ok(false) };
+        let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) else {
+            return Err(AgreementsError::Missing(c.cmip));
+        };
+        Ok(m.proxy_votes(facts, k, &|p| by.contains_key(p)))
     }
 }

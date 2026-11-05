@@ -32,7 +32,7 @@
 //!    ([`AgreementsView::binding`]).
 
 use super::formats::*;
-use super::tiers::{changes, powers_needed, rollback_powers, Change, Tier};
+use super::tiers::{changes, powers_needed, rollback_powers, Change};
 use crate::chain::{Resolution, Status, Verifier, Held};
 use crate::hash::Hash;
 use crate::identity::Payload;
@@ -289,6 +289,8 @@ pub struct AgreementsView<'a> {
     /// attempts to reach homes are taken as they are. Never for a view a
     /// caller makes: only for the comparison [`Self::binding`] runs.
     trust_own_attempts: bool,
+    /// The control models this verifier holds (Agreements rule 99).
+    control: super::control::Held,
 }
 
 /// What a decision cites on the collective's chain (F127): every act it
@@ -592,6 +594,20 @@ struct InForce {
 }
 
 impl<'a> AgreementsView<'a> {
+    /// Hold these control models (Agreements rule 99): a collective naming
+    /// one of them is read through its answers; one naming a model not held
+    /// is unknown wherever its acts need the model.
+    pub fn with_control(mut self, held: super::control::Held) -> Self {
+        self.control.extend(held);
+        self
+    }
+
+    /// Hold no control model (a verifier that holds none: rule 98's
+    /// collective whose model is not held).
+    pub fn drop_control(&mut self) {
+        self.control.clear();
+    }
+
     pub fn new(v: &'a Verifier, mirs: Mirs) -> Self {
         AgreementsView {
             v,
@@ -637,6 +653,7 @@ impl<'a> AgreementsView<'a> {
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts: false,
+            control: Vec::new(),
         }
     }
 
@@ -708,6 +725,7 @@ impl<'a> AgreementsView<'a> {
             ending_sigs: RefCell::new(BTreeMap::new()),
             chains: RefCell::new(BTreeMap::new()),
             trust_own_attempts,
+            control: self.control.clone(),
         }
     }
 
@@ -919,9 +937,19 @@ impl<'a> AgreementsView<'a> {
         if !self.is_agreements(h, types::TERMS) {
             return Err(AgreementsError::Check("not a terms act"));
         }
-        let t = Terms::decode(&h.inside.payload)?;
+        let mut t = Terms::decode(&h.inside.payload)?;
         check_terms_inside(&h.inside, &t)?;
+        // A control model this verifier does not hold answers nothing: the
+        // terms are read without its answers, and what needs them (an
+        // everyday act's consent, an operational clone) is unknown, never
+        // the way out (rule 98).
+        super::control::fill(&mut t, &self.control)?;
         t.check(&self.mirs)?;
+        if let Some(c) = &t.control {
+            if let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) {
+                m.check(&t, &self.mirs)?;
+            }
+        }
         Ok(t)
     }
 
@@ -1073,7 +1101,7 @@ impl<'a> AgreementsView<'a> {
         let needs = if rollback {
             rollback_powers(parent, clone)
         } else {
-            powers_needed(parent, clone, &self.mirs, &self.ext())?
+            powers_needed(parent, clone, &self.mirs, &self.ext(), &self.control)?
         };
         let named: Vec<Power> = mark.iter().map(|e| e.power.clone()).collect();
         if named != needs {
@@ -1232,26 +1260,37 @@ impl<'a> AgreementsView<'a> {
         let mut out: Vec<Hash> = vec![];
         let lineage = self.lineage(pid)?;
         for (o, _) in super::pay::stakes_paid_less(parent, clone) {
-            let Some((i, st)) = parent.stake_on(&o) else { continue };
+            let Some((i, _)) = parent.stake_on(&o) else { continue };
             let (rule, _) = parent.holders_rule(i as u64);
             let by_rule = matches!(rule, HoldersRule::Share(_)) && mark.iter().any(|e| e.power == Power::Holders(i as u64));
             for (h, n) in self.roster_at(col, at, pid, i as u64)? {
                 if n == 0 || parent.parties.contains(&h) || out.contains(&h) {
                     continue;
                 }
-                if by_rule {
-                    let bought = !st.identified().iter().any(|(x, _)| *x == h);
-                    let signed = lineage.iter().any(|(v, vt)| {
-                        vt.holders_rule(i as u64).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[h]).is_empty()
-                    });
-                    if bought || signed {
-                        continue;
-                    }
+                if by_rule && self.holders_rule_binds(col, at, pid, parent, &lineage, i as u64, &h)? {
+                    continue;
                 }
                 out.push(h);
             }
         }
         Ok(out)
+    }
+
+    /// Whether stake `i`'s holders' rule in `parent` binds holder `h`
+    /// (Agreements rule 48): `h` accepted it, by signing a version of the
+    /// lineage (`lineage`, from the parent back) carrying it, or by buying
+    /// under it ([`Self::bought_under`]: a change of the rule after the
+    /// seller signed and before the line placed the transfer binds the buyer
+    /// only by its signature). Read from the core's own acts alone, whatever
+    /// the collective's control model.
+    #[allow(clippy::too_many_arguments)]
+    fn holders_rule_binds(&self, col: &Col, at: Line<'a>, pid: &Hash, parent: &Terms, lineage: &[(Hash, Terms)], i: u64, h: &Hash) -> R<bool> {
+        let (rule, _) = parent.holders_rule(i);
+        if lineage.iter().any(|(v, vt)| vt.holders_rule(i).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[*h]).is_empty()) {
+            return Ok(true);
+        }
+        let written = parent.stakes.as_ref().and_then(|s| s.get(i as usize)).is_some_and(|st| st.identified().iter().any(|(x, _)| x == h));
+        Ok(!written && self.bought_under(col, at, pid, i, h, &rule)?)
     }
 
     /// [`Self::must_sign`] in two: those asked for their share, their stake
@@ -1600,7 +1639,7 @@ impl<'a> AgreementsView<'a> {
     /// The powers a clone needs (rule 44c).
     pub fn powers_needed(&self, clone: &Terms) -> R<Vec<Power>> {
         let p = clone.parent.ok_or(AgreementsError::Check("not a clone"))?;
-        powers_needed(&self.terms(&p)?, clone, &self.mirs, &self.ext())
+        powers_needed(&self.terms(&p)?, clone, &self.mirs, &self.ext(), &self.control)
     }
 
     // ------------------------------------------------------------ the collective
@@ -1777,11 +1816,15 @@ impl<'a> AgreementsView<'a> {
             ));
         }
         let parent = self.terms(&at.agreement)?;
-        if !changes(&parent, &k_terms)
-            .iter()
-            .any(|c| c.tier() == Tier::Constitutional)
-        {
+        if !super::tiers::constitutional(&parent, &k_terms) {
             return Ok(Some("a rotation declares only a clone that changes the constitutional tier (rule 37, B5)".into()));
+        }
+        // F424: and nothing but constitutional changes, so that telling a
+        // broken collective from one that is not never needs the model.
+        // Field 7 changes only by its placed acts, a succession's and an
+        // absence outcome's among them (rule 98.2): no operational part.
+        if changes(&parent, &k_terms).iter().any(|c| c.tier() == super::tiers::Tier::Operational && *c != Change::Field(7)) {
+            return Ok(Some("a rotation declares only a clone whose every change is constitutional; its operational part is recorded separately (rules 69, 98; F424)".into()));
         }
         if let Some(w) = self.recovery_signatures(col, j, &at.agreement, &d.agreement, d.absence.as_deref())? {
             return Ok(Some(w));
@@ -3180,7 +3223,9 @@ impl<'a> AgreementsView<'a> {
                 Some(a) => t.area(a).is_some_and(|ar| ar.holders.contains(p)),
             };
             let constitutional = match &t.parent {
-                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == Tier::Constitutional),
+                // Named again by a clone changing the constitution beyond
+                // the judicial tier (rule 65; draft 17's reading kept).
+                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == super::tiers::Tier::Constitutional),
                 None => false,
             };
             if named && constitutional && !self.valid_sigs(v, &[*p]).is_empty() {
@@ -3246,9 +3291,9 @@ impl<'a> AgreementsView<'a> {
             // Named again: by a constitutional clone (rule 37b's refit), never
             // by an ordinary clone that only copies the list (build question B10).
             let constitutional = match &t.parent {
-                Some(pp) => changes(&self.terms(pp)?, &t)
-                    .iter()
-                    .any(|c| c.tier() == Tier::Constitutional),
+                // Named again by a clone changing the constitution beyond
+                // the judicial tier (rule 65; draft 17's reading kept).
+                Some(pp) => changes(&self.terms(pp)?, &t).iter().any(|c| c.tier() == super::tiers::Tier::Constitutional),
                 None => false,
             };
             if !named || !constitutional {
@@ -3535,11 +3580,44 @@ impl<'a> AgreementsView<'a> {
         // Rule 96 (new in draft 14, F309, F315): an issuance, judged; the
         // holders it scales down pro rata under the stake's holders' rule
         // do not sign for themselves.
-        let excused = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
+        let issued = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
             Err(state) => return Ok(state),
-            Ok(e) => e.unwrap_or_default(),
+            Ok(e) => e,
         };
-        let (losing, _) = Self::must_sign_parts(parent, clone);
+        let is_issuance = issued.is_some();
+        let excused = issued.unwrap_or_default();
+        // Rule 98.2, the core's own check for any model: a holder the model
+        // excuses from signing an issuance is excused only where the stake's
+        // holders' rule binds it (rule 48), read from the core's own acts. A
+        // holder it does not bind still signs.
+        let issued_stake = clone.stakes.as_deref().and_then(|cs| {
+            let ps = parent.stakes.as_deref().unwrap_or(&[]);
+            (0..ps.len().max(cs.len())).find(|i| ps.get(*i) != cs.get(*i))
+        });
+        let excused: Vec<Hash> = match issued_stake {
+            Some(i) if !excused.is_empty() => {
+                let mut kept = vec![];
+                for h in excused {
+                    if self.holders_rule_binds(col, at, &pid, parent, &lineage[1..], i as u64, &h)? {
+                        kept.push(h);
+                    }
+                }
+                kept
+            }
+            _ => vec![],
+        };
+        let (mut losing, _) = Self::must_sign_parts(parent, clone);
+        // An issuance is a reduction of every holder's share (rule 98.2),
+        // read on the roster at the line: a holder by a placed transfer, not
+        // written in field 7, signs too.
+        if let (true, Some(i)) = (is_issuance, issued_stake) {
+            let after = clone.stakes.as_deref().and_then(|s| s.get(i));
+            for (h, n) in self.roster_at(col, at, &pid, i as u64)? {
+                if after.is_none_or(|s| s.share_of(&Who::Id(h)) < n) && !losing.contains(&h) {
+                    losing.push(h);
+                }
+            }
+        }
         let losing: Vec<Hash> = losing.into_iter().filter(|h| !excused.contains(h)).collect();
         // Agreements draft 14 (rules 48, 94; F307, F316): who is paid less is
         // read on the roster at this line; a holder the stake's holders'
@@ -4396,6 +4474,13 @@ impl<'a> AgreementsView<'a> {
             return Ok(Consent::RailNotAccepted { agreement: ag, rail });
         }
         let t = self.terms(&ag)?;
+        // An everyday act whose power the collective's control model decides
+        // is unknown to a verifier that does not hold it (rule 98).
+        if let Some(c) = &t.control {
+            if !self.control.iter().any(|(h, _)| *h == c.cmip) {
+                return Err(AgreementsError::Missing(c.cmip));
+            }
+        }
         let mut reaching: Vec<Area> = vec![];
         // A revocation is judged, like the grant it names, by that grant's
         // area alone, or, naming none, by the rule for Agreements (rule 74).

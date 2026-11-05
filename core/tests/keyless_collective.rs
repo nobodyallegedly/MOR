@@ -33,7 +33,7 @@ fn spec(s: &str) -> Hash {
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mirs())
+    AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())
 }
 
 fn act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
@@ -310,6 +310,7 @@ fn a_grant_in_an_area_counts_once_the_areas_rule_is_met_its_drafter_signing_by_d
         let mut t = terms(&ids, authority.id);
         let money: Vec<Kind> = [0, 1, 2].into_iter().map(|ty| Kind::Type { spec: mirs().money, type_: ty }).collect();
         t.areas = Some(vec![agreements::Area { name: "Money".into(), holders: vec![ids[0], ids[1]], threshold: 1, kinds: Some(money.clone()), fields: None, id: 2, limits: None }]);
+        mor_control::install(&mut t);
         assert_eq!(t.check(&mirs()), Ok(()));
         let founding = act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
         for p in m.iter_mut() {

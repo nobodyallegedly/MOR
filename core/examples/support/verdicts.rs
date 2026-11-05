@@ -88,7 +88,7 @@ fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mirs())
+    AgreementsView::new(&w.v, mirs()).with_control(mor_control::held())
 }
 
 fn status_name(s: Status) -> &'static str {
@@ -193,6 +193,7 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        control: Some(mor_control::control()),
     }
 }
 
@@ -242,11 +243,18 @@ struct Col {
 }
 
 fn collective(w: &mut World, money_holders: &[usize], money: u64) -> Col {
+    collective_with(w, money_holders, money, &|_| {})
+}
+
+/// A collective whose founding terms `f` changes (S7m: no control model, a
+/// constitutional rule of two).
+fn collective_with(w: &mut World, money_holders: &[usize], money: u64, f: &dyn Fn(&mut Terms)) -> Col {
     let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
     let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
     let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
     let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
-    let t = collective_terms(&ids, authority.id, keeper.id, money_holders.iter().map(|i| ids[*i]).collect(), money);
+    let mut t = collective_terms(&ids, authority.id, keeper.id, money_holders.iter().map(|i| ids[*i]).collect(), money);
+    f(&mut t);
     let founding = ag_act(w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
     for p in m.iter_mut() {
         sign(w, p, &founding);
@@ -356,6 +364,8 @@ pub struct Facts {
     pub judges_lapsed: Vec<(Hash, Hash)>,
     /// Settlements the time reference places before their link's stage opened.
     pub settled_out_of_turn: Vec<Hash>,
+    /// The verifier holds no control model (Agreements rule 98).
+    pub no_control: bool,
     /// Rail Modules' specifications this verifier holds and adopted, as
     /// content: each rail's kind and binding is read from them, fields 11
     /// and 13, under its spec hash (Development, "A rail Module's kind and
@@ -404,6 +414,9 @@ impl Facts {
         if !self.rail_invalid.is_empty() {
             m.insert("rail_invalid".into(), self.rail_invalid.iter().map(|x| json!(hx(x))).collect());
         }
+        if self.no_control {
+            m.insert("control_models_held".into(), json!(false));
+        }
         J::Object(m)
     }
 
@@ -420,6 +433,9 @@ impl Facts {
     }
 
     fn apply_view(&self, v: &mut AgreementsView) {
+        if self.no_control {
+            v.drop_control();
+        }
         for (a, r, p) in &self.anchors {
             v.anchored.add(&Anchor { act: *a, reference: r.clone(), point: *p });
         }
@@ -2686,6 +2702,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_b(out);
     s7g_agreements_c(out);
     scenario9::agreements(out);
+    scenario9::control_models(out);
     s7i::agreements(out);
     s7l::agreements(out);
     s7l::key_delivery(out);

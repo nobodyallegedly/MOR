@@ -6,24 +6,16 @@
 use super::*;
 use crate::agreements::owners::{owner_types, IssuanceOffer};
 
-/// One millionth of a whole share, squared: exact shares are written over
-/// this denominator, so a share an issuance gives is checked to within rule
-/// 9's rounding (less than one millionth from exact).
-const EXACT: u128 = (MILLION as u128) * (MILLION as u128);
-
 impl<'a> AgreementsView<'a> {
-    /// A collective's clone carrying field 32, judged as rule 96 says, at
-    /// line `at` (`by`: the signers its record names, each with a signature
-    /// act). `Ok(None)` for a clone that is no issuance. `Ok(Some(excused))`
-    /// for an issuance that passes rule 96's checks: `excused`, the holders
-    /// of the issued stake whose share it scales down by the stake's
-    /// holders' rule, who then do not sign for themselves (rule 48's
-    /// exception, rule 96: "pro rata issuance under the holders' rule is
-    /// excepted from the bullet on shares dropped or lowered"). `Err` with
-    /// the clone's state where it fails: invalid where it is no issuance in
-    /// form, a draft where it waits (on an offer reaching a holder, a
-    /// period, a take-up, a new holder's signature) or gives a holder other
-    /// than its proportion.
+    /// A collective's clone carrying an issuance (its control model's
+    /// answer `issues_under`), judged by the model the verifier holds from
+    /// the line's facts, which this gathers (the line as data,
+    /// [`crate::agreements::control::IssuanceFacts`]): nothing of the model's
+    /// judgment is here. `Ok(None)` for a clone that is no issuance;
+    /// `Ok(Some(excused))` for one that passes, `excused` the holders the
+    /// model excuses from signing, of whom the caller keeps those the
+    /// stake's holders' rule binds (rules 48, 98.2); `Err` with the clone's
+    /// state where it fails.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn issuance_at(
         &self,
@@ -35,117 +27,64 @@ impl<'a> AgreementsView<'a> {
         lineage: &[(Hash, Terms)],
         by: &BTreeMap<Hash, Hash>,
     ) -> R<Result<Option<Vec<Hash>>, CloneState>> {
+        use crate::agreements::control::{IssuanceFacts, OfferFacts, OfferPlaced};
         let Some(under) = &clone.issues_under else {
             return Ok(Ok(None));
         };
-        let invalid = |w: &str| Ok(Err(CloneState::Invalid(w.into())));
-        let draft = |w: &str| Ok(Err(CloneState::Draft(w.into())));
+        let Some(c) = &parent.control else { return Ok(Ok(None)) };
+        let Some((_, model)) = self.control.iter().find(|(h, _)| *h == c.cmip) else {
+            return Err(AgreementsError::Missing(c.cmip));
+        };
         let (ps, cs) = (parent.stakes.as_deref().unwrap_or(&[]), clone.stakes.as_deref().unwrap_or(&[]));
         let changed: Vec<usize> = (0..ps.len().max(cs.len())).filter(|i| ps.get(*i) != cs.get(*i)).collect();
-        let [i] = changed.as_slice() else {
-            return invalid("an issuance changes exactly one stake, and no other (rule 96; new in draft 14, F309)");
+        let stake = match changed.as_slice() {
+            [i] => Some(*i),
+            _ => None,
         };
-        let i = *i;
-        let (Some(before), Some(after)) = (ps.get(i), cs.get(i)) else {
-            return invalid("an issuance adds holders to a stake its parent defines (rule 96, F309)");
+        let roster = match stake {
+            Some(i) => self.roster_at(col, at, pid, i as u64),
+            None => Err(AgreementsError::Check("no one stake changed")),
         };
-        if before.object != after.object || after.holders.len() != after.identified().len() {
-            return invalid("an issuance adds holders to a stake, on the same object, each holder named (rule 96, F309)");
-        }
-        let written: Vec<(Hash, u64)> = after.identified();
-        let roster = self.roster_at(col, at, pid, i as u64)?;
-        let share_at = |h: &Hash| roster.iter().find(|(x, _)| x == h).map_or(0, |(_, n)| *n);
-        // Every new holder it adds signs it (rule 96).
-        if written.iter().any(|(h, n)| *n > 0 && share_at(h) == 0 && !by.contains_key(h)) {
-            return draft("a new holder the issuance adds has not signed it (rule 96; new in draft 14, F309)");
-        }
-        let (rule, waived) = parent.holders_rule(i as u64);
-        if *under == IssuesUnder::Waived && !waived {
-            return invalid("an issuance naming no offer ([0]) stands only under that stake's standing waiver of pre-emption in its parent (field 30; new in draft 14, F328)");
-        }
-        // Decided by every holder (no holders' rule by share), or signed by
-        // every holder: pre-emption is waived, and every holder whose share
-        // falls signs as rule 8 asks (rule 96).
-        let every_signed = roster.iter().all(|(h, _)| by.contains_key(h));
-        if !matches!(rule, HoldersRule::Share(_)) || every_signed {
-            return Ok(Ok(Some(vec![])));
-        }
-        let excused: Vec<Hash> = roster.iter().map(|(h, _)| *h).collect();
-        match under {
-            IssuesUnder::Waived => {
-                // Every existing share scaled by one factor: what the
-                // existing holders hold together after it.
-                let kept: u128 = roster.iter().map(|(h, _)| written.iter().find(|(x, _)| x == h).map_or(0, |(_, n)| *n) as u128).sum();
-                if kept >= MILLION as u128 {
-                    return invalid("an issuance adds new holders to the stake (rule 96, F309)");
+        let offer = match (under, stake) {
+            (IssuesUnder::Offer(o), Some(i)) => Some(match self.v.get(o) {
+                None => Err(AgreementsError::Missing(*o)),
+                Some(x) => {
+                    let decoded = IssuanceOffer::decode(&x.inside);
+                    let ours = decoded.as_ref().is_ok_and(|d| d.stake == i as u64 && lineage.iter().any(|(v, _)| *v == d.version));
+                    let placed = match &decoded {
+                        Ok(d) if ours => (|| -> R<OfferPlaced> {
+                            let ot = self.terms(&d.version)?;
+                            let reached_all = (|| -> R<bool> {
+                                for (h, _) in self.roster_at(col, Line::Record(x), &d.version, i as u64)? {
+                                    if !self.reaches_holder(x, &h)? {
+                                        return Ok(false);
+                                    }
+                                }
+                                Ok(true)
+                            })();
+                            let lapsed = self.offer_periods_lapsed.contains(o);
+                            let took_up = match &roster {
+                                Ok(r) => r.iter().map(|(h, s)| (*h, self.took_up(col, at, x, d, h, *s, lapsed))).collect(),
+                                Err(_) => vec![],
+                            };
+                            Ok(OfferPlaced {
+                                done: Self::for_col(col, x) && self.valid(o) && self.on_chain(col, x) && self.sealed_to_all(x, &ot),
+                                before: self.before_struct(col, x, at),
+                                has_time: ot.time.is_some() || ot.cmip(TIME_REFERENCE_TASK).is_some(),
+                                reached_all,
+                                lapsed,
+                                took_up,
+                            })
+                        })(),
+                        _ => Err(AgreementsError::Check("not this agreement's offer")),
+                    };
+                    Ok(OfferFacts { is_offer: self.is_agreements(x, owner_types::ISSUANCE_OFFER), offer: decoded, ours, placed })
                 }
-                for (h, s) in &roster {
-                    let w = written.iter().find(|(x, _)| x == h).map_or(0, |(_, n)| *n) as u128;
-                    if !near(w, *s as u128 * kept * MILLION as u128) {
-                        return draft("the issuance scales one existing share unlike the others (rule 96; new in draft 14, F309)");
-                    }
-                }
-                Ok(Ok(Some(excused)))
-            }
-            IssuesUnder::Offer(o) => {
-                let Some(x) = self.v.get(o) else {
-                    return Err(AgreementsError::Missing(*o));
-                };
-                if !self.is_agreements(x, owner_types::ISSUANCE_OFFER) {
-                    return invalid("field 32 names an act that is no issuance offer (type 26; rule 96)");
-                }
-                let offer = IssuanceOffer::decode(&x.inside)?;
-                if offer.stake != i as u64 || !lineage.iter().any(|(v, _)| *v == offer.version) {
-                    return invalid("the issuance offer it names offers another stake, or of another agreement (rule 96, F309)");
-                }
-                let ot = self.terms(&offer.version)?;
-                if !Self::for_col(col, x) || !self.valid(o) || !self.on_chain(col, x) || !self.sealed_to_all(x, &ot) {
-                    return draft("the issuance offer is not an act of the collective that is done: valid, on its chain and sealed to every member (rule 57; type 26)");
-                }
-                if !self.before_struct(col, x, at) {
-                    return draft("the issuance offer is not placed before the line putting the issuance in force (rule 96)");
-                }
-                if ot.time.is_none() && ot.cmip(TIME_REFERENCE_TASK).is_none() {
-                    return draft("the issuance offer counts for nothing: the agreement names no time reference for its period (rule 96, type 26; F315)");
-                }
-                // Every holder at the offer had to be reached: an offer that
-                // did not reach one started no period for it (F315).
-                for (h, _) in self.roster_at(col, Line::Record(x), &offer.version, i as u64)? {
-                    if !self.reaches_holder(x, &h)? {
-                        return draft("the issuance offer did not reach a holder of the stake, public or sealed to it: it started no period for that holder, and the issuance waits (rule 96; new in draft 14, F315, F328)");
-                    }
-                }
-                let lapsed = self.offer_periods_lapsed.contains(o);
-                // Exact shares, over EXACT: each existing holder scaled by
-                // what the new shares leave; each holder taking up keeps its
-                // whole proportion; the rest to the offer's new holders.
-                let size = offer.size as u128;
-                let mut exact: BTreeMap<Hash, u128> = BTreeMap::new();
-                let mut left = size * MILLION as u128;
-                for (h, s) in &roster {
-                    let s = *s as u128;
-                    let mut e = s * (MILLION as u128 - size) * MILLION as u128;
-                    if self.took_up(col, at, x, &offer, h, s as u64, lapsed)? {
-                        e += s * size * MILLION as u128;
-                        left -= s * size;
-                    } else if !lapsed {
-                        return draft("a holder's period on the issuance offer still runs, and it has not taken up its proportion (rule 96; new in draft 14, F309)");
-                    }
-                    *exact.entry(*h).or_default() += e;
-                }
-                for (h, n) in &offer.new_holders {
-                    *exact.entry(*h).or_default() += left * *n as u128;
-                }
-                let names: BTreeSet<Hash> = exact.keys().copied().chain(written.iter().map(|(h, _)| *h)).collect();
-                for h in names {
-                    let w = written.iter().find(|(x, _)| *x == h).map_or(0, |(_, n)| *n) as u128;
-                    if !near(w, exact.get(&h).copied().unwrap_or(0)) {
-                        return draft("the issuance gives a holder other than its proportion: each holder that took up receives exactly its proportion of the new shares, every existing share is scaled alike, and the rest goes to the offer's new holders in its shares (rule 96; new in draft 14, F309)");
-                    }
-                }
-                Ok(Ok(Some(excused)))
-            }
-        }
+            }),
+            _ => None,
+        };
+        let facts = IssuanceFacts { stake, roster, signed: by.keys().copied().collect(), offer };
+        model.issuance(parent, clone, &facts)
     }
 
     /// Whether `h`, holding `share` of the stake at the issuance's line,
@@ -280,12 +219,6 @@ impl<'a> AgreementsView<'a> {
         }
         self.one_count(&receipts, &claims)
     }
-}
-
-/// Whether a written share `w` (millionths) lies within rule 9's rounding of
-/// the exact share `exact` (over [`EXACT`]): less than one millionth away.
-fn near(w: u128, exact: u128) -> bool {
-    (w * EXACT).abs_diff(exact) < EXACT
 }
 
 impl<'a> AgreementsView<'a> {

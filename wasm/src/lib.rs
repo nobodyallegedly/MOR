@@ -1865,7 +1865,7 @@ impl SpecsIn {
     }
 
     fn view<'a>(&self, v: &'a chain::Verifier) -> R<agreements::AgreementsView<'a>> {
-        let mut view = agreements::AgreementsView::new(v, self.mirs()?);
+        let mut view = agreements::AgreementsView::new(v, self.mirs()?).with_control(mor_control::held());
         view.ext_layers = self.ext()?;
         for (k, log) in &self.keeper_logs {
             view.keeper_logs
@@ -1916,13 +1916,32 @@ fn specs_of(v: JsValue) -> R<SpecsIn> {
     from_js(v)
 }
 
+/// Move a terms payload's legacy fields 20, 30, 32 and 34 (the areas, their
+/// words, the holders' rules, an issuance's offer) into field 35, naming the
+/// default control cMIP with them as its parameters (Agreements rule 99), and
+/// return the payload as CBOR. A collective's terms carrying none of them get
+/// field 35 with empty parameters; terms that are no collective's are
+/// returned as they came. A migration aid for clients that built field 34.
+#[wasm_bindgen(js_name = agreementsControlPack)]
+pub fn agreements_control_pack(payload: &[u8]) -> R<Vec<u8>> {
+    let m = payload_of(payload)?;
+    let collective = m.iter().any(|(k, _)| *k == Value::Uint(12));
+    if !collective || m.iter().any(|(k, _)| *k == Value::Uint(35)) {
+        return Ok(cbor::encode(&Value::Map(m)));
+    }
+    let (params, mut rest): (Vec<_>, Vec<_>) = m.into_iter().partition(|(k, _)| matches!(k, Value::Uint(20 | 30 | 32 | 34)));
+    rest.push((Value::Uint(35), Value::Array(vec![Value::Bytes(mor_control::cmip().to_vec()), Value::Map(params)])));
+    rest.sort_by(|a, b| cbor::encode(&a.0).cmp(&cbor::encode(&b.0)));
+    Ok(cbor::encode(&Value::Map(rest)))
+}
+
 /// Check a terms payload (Agreements type 0), given as CBOR: its format and every
 /// check that needs no other act (key grammar, areas, judges, F105 for
 /// founding terms). Throws `agreements/<code>: <why>`.
 #[wasm_bindgen(js_name = checkTerms)]
 pub fn check_terms(payload: &[u8], specs: JsValue) -> R<()> {
     let s = specs_of(specs)?;
-    let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
+    let t = mor_control::decode(&payload_of(payload)?).map_err(lerr)?;
     t.check(&s.mirs()?).map_err(lerr)
 }
 
@@ -2279,7 +2298,7 @@ type StakeOut = (Option<String>, Vec<(Option<String>, u64)>);
 #[wasm_bindgen(js_name = readTerms)]
 pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
     let s = specs_of(specs)?;
-    let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
+    let t = mor_control::decode(&payload_of(payload)?).map_err(lerr)?;
     let hs = |v: &Vec<Hash>| v.iter().map(hx).collect::<Vec<_>>();
     let pairs = |v: &Vec<(Hash, u64)>| v.iter().map(|(h, n)| (hx(h), *n)).collect::<Vec<_>>();
     to_js(&TermsOut {
@@ -2545,12 +2564,12 @@ struct ClonePlanOut {
 #[wasm_bindgen(js_name = agreementsClonePlan)]
 pub fn agreements_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<JsValue> {
     let s = specs_of(specs)?;
-    let p = agreements::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
-    let c = agreements::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+    let p = mor_control::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = mor_control::decode(&payload_of(clone)?).map_err(lerr)?;
     let ext = s.ext()?;
     let needs = agreements::powers_needed(&p, &c, &s.mirs()?, &|e: &Hash| {
         ext.get(e).cloned().ok_or(agreements::AgreementsError::Missing(*e))
-    })
+    }, &mor_control::held())
     .map_err(lerr)?;
     let tier = |t: agreements::Tier| match t {
         agreements::Tier::Constitutional => "constitutional",
@@ -2601,8 +2620,8 @@ pub fn agreements_clone_plan(parent: &[u8], clone: &[u8], specs: JsValue) -> R<J
 /// where the clone changes a judge, whatever its other changes.
 #[wasm_bindgen(js_name = agreementsRollbackPlan)]
 pub fn agreements_rollback_plan(parent: &[u8], clone: &[u8]) -> R<JsValue> {
-    let p = agreements::Terms::decode(&payload_of(parent)?).map_err(lerr)?;
-    let c = agreements::Terms::decode(&payload_of(clone)?).map_err(lerr)?;
+    let p = mor_control::decode(&payload_of(parent)?).map_err(lerr)?;
+    let c = mor_control::decode(&payload_of(clone)?).map_err(lerr)?;
     #[derive(Serialize)]
     struct Out {
         needs: Vec<PowerOut>,

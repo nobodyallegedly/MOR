@@ -23,7 +23,7 @@ export const MIR_TEXTS = [
   { layer: 'Envelopes', file: 'MIR-envelopes-draft-11.md' },
   { layer: 'Text', file: 'MIR-text-draft-11.md' },
   { layer: 'Money', file: 'MIR-money-draft-11.md' },
-  { layer: 'Agreements', file: 'MIR-agreements-draft-17.md' },
+  { layer: 'Agreements', file: 'MIR-agreements-draft-18.md' },
   { layer: 'Development', file: 'MIR-development-draft-11.md' },
 ] as const;
 

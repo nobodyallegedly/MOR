@@ -60,8 +60,9 @@ genesis client (clients/genesis: mor-genesis new).
         unread with no card, voids its acts: that is said first, and nothing
         is signed until you type VOID.
   words --file C --text T --member M.json [--member M.json ...]
-        An ordinary change: the release area's own words, changed by its
-        holders (enough of them to meet the release rule) and recorded by the
+        The release area's own words: a constitutional change (Agreements
+        draft 18, F421), signed under the constitutional change rule (every
+        member unless the founding wrote otherwise) and recorded by the
         collective at once, with no rotation.
   release --file C --member M.json --version V [--name N] [--root DIR] [--implements ID ...]
         Publish every file git tracks under DIR (default: this repository) as a

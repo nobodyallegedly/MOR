@@ -5,7 +5,7 @@
 // says why terms in it still fail Agreements' checks; every publication is
 // encoded and checked by the core (`publicationPayload`).
 
-import { cborEncode, publicationPayload, sha256, unhex } from '../../genesis/src/core.ts';
+import { agreementsControlPack, cborEncode, publicationPayload, sha256, unhex } from '../../genesis/src/core.ts';
 
 /** A test identity, specification or act: a hash of its name. */
 export const id = (name: string): string => sha256(name);
@@ -137,7 +137,8 @@ export function encode(t: Terms): Uint8Array {
         }),
     );
   }
-  return cborEncode(m);
+  // Agreements draft 18: a collective's areas and holders' rules go into the default control cMIP's field 35.
+  return agreementsControlPack(cborEncode(m));
 }
 
 /** A publication's fields, as the core's `publicationPayload` takes them. */

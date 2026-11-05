@@ -219,15 +219,16 @@ test('the author, without a terminal: identities, a release, a collective founde
   assert.equal(checked.ok, true);
   assert.match(checked.reading.title, /^VERIFIED: MOR 11b\.3/);
 
-  // 8. An ordinary change: the release area's own words, recorded at once, no rotation.
+  // 8. The release area's own words: a constitutional change (F421), recorded at once, no rotation.
   const ww = await sign(c, { kind: 'words', collective: col.id, text: 'We release only what we both checked.' });
   const www = words(ww.review.reading);
   assert.match(ww.review.reading.title, /New words for the Releases area of “Makers”/);
-  assert.match(www, /An ordinary change: it changes only the Releases area's own words, an operational matter in that area/);
-  assert.match(www, /marked with the Releases area's power and signed by Sim Two .* and Sim Three/);
+  assert.match(www, /A constitutional change: an area's own words are part of the collective's control model/);
+  assert.match(www, /The cost: one more signature round/);
+  assert.match(www, /marked with the constitutional change rule and signed by Sim Two .* and Sim Three/);
   // The record is drawn by a member with their own key (Agreements rule 60; was: "signed with its signing key").
   assert.match(www, /The collective writes it on its record at once, the record drawn by a member with their own key, naming the collective \(Agreements rule 60\): no rotation, no new keys \(Agreements rule 37c, Q8\)/);
-  assert.match(www, /A change to the “Releases” area's own words: operational, in the “Releases” area/);
+  assert.match(www, /A change to the “Releases” area's own words: constitutional/);
   assert.match(www, /Its mark names exactly that/);
   assert.equal(ww.review.reading.plain[0].text, 'We release only what we both checked.');
   s = await state(c);
@@ -261,8 +262,10 @@ test('the author, without a terminal: identities, a release, a collective founde
   commit(w.checkout, 'src/lib.rs', 'pub fn six() -> u8 { 6 }\n');
   const frozen = await prepare(c, { kind: 'release', publisher: col.id, version: '11b.5' });
   assert.match(frozen.reading.blocking.join(' '), /The Releases area has no holder left whose voice remains: it is frozen, and a release would count for nothing until the members refit it/);
-  const noWords = await prepare(c, { kind: 'words', collective: col.id, text: 'Other words.' });
-  assert.match(noWords.reading.blocking.join(' '), /The Releases area is frozen/);
+  // A frozen area's words still change, as any constitutional change (Agreements draft 18, F421): rewording is not the area's holders' to block.
+  const frozenWords = await prepare(c, { kind: 'words', collective: col.id, text: 'Other words.' });
+  assert.doesNotMatch(frozenWords.reading.blocking.join(' '), /frozen/);
+  assert.match(words(frozenWords.reading), /A constitutional change/);
 
   // Everything signed is on record, newest first, with the digest that was shown.
   s = await state(c);

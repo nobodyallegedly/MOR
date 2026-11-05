@@ -1741,6 +1741,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mor-control"
+version = "0.1.0"
+dependencies = [
+ "mor-core",
+]
+
+[[package]]
 name = "mor-conversion"
 version = "0.1.0"
 dependencies = [
@@ -1762,6 +1769,7 @@ dependencies = [
  "libcrux-curve25519",
  "libcrux-ml-kem",
  "libcrux-sha3",
+ "mor-control",
  "proptest",
  "rand_core 0.6.4",
  "serde_json",
@@ -1875,6 +1883,7 @@ dependencies = [
  "k256",
  "mor-airgap",
  "mor-anchoring",
+ "mor-control",
  "mor-conversion",
  "mor-core",
  "mor-lightning",
