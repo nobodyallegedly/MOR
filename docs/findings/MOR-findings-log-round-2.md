@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F429. S7n-2's questions, settled (5 November 2026)
+
+**From S7n-2's report** (`docs/s7n-2-report.md`, pull request 124, merged): everyday acts by share written and checked on paper (five verdicts matching the core's).
+
+**Settled by the MOR lead under delegation**, along the session's leans: 1, Money draft 13 adds one clause: a collective's Money acts count under the rule its founding names for Money "or as its control model narrows it (Agreements rules 60 and 99)"; 2, `query-answer` gains key 2: for each act type a model gives a power by share, its `counted`, so a client can show founders who acts on what, Money first (the default cMIP answers it empty); 3, a grant reaching acts a power by share reaches counts only with signatures meeting that power, as a grant within an area does with its holders: one sentence in rule 74, the core's grant check extended, a vector. Point 3 closes a gap opened by F428 itself. All three in S7n-3, after #124's merge and before the say-it-once pass, whose rule is that meaning never changes.
+
 ## F428. Everyday acts by share; S7n's questions (5 November 2026)
 
 **From S7n's report** (`docs/s7n-report.md`, pull request 124): a second control model, "Majority and treasury", was written on paper from the texts alone, and a second outsider's five verdicts under it matched the core's. Sixteen guesses; two closed in the text, the rest S7n's seven questions.
