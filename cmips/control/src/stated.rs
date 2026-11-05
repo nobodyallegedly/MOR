@@ -34,6 +34,20 @@ impl ControlModel for Stated {
         }
     }
 
+    fn powers_by_share(&self, _: &Terms) -> Vec<((Hash, u64), Value)> {
+        // The stated answers that give a power by share, `[0, [2, counted]]`.
+        self.0
+            .iter()
+            .filter_map(|(k, v)| match v {
+                Value::Array(a) if a.len() == 2 && a[0] == Value::Uint(0) => match &a[1] {
+                    Value::Array(b) if b.len() == 2 && b[0] == Value::Uint(2) => Some((*k, b[1].clone())),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect()
+    }
+
     fn act_answer(&self, _: &Terms, inside: &Inside) -> Option<Value> {
         self.0.iter().find(|((s, t), _)| *s == inside.spec && *t == inside.type_).map(|(_, v)| v.clone())
     }

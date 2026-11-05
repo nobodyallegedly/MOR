@@ -222,6 +222,14 @@ pub trait ControlModel {
         let _ = (terms, inside);
         None
     }
+    /// The act types the model gives a power by share, each with that
+    /// power's `counted` (rule 99, `query-answer` key 2; F429): what the
+    /// client shows founders, and what a grant reaching those acts must meet
+    /// (rule 74). Empty for a model that gives none (the default).
+    fn powers_by_share(&self, terms: &Terms) -> Vec<((Hash, u64), Value)> {
+        let _ = terms;
+        vec![]
+    }
     /// An act of kind [`ActKind::Offer`], read.
     fn read_offer(&self, inside: &crate::act::Inside) -> R<OfferRead> {
         let _ = inside;
@@ -417,4 +425,54 @@ pub fn answer_reading(v: &Value) -> String {
         Ok(Answer::ByShare { .. }) => "an act, by share".into(),
         Ok(Answer::Clone { .. }) => "a clone".into(),
     }
+}
+
+/// A power by share a model lists in its query answer (key 2), read as an
+/// act's answer `[0, [2, counted]]` reads: `None` where it is overreaching.
+pub fn by_share_power(counted: &Value) -> Option<(Vec<Hash>, u64, u64)> {
+    let v = Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), counted.clone()])]);
+    match read_answer(&v) {
+        Ok(Answer::ByShare { among, stake, share, .. }) => Some((among, stake, share)),
+        _ => None,
+    }
+}
+
+/// A model's query answer (rule 99, `query-answer`), as CBOR: its areas
+/// (key 0), each stake's holders' rule (key 1), and each act type it gives
+/// a power by share with that power (key 2), from the answers `t` holds.
+pub fn query_answer(t: &Terms, m: &dyn ControlModel) -> Value {
+    let hashes = |hs: &[Hash]| {
+        let mut v = hs.to_vec();
+        v.sort();
+        Value::Array(v.iter().map(|h| Value::Bytes(h.to_vec())).collect())
+    };
+    let mut areas: Vec<&Area> = t.areas().iter().collect();
+    areas.sort_by_key(|a| a.id);
+    let key0 = Value::Array(
+        areas
+            .iter()
+            .map(|a| {
+                let reach: Vec<Value> = a.kinds.iter().flatten().filter_map(|k| match k {
+                    super::formats::Kind::Type { spec, type_ } => Some(Value::Array(vec![Value::Bytes(spec.to_vec()), Value::Uint(*type_)])),
+                    _ => None,
+                }).collect();
+                let tasks: Vec<Value> = a.fields.iter().flatten().filter_map(|f| match f {
+                    super::formats::FieldRef::Task(t) => Some(Value::Uint(*t)),
+                    _ => None,
+                }).collect();
+                Value::Map(vec![
+                    (Value::Uint(0), Value::Uint(a.id)),
+                    (Value::Uint(1), hashes(&a.holders)),
+                    (Value::Uint(2), Value::Uint(a.threshold)),
+                    (Value::Uint(3), Value::Array(reach)),
+                    (Value::Uint(4), Value::Array(tasks)),
+                ])
+            })
+            .collect(),
+    );
+    let key1 = Value::Array(t.holders_rules.iter().flatten().map(|e| Value::Array(vec![Value::Uint(e.stake), e.rule.to_value()])).collect());
+    let mut by = m.powers_by_share(t);
+    by.sort_by_key(|((s, ty), _)| crate::cbor::encode(&Value::Array(vec![Value::Bytes(s.to_vec()), Value::Uint(*ty)])));
+    let key2 = Value::Array(by.into_iter().map(|((s, ty), c)| Value::Array(vec![Value::Array(vec![Value::Bytes(s.to_vec()), Value::Uint(ty)]), c])).collect());
+    Value::Map(vec![(Value::Uint(0), key0), (Value::Uint(1), key1), (Value::Uint(2), key2)])
 }

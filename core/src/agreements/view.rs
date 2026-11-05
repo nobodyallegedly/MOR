@@ -4587,6 +4587,26 @@ impl<'a> AgreementsView<'a> {
                         return Ok(Consent::Invalid { agreement: ag, reason: "a grant naming no area reaches acts an area reaches (rule 74)".into() });
                     }
                 }
+                // A grant reaching acts a power by share reaches counts only
+                // with signatures meeting that power, as a grant within an
+                // area counts with its holders (rule 74; F429, 3).
+                if let Some(m) = t.control.as_ref().and_then(|c| self.control.iter().find(|(h, _)| *h == c.cmip)).map(|(_, m)| m.clone()) {
+                    let mut counts = vec![];
+                    for ((spec, type_), counted) in m.powers_by_share(&t) {
+                        let k = Kind::Type { spec, type_ };
+                        if !g.kinds.iter().flatten().any(|gk| t.kinds_overlap(&self.mirs, gk, &k)) {
+                            continue;
+                        }
+                        match super::control::by_share_power(&counted) {
+                            Some((among, stake, share)) if among.iter().all(|p| t.parties.contains(p)) => counts.push(self.count_by_share(&col, act, x, ag, &among, stake, share)?),
+                            _ => {}
+                        }
+                    }
+                    if !counts.is_empty() {
+                        let met = counts.iter().all(|a| a.met);
+                        return Ok(Consent::Areas { agreement: ag, areas: counts, met });
+                    }
+                }
                 reaching.extend(t.lane(layers::AGREEMENTS));
             }
         }

@@ -15475,3 +15475,22 @@ mod second_model_by_share {
         assert!(matches!(e.clone.as_ref().unwrap().1, CloneState::Invalid(_)), "{:?}", e.clone);
     }
 }
+
+/// Agreements draft 20, rule 99 (F429, 2): a model's query answer lists
+/// each act type it gives a power by share (key 2): the default control
+/// cMIP gives none, so key 2 is empty; its areas are key 0.
+#[test]
+fn s7n3_the_query_answer_lists_powers_by_share() {
+    let lab = Lab::new(&|_| {});
+    let t = lab.view().terms(&lab.founding).unwrap();
+    let q = agreements::control::query_answer(&t, &mor_control::Default);
+    let Value::Map(m) = q else { panic!() };
+    assert_eq!(m.iter().find(|(k, _)| *k == Value::Uint(2)).map(|(_, v)| v.clone()), Some(Value::Array(vec![])));
+    let Some((_, Value::Array(areas))) = m.iter().find(|(k, _)| *k == Value::Uint(0)) else { panic!() };
+    assert_eq!(areas.len(), 2, "the label's two areas");
+    let stated = mor_control::stated::Stated(vec![((mirs().money, 0), Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), Value::Uint(7)])]))]);
+    let q = agreements::control::query_answer(&t, &stated);
+    let Value::Map(m) = q else { panic!() };
+    let Some((_, Value::Array(by))) = m.iter().find(|(k, _)| *k == Value::Uint(2)) else { panic!() };
+    assert_eq!(by.len(), 1, "a model giving the payee pointer a power by share lists it");
+}

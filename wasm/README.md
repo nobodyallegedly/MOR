@@ -15,6 +15,15 @@ with `wasm-bindgen-cli` of the version pinned in `Cargo.toml` (0.2.129), and wit
 
 ## For the Dubsar Suite
 
+### Agreements draft 20 (S7n-3)
+
+| What | Before | Now |
+| --- | --- | --- |
+| A control model's query answer | areas and holders' rules, read through `readTerms` (`areas`, `holdersRules`) | also key 2, each act type the model gives a power by share and that power: **`agreementsQueryAnswer(payload: Uint8Array): Uint8Array`**, the whole `query-answer` (Agreements rule 99) as CBOR, keys 0 (areas), 1 (holders' rules) and 2 (powers by share). `readTerms` is unchanged. Under the default control cMIP (draft 3) key 2 is empty |
+| What a client shows before founders sign | every area, holders' rule and issuance term, Money first | **who acts on what, Money first**: every area, every power by share (key 2) among it, every holders' rule and issuance term (rule 98's client conformance) |
+| A collective's grant reaching acts a power by share reaches | counted under the rule for Agreements | counts only with signatures meeting that power (rule 74); `agreementsConsent` on the grant shows the power by share's count (`area` -1000, `share`). A grantee's act under it asks no further share |
+| Money | a collective's Money acts under its rule for Money | Money draft 13: "or as its control model narrows it" (no change in what the core judges) |
+
 ### Agreements draft 19: the boundary for a second control model (S7n)
 
 **Types 26 to 28 moved.** The issuance offer, the proxy and the revocation of a proxy are no longer Agreements types: they are the **default control cMIP's own acts**, of its own specification (Agreements rule 99, "A model's own acts"; the cMIP's section 7, draft 2). Their payloads, their `objects` and their type numbers are unchanged; only the act's `spec` changes, so their bytes and act ids change. An act of the Agreements MIR's specification with type 26, 27 or 28 is now **invalid**.

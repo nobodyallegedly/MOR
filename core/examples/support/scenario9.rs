@@ -1324,4 +1324,26 @@ pub fn control_models(out: &mut Out) {
     out.case(&mut w, "the agent's pointer under the same grant after the change of model, the new model giving an area of the same id: not backed", "Agreements rule 74",
         "A change of control model ends every grant within an area, whatever area of the new model carries the same id.", twin(), ask("backing", &after), json!("not backed (void)"), None);
 
+    // S7n-3 (F429, 3): a grant reaching acts a power by share reaches
+    // counts only with signatures meeting that power (rule 74).
+    let mut w = World::new();
+    let (mut col, _) = stated(&mut w);
+    let cid = col.id;
+    let majority = by_share_answer(&col, arr(vec![u(3), u(0), u(500_001)]));
+    let mut agent = w.genesis("the collective's money agent", vec![own_home()], None, None);
+    let g = Grant { grantee: agent.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: None, kinds: Some(vec![Kind::Type { spec: mirs().money, type_: 0 }]), reinstates: None, key: None };
+    let gid = ag_act(&mut w, &mut col.m[1].acting_for(cid, vec![cid]), agreements::types::GRANT, g.to_map(), None);
+    sign(&mut w, &mut col.m[2].acting_for(cid, vec![cid]), &gid);
+    sign(&mut w, &mut agent, &gid);
+    let ptr = pointer_act(&mut w, &mut agent.acting_for(cid, vec![gid]), b"the collective's address, set by its agent");
+    out.case(&mut w, "a grant reaching the payee pointers a power by share reaches, drawn by the member holding 30 per cent and signed by the one holding 20: exactly half, it does not count", "Agreements rules 74 and 99",
+        "A grant reaching acts a power by share reaches counts only with signatures meeting that power, as a grant within an area counts with its holders.", told(&majority), ask("consent counts", &gid), json!(false), None);
+    out.case(&mut w, "the agent's pointer under that grant: not backed", "Agreements rules 74 and 80",
+        "The grant does not count.", told(&majority), ask("backing", &ptr), json!("not backed (void)"), None);
+    sign(&mut w, &mut col.m[0].acting_for(cid, vec![cid]), &gid);
+    out.case(&mut w, "the same grant signed by the member holding half too: it counts", "Agreements rules 74 and 99",
+        "All three, more than half.", told(&majority), ask("consent counts", &gid), json!(true), None);
+    out.case(&mut w, "the agent's pointer under that grant: backed, asking no further share", "Agreements rules 74 and 80",
+        "A grantee's act within the grant's reach is the grant's.", told(&majority), ask("backing", &ptr), json!("backed"), None);
+
 }
