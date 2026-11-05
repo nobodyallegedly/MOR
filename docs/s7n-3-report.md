@@ -68,4 +68,9 @@ The default cMIP gives no power by share, so nothing an app does today changes.
 
 ## Releases and CI
 
-To follow (the next lines of this report).
+- **The final merge of main:** main had not moved since `db20305`, from which this branch starts, so the merge was a no-op.
+- **The six releases**, rebuilt as their READMEs say, with rustc 1.97.0, wasm-bindgen 0.2.129 and esbuild 0.25.12: commit `aecd9d9`. That covers the display client, Dub, Kišib (its air-gapped WebAssembly too), Damgar, Ummia and Edubba. The display client's reproducibility test passes locally, and GitHub's machine built the same WebAssembly (`ceee4ad9…`).
+- **CI on `aecd9d9`, read myself** (5 November, 14:28 UTC): **green but one step.**
+  - Green: the Rust workspace; both vector steps; every app and module but the reader; the reproducible display client; the regtest job; Nakišib (linux and mac); the browsers; Kišib's seal; Edubba's release check.
+  - **Red: `clients/reader`**, test 8, "the texts shipped are the newest draft of each MIR under spec/". `clients/reader/src/mirs.ts` names `MIR-money-draft-12.md` and `MIR-agreements-draft-19.md`, and the newest are 13 and 20. Two lines, the suite's. I did not change `clients/`.
+- **The pull request stays a draft** until the suite's two lines land on this branch and CI is green. Then I mark it ready, as asked, or the MOR lead does.
