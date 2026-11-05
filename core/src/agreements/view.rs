@@ -4519,6 +4519,18 @@ impl<'a> AgreementsView<'a> {
         if let Some(c) = &t.control {
             if let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) {
                 if let Some(v) = m.act_answer(&t, &x.inside) {
+                    // An act's answer for a type the model lists in its query
+                    // answer's key 2 is that power; any other answer for it,
+                    // and a power by share for a type it does not list, is
+                    // overreaching, set aside (rule 99; F429).
+                    let listed = m.powers_by_share(&t).into_iter().find(|((s, ty), _)| *s == x.inside.spec && *ty == x.inside.type_).map(|(_, c)| c);
+                    let as_listed = listed.map(|c| crate::cbor::Value::Array(vec![crate::cbor::Value::Uint(0), crate::cbor::Value::Array(vec![crate::cbor::Value::Uint(2), c])]));
+                    let by_share = matches!(super::control::read_answer(&v), Ok(super::control::Answer::ByShare { .. }));
+                    let set_aside = match &as_listed {
+                        Some(l) => *l != v,
+                        None => by_share,
+                    };
+                    let v = if set_aside { crate::cbor::Value::Array(vec![]) } else { v };
                     match super::control::read_answer(&v) {
                         Ok(super::control::Answer::Refused(w)) => return Ok(Consent::Invalid { agreement: ag, reason: format!("the collective's control model refuses it: {w} (rule 99)") }),
                         Ok(super::control::Answer::ByShare { among, stake, share, .. }) if among.iter().all(|p| t.parties.contains(p)) => {
@@ -4585,6 +4597,26 @@ impl<'a> AgreementsView<'a> {
                 for k in g.kinds.iter().flatten() {
                     if t.areas().iter().any(|a| a.kinds.iter().flatten().any(|ak| t.kinds_overlap(&self.mirs, ak, k))) {
                         return Ok(Consent::Invalid { agreement: ag, reason: "a grant naming no area reaches acts an area reaches (rule 74)".into() });
+                    }
+                }
+                // A grant reaching acts a power by share reaches counts only
+                // with signatures meeting that power, as a grant within an
+                // area counts with its holders (rule 74; F429, 3).
+                if let Some(m) = t.control.as_ref().and_then(|c| self.control.iter().find(|(h, _)| *h == c.cmip)).map(|(_, m)| m.clone()) {
+                    let mut counts = vec![];
+                    for ((spec, type_), counted) in m.powers_by_share(&t) {
+                        let k = Kind::Type { spec, type_ };
+                        if !g.kinds.iter().flatten().any(|gk| t.kinds_overlap(&self.mirs, gk, &k)) {
+                            continue;
+                        }
+                        match super::control::by_share_power(&counted) {
+                            Some((among, stake, share)) if among.iter().all(|p| t.parties.contains(p)) => counts.push(self.count_by_share(&col, act, x, ag, &among, stake, share)?),
+                            _ => {}
+                        }
+                    }
+                    if !counts.is_empty() {
+                        let met = counts.iter().all(|a| a.met);
+                        return Ok(Consent::Areas { agreement: ag, areas: counts, met });
                     }
                 }
                 reaching.extend(t.lane(layers::AGREEMENTS));

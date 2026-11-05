@@ -22,8 +22,8 @@ export const MIR_TEXTS = [
   { layer: 'Identity', file: 'MIR-identity-draft-15.md' },
   { layer: 'Envelopes', file: 'MIR-envelopes-draft-11.md' },
   { layer: 'Text', file: 'MIR-text-draft-11.md' },
-  { layer: 'Money', file: 'MIR-money-draft-12.md' },
-  { layer: 'Agreements', file: 'MIR-agreements-draft-19.md' },
+  { layer: 'Money', file: 'MIR-money-draft-13.md' },
+  { layer: 'Agreements', file: 'MIR-agreements-draft-20.md' },
   { layer: 'Development', file: 'MIR-development-draft-11.md' },
 ] as const;
 

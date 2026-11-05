@@ -1944,6 +1944,22 @@ pub fn agreements_control_cmip() -> String {
     hx(&mor_control::cmip())
 }
 
+/// A collective's control model's query answer (Agreements rule 99,
+/// `query-answer`), as CBOR, for terms given as CBOR, read through the
+/// models the binding holds (the default control cMIP): its areas (key 0),
+/// each stake's holders' rule (key 1), and each act type it gives a power by
+/// share with that power (key 2; empty under the default cMIP), so that a
+/// client can show founders who acts on what, Money first. Throws where the
+/// terms name no control model, or one the binding does not hold.
+#[wasm_bindgen(js_name = agreementsQueryAnswer)]
+pub fn agreements_query_answer(payload: &[u8]) -> R<Vec<u8>> {
+    let t = mor_control::decode(&payload_of(payload)?).map_err(lerr)?;
+    let Some(c) = &t.control else { return Err(JsError::new("agreements/no-model: the terms name no control model")) };
+    let held = mor_control::held();
+    let Some((_, m)) = held.iter().find(|(h, _)| *h == c.cmip) else { return Err(JsError::new("agreements/missing: a control model the binding does not hold")) };
+    Ok(cbor::encode(&agreements::control::query_answer(&t, m.as_ref())))
+}
+
 /// A control model's answer, given as CBOR in Agreements rule 99's format,
 /// as the rule reads it: "overreaching", "refused", "unknown", "an act, no
 /// area", "an act, area N" or "a clone". Throws only on bytes that are no

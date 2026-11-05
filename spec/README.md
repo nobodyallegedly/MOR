@@ -11,11 +11,11 @@ These eight texts are the freeze-ready drafts (`docs/freeze-ready-drafts-report.
 | `MIR-identity-draft-15.md` | Identity draft 15, freeze-ready, its "Written for people" section included. |
 | `MIR-text-draft-11.md` | Text draft 11, freeze-ready: drafts 9 and 10's two cases of rule 14 included. |
 | `MIR-envelopes-draft-11.md` | Envelopes draft 11, freeze-ready. |
-| `MIR-money-draft-12.md` | Money draft 12, freeze-ready: draft 11 with one pointer changed (a take-up of an issuance is a control model's, Agreements rule 99). |
-| `MIR-agreements-draft-19.md` | Agreements draft 19, freeze-ready: draft 18 (the four parts; control models handed to cMIPs, rules 98 and 99) with the boundary for a second model: a control model's answer in a format, its inputs as the line as data, its own acts counted where field 35 names it, "refused" and "overreaching", a clone with constitutional and operational changes, entering a publication under the rule for Agreements, removal and succession leaving the parameters to the model, and "bought under" in rule 48. |
+| `MIR-money-draft-13.md` | Money draft 13, freeze-ready: draft 12 with one clause (a collective's Money acts count under its rule for Money, or as its control model narrows it). |
+| `MIR-agreements-draft-20.md` | Agreements draft 20, freeze-ready: draft 19 with a model's query answer listing its powers by share (key 2), shown at founding, and grants under a power by share (rule 74); draft 19: draft 18 (the four parts; control models handed to cMIPs, rules 98 and 99) with the boundary for a second model: a control model's answer in a format, its inputs as the line as data, its own acts counted where field 35 names it, "refused" and "overreaching", a clone with constitutional and operational changes, entering a publication under the rule for Agreements, removal and succession leaving the parameters to the model, and "bought under" in rule 48. |
 | `MIR-development-draft-11.md` | Development draft 11, freeze-ready. |
-| `02-MOR-MICS-v32.md` | The MICS document, version 32, freeze-ready, naming the six above. |
-| `03-MOR-freeze-test-suite-v32.md` | The freeze test suite, version 32, freeze-ready, testing the six above and the default control cMIP, draft 2, where a step says so. |
+| `02-MOR-MICS-v33.md` | The MICS document, version 33, freeze-ready, naming the six above. |
+| `03-MOR-freeze-test-suite-v33.md` | The freeze test suite, version 33, freeze-ready, testing the six above and the default control cMIP, draft 3, where a step says so. |
 
 ## Earlier drafts, as recorded
 
