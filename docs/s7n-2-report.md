@@ -1,3 +1,5 @@
+**I am starting the final merge of main.** CI on `12239c8` was all green ("tests", jobs "all" and "regtest"; Nakišib; the browsers) save Edubba's release check, which compares with the `built/` copy the releases will replace.
+
 # S7n-2 report: the boundary for a second model, second part
 
 Branch `claude/s7n-second-model-mngeur`, pull request 124, not to be merged by me. No finding of my own; F429 unused.
