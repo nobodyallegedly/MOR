@@ -541,6 +541,97 @@ def py_verdict(case, pool, mirs):
     return "invalid"
 
 
+def py_answer(b):
+    """Agreements rule 99: how a control model's answer reads, from its
+    bytes alone: "overreaching" where it is outside the `answer` format or
+    names a power a model may never name ([0], [3, party], [4])."""
+    try:
+        v = decode(b)
+    except Reject:
+        return "overreaching"
+    uint = lambda x: type(x) is int and x >= 0
+
+    def power(p):
+        if not isinstance(p, list) or not p or not uint(p[0]):
+            return None
+        shapes = {0: 1, 1: 1, 2: 2, 3: 2, 4: 1, 5: 2, 6: 2}
+        if p[0] not in shapes or len(p) != shapes[p[0]]:
+            return None
+        if p[0] == 3:
+            return p if is_hash(p[1]) else None
+        return p if all(uint(x) for x in p[1:]) else None
+
+    def rule(r, nested=False):
+        if not isinstance(r, list) or not r or not uint(r[0]):
+            return False
+        t = r[0]
+        if t == 0:
+            return len(r) == 1
+        if t == 1:
+            return len(r) == 2 and uint(r[1])
+        if t == 2:
+            return len(r) == 2 and isinstance(r[1], list) and r[1] and all(is_hash(h) for h in r[1])
+        if t in (3, 5):
+            return len(r) == 3 and uint(r[1]) and uint(r[2])
+        if t == 4:
+            return not nested and len(r) == 2 and isinstance(r[1], list) and len(r[1]) >= 2 and all(rule(x, True) for x in r[1])
+        return False
+
+    def ascending(hs):
+        return all(hs[i] < hs[i + 1] for i in range(len(hs) - 1))
+
+    if not isinstance(v, list) or not v or not uint(v[0]):
+        return "overreaching"
+    kind, rest = v[0], v[1:]
+    if kind == 0 and len(rest) == 1 and isinstance(rest[0], list):
+        a = rest[0]
+        if a == [0]:
+            return "an act, no area"
+        if len(a) == 2 and a[0] == 1 and uint(a[1]):
+            return f"an act, area {a[1]}"
+        return "overreaching"
+    if kind == 1 and len(rest) == 1 and isinstance(rest[0], out_map):
+        m = rest[0]
+        if 0 not in m.keys() or not set(m.keys()) <= {0, 1}:
+            return "overreaching"
+        ps = m.get(0)
+        if not isinstance(ps, list):
+            return "overreaching"
+        encs = []
+        for c in ps:
+            if not isinstance(c, list) or len(c) != 3:
+                return "overreaching"
+            p = power(c[0])
+            if p is None or p[0] in (0, 3, 4):
+                return "overreaching"
+            among = c[1]
+            if not isinstance(among, list) or not among or not all(is_hash(h) for h in among) or not ascending(among):
+                return "overreaching"
+            if not rule(c[2]):
+                return "overreaching"
+            encs.append(encode(p))
+        if not ascending(encs):
+            return "overreaching"
+        st = m.get(1)
+        if 1 in m.keys():
+            if not isinstance(st, list) or not st:
+                return "overreaching"
+            for e in st:
+                if not isinstance(e, list) or len(e) != 2 or not is_hash(e[0]):
+                    return "overreaching"
+                p = power(e[1])
+                if p is None or p[0] != 5:
+                    return "overreaching"
+            if not ascending([e[0] for e in st]):
+                return "overreaching"
+        return "a clone"
+    if kind == 2 and len(rest) == 1 and isinstance(rest[0], str):
+        return "refused"
+    if kind == 3 and not rest:
+        return "unknown"
+    return "overreaching"
+
+
 def py_spec(content, money, held):
     """Development, "How the content is decoded": 'a specification', 'no
     specification', or unknown where a payment cMIP's field 2 is needed."""
@@ -751,7 +842,7 @@ def main():
         for c in f["cases"][layer]:
             if "python" not in c:
                 continue
-            got = py_verdict(c, pool, mirs)
+            got = py_answer(H(c["ask"]["answer"])) if c["python"] == "control answer" else py_verdict(c, pool, mirs)
             want = "unknown" if c["python"] == "at a Text-only verifier: unknown" else c["verdict"]
             assert got == want, (c["name"], got, want)
             n += 1

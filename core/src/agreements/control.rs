@@ -373,3 +373,18 @@ pub fn fill(t: &mut Terms, held: &Held) -> R<bool> {
     }
     Ok(true)
 }
+
+/// How rule 99 reads a model's answer, in words (the published vectors'
+/// "control answer" question): "overreaching" where [`read_answer`] sets it
+/// aside; otherwise "refused", "unknown", "an act, no area", "an act, area
+/// N" or "a clone".
+pub fn answer_reading(v: &Value) -> String {
+    match read_answer(v) {
+        Err(_) => "overreaching".into(),
+        Ok(Answer::Refused(_)) => "refused".into(),
+        Ok(Answer::Unknown) => "unknown".into(),
+        Ok(Answer::NoArea) => "an act, no area".into(),
+        Ok(Answer::Area(n)) => format!("an act, area {n}"),
+        Ok(Answer::Clone { .. }) => "a clone".into(),
+    }
+}

@@ -317,6 +317,7 @@ fn verdict_vectors() {
             let got = match ask["question"].as_str().unwrap() {
                 "status" | "verdict, implementing the MIRs only" if refused.contains(&h(&ask["act"])) => json!("invalid"),
                 "status" => json!(name(v.status(&h(&ask["act"])))),
+                "control answer" => json!(mor_core::agreements::control::answer_reading(&mor_core::cbor::decode(&b(&ask["answer"])).unwrap())),
                 "price tag" => json!(match v.price_tag(&h(&ask["act"])).map(|(_, c)| c) {
                     Some(mor_core::chain::TagCount::Counts) => "counts",
                     Some(mor_core::chain::TagCount::Nobodys(_)) => "nobody's offer",

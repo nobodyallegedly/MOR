@@ -468,6 +468,8 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
     facts.apply(w);
     let h = |k: &str| -> Hash { hex::decode(ask[k].as_str().unwrap()).unwrap().try_into().unwrap() };
     match ask["question"].as_str().unwrap() {
+        // A control model's answer, as bytes (Agreements rule 99's format).
+        "control answer" => json!(agreements::control::answer_reading(&mor_core::cbor::decode(&hex::decode(ask["answer"].as_str().unwrap()).unwrap()).unwrap())),
         // An act that does not open (Envelopes rules 1 to 5; a text field
         // not canonical among them) is invalid: the verifier cannot hold it.
         // So for the verifier implementing the MIRs only, as `tests/vectors.rs` answers it.
