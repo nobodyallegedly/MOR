@@ -1,4 +1,4 @@
-**I am starting the final merge of main.** CI on `12239c8` was all green ("tests", jobs "all" and "regtest"; Nakišib; the browsers) save Edubba's release check, which compares with the `built/` copy the releases will replace.
+**I am starting the final merge of main.** CI on `f5d3bc1` (my `12239c8` with the suite's reader line) was all green ("tests", jobs "all" and "regtest"; Nakišib; the browsers) save Edubba's release check, which compares with the `built/` copy the releases will replace.
 
 # S7n-2 report: the boundary for a second model, second part
 
