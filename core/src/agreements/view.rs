@@ -1260,26 +1260,37 @@ impl<'a> AgreementsView<'a> {
         let mut out: Vec<Hash> = vec![];
         let lineage = self.lineage(pid)?;
         for (o, _) in super::pay::stakes_paid_less(parent, clone) {
-            let Some((i, st)) = parent.stake_on(&o) else { continue };
+            let Some((i, _)) = parent.stake_on(&o) else { continue };
             let (rule, _) = parent.holders_rule(i as u64);
             let by_rule = matches!(rule, HoldersRule::Share(_)) && mark.iter().any(|e| e.power == Power::Holders(i as u64));
             for (h, n) in self.roster_at(col, at, pid, i as u64)? {
                 if n == 0 || parent.parties.contains(&h) || out.contains(&h) {
                     continue;
                 }
-                if by_rule {
-                    let bought = !st.identified().iter().any(|(x, _)| *x == h);
-                    let signed = lineage.iter().any(|(v, vt)| {
-                        vt.holders_rule(i as u64).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[h]).is_empty()
-                    });
-                    if bought || signed {
-                        continue;
-                    }
+                if by_rule && self.holders_rule_binds(col, at, pid, parent, &lineage, i as u64, &h)? {
+                    continue;
                 }
                 out.push(h);
             }
         }
         Ok(out)
+    }
+
+    /// Whether stake `i`'s holders' rule in `parent` binds holder `h`
+    /// (Agreements rule 48): `h` accepted it, by signing a version of the
+    /// lineage (`lineage`, from the parent back) carrying it, or by buying
+    /// under it ([`Self::bought_under`]: a change of the rule after the
+    /// seller signed and before the line placed the transfer binds the buyer
+    /// only by its signature). Read from the core's own acts alone, whatever
+    /// the collective's control model.
+    #[allow(clippy::too_many_arguments)]
+    fn holders_rule_binds(&self, col: &Col, at: Line<'a>, pid: &Hash, parent: &Terms, lineage: &[(Hash, Terms)], i: u64, h: &Hash) -> R<bool> {
+        let (rule, _) = parent.holders_rule(i);
+        if lineage.iter().any(|(v, vt)| vt.holders_rule(i).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[*h]).is_empty()) {
+            return Ok(true);
+        }
+        let written = parent.stakes.as_ref().and_then(|s| s.get(i as usize)).is_some_and(|st| st.identified().iter().any(|(x, _)| x == h));
+        Ok(!written && self.bought_under(col, at, pid, i, h, &rule)?)
     }
 
     /// [`Self::must_sign`] in two: those asked for their share, their stake
@@ -3572,6 +3583,25 @@ impl<'a> AgreementsView<'a> {
         let excused = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
             Err(state) => return Ok(state),
             Ok(e) => e.unwrap_or_default(),
+        };
+        // Rule 98.2, the core's own check for any model: a holder the model
+        // excuses from signing an issuance is excused only where the stake's
+        // holders' rule binds it (rule 48), read from the core's own acts. A
+        // holder it does not bind still signs.
+        let excused: Vec<Hash> = match clone.stakes.as_deref().and_then(|cs| {
+            let ps = parent.stakes.as_deref().unwrap_or(&[]);
+            (0..ps.len().max(cs.len())).find(|i| ps.get(*i) != cs.get(*i))
+        }) {
+            Some(i) if !excused.is_empty() => {
+                let mut kept = vec![];
+                for h in excused {
+                    if self.holders_rule_binds(col, at, &pid, parent, &lineage[1..], i as u64, &h)? {
+                        kept.push(h);
+                    }
+                }
+                kept
+            }
+            _ => vec![],
         };
         let (losing, _) = Self::must_sign_parts(parent, clone);
         let losing: Vec<Hash> = losing.into_iter().filter(|h| !excused.contains(h)).collect();

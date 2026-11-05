@@ -602,6 +602,37 @@ impl<'a> AgreementsView<'a> {
             return Ok(vec![]);
         };
         let mut out: Vec<(Hash, u64)> = st.identified();
+        let mut pending: Vec<(Hash, Hash, u64)> =
+            self.transfers_by(col, ag, stake, before)?.into_iter().map(|e| (e.seller, e.transfer.to, e.transfer.share)).collect();
+        // A buyer selling on: apply each sale once its seller holds enough.
+        loop {
+            let before = pending.len();
+            pending.retain(|(seller, to, share)| {
+                let Some(i) = out.iter().position(|(h, n)| h == seller && n >= share) else { return true };
+                out[i].1 -= share;
+                match out.iter_mut().find(|(h, _)| h == to) {
+                    Some(b) => b.1 += share,
+                    None => out.push((*to, *share)),
+                }
+                false
+            });
+            if pending.len() == before {
+                break;
+            }
+        }
+        out.retain(|(_, n)| *n > 0);
+        Ok(out)
+    }
+
+    /// The effective transfers of stake `stake` of agreement `ag` that the
+    /// collective's line places (`before`, as [`Self::roster_by`] reads it),
+    /// each naming a version of `ag`'s lineage whose field 7 for that stake
+    /// is `ag`'s.
+    fn transfers_by(&self, col: &Col, ag: &Hash, stake: u64, before: &dyn Fn(&Held, bool) -> bool) -> R<Vec<TransferEval>> {
+        let t = self.terms(ag)?;
+        let Some(st) = t.stakes.as_ref().and_then(|s| s.get(stake as usize)).cloned() else {
+            return Ok(vec![]);
+        };
         let lineage: Vec<Hash> = self
             .lineage(ag)?
             .into_iter()
@@ -639,7 +670,7 @@ impl<'a> AgreementsView<'a> {
         }
         placed.sort();
         placed.dedup();
-        let mut pending: Vec<(Hash, Hash, u64)> = vec![];
+        let mut out: Vec<TransferEval> = vec![];
         for y in placed {
             let Some(h) = self.v.get(&y) else { continue };
             if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
@@ -647,27 +678,32 @@ impl<'a> AgreementsView<'a> {
             }
             let e = self.transfer(&y)?;
             if e.effective && e.transfer.stake == stake && lineage.contains(&e.transfer.agreement) {
-                pending.push((e.seller, e.transfer.to, e.transfer.share));
+                out.push(e);
             }
         }
-        // A buyer selling on: apply each sale once its seller holds enough.
-        loop {
-            let before = pending.len();
-            pending.retain(|(seller, to, share)| {
-                let Some(i) = out.iter().position(|(h, n)| h == seller && n >= share) else { return true };
-                out[i].1 -= share;
-                match out.iter_mut().find(|(h, _)| h == to) {
-                    Some(b) => b.1 += share,
-                    None => out.push((*to, *share)),
-                }
-                false
-            });
-            if pending.len() == before {
-                break;
-            }
-        }
-        out.retain(|(_, n)| *n > 0);
         Ok(out)
+    }
+
+    /// Whether `h` bought stake `stake` of `ag` under holders' rule `rule`
+    /// (Agreements rule 48, "a buyer is bound by the rules it bought
+    /// under"): an effective transfer to it, placed by the line before `at`,
+    /// naming a version whose holders' rule for that stake is `rule`. A
+    /// change of that rule made after the seller signed the transfer (which
+    /// names the version it sells under) and before the line placed it is
+    /// not one the buyer bought under: it binds the buyer only by the
+    /// buyer's own signature.
+    pub(super) fn bought_under(&self, col: &Col, at: Line<'a>, ag: &Hash, stake: u64, h: &Hash, rule: &HoldersRule) -> R<bool> {
+        let before = |x: &Held, is_record: bool| if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before_struct(col, x, at) };
+        for e in self.transfers_by(col, ag, stake, &before)? {
+            if e.transfer.to != *h {
+                continue;
+            }
+            let v = self.terms(&e.transfer.agreement)?;
+            if v.holders_rules.is_some() && v.holders_rule(stake).0 == *rule {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 
