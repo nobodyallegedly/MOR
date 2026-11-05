@@ -9122,8 +9122,8 @@ async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new 
   return { cards: found, lines: lines2 };
 }
 var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
-var MICS_HASH = "435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c";
-var SUITE_HASH = "1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276";
+var MICS_HASH = "86150e996ecd0bc7a7ae20cd28fcd7d0fa1711eeb3344134bee592da00ed9189";
+var SUITE_HASH = "ce3cc0a9327d105bf904001ef2f5eb5928172262604de86c36f42894fd09c94b";
 var BUILT_IN = [
   { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
   { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },
