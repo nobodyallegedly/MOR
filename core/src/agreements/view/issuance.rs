@@ -1,10 +1,11 @@
 //! Issuance with pre-emption (Agreements draft 14, rule 96; F309, F315,
 //! F328 Q13 and Q14): a clone of a collective's agreement adding new holders
 //! to one stake, every existing share scaled alike, each existing holder
-//! first offered its proportion by an issuance offer (type 26).
+//! first offered its proportion by an issuance offer (the default control
+//! cMIP's type 26, of its own specification since Agreements draft 19).
 
 use super::*;
-use crate::agreements::owners::{owner_types, IssuanceOffer};
+use crate::agreements::control::{ActKind, OfferRead};
 
 impl<'a> AgreementsView<'a> {
     /// A collective's clone carrying an issuance (its control model's
@@ -49,7 +50,8 @@ impl<'a> AgreementsView<'a> {
             (IssuesUnder::Offer(o), Some(i)) => Some(match self.v.get(o) {
                 None => Err(AgreementsError::Missing(*o)),
                 Some(x) => {
-                    let decoded = IssuanceOffer::decode(&x.inside);
+                    let is_offer = x.inside.spec == c.cmip && model.act_kind(x.inside.type_) == Some(ActKind::Offer);
+                    let decoded = model.read_offer(&x.inside);
                     let ours = decoded.as_ref().is_ok_and(|d| d.stake == i as u64 && lineage.iter().any(|(v, _)| *v == d.version));
                     let placed = match &decoded {
                         Ok(d) if ours => (|| -> R<OfferPlaced> {
@@ -78,7 +80,7 @@ impl<'a> AgreementsView<'a> {
                         })(),
                         _ => Err(AgreementsError::Check("not this agreement's offer")),
                     };
-                    Ok(OfferFacts { is_offer: self.is_agreements(x, owner_types::ISSUANCE_OFFER), offer: decoded, ours, placed })
+                    Ok(OfferFacts { is_offer, offer: decoded, ours, placed })
                 }
             }),
             _ => None,
@@ -101,12 +103,12 @@ impl<'a> AgreementsView<'a> {
     #[allow(clippy::too_many_arguments)]
     /// Judged as [`Self::judged`] says: unknown only where it depends on
     /// whether two records whose payment is not stated are one payment.
-    fn took_up(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
+    fn took_up(&self, col: &Col, at: Line<'a>, x: &Held, offer: &OfferRead, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
         self.judged_r(|| self.took_up_unjudged(col, at, x, offer, h, share, lapsed))
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn took_up_unjudged(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
+    fn took_up_unjudged(&self, col: &Col, at: Line<'a>, x: &Held, offer: &OfferRead, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
         for s in self.v.signed_by(h) {
             if !self.is_agreements(s, types::SIGNATURE) || decode_signature(&s.inside).ok() != Some(x.id) {
                 continue;
@@ -222,8 +224,24 @@ impl<'a> AgreementsView<'a> {
 }
 
 impl<'a> AgreementsView<'a> {
-    /// Whether `a` is a take-up: a signature act naming an issuance offer.
+    /// Whether `a` is a take-up: a signature act naming an offer of a
+    /// control model the verifier holds (rule 99).
     pub(super) fn takes_up(&self, a: &Held) -> bool {
-        self.is_agreements(a, types::SIGNATURE) && decode_signature(&a.inside).ok().and_then(|o| self.v.get(&o)).is_some_and(|o| self.is_agreements(o, owner_types::ISSUANCE_OFFER))
+        self.is_agreements(a, types::SIGNATURE)
+            && decode_signature(&a.inside).ok().and_then(|o| self.v.get(&o)).is_some_and(|o| self.control.iter().any(|(h, m)| o.inside.spec == *h && m.act_kind(o.inside.type_) == Some(ActKind::Offer)))
+    }
+
+    /// What `x` is as an act of the control model `cmip` names (rule 99, "A
+    /// model's own acts"): of that model's specification, a type it
+    /// declares, in that type's format, the verifier holding the model.
+    pub(super) fn model_kind(&self, cmip: Option<&Hash>, x: &Held) -> Option<ActKind> {
+        let c = cmip?;
+        if x.inside.spec != *c {
+            return None;
+        }
+        let (_, m) = self.control.iter().find(|(h, _)| h == c)?;
+        let k = m.act_kind(x.inside.type_)?;
+        m.act_format(&x.inside).ok()?;
+        Some(k)
     }
 }

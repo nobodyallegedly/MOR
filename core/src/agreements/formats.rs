@@ -2436,7 +2436,7 @@ pub fn chain_citations(objects: &[Object], own: usize) -> R<(&[Object], &[Object
     Ok((a, c))
 }
 
-pub(crate) fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
+pub fn check_objects_self(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     let expected = [Object {
         chain: *x,
         predecessor: *x,
@@ -4088,28 +4088,28 @@ pub(crate) fn distinct(v: &[Hash]) -> bool {
     v.iter().enumerate().all(|(i, x)| !v[..i].contains(x))
 }
 
-pub(crate) fn hash(v: &Value, w: &'static str) -> R<Hash> {
+pub fn hash(v: &Value, w: &'static str) -> R<Hash> {
     match v {
         Value::Bytes(x) => x.as_slice().try_into().map_err(|_| AgreementsError::Shape(w)),
         _ => Err(AgreementsError::Shape(w)),
     }
 }
 
-pub(crate) fn uint(v: &Value, w: &'static str) -> R<u64> {
+pub fn uint(v: &Value, w: &'static str) -> R<u64> {
     match v {
         Value::Uint(n) => Ok(*n),
         _ => Err(AgreementsError::Shape(w)),
     }
 }
 
-pub(crate) fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
+pub fn nonempty<'a>(v: &'a Value, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if !a.is_empty() => Ok(a),
         _ => Err(AgreementsError::Shape(w)),
     }
 }
 
-pub(crate) fn tuple<'a>(v: &'a Value, n: usize, w: &'static str) -> R<&'a [Value]> {
+pub fn tuple<'a>(v: &'a Value, n: usize, w: &'static str) -> R<&'a [Value]> {
     match v {
         Value::Array(a) if a.len() == n => Ok(a),
         _ => Err(AgreementsError::Shape(w)),
@@ -4196,7 +4196,7 @@ fn chain_link(v: &Value) -> R<ChainLink> {
     Ok(ChainLink { judge, next })
 }
 
-fn power(v: &Value) -> R<Power> {
+pub(crate) fn power(v: &Value) -> R<Power> {
     let a = nonempty(v, "power")?;
     match (uint(&a[0], "power form")?, a.len()) {
         (0, 1) => Ok(Power::Constitutional),

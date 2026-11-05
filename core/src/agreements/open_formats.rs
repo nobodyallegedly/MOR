@@ -726,3 +726,52 @@ impl Liveness {
         Ok(Liveness { agreement })
     }
 }
+
+/// Fable's A6 (F295 for Agreements): whether an Agreements act is in its
+/// type's format, by that type's own decoder. `Shape` or `Check` for an
+/// act outside its format, or of a retired or undefined type: invalid for
+/// a verifier that knows the Agreements MIR's hash, as for Money (M1);
+/// `Unsupported` for a type whose format is still open: none since the
+/// keeper record's (type 2) was written (Agreements 17).
+/// Types 26 to 28 are no Agreements types since draft 19: a control
+/// model's own acts are of its own specification (rule 99).
+/// Only the format is read here: what a type's rules ask of other acts is
+/// the view's.
+pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
+    use super::formats::{
+        decode_signature, types, AbsenceDeclaration, Closing, Contest, Fork, ForkSettlement, Grant, KeeperRecord, NegotiationMessage, Notice,
+        Record, Release, Resignation, Revocation, SettlementRequest, Split, Terms,
+    };
+    use super::open_formats::{new_types, JudgeRequest, Liveness, StakeTransfer, WorkClaim, RETIRED_TYPES};
+    use super::formats::AgreementsError;
+    let p = &inside.payload;
+    match inside.type_ {
+        types::TERMS => Terms::decode(p).map(|_| ()),
+        types::SIGNATURE => decode_signature(inside).map(|_| ()),
+        types::KEEPER_RECORD => KeeperRecord::decode(inside).map(|_| ()),
+        types::CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
+        new_types::STAKE_TRANSFER => StakeTransfer::decode(inside).map(|_| ()),
+        types::RELEASE => Release::decode(inside).map(|_| ()),
+        types::PUBLICATION => crate::agreements::Publication::decode(inside).map(|_| ()),
+        types::SPLIT => Split::decode(p).map(|_| ()),
+        types::GRANT => Grant::decode(p).map(|_| ()),
+        types::REVOCATION => Revocation::decode(p).map(|_| ()),
+        new_types::LIVENESS => Liveness::decode(inside).map(|_| ()),
+        types::DECLARATION => AbsenceDeclaration::decode(inside).map(|_| ()),
+        types::CONTEST => Contest::decode(inside).map(|_| ()),
+        types::RESIGNATION => Resignation::decode(inside).map(|_| ()),
+        types::RECORD => Record::decode(inside).map(|_| ()),
+        types::NEGOTIATION => NegotiationMessage::decode(inside).map(|_| ()),
+        types::FORK => Fork::decode(inside).map(|_| ()),
+        types::CLOSING => Closing::decode(inside).map(|_| ()),
+        types::SETTLEMENT_REQUEST => SettlementRequest::decode(inside).map(|_| ()),
+        types::FORK_SETTLEMENT => ForkSettlement::decode(inside).map(|_| ()),
+        types::NOTICE => Notice::decode(inside).map(|_| ()),
+        new_types::JUDGE_REQUEST => JudgeRequest::decode(inside).map(|_| ()),
+        // 26 to 28: once the issuance offer, the proxy and its revocation,
+        // now the default control cMIP's own acts, of its specification
+        // (Agreements draft 19, rule 99): as Agreements types, undefined.
+        t if RETIRED_TYPES.contains(&t) => Err(AgreementsError::Shape("a retired Agreements type, never reused")),
+        _ => Err(AgreementsError::Shape("a type the Agreements MIR does not define")),
+    }
+}

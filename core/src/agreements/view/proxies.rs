@@ -3,8 +3,7 @@
 //! fence.
 
 use super::*;
-use crate::agreements::control::ProxyFacts;
-use crate::agreements::owners::{decode_proxy_revocation, owner_types, Proxy};
+use crate::agreements::control::{ActKind, ProxyFacts, ProxyRead};
 
 impl<'a> AgreementsView<'a> {
     /// Whether holder `h`'s vote under stake `stake`'s holders' rule on the
@@ -31,13 +30,18 @@ impl<'a> AgreementsView<'a> {
             }
         }
         let lineage: Vec<Hash> = self.lineage(ag)?.into_iter().map(|(v, _)| v).collect();
+        // The model's own acts, of its specification (rule 99).
+        let Some(cmip) = self.terms(ag)?.control.map(|c| c.cmip) else { return Ok(false) };
+        let Some((_, model)) = self.control.iter().find(|(h, _)| *h == cmip) else {
+            return Err(AgreementsError::Missing(cmip));
+        };
         // Every proxy of `h` on the stake the line placed, with where.
-        let mut placed: Vec<(&'a Held, Proxy, Vec<&'a Held>)> = vec![];
+        let mut placed: Vec<(&'a Held, ProxyRead, Vec<&'a Held>)> = vec![];
         for x in self.v.signed_by(h) {
-            if !self.is_agreements(x, owner_types::PROXY) || !self.kept_at(col, x, at)? {
+            if self.model_kind(Some(&cmip), x) != Some(ActKind::Proxy) || !self.kept_at(col, x, at)? {
                 continue;
             }
-            let Ok(p) = Proxy::decode(&x.inside) else { continue };
+            let Ok(p) = model.read_proxy(&x.inside) else { continue };
             if p.stake != stake || !lineage.contains(&p.version) || p.proxy == *h {
                 continue;
             }
@@ -61,8 +65,8 @@ impl<'a> AgreementsView<'a> {
                 // Revoked by a revocation of the holder's, placed before the line.
                 let mut revoked = false;
                 for r in self.v.signed_by(h) {
-                    if self.is_agreements(r, owner_types::PROXY_REVOCATION)
-                        && decode_proxy_revocation(&r.inside).ok() == Some(x.id)
+                    if self.model_kind(Some(&cmip), r) == Some(ActKind::Revocation)
+                        && model.read_revocation(&r.inside).ok() == Some(x.id)
                         && self.kept_at(col, r, at)?
                         && self.placed_by_line(col, r, at)?
                     {

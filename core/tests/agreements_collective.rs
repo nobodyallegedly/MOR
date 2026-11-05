@@ -667,6 +667,13 @@ fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value
     w.add(&a)
 }
 
+/// An act of the default control cMIP's own specification (Agreements draft
+/// 19, rule 99): an issuance offer, a proxy or its revocation.
+fn model_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let a = w.everyday_act(p, mor_control::cmip(), type_, payload, objects, None);
+    w.add(&a)
+}
+
 fn view(w: &World) -> AgreementsView<'_> {
     common::stand_in_payments(AgreementsView::new(&w.v, mirs()).with_control(mor_control::held()))
 }
@@ -13253,7 +13260,7 @@ fn an_issuance_3_7ac() {
     let ids = lab.ids();
     let mut ivy = lab.w.genesis("ivy, the new holder", vec![own_home()], None, None);
     let unit = spec("a unit");
-    let offer = agreements::IssuanceOffer {
+    let offer = mor_control::acts::IssuanceOffer {
         version: k,
         stake: 0,
         size: 200_000,
@@ -13263,7 +13270,7 @@ fn an_issuance_3_7ac() {
         words: Some("A fifth, for the studio.".into()),
         more: None,
     };
-    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, offer.to_map(), obj(k), None);
+    let a = lab.w.everyday_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, offer.to_map(), obj(k), None);
     let o = lab.w.add(&a);
     // Ben takes up; no line of the label places it: within the period, it
     // counts all the same (F329 Q3).
@@ -13307,8 +13314,8 @@ fn an_issuance_3_7ac() {
     let got = state_at(&lab, &r_plain, &[o], &[up]);
     assert!(matches!(&got, CloneState::Draft(w) if w.contains("lowers a holder's stake")), "{got:?}");
     // An offer sealed to the members alone did not reach Dana.
-    let sealed = agreements::IssuanceOffer { period: Value::Uint(11), ..offer.clone() };
-    let o2 = lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
+    let sealed = mor_control::acts::IssuanceOffer { period: Value::Uint(11), ..offer.clone() };
+    let o2 = lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
     let scaled = vec![(a_, 240_000), (b_, 240_000), (c_, 240_000), (d_, 80_000), (i_, 200_000)];
     let y = issuance(&mut lab, &k, agreements::IssuesUnder::Offer(o2), scaled.clone(), &[a_, b_]);
     let r_sealed = issuance_record(&mut lab, y, &mut [&mut ivy]);
@@ -13335,8 +13342,8 @@ fn an_issuance_3_7ac() {
     let ids = lab.ids();
     let mut ivy = lab.w.genesis("ivy, the new holder", vec![own_home()], None, None);
     let (a_, b_, c_, d_, i_) = (ids[ANA], ids[BEN], ids[CY], dana.id, ivy.id);
-    let sealed = agreements::IssuanceOffer { version: k, new_holders: vec![(i_, 1_000_000)], ..offer.clone() };
-    let o3 = lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
+    let sealed = mor_control::acts::IssuanceOffer { version: k, new_holders: vec![(i_, 1_000_000)], ..offer.clone() };
+    let o3 = lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, sealed.to_map(), obj(k), sorted(vec![a_, b_, c_]));
     let scaled = vec![(a_, 240_000), (b_, 240_000), (c_, 240_000), (d_, 80_000), (i_, 200_000)];
     let y = issuance(&mut lab, &k, agreements::IssuesUnder::Offer(o3), scaled.clone(), &[a_, b_]);
     let r = issuance_record(&mut lab, y, &mut [&mut ivy, &mut dana]);
@@ -13387,8 +13394,8 @@ fn an_issuance_3_7ac() {
 /// A proxy act of `holder` (rule 97), public, on the label's stake in
 /// itself (stake 0 of `k`), naming `proxy`, scoped to `scoped` or standing.
 fn proxy_act(lab: &mut Lab, holder: &mut Person, k: Hash, proxy: Hash, scoped: Option<Hash>) -> Hash {
-    let p = agreements::Proxy { version: k, stake: 0, proxy, scoped };
-    agreements_act(&mut lab.w, holder, agreements::owner_types::PROXY, p.to_map(), obj(k))
+    let p = mor_control::acts::Proxy { version: k, stake: 0, proxy, scoped };
+    model_act(&mut lab.w, holder, mor_control::acts::types::PROXY, p.to_map(), obj(k))
 }
 
 /// Freeze suite v28, 3.7ak (F327): Dana, holding half the label's stake in
@@ -13439,7 +13446,7 @@ fn proxies_3_7ak() {
     let (mut lab, mut dana, k, mut pat, mut svc, sa) = fresh();
     let px = proxy_act(&mut lab, &mut dana, k, pat.id, None);
     lab.acknowledge(0, px);
-    let rv = agreements_act(&mut lab.w, &mut dana, agreements::owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px));
+    let rv = model_act(&mut lab.w, &mut dana, mor_control::acts::types::PROXY_REVOCATION, mor_control::acts::proxy_revocation_payload(&px), obj(px));
     lab.acknowledge(0, rv);
     assert!(!vote(&mut lab, &mut svc, sa, &mut pat), "revoked");
     // Replaced by a newer proxy: Quinn votes, Pat does not.
@@ -13936,8 +13943,8 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
             OwnerOp::Proxy { holder, proxy, scoped, placed } => {
                 let h = *holder as usize % 5;
                 let to = ids[5 + *proxy as usize % 2];
-                let p = agreements::Proxy { version: cur, stake: 0, proxy: to, scoped: scoped.then_some(cur) };
-                let x = with(&mut lab, &mut others, h, |w, q| agreements_act(w, q, agreements::owner_types::PROXY, p.to_map(), obj(cur)));
+                let p = mor_control::acts::Proxy { version: cur, stake: 0, proxy: to, scoped: scoped.then_some(cur) };
+                let x = with(&mut lab, &mut others, h, |w, q| model_act(w, q, mor_control::acts::types::PROXY, p.to_map(), obj(cur)));
                 proxies.push(x);
                 if *placed {
                     lab.acknowledge(0, x);
@@ -13947,19 +13954,19 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
                 let Some(px) = proxies.last().copied() else { continue };
                 let Some(h) = lab.w.v.get(&px).and_then(|a| a.act.outside.signer) else { continue };
                 let Some(i) = ids.iter().position(|x| *x == h) else { continue };
-                let r = with(&mut lab, &mut others, i, |w, q| agreements_act(w, q, agreements::owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px)));
+                let r = with(&mut lab, &mut others, i, |w, q| model_act(w, q, mor_control::acts::types::PROXY_REVOCATION, mor_control::acts::proxy_revocation_payload(&px), obj(px)));
                 if *placed {
                     lab.acknowledge(0, r);
                 }
             }
             OwnerOp::Offer { public } => {
-                let o = agreements::IssuanceOffer { version: cur, stake: 0, size: 100_000, new_holders: vec![(ids[5], 1_000_000)], period: Value::Uint(9), price: None, words: None, more: None };
+                let o = mor_control::acts::IssuanceOffer { version: cur, stake: 0, size: 100_000, new_holders: vec![(ids[5], 1_000_000)], period: Value::Uint(9), price: None, words: None, more: None };
                 let x = if *public {
-                    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), None);
+                    let a = lab.w.everyday_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, o.to_map(), obj(cur), None);
                     lab.w.add(&a)
                 } else {
                     let to = sorted(lab.ids());
-                    lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), to)
+                    lab.w.private_act(&mut lab.c[0], mor_control::cmip(), mor_control::acts::types::ISSUANCE_OFFER, o.to_map(), obj(cur), to)
                 };
                 offer = Some(x);
             }
@@ -15073,5 +15080,398 @@ fn s7j_a_referral_through_a_route_is_the_first_payers() {
         } else {
             assert_eq!(e.unevidenced, vec![r1.id], "no first payer's citation: the purchase is the swap's, and the fan's acknowledgement fills nothing");
         }
+    }
+}
+
+/// Agreements draft 19, rules 60 and 98 (F425, 6; suite step 3.7c): an
+/// area reaching the label's publications narrows its rule for Agreements,
+/// never replaces it: the area's holder alone does not bring the label into
+/// a publication; with a second member's signature, the rule for
+/// Agreements met too, it counts.
+#[test]
+fn s7n_a_publication_needs_the_rule_for_agreements_besides_the_area() {
+    let mut lab = Lab::new(&|t| {
+        let cy = t.parties[CY];
+        let a = &mut t.areas.as_mut().unwrap()[0];
+        a.holders = vec![cy];
+        a.kinds.as_mut().unwrap().push(Kind::Type { spec: mirs().agreements, type_: agreements::types::PUBLICATION });
+        for (l, r) in t.layers.as_mut().unwrap().iter_mut() {
+            if *l == agreements::layers::AGREEMENTS {
+                *r = Rule::Threshold(2);
+            }
+        }
+    });
+    let bake = lab.publish(0);
+    lab.sign(ANA, &bake);
+    let f = lab.founding;
+    let label = lab.col.id;
+    let p = agreements::Publication { sold: Some(vec![agreements::Sold::Bake(bake)]), owners: Some(f), partners: vec![], service: label, plan: common::test_plan(), words: None, time: None, until: None, refund: None, cmips: vec![], designated: None, backups: vec![], failed: None };
+    let mut objects = vec![Object { chain: f, predecessor: f }];
+    objects.extend(lab.chain(&[]));
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::types::PUBLICATION, p.to_map(), Some(objects), None);
+    let pb = lab.own(0, &a);
+    // Cy, the Releases area's one holder, drafted it: the area is met, the
+    // rule for Agreements (any two) is not.
+    match lab.consent(&pb) {
+        Consent::Areas { areas, met, .. } => {
+            assert!(!met);
+            assert_eq!(areas.len(), 2, "the area and the rule for Agreements: {areas:?}");
+            assert!(areas.iter().any(|a| a.area == 1 && a.met));
+        }
+        c => panic!("{c:?}"),
+    }
+    lab.sign(ANA, &pb);
+    assert!(lab.counts(&pb), "{:?}", lab.consent(&pb));
+}
+
+/// Agreements draft 19, rules 69 and 83 (F425, 7): a clone taking a party
+/// out may leave the control model's parameters as they are: the default
+/// model reads a holder who is no party out of its areas; founding terms
+/// still never list a non-party as an area's holder.
+#[test]
+fn s7n_a_removal_leaves_the_parameters_to_the_model() {
+    let lab = Lab::new(&|_| {});
+    let ids = lab.ids();
+    let mut t = label_terms(&ids, lab.authority.id, lab.keeper.id, &|_| {});
+    t.parent = Some(lab.founding);
+    t.parties.retain(|p| *p != ids[BEN]);
+    let read = mor_control::decode(&t.to_map()).unwrap();
+    let money = read.area(2).unwrap();
+    assert!(money.holders.is_empty(), "Ben read out of the Money area: {money:?}");
+    assert_eq!(read.area(1).unwrap().holders, vec![ids[ANA]]);
+    assert_eq!(mor_core::cbor::encode(&Value::Map(read.to_map())), mor_core::cbor::encode(&Value::Map(t.to_map())), "its parameters encoded as written");
+    let mut founding = label_terms(&ids, lab.authority.id, lab.keeper.id, &|_| {});
+    founding.parties.retain(|p| *p != ids[BEN]);
+    assert!(mor_control::check(&founding, &mirs()).is_err(), "founding terms list only parties as an area's holders");
+}
+
+/// Agreements draft 19, rule 99 (F425, 4): a model's answer naming the
+/// constitutional change rule for an operational clone is overreaching:
+/// set aside, the clone needing what the last resort reads (here the rule
+/// for Money, for a payment cMIP), never what the model asked.
+#[test]
+fn s7n_an_overreaching_answer_is_set_aside() {
+    use mor_core::agreements::control::{Answers, ControlModel};
+    struct Over;
+    impl ControlModel for Over {
+        fn read(&self, _: &Value) -> Result<Answers, agreements::AgreementsError> {
+            Ok(Answers::default())
+        }
+        fn clone_powers(&self, _: &Terms, _: &Terms, _: &[agreements::Change], _: &dyn Fn(&Hash) -> Result<Vec<u64>, agreements::AgreementsError>) -> Result<Vec<Power>, agreements::AgreementsError> {
+            Ok(vec![Power::Constitutional])
+        }
+    }
+    let over = spec("an overreaching control model");
+    let lab = Lab::new(&|_| {});
+    let ids = lab.ids();
+    let parent = label_terms(&ids, lab.authority.id, lab.keeper.id, &|t| {
+        t.areas = None;
+        t.area_words = None;
+        t.control = Some(agreements::Control { cmip: over, params: Value::Map(vec![]), pack: None });
+    });
+    let mut clone = parent.clone();
+    clone.parent = Some(lab.founding);
+    clone.cmips = vec![(6, pay2()), (11, anchor())];
+    let held: mor_core::agreements::control::Held = vec![(over, std::rc::Rc::new(Over))];
+    let needs = agreements::powers_needed(&parent, &clone, &mirs(), &|_| Ok(vec![]), &held).unwrap();
+    assert_eq!(needs, vec![Power::Layer(agreements::layers::MONEY)]);
+}
+
+/// S7n, a second control model on paper: "Majority and treasury", written
+/// by an outside builder from the texts alone, held here as a stand-in.
+/// Parameters `{ 0 => [treasurers], 1 => number }`: one area, id 0, the
+/// treasurers', reaching the Money MIR's acts (types 0 to 5) and deciding
+/// tasks 6 and 7; every other operational change needs its layer's rule and
+/// the clone rule (field 5, written by share). The five acts a second
+/// outside verifier judged from the texts and that specification, judged
+/// here by the core through the stand-in.
+mod second_model {
+    use super::*;
+    use mor_core::agreements::control::{Answers, ControlModel, Held};
+    use mor_core::agreements::{task_layer, AgreementsError, Change, FieldRef};
+
+    pub struct Treasury;
+
+    pub fn cmip() -> Hash {
+        spec("cMIP: Majority and treasury, draft 1 (stand-in)")
+    }
+
+    fn held() -> Held {
+        vec![(cmip(), std::rc::Rc::new(Treasury) as std::rc::Rc<dyn ControlModel>)]
+    }
+
+    impl ControlModel for Treasury {
+        fn read(&self, params: &Value) -> Result<Answers, AgreementsError> {
+            let bad = AgreementsError::Shape("treasury: parameters invalid");
+            let Value::Map(m) = params else { return Err(bad) };
+            let (Some((_, Value::Array(hs))), Some((_, Value::Uint(n)))) = (m.iter().find(|(k, _)| *k == Value::Uint(0)), m.iter().find(|(k, _)| *k == Value::Uint(1))) else { return Err(bad) };
+            let holders = hs.iter().map(|h| match h {
+                Value::Bytes(b) => Hash::try_from(&b[..]).map_err(|_| AgreementsError::Shape("treasury: a treasurer")),
+                _ => Err(AgreementsError::Shape("treasury: a treasurer")),
+            }).collect::<Result<Vec<Hash>, _>>()?;
+            let kinds = (0..=mor_core::money::types::PRICE_TAG).map(|type_| Kind::Type { spec: mirs().money, type_ }).collect();
+            Ok(Answers {
+                areas: Some(vec![Area { name: "Treasury".into(), holders, threshold: *n, kinds: Some(kinds), fields: Some(vec![FieldRef::Task(6), FieldRef::Task(7)]), id: 0, limits: None }]),
+                ..Answers::default()
+            })
+        }
+
+        fn clone_powers(&self, _: &Terms, _: &Terms, ops: &[Change], ext: &dyn Fn(&Hash) -> Result<Vec<u64>, AgreementsError>) -> Result<Vec<Power>, AgreementsError> {
+            let mut out = vec![];
+            if ops.is_empty() {
+                out.push(Power::Clone);
+            }
+            for c in ops {
+                match c {
+                    Change::Task(6 | 7) => out.push(Power::Area(0)),
+                    Change::Task(t) => {
+                        out.push(Power::Clone);
+                        if let Some(l) = task_layer(*t).filter(|l| (1..=5).contains(l)) {
+                            out.push(Power::Layer(l));
+                        }
+                    }
+                    Change::Extension(e) => {
+                        out.push(Power::Clone);
+                        out.push(Power::Layer(agreements::layers::DEVELOPMENT));
+                        for l in ext(e)? {
+                            out.push(if l == agreements::layers::MONEY { Power::Area(0) } else { Power::Layer(l) });
+                        }
+                    }
+                    _ => out.push(Power::Clone),
+                }
+            }
+            out.sort_by_key(|p| p.encoding());
+            out.dedup();
+            Ok(out)
+        }
+    }
+
+    fn x1() -> Hash {
+        spec("a Text cMIP, X1")
+    }
+
+    /// The collective of the five acts: Ana, Ben and Cy holding 50, 30 and
+    /// 20 per cent; field 5 by share, more than half; every layer any two;
+    /// Cy the one treasurer.
+    fn founding(t: &mut Terms) {
+        let ids = t.parties.clone();
+        t.stakes = Some(vec![agreements::Stake { object: Who::This, holders: vec![(Who::Id(ids[ANA]), 500_000), (Who::Id(ids[BEN]), 300_000), (Who::Id(ids[CY]), 200_000)] }]);
+        t.clone = Rule::ByShare { stake: 0, share: 500_001 };
+        t.layers = Some(common::layers_all(Rule::Threshold(2)));
+        t.cmips = vec![(4, x1()), (6, pay()), (11, anchor())];
+        t.areas = None;
+        t.area_words = None;
+        t.control = Some(agreements::Control {
+            cmip: cmip(),
+            params: Value::Map(vec![(Value::Uint(0), Value::Array(vec![Value::Bytes(ids[CY].to_vec())])), (Value::Uint(1), Value::Uint(1))]),
+            pack: None,
+        });
+    }
+
+    fn view(lab: &Lab) -> AgreementsView<'_> {
+        let mut v = common::stand_in_payments(AgreementsView::new(&lab.w.v, mirs()).with_control(held()));
+        v.ext_layers.insert(ext(), vec![]);
+        v
+    }
+
+    /// A clone of the founding changed by `f`, marked `mark`, signed by
+    /// `signers` (and `joining`), recorded: the record.
+    fn recorded(lab: &mut Lab, mark: Vec<(Power, Vec<usize>)>, signers: &[usize], joining: Option<&mut Person>, f: &dyn Fn(&mut Terms)) -> (Hash, Hash) {
+        let ids = lab.ids();
+        let mut t = label_terms(&ids, lab.authority.id, lab.keeper.id, &founding);
+        t.parent = Some(lab.founding);
+        t.field4 = Field4::Mark(mark.into_iter().map(|(power, who)| MarkEntry { power, signers: sorted(who.iter().map(|i| ids[*i]).collect()) }).collect());
+        f(&mut t);
+        let k = lab.propose(signers[0], &t);
+        let mut sigs: Vec<Hash> = signers.iter().map(|i| lab.sign(*i, &k)).collect();
+        if let Some(p) = joining {
+            sigs.push(lab.sign_by(p, &k));
+        }
+        (k, lab.record(0, Some((k, sigs)), &[1], vec![], k))
+    }
+
+    #[test]
+    fn the_five_acts() {
+        // 1. A payee pointer drafted by Cy, the treasurer, alone: counts.
+        let mut lab = Lab::new(&founding);
+        let p1 = lab.pointer(0, 1, None, &[spec("a rail Module")]);
+        assert!(view(&lab).consent(&p1).unwrap().counts(), "{:?}", view(&lab).consent(&p1));
+        // 2. A payee pointer Ana drafts and Ben signs, Cy not: the area takes
+        // it out of Money's rule of any two; it does not count.
+        let mut ana = lab.m[ANA].acting_for(lab.col.id, lab.decisions());
+        let p = mor_core::money::Payload::PayeePointer(mor_core::money::PayeePointer { payee: lab.col.id, version: 1, previous: None, rails: vec![mor_core::money::Rail { module: spec("a rail Module"), address: b"an address".to_vec() }] });
+        let a = lab.w.everyday_act(&mut ana, mirs().money, 0, p.to_map(), None, None);
+        let p2 = lab.w.add(&a);
+        lab.sign(BEN, &p2);
+        assert!(!view(&lab).consent(&p2).unwrap().counts(), "{:?}", view(&lab).consent(&p2));
+        // 3. A clone replacing the Text cMIP, Ana and Ben signing, marked
+        // with the clone rule and the rule for Text: in force.
+        let mut lab = Lab::new(&founding);
+        let (k3, r3) = recorded(&mut lab, vec![(Power::Clone, vec![ANA, BEN]), (Power::Layer(agreements::layers::TEXT), vec![ANA, BEN])], &[ANA, BEN], None, &|t| t.cmips[0].1 = spec("a Text cMIP, X2"));
+        assert_eq!(view(&lab).record(&lab.col.id, &r3).unwrap().puts, Some(k3), "{:?}", view(&lab).record(&lab.col.id, &r3).unwrap().clone);
+        // 4. A clone replacing the payment cMIP, Cy alone, marked with the
+        // treasury's power: in force.
+        let mut lab = Lab::new(&founding);
+        let (k4, r4) = recorded(&mut lab, vec![(Power::Area(0), vec![CY])], &[CY], None, &|t| t.cmips[1].1 = pay2());
+        assert_eq!(view(&lab).record(&lab.col.id, &r4).unwrap().puts, Some(k4), "{:?}", view(&lab).record(&lab.col.id, &r4).unwrap().clone);
+        // 5. A clone adding Dee and replacing the Text cMIP, marked with the
+        // constitutional change rule alone: invalid, the rule for Text
+        // missing from its mark (rule 99).
+        let mut lab = Lab::new(&founding);
+        let mut dee = lab.w.genesis("dee", vec![own_home()], None, None);
+        let dee_id = dee.id;
+        let (_, r5) = recorded(&mut lab, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &[ANA, BEN, CY], Some(&mut dee), &|t| {
+            t.parties.push(dee_id);
+            t.cmips[0].1 = spec("a Text cMIP, X2");
+        });
+        let e = view(&lab).record(&lab.col.id, &r5).unwrap();
+        assert_eq!(e.puts, None);
+        match &e.clone.as_ref().unwrap().1 {
+            CloneState::Invalid(w) => assert!(w.contains("the mark names other powers"), "{w}"),
+            s => panic!("{s:?}"),
+        }
+        // Marked with the rule for Text beside it: in force.
+        let mut lab = Lab::new(&founding);
+        let mut dee = lab.w.genesis("dee", vec![own_home()], None, None);
+        let dee_id = dee.id;
+        let (k6, r6) = recorded(&mut lab, vec![(Power::Constitutional, vec![ANA, BEN, CY]), (Power::Layer(agreements::layers::TEXT), vec![ANA, BEN])], &[ANA, BEN, CY], Some(&mut dee), &|t| {
+            t.parties.push(dee_id);
+            t.cmips[0].1 = spec("a Text cMIP, X2");
+        });
+        assert_eq!(view(&lab).record(&lab.col.id, &r6).unwrap().puts, Some(k6), "{:?}", view(&lab).record(&lab.col.id, &r6).unwrap().clone);
+    }
+}
+
+/// S7n-2 (F428), the second model on paper, draft 2: "Majority and
+/// treasury" amended by its outside builder so that the collective's Money
+/// acts need members holding more than half of its stake in itself (rule 99,
+/// `[2, counted]`), the treasurers dropped; a clone changing a Money task
+/// needs the rule for Money and the clone rule, by field 5. Held here as a
+/// stand-in, judging the five acts a second outsider judged on paper.
+mod second_model_by_share {
+    use super::*;
+    use mor_core::agreements::control::{Answers, ControlModel, Held};
+    use mor_core::agreements::{task_layer, AgreementsError, Change};
+
+    pub struct Majority;
+
+    pub fn cmip() -> Hash {
+        spec("cMIP: Majority and treasury, draft 2 (stand-in)")
+    }
+
+    fn held() -> Held {
+        vec![(cmip(), std::rc::Rc::new(Majority) as std::rc::Rc<dyn ControlModel>)]
+    }
+
+    impl ControlModel for Majority {
+        fn read(&self, params: &Value) -> Result<Answers, AgreementsError> {
+            match params {
+                Value::Map(_) => Ok(Answers::default()),
+                _ => Err(AgreementsError::Shape("majority: parameters invalid")),
+            }
+        }
+
+        fn act_answer(&self, t: &Terms, inside: &mor_core::act::Inside) -> Option<Value> {
+            if inside.spec != mirs().money || inside.type_ > mor_core::money::types::PRICE_TAG {
+                return Some(Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(0)])]));
+            }
+            // Among the Money layer's actors: every party, or those its rule names.
+            let mut among = match t.layer_rule(agreements::layers::MONEY) {
+                Some(Rule::Named(n)) => n.clone(),
+                _ => t.parties.clone(),
+            };
+            among.sort();
+            let counted = Value::Array(vec![
+                Value::Array(vec![Value::Uint(6), Value::Uint(3)]),
+                Value::Array(among.iter().map(|h| Value::Bytes(h.to_vec())).collect()),
+                Value::Array(vec![Value::Uint(3), Value::Uint(0), Value::Uint(500_001)]),
+            ]);
+            Some(Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), counted])]))
+        }
+
+        fn clone_powers(&self, _: &Terms, _: &Terms, ops: &[Change], ext: &dyn Fn(&Hash) -> Result<Vec<u64>, AgreementsError>) -> Result<Vec<Power>, AgreementsError> {
+            let mut out = vec![Power::Clone];
+            for c in ops {
+                match c {
+                    Change::Task(t) => {
+                        if let Some(l) = task_layer(*t).filter(|l| (1..=5).contains(l)) {
+                            out.push(Power::Layer(l));
+                        }
+                    }
+                    Change::Extension(e) => {
+                        out.push(Power::Layer(agreements::layers::DEVELOPMENT));
+                        out.extend(ext(e)?.into_iter().map(Power::Layer));
+                    }
+                    _ => {}
+                }
+            }
+            out.sort_by_key(|p| p.encoding());
+            out.dedup();
+            Ok(out)
+        }
+    }
+
+    fn founding(t: &mut Terms) {
+        let ids = t.parties.clone();
+        t.stakes = Some(vec![agreements::Stake { object: Who::This, holders: vec![(Who::Id(ids[ANA]), 500_000), (Who::Id(ids[BEN]), 300_000), (Who::Id(ids[CY]), 200_000)] }]);
+        t.clone = Rule::ByShare { stake: 0, share: 500_001 };
+        t.layers = Some(common::layers_all(Rule::Threshold(2)));
+        t.cmips = vec![(4, spec("a Text cMIP, X1")), (6, pay()), (11, anchor())];
+        t.areas = None;
+        t.area_words = None;
+        t.control = Some(agreements::Control { cmip: cmip(), params: Value::Map(vec![]), pack: None });
+    }
+
+    fn view(lab: &Lab) -> AgreementsView<'_> {
+        common::stand_in_payments(AgreementsView::new(&lab.w.v, mirs()).with_control(held()))
+    }
+
+    /// A payee pointer drafted by `by`, signed by `signers`.
+    fn pointer(lab: &mut Lab, by: usize, signers: &[usize]) -> Hash {
+        let mut d = lab.m[by].acting_for(lab.col.id, lab.decisions());
+        let p = mor_core::money::Payload::PayeePointer(mor_core::money::PayeePointer { payee: lab.col.id, version: 1, previous: None, rails: vec![mor_core::money::Rail { module: spec("a rail Module"), address: b"an address".to_vec() }] });
+        let a = lab.w.everyday_act(&mut d, mirs().money, 0, p.to_map(), None, None);
+        let x = lab.w.add(&a);
+        for s in signers {
+            lab.sign(*s, &x);
+        }
+        x
+    }
+
+    fn payment_clone(lab: &mut Lab, signers: &[usize]) -> (Hash, Hash) {
+        let ids = lab.ids();
+        let mut t = label_terms(&ids, lab.authority.id, lab.keeper.id, &founding);
+        t.parent = Some(lab.founding);
+        let who: Vec<Hash> = sorted(signers.iter().map(|i| ids[*i]).collect());
+        t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: who.clone() }, MarkEntry { power: Power::Layer(agreements::layers::MONEY), signers: who }]);
+        t.cmips[1].1 = pay2();
+        let k = lab.propose(signers[0], &t);
+        let sigs: Vec<Hash> = signers.iter().map(|i| lab.sign(*i, &k)).collect();
+        (k, lab.record(0, Some((k, sigs)), &[1], vec![], k))
+    }
+
+    #[test]
+    fn the_five_acts() {
+        let mut lab = Lab::new(&founding);
+        // 1. Ben drafts, Cy signs: exactly half, not more: does not count.
+        let p1 = pointer(&mut lab, BEN, &[CY]);
+        assert!(!view(&lab).consent(&p1).unwrap().counts(), "{:?}", view(&lab).consent(&p1));
+        // 2. Ana alone: half: does not count.
+        let p2 = pointer(&mut lab, ANA, &[]);
+        assert!(!view(&lab).consent(&p2).unwrap().counts(), "{:?}", view(&lab).consent(&p2));
+        // 3. Ana drafts, Cy signs: seven tenths: counts.
+        let p3 = pointer(&mut lab, ANA, &[CY]);
+        assert!(view(&lab).consent(&p3).unwrap().counts(), "{:?}", view(&lab).consent(&p3));
+        // 4. A clone replacing the payment cMIP, Ana and Ben, marked [1] and
+        // [6, 3]: in force.
+        let (k4, r4) = payment_clone(&mut lab, &[ANA, BEN]);
+        assert_eq!(view(&lab).record(&lab.col.id, &r4).unwrap().puts, Some(k4), "{:?}", view(&lab).record(&lab.col.id, &r4).unwrap().clone);
+        // 5. The same clone by Ben and Cy: the clone rule, by field 5, not
+        // met: invalid.
+        let mut lab = Lab::new(&founding);
+        let (_, r5) = payment_clone(&mut lab, &[BEN, CY]);
+        let e = view(&lab).record(&lab.col.id, &r5).unwrap();
+        assert_eq!(e.puts, None);
+        assert!(matches!(e.clone.as_ref().unwrap().1, CloneState::Invalid(_)), "{:?}", e.clone);
     }
 }

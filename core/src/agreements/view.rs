@@ -480,6 +480,10 @@ impl Consent {
     }
 }
 
+/// The `area` of an [`AreaCount`] that is a power a control model gave one
+/// act by share (rule 99, F428), no area's id.
+pub const BY_SHARE: u64 = u64::MAX - 1000;
+
 /// One area's count for an act.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AreaCount {
@@ -498,6 +502,10 @@ pub struct AreaCount {
     /// judged the act, a second key asked above them.
     pub limits: Option<AreaLimits>,
     pub met: bool,
+    /// A power a control model gave this act by share (rule 99, `[2,
+    /// counted]`; F428): `needed` is then no number of heads, and `share`
+    /// holds the share asked for, in millionths of what the voices hold.
+    pub share: Option<u64>,
 }
 
 /// How an area's limits cMIP judged an act (F353, draft 16).
@@ -604,6 +612,11 @@ impl<'a> AgreementsView<'a> {
 
     /// Hold no control model (a verifier that holds none: rule 98's
     /// collective whose model is not held).
+    /// Hold these control models too (Agreements rule 99).
+    pub fn add_control(&mut self, held: super::control::Held) {
+        self.control.extend(held);
+    }
+
     pub fn drop_control(&mut self) {
         self.control.clear();
     }
@@ -2851,9 +2864,13 @@ impl<'a> AgreementsView<'a> {
             // the owners' matters (rules 94, 96, 97; new in draft 14, F316,
             // F327; the take-up placed as a transfer is, a reading of the
             // build), each judged where the owners' matters read it.
+            // A control model's own proxy, revocation or other act, of the
+            // model the agreement in force names (rule 99), is placed so too.
             if self.is_agreements(a, crate::agreements::open_formats::new_types::STAKE_TRANSFER)
-                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY)
-                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY_REVOCATION)
+                || matches!(
+                    self.model_kind(at_terms.control.as_ref().map(|c| &c.cmip), a),
+                    Some(crate::agreements::control::ActKind::Proxy | crate::agreements::control::ActKind::Revocation | crate::agreements::control::ActKind::Other)
+                )
                 || self.takes_up(a)
             {
                 if !self.kept_at(col, a, Line::Record(h))? {
@@ -4412,7 +4429,22 @@ impl<'a> AgreementsView<'a> {
         // grant is the consent, given once.
         if let Some((g, _)) = self.col_grant(&col, x) {
             return Ok(match self.backing(act)? {
-                Backing::Backed { grant } | Backing::Binds { grant } => Consent::Granted { agreement: self.in_force(act)?.unwrap_or(g.id), grant },
+                Backing::Backed { grant } | Backing::Binds { grant } => {
+                    let agreement = self.in_force(act)?.unwrap_or(g.id);
+                    // Entering an agreement as a party under a grant within
+                    // an area: the rule for Agreements too, its members
+                    // signing (rule 98; F425, 6).
+                    let in_area = self.v.get(&grant).and_then(|h| Grant::decode(&h.inside.payload).ok()).is_some_and(|d| d.area.is_some());
+                    if in_area && self.enters_as_party(&col, x) {
+                        if let Some(l) = self.terms(&agreement)?.lane(layers::AGREEMENTS) {
+                            let c = self.count_areas(&col, act, Point::Act(x), agreement, vec![l])?;
+                            if !c.counts() {
+                                return Ok(c);
+                            }
+                        }
+                    }
+                    Consent::Granted { agreement, grant }
+                }
                 Backing::NotBacked { grant, reason } | Backing::Disputed { grant, reason } => Consent::Ungranted { grant, reason },
                 Backing::Unknown { grant, reason } => Consent::Unknown { grant, reason },
                 Backing::NotUnderGrant => Consent::Ungranted { grant: g.id, reason: "not signed by the grant's grantee".into() },
@@ -4479,6 +4511,32 @@ impl<'a> AgreementsView<'a> {
         if let Some(c) = &t.control {
             if !self.control.iter().any(|(h, _)| *h == c.cmip) {
                 return Err(AgreementsError::Missing(c.cmip));
+            }
+        }
+        // A control model that answers per act (rule 99): a power by share
+        // for this act, counted as rule 65 counts a rule by share; a refusal
+        // makes it invalid; an overreaching answer is set aside (F428).
+        if let Some(c) = &t.control {
+            if let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) {
+                if let Some(v) = m.act_answer(&t, &x.inside) {
+                    match super::control::read_answer(&v) {
+                        Ok(super::control::Answer::Refused(w)) => return Ok(Consent::Invalid { agreement: ag, reason: format!("the collective's control model refuses it: {w} (rule 99)") }),
+                        Ok(super::control::Answer::ByShare { among, stake, share, .. }) if among.iter().all(|p| t.parties.contains(p)) => {
+                            let by = self.count_by_share(&col, act, x, ag, &among, stake, share)?;
+                            let mut counts = vec![by];
+                            if self.enters_as_party(&col, x) {
+                                if let Some(l) = t.lane(layers::AGREEMENTS) {
+                                    if let Consent::Areas { areas, .. } = self.count_areas(&col, act, Point::Act(x), ag, vec![l])? {
+                                        counts.extend(areas);
+                                    }
+                                }
+                            }
+                            let met = counts.iter().all(|a| a.met);
+                            return Ok(Consent::Areas { agreement: ag, areas: counts, met });
+                        }
+                        _ => {}
+                    }
+                }
             }
         }
         let mut reaching: Vec<Area> = vec![];
@@ -4594,7 +4652,68 @@ impl<'a> AgreementsView<'a> {
                 });
             }
         }
+        // Entering an agreement as a party is an act of the Agreements layer
+        // under its rule, never of a control model's power alone: an area
+        // reaching it adds to that rule (rules 60, 98; F425, 6).
+        if self.enters_as_party(&col, x) {
+            if let Some(l) = t.lane(layers::AGREEMENTS) {
+                if !reaching.iter().any(|r| r.id == l.id) {
+                    reaching.push(l);
+                }
+            }
+        }
         self.count_areas(&col, act, Point::Act(x), ag, reaching)
+    }
+
+    /// A power by share a control model gave act `x` (rule 99, `[2,
+    /// counted]`; F428), counted as rule 65 counts a rule by share among the
+    /// parties: each of `among` whose voice remains at the act counts by
+    /// what it holds of `stake` at the act (field 7 of the agreement in force
+    /// and the transfers the collective's line placed before it), the share
+    /// asked for being of what those voices hold together; where they hold
+    /// nothing, every voice that remains signing meets it. The signers are
+    /// counted as an area's are: the drafter, and the valid signature acts
+    /// naming it, of those who signed the agreement or a version it descends
+    /// from.
+    #[allow(clippy::too_many_arguments)]
+    fn count_by_share(&self, col: &Col, act: &Hash, x: &'a Held, ag: Hash, among: &[Hash], stake: u64, share: u64) -> R<AreaCount> {
+        let lineage: Vec<Hash> = self.lineage(&ag)?.into_iter().map(|(i, _)| i).collect();
+        let drafter: Option<Hash> = x.act.outside.signer.filter(|s| *s != col.id);
+        let mut by: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
+        for p in among {
+            for h in self.v.signed_by(p) {
+                if self.is_agreements(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*act) && self.sig_counts(col, h)? {
+                    by.entry(*p).or_default().push(h.id);
+                }
+            }
+            if drafter == Some(*p) {
+                by.entry(*p).or_default().push(x.id);
+            }
+        }
+        let (voices, _) = self.voices(col, Point::Act(x), &ag, among, None, &by, &[])?;
+        let signers: Vec<Hash> = voices.iter().filter(|p| by.contains_key(*p) && lineage.iter().any(|v| !self.signers(v, &[**p]).is_empty())).copied().collect();
+        let roster = self.roster_at(col, Line::Record(x), &ag, stake)?;
+        let held = |p: &Hash| roster.iter().find(|(h, _)| h == p).map_or(0, |(_, n)| *n) as u128;
+        let total: u128 = voices.iter().map(held).sum();
+        let got: u128 = signers.iter().map(held).sum();
+        let met = !voices.is_empty() && if total == 0 { voices.iter().all(|v| signers.contains(v)) } else { got * MILLION as u128 >= share as u128 * total };
+        Ok(AreaCount { area: BY_SHARE, name: "a power by share (rule 99)".into(), frozen: voices.is_empty(), voices, needed: 0, signers, limits: None, met, share: Some(share) })
+    }
+
+    /// Whether `x` is an act by which collective `col` enters an agreement
+    /// as a party (rule 98): its publication (type 6), save its own split
+    /// agreement (the judicial tier's, rule 67), or its signature act on a
+    /// publication or on terms naming it among their parties.
+    fn enters_as_party(&self, col: &Col, x: &Held) -> bool {
+        let publication = |h: &Held| self.is_agreements(h, types::PUBLICATION) && !self.pub_act(&h.id).is_some_and(|(_, a)| a.publication.is_split_agreement());
+        if publication(x) {
+            return true;
+        }
+        if !self.is_agreements(x, types::SIGNATURE) {
+            return false;
+        }
+        let Some(o) = decode_signature(&x.inside).ok().and_then(|s| self.v.get(&s)) else { return false };
+        publication(o) || (self.is_agreements(o, types::TERMS) && Terms::decode(&o.inside.payload).is_ok_and(|t| t.parties.contains(&col.id)))
     }
 
     /// Rule 36a: each area reaching `act` counted, under the agreement `ag`
@@ -4659,6 +4778,7 @@ impl<'a> AgreementsView<'a> {
                 signers,
                 limits,
                 met,
+                share: None,
             });
         }
         let met = out.iter().all(|a| a.met);
@@ -5110,6 +5230,16 @@ impl<'a> AgreementsView<'a> {
                     return Ok(Backing::Binds { grant: gh.id });
                 }
                 return not("the departure that emptied the grant's area ended it, and that line's history does not hold the act: the ending wins (the tie rule, F128 G2)");
+            }
+            // Agreements draft 19, rule 74 (F428, 5): a change of control
+            // model ends every grant within an area, at the line putting in
+            // force an agreement naming another model, or none: an act whose
+            // agreement in force names another model than the grant's is
+            // past it, whatever area carries the same id.
+            let model = |ag: Option<Hash>| -> R<Option<Hash>> { Ok(match ag { Some(a) => self.terms(&a)?.control.map(|c| c.cmip), None => None }) };
+            let (at_grant, at_act) = (self.in_force(&gh.id)?, self.in_force(act)?);
+            if at_grant.is_some() && at_act.is_some() && model(at_grant)? != model(at_act)? {
+                return not("the collective changed its control model after the grant: a change of model ends every grant within an area (rule 74)");
             }
         }
         // Rule 18d (audit, October 2026, gap 10): the grant's limits

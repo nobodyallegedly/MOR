@@ -15,14 +15,12 @@
 //!   what a verifier holds.
 
 pub mod formats;
-/// Control models (Agreements draft 18, rule 99): the boundary.
+/// Control models (Agreements draft 19, rule 99): the boundary.
 pub mod control;
 pub mod open_formats;
 /// The publication (Agreements type 6): the offer, with its partners, split
 /// service and split plan.
 pub mod publication;
-/// The owners' acts of draft 14: the issuance offer and proxies (F309, F327).
-pub mod owners;
 /// What a version pays a stake less (Agreements draft 12, rule 48: F270,
 /// F274, F279, F280).
 pub mod pay;
@@ -32,9 +30,8 @@ pub mod tiers;
 pub mod view;
 
 pub use formats::*;
-pub use owners::{decode_proxy_revocation, in_format, owner_types, proxy_revocation_payload, IssuanceOffer, Proxy};
 pub use open_formats::{
-    new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, RefundTerms, ShareRule, Sold, SplitPlan,
+    in_format, new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, RefundTerms, ShareRule, Sold, SplitPlan,
     StakeTransfer, Unfilled, WorkClaim, FEES_FIELD, RETIRED_TYPES, WITHDRAWN_FIELDS,
 };
 pub use publication::{Partner, Publication, PublicationAct};
@@ -42,7 +39,7 @@ pub use pay::{owners_line_lowered, pay_signers, stakes_paid_less, PaidLess};
 pub use proofs::{delivery_checkers, OfferClass, ProofChecker, ProofVerdict};
 pub use tiers::{changes, constitutional, judicial_changes, powers_needed, rollback_powers, Change, Tier, CONSTITUTION, JUDICIAL_FIELDS};
 pub use view::{
-    Deadline, KeeperSequence, Agreement, AreaCount, AreaLimits, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement, Payment,
+    Deadline, KeeperSequence, Agreement, AreaCount, BY_SHARE, AreaLimits, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement, Payment,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
     AlarmKind, NumberBreak, OwedBack, SplitNumbers, PublicationEval, PublicationTip, TagUnder, TransferEval, WorkOwners, SuccessorCheck, SaleState, VowEval, VowSale, ForwardOwed, HopRecord, RouteVerdict, RouteBuyer, RefundHop,

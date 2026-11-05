@@ -8,7 +8,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MIRS as CORE, moneySpecs, sha256 } from '../../genesis/src/core.ts';
+import { MIRS as CORE, agreementsControlCmip, moneySpecs, sha256 } from '../../genesis/src/core.ts';
+import { CONTROL_CMIP } from '../src/mirs.ts';
 import { TestCollective } from '../../repo/src/collective.ts';
 import { readAgreement, termsOf } from '../../collective/src/explain.ts';
 import { GRANT_LIMITS_SPEC_2, MIRS, REGTEST_UNIT, aloneSay, defaultGrid, evenPercent, governanceOf, gridOf, gridSay, kindsFor, type Grid } from '../src/grid.ts';
@@ -40,6 +41,8 @@ const cast = (): Grid => ({
 
 test('the hashes the page writes are the core’s', () => {
   for (const k of ['text', 'envelopes', 'money', 'agreements', 'development'] as const) assert.equal(MIRS[k], CORE[k], k);
+  // Agreements draft 19: the default control cMIP's own acts carry its stand-in hash.
+  assert.equal(CONTROL_CMIP, agreementsControlCmip(), 'the default control cMIP');
   assert.equal(GRANT_LIMITS_SPEC_2, sha256('Grant limits cMIP, draft 2, test value until publication'));
   assert.equal(REGTEST_UNIT, (moneySpecs() as { units: { regtest: string } }).units.regtest);
 });

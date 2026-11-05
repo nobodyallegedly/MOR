@@ -1,27 +1,53 @@
-//! The owners' acts of Agreements draft 14 (Part four): the issuance offer
-//! (type 26; rule 96, F309, F315), the proxy (type 27) and the revocation
-//! of a proxy (type 28; rule 97, F327).
+//! This cMIP's own acts (its section 7; Agreements draft 19, rule 99): the
+//! issuance offer (type 26; rule 96), the proxy (type 27) and the
+//! revocation of a proxy (type 28; rule 97), of this cMIP's specification,
+//! its `spec` field this cMIP's hash. Moved from the core's
+//! `agreements/owners.rs`, where they were Agreements types: the formats are
+//! unchanged; the core no longer decodes them.
 //!
 //! In plain words: a collective offers each owner of a stake its own
 //! proportion of new shares, on the same terms, for a period; an owner
 //! hands its vote on the owners' matters of one stake to another identity,
 //! for one version or until revoked, and takes it back.
 
-use super::formats::{check_objects_self, hash, nonempty, tuple, uint, AgreementsError, R, MILLION};
-use crate::act::Inside;
-use crate::cbor::Value;
-use crate::hash::Hash;
-use crate::money::Amount;
+use mor_core::act::Inside;
+use mor_core::agreements::control::{ActKind, OfferRead, ProxyRead};
+use mor_core::agreements::{check_objects_self, hash, nonempty, tuple, uint, AgreementsError, MILLION};
+use mor_core::cbor::Value;
+use mor_core::hash::Hash;
+use mor_core::money::Amount;
 
-/// The act types draft 14 adds, at the next free numbers (mechanic, draft
-/// 14's).
-pub mod owner_types {
+type R<T> = Result<T, AgreementsError>;
+
+/// The act types this cMIP's specification declares, numbered within it.
+pub mod types {
     /// An issuance offer (rule 96).
     pub const ISSUANCE_OFFER: u64 = 26;
     /// A proxy (rule 97).
     pub const PROXY: u64 = 27;
     /// The revocation of a proxy (rule 97).
     pub const PROXY_REVOCATION: u64 = 28;
+}
+
+/// What each declared type is to the core (Agreements rule 99, the line as
+/// data); `None` for a type this specification does not declare.
+pub fn kind(type_: u64) -> Option<ActKind> {
+    match type_ {
+        types::ISSUANCE_OFFER => Some(ActKind::Offer),
+        types::PROXY => Some(ActKind::Proxy),
+        types::PROXY_REVOCATION => Some(ActKind::Revocation),
+        _ => None,
+    }
+}
+
+/// Whether an act of this specification is in its type's format.
+pub fn in_format(inside: &Inside) -> R<()> {
+    match inside.type_ {
+        types::ISSUANCE_OFFER => IssuanceOffer::decode(inside).map(|_| ()),
+        types::PROXY => Proxy::decode(inside).map(|_| ()),
+        types::PROXY_REVOCATION => decode_proxy_revocation(inside).map(|_| ()),
+        _ => Err(AgreementsError::Shape("a type the default control cMIP does not declare")),
+    }
 }
 
 fn b(h: &Hash) -> Value {
@@ -154,7 +180,7 @@ impl IssuanceOffer {
 }
 
 /// The inside of an act naming `x` as chain and predecessor, first.
-pub(crate) fn names_first(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
+pub fn names_first(inside: &Inside, x: &Hash, w: &'static str) -> R<()> {
     check_objects_self(inside, x, w)
 }
 
@@ -225,48 +251,15 @@ pub fn proxy_revocation_payload(proxy: &Hash) -> Vec<(Value, Value)> {
     vec![(Value::Uint(0), b(proxy))]
 }
 
-/// Fable's A6 (F295 for Agreements): whether an Agreements act is in its
-/// type's format, by that type's own decoder. `Shape` or `Check` for an
-/// act outside its format, or of a retired or undefined type: invalid for
-/// a verifier that knows the Agreements MIR's hash, as for Money (M1);
-/// `Unsupported` for a type whose format is still open: none since the
-/// keeper record's (type 2) was written (Agreements 17).
-/// Only the format is read here: what a type's rules ask of other acts is
-/// the view's.
-pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
-    use super::formats::{
-        decode_signature, types, AbsenceDeclaration, Closing, Contest, Fork, ForkSettlement, Grant, KeeperRecord, NegotiationMessage, Notice,
-        Record, Release, Resignation, Revocation, SettlementRequest, Split, Terms,
-    };
-    use super::open_formats::{new_types, JudgeRequest, Liveness, StakeTransfer, WorkClaim, RETIRED_TYPES};
-    let p = &inside.payload;
-    match inside.type_ {
-        types::TERMS => Terms::decode(p).map(|_| ()),
-        types::SIGNATURE => decode_signature(inside).map(|_| ()),
-        types::KEEPER_RECORD => KeeperRecord::decode(inside).map(|_| ()),
-        types::CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
-        new_types::STAKE_TRANSFER => StakeTransfer::decode(inside).map(|_| ()),
-        types::RELEASE => Release::decode(inside).map(|_| ()),
-        types::PUBLICATION => crate::agreements::Publication::decode(inside).map(|_| ()),
-        types::SPLIT => Split::decode(p).map(|_| ()),
-        types::GRANT => Grant::decode(p).map(|_| ()),
-        types::REVOCATION => Revocation::decode(p).map(|_| ()),
-        new_types::LIVENESS => Liveness::decode(inside).map(|_| ()),
-        types::DECLARATION => AbsenceDeclaration::decode(inside).map(|_| ()),
-        types::CONTEST => Contest::decode(inside).map(|_| ()),
-        types::RESIGNATION => Resignation::decode(inside).map(|_| ()),
-        types::RECORD => Record::decode(inside).map(|_| ()),
-        types::NEGOTIATION => NegotiationMessage::decode(inside).map(|_| ()),
-        types::FORK => Fork::decode(inside).map(|_| ()),
-        types::CLOSING => Closing::decode(inside).map(|_| ()),
-        types::SETTLEMENT_REQUEST => SettlementRequest::decode(inside).map(|_| ()),
-        types::FORK_SETTLEMENT => ForkSettlement::decode(inside).map(|_| ()),
-        types::NOTICE => Notice::decode(inside).map(|_| ()),
-        new_types::JUDGE_REQUEST => JudgeRequest::decode(inside).map(|_| ()),
-        owner_types::ISSUANCE_OFFER => IssuanceOffer::decode(inside).map(|_| ()),
-        owner_types::PROXY => Proxy::decode(inside).map(|_| ()),
-        owner_types::PROXY_REVOCATION => decode_proxy_revocation(inside).map(|_| ()),
-        t if RETIRED_TYPES.contains(&t) => Err(AgreementsError::Shape("a retired Agreements type, never reused")),
-        _ => Err(AgreementsError::Shape("a type the Agreements MIR does not define")),
+
+impl From<&IssuanceOffer> for OfferRead {
+    fn from(o: &IssuanceOffer) -> OfferRead {
+        OfferRead { version: o.version, stake: o.stake, size: o.size, new_holders: o.new_holders.clone(), period: o.period.clone(), price: o.price.clone() }
+    }
+}
+
+impl From<&Proxy> for ProxyRead {
+    fn from(p: &Proxy) -> ProxyRead {
+        ProxyRead { version: p.version, stake: p.stake, proxy: p.proxy, scoped: p.scoped }
     }
 }

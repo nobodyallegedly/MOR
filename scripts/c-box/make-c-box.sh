@@ -14,16 +14,23 @@ for fam in 02-MOR-MICS-v 03-MOR-freeze-test-suite-v; do
   f=$(ls "$repo/spec" | grep -E "^${fam}[0-9]+\.md$" | sed -E "s/^${fam}([0-9]+)\.md$/\1 &/" | sort -n | tail -1 | cut -d' ' -f2)
   cp "$repo/spec/$f" "$out/spec/"
 done
+# The default control cMIP, beside the eight texts: the suite runs steps
+# against it, and a builder of a second control model needs one model to
+# read (Agreements rule 99). Its "For the Dubsar Suite" section, a handover
+# to its owners and no part of its specification, is left out.
+mkdir -p "$out/cmips"
+f=$(ls "$repo/cmips" | grep -E "^cmip-collective-control-draft-[0-9]+\.md$" | sed -E "s/^cmip-collective-control-draft-([0-9]+)\.md$/\1 &/" | sort -n | tail -1 | cut -d' ' -f2)
+awk '/^## For the Dubsar Suite/{skip=1; next} skip && /^## /{skip=0} !skip' "$repo/cmips/$f" > "$out/cmips/$f"
 cp "$repo"/core/vectors/*.json "$out/vectors/"
 cp "$repo/scripts/c-box/vectors-README.md" "$out/vectors/README.md"
 cp "$repo/scripts/c-box/README.md" "$out/README.md"
 commit=$(git -C "$repo" rev-parse HEAD)
 printf '# Snapshot\n\nTaken from the MOR repository at commit `%s`, %s (UTC).\n' "$commit" "$(date -u +%Y-%m-%d)" > "$out/SNAPSHOT.md"
-(cd "$out" && find spec vectors README.md SNAPSHOT.md -type f | LC_ALL=C sort | xargs sha256sum > MANIFEST.sha256)
+(cd "$out" && find spec cmips vectors README.md SNAPSHOT.md -type f | LC_ALL=C sort | xargs sha256sum > MANIFEST.sha256)
 # Nothing of the record or the code may travel.
 if grep -rIlE '\bF[0-9]{2,3}\b|docs/|\.rs\b|check\.py|cargo ' "$out" --exclude=MANIFEST.sha256 >/dev/null; then
   echo "refused: a finding number or a pointer to code or docs in:" >&2
   grep -rIlE '\bF[0-9]{2,3}\b|docs/|\.rs\b|check\.py|cargo ' "$out" --exclude=MANIFEST.sha256 >&2
   exit 1
 fi
-echo "box assembled in $out: $(ls "$out/spec" | wc -l) texts, $(ls "$out/vectors" | wc -l) vector files"
+echo "box assembled in $out: $(ls "$out/spec" | wc -l) texts, $(ls "$out/cmips" | wc -l) cMIP, $(ls "$out/vectors" | wc -l) vector files"

@@ -1,5 +1,5 @@
-//! The default control cMIP, draft 1 (`cmips/cmip-collective-control-draft-1.md`;
-//! Agreements draft 18, rule 99).
+//! The default control cMIP, draft 2 (`cmips/cmip-collective-control-draft-2.md`;
+//! Agreements draft 19, rule 99).
 //!
 //! In plain words: a collective names this cMIP in its terms' field 35,
 //! with its parameters: its areas finer than a layer (parameter 34), their
@@ -27,9 +27,17 @@ pub mod areas;
 /// Issuance with pre-emption (rule 96), from the line's facts.
 pub mod issuance;
 
+/// This cMIP's own acts (types 26 to 28, of its specification).
+pub mod acts;
+
+/// A stand-in model whose per-act answers a verifier is told (test data).
+pub mod stated;
+
 type R<T> = Result<T, AgreementsError>;
 
-/// The stand-in hash of this cMIP's specification (test data).
+/// The stand-in hash of this cMIP's specification (test data). Its label
+/// still says draft 1: it is a label, not the text's hash, and keeping it
+/// keeps every vector naming this cMIP byte for byte.
 pub fn cmip() -> Hash {
     sha256(b"cMIP: A collective's control, draft 1 (stand-in)")
 }
@@ -42,6 +50,18 @@ pub struct Default;
 /// holds the default control cMIP").
 pub fn held() -> Held {
     vec![(cmip(), Rc::new(Default) as Rc<dyn ControlModel>)]
+}
+
+/// A second stand-in hash for this cMIP's text (test data): another model
+/// to a verifier, giving areas of the same ids. The published vectors use it
+/// for a change of control model (Agreements rule 74, F428).
+pub fn twin() -> Hash {
+    sha256(b"cMIP: A collective's control, published again under another hash (stand-in)")
+}
+
+/// This cMIP held under [`twin`] as well.
+pub fn held_twin() -> Held {
+    vec![(twin(), Rc::new(Default) as Rc<dyn ControlModel>)]
 }
 
 /// Name this cMIP as `t`'s control model, its parameters packed from the
@@ -168,6 +188,26 @@ impl ControlModel for Default {
 
     fn pack(&self) -> Option<fn(&Terms) -> Value> {
         Some(params)
+    }
+
+    fn act_kind(&self, type_: u64) -> Option<mor_core::agreements::control::ActKind> {
+        acts::kind(type_)
+    }
+
+    fn act_format(&self, inside: &mor_core::act::Inside) -> R<()> {
+        acts::in_format(inside)
+    }
+
+    fn read_offer(&self, inside: &mor_core::act::Inside) -> R<mor_core::agreements::control::OfferRead> {
+        acts::IssuanceOffer::decode(inside).map(|o| (&o).into())
+    }
+
+    fn read_proxy(&self, inside: &mor_core::act::Inside) -> R<mor_core::agreements::control::ProxyRead> {
+        acts::Proxy::decode(inside).map(|p| (&p).into())
+    }
+
+    fn read_revocation(&self, inside: &mor_core::act::Inside) -> R<Hash> {
+        acts::decode_proxy_revocation(inside)
     }
 
     fn check(&self, t: &Terms, mirs: &mor_core::agreements::Mirs) -> R<()> {

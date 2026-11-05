@@ -373,6 +373,13 @@ pub struct Facts {
     pub rail_specifications: Vec<Vec<u8>>,
     /// Receipts and claims the rail answered invalid (Money rule 8).
     pub rail_invalid: Vec<Hash>,
+    /// A control model's answers for the acts of a type, as the verifier is
+    /// told them (Agreements rule 99): held as the stated stand-in model,
+    /// `mor_control::stated` (S7n-2, F428).
+    pub control_answers: Vec<((Hash, u64), Value)>,
+    /// The verifier holds the default control cMIP under a second hash too
+    /// (`mor_control::twin`, test data), another model to it (rule 74).
+    pub control_twin: bool,
 }
 
 impl Facts {
@@ -417,6 +424,15 @@ impl Facts {
         if self.no_control {
             m.insert("control_models_held".into(), json!(false));
         }
+        if self.control_twin {
+            m.insert("control_models_also".into(), json!([{ "model": hx(&mor_control::twin()), "reads_as": hx(&mor_control::cmip()) }]));
+        }
+        if !self.control_answers.is_empty() {
+            m.insert(
+                "control_answers".into(),
+                self.control_answers.iter().map(|((s, t), v)| json!({ "model": hx(&mor_control::stated::cmip()), "spec": hx(s), "type": t, "answer": hx(&cbor::encode(v)) })).collect(),
+            );
+        }
         J::Object(m)
     }
 
@@ -435,6 +451,12 @@ impl Facts {
     fn apply_view(&self, v: &mut AgreementsView) {
         if self.no_control {
             v.drop_control();
+        }
+        if self.control_twin {
+            v.add_control(mor_control::held_twin());
+        }
+        if !self.control_answers.is_empty() {
+            v.add_control(mor_control::stated::Stated::held(self.control_answers.clone()));
         }
         for (a, r, p) in &self.anchors {
             v.anchored.add(&Anchor { act: *a, reference: r.clone(), point: *p });
@@ -468,6 +490,8 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
     facts.apply(w);
     let h = |k: &str| -> Hash { hex::decode(ask[k].as_str().unwrap()).unwrap().try_into().unwrap() };
     match ask["question"].as_str().unwrap() {
+        // A control model's answer, as bytes (Agreements rule 99's format).
+        "control answer" => json!(agreements::control::answer_reading(&mor_core::cbor::decode(&hex::decode(ask["answer"].as_str().unwrap()).unwrap()).unwrap())),
         // An act that does not open (Envelopes rules 1 to 5; a text field
         // not canonical among them) is invalid: the verifier cannot hold it.
         // So for the verifier implementing the MIRs only, as `tests/vectors.rs` answers it.

@@ -1935,6 +1935,25 @@ pub fn agreements_control_pack(payload: &[u8]) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(rest)))
 }
 
+/// The default control cMIP's hash (its stand-in, test data): the `spec` of
+/// its own acts, the issuance offer (type 26), the proxy (type 27) and the
+/// revocation of a proxy (type 28), which are no Agreements types since
+/// Agreements draft 19 (rule 99), and the cMIP field 35 names.
+#[wasm_bindgen(js_name = agreementsControlCmip)]
+pub fn agreements_control_cmip() -> String {
+    hx(&mor_control::cmip())
+}
+
+/// A control model's answer, given as CBOR in Agreements rule 99's format,
+/// as the rule reads it: "overreaching", "refused", "unknown", "an act, no
+/// area", "an act, area N" or "a clone". Throws only on bytes that are no
+/// CBOR item.
+#[wasm_bindgen(js_name = agreementsControlAnswer)]
+pub fn agreements_control_answer(answer: &[u8]) -> R<String> {
+    let v = cbor::decode(answer).map_err(|e| JsError::new(&format!("cbor: {e:?}")))?;
+    Ok(agreements::control::answer_reading(&v))
+}
+
 /// Check a terms payload (Agreements type 0), given as CBOR: its format and every
 /// check that needs no other act (key grammar, areas, judges, F105 for
 /// founding terms). Throws `agreements/<code>: <why>`.
@@ -2857,6 +2876,10 @@ struct AreaCountOut {
     /// "within", "above" or "unknown" where the area carries limits (F353).
     limits: Option<String>,
     met: bool,
+    /// A power a control model gave this act by share (Agreements draft 19,
+    /// rule 99): the share asked for, in millionths of what the voices hold;
+    /// `area` is then -1000, no area's id, and `needed` 0.
+    share: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -3134,7 +3157,7 @@ impl Verifier {
                 o.areas = areas
                     .iter()
                     .map(|a| AreaCountOut {
-                        area: agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)),
+                        area: if a.share.is_some() { -1000 } else { agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)) },
                         layer: agreements::lane_of(a.area),
                         name: a.name.clone(),
                         frozen: a.frozen,
@@ -3147,6 +3170,7 @@ impl Verifier {
                             agreements::AreaLimits::Unknown => "unknown".into(),
                         }),
                         met: a.met,
+                        share: a.share,
                     })
                     .collect();
             }
