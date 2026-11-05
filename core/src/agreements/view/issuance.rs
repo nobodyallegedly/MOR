@@ -7,26 +7,15 @@ use super::*;
 use crate::agreements::owners::{owner_types, IssuanceOffer};
 
 impl<'a> AgreementsView<'a> {
-    /// A collective's clone carrying field 32, judged as rule 96 says, at
-    /// line `at` (`by`: the signers its record names, each with a signature
-    /// act). `Ok(None)` for a clone that is no issuance. `Ok(Some(excused))`
-    /// for an issuance that passes rule 96's checks: `excused`, the holders
-    /// of the issued stake whose share it scales down by the stake's
-    /// holders' rule, who then do not sign for themselves (rule 48's
-    /// exception, rule 96: "pro rata issuance under the holders' rule is
-    /// excepted from the bullet on shares dropped or lowered"). `Err` with
-    /// the clone's state where it fails: invalid where it is no issuance in
-    /// form, a draft where it waits (on an offer reaching a holder, a
-    /// period, a take-up, a new holder's signature) or gives a holder other
-    /// than its proportion.
     /// A collective's clone carrying an issuance (its control model's
     /// answer `issues_under`), judged by the model the verifier holds from
     /// the line's facts, which this gathers (the line as data,
     /// [`crate::agreements::control::IssuanceFacts`]): nothing of the model's
     /// judgment is here. `Ok(None)` for a clone that is no issuance;
-    /// `Ok(Some(excused))` for one that passes, `excused` the holders it
-    /// scales down under a holders' rule they accepted (rule 98.2), who do
-    /// not sign for themselves; `Err` with the clone's state where it fails.
+    /// `Ok(Some(excused))` for one that passes, `excused` the holders the
+    /// model excuses from signing, of whom the caller keeps those the
+    /// stake's holders' rule binds (rules 48, 98.2); `Err` with the clone's
+    /// state where it fails.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn issuance_at(
         &self,
