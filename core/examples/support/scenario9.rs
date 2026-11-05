@@ -1053,4 +1053,105 @@ pub fn control_models(out: &mut Out) {
     let r9 = draw(&mut w, &cy, cid, k8, s9, cid);
     out.case(&mut w, "the same issuance, every holder signing: in force", "Agreements rules 48 and 98.2",
         "Every holder signed: the reduction has each holder's consent.", Facts::default(), ask_record(&cid, &r9), json!({ "line": true, "puts": hx(&k8) }), None);
+
+    // An issuance under a holders' rule (rules 48, 98.2): it binds only the
+    // holders who accepted it, by signing a version carrying it or by buying
+    // under it; a holder it does not bind signs. The control model (the
+    // default cMIP) excuses every holder under a rule by share; the core
+    // keeps only those the rule binds. Every case: Ana, Ben and Cy hold
+    // 333,334, 333,333 and 233,333, the investor Xi 100,000; the issuance
+    // gives Nia 99,999, every existing share scaled alike (the standing
+    // waiver, no offer), signed by the three members and Nia, never by Xi.
+    let by_share = |t: &mut Terms| t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: agreements::HoldersRule::Share(600_000), waived: true }]);
+    let shares = |a: Hash, b: Hash, c: Hash, x: Hash, n: Option<Hash>| {
+        let mut h = match n {
+            None => vec![(a, 333_334), (b, 333_333), (c, 233_333), (x, 100_000)],
+            Some(_) => vec![(a, 300_001), (b, 300_000), (c, 210_000), (x, 90_000)],
+        };
+        if let Some(n) = n {
+            h.push((n, 99_999));
+        }
+        Some(vec![agreements::Stake { object: agreements::Who::This, holders: h.into_iter().map(|(h, n)| (agreements::Who::Id(h), n)).collect() }])
+    };
+    // A record of the collective placing a transfer (field 3).
+    let place = |w: &mut World, by: &Person, cid: Hash, ag: Hash, x: Hash, cite: Hash| {
+        let mut d = by.acting_for(cid, vec![cite]);
+        let r = agreements::Record { clone: None, signatures: None, registers: Some(vec![x]) };
+        let a = w.everyday_act(&mut d, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(ag), None);
+        w.add(&a)
+    };
+    let issue_under = |w: &mut World, col: &mut Col, parent: Hash, cite: Vec<Hash>, x: Hash, nia: &mut Person| -> (Hash, Hash) {
+        let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+        let nid = nia.id;
+        let f = |t: &mut Terms| {
+            t.stakes = shares(ids[0], ids[1], ids[2], x, Some(nid));
+            t.issues_under = Some(agreements::IssuesUnder::Waived);
+        };
+        let mut probe = view(w).terms(&parent).unwrap();
+        probe.parent = Some(parent);
+        f(&mut probe);
+        let needs = view(w).powers_needed(&probe).unwrap();
+        let mark = needs.into_iter().map(|p| { let who = if matches!(p, agreements::Power::Holders(_)) { vec![0, 1] } else { vec![0, 1, 2] }; (p, who) }).collect();
+        let after = cite[0];
+        let (k, mut s) = clone_of(w, col, parent, mark, &[0, 1, 2], cite, &f);
+        s.push(sign(w, &mut nia.acting_for(col.id, vec![col.id]), &k));
+        let cy = col.m[2].clone();
+        let r = draw(w, &cy, col.id, k, s, after);
+        (k, r)
+    };
+
+    // Accepted by buying: Cy sells Xi 100,000 under the founding, which
+    // carries the rule; the issuance places the sale, and Xi is bound.
+    let mut w = World::new();
+    let mut col = collective_with(&mut w, &[1], 1, &by_share);
+    let (f, cid) = (col.founding, col.id);
+    let mut xi = w.genesis("xi, a buyer", vec![own_home()], None, None);
+    let mut nia = w.genesis("nia, the new holder", vec![own_home()], None, None);
+    let tr = StakeTransfer { agreement: f, stake: 0, to: xi.id, share: 100_000, record: vec![] };
+    let x = ag_act(&mut w, &mut col.m[2], agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(f));
+    sign(&mut w, &mut xi, &x);
+    let (_, cy) = w.chain_sign(&col.m[2], x);
+    col.m[2] = cy;
+    let cy = col.m[2].clone();
+    let p10 = place(&mut w, &cy, cid, f, x, cid);
+    let (k10, r10) = issue_under(&mut w, &mut col, f, vec![p10], xi.id, &mut nia);
+    out.case(&mut w, "an issuance under a holders' rule by share, a buyer who bought under it not signing: in force", "Agreements rules 48 and 98.2",
+        "Members holding 66.7% meet the rule of 60%; the buyer accepted the rule by buying under the version carrying it, so the rule binds it and it need not sign.", Facts::default(), ask_record(&cid, &r10), json!({ "line": true, "puts": hx(&k10) }), None);
+
+    // Never accepted: Xi is written in the founding's field 7 and never
+    // signed a version carrying the rule, nor bought under it.
+    let mut w = World::new();
+    let xi = w.genesis("xi, a holder who signs nothing", vec![own_home()], None, None);
+    let xid = xi.id;
+    let mut col = collective_with(&mut w, &[1], 1, &|t| {
+        by_share(t);
+        let ids = t.parties.clone();
+        t.stakes = shares(ids[0], ids[1], ids[2], xid, None);
+    });
+    let (f, cid) = (col.founding, col.id);
+    let mut nia = w.genesis("nia, the new holder", vec![own_home()], None, None);
+    let (_, r11) = issue_under(&mut w, &mut col, f, vec![cid], xid, &mut nia);
+    out.case(&mut w, "an issuance under a holders' rule by share that a holder never signed, that holder not signing: nothing in force", "Agreements rules 48 and 98.2",
+        "The rule binds only holders who accepted it; a holder written at founding who signed no version carrying it, nor bought under it, still signs: the rule counts for nothing for it.", Facts::default(), ask_record(&cid, &r11), json!({ "line": true, "puts": null }), None);
+
+    // The buyer bait: Cy signs the sale to Xi under the founding, which
+    // carries no rule; the members then add the rule by share; the line
+    // places the sale only after, with the issuance.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.id);
+    let mut xi = w.genesis("xi, a buyer", vec![own_home()], None, None);
+    let mut nia = w.genesis("nia, the new holder", vec![own_home()], None, None);
+    let tr = StakeTransfer { agreement: f, stake: 0, to: xi.id, share: 100_000, record: vec![] };
+    let x = ag_act(&mut w, &mut col.m[2], agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(f));
+    sign(&mut w, &mut xi, &x);
+    let (_, cy) = w.chain_sign(&col.m[2], x);
+    col.m[2] = cy;
+    let (kr, sr) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2])], &[0, 1, 2], vec![cid], &by_share);
+    let cy = col.m[2].clone();
+    let rr = draw(&mut w, &cy, cid, kr, sr, cid);
+    let p12 = place(&mut w, &cy, cid, kr, x, rr);
+    let (_, r12) = issue_under(&mut w, &mut col, kr, vec![p12], xi.id, &mut nia);
+    out.case(&mut w, "the buyer bait: a holders' rule added after a sale was signed and before the line placed it, then an issuance under it, the buyer not signing: nothing in force", "Agreements rule 48",
+        "A change to the rules binding a stake's holders, made after the seller signed a transfer and before the line placed it, binds the buyer only with the buyer's signature: the buyer signs the issuance.", Facts::default(), ask_record(&cid, &r12), json!({ "line": true, "puts": null }), None);
 }
