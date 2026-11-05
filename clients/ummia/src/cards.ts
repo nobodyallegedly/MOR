@@ -304,11 +304,11 @@ export interface BuiltIn {
 /**
  * The MICS document's and the freeze test suite's spec hashes: the core
  * names no test value for them, so these are the hashes Development rule 26
- * computes from the current drafts' text (MICS v30, the freeze test suite
- * v30); `test/cards.test.ts` computes them again from the files.
+ * computes from the current drafts' text (MICS v34, the freeze test suite
+ * v34); `test/cards.test.ts` computes them again from the files.
  */
-export const MICS_HASH = '435bfb07a4d78cce2d5f46f8ef836921edddfcb9346c718dc27efd6477a0d56c';
-export const SUITE_HASH = '1d6ae968970214aa786e8a4573c08ba53a89aacb9b0e977c300091cdbe0e5276';
+export const MICS_HASH = '86150e996ecd0bc7a7ae20cd28fcd7d0fa1711eeb3344134bee592da00ed9189';
+export const SUITE_HASH = 'ce3cc0a9327d105bf904001ef2f5eb5928172262604de86c36f42894fd09c94b';
 
 export const BUILT_IN: BuiltIn[] = [
   { hash: MIRS.identity, title: 'MIR: Identity', kind: 'MIR', summary: 'Who signs: identities, their keys, homes, rotations, receipts and succession.' },
