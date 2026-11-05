@@ -9,3 +9,6 @@ export const MIRS = {
   agreements: '00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a',
   development: 'f62cc059fd01d5643cac6375b06323ad15c3d2d96729f00df15c457e5a0da6f8',
 } as const;
+
+/** The default control cMIP's stand-in hash (`agreementsControlCmip()`), the specification of its own acts (Agreements draft 19); checked against the core's in `test/grid.test.ts`. */
+export const CONTROL_CMIP = '82c58f7cb0078d65e4c1bfa2446ae78d95f9ef7a4e2e6766287927231be43a10';
