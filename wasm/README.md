@@ -15,6 +15,34 @@ with `wasm-bindgen-cli` of the version pinned in `Cargo.toml` (0.2.129), and wit
 
 ## For the Dubsar Suite
 
+### Agreements draft 19: the boundary for a second control model (S7n)
+
+**Types 26 to 28 moved.** The issuance offer, the proxy and the revocation of a proxy are no longer Agreements types: they are the **default control cMIP's own acts**, of its own specification (Agreements rule 99, "A model's own acts"; the cMIP's section 7, draft 2). Their payloads, their `objects` and their type numbers are unchanged; only the act's `spec` changes, so their bytes and act ids change. An act of the Agreements MIR's specification with type 26, 27 or 28 is now **invalid**.
+
+| Old | New |
+| --- | --- |
+| An issuance offer: `spec` the Agreements MIR's hash, type 26 | `spec` **`agreementsControlCmip()`** (the default cMIP's stand-in hash), type 26 |
+| A proxy: Agreements, type 27 | `agreementsControlCmip()`, type 27 |
+| A revocation of a proxy: Agreements, type 28 | `agreementsControlCmip()`, type 28 |
+| A take-up: a signature act (Agreements type 1) naming the offer | unchanged |
+| Rust: `mor_core::agreements::owner_types::{ISSUANCE_OFFER, PROXY, PROXY_REVOCATION}`, `agreements::{IssuanceOffer, Proxy, decode_proxy_revocation, proxy_revocation_payload}`, the file `core/src/agreements/owners.rs` | `mor_control::acts::types::{ISSUANCE_OFFER, PROXY, PROXY_REVOCATION}`, `mor_control::acts::{IssuanceOffer, Proxy, decode_proxy_revocation, proxy_revocation_payload, kind, in_format}`, the file `cmips/control/src/acts.rs`; `core/src/agreements/owners.rs` is gone |
+| `agreements::in_format` (in `owners.rs`) | `agreements::in_format` (in `open_formats.rs`), types 26 to 28 now "a type the Agreements MIR does not define" |
+
+**Where an app breaks.** `clients/desk/scripts/core-types.ts` reads `pub mod owner_types` from `core/src/agreements/owners.rs` to list the Agreements types in the granular menu: the file is gone, so the desk's generator throws and `test/core-types.test.ts` fails. The three acts are no longer the Agreements layer's: the menu lists them, if at all, under the collective's control model, with `spec` `agreementsControlCmip()` (the types are `pub mod types` in `cmips/control/src/acts.rs`). Any app that builds an issuance offer, a proxy or a revocation with the Agreements MIR's hash (Edubba, through the desk's menu or its own encoder) makes an invalid act until it changes the `spec`. I did not change `clients/`.
+
+**Other changes an app sees:**
+
+| What | Before | Now |
+| --- | --- | --- |
+| A collective's publication (type 6), or its signature act on a publication or on terms naming it as a party, reached by an area of its control model | counted under the area alone | counts only where the collective's **rule for Agreements** is met too (rules 60, 98); `agreementsConsent` shows both counts. Under a grant within such an area, the grantee's act counts only once members meeting the rule for Agreements also sign it |
+| `agreementsPowersNeeded` for a clone making a constitutional change and changing a task's cMIP or an extension | `[0]` (and `[4]` where judicial) | also `[6, layer]` or `[2, area]` for each layer's rule or area those changes lie under; never `[1]` beside `[0]` (rule 99) |
+| A clone taking a party out of the parties | had to rewrite the areas without it | may leave the default cMIP's parameters as they are: `readTerms(...).areas` lists only holders who are parties of that clone (rules 69, 83); founding terms still refuse a non-party holder |
+| A model's answer reaching the constitution | an error | **overreaching**: set aside, the clone judged by the last resort; **refused** now names only an act or clone the model refuses |
+| none | | **`agreementsControlCmip(): string`**: the default cMIP's hash, hex |
+| none | | **`agreementsControlAnswer(answer: Uint8Array): string`**: a control model's answer in rule 99's format, read as "overreaching", "refused", "unknown", "an act, no area", "an act, area N" or "a clone" |
+
+The default cMIP's stand-in hash is unchanged (its label still says draft 1), so every collective an app founded keeps its act ids.
+
 ### Agreements draft 18: control models (S7m, F420 to F423)
 
 A collective's areas, their words, the holders' rules and an issuance's offer are no longer terms fields. They are the parameters of the collective's **control model**, terms field 35, `[cmip, params]` (Agreements rule 99). The core never reads the parameters; the default control cMIP (`cmips/control`, `mor-control`) does, and the binding holds it.
