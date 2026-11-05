@@ -30,6 +30,9 @@ pub mod issuance;
 /// This cMIP's own acts (types 26 to 28, of its specification).
 pub mod acts;
 
+/// A stand-in model whose per-act answers a verifier is told (test data).
+pub mod stated;
+
 type R<T> = Result<T, AgreementsError>;
 
 /// The stand-in hash of this cMIP's specification (test data). Its label
@@ -47,6 +50,18 @@ pub struct Default;
 /// holds the default control cMIP").
 pub fn held() -> Held {
     vec![(cmip(), Rc::new(Default) as Rc<dyn ControlModel>)]
+}
+
+/// A second stand-in hash for this cMIP's text (test data): another model
+/// to a verifier, giving areas of the same ids. The published vectors use it
+/// for a change of control model (Agreements rule 74, F428).
+pub fn twin() -> Hash {
+    sha256(b"cMIP: A collective's control, published again under another hash (stand-in)")
+}
+
+/// This cMIP held under [`twin`] as well.
+pub fn held_twin() -> Held {
+    vec![(twin(), Rc::new(Default) as Rc<dyn ControlModel>)]
 }
 
 /// Name this cMIP as `t`'s control model, its parameters packed from the

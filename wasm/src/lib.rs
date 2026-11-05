@@ -2876,6 +2876,10 @@ struct AreaCountOut {
     /// "within", "above" or "unknown" where the area carries limits (F353).
     limits: Option<String>,
     met: bool,
+    /// A power a control model gave this act by share (Agreements draft 19,
+    /// rule 99): the share asked for, in millionths of what the voices hold;
+    /// `area` is then -1000, no area's id, and `needed` 0.
+    share: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -3153,7 +3157,7 @@ impl Verifier {
                 o.areas = areas
                     .iter()
                     .map(|a| AreaCountOut {
-                        area: agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)),
+                        area: if a.share.is_some() { -1000 } else { agreements::lane_of(a.area).map_or(a.area as i64, |l| -(l as i64)) },
                         layer: agreements::lane_of(a.area),
                         name: a.name.clone(),
                         frozen: a.frozen,
@@ -3166,6 +3170,7 @@ impl Verifier {
                             agreements::AreaLimits::Unknown => "unknown".into(),
                         }),
                         met: a.met,
+                        share: a.share,
                     })
                     .collect();
             }

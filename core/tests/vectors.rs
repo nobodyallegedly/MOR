@@ -556,6 +556,25 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     if facts["control_models_held"] == serde_json::Value::Bool(false) {
         av.drop_control();
     }
+    // A control model's answers the verifier is told, per act type (rule
+    // 99): the stated stand-in model.
+    let stated: Vec<((Hash, u64), cbor::Value)> = facts["control_answers"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|x| {
+            assert_eq!(h(&x["model"]), mor_control::stated::cmip(), "the stated model");
+            ((h(&x["spec"]), x["type"].as_u64().unwrap()), cbor::decode(&b(&x["answer"])).unwrap())
+        })
+        .collect();
+    if !stated.is_empty() {
+        av.add_control(mor_control::stated::Stated::held(stated));
+    }
+    // The default control cMIP held under a second hash too (rule 74).
+    for x in facts["control_models_also"].as_array().into_iter().flatten() {
+        assert_eq!((h(&x["model"]), h(&x["reads_as"])), (mor_control::twin(), mor_control::cmip()), "the twin model");
+        av.add_control(mor_control::held_twin());
+    }
     for a in facts["anchors"].as_array().into_iter().flatten() {
         let r = Reference::decode(&cbor::decode(&b(&a["clock"])).unwrap()).unwrap();
         av.anchored.add(&Anchor { act: h(&a["act"]), reference: r, point: a["point"].as_u64().unwrap() });

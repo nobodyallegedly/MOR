@@ -43,6 +43,14 @@ with `wasm-bindgen-cli` of the version pinned in `Cargo.toml` (0.2.129), and wit
 
 The default cMIP's stand-in hash is unchanged (its label still says draft 1), so every collective an app founded keeps its act ids.
 
+**Added in S7n-2 (F428):**
+
+| What | Before | Now |
+| --- | --- | --- |
+| `agreementsConsent(...)`'s `areas` | areas and layers' rules only | may hold **a power by share** a collective's control model gave the act (rule 99, `act-answer` `[2, counted]`): `area` -1000, `share` the share asked for in millionths of what the voices hold, `needed` 0, `voices` and `signers` as for an area. The default cMIP gives none; a second model may |
+| `agreementsControlAnswer(bytes)` | | also reads `[0, [2, counted]]` as "an act, by share"; a by-share answer whose rule is not `[3, stake, share]` is "overreaching" |
+| A grant within an area, after the collective changes its control model (field 35's cMIP) | backed | **not backed** from the line putting the new model in force, whatever area of the new model carries the same id (rule 74) |
+
 ### Agreements draft 18: control models (S7m, F420 to F423)
 
 A collective's areas, their words, the holders' rules and an issuance's offer are no longer terms fields. They are the parameters of the collective's **control model**, terms field 35, `[cmip, params]` (Agreements rule 99). The core never reads the parameters; the default control cMIP (`cmips/control`, `mor-control`) does, and the binding holds it.

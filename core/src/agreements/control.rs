@@ -213,6 +213,15 @@ pub trait ControlModel {
         let _ = inside;
         Err(AgreementsError::Shape("this control model declares no acts"))
     }
+    /// The model's answer for an everyday act for the collective (rule 99,
+    /// `answer`), as CBOR, where the model answers per act; `None` where its
+    /// queries' areas say all (the default model). The core reads it with
+    /// [`read_answer`]: a power by share it counts (rule 65), a refusal makes
+    /// the act invalid, anything overreaching is set aside.
+    fn act_answer(&self, terms: &Terms, inside: &crate::act::Inside) -> Option<Value> {
+        let _ = (terms, inside);
+        None
+    }
     /// An act of kind [`ActKind::Offer`], read.
     fn read_offer(&self, inside: &crate::act::Inside) -> R<OfferRead> {
         let _ = inside;
@@ -254,6 +263,10 @@ pub enum Answer {
     NoArea,
     /// `[0, [1, area]]`: the area of this id reaches the act.
     Area(u64),
+    /// `[0, [2, counted]]`: a power by share for this act (F428): counted
+    /// among `among`, by the rule `[3, stake, share]`, as rule 65 counts a
+    /// rule by share.
+    ByShare { power: Power, among: Vec<Hash>, stake: u64, share: u64 },
     /// `[1, clone-answer]`: the powers the clone's operational changes need,
     /// each with the parties it is counted among and its rule; and the
     /// holders for whom a stake's holders consenting together stand in.
@@ -280,7 +293,23 @@ pub fn read_answer(v: &Value) -> R<Answer> {
             match b.as_slice() {
                 [Value::Uint(0)] => Ok(Answer::NoArea),
                 [Value::Uint(1), Value::Uint(id)] => Ok(Answer::Area(*id)),
-                _ => Err(over("an act's answer is [0] or [1, area]: overreaching")),
+                [Value::Uint(2), c] => {
+                    let t = tuple(c, 3, "a counted power is [power, among, rule]: overreaching")?;
+                    let power = super::formats::power(&t[0]).map_err(|_| over("a counted power names a power of the mark's grammar: overreaching"))?;
+                    if matches!(power, Power::Constitutional | Power::Judicial | Power::Plan(_)) {
+                        return Err(over("a control model names no power for the constitution, a succession plan or the judicial tier (rules 67, 83, 98, 99): overreaching"));
+                    }
+                    let Value::Array(am) = &t[1] else { return Err(over("a counted power's parties: overreaching")) };
+                    let among = am.iter().map(|h| hash(h, "a counted power's parties: overreaching")).collect::<R<Vec<_>>>()?;
+                    if among.is_empty() || !ascending(&among) {
+                        return Err(over("a counted power's parties, ascending, none twice: overreaching"));
+                    }
+                    match super::formats::rule(&t[2]) {
+                        Ok(super::formats::Rule::ByShare { stake, share }) if (1..=super::formats::MILLION).contains(&share) => Ok(Answer::ByShare { power, among, stake, share }),
+                        _ => Err(over("an act's power by share names a rule by share, [3, stake, share] (rule 99): overreaching")),
+                    }
+                }
+                _ => Err(over("an act's answer is [0], [1, area] or [2, counted]: overreaching")),
             }
         }
         (1, [Value::Map(m)]) => {
@@ -377,7 +406,7 @@ pub fn fill(t: &mut Terms, held: &Held) -> R<bool> {
 /// How rule 99 reads a model's answer, in words (the published vectors'
 /// "control answer" question): "overreaching" where [`read_answer`] sets it
 /// aside; otherwise "refused", "unknown", "an act, no area", "an act, area
-/// N" or "a clone".
+/// N", "an act, by share" or "a clone".
 pub fn answer_reading(v: &Value) -> String {
     match read_answer(v) {
         Err(_) => "overreaching".into(),
@@ -385,6 +414,7 @@ pub fn answer_reading(v: &Value) -> String {
         Ok(Answer::Unknown) => "unknown".into(),
         Ok(Answer::NoArea) => "an act, no area".into(),
         Ok(Answer::Area(n)) => format!("an act, area {n}"),
+        Ok(Answer::ByShare { .. }) => "an act, by share".into(),
         Ok(Answer::Clone { .. }) => "a clone".into(),
     }
 }

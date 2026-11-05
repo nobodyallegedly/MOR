@@ -1239,4 +1239,89 @@ pub fn control_models(out: &mut Out) {
     out.case(&mut w, "the same proxy under the Agreements MIR's hash, type 27: invalid", "Agreements rule 99, \"Act formats\"",
         "Types 26 to 28 are no Agreements types: the issuance offer, the proxy and its revocation are the default control cMIP's own acts.", Facts::default(), ask_status(&p2), json!("invalid"), None);
 
+    // S7n-2 (F428): an everyday act by share. A collective whose stake in
+    // itself is held 50, 30 and 20 per cent names a model that answers, for
+    // a payee pointer, a power counted among the three by share, more than
+    // half (rule 99, `[2, counted]`); the verifier is told that answer.
+    let stated = |w: &mut World| {
+        let mut col = collective_with(w, &[1], 1, &|t| {
+            let ids = t.parties.clone();
+            t.control = Some(agreements::Control { cmip: mor_control::stated::cmip(), params: mor_core::cbor::Value::Map(vec![]), pack: None });
+            t.areas = None;
+            t.area_words = None;
+            t.holders_rules = None;
+            t.stakes = Some(vec![agreements::Stake { object: agreements::Who::This, holders: vec![(agreements::Who::Id(ids[0]), 500_000), (agreements::Who::Id(ids[1]), 300_000), (agreements::Who::Id(ids[2]), 200_000)] }]);
+        });
+        let cid = col.id;
+        let mut ben_for = col.m[1].acting_for(cid, vec![cid]);
+        let ptr = pointer_act(w, &mut ben_for, b"the collective's address, by share");
+        col.m[1] = ben_for;
+        (col, ptr)
+    };
+    let u = mor_core::cbor::Value::Uint;
+    let arr = mor_core::cbor::Value::Array;
+    let by_share_answer = |col: &Col, rule: mor_core::cbor::Value| {
+        let mut ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+        ids.sort();
+        arr(vec![u(0), arr(vec![u(2), arr(vec![arr(vec![u(6), u(3)]), arr(ids.iter().map(|h| mor_core::cbor::Value::Bytes(h.to_vec())).collect()), rule])])])
+    };
+    let mut w = World::new();
+    let (mut col, ptr) = stated(&mut w);
+    let majority = by_share_answer(&col, arr(vec![u(3), u(0), u(500_001)]));
+    let told = |a: &mor_core::cbor::Value| Facts { control_answers: vec![((mirs().money, 0), a.clone())], ..Default::default() };
+    let alone = w.log.clone();
+    out.case(&mut w, "a payee pointer by share: drafted by the member holding 30 per cent alone, the model asking more than half: it does not count", "Agreements rules 65 and 99",
+        "A power a control model gives one act by share is counted as a rule by share: 30 per cent of what the voices hold is not more than half.", told(&majority), ask("consent counts", &ptr), json!(false), None);
+    sign(&mut w, &mut col.m[2], &ptr);
+    let half = w.log.clone();
+    out.case(&mut w, "the same pointer signed by the member holding 20 per cent too: half, not more than half: it does not count", "Agreements rules 65 and 99",
+        "Together they hold exactly half; the rule asks at least 500,001 millionths.", told(&majority), ask("consent counts", &ptr), json!(false), None);
+    sign(&mut w, &mut col.m[0], &ptr);
+    out.case(&mut w, "the same pointer signed by the member holding half too: it counts", "Agreements rules 65 and 99",
+        "All three, the whole of what the voices hold.", told(&majority), ask("consent counts", &ptr), json!(true), None);
+    let by_head = by_share_answer(&col, arr(vec![u(1), u(2)]));
+    let mut w1 = replay(&alone, &[]);
+    out.case(&mut w1, "the pointer drafted by the member holding 30 per cent alone, the model's power for it written by head: overreaching, set aside: it counts under the collective's rule for Money, that member alone", "Agreements rule 99",
+        "An act's power by share names a rule by share; one written otherwise is overreaching, set aside, and the act counts as the core alone would count it: the rule for Money names that member.", told(&by_head), ask("consent counts", &ptr), json!(true), None);
+    let _ = half;
+    for (name, v, want) in [
+        ("an act's answer giving it a power by share: an act, by share", majority.clone(), "an act, by share"),
+        ("an act's answer giving it a power by head where by share is asked: overreaching", by_head.clone(), "overreaching"),
+    ] {
+        let ask = json!({ "question": "control answer", "answer": hx(&mor_core::cbor::encode(&v)) });
+        out.case(&mut w1, &format!("a control model's answer: {name}"), "Agreements rule 99", "Read as rule 99's format says.", Facts::default(), ask, json!(want), Some("control answer"));
+    }
+
+    // S7n-2 (F428, 5): a change of control model ends every grant within
+    // an area (rule 74), whatever area of the new model carries its id.
+    let mut w = World::new();
+    let money: Vec<Kind> = [0, 1, 2].into_iter().map(|ty| Kind::Type { spec: mirs().money, type_: ty }).collect();
+    let mk = money.clone();
+    let (mut col, _) = band(&mut w, "a band changing its control model", &move |t, ids| {
+        t.areas = Some(vec![agreements::Area { name: "Money".into(), holders: vec![ids[0], ids[1]], threshold: 1, kinds: Some(mk.clone()), fields: None, id: 2, limits: None }]);
+    });
+    let (f, cid) = (col.founding, col.id);
+    let mut agent = w.genesis("the band's money agent", vec![own_home()], None, None);
+    let g = Grant { grantee: agent.id, scope: 2, agreements: None, limits: None, limits_cmip: None, area: Some(2), kinds: Some(money), reinstates: None, key: None };
+    let gid = ag_act(&mut w, &mut col.m[0].acting_for(cid, vec![cid]), agreements::types::GRANT, g.to_map(), None);
+    sign(&mut w, &mut agent, &gid);
+    let before = pointer_act(&mut w, &mut agent.acting_for(cid, vec![gid]), b"the band's address, set by its agent before the change");
+    let (k, sigs) = clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2])], &[0, 1, 2], vec![gid], &|t| {
+        t.control = Some(agreements::Control { cmip: mor_control::twin(), params: mor_core::cbor::Value::Map(vec![]), pack: Some(mor_control::params) });
+    });
+    let rec = {
+        let mut d = col.m[2].acting_for(cid, vec![gid]);
+        let r = agreements::Record { clone: Some(k), signatures: Some(sigs), registers: None };
+        let a = w.everyday_act(&mut d, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(k), None);
+        w.add(&a)
+    };
+    let after = pointer_act(&mut w, &mut agent.acting_for(cid, vec![gid, rec]), b"the band's address, set by its agent after the change");
+    let twin = || Facts { control_twin: true, ..Default::default() };
+    out.case(&mut w, "a change of control model: the record putting in force the clone naming another model, every member signing: the line", "Agreements rules 98 and 99",
+        "Field 35 is constitutional: the constitutional change rule, every member by default.", twin(), ask_record(&cid, &rec), json!({ "line": true, "puts": hx(&k) }), None);
+    out.case(&mut w, "the agent's pointer under a grant within the Money area, before the change of model: backed", "Agreements rule 74",
+        "The grant stands until the line that changes the model.", twin(), ask("backing", &before), json!("backed"), None);
+    out.case(&mut w, "the agent's pointer under the same grant after the change of model, the new model giving an area of the same id: not backed", "Agreements rule 74",
+        "A change of control model ends every grant within an area, whatever area of the new model carries the same id.", twin(), ask("backing", &after), json!("not backed (void)"), None);
+
 }

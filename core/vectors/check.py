@@ -589,6 +589,12 @@ def py_answer(b):
             return "an act, no area"
         if len(a) == 2 and a[0] == 1 and uint(a[1]):
             return f"an act, area {a[1]}"
+        # [2, counted]: a power by share for this act, its rule [3, stake, share].
+        if len(a) == 2 and a[0] == 2 and isinstance(a[1], list) and len(a[1]) == 3:
+            p, among, r = power(a[1][0]), a[1][1], a[1][2]
+            if (p is not None and p[0] not in (0, 3, 4) and isinstance(among, list) and among and all(is_hash(h) for h in among)
+                    and ascending(among) and isinstance(r, list) and len(r) == 3 and r[0] == 3 and uint(r[1]) and uint(r[2]) and 1 <= r[2] <= 1000000):
+                return "an act, by share"
         return "overreaching"
     if kind == 1 and len(rest) == 1 and isinstance(rest[0], out_map):
         m = rest[0]
