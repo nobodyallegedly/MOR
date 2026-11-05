@@ -304,7 +304,7 @@ Unpaid shares stay open debts (Money rule 5) until the holder can receive, for i
 
 *Stated cost:* *a members' collective with departed holders and no holders' rule waits for their signatures on its sales and releases of works, and on a fork whose successors' plans pay them less, as its fee changes already do. Shared ownership means shared fruits.*
 
-**Prices and publications are no owners' matter** (Agreements rule 48, its stated cost included): the price of what a collective sells, and whether and with whom it publishes, are the collective's business, decided under its rules for each layer (rule 60), owners who have no say protected by sight (rule 57) and by the exit (rule 10). *A vote on every price is not one owners could cast.*
+**Prices and publications are no owners' matter** (Agreements rule 48, its stated cost included): the price of what a collective sells, and whether and with whom it publishes, are the collective's business, decided under its rules for each layer (rule 60). Owners who have no say are protected by sight (rule 57) and by the exit (rule 10), never by a vote on prices. *Stated cost:* *the members can price every work at a token price, or at none, or publish it with partners taking most of each sale; publications and price tags are public, so the owners see it, and can leave. A vote on every price is not one owners could cast.*
 
 #### Rule 96. Issuance, with pre-emption
 

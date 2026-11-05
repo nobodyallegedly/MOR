@@ -50,8 +50,6 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 ## Words used in this MIR
 
-Each word is defined once; where a rule says more, the entry names it.
-
 ### Agreements and signing
 
 - **Terms.** An act proposing an agreement: its parties, its text, its cMIPs, its keepers and its rules (type 0).
@@ -108,9 +106,9 @@ Each word is defined once; where a rule says more, the entry names it.
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks), who receives the keys of the acts it must judge (rule 44).
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge (rule 35).*
 - **Chain of judgment.** For a judge the terms name, the ones that take over from it, in order, when it answers "unknown" or does not act within its period (terms field 21, rule 35).
-- **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms (rule 33).
+- **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms (rule 33). *Before and after among acts done for a collective are judged on the collective's own chain ("Made before, made after"); the time reference judges deadlines and absence.*
 - **Concurrency rule.** Retired: terms field 10 is withdrawn, never reused. A fork of records is settled by rule 90's default.
-- **Contest.** A signed objection to another act, by someone with standing (rule 54): it makes disagreement visible and changes nothing. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
+- **Contest.** A signed objection to another act, by someone with standing (rule 54). It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
 - **Standing.** Who may contest an act (rule 54).
 
 ### Collectives
@@ -142,7 +140,7 @@ Each word is defined once; where a rule says more, the entry names it.
   - It loses its voice in one area by stepping down from it (rule 71), or by a constitutional clone that replaces it there.
   - It never loses its stake that way.
 
-  In a collective, each takes effect at the collective's line registering it ("Made before, made after", 3).
+  In a collective, each takes effect at the collective's line registering it, and keeps that effect whatever its signer's later rotation disowns ("Made before, made after", 3 and 4).
 - **Departed holder.** An identity that left a collective, by resigning or by being removed, and kept a share of its stake. Its share is in the collective's stake (field 7), which decides what it is paid; its consent is asked where rule 98 asks the owners', and it may be declared absent though no party (rule 85). The collective's **departed members entry** records only that the identity is departed, without voice (terms field 22).
 
 ### A collective's acts, in order
@@ -154,7 +152,7 @@ Each word is defined once; where a rule says more, the entry names it.
 - **Actions chain.** Every other act done for a collective (rule 58). Negotiation messages are on neither chain, being talk.
 - **History.** What a decision or an action cites on the collective's chain, transitively: the acts it names there, what each act reached names there, the tips of each record reached, and the signature acts each rotation reached names. An act is before a line when the line's history holds it.
 - **Tie rule.** When a decision ending powers and an action using them cite neither each other, the ending wins ("Made before, made after", 7).
-- **Done.** An act for a collective is done once sealed to every member of the agreement in force for it (or public) and on the chain, citing the collective's latest decision as its signer knew it; before that it is planning, and binds no one (rule 57).
+- **Done.** An act for a collective is done once sealed to every member of the agreement in force for it (or public) and on the chain, citing the collective's latest decision as its signer knew it; where the collective's stake in itself has holders who are no members, a Money act for it is done only once sealed to every holder of that stake as well, or public; before that it is planning, and binds no one (rule 57).
 
 ### Grants
 
@@ -527,7 +525,7 @@ A publication, or a bare bake's price tag, for a work whose claim an ownership a
 *Somebody owns the vow.* *A worker's vow, a job booked through a platform: she claims her vow, and her ownership agreement gives her its stake; the platform's publication names that agreement as its owners, the platform a partner taking its share off the top; what is left is hers, her agreement signs the publication as its owners' side, and the platform raising its share needs her signature.*
 
 - From its founding version on, the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
-- **A publication selling a vow that it does not pay the vow's owner.** A publication naming a vow counts whether or not it pays the vow's signer: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where an ownership agreement claims the vow (above); the owner's protection is her own signature, and what her client shows before she signs (above).
+- **A publication selling a vow that it does not pay the vow's owner.** A publication naming a vow counts whether or not it pays the vow's signer: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where an ownership agreement claims the vow (above); the owner's protection is her own signature, and what her client shows before she signs (her client flags a publication selling her vow that pays her nothing: "No owner").
 - The vow's signer is read from the vow the verifier holds, by its name (its genesis). A verifier that does not hold the vow cannot tell its name from a work's hash, and judges nothing, as for a publication's `[ 3, vow ]` ("Publication (type 6)").
 
 *Budgets are not vows: the vote that decides where a common budget goes is a cMIP's; the projects answering the need make vows, each sold by a publication with its owner, which the budget pays.*
@@ -1123,6 +1121,8 @@ Decisions ending a grant are: a revocation, a departure emptying its area, a lay
 
 **Counterparties: wait until a later act of the collective cites the act before performing.** From then on the act is adopted (rule 76), and no ending racing that citation voids it.
 
+**The promise, restated**: safe once cited, against everything but the collusion of an ending's signers.
+
 *Stated cost:* a fork or closing whose line is drawn early on purpose, before the citing act, leaves both out of its history, and both are void (the tie rule). Without a clock, a line drawn early on purpose cannot be told from one drawn before the later acts existed, and every cure would let something uploaded after a fork reopen it, against a complete fork's finality (rule 91). It needs every signer of the ending to collude against the counterparty: each conforming client refuses to sign it ("Made before, made after", client conformance). And it stays fully legible: the signed act, the collective's citation of it and the ending leaving them out stand as evidence for any outside court.
 
 #### Rule 80. Evaluation
@@ -1558,7 +1558,7 @@ The replacement signs the clone too (rule 45). Until one of them completes, the 
 
 **Stepping down at once.** A holder may instead give up an area at once, alone, by a resignation naming that area (type 16, field 1). Whether it counts is read without the control model: a member's step-down from an area id its terms name is registered as any resignation is, and one by a non-holder changes nothing. *It says: I am done, and will do nothing more in this area.*
 
-**The resignation names the drafts its signer had signed and leaves behind** (field 2), as "Resignation (type 16)" says, its stated cost and client conformance included.
+**The resignation names the drafts its signer had signed and leaves behind** (field 2). A version it names never gives the signer the area back, whichever line puts it in force. A draft it fails to name does: the signer's stated cost. *Client conformance:* the holder's client names them, as for a resignation.
 
 The stepping down takes effect for the collective at the collective's line registering it (record field 3). From that line on, the holder's signature acts count toward nothing in that area, in that agreement or any descending from it. A signature of the holder placed before the line stays valid, and counts as rule 65 says. The holder keeps the rest of its voice, and its stake. The collective then makes the constitutional change for that area by one of the three ways.
 
@@ -1706,11 +1706,13 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
      - **A payment that reaches a publication of the original after the fork** (a wallet not reading Agreements paying a tag of an ended publication, a push rail that cannot refuse) **is owed back to the payer as a refund**, as a payment racing an ending is (rules 11, 12).
      - A sale the original's chain recorded in the fork's history stays a purchase.
 
+     *Stated cost: a wallet reading only Money does not see the ending, and could still pay an on-chain address of a dead service; that money is owed back to it (rule 12's client conformance).* *The work is the point of payment; it needs nothing of the old collective.*
+
    - **Defaults.** Whatever the fork act does not settle falls to these defaults.
 
 - **C. Actively abandoned,** where everyone agrees the collective has ended but its works still earn: a plain collective, nothing new. It keeps its rules, changes rails, renews its publications and pays every holder until winding it down makes sense. *A plain collective is enough; only how its stakeholders use it changes.*
 
-- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **Each sale or release of a work needs the owners' consent** (rule 98): the holders of the collective's stake in itself who have no say consent, each signing, or under a rule of the control model they accepted. **A closing act (type 20), signed under the constitutional change rule like the fork act, and counted by share at its line where that rule counts by share, as a fork is, ends a collective that holds nothing and owes nothing.** After its line, nothing done for the collective counts in Agreements. A collective cannot close while it owes anything: one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). This is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. An absentee's money share follows the collective's own rules, and does not keep the collective from closing ("Closing (type 20)").
+- **D. Dissolution,** where the collective dies. Its works are sold (stake transfers, rule 10) or released to the public domain (rule 55), then it closes. **Each sale or release of a work needs the owners' consent** (rule 98): the holders of the collective's stake in itself who have no say consent, each signing, or under a rule of the control model they accepted. **A closing act (type 20), signed under the constitutional change rule like the fork act, and counted by share at its line where that rule counts by share, as a fork is, ends a collective that holds nothing and owes nothing.** After its line, nothing done for the collective counts in Agreements. A collective cannot close while it owes anything: one that cannot pay stays open, abandoned, its debts visible, until each is paid or its creditor releases it (rule 92). This is the whole of liquidation: ordinary sales, transfers and releases before the closing, the closing naming no stake. An absentee's money share follows the collective's own rules, and does not keep the collective from closing ("Closing (type 20)"). Batching them is a client's or a cMIP's convenience, never a second way in the core.
 
 *"A fork closes the original" holds for shape B only. No group keeps the original identity: a lone holdout keeping the identity, its history and its pointers while everyone else leaves was the cost that closing the original removes. Leaving costs the vote and the right to act, never a stake unless it is sold.*
 
@@ -3692,7 +3694,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### How a collective ends
 
 - A group splits off with the powers to do so: an ordinary membership change, its members departed holders (rule 91, shape A): 3.
-- A collective forks (rule 91, shape B): each side founds its successor first, every member chain-signs the fork on a side under the constitutional rule, ownership passes by the members' stakes, the departed holder keeps their share in each, every debt in the history it cites is handed out or the fork does not take effect, its grants and publications end at the line; the forks that close nothing: 3.
+- A collective forks: each side founds its successor first; the fork act names them; every member signs it with their own identity, by a chain signature with their chain key, on a side, under the constitutional rule; the original's later acts count for nothing; its ownership passes to the successors by the members' stakes; the departed holder keeps their share in each; the fork hands out every debt in the history it cites, an unpublished one included, or does not take effect, each successor signing for its own, and uploading that debt later changes nothing; a successor owing such a debt cannot close until it is paid or released; every grant ends at the fork's line, a grantee's deal the fork's history cites binding and any other void; a debt signed off the fork's history is void; its publications sell nothing from the line; a payment to the old service naming no claim, or the original's claim never recorded by the original's chain before the fork, is no purchase, owed back to the payer; one naming the fork is pending until a successor's chain records it; a member on no side under every-party, a stranger on a side, a successor dropping a departed holder, or two concurrent forks sharing no signer, close nothing (rule 91, shape B): 3.
 - Under a constitutional rule of two of three, two members fork without the third, who signs no side and is a departed holder of each successor at their percentage: 3.
 - A fork hands out its whole history, or does not take effect; unknown while the history is not all held; a successor's later fork hands out what it inherited: 3.
 - The tie rule: a public debt a closing's history does not cite is void, and does not keep the collective from closing; cited, it does: 3.
