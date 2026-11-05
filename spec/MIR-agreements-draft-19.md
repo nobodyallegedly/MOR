@@ -2446,10 +2446,11 @@ The rule is the chain's, so it holds for every judge the chain serves, one activ
   - **the roster**: for each stake, its holders and their shares there, field 7 of the agreement in force with the placed transfers, successions, absence outcomes and issuances applied (rule 98.2);
   - **the signatures**: each signature act the line places on the act or clone judged, by its signer;
   - **the model's own acts**: every act of the model's own specification the line placed (below), each with its signer, its payload, its recipients (public, or sealed to whom) and whether it lies before that line; and each signature act naming one of them, with its signer and where the line places it;
+- **the layers each extension a clone adds or drops declares** (Development, specification field 10), where the verifier holds that specification; where it does not, an answer that needs them is unknown;
 - **the facts the verifier states**, as it states every judge's answer: what was paid toward each act a payment names (Money rule 8, with the rail's answer), and, on the agreement's time reference, which acts lie within a period and which periods have lapsed (rule 33);
 - the act: an act for the collective (rule 58), or a clone of its agreement.
 
-The model answers from these alone. It reads no other act, no clock and nothing else of the verifier's; where one of these cannot be computed because an act it needs is not held, an answer that needs it is unknown.
+The model answers from these alone. It reads no other act, no clock and nothing else of the verifier's; the signatures are handed to it so that it can say who acted (a holder's own vote, say, beating its proxy's), never to count a power, which the core alone counts; where one of these cannot be computed because an act it needs is not held, an answer that needs it is unknown.
 
 **What it produces**, for each act or clone it is asked about, one answer, in this format (the terms' `rule` and `power`, "Terms (type 0)"):
 
