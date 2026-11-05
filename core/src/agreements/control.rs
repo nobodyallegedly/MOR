@@ -125,6 +125,12 @@ pub trait ControlModel {
     fn pack(&self) -> Option<fn(&Terms) -> Value> {
         None
     }
+    /// The model's check of its answers against the terms that carry them:
+    /// an error where its parameters are outside its format (refused).
+    fn check(&self, t: &Terms, mirs: &super::formats::Mirs) -> R<()> {
+        let _ = (t, mirs);
+        Ok(())
+    }
     /// The powers a clone of a collective's agreement needs for its
     /// operational changes `ops` (never a constitutional or judicial one,
     /// which the core reads itself, rules 67 and 98): each a power in the

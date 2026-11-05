@@ -21,6 +21,9 @@ use std::rc::Rc;
 /// What an operational clone needs (rules 63, 64).
 pub mod tiers;
 
+/// The areas' format check.
+pub mod areas;
+
 /// Issuance with pre-emption (rule 96), from the line's facts.
 pub mod issuance;
 
@@ -167,6 +170,10 @@ impl ControlModel for Default {
         Some(params)
     }
 
+    fn check(&self, t: &Terms, mirs: &mor_core::agreements::Mirs) -> R<()> {
+        areas::check_areas(t, mirs)
+    }
+
     fn clone_powers(&self, parent: &Terms, clone: &Terms, ops: &[mor_core::agreements::Change], ext_layers: &dyn Fn(&Hash) -> R<Vec<u64>>) -> R<Vec<mor_core::agreements::Power>> {
         tiers::clone_powers(parent, clone, ops, ext_layers)
     }
@@ -203,4 +210,14 @@ pub fn decode(p: &[(Value, Value)]) -> R<Terms> {
         return Err(AgreementsError::Missing(t.control.as_ref().expect("named").cmip));
     }
     Ok(t)
+}
+
+/// Terms built in memory, checked as a client holding this cMIP checks them:
+/// the core's checks, then this model's check of its answers.
+pub fn check(t: &Terms, mirs: &mor_core::agreements::Mirs) -> R<()> {
+    t.check(mirs)?;
+    if t.names_control() && t.control.as_ref().is_some_and(|c| c.cmip == cmip()) {
+        Default.check(t, mirs)?;
+    }
+    Ok(())
 }

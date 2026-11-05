@@ -148,7 +148,7 @@ fn roundtrip(t: &Terms) -> Terms {
 }
 
 fn check(t: &Terms) -> Result<(), AgreementsError> {
-    t.check(&mirs())
+    mor_control::check(t, &mirs())
 }
 
 // ---------------------------------------------------------------- formats

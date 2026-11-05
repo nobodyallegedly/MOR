@@ -945,6 +945,11 @@ impl<'a> AgreementsView<'a> {
         // the way out (rule 98).
         super::control::fill(&mut t, &self.control)?;
         t.check(&self.mirs)?;
+        if let Some(c) = &t.control {
+            if let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) {
+                m.check(&t, &self.mirs)?;
+            }
+        }
         Ok(t)
     }
 

@@ -3767,10 +3767,10 @@ fn an_identity_area_shows_its_consent_on_a_rotation() {
     let mut t = lab.view().terms(&lab.founding).unwrap();
     let keys = |kinds: Vec<Kind>| Area { name: "Keys".into(), holders: vec![ids[BEN], ids[CY]], threshold: 2, kinds: Some(kinds), fields: None, id: 3, limits: None };
     t.areas.as_mut().unwrap().push(keys(vec![Kind::Type { spec: common::identity_spec(), type_: 1 }]));
-    assert!(t.check(&mirs()).is_err(), "rotations are never in an area's reach");
+    assert!(mor_control::check(&t, &mirs()).is_err(), "rotations are never in an area's reach");
     t.areas.as_mut().unwrap().pop();
     t.areas.as_mut().unwrap().push(keys(vec![Kind::Layer(agreements::layers::IDENTITY)]));
-    assert!(t.check(&mirs()).is_err(), "a whole layer is field 19's");
+    assert!(mor_control::check(&t, &mirs()).is_err(), "a whole layer is field 19's");
     lab.publish(0);
     let r = lab.rotate(None, &[0]);
     let got = lab.view().rotation_consent(&r).unwrap();
@@ -6305,7 +6305,7 @@ fn terms_field_25_is_withdrawn() {
     assert!(Terms::decode(&m).unwrap_err().to_string().contains("F128"));
     let mut reach = t.clone();
     reach.areas.as_mut().unwrap()[0].fields = Some(vec![agreements::FieldRef::Field(25)]);
-    assert!(reach.check(&mirs()).is_err());
+    assert!(mor_control::check(&reach, &mirs()).is_err());
 }
 
 /// F126 (E2): a collective forgives a debt owed to it by its Money lane
