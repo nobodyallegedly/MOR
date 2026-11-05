@@ -1346,4 +1346,17 @@ pub fn control_models(out: &mut Out) {
     out.case(&mut w, "the agent's pointer under that grant: backed, asking no further share", "Agreements rules 74 and 80",
         "A grantee's act within the grant's reach is the grant's.", told(&majority), ask("backing", &ptr), json!("backed"), None);
 
+    // S7n-3 (the MOR lead, under delegation): a model's answer for an act of
+    // a type its query answer lists in key 2 is that power; any other is
+    // overreaching, set aside (rule 99).
+    let mut w = World::new();
+    let (col, ptr) = stated(&mut w);
+    let majority = by_share_answer(&col, arr(vec![u(3), u(0), u(500_001)]));
+    let mut ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+    ids.sort();
+    let listed = arr(vec![arr(vec![u(6), u(3)]), arr(ids.iter().map(|h| mor_core::cbor::Value::Bytes(h.to_vec())).collect()), arr(vec![u(3), u(0), u(600_000)])]);
+    let facts = Facts { control_answers: vec![((mirs().money, 0), majority.clone())], control_listed: vec![((mirs().money, 0), listed)], ..Default::default() };
+    out.case(&mut w, "a payee pointer whose power by share the model answers otherwise than its query answer lists for payee pointers: overreaching, set aside: it counts under the rule for Money, its drafter alone", "Agreements rule 99",
+        "A model's answer for an act of a type its query answer lists (key 2) is that power; any other answer for it is overreaching, set aside, and the act counts as the core alone would count it: the rule for Money names the member who drafted it.", facts, ask("consent counts", &ptr), json!(true), None);
+
 }

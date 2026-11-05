@@ -6273,6 +6273,47 @@
           "46a967ab04fcfbaca0b2e0e1393dc2d5c69732685af38e4ecd1b1d8b477b74a5",
           "4429071b17686cf5f7dbedb03144989a3c44d94edba9b3fd8684fd116ff7c9b0",
           "60b6381b6bce0b16d81ef82d87241b930716218c7ebce28eafb11de243eebd31",
+          "7c1ca2587937ba4613fe026b286372bea43a56e24f3c3a8a3e4726d1b9bcbab4",
+          "dea2191d7822292ea21ce31770d53831ce58231adc5b27dd000b62b3978e791c",
+          "a403ac407231165bddecaddaffd1696d709400680bd0c28140ef8bed260e795e",
+          "4922a61a6fb7e8af4f0613fa517fb665b9b35ffa5ea5d06dc67da8be00d2207e",
+          "0e682df8ef587e2232d2cddcd03130237d082e097bb9b2d24db9dbd9d5eb4792",
+          "db278de425f19f986aefff80fa92eb0d09962847c90e77af87066e9ef52117fa"
+        ],
+        "ask": {
+          "act": "db278de425f19f986aefff80fa92eb0d09962847c90e77af87066e9ef52117fa",
+          "question": "consent counts"
+        },
+        "facts": {
+          "control_answers": [
+            {
+              "answer": "820082028382060383582046a967ab04fcfbaca0b2e0e1393dc2d5c69732685af38e4ecd1b1d8b477b74a558204ae8c0e3a47ae12e9b89f4bc28d3dc416afe99fddb52deb177dc930e76c85f9f58206ef9bfd09402356189a6f3ea6d5317b471e598a946059d09998f50b6847d288b8303001a0007a121",
+              "model": "8f164fac4d8f2d698e19ed1fd747f4e64e31deaec2fb71625d9586adc4eb6955",
+              "spec": "b6cea993bfce99cf52c277648855d42cfd32654a6a8c018519f4e92179d8c69d",
+              "type": 0
+            }
+          ],
+          "control_listed": [
+            {
+              "counted": "8382060383582046a967ab04fcfbaca0b2e0e1393dc2d5c69732685af38e4ecd1b1d8b477b74a558204ae8c0e3a47ae12e9b89f4bc28d3dc416afe99fddb52deb177dc930e76c85f9f58206ef9bfd09402356189a6f3ea6d5317b471e598a946059d09998f50b6847d288b8303001a000927c0",
+              "model": "8f164fac4d8f2d698e19ed1fd747f4e64e31deaec2fb71625d9586adc4eb6955",
+              "spec": "b6cea993bfce99cf52c277648855d42cfd32654a6a8c018519f4e92179d8c69d",
+              "type": 0
+            }
+          ]
+        },
+        "name": "a payee pointer whose power by share the model answers otherwise than its query answer lists for payee pointers: overreaching, set aside: it counts under the rule for Money, its drafter alone",
+        "rule": "Agreements rule 99",
+        "verdict": true,
+        "why": "A model's answer for an act of a type its query answer lists (key 2) is that power; any other answer for it is overreaching, set aside, and the act counts as the core alone would count it: the rule for Money names the member who drafted it."
+      },
+      {
+        "acts": [
+          "6ef9bfd09402356189a6f3ea6d5317b471e598a946059d09998f50b6847d288b",
+          "4ae8c0e3a47ae12e9b89f4bc28d3dc416afe99fddb52deb177dc930e76c85f9f",
+          "46a967ab04fcfbaca0b2e0e1393dc2d5c69732685af38e4ecd1b1d8b477b74a5",
+          "4429071b17686cf5f7dbedb03144989a3c44d94edba9b3fd8684fd116ff7c9b0",
+          "60b6381b6bce0b16d81ef82d87241b930716218c7ebce28eafb11de243eebd31",
           "ddac212392dfd34e19cf30ef91bc8921199f019b0fd8864f33002dec1a08165a",
           "bdc73591e8bffb03430d23190c2267350d02d6e89780c36934ef583d6e02d433",
           "8fe8c407068eb1a5eca808e3f7baf240952e533c2b40ae5f36fc66ae07f86bf3",

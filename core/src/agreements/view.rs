@@ -4519,6 +4519,18 @@ impl<'a> AgreementsView<'a> {
         if let Some(c) = &t.control {
             if let Some((_, m)) = self.control.iter().find(|(h, _)| *h == c.cmip) {
                 if let Some(v) = m.act_answer(&t, &x.inside) {
+                    // An act's answer for a type the model lists in its query
+                    // answer's key 2 is that power; any other answer for it,
+                    // and a power by share for a type it does not list, is
+                    // overreaching, set aside (rule 99; F429).
+                    let listed = m.powers_by_share(&t).into_iter().find(|((s, ty), _)| *s == x.inside.spec && *ty == x.inside.type_).map(|(_, c)| c);
+                    let as_listed = listed.map(|c| crate::cbor::Value::Array(vec![crate::cbor::Value::Uint(0), crate::cbor::Value::Array(vec![crate::cbor::Value::Uint(2), c])]));
+                    let by_share = matches!(super::control::read_answer(&v), Ok(super::control::Answer::ByShare { .. }));
+                    let set_aside = match &as_listed {
+                        Some(l) => *l != v,
+                        None => by_share,
+                    };
+                    let v = if set_aside { crate::cbor::Value::Array(vec![]) } else { v };
                     match super::control::read_answer(&v) {
                         Ok(super::control::Answer::Refused(w)) => return Ok(Consent::Invalid { agreement: ag, reason: format!("the collective's control model refuses it: {w} (rule 99)") }),
                         Ok(super::control::Answer::ByShare { among, stake, share, .. }) if among.iter().all(|p| t.parties.contains(p)) => {

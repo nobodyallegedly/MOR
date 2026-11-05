@@ -567,8 +567,18 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
             ((h(&x["spec"]), x["type"].as_u64().unwrap()), cbor::decode(&b(&x["answer"])).unwrap())
         })
         .collect();
+    // Its query answer's key 2, where stated apart (rule 99).
+    let listed: Vec<((Hash, u64), cbor::Value)> = facts["control_listed"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|x| {
+            assert_eq!(h(&x["model"]), mor_control::stated::cmip(), "the stated model");
+            ((h(&x["spec"]), x["type"].as_u64().unwrap()), cbor::decode(&b(&x["counted"])).unwrap())
+        })
+        .collect();
     if !stated.is_empty() {
-        av.add_control(mor_control::stated::Stated::held(stated));
+        av.add_control(mor_control::stated::Stated::held_listing(stated, (!listed.is_empty()).then_some(listed)));
     }
     // The default control cMIP held under a second hash too (rule 74).
     for x in facts["control_models_also"].as_array().into_iter().flatten() {

@@ -16,13 +16,20 @@ pub fn cmip() -> Hash {
     sha256(b"cMIP: a control model whose answers the verifier states (stand-in)")
 }
 
-/// The model, with its answers by act type: `((spec, type), answer)`.
-pub struct Stated(pub Vec<((Hash, u64), Value)>);
+/// The model, with its answers by act type, `((spec, type), answer)`, and,
+/// where stated apart, the powers by share its query answer lists (key 2);
+/// otherwise key 2 lists the answers that give a power by share.
+pub struct Stated(pub Vec<((Hash, u64), Value)>, pub Option<Vec<((Hash, u64), Value)>>);
 
 impl Stated {
     /// This model, as a verifier holds it.
     pub fn held(answers: Vec<((Hash, u64), Value)>) -> Held {
-        vec![(cmip(), Rc::new(Stated(answers)) as Rc<dyn ControlModel>)]
+        Self::held_listing(answers, None)
+    }
+
+    /// This model, its query answer's key 2 stated apart from its answers.
+    pub fn held_listing(answers: Vec<((Hash, u64), Value)>, listed: Option<Vec<((Hash, u64), Value)>>) -> Held {
+        vec![(cmip(), Rc::new(Stated(answers, listed)) as Rc<dyn ControlModel>)]
     }
 }
 
@@ -35,6 +42,9 @@ impl ControlModel for Stated {
     }
 
     fn powers_by_share(&self, _: &Terms) -> Vec<((Hash, u64), Value)> {
+        if let Some(l) = &self.1 {
+            return l.clone();
+        }
         // The stated answers that give a power by share, `[0, [2, counted]]`.
         self.0
             .iter()

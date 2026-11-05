@@ -251,7 +251,7 @@ An obligation is released when a creditor's release (type 4) names it, valid und
 - It counts wherever a verifier holds it, public or not, and ends an obligation whether or not that obligation binds yet.
 - What it names in field 1 is a record only, never checked.
 
-*Where the creditor is a collective, its release counts by its own rules, under the rule its founding names for Money alone (Agreements rule 92); a Money-only client cannot check that, and shows such a release's standing as unknown.*
+*Where the creditor is a collective, its release counts by its own rules, under the rule its founding names for Money (Agreements rule 92); a Money-only client cannot check that, and shows such a release's standing as unknown.*
 
 #### Rule 17. Which pointer a debt is paid to
 
@@ -648,7 +648,7 @@ The unit specification: a specification of kind 2 (Development, Part three, "A u
 #### Debts
 
 - Obligation signed by the debtor, and discharge, unit-agnostic, possibly by several routes: 1.
-- A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts only under the rule its founding names for Money: 3.
+- A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts under the rule its founding names for Money: 3.
 
 #### Buying, refunds and referrals
 

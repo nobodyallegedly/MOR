@@ -15355,6 +15355,21 @@ mod second_model_by_share {
 
     pub struct Majority;
 
+    /// Its power for a Money act: among the Money layer's actors (every
+    /// party, or those its rule names), more than half by share.
+    fn counted(t: &Terms) -> Value {
+        let mut among = match t.layer_rule(agreements::layers::MONEY) {
+            Some(Rule::Named(n)) => n.clone(),
+            _ => t.parties.clone(),
+        };
+        among.sort();
+        Value::Array(vec![
+            Value::Array(vec![Value::Uint(6), Value::Uint(3)]),
+            Value::Array(among.iter().map(|h| Value::Bytes(h.to_vec())).collect()),
+            Value::Array(vec![Value::Uint(3), Value::Uint(0), Value::Uint(500_001)]),
+        ])
+    }
+
     pub fn cmip() -> Hash {
         spec("cMIP: Majority and treasury, draft 2 (stand-in)")
     }
@@ -15375,18 +15390,13 @@ mod second_model_by_share {
             if inside.spec != mirs().money || inside.type_ > mor_core::money::types::PRICE_TAG {
                 return Some(Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(0)])]));
             }
-            // Among the Money layer's actors: every party, or those its rule names.
-            let mut among = match t.layer_rule(agreements::layers::MONEY) {
-                Some(Rule::Named(n)) => n.clone(),
-                _ => t.parties.clone(),
-            };
-            among.sort();
-            let counted = Value::Array(vec![
-                Value::Array(vec![Value::Uint(6), Value::Uint(3)]),
-                Value::Array(among.iter().map(|h| Value::Bytes(h.to_vec())).collect()),
-                Value::Array(vec![Value::Uint(3), Value::Uint(0), Value::Uint(500_001)]),
-            ]);
-            Some(Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), counted])]))
+            Some(Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), counted(t)])]))
+        }
+
+        // Its query answer lists each Money act type's power by share (key 2,
+        // Agreements draft 20): its answer for each such act is that power.
+        fn powers_by_share(&self, t: &Terms) -> Vec<((Hash, u64), Value)> {
+            (0..=mor_core::money::types::PRICE_TAG).map(|ty| ((mirs().money, ty), counted(t))).collect()
         }
 
         fn clone_powers(&self, _: &Terms, _: &Terms, ops: &[Change], ext: &dyn Fn(&Hash) -> Result<Vec<u64>, AgreementsError>) -> Result<Vec<Power>, AgreementsError> {
@@ -15488,7 +15498,7 @@ fn s7n3_the_query_answer_lists_powers_by_share() {
     assert_eq!(m.iter().find(|(k, _)| *k == Value::Uint(2)).map(|(_, v)| v.clone()), Some(Value::Array(vec![])));
     let Some((_, Value::Array(areas))) = m.iter().find(|(k, _)| *k == Value::Uint(0)) else { panic!() };
     assert_eq!(areas.len(), 2, "the label's two areas");
-    let stated = mor_control::stated::Stated(vec![((mirs().money, 0), Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), Value::Uint(7)])]))]);
+    let stated = mor_control::stated::Stated(vec![((mirs().money, 0), Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(2), Value::Uint(7)])]))], None);
     let q = agreements::control::query_answer(&t, &stated);
     let Value::Map(m) = q else { panic!() };
     let Some((_, Value::Array(by))) = m.iter().find(|(k, _)| *k == Value::Uint(2)) else { panic!() };

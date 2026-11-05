@@ -66,6 +66,15 @@ The default cMIP gives no power by share, so nothing an app does today changes.
    - *Plainly:* a model could list a power by share in its query answer and answer otherwise for one act. Nothing says which wins.
    - *Lean:* the act's answer must be the listed power, and any other answer is overreaching. One sentence in rule 99. Cost: the core compares the two.
 
+## After the first edition (the MOR lead, under delegation)
+
+1. **"Alone" dropped in Money draft 13**, in both places, on this branch. The italic note after the creditor's release now says "under the rule its founding names for Money (Agreements rule 92)". The freeze scenario says "a collective creditor's counts under the rule its founding names for Money". *A correction to my first edition:* that second place said "only", not "alone"; its "alone" ("signed by the creditor alone") is another matter, left as it was. Money draft 13 against draft 12 is now these three phrases and the draft number.
+2. **An act's answer must be the listed power.** One sentence in rule 99: "A model's answer for an act of a type key 2 lists is that power; any other answer for it is overreaching."
+   - The core compares: an act's answer for a listed type that differs from `[0, [2, listed]]`, or a power by share for a type key 2 does not list, is set aside, and the act counts as the core alone would count it.
+   - **One vector:** a model listing 600,000 for payee pointers and answering 500,001 for one is overreaching, set aside. The pointer counts under the rule for Money. **559 cases**; every earlier case byte for byte; no verdict moved.
+   - The test stand-in of the paper model, draft 2, now lists its powers in key 2, as the rule asks; its five verdicts are unchanged.
+   - 800 tests pass locally; the Python check agrees.
+
 ## Releases and CI
 
 - **The final merge of main:** main had not moved since `db20305`, from which this branch starts, so the merge was a no-op.

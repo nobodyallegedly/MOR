@@ -380,6 +380,9 @@ pub struct Facts {
     /// The verifier holds the default control cMIP under a second hash too
     /// (`mor_control::twin`, test data), another model to it (rule 74).
     pub control_twin: bool,
+    /// The stated model's query answer, key 2, where stated apart from its
+    /// answers (rule 99; F429): its powers by share by act type.
+    pub control_listed: Vec<((Hash, u64), Value)>,
 }
 
 impl Facts {
@@ -427,6 +430,12 @@ impl Facts {
         if self.control_twin {
             m.insert("control_models_also".into(), json!([{ "model": hx(&mor_control::twin()), "reads_as": hx(&mor_control::cmip()) }]));
         }
+        if !self.control_listed.is_empty() {
+            m.insert(
+                "control_listed".into(),
+                self.control_listed.iter().map(|((s, t), v)| json!({ "model": hx(&mor_control::stated::cmip()), "spec": hx(s), "type": t, "counted": hx(&cbor::encode(v)) })).collect(),
+            );
+        }
         if !self.control_answers.is_empty() {
             m.insert(
                 "control_answers".into(),
@@ -456,7 +465,8 @@ impl Facts {
             v.add_control(mor_control::held_twin());
         }
         if !self.control_answers.is_empty() {
-            v.add_control(mor_control::stated::Stated::held(self.control_answers.clone()));
+            let listed = (!self.control_listed.is_empty()).then(|| self.control_listed.clone());
+            v.add_control(mor_control::stated::Stated::held_listing(self.control_answers.clone(), listed));
         }
         for (a, r, p) in &self.anchors {
             v.anchored.add(&Anchor { act: *a, reference: r.clone(), point: *p });

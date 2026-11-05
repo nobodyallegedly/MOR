@@ -23,6 +23,7 @@ with `wasm-bindgen-cli` of the version pinned in `Cargo.toml` (0.2.129), and wit
 | What a client shows before founders sign | every area, holders' rule and issuance term, Money first | **who acts on what, Money first**: every area, every power by share (key 2) among it, every holders' rule and issuance term (rule 98's client conformance) |
 | A collective's grant reaching acts a power by share reaches | counted under the rule for Agreements | counts only with signatures meeting that power (rule 74); `agreementsConsent` on the grant shows the power by share's count (`area` -1000, `share`). A grantee's act under it asks no further share |
 | Money | a collective's Money acts under its rule for Money | Money draft 13: "or as its control model narrows it" (no change in what the core judges) |
+| A model's answer for an act of a type its query answer lists (key 2) | counted as answered | must be that listed power; any other answer for it, or a power by share for a type it does not list, is overreaching, set aside (rule 99) |
 
 ### Agreements draft 19: the boundary for a second control model (S7n)
 
