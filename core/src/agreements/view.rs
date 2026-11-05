@@ -3580,18 +3580,21 @@ impl<'a> AgreementsView<'a> {
         // Rule 96 (new in draft 14, F309, F315): an issuance, judged; the
         // holders it scales down pro rata under the stake's holders' rule
         // do not sign for themselves.
-        let excused = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
+        let issued = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
             Err(state) => return Ok(state),
-            Ok(e) => e.unwrap_or_default(),
+            Ok(e) => e,
         };
+        let is_issuance = issued.is_some();
+        let excused = issued.unwrap_or_default();
         // Rule 98.2, the core's own check for any model: a holder the model
         // excuses from signing an issuance is excused only where the stake's
         // holders' rule binds it (rule 48), read from the core's own acts. A
         // holder it does not bind still signs.
-        let excused: Vec<Hash> = match clone.stakes.as_deref().and_then(|cs| {
+        let issued_stake = clone.stakes.as_deref().and_then(|cs| {
             let ps = parent.stakes.as_deref().unwrap_or(&[]);
             (0..ps.len().max(cs.len())).find(|i| ps.get(*i) != cs.get(*i))
-        }) {
+        });
+        let excused: Vec<Hash> = match issued_stake {
             Some(i) if !excused.is_empty() => {
                 let mut kept = vec![];
                 for h in excused {
@@ -3603,7 +3606,18 @@ impl<'a> AgreementsView<'a> {
             }
             _ => vec![],
         };
-        let (losing, _) = Self::must_sign_parts(parent, clone);
+        let (mut losing, _) = Self::must_sign_parts(parent, clone);
+        // An issuance is a reduction of every holder's share (rule 98.2),
+        // read on the roster at the line: a holder by a placed transfer, not
+        // written in field 7, signs too.
+        if let (true, Some(i)) = (is_issuance, issued_stake) {
+            let after = clone.stakes.as_deref().and_then(|s| s.get(i));
+            for (h, n) in self.roster_at(col, at, &pid, i as u64)? {
+                if after.is_none_or(|s| s.share_of(&Who::Id(h)) < n) && !losing.contains(&h) {
+                    losing.push(h);
+                }
+            }
+        }
         let losing: Vec<Hash> = losing.into_iter().filter(|h| !excused.contains(h)).collect();
         // Agreements draft 14 (rules 48, 94; F307, F316): who is paid less is
         // read on the roster at this line; a holder the stake's holders'
