@@ -11164,6 +11164,7 @@ var MIRS2 = {
   agreements: "00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a",
   development: "f62cc059fd01d5643cac6375b06323ad15c3d2d96729f00df15c457e5a0da6f8"
 };
+var CONTROL_CMIP = "82c58f7cb0078d65e4c1bfa2446ae78d95f9ef7a4e2e6766287927231be43a10";
 
 // src/core-types.ts
 var CORE_TYPES = {
@@ -11206,7 +11207,9 @@ var CORE_TYPES = {
     { constant: "SETTLEMENT_REQUEST", type: 22 },
     { constant: "FORK_SETTLEMENT", type: 23 },
     { constant: "NOTICE", type: 24 },
-    { constant: "JUDGE_REQUEST", type: 25 },
+    { constant: "JUDGE_REQUEST", type: 25 }
+  ],
+  control: [
     { constant: "ISSUANCE_OFFER", type: 26 },
     { constant: "PROXY", type: 27 },
     { constant: "PROXY_REVOCATION", type: 28 }
@@ -11252,10 +11255,13 @@ var KIND_WORDS = {
     SETTLEMENT_REQUEST: "requests to settle a deal\u2019s fork",
     FORK_SETTLEMENT: "settlements of a deal\u2019s fork",
     NOTICE: "notices to a payer owed money back",
-    JUDGE_REQUEST: "requests to a judge",
-    ISSUANCE_OFFER: "issuance offers",
-    PROXY: "proxies",
-    PROXY_REVOCATION: "revocations of a proxy"
+    JUDGE_REQUEST: "requests to a judge"
+  },
+  // Agreements draft 19: the default control cMIP's own acts, no longer the Agreements MIR's.
+  control: {
+    ISSUANCE_OFFER: "issuance offers (the collective\u2019s control model)",
+    PROXY: "proxies (the collective\u2019s control model)",
+    PROXY_REVOCATION: "revocations of a proxy (the collective\u2019s control model)"
   }
 };
 var plain = (constant) => constant.toLowerCase().replace(/_/g, " ");
@@ -11263,7 +11269,11 @@ var GRID_LAYERS = [
   { key: "text", layer: 1, name: "Text", say: "posts and messages (the Text layer)", kinds: CORE_TYPES.text.map((t) => ({ spec: MIRS2.text, type: t.type, name: KIND_WORDS.text[t.constant] ?? plain(t.constant) })) },
   { key: "envelopes", layer: 2, name: "Envelopes", say: "bakes, their keys, vows (the Envelopes layer)", kinds: CORE_TYPES.envelopes.map((t) => ({ spec: MIRS2.envelopes, type: t.type, name: KIND_WORDS.envelopes[t.constant] ?? plain(t.constant) })) },
   { key: "money", layer: 3, name: "Money", say: "money (the Money layer)", kinds: CORE_TYPES.money.map((t) => ({ spec: MIRS2.money, type: t.type, name: KIND_WORDS.money[t.constant] ?? plain(t.constant) })) },
-  { key: "agreements", layer: 4, name: "Agreements", say: "collectives, ownership agreements, publications, claims of works (the Agreements layer)", kinds: CORE_TYPES.agreements.map((t) => ({ spec: MIRS2.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })) },
+  { key: "agreements", layer: 4, name: "Agreements", say: "collectives, ownership agreements, publications, claims of works (the Agreements layer)", kinds: [
+    ...CORE_TYPES.agreements.map((t) => ({ spec: MIRS2.agreements, type: t.type, name: KIND_WORDS.agreements[t.constant] ?? plain(t.constant) })),
+    // The collective's control model's own acts (the default cMIP's specification, Agreements draft 19), offered with the Agreements layer.
+    ...CORE_TYPES.control.map((t) => ({ spec: CONTROL_CMIP, type: t.type, name: KIND_WORDS.control[t.constant] ?? plain(t.constant) }))
+  ] },
   // The Development MIR defines no act type of its own: a specification is published as a publication. Chosen whole.
   { key: "development", layer: 5, name: "Development", say: "specifications (the Development layer)", kinds: [] }
 ];
