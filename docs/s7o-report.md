@@ -1,4 +1,4 @@
-**Ready to merge, pending the MOR lead's reading of CI on the head** (two lines in `clients/`, the suite's, are expected to fail; see "For the Dubsar Suite").
+**Ready to merge.** CI read on `ea2b0e5` (run 42102861191): `regtest` green; `all` green in every step but one, `clients/reader` test 8, "the texts shipped are the newest draft of each MIR" (actual `MIR-agreements-draft-20.md`, expected `-21.md`): the suite's one line in `clients/reader/src/mirs.ts`, which this session may not change (see "For the Dubsar Suite").
 
 # S7o report: say each rule once
 
@@ -72,4 +72,4 @@ A subagent limited to the eight texts and the default cMIP read draft 21 whole a
 - Vectors regenerated: `git diff --exit-code core/vectors` clean, byte for byte. `python3 core/vectors/check.py`: all 291 agree, 113 verdict vectors judged.
 - `scripts/c-box/make-c-box.sh` into a scratch folder: refused nothing; 8 texts (Agreements 21, MICS v34, suite v34), 1 cMIP (draft 4), 12 vector files.
 - No release rebuild: nothing under `core/` or `wasm/` changed.
-- CI on the head: see the pull request.
+- CI on `ea2b0e5`, read by me: `regtest` green; `all` red only at `clients/reader` test 8, as expected above; every other step green, the vectors regenerated and the Python check among them.
