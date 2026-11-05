@@ -67,6 +67,15 @@ The release workflows were not dispatched: each pushes its build to `main` (`git
 ## CI, checked myself
 
 - **Before this part**, on the remote head `98b5811`: all green. That covers "tests" (jobs "all" and "regtest"), Nakišib (linux and mac) and the browsers job.
+- **On `8f837fa`**, the head with the rebuilt releases plus this report's releases section; read 5 November, 07:57 UTC: **all green.**
+  - "tests", run 1408: the Rust workspace, both vector steps, every app and module, the reproducible display client, and the regtest job;
+  - Nakišib, linux and mac;
+  - site in WebKit;
+  - Kišib's seal on macOS;
+  - Edubba's release check: GitHub's machine gives the bytes the branch carries in `built/`.
+- The earlier runs on `6b4f57f`, the releases commit, were green too.
+- The commit adding this section changes only this report.
+- **Locally:** the whole workspace passes, 794 tests in 95 suites.
 
 ## The box
 
