@@ -162,7 +162,7 @@ The payload is decoded strictly: a closed map, field 0 a text string, field 1, i
 
 ### Freeze scenarios
 
-Components exercised (freeze test suite v30; scenario numbers are the suite's):
+Components exercised (freeze test suite v36; scenario numbers are the suite's):
 
 - Text universal across sub-networks: scenario 5 (a messaging client with no Money or Agreements still exchanges text with both parties).
 - Canonical text in every act: all scenarios, since terms, names and messages are text.

@@ -623,7 +623,7 @@ The unit specification: a specification of kind 2 (Development, Part three, "A u
 
 ### Freeze scenarios
 
-*Each bullet names the scenarios of the freeze test suite v30 that cover it.*
+*Each bullet names the scenarios of the freeze test suite v36 that cover it.*
 
 #### Where a payment goes
 

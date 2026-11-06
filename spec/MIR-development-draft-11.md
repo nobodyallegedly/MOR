@@ -465,7 +465,7 @@ A MIP (kind 8) is a proposal toward a successor protocol. It names its creator, 
 
 ### Freeze scenarios
 
-*Each bullet names the scenarios of the freeze test suite v30 that cover it.*
+*Each bullet names the scenarios of the freeze test suite v36 that cover it.*
 
 #### Part one
 
