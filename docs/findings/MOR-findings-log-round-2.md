@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F433. Fable's last read: ready with named sentences; a simulated freeze (6 November 2026)
+
+**Fable's last read before the freeze** (`docs/reviews/fable-last-read.md`, pull request 128): the eight texts agree with each other; the way out walked again holds at every step; nothing a module can break. **Ready with named sentences:** three that must close because two honest verifiers could differ (item 2, an issuance's offer parameter excepted from field 35's comparison in rule 98.3; item 10, which complete clones a rotation declares; item 1, field 2's judicial tasks in rule 98.3's list and rule 67's sentence), the eight clauses of items 3 to 9, the suite's misfiled checklist lines, and the MIRs' scenario headers naming the suite v35. Not to cut further before the freeze; readability belongs to companion documents. What waits for MOR 2 or the cMIP's lead is listed in its section 3.
+
+**Settled by the MOR lead under delegation:** every lean of `docs/s7p-for-fable.md`, as Fable judged them, item 6 by its clause (rule 48's "made after" read against the version the transfer names, so the core and the vectors stand); item 4 by deleting the clause, as Fable prefers; the two one-line pointers between "Collectives in the identity chain" and "Made before, made after". All in one last text pass, S7q, then the third box.
+
+**Decided by Nobody, allegedly, 6 November 2026:** "We will simulate the freeze and unleash the companies to test it." After S7q and the box, the freeze is first rehearsed: the texts treated as frozen, and the industry teams under the Dubsar Suite build on them and try to break them; what they find decides the real freeze.
+
 ## F432 (reserved for S7p). S7o's contradictions, three settled (6 November 2026)
 
 **From S7o's report** (`docs/s7o-report.md`, pull request 126, merged; the say-it-once pass cut Agreements by about 8%, 84,414 to 77,567 words, the rest being rules said once). **Settled by the MOR lead under delegation**, along S7o's leans: 1, rule 10's reading of which version binds a buyer of a stake, rule 48 corrected to say it; 2, a change of control model ends a grant within an area in the grant format and rule 79 as in rule 74; 3, the fork's scenario line follows rule 91. S7o's older inconsistencies: wording slips fixed in S7p, the rest written up for Fable's last read of the eight texts.
