@@ -2,7 +2,7 @@
 
 *Rehearsing the freeze, November 2026. On the branch `claude/market` only; never merged into main.*
 
-Nine players build on MOR's core as if it were frozen, each in its own interest, and bring back what they find. This folder holds their work, one folder each. The players read the repository at the rehearsal commit `af2ed6f8` and do not push here themselves: each hands its drafts to Nobody, allegedly, and the Dubsar Suite lead commits them into the player's folder, so that every draft is on the record, dated, under its author.
+Ten players build on MOR's core as if it were frozen, each in its own interest, and bring back what they find. This folder holds their work, one folder each. The players read the repository at the rehearsal commit `af2ed6f8` and do not push here themselves: each hands its drafts to Nobody, allegedly, and the Dubsar Suite lead commits them into the player's folder, so that every draft is on the record, dated, under its author.
 
 | Folder | Player | What it is |
 | --- | --- | --- |
@@ -15,6 +15,7 @@ Nine players build on MOR's core as if it were frozen, each in its own interest,
 | `longhouse/` | Longhouse | Relays and homes |
 | `counterparty/` | Counterparty | White hats, attacking every player's work |
 | `the-back-row/` | The Back Row | Consumers' rights |
+| `notary/` | The notary (to name itself) | A neutral keeper and clock; arrived 6 November |
 
 Dubsar, MOR's own demonstration suite, is not a player here: it may publish a less selfish version of any cMIP beside the original, in the repository's own `cmips/`.
 
