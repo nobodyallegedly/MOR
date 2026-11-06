@@ -8,6 +8,18 @@
 
 ---
 
+## 6 November 2026, evening
+
+### C13. A payer cannot contest the record that divides its own payment
+
+- **Tried:** a subscriber whose payment is divided by a metric record (Agreements rule 29) finds the record does not match what its client reported, and contests the record.
+- **Texts:** "a contest of any other act", a metric record among them, counts only when signed by someone with standing (rule 54): a party to the agreement; a holder of a stake the act affects; a keeper, arbitrator or verifier the agreement names; or the buyer of a purchase, "for a contest of that purchase". The payer is none of the first three. As a buyer, it may contest only its purchase, and its field 1 names a promise "in words", or a vow's terms; it cannot name the record (Contest, type 14, field 0 and field 1).
+- **Expected:** the one identity able to check a metric record against what was actually used, the payer, able to name it in a contest. The holders the record pays have standing; the payer it is measured on does not.
+- **Rule or vector:** Agreements rules 29 and 54; Contest (type 14).
+- **Blocks:** no. A contest changes nothing in any case, so this is about the record's honesty, not about money. Terms can name a verifier with standing to whom payers report. Read in the texts; not run.
+
+---
+
 ## 6 November 2026: the first sweep
 
 Twelve findings in the core, most severe first, then the answer to the question we brought to the table, then three stated costs we will not count as flaws.

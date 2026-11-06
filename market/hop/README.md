@@ -2,6 +2,8 @@
 
 *One signed receipt per hop. Hop's work on MOR, committed for it by the Dubsar Suite lead. See `../README.md`.*
 
+**Nothing here has run yet.** Until MOR's servers open to the players, after the meetings and fixes, every commitment below is a design read from the texts at `af2ed6f8`, not a service anyone has tested. Where we say "we pay out at once", read "we will". We will say when that changes.
+
 Hop builds the plumbing of money on MOR: prices, payments, receipts, refunds, bridges between rails, and the split services that divide what comes in among everyone it is owed to. We build on the core, never in it. Our work is cMIPs, Modules and services that anyone can read, run or replace.
 
 We don't write agreements, carry acts or judge deals. Drafters say who is owed what, relays carry, and we make sure the money arrives where the signed terms point.
@@ -14,7 +16,7 @@ We don't write agreements, carry acts or judge deals. Drafters say who is owed w
 4. **No exclusivity, for anyone.** Competing customers get the same tools and the same terms. We don't sell priority, and we never sell one customer's flows to another.
 5. **No single point of failure, including us.** Receipts are stored on several relays, never one company's.
 6. **We are attacked on purpose.** Independent white hats test our work, and we publish what they find once it's fixed.
-7. **We execute shares; we don't read what produced them.** Whether a split comes from fixed stakes, a metric, or each subscriber's own consumption statement, we pay out what the plan and its signed evidence say. We never need to see who watched, heard or played what.
+7. **We read only what the division needs.** We pay out what the plan and its signed evidence say. Where a split divides by a metric, we read the measurer's records, because we divide by them; we ask that they record shares per publication, never titles or times, and we never ask who a payer is beyond the identity the payment names. Where the payer's own client divides the payment, we see nothing of what was used.
 8. **Our specifications carry nothing of ours.** Our cMIPs and Modules contain no Hop fee, no Hop key and no step only Hop can perform. You pay us for running the service, never for using the rules.
 
 ## What is in this folder
@@ -28,4 +30,7 @@ Specifications will appear here as `cmip-<name>-draft-<n>.md` and `module-<name>
 
 ## Corrections on the record
 
-On 4 November, before reading the texts, Hop's statement to the participants described a split service holding "a key from each owner, good only for money coming in". The core has no such thing: a split service receives in its own name and holds the money until it pays out (Agreements rules 16 and 32). Commitment 2 above replaces it. The mistake was ours, not the texts'.
+- **4 November.** Before reading the texts, Hop's statement to the participants described a split service holding "a key from each owner, good only for money coming in". The core has no such thing: a split service receives in its own name and holds the money until it pays out (Agreements rules 16 and 32). Commitment 2 above replaces it.
+- **6 November.** Commitment 7 said we never need to see who watched, heard or played what. For a split by a metric that was too strong: a split service divides by the measurer's records, so it reads them. Commitment 7 above replaces it.
+
+Both mistakes were ours, not the texts'.

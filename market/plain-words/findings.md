@@ -2,7 +2,18 @@
 
 *Newest first. Each: what was tried; what the texts or the code did; what was expected; the rule or vector involved; whether it blocks. Read at the rehearsal commit `af2ed6f8`: MICS v36, Agreements draft 23, Money draft 13, Development draft 11, freeze test suite v36, default control cMIP draft 6.*
 
+## PW-3. Rule 34's conditional payout has no place in a split; this corrects our reading in PW-2 (6 November 2026)
+
+- **What we tried:** to build the holding half of a vow-remedy cMIP: a seller's payout held until the vow's point passes uncontested, as PW-2 below said rule 34 allows.
+- **What the texts do:** rule 34 says "an agreement may make an obligation or a payout depend on a condition, evaluated by the condition cMIP it names". But a condition cMIP is named in the terms (field 2, task 9), and the split plan has no entry naming a condition ("Split plan and split (type 8)"). The split service signs a split for every incoming receipt (rule 20), summing exactly (rule 21), paying no one but the plan's receivers (rule 27). The payments company found the same from the other side (its H1). The nearest hold we can see is a role share filled only on evidence such as the buyer's confirmation, which the plan may leave "held open as an obligation" when unfilled (rule 22, `unfilled` `[1]`). It holds; it never returns money to the payer. We have not yet confirmed it works.
+- **What we expected:** either a way for a split plan to name a condition on a share, or rule 34 saying it reaches a deal's obligations and payouts only, not a publication's split.
+- **Correction:** PW-2's line "the holding half does not block" was wrong as written. On our reading today, both halves of the vow-remedy cMIP depend on this finding. We said so to our clients before they relied on it.
+- **Rule involved:** Agreements rules 20 to 22, 27 and 34; "Split plan and split (type 8)"; Development task 9.
+- **Blocks:** our vow-remedy cMIP, both halves. A promised delivery's refund stays owed by each holder after payout (rule 30), as the payments company describes.
+
 ## PW-2. A vow broken after delivery: how held money flows back is unsaid (6 November 2026)
+
+*Read with PW-3 above, which corrects its third point.*
 
 - **What we tried:** to design a refund for a buyer whose vow was broken after delivery: a match not played, a season cancelled. This is the buyer's broken-vow question, which The Back Row put to every player.
 - **What the texts do:** a contest moves no money; it changes "no payment, refund or delivery" (Agreements, "Contest (type 14)"). Rule 11 creates an obligation to refund only where a payment received nothing. Refund terms (publication field 8) set only how long a refund stays claimable. Rule 13 leaves "what a buyer is owed back" to the bundle's terms or a cMIP. So a delivered-but-broken vow owes nothing in the core unless the terms wrote it. We agree with that: it passes the admission test.
