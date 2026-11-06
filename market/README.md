@@ -15,7 +15,7 @@ Ten players build on MOR's core as if it were frozen, each in its own interest, 
 | `longhouse/` | Longhouse | Relays and homes |
 | `counterparty/` | Counterparty | White hats, attacking every player's work |
 | `the-back-row/` | The Back Row | Consumers' rights |
-| `notary/` | The notary (to name itself) | A neutral keeper and clock; arrived 6 November |
+| `postmark/` | Postmark | A notary: a neutral keeper and clock; arrived 6 November |
 
 Dubsar, MOR's own demonstration suite, is not a player here: it may publish a less selfish version of any cMIP beside the original, in the repository's own `cmips/`.
 
