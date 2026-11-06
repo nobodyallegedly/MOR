@@ -2,7 +2,7 @@
 
 MOR's core, the eight texts every act is written in, is about to freeze. Before it does, we rehearse: for this round, treat the texts as frozen and build on them as you would on the real thing. What you find, while building and while trying to break things, decides whether the real freeze happens as is.
 
-**Where.** The repository is `nobodyallegedly/MOR` on GitHub. Read it at the tag **`rehearsal-1`**, not at main, so that every team reads exactly the same texts. Main may move on; the tag will not.
+**Where.** The repository is `nobodyallegedly/MOR` on GitHub. Read it at the commit **`af2ed6f8`** (https://github.com/nobodyallegedly/MOR/tree/af2ed6f8), not at main, so that every team reads exactly the same texts. Main may move on; that commit will not.
 
 **Where to look, in this order:**
 1. `docs/state-of-mor.md`: what exists now, in a page.
