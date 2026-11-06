@@ -1,0 +1,12 @@
+The last read before the freeze, in the MOR repository (`nobodyallegedly/MOR`), on main: the eight texts whole (the MICS v35, the six MIRs: Identity, Text, Envelopes, Money draft 13, Agreements draft 22, Development; the freeze test suite v35) and the default control cMIP draft 5. Start from `docs/s7p-for-fable.md` (eleven items, each with both readings quoted, options and a lean); `docs/state-of-mor.md` and, in `docs/findings/MOR-findings-log-round-2.md`, F420 to F432 for what changed since your last reviews (the trim; the constitution and the judicial tier in the core; dilution as a reduction; the boundary for a second model; everyday acts by share; the say-it-once pass).
+
+**Why now.** After this read: the third box (the C verifier's third edition, built from these texts alone), then the freeze, Nobody, allegedly's word. Whatever is frozen stays for all of MOR 1; MOR is built to be a good ancestor, the way out above all.
+
+**Please judge, plainly:**
+1. **The eleven items** on `docs/s7p-for-fable.md`: agree with each lean or say otherwise, with the sentence that would change. Item 6 first (rule 48 now reads the version in force at placement, the core's `bought_under` the version the transfer names; they differ only where a seller names a stale version, and no vector covers it).
+2. **Anything that must change before the freeze**, from reading the eight texts and the cMIP whole: a contradiction, a rule two builders would read two ways, a guarantee a module can still break, a gap in the way out (leaving, carrying one's identity and what is one's own, succession, forking, closing, the escape). For each, the sentence and its cost.
+3. **What can wait for MOR 2**, said as such, so it is not mistaken for a freeze blocker.
+4. **The size and the read.** Agreements is now about 77,000 words, the six MIRs about 136,000. Is anything left that a stranger cannot follow without the history, and is the core's shape, as Nobody, allegedly, put it, "the grammar of agreeing", visible from the texts?
+5. **Your view on freezing** these texts once the questions above are answered: ready, ready with named sentences, or not ready and why.
+
+Plain words first, then precisely. Do not change texts, code or vectors; decide nothing. Write `fable-last-read.md` (in the repository: `docs/reviews/`, branch `claude/fable-last-read`, a pull request, no merge). Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
