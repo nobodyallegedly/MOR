@@ -508,7 +508,7 @@ Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as r
 
 ### Freeze scenarios
 
-*Each bullet names the scenarios of the freeze test suite v30 that cover it.*
+*Each bullet names the scenarios of the freeze test suite v36 that cover it.*
 
 #### Every act, public and private
 

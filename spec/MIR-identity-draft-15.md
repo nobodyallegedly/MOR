@@ -1071,7 +1071,7 @@ Fixed at the freeze: this MIR's spec hash, computed from its frozen text as Deve
 
 ### Freeze scenarios
 
-Components exercised (freeze test suite v30; scenario and step numbers are the suite's):
+Components exercised (freeze test suite v36; scenario and step numbers are the suite's):
 
 - Genesis, homes and routes, including an inbox route: all scenarios.
 - Rotation by chain key, delivered at the home: 1, 5; pending until the home rule is met: a component under "Identity".
