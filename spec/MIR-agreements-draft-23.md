@@ -2689,7 +2689,7 @@ power = [ 0 ]                             ; the parent's constitutional change r
 
 **A deal** (terms without field 12) has every party as its clone rule too. Any deal whose field 5 is not `[0]` is invalid, and so are terms of a deal carrying field 18, 19 or 35. *The fields are kept rather than dropped so that every agreement has one format, and a deal says on its face what it needs.*
 
-**In a deal, the absence authority is one identity**: a party, a keeper's operator or a collective, named by the clause's first form, `[0, hash]`. Terms of a deal whose abandonment clause names a threshold of the other parties, `[1, uint]`, are invalid, whatever its number.
+**In a deal, the absence authority is a named identity** (a keeper's operator, a party, a collective or a third party), named by the clause's first form, `[0, hash]`. Terms of a deal whose abandonment clause names a threshold of the other parties, `[1, uint]`, are invalid, whatever its number.
 
 **A judge never handles what it judges.** This holds in every agreement, a deal's as a collective's.
 
