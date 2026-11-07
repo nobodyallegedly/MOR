@@ -3836,8 +3836,18 @@ impl<'a> AgreementsView<'a> {
         if !lineage.iter().any(|(v, _)| *v == d.clause) {
             return Ok(Err("the clause it applies is not a version of the agreement it names (rule 85, F313)".into()));
         }
-        let Some(clause) = t.abandonment.clone() else {
-            return Ok(Err("the agreement it names carries no abandonment clause".into()));
+        // F436.6 D (rule 85, draft 24): the clause of the version the holder
+        // last signed as a party; or, for a holder that bought in, of the
+        // version in force where the collective's line placed its transfer;
+        // a holder that did neither, the clause in force.
+        let expected = self.holder_clause_version(&d, lineage)?;
+        if d.clause != expected {
+            return Ok(Err(
+                "field 1 is not the version whose clause judges this holder: the version it last signed as a party, or, having bought in, the version in force where the collective's line placed its transfer (rule 85)".into(),
+            ));
+        }
+        let Some(clause) = lineage.iter().find(|(v, _)| *v == expected).and_then(|(_, x)| x.abandonment.clone()) else {
+            return Ok(Err("the version whose clause judges this holder carries no abandonment clause (rule 85)".into()));
         };
         if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
             return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
@@ -3858,6 +3868,62 @@ impl<'a> AgreementsView<'a> {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
         Ok(Ok((d, clause)))
+    }
+
+    /// Rule 85 (F436.6 D): the version whose abandonment clause judges a
+    /// holder of a collective's stake in itself who is no party. The latest
+    /// version of the lineage the holder signed as a party (its drafter, or
+    /// by a signature act naming it); else, where the collective's line
+    /// placed a transfer to it, the agreement in force at the act that
+    /// placed it (the latest such placement); else the clause in force.
+    fn holder_clause_version(&self, d: &AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Hash> {
+        for (v, vt) in lineage {
+            if !vt.parties.contains(&d.party) {
+                continue;
+            }
+            let drafted = self.v.get(v).and_then(|h| h.act.outside.signer) == Some(d.party);
+            if drafted || !self.signers(v, &[d.party]).is_empty() {
+                return Ok(*v);
+            }
+        }
+        let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
+        let Some(collective) = self.collective_of(&lineage[0].0)? else {
+            return Ok(lineage[0].0);
+        };
+        let col = self.col(&collective);
+        let mut best: Option<(usize, Hash)> = None;
+        for x in self.col_acts(&col) {
+            if self.status(&x.id) != Status::Valid {
+                continue;
+            }
+            let mut places: Vec<Hash> = x.inside.acks.iter().flatten().copied().collect();
+            if self.is_agreements(x, types::RECORD) {
+                if let Ok(e) = self.record_eval(&col, x) {
+                    if e.line {
+                        places.extend(e.places.iter().copied());
+                    }
+                }
+            }
+            for y in places {
+                let Some(h) = self.v.get(&y) else { continue };
+                if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+                    continue;
+                }
+                let Ok(e) = self.transfer(&y) else { continue };
+                if !e.effective || e.transfer.to != d.party || !versions.contains(&e.transfer.agreement) {
+                    continue;
+                }
+                if let Ok(Some(v)) = self.in_force(&x.id) {
+                    if let Some(i) = versions.iter().position(|w| *w == v) {
+                        // The latest placement: the version nearest the head.
+                        if best.is_none_or(|(j, _)| i < j) {
+                            best = Some((i, v));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(best.map(|(_, v)| v).unwrap_or(lineage[0].0))
     }
 
     /// A declaration as the act `by` uses it (rule 51, F172): the record

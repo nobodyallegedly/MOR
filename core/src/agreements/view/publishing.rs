@@ -192,7 +192,35 @@ impl<'a> AgreementsView<'a> {
                 parties.push(x);
             }
         }
-        let unsigned: Vec<Hash> = parties.iter().filter(|p| !self.pub_signed(id, &drafter, p)).copied().collect();
+        // F436.2 (rule 11, draft 24): the owners' side's exit. A later
+        // version that sells nothing (its ending), or that changes only its
+        // split service and backups (fields 3, 11 and 12), counts with the
+        // owners' side's signature alone, each service or backup it newly
+        // names signing it to accept; every other version needs every party.
+        let exit_needs: Option<Vec<Hash>> = follows.and_then(|(_, prev)| self.pub_act(&prev)).and_then(|(_, pa)| {
+            let old = &pa.publication;
+            let ending = publication.sold.as_ref().is_some_and(|s| s.is_empty());
+            let mut same = publication.clone();
+            same.service = old.service;
+            same.backups = old.backups.clone();
+            same.failed = old.failed.clone();
+            if ending || same == *old {
+                let mut need = vec![owners_side];
+                if publication.service != old.service {
+                    need.push(publication.service);
+                }
+                for b in &publication.backups {
+                    if !old.backups.contains(b) && *b != old.service && !need.contains(b) {
+                        need.push(*b);
+                    }
+                }
+                Some(need)
+            } else {
+                None
+            }
+        });
+        let required: &[Hash] = exit_needs.as_deref().unwrap_or(&parties);
+        let unsigned: Vec<Hash> = required.iter().filter(|p| !self.pub_signed(id, &drafter, p)).copied().collect();
         if !unsigned.is_empty() {
             problems.push("not every party has signed it: the owners' side, each partner, the split service and each backup".into());
         }
@@ -755,7 +783,12 @@ impl<'a> AgreementsView<'a> {
                     e.verdict = PurchaseVerdict::Unrecorded;
                     return Ok(Some(e));
                 }
-                if !endings.is_empty() && receipts.iter().all(|r| self.after_own_signature(r, &service, &endings)) {
+                // F436.2 (rule 12, draft 24): where the owners' side ended it
+                // alone, the service's own history holding the ending stands
+                // in for its signature, as for a withdrawal it did not sign.
+                if !endings.is_empty()
+                    && receipts.iter().all(|r| self.after_own_signature(r, &service, &endings) || endings.iter().any(|w| self.act_history(&r.id).contains(w)))
+                {
                     return no(e, "on a push rail, the split service recorded its receipt after its own signature on the version ending the publication: a payment racing the ending, owed back by the service, then by each party (rule 11)");
                 }
                 // A sale before a price tag's withdrawal, or its price's
