@@ -595,6 +595,9 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     for r in facts["rail_payments"].as_array().into_iter().flatten() {
         av.payments.insert(b(&r["proof"]), b(&r["payment"]));
     }
+    for r in facts["rail_amounts"].as_array().into_iter().flatten() {
+        av.rail_amounts.insert(b(&r["proof"]), r["amount"].as_u64().unwrap());
+    }
     for x in facts["judges_lapsed"].as_array().into_iter().flatten() {
         av.judges_lapsed.insert((h(&x["question"]), h(&x["judge"])));
     }

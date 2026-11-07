@@ -134,6 +134,12 @@ pub struct AgreementsView<'a> {
     /// ([`AgreementsError::PaymentUnstated`], [`Self::paid_toward`],
     /// [`Self::disagreements`]). A fact the caller states, like `rail_valid`.
     pub payments: BTreeMap<Vec<u8>, Vec<u8>>,
+    /// The amount the rail's answer states the hop moved, read from the
+    /// proof (Money rule 8, F436's R14), by proof (field 1). Read by Money
+    /// rule 12's batch total: records of one payment under one batch whose
+    /// amounts together exceed it count for none until the receiver
+    /// resolves them. A fact the caller states, like `rail_valid`.
+    pub rail_amounts: BTreeMap<Vec<u8>, u64>,
     /// Set when an answer compared two records whose sameness rests on a
     /// payment not stated in [`Self::payments`] ([`Self::unstated_payment_read`]).
     unstated: std::cell::Cell<bool>,
@@ -632,6 +638,7 @@ impl<'a> AgreementsView<'a> {
             rail_valid: BTreeMap::new(),
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
+            rail_amounts: BTreeMap::new(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -704,6 +711,7 @@ impl<'a> AgreementsView<'a> {
             rail_valid: self.rail_valid.clone(),
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
+            rail_amounts: self.rail_amounts.clone(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -7386,7 +7394,9 @@ impl<'a> AgreementsView<'a> {
             .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
             .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == act))
             .filter(|x| !self.refuses(&x.id))
-            .filter_map(|x| res.position_of(&x.id))
+            // F436.1 (rule 10): a successor's debt accepted stands whatever
+            // an escape of the successor later abandons.
+            .filter_map(|x| res.position_of(&x.id).or_else(|| self.v.escape_abandoned_at(signer, &x.id)))
             .min()
     }
 
@@ -7875,7 +7885,9 @@ impl<'a> AgreementsView<'a> {
             if !endings.contains(&c.signs) {
                 continue;
             }
-            let Some(p) = self.v.resolve(&signer).position_of(&x.id) else { continue };
+            // F436.1 (rules 10, 91): a chain signature on an ending stands
+            // whatever an escape of its signer later abandons.
+            let Some(p) = self.v.resolve(&signer).position_of(&x.id).or_else(|| self.v.escape_abandoned_at(&signer, &x.id)) else { continue };
             // F153: a member's chain signature counting only through the
             // verifier's own attempts is left aside (the ending is then
             // judged unknown by `binding`).
@@ -8163,6 +8175,31 @@ impl<'a> AgreementsView<'a> {
         // whether a record naming another purpose is this payment; only
         // then whether the receiver's receipts of it resolve the conflict.
         let one = |x: &Hash, p: &[u8]| self.same_payment_of((Some(x), p), (Some(id), proof));
+        // Money rule 12's batch total (F436's R25): receipts of one payment
+        // sharing it under one batch count only where their amounts
+        // together do not exceed what the payment shows, the amount the
+        // rail's answer states; otherwise none counts until the receiver
+        // resolves them.
+        if let (Some(b), Some(&shown)) = (batch, self.rail_amounts.get(proof)) {
+            let own = match self.v.get(id).map(|h| Fin::decode(h.inside.type_, &h.inside.payload)) {
+                Some(Ok(Fin::Receipt(rc))) => rc.amount.value,
+                _ => 0,
+            };
+            let mut total = own;
+            for h in self.v.held_acts() {
+                if h.inside.spec != self.mirs.money || &h.id == id {
+                    continue;
+                }
+                if let Ok(Fin::Receipt(rc)) = Fin::decode(h.inside.type_, &h.inside.payload) {
+                    if &rc.rail == rail && rc.batch.as_ref() == Some(b) && self.author(h) == Some(rc.payee) && one(&h.id, &rc.proof) {
+                        total = total.saturating_add(rc.amount.value);
+                    }
+                }
+            }
+            if total > shown {
+                return true;
+            }
+        }
         let conflict = records.iter().any(|(x, p, _, same, o, b)| !same && !o && !(batch.is_some() && batch == b.as_ref()) && one(x, p));
         if !conflict {
             return false;
@@ -8320,6 +8357,48 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
+
+    /// Money rule 4, read before any proof: a held receipt or claim naming
+    /// a rail Module that no held act names as one of the payee's rails (a
+    /// payee pointer, a grantee's included, a vault entry of the payee's
+    /// chain, or a claim's refund rail) counts for nothing, whatever its
+    /// rail's proof shows. Where any held act names the Module, the rail's
+    /// answer decides ([`Self::rail_named_at`]).
+    pub(super) fn rail_never_listed(&self, id: &Hash) -> bool {
+        use crate::money::{self as fin, Payload as Fin};
+        let Some(x) = self.v.get(id).filter(|h| h.inside.spec == self.mirs.money) else { return false };
+        let (rail, payee) = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => (r.rail, r.payee),
+            Ok(Fin::Claim(c)) => (c.rail, c.payee),
+            _ => return false,
+        };
+        // A verifier holding no rail list of the payee cannot tell.
+        let mut listed = false;
+        for h in self.v.held_acts() {
+            if h.inside.spec != self.mirs.money {
+                continue;
+            }
+            match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::PayeePointer(q)) if q.rails.iter().any(|r| r.module == rail) => return false,
+                Ok(Fin::PayeePointer(q)) if q.payee == payee => listed = true,
+                Ok(Fin::Claim(c)) if c.refund.as_ref().is_some_and(|r| r.module == rail) => return false,
+                _ => {}
+            }
+        }
+        let res = self.v.resolve(&payee);
+        if res.links.is_empty() {
+            return false;
+        }
+        for st in &res.states {
+            if let Ok(Some(Some(entries))) = fin::vault_in(&self.mirs.money, &st.declarations) {
+                if entries.iter().any(|e| e.rail_module == rail) {
+                    return false;
+                }
+                listed = true;
+            }
+        }
+        listed
+    }
 
     /// Whether a held receipt or claim counts for its payee where the rail
     /// answered it paid (Money rules 4, 12 to 15; [`Self::payment_counts`]),
@@ -8775,6 +8854,12 @@ impl<'a> AgreementsView<'a> {
             return true;
         }
         if self.rail_invalid.contains(id) {
+            return false;
+        }
+        // Money rule 4 (F436, Fable's R39): a record naming a rail Module
+        // the payee never listed counts for nothing before any proof is
+        // read, never as unanswered.
+        if self.rail_never_listed(id) {
             return false;
         }
         // Only a receipt or claim has a verification answer (Money rule 8):

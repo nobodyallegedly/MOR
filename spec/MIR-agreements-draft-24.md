@@ -369,9 +369,9 @@ It counts, and sells, once every party has signed it ("Publication (type 6)"). *
 
 **A publication changes by versions on its own chain**, each a later version signed by every party of that version, save the owners' side's exit below. A purchase under any version counts. Two versions of one previous are the parties' fork, shown.
 
-**The owners' side's exit.** A publication's owners' side, under its own rule, may alone sign a version that sells nothing (its ending), or one that changes only its split service and backups (fields 3, 11, 12), each service or backup it newly names signing it to accept, as rule 16 says; every other version needs every party. A replaced service withdraws its tags (Money rule 18) and still owes payouts on everything it received (rule 31). **A publication may name a cMIP that adds conditions to that exit** (a notice, a payment owed on ending, a handover), as its condition cMIP (field 9, task 9): such a version then counts once that cMIP answers true for it, and is pending until then, unknown to a verifier that does not hold the cMIP. **No cMIP removes the exit**: it is the way out, which nothing a cMIP decides reaches (rule 99). *Stated cost: a partner or a split service loses a veto over the ending and over its own replacement; one who wants security writes a term, an obligation owed on ending, as in every other deal. Past sales stand, so nothing paid moves.*
+**The owners' side's exit.** A publication's owners' side, under its own rule, may alone sign a version that sells nothing (its ending), or one that changes only its split service and backups (fields 3, 11, 12), each service or backup it newly names signing it to accept, as rule 16 says; every other version needs every party. A replaced service withdraws its tags (Money rule 18) and still owes payouts on everything it received (rule 31). **A publication may name a cMIP that adds conditions to that exit** (a notice, a payment owed on ending, a handover). **No cMIP removes the exit**: it is the way out, which nothing a cMIP decides reaches (rule 99). *Stated cost: a partner or a split service loses a veto over the ending and over its own replacement; one who wants security writes a term, an obligation owed on ending, as in every other deal. Past sales stand, so nothing paid moves.*
 
-**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it, or by its owners' side alone (above). Past sales stand. **A payment racing the ending** (on a push rail, one its split service receipts after its own signature on the version ending it, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout**: what the agreement received is what its holders were paid, and a holder that is itself an ownership agreement owes it back through its own holders in turn. This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication.
+**A publication is ended by a later version that sells nothing** (field 0 empty), signed by every party of it, or by its owners' side alone (above). Past sales stand. **A payment racing the ending** (on a push rail, one its split service receipts after its own signature on the version ending it, or after its history holds an ending the owners' side signed alone, as rule 12 reads it) **is owed back: by the split service from what it holds of it, and, past that, by each party of the publication in the share of it it received, each an open obligation** (rule 30). **Where the owners' side is an ownership agreement, each holder paid on its line owes back their own payout**: what the agreement received is what its holders were paid, and a holder that is itself an ownership agreement owes it back through its own holders in turn. This obligation is this rule's, as the split service's is, not one the terms write: it is open whether or not the holder signed the publication.
 
 **Two stops, two different people's.** A publication's ending is a version its owners' side may sign alone, so no partner and no service ends a publication alone. **A price tag's withdrawal is its signer's alone** (Money rule 18): the publication's split service, or the party it designates to sign its tags. Withdrawing the tag stops sales at that price, and is the one-sided stop, held by the publication's side; ending the publication stops it for everyone, and needs the owners' side. *So a co-owner short of the owners' side's rule, or the uploader of a bake the publication sells, cannot stop the publication's sales alone; the publication's side can stop selling at once, and the owners' side ends it.*
 
@@ -1226,7 +1226,7 @@ An address is a rail, a rail Module and the address bytes it reads (Money, payee
 
 #### Rule 17. The split task, handed to the split cMIP the publication names
 
-**The split service, its backups in order and what counts as a failed attempt are fields of the publication, read by its split cMIP**, signed with it by every party (fields 3, 11 and 12).
+**The split service, its backups in order and what counts as a failed attempt are fields of the publication, read by its split cMIP**, signed with it by every party (fields 3, 11 and 12), or by the owners' side alone where it replaces them (rule 11).
 
 **Attempts run per payment, not by stages:**
 
@@ -1960,7 +1960,7 @@ A clause naming only the member a version removes goes with the removal. This is
 
 A departed holder's stake plan changes only with that holder's signature too.
 
-Every member, and every departed holder, is judged by the version in force.
+Every member, and every departed holder, is judged by the version in force, save a declaration of absence against a holder who is no party, judged under the clause rule 85 names.
 
 *It is the joint signature that matters. If a member who did not sign a change kept the version they signed, two members could hold different judges, and where one joined after a change the other never signed, no judge would be signed by both: nothing would say who decides between them. With one version for everyone, every dispute has one judge both signed. Arbitrators, the condition cMIP and the anchoring cMIP can each decide who wins a dispute, so a majority still cannot pick a friendlier judge after the fact.*
 
@@ -2217,7 +2217,7 @@ A party with nothing else to sign shows presence with a liveness act.
 
 #### Rule 87. Declaration
 
-A declaration is a signed act by the authority the clause names, stating the agreement, the clause, the party and the outcome (type 13). In a collective the party may be a holder of its stake in itself who is no party, under the clause in force, with the stake-moving outcomes only (rule 85).
+A declaration is a signed act by the authority the clause names, stating the agreement, the clause, the party and the outcome (type 13). In a collective the party may be a holder of its stake in itself who is no party, under the clause rule 85 names for it, with the stake-moving outcomes only (rule 85).
 
 The core checks:
 - that it is signed by that authority (for a threshold of the other parties, by one of them, completed by the others' signature acts until the number is met);
@@ -2837,7 +2837,7 @@ Its `objects`: a later version names `[first, previous]` first. Where field 1 is
 - every party of it has signed it: its drafter by drafting it, each other party by a signature act naming it (type 1), an agreement that is a party as rule 15 says;
 - the partners' shares, with what the split plan takes off the top as fixed shares, do not exceed 1,000,000 together;
 - field 7 has a time reference;
-- a later version is signed by the same parties' consent, every party of that version, save a version the owners' side may sign alone (rule 11: one that sells nothing, or changes only fields 3, 11 and 12, each service it newly names signing it), counting where any condition cMIP it names answers true (rule 11).
+- a later version is signed by the same parties' consent, every party of that version, save a version the owners' side may sign alone (rule 11: one that sells nothing, or changes only fields 3, 11 and 12, each service it newly names signing it).
 
 A version that does not count sells nothing, and a price tag naming it buys nothing.
 
@@ -3700,7 +3700,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 - A threshold abandonment authority of two of the other parties, both counted: one signs the declaration and the other a signature act naming it, which the collective acknowledges before its line or in the record registering it; the declaration counts there; a signature it acknowledges only after that record completes nothing there, and a later record registers the declaration: 3.
 - A threshold abandonment authority of two of the other parties against the last member able to draw a record: the recovery rotation removing them names the second signature act, and the declaration counts there; one that names none, the second signature placed nowhere before it, leaves the declared member counted: 3.
 - A declaration naming another clause version than the one the absent member signed last, an outcome the clause does not allow, or signed by someone other than the authority registers nothing (rule 87): 3.
-- A departed holder vanishes: declared absent under the clause in force, though no party, its stake passes to its plan's successor, who signs the sale; with no plan, outcome 1 shares it out and the sale proceeds; a declaration against it stating outcome 0, 3 or 4 counts for nothing: 3.
+- A departed holder vanishes: declared absent under the clause of the version it last signed as a party, though no party now, its stake passes to its plan's successor, who signs the sale; with no plan, outcome 1 shares it out and the sale proceeds; a declaration against it stating outcome 0, 3 or 4 counts for nothing: 3.
 - A collective whose constitutional change rule counts among its stake's holders, its abandonment clause allowing outcome 0 alone, or naming as authority the holder it would have to declare: invalid; allowing outcome 1 with an authority able to declare every holder who is no party: valid, a vanished holder's stake moved and the constitution changed without it: 3.
 - A declaration of absence registered by a line, then its authority rotates and disowns it, or the declared member rotates and disowns the signature field 1 names: the record stays a line, the declaration shown disputed: 3.
 

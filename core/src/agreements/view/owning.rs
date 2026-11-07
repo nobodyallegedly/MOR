@@ -419,15 +419,43 @@ impl<'a> AgreementsView<'a> {
 
     /// The position on the seller's identity chain of the chain signature
     /// naming the transfer (the earliest that counts), F132.
+    ///
+    /// F436.1 (rule 10): a chain signature's placing stands for the transfer
+    /// once the transfer is complete (the buyer's signature act placed too),
+    /// whatever an escape of the seller later abandons: an abandoned chain
+    /// signature then still places it, at its position, the escape shown as
+    /// a dispute on it ([`Self::escape_disputes`]).
     fn transfer_place(&self, id: &Hash, seller: &Hash) -> Option<u64> {
         let res = self.v.resolve(seller);
+        let complete = || {
+            self.v
+                .get(id)
+                .and_then(|h| StakeTransfer::decode(&h.inside).ok())
+                .is_some_and(|t| !self.signers(id, &[t.to]).is_empty())
+        };
         self.v
             .signed_by(seller)
             .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
             .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == id))
             .filter(|x| !self.refuses(&x.id))
-            .filter_map(|x| res.position_of(&x.id).map(|p| p as u64))
+            .filter_map(|x| {
+                res.position_of(&x.id)
+                    .or_else(|| self.v.escape_abandoned_at(seller, &x.id).filter(|_| complete()))
+                    .map(|p| p as u64)
+            })
             .min()
+    }
+
+    /// F436.1: the escapes of `signer` that abandon a chain signature naming
+    /// `act` (shown as a dispute on it, where the act stands).
+    pub fn escape_disputes(&self, signer: &Hash, act: &Hash) -> Vec<Hash> {
+        let res = self.v.resolve(signer);
+        self.v
+            .signed_by(signer)
+            .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == act))
+            .filter_map(|x| self.v.escape_abandoned_at(signer, &x.id))
+            .map(|p| res.links[p].act)
+            .collect()
     }
 
     /// The splits (by any service) paying `seller` on the stake a transfer
