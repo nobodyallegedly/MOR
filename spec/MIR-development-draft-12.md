@@ -124,6 +124,7 @@ Several Modules may operate at once under the one cMIP an agreement names for a 
 | 12 | Agreements | Grant limits | a grant and an act under it | within limits, or not |
 | 13 | Agreements | Work claims | a work hash and a claim | a claim, optionally with a commitment made before upload |
 | 14 | Agreements | Absence proof | an abandonment declaration, the clause's parameters, and the acts the record's history holds | accepted, refused or unknown |
+| 15 | Agreements | Termination terms | the agreement's version in force, its own parameters (terms field 36, publication field 13), a terminating act, and the acts that act's history holds | met, not yet met (condition evaluation's "pending", under this task's name) or unknown (Agreements, "Termination") |
 
 **Not a task: the proof checker of a proven delivery** (Agreements rule 11, and "A service sold under a cMIP's terms"). A proven delivery is one that leaves a proof any verifier can check from data alone, no one's word trusted. It uses the access form, `[ 2, [ cMIP, params ] ]`, under that cMIP's terms. A cMIP may produce the proof; the verifier checks the proof itself, never the cMIP's say-so. A delivery the verifier cannot check from data it holds is not proven, whatever the cMIP signs. A verifier asks the checker of the cMIP the publication names for it, among those it holds, for the proof's verdict; with none held, the delivery is not proven for it.
 
@@ -141,7 +142,7 @@ A specification whose content is not in the format is no specification, and no c
 
 A client may fetch a specification by its hash, show it to the user, and adopt it on the user's choice.
 
-#### Rule 12. Exit
+#### Rule 12. Moving off a cMIP
 
 Agreements are always in core format, so activity on a fading cMIP moves by cloning agreements onto another (Agreements).
 
@@ -471,7 +472,7 @@ A MIP (kind 8) is a proposal toward a successor protocol. It names its creator, 
 
 - Module identity by hash; frozen once uploaded: 2, 8.
 - Consent by whoever bears the cost, including creator-side fees: 2.
-- Exit by cloning onto another cMIP: 1.
+- Moving off a cMIP by cloning onto another: 1.
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - A publication's split shown with its computed payouts before signing: 2.
 - A bake in the creator's name signed with a stolen key, disowned by the creator's rotation and relied on by another identity: shown as disputed, and the specification unclaimed by the creator: 8.
