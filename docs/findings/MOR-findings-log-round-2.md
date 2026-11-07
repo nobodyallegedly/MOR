@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F436. The rehearsal's decisions (7 November 2026)
+
+Taken one at a time after comparing the two assessments (`docs/lead/rehearsal-1-comparison.md`). Written into the texts in one pass when all are taken.
+
+1. **The escape and what others relied on (C; Fable R1). Decided by Nobody, allegedly:** "Disputed matters here, even if simply as a signal." What a chain act placed stands once complete (a transfer both signatures placed, an ending complete, a successor's debt accepted), and the escape is shown as a dispute on it; an act bound to a rotation an escape abandons is judged as rule 34 judges an act outside a rotation's kept ancestry: void, or, where another identity acknowledged it or a named keeper recorded it before the escape, shown as disputed, never silently invalid. The robbed owner's loss in the window is the stated cost, as for a stolen chain key. Fable's wider reach taken. One new step in suite scenario 3.9: an escape after a placed sale.
+
 ## F435. The first freeze rehearsal: the cases against the core, assessed (7 November 2026)
 
 **Pattern:** 4 and the way out. Ten players read the texts at `af2ed6f8` as frozen, met, negotiated and each filed a case against the core (`market/*/beef-with-the-core.md`). The MOR lead assessed every case overnight (`docs/lead/rehearsal-1-assessment.md`); Fable assesses independently (`docs/reviews/fable-rehearsal-1.md`); the two are compared before anything is written.
