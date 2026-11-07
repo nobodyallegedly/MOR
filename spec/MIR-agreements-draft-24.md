@@ -3760,6 +3760,9 @@ The scenario numbers after each colon are those of the freeze test suite.
 - Rotation and escape: the collective's chain key rotated from shares; its homeless rotation, signed by its chain key, its own escape, which no old home's objection voids: 9.
 - A refund owed back: a payment racing a publication's ending owed back by the split service from what it holds, then by each party in its share: 9.
 - A work cloned to MOR 2: its bake, claim and ownership agreement carried; its publications, distribution, remade: 9.
+- An escape after a placed sale: the complete transfer stands, the escape shown as a dispute on it: 3.9ak.
+- An outside holder declared absent only under the clause it accepted: 3.7bb.
+- The owners' side replacing a split service that does not sign, or ending its publication alone: 7.7.
 
 #### Forked deals
 

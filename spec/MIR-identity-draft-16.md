@@ -1095,6 +1095,9 @@ Components exercised (freeze test suite v37; scenario and step numbers are the s
 - Closure by rotation; a stolen operator key cannot close a home: 5.
 - Homeless rotation: closure, objection, auditor absence statements judged by the auditors in force before it, the vanished home's audited history proved by the proofs the owner carried; receipts from the new homes; final once the next rotation counts, yet still beaten by a rotation the old homes held, so a used chain key found after a closure rewrites nothing; re-homed without audit never final by the next rotation, a censored reader, a thief's second rotation voided with the first: 5.
 - Escape with both keys past a hostile home, including after a refused normal rotation: 5.
+- An escape abandoning a rotation: the acts bound to it judged as rule 34 judges an act outside a kept ancestry, disputed where relied on; a sale its chain signature placed standing once complete: 3.9ak.
+- A receipt that counted keeps counting after its operator's closing rotation keeps nothing; an audited owner's position contested by a rival dropping the audit, never the thief's outright: 5.7c, 5.7d.
+- A succession confirmed by a chain signature, a collective's so: 5.8b.
 - Several unlinked identities; linking signed by both, ended by either; public or encrypted: 5.
 - Succession: 5.
 - Linking an outside identifier; signing in after a rotation: 5.
