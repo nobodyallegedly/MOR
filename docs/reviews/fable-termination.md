@@ -99,3 +99,13 @@ Before a signature on an agreement naming termination terms, or on a version cha
 ## What I read and what I reason
 
 Read: F436 whole, item 7 first; S7r's report, F437 and its "two alignments"; Agreements 24 at rules 10, 11, 12, 13, 31, 34, 35, 47, 49, 55, 70, 71, 74, 76, 85 to 92, 98, 99, section 22 and the publication and terms formats; Development 12's rules 6 to 9 and the task table; the MICS's "Tasks" paragraph. Reasoned: each existing ending against the test in section 1; the definition's sentences against rule 35, rule 98.2 and "Made before, made after"; the task against each other task's reading; the way out walked once more with a veto in force. Nothing run.
+
+## Addendum, 7 November 2026, evening: the two questions answered
+
+Decided by Nobody, allegedly, after reading this review:
+
+1. **Termination terms may widen who may terminate**: "yes". So the sentence "where it names them, the act counts only when the termination terms' cMIP answers met" is read for any terminating act, whoever signed it, and a party other than the owners' side (a partner, a service, the measurer) may end its own place where the terms the parties signed let it; without terms, the defaults of section 2 stand.
+
+2. **F437.1, the successor's clause**: "Yes, I agree. Whatever the holder held is what is being passed." A stake passes to a successor with the clause that bound its holder, carried through successions; the sentence for rule 85 is the one in section 7. A holder who bought more than once is bound by its latest placement, as the code reads it.
+
+With these, the shape is ready to write as section 8 lists it.
