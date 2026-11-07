@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F435. The first freeze rehearsal: the cases against the core, assessed (7 November 2026)
+
+**Pattern:** 4 and the way out. Ten players read the texts at `af2ed6f8` as frozen, met, negotiated and each filed a case against the core (`market/*/beef-with-the-core.md`). The MOR lead assessed every case overnight (`docs/lead/rehearsal-1-assessment.md`); Fable assesses independently (`docs/reviews/fable-rehearsal-1.md`); the two are compared before anything is written.
+
+**What it found.** No crack in the shared language. Six way-out cases (A to F: an operator's rotation voiding customers' receipts; a rival rotation dropping audit; an escape unmaking what others relied on; the absence clause rewritten against an outside holder; a present service blocking its own replacement; closing with conditional obligations pending) and three grammar cases (G, a broken vow's refund; H, a sliver sold to a deal opening a collective's books; K, who may read a claim), each with a lean, for Nobody, allegedly. About twenty precise changes, wording and stated costs under delegation; two cases a Module's job. Freeze steps 5.7c and 5.7d are blocked as written (A, B); 5.2 is wrong as written (X).
+
+**Decided:** nothing yet. **The MOR lead's view:** not ready as rehearsed; ready after the list, its vectors and a short second rehearsal on 5.7c and 5.7d.
+
 ## F433. Fable's last read: ready with named sentences; a simulated freeze (6 November 2026)
 
 **Fable's last read before the freeze** (`docs/reviews/fable-last-read.md`, pull request 128): the eight texts agree with each other; the way out walked again holds at every step; nothing a module can break. **Ready with named sentences:** three that must close because two honest verifiers could differ (item 2, an issuance's offer parameter excepted from field 35's comparison in rule 98.3; item 10, which complete clones a rotation declares; item 1, field 2's judicial tasks in rule 98.3's list and rule 67's sentence), the eight clauses of items 3 to 9, the suite's misfiled checklist lines, and the MIRs' scenario headers naming the suite v35. Not to cut further before the freeze; readability belongs to companion documents. What waits for MOR 2 or the cMIP's lead is listed in its section 3.
