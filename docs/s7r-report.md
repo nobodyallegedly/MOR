@@ -1,0 +1,232 @@
+**Status: texts done, suite done, code done; vectors done but one: suite step 3.7bb (an outside holder declared absent under the clause it accepted) is written and in the verifier, with no published vector yet. CI: see "CI" at the end.**
+
+# S7r report: the first rehearsal's decisions (F436) written into MOR
+
+Branch `claude/s7r-rehearsal-decisions-t1edud` (the branch this session was given; the prompt named `claude/s7r-rehearsal-decisions`), from main at `af2ed6f`. Finding **F437** is this session's, below, for the lead; not written in the log, which lives on `claude/lead-records`.
+
+## In plain words
+
+Every decision in F436 is now in the texts, in Identity draft 16, Agreements 24, Money 14, Envelopes 12, Development 12, MICS v37 and the suite v37. Text draft 11 changed only its scenario header (v36 to v37), in place. The reference verifier follows the way-out decisions (the escape, receipts, the audit, an outside holder's clause, the owners' exit, a collective's succession by chain signature), Money rule 4's early refusal and rule 12's batch total. The binding reads field 10, and a fee's payee, from the specifications' bytes. One existing verdict moved, as F436.6 A meant it to. 23 new vectors.
+
+Writing the decisions exposed three gaps the decisions did not settle (F437). I did not work around them: each is written as narrowly as the decision allows, and named below.
+
+## 1. The decisions as written, and where
+
+**F436.1, the escape (R1).**
+- Identity 16, everyday check 2: an act bound to a rotation an escape abandons is judged as rule 34 judges an act outside a kept ancestry. It is void, or, where another identity acknowledged it or a named keeper recorded it before recording the escape, valid and disputed.
+- The same in rule 29's stated cost (with the robbed owner's loss), "A rotation that does not count", and "The escape endorsement".
+- The evidence section adds evidence bound to a rotation its signer's escape abandons: it decides nothing, save a receipt that counted.
+- Agreements 24, rule 10: a chain signature's placing stands for the act it placed once that act is complete, whatever an escape of its signer later abandons; the escape is shown as a dispute on it. The robbed owner's cost is stated here too.
+- Rule 91 follows, in two places: the owners' signatures on an ending, and a successor's debt accepted.
+- Rule 42: "later rotation" includes an escape.
+
+**F436.2, the owners' exit (R5).**
+- Rule 11 gains a paragraph, "The owners' side's exit". The owners' side alone may sign a version that sells nothing, or one changing only fields 3, 11 and 12. Every other version needs every party.
+- Each newly named service signs to accept, as rule 16 asks.
+- A replaced service withdraws its tags and owes payouts on everything it received.
+- A publication may name a cMIP adding conditions to that exit; no cMIP removes it.
+- Followed in: the ending and "Two stops"; rule 12's push-rail placing; rules 17 and 31; the publication's "It counts"; rule 47; rule 98.1. Also in the MICS deal line and the last resort.
+
+**F436.6.**
+- **A (R3):** receipt check 5. A receipt that counted toward the home rule at a position keeps counting there, shown disputed, whatever its operator's later rotation keeps, disowns or, by an escape, abandons.
+- **B (R4):** receipt check 4. A position contested by two rotations revealing the same chain key is judged under the audit requirement before it. Rule 56 follows.
+- **D (R2):** rule 85 (the sentence as decided), the rule 87 checks, the declaration's field 1 comment and its checks, and rules 67 and 87's "clause in force" sentences scoped. The succession plan's format: "a plan naming its own party as stake successor names none".
+- **H (R6):** rule 57. A deal holder is reached by sealing to each party of the version of that deal the transfer placing it names (its founding, for a holder at founding), or by publicity. The stated cost is written.
+
+**F436.5:** Identity section 8. A succession is also confirmed by a chain signature of the successor naming the rotation, which a collective signs under its key grammar. Section 7 and Part two's opening follow.
+
+**F436.3:**
+- Rule 98's client line, as decided.
+- Rule 99: "The core names no control cMIP as default"; `cmip-collective-control` is one control cMIP among others, its name its keeper's.
+- Section 23, "Numbers kept as history".
+- `cmip-collective-control` is called by its name wherever the texts mentioned "the default control cMIP": Agreements, the MICS, and the suite (heading 3b and the checklist).
+
+**F436.4:** the claim sentence after the contest format, as decided. One clause in the MICS glossary.
+
+**The delegated list, item by item.**
+- R16: rule 22's timing clause, the italic refund example, and rule 34 (see F437, point 3).
+- R10: the closing.
+- R13: the split checklist and the MICS splits bullet.
+- R21: rule 54.
+- R17: plan key 3 and rule 22.
+- R18: rule 30 and the checklist.
+- R19: rule 9.
+- R14: Money rule 8.
+- R15: Money rule 17 and Agreements rule 11.
+- R26: rule 74.
+- R27: Identity rules 19 and 20 are marked as conduct no verifier can check, the same evidence is not promised, and one sentence is in the MICS.
+- R28: Identity's glossary, rule 56, section 13 and the reasoning, plus the MICS.
+- R9 and R8: Identity section 8.
+- R29: rule 33.
+- R30: the publication's keepers.
+- R31: rule 37.
+- R32: the MICS glossary.
+- R36: Envelopes, the salt.
+- R37: Development rule 13.
+- R40: rule 11 (each bake's key, a bare bake's refund) and suite 5.2.
+- R41: spec/README.
+
+**The stated costs, each said once:**
+- R24, beside rule 12's strong SHOULD;
+- R23, beside rule 22;
+- R33, rule 33's commentary.
+
+## 2. The suite (v37)
+
+All of these are marked *(run)*, and each has vectors, except 3.7bb (below):
+- **3.9ak**: an escape after a placed sale.
+- **3.7bb**: an outside holder declared absent under the clause it accepted.
+- **5.7c**: the closing rotation keeps nothing.
+- **5.7d**: the audit dropped, "contested, never the thief outright".
+- **7.7**: the owners' side leaves a service that does not sign, and ends alone.
+
+Also:
+- **5.2**: "A second purchase".
+- **5.8b**: confirmation by chain signature, and a collective's confirmation.
+- **3.7ag**: aligned to D.
+- **7.4**: "(Reasoned until a payment cMIP defines a batch.)"
+- The checklist lines for audits, the escape, succession and the publication.
+
+## 3. Code and vectors
+
+**Reference verifier (`core/`):**
+- **R1:** `escape_abandoned_at`. Everyday check 2 judges an act bound to an abandoned rotation by rule 34. A complete transfer's abandoned chain signature still places it. An ending's or a successor's chain signature stands.
+- **R3:** receipts that counted, the operator's later rotations left aside, keep counting, shown disputed.
+- **R4:** a contested position is judged under the audit before it. One home's receipts of both, neither counting, make it contested (rule 44).
+- **R2:** `holder_clause_version` checks field 1 per holder.
+- **F436.2:** a version may be signed by the owners' side alone. On a push rail, an ending the owners' side signed alone is placed by the service's own history.
+- **F436.5:** a chain signature confirms a succession.
+- **Money rule 4:** a record naming a rail Module that no held pointer, vault or refund rail of the payee names counts for nothing before any proof is read. This applies only where the verifier holds some rail list of the payee.
+- **Rule 12:** the batch total, against a new fact, the amount the rail's answer states (`rail_amounts`, R14).
+- **R13:** a fee payout's receiver is checked against the Module's declared payee, a new fact read from the specification's bytes (`fee_payees`).
+
+**Binding (`wasm/`):**
+- `extensions`: specifications whose field 10 is read from their bytes. `extLayers` is kept only for an extension given no bytes.
+- `modules`: fee payees.
+
+**Vectors: 559 to 582.**
+- Identity:
+  - 3.9ak: a post bound to the abandoned rival rotation, before the escape valid; after it, disputed or void; the escape counts.
+  - 5.7c and 5.7d (two cases).
+  - 5.8b.
+- Agreements:
+  - 3.9ak: the transfer before and after the escape, and the escape counting.
+  - 7.7: three cases.
+  - Money rule 4's early refusal.
+  - Rule 12's batch, two cases.
+  - Role shares: a use record acknowledged, and not.
+  - A delivery record of the right object, and of the wrong one.
+  - A metric payout to a holder paid nothing (one millionth).
+  - A metric payout whose measurer is the service.
+- Two new questions in the vectors, "publication" and "split judged". The C verifier will need to answer them.
+
+**Moved verdicts:** one. "A rotation whose only receipt its home's rotation voided, the receipt acknowledged" was pending. Now its receipt counted and keeps counting, and the rotation counts (F436.6 A, receipt check 5). It is renamed accordingly. Every other vector is byte for byte.
+
+**Left:** a published vector for 3.7bb. The verifier's per-holder clause is in, and the existing 3.7ag test passes under it. A vector needs a collective whose line places a buyer's transfer, then a judicial clone. That fixture is a test's (`Lab`), not the generator's.
+
+## F437: what the decisions left open (for the lead)
+
+1. **D, a holder that neither signed nor bought in.** This is a stake successor who received a share by succession. F436.6 D names two kinds of outside holder; a successor is neither.
+   - Written: "judged under the clause in force", the old rule, unchanged.
+   - The meaning diff points out this leaves R2's hole open for successors.
+   - Lean: the version in force where the line placed the succession, by analogy with buying in. It is Nobody, allegedly's to decide.
+   - Also open: a holder that bought more than once. The code takes the latest placement.
+2. **F436.2, how a publication names the exit-conditions cMIP.** The decision says it may name one, not where.
+   - I first wrote it as the publication's condition cMIP (task 9) and withdrew it. The meaning diff showed a condition cMIP named for other reasons would then gate the exit unasked.
+   - The text now says only that it may, and that none removes the exit. The code reads no such cMIP.
+   - Options: a new task number, or a field of the publication. Either is a mechanism F436 did not decide.
+3. **R16, "rule 34 scoped to deals".** Read literally, it contradicts R10's sentence on a collective's conditional obligation at closing.
+   - Written: "a publication's split follows its plan's evidence, never a condition", which is R16's own sentence.
+   - The meaning diff judged this coherent.
+
+**Two alignments beyond the letter, both checked by the meaning diff as necessary:**
+- Receipt check 5 and the evidence section cover an escape as well as a rotation. Without that, an operator holding both keys reopens R3 by escaping.
+- On a push rail, the service's history stands in for its signature on an ending it did not sign, mirroring the existing rule for a withdrawal.
+
+## The meaning diff (a subagent: each text against its last draft)
+
+- Every change is tagged to an F436 item. No item is missing.
+- **Beyond F436:** the escape alignments, and the exit-conditions binding (both above). The binding is withdrawn.
+- It also flagged a stray clause in receipt check 5, "or that such a rotation disowns". It is removed.
+- **Contradictions found, all fixed:**
+  - Identity's reasoning ("forged receipts die with the rotation"; "other homes cosign").
+  - The MICS last resort (no exit exception).
+  - Rule 17's "signed by every party (fields 3, 11, 12)".
+  - Rule 11's racing-payment parenthesis.
+  - The MICS rotation paragraph (evidence bound to an abandoned rotation).
+  - Suite 3.9ak's wording.
+
+## The two-builders check (two subagents, given only the eight new texts)
+
+| Case | Builder A | Builder B | The core |
+| --- | --- | --- | --- |
+| Escape after a complete sale: the escape | counts | counts | counts (vector) |
+| the transfer | stands, payouts Carla's, escape a dispute on it | the same | effective (vector) |
+| a thief post on the abandoned rotation, acknowledged / not | disputed / void | disputed / void | disputed / void (vectors) |
+| Owners' side replaces S, T signs, L and S not | counts | counts | counts (vector) |
+| the same, raising L's share | does not count | does not count | does not count (vector) |
+| S | owes payouts on what it received; its tags as rule 12 | the same | (text) |
+| Declaration against a buyer, field 1 = latest, the member authority | counts for nothing | counts for nothing | counts for nothing (`holder_clause_version`) |
+| field 1 = the version at placement, its authority | counts | counts | counts |
+| outcomes against her | 1 only | 1 only | 1 only |
+
+**They agree with each other and with the core.**
+
+What both flagged, now fixed:
+- Rule 87's and rule 67's "clause in force", now scoped.
+- Suite 7.7's "without the old service's signature", now "the partner's".
+
+Readings they raised, left as they are:
+- Whether a seller's payout receipt bound to the escape is "after" the transfer's chain signature at the same position.
+- Whether Money rule 18's "the publication's split service" stops a replaced service's tags at once, against R24's stated cost.
+
+## The eight texts' hashes
+
+Computed as in `docs/s7l-report.md`: `tagged_hash("MOR/spec", {0: kind, 9: text})`, one final line break removed. The same code reproduces MICS v36's and suite v36's pins.
+
+| Text | Spec hash |
+| --- | --- |
+| Identity draft 16 | `43cc2a7fe8e8a31dc566d0942e9d2c8b95902953e51ea2074372c51bbc2f0616` |
+| Text draft 11 (header v37) | `7835d789f6e9cbb3a089620deea1ca73c591617a10a414bc47bb58ed9063b478` |
+| Envelopes draft 12 | `c56f0b4ebf63ad774aaaec268c65c93cd4eff9f63bd94754f64062bf8f45bfdc` |
+| Money draft 14 | `ba4b3d32832f73a541bccd8a2fe387d95837ecbf2079155f70b715123faa6a2c` |
+| Agreements draft 24 | `c860a7d72a1976458949250327afb5353662674941fb5d4c22b51431e1c1221f` |
+| Development draft 12 | `ca1980041a4c0ac9ae55a78bce641b45bd2a74d6f00e66c90201eb11ab259b56` |
+| MICS v37 | `241b8bf90ac268849b72de3c8dedc56d3d3fcba0d70997533d3afc80223e9632` |
+| Freeze test suite v37 | `67409f625f0c0be94dbe46f112f0cd0990b7549a048ba49616d55b9773e9d504` |
+
+## For the Dubsar Suite
+
+**Pins.**
+- Ummia's `MICS_HASH` and `SUITE_HASH` are as above.
+- The reader's lines name Identity 16, Envelopes 12, Money 14, Agreements 24 and Development 12. Text 11 keeps its file name, with a new hash.
+- `clients/` is untouched, so Ummia's pin test and the reader's newest-draft test fail until these lines are written.
+
+**What changes for clients:**
+- **The claim sentence.** The buyer's claim is readable by the split service. Others read it only by the buyer's choice, shown before paying, never public by a client's choice. A contest is readable as standing needs.
+- **The control model a client holds** is the one the collective's terms name, or the client shows what it decides as unknown. No client is obliged to hold `cmip-collective-control`.
+- **The owners' exit.**
+  - A publication's owners' side may end it, or replace its split service and backups, without the partners and the old service, the new service signing.
+  - Clients signing a publication should show that partners and the service hold no veto there.
+  - A wallet on a push rail should check the latest version.
+- **Disputed acts after an escape.** Acts bound to an abandoned rotation show as disputed, where relied on, or void, never invalid. A sale whose chain signature an escape abandoned stands, shown with the escape as a dispute.
+- **The binding.** Pass the extensions' specifications as `extensions` (field 10 is read from them; `extLayers` is kept only for one given no bytes). Pass Modules' specifications as `modules`, for fee receivers.
+- **Releases.** `core/` and `wasm/` changed, so the six web releases need rebuilding before merge, as the workbook says.
+
+**What `cmip-collective-control` must change (for its keeper; not changed here):**
+- Its header names Agreements draft 24.
+- It should not call itself the default anywhere. `cmips/README.md` says "the default control model", and its last column says "A collective naming it works as before". The core now says it names no default.
+- Its rule numbers 62 to 64, 66, 68 and 94 to 97 are kept by Agreements as history, not as pointers to a default.
+- The client line it relies on is now "the control model the terms name, or unknown".
+- `clients/desk` speaks of "the default control cMIP" in comments and a test label.
+
+## Checks
+
+- `cargo test --workspace --locked`: 800 passed, 0 failed. This includes the identity gauntlet, which caught a first version of the R4 contest rule (fixed: a conflict ends where only one receipt is cosigned).
+- Vectors regenerated (`cargo run -p mor-core --example gen_vectors`): 23 new, 1 moved, the rest byte for byte.
+- `python3 core/vectors/check.py`: all 291 vectors agree, 113 verdict vectors judged.
+- `scripts/c-box/make-c-box.sh` into a scratch folder: refused nothing. It assembled 8 texts (Identity 16, Text 11, Envelopes 12, Money 14, Agreements 24, Development 12, MICS v37, suite v37), 1 cMIP (draft 6) and 12 vector files.
+
+## CI
+
+See the pull request: read on the head after the last push (written in the next commit).
