@@ -40,6 +40,8 @@ Taken one at a time after comparing the two assessments (`docs/lead/rehearsal-1-
 
 4. **Who may read a buyer's claim (K; Fable R34). Decided by Nobody, allegedly** ("Yes pls"), reversing the design note of 23 October: *the buyer's client makes its claim of the purchase readable by the payee, the split service (rule 16); by the owners' side or anyone else only by the buyer's choice, shown before paying; never public by a client's choice; a buyer who contests makes the contest readable as rule 54's standing needs.* The owners keep every receipt and every split. Asked first whether market analysis can still be built: yes, above the core, from receipts, splits and measurers' records, and by opt-in sharing, aggregate statistics or panels in cMIPs and Modules; only profiling a buyer without its consent is closed.
 
+5. **A collective as a confirmed successor (AB; Fable R7). Decided by Nobody, allegedly:** "Allowed". Identity section 8: a succession is confirmed by a link confirmation of the successor naming the rotation, by a witness act of the successor, *or by a chain signature of the successor naming the rotation*, which a collective signs under its key grammar. Cost: one chain-key ceremony to confirm.
+
 ## F435. The first freeze rehearsal: the cases against the core, assessed (7 November 2026)
 
 **Pattern:** 4 and the way out. Ten players read the texts at `af2ed6f8` as frozen, met, negotiated and each filed a case against the core (`market/*/beef-with-the-core.md`). The MOR lead assessed every case overnight (`docs/lead/rehearsal-1-assessment.md`); Fable assesses independently (`docs/reviews/fable-rehearsal-1.md`); the two are compared before anything is written.
