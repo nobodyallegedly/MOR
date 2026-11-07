@@ -1015,6 +1015,10 @@ impl Verifier {
             let names = match h.inside.type_ {
                 types::LINK_CONFIRMATION => h.inside.objects.iter().flatten().any(|o| o.predecessor == rotation),
                 types::WITNESS => h.inside.acks.iter().flatten().any(|a| *a == rotation),
+                // F436.5 (Identity section 8, draft 16): or by a chain
+                // signature of the successor naming the rotation, which a
+                // collective signs under its key grammar.
+                types::CHAIN_SIGNATURE => matches!(h.payload(), Some(Payload::ChainSignature(c)) if c.signs == rotation),
                 _ => false,
             };
             if !names {
@@ -1718,6 +1722,13 @@ impl Verifier {
                         if let Some(p) = best {
                             sup.push((c.id, p));
                         }
+                    }
+                    // Rule 44 with receipt check 4 (F436.6 B): at a position
+                    // contested by two rotations under the audit before it,
+                    // one home's receipts of both are a conflict whether or
+                    // not either is cosigned yet: contested, never pending.
+                    if contested_pos && sup.is_empty() && cands.iter().filter(|c| self.receipts(&o, id, &c.id, n).next().is_some()).count() >= 2 {
+                        t.contested = true;
                     }
                     if sup.len() >= 2 {
                         // A standing conflict: this home counts for nothing here.

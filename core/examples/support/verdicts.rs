@@ -46,6 +46,7 @@ mod s7j_identity;
 #[path = "s7k.rs"]
 mod s7k;
 mod s7l;
+mod s7r;
 
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -357,6 +358,8 @@ pub struct Facts {
     /// The rail Module's answer of which payment a proof is (Money rule 12).
     pub rail_payments: Vec<(Vec<u8>, Vec<u8>)>,
     pub rail_amounts: Vec<(Vec<u8>, u64)>,
+    pub module_specifications: Vec<Vec<u8>>,
+    pub delivery_specs: Vec<Hash>,
     /// Private acts this verifier found in their sealed form at a home, with
     /// the home's operator (Identity, "Private links").
     pub found_at_home: Vec<(Hash, Hash)>,
@@ -415,6 +418,12 @@ impl Facts {
         }
         if !self.found_at_home.is_empty() {
             m.insert("found_at_home".into(), self.found_at_home.iter().map(|(a, o)| json!({ "act": hx(a), "operator": hx(o) })).collect());
+        }
+        if !self.delivery_specs.is_empty() {
+            m.insert("delivery_specs".into(), self.delivery_specs.iter().map(|c| json!(hx(c))).collect());
+        }
+        if !self.module_specifications.is_empty() {
+            m.insert("module_specifications".into(), self.module_specifications.iter().map(|c| json!(hx(c))).collect());
         }
         if !self.rail_amounts.is_empty() {
             m.insert("rail_amounts".into(), self.rail_amounts.iter().map(|(p, a)| json!({ "proof": hx(p), "amount": a })).collect());
@@ -483,6 +492,14 @@ impl Facts {
         }
         for (p, a) in &self.rail_amounts {
             v.rail_amounts.insert(p.clone(), *a);
+        }
+        for c in &self.delivery_specs {
+            v.delivery_records.insert(*c);
+        }
+        for c in &self.module_specifications {
+            if let Some((m, to)) = mor_core::agreements::AgreementsView::fee_payee_from(c) {
+                v.fee_payees.insert(m, to);
+            }
         }
         for (q, j) in &self.judges_lapsed {
             v.judges_lapsed.insert((*q, *j));
@@ -706,6 +723,27 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                 m.sort();
                 m.dedup();
                 json!({ "mismatched": m })
+            })
+        }
+        // S7r: a publication counts or not (rule 11; the owners' side's exit).
+        "publication" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.publication(&h("act")).map_or(json!("unknown"), |e| json!({ "counts": e.counts, "ends": e.ends }))
+        }
+        // S7r: a split judged in full (rules 22, 27, 29): the mismatched
+        // payouts, the role payouts whose evidence does not hold, and what is
+        // wrong with its metric payouts.
+        "split judged" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.split(&h("act")).map_or(json!("unknown"), |e| {
+                let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hx(&x.holder)).collect();
+                m.sort();
+                m.dedup();
+                let mut u: Vec<String> = e.unevidenced.iter().map(|x| hx(x)).collect();
+                u.sort();
+                json!({ "mismatched": m, "unevidenced": u, "metric_problems": e.metric_problems })
             })
         }
         // A record of a collective (rule 69): whether it is a line, and the
@@ -1225,6 +1263,7 @@ pub fn identity(out: &mut Out) {
     s7g_development_identity(out);
     s7i::identity(out);
     s7j_identity::identity(out);
+    s7r::identity(out);
     s7k::identity(out);
     s7k::identity_rule_40(out);
 }
@@ -2779,6 +2818,7 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_b(out);
     s7g_agreements_c(out);
     scenario9::agreements(out);
+    s7r::agreements(out);
     scenario9::control_models(out);
     s7i::agreements(out);
     s7l::agreements(out);

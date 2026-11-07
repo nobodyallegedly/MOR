@@ -140,6 +140,13 @@ pub struct AgreementsView<'a> {
     /// amounts together exceed it count for none until the receiver
     /// resolves them. A fact the caller states, like `rail_valid`.
     pub rail_amounts: BTreeMap<Vec<u8>, u64>,
+    /// For each Module whose specification the caller holds, by its spec
+    /// hash, the identity its fee is paid to: the one its field 7 names as
+    /// paid, or its creator where it names none (F436's R13). Read from the
+    /// specification's bytes ([`Self::fee_payee_from`]). A fee payout to
+    /// any other receiver is a mismatch; a Module not listed leaves the
+    /// receiver unchecked, as its amount already is.
+    pub fee_payees: BTreeMap<Hash, Hash>,
     /// Set when an answer compared two records whose sameness rests on a
     /// payment not stated in [`Self::payments`] ([`Self::unstated_payment_read`]).
     unstated: std::cell::Cell<bool>,
@@ -639,6 +646,7 @@ impl<'a> AgreementsView<'a> {
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
             rail_amounts: BTreeMap::new(),
+            fee_payees: BTreeMap::new(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -712,6 +720,7 @@ impl<'a> AgreementsView<'a> {
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
             rail_amounts: self.rail_amounts.clone(),
+            fee_payees: self.fee_payees.clone(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -8424,6 +8433,16 @@ impl<'a> AgreementsView<'a> {
     }
 
 
+    /// The identity a Module's fee is paid to, read from its specification's
+    /// content (Development field 7): `paid`, or its creator where it names
+    /// none; with its spec hash. `None` where the content is no
+    /// specification, or names neither.
+    pub fn fee_payee_from(content: &[u8]) -> Option<(Hash, Hash)> {
+        let sp = crate::development::Spec::decode(content, &Default::default()).ok()?;
+        let to = sp.fee.as_ref().and_then(|f| f.paid).or(sp.creator)?;
+        Some((crate::development::Spec::hash_of(content), to))
+    }
+
     /// Money rule 4, read before any proof: a held receipt or claim naming
     /// a rail Module that no held act names as one of the payee's rails (a
     /// payee pointer, a grantee's included, a vault entry of the payee's
@@ -10690,6 +10709,15 @@ impl<'a> AgreementsView<'a> {
             };
             if owed && !s.payouts.iter().any(|x| x.fee_module == Some(f.module)) && !e.fees_skipped.contains(&f.module) {
                 e.fees_skipped.push(f.module);
+            }
+        }
+        // F436's R13: a fee payout's receiver is the identity the Module's
+        // specification names as paid, or its creator where it names none.
+        for x in s.payouts.iter().filter(|x| x.fee_module.is_some()) {
+            if let Some(r) = x.fee_module.as_ref().and_then(|m| self.fee_payees.get(m)) {
+                if *r != x.receiver {
+                    e.mismatched.push(Mismatch { stake: 0, holder: x.receiver, paid: x.amount, due: 0 });
+                }
             }
         }
         if !e.fees_skipped.is_empty() {
