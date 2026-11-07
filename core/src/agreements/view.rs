@@ -46,7 +46,7 @@ pub mod reference_absence_proof;
 /// The publication (rules 11 to 17): publications judged, their price
 /// tags, purchases by tag, and shares by reference.
 mod publishing;
-pub use publishing::{PublicationEval, PublicationTip, TagUnder};
+pub use publishing::{Activity, PublicationEval, PublicationTip, TagUnder, TerminationAnswer, TerminationEval};
 /// Client conformance on a deal's versions (F221, F222).
 mod deals;
 pub use deals::SuccessorCheck;
@@ -183,6 +183,15 @@ pub struct AgreementsView<'a> {
     /// Consulted only where the clause names such a cMIP; with none, the
     /// declaration is the authority's judgment, a stated cost.
     pub absence_accepted: BTreeSet<(Hash, Hash)>,
+    /// The termination terms' answers (task 15; Agreements, "Termination"),
+    /// by terminating act: met, or not yet met, as the cMIP the agreement
+    /// names answered it, judging the acts that act's history holds. The
+    /// cMIP's answer, a fact the caller states, like `absence_accepted`:
+    /// the core reads no cMIP. An act not listed is unknown: a verifier
+    /// that does not hold the cMIP, or its answer, shows the agreement's or
+    /// the place's state as unknown from that act on, never active by
+    /// default. Consulted only where the agreement names termination terms.
+    pub termination_answers: BTreeMap<Hash, TerminationAnswer>,
     /// The anchors this verifier checked (Envelopes, task "Anchoring",
     /// F173), each act judged by its earliest anchor on each reference:
     /// with an anchoring cMIP it carries (`Anchors::add_proof`), or as the
@@ -654,6 +663,7 @@ impl<'a> AgreementsView<'a> {
             as_if_answered: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
+            termination_answers: BTreeMap::new(),
             anchored: Default::default(),
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
@@ -728,6 +738,7 @@ impl<'a> AgreementsView<'a> {
             as_if_answered: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
+            termination_answers: self.termination_answers.clone(),
             anchored: self.anchored.clone(),
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
@@ -3879,25 +3890,41 @@ impl<'a> AgreementsView<'a> {
         Ok(Ok((d, clause)))
     }
 
-    /// Rule 85 (F436.6 D): the version whose abandonment clause judges a
-    /// holder of a collective's stake in itself who is no party. The latest
-    /// version of the lineage the holder signed as a party (its drafter, or
-    /// by a signature act naming it); else, where the collective's line
-    /// placed a transfer to it, the agreement in force at the act that
-    /// placed it (the latest such placement); else the clause in force.
+    /// Rule 85 (F436.6 D; F437.1, decided by Nobody, allegedly, F436.8): the
+    /// version whose abandonment clause judges a holder of a collective's
+    /// stake in itself who is no party. The latest version of the lineage
+    /// the holder signed as a party (its drafter, or by a signature act
+    /// naming it); else, where the collective's line placed a transfer to
+    /// it, the agreement in force at the act that placed it (the latest such
+    /// placement); else, for a stake successor, the version that bound the
+    /// holder it succeeded, found the same way, carried through successions;
+    /// else the clause in force.
     fn holder_clause_version(&self, d: &AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Hash> {
+        Ok(self.holder_clause_of(&d.party, lineage, &mut vec![])?.unwrap_or(lineage[0].0))
+    }
+
+    /// [`Self::holder_clause_version`] for `party`, `None` where nothing
+    /// bound it (the clause in force then applies); `seen` stops a loop of
+    /// plans naming each other.
+    fn holder_clause_of(&self, party: &Hash, lineage: &[(Hash, Terms)], seen: &mut Vec<Hash>) -> R<Option<Hash>> {
+        if seen.contains(party) {
+            return Ok(None);
+        }
+        seen.push(*party);
+        let d = AbsenceDeclaration { agreement: lineage[0].0, clause: lineage[0].0, party: *party, outcomes: vec![] };
+        let d = &d;
         for (v, vt) in lineage {
             if !vt.parties.contains(&d.party) {
                 continue;
             }
             let drafted = self.v.get(v).and_then(|h| h.act.outside.signer) == Some(d.party);
             if drafted || !self.signers(v, &[d.party]).is_empty() {
-                return Ok(*v);
+                return Ok(Some(*v));
             }
         }
         let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
         let Some(collective) = self.collective_of(&lineage[0].0)? else {
-            return Ok(lineage[0].0);
+            return Ok(None);
         };
         let col = self.col(&collective);
         let mut best: Option<(usize, Hash)> = None;
@@ -3932,7 +3959,22 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        Ok(best.map(|(_, v)| v).unwrap_or(lineage[0].0))
+        if let Some((_, v)) = best {
+            return Ok(Some(v));
+        }
+        // A stake successor: the stake passed with the clause that bound its
+        // holder (F437.1). The holder it succeeded is the party of a plan,
+        // in a version of the lineage, naming it as a stake successor.
+        for (_, vt) in lineage {
+            for p in vt.succession.iter().flatten() {
+                if p.party != d.party && p.stakes.iter().flatten().any(|(s, _)| *s == d.party) {
+                    if let Some(v) = self.holder_clause_of(&p.party, lineage, seen)? {
+                        return Ok(Some(v));
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 
     /// A declaration as the act `by` uses it (rule 51, F172): the record

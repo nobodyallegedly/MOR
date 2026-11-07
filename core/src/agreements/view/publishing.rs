@@ -7,6 +7,7 @@ use super::*;
 use crate::agreements::open_formats::Sold;
 use crate::agreements::publication::{Publication, PublicationAct};
 use crate::money::{self as fin, Payload as Fin, Priced};
+use crate::cbor::Value;
 
 /// What a client pays against ([`AgreementsView::publication_tip`]): the
 /// publication's latest versions (two or more: the parties' fork, shown),
@@ -47,6 +48,102 @@ pub struct PublicationEval {
     /// The ownership agreements claiming what it sells under whose line it
     /// is not made (rule 14): it visibly contradicts them, and stays valid.
     pub outside_claims: Vec<Hash>,
+    /// Whether this verifier cannot tell whether it counts: a terminating
+    /// act under termination terms whose answer it does not hold
+    /// ("Termination"). `counts` is then false, and its state unknown,
+    /// never active by default.
+    pub unknown: bool,
+    /// Its termination terms (field 13, or field 9's task 15).
+    pub termination: Option<(Hash, Value)>,
+}
+
+/// The termination terms' answer for a terminating act (task 15;
+/// Agreements, "Termination"), as the caller states it; with none, unknown.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TerminationAnswer {
+    Met,
+    NotYetMet,
+}
+
+/// The core's only states of an agreement and of a party's place in it
+/// (Agreements, "Termination"): active, terminated, or unknown where a
+/// verifier cannot tell.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Activity {
+    Active,
+    Terminated,
+    Unknown,
+}
+
+impl Activity {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Activity::Active => "active",
+            Activity::Terminated => "terminated",
+            Activity::Unknown => "unknown",
+        }
+    }
+}
+
+/// A later version of a publication read as a terminating act
+/// ([`AgreementsView::termination`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TerminationEval {
+    /// Whether it is a terminating act: it sells nothing, or its every
+    /// change ends another party's place.
+    pub terminating: bool,
+    /// Whether it counts: `Some(true)`, `Some(false)`, or `None` unknown.
+    pub counts: Option<bool>,
+    /// The publication's state from this act on.
+    pub publication: Activity,
+    /// Each place of the version it follows that it no longer names (a
+    /// partner, the split service, a backup, a metric's measurer), with
+    /// that place's state from this act on.
+    pub places: Vec<(Hash, Activity)>,
+}
+
+/// Whether `new`, a later version of `old`, is a terminating act's shape
+/// ("Termination"; rule 11): it sells nothing; or every change it makes
+/// ends a place: a split service or backups named anew (fields 3, 11, 12),
+/// partners dropped (each one kept unchanged), a metric's measurer named
+/// anew (plan key 8, its module and parameters unchanged), its termination
+/// terms unchanged. The parties it newly names in a terminated party's
+/// place, who sign it to accept (each service or backup); `None` when it is
+/// no terminating act.
+fn terminating_shape(old: &Publication, new: &Publication, old_terms: &Option<(Hash, Value)>, new_terms: &Option<(Hash, Value)>) -> Option<Vec<Hash>> {
+    let ending = new.sold.as_ref().is_some_and(|s| s.is_empty());
+    if !ending {
+        if old_terms != new_terms {
+            return None;
+        }
+        if !new.partners.iter().all(|p| old.partners.contains(p)) {
+            return None;
+        }
+        if new.plan.metrics.len() != old.plan.metrics.len()
+            || !new.plan.metrics.iter().zip(&old.plan.metrics).all(|(n, o)| n.module == o.module && n.params == o.params)
+        {
+            return None;
+        }
+        let mut same = new.clone();
+        same.service = old.service;
+        same.backups = old.backups.clone();
+        same.failed = old.failed.clone();
+        same.partners = old.partners.clone();
+        same.plan.metrics = old.plan.metrics.clone();
+        if same != *old {
+            return None;
+        }
+    }
+    let mut need: Vec<Hash> = vec![];
+    if new.service != old.service {
+        need.push(new.service);
+    }
+    for b in &new.backups {
+        if !old.backups.contains(b) && *b != old.service && !need.contains(b) {
+            need.push(*b);
+        }
+    }
+    Some(need)
 }
 
 /// Whether a price tag counts under its publication (Money rule 18;
@@ -138,7 +235,7 @@ impl<'a> AgreementsView<'a> {
         if !self.is_agreements(h, types::PUBLICATION) {
             return Err(AgreementsError::Check("not a publication"));
         }
-        let PublicationAct { publication, follows } = Publication::decode(&h.inside)?;
+        let PublicationAct { publication, follows, termination } = Publication::decode(&h.inside)?;
         let drafter = self.author(h).ok_or(AgreementsError::Check("a publication has a signer"))?;
         let mut problems: Vec<String> = vec![];
         if !self.valid(id) {
@@ -192,34 +289,37 @@ impl<'a> AgreementsView<'a> {
                 parties.push(x);
             }
         }
-        // F436.2 (rule 11, draft 24): the owners' side's exit. A later
-        // version that sells nothing (its ending), or that changes only its
-        // split service and backups (fields 3, 11 and 12), counts with the
-        // owners' side's signature alone, each service or backup it newly
-        // names signing it to accept; every other version needs every party.
-        let exit_needs: Option<Vec<Hash>> = follows.and_then(|(_, prev)| self.pub_act(&prev)).and_then(|(_, pa)| {
-            let old = &pa.publication;
-            let ending = publication.sold.as_ref().is_some_and(|s| s.is_empty());
-            let mut same = publication.clone();
-            same.service = old.service;
-            same.backups = old.backups.clone();
-            same.failed = old.failed.clone();
-            if ending || same == *old {
+        // "Termination" (F436.7, F436.8; rule 11): a terminating act, a
+        // later version that sells nothing or whose every change ends
+        // another party's place, counts under the publication's termination
+        // rule: by default its owners' side's signature alone; where the
+        // version in force names termination terms (field 13), only when
+        // their cMIP answers met, whoever signed it (they may widen who
+        // terminates). Each service or backup it newly names signs it to
+        // accept. Every other version needs every party.
+        let mut unknown = false;
+        let terminating: Option<(Vec<Hash>, Option<(Hash, Value)>)> = follows
+            .and_then(|(_, prev)| self.pub_act(&prev))
+            .and_then(|(_, pa)| terminating_shape(&pa.publication, &publication, &pa.termination, &termination).map(|n| (n, pa.termination.clone())));
+        let required: Vec<Hash> = match &terminating {
+            None => parties.clone(),
+            Some((newly, None)) => {
                 let mut need = vec![owners_side];
-                if publication.service != old.service {
-                    need.push(publication.service);
-                }
-                for b in &publication.backups {
-                    if !old.backups.contains(b) && *b != old.service && !need.contains(b) {
-                        need.push(*b);
+                need.extend(newly.iter().filter(|x| **x != owners_side).copied());
+                need
+            }
+            Some((newly, Some(_))) => {
+                match self.termination_answers.get(id) {
+                    Some(TerminationAnswer::Met) => {}
+                    Some(TerminationAnswer::NotYetMet) => problems.push("its termination terms answer not yet met: the terminating act does not count, the publication and every place in it staying active (\"Termination\")".into()),
+                    None => {
+                        unknown = true;
+                        problems.push("unknown: its termination terms' answer is not held (task 15; \"Termination\")".into());
                     }
                 }
-                Some(need)
-            } else {
-                None
+                newly.clone()
             }
-        });
-        let required: &[Hash] = exit_needs.as_deref().unwrap_or(&parties);
+        };
         let unsigned: Vec<Hash> = required.iter().filter(|p| !self.pub_signed(id, &drafter, p)).copied().collect();
         if !unsigned.is_empty() {
             problems.push("not every party has signed it: the owners' side, each partner, the split service and each backup".into());
@@ -273,7 +373,7 @@ impl<'a> AgreementsView<'a> {
         let latest = self.pub_tips(&first);
         let counts = problems.is_empty();
         let ends = publication.ends();
-        Ok(PublicationEval { id: *id, publication, follows, first, drafter, parties, unsigned, counts, problems, latest, ends, outside_claims })
+        Ok(PublicationEval { id: *id, publication, follows, first, drafter, parties, unsigned, counts, problems, latest, ends, outside_claims, unknown, termination })
     }
 
     /// Why the holders of the collective's stake in itself have not
@@ -341,6 +441,51 @@ impl<'a> AgreementsView<'a> {
                 Ok((got < need).then(|| "it pays the collective's stake less, and its holders signing it do not meet the stake's holders' rule (rule 94)".into()))
             }
         }
+    }
+
+    /// A later version of a publication read as a terminating act
+    /// (Agreements, "Termination"; rule 11): whether it is one, whether it
+    /// counts (unknown where its termination terms' answer is not held),
+    /// the publication's state from it on, and each place of the version it
+    /// follows that it no longer names, with that place's state. A version
+    /// that does not count terminates nothing: the publication, and every
+    /// place in it, stay active; one whose counting is unknown leaves them
+    /// unknown from it on, never active by default (rule 35).
+    pub fn termination(&self, id: &Hash) -> R<TerminationEval> {
+        let e = self.publication(id)?;
+        let Some((_, prev)) = e.follows else {
+            return Err(AgreementsError::Check("a first version terminates nothing: it completes the publication"));
+        };
+        let Some((_, pa)) = self.pub_act(&prev) else {
+            return Err(AgreementsError::Check("the version it follows is not held"));
+        };
+        let old = &pa.publication;
+        let terminating = terminating_shape(old, &e.publication, &pa.termination, &e.termination).is_some();
+        let counts = if e.unknown { None } else { Some(e.counts) };
+        let after = |ended: bool| match counts {
+            Some(true) if ended => Activity::Terminated,
+            None if ended => Activity::Unknown,
+            _ => Activity::Active,
+        };
+        let publication = after(terminating && e.ends);
+        let mut gone: Vec<Hash> = vec![];
+        let new = &e.publication;
+        let mut old_places: Vec<Hash> = old.partners.iter().map(|p| p.identity).collect();
+        old_places.push(old.service);
+        old_places.extend(old.backups.iter().copied());
+        old_places.extend(old.plan.metrics.iter().map(|m| m.measurer));
+        let mut new_places: Vec<Hash> = new.partners.iter().map(|p| p.identity).collect();
+        new_places.push(new.service);
+        new_places.extend(new.backups.iter().copied());
+        new_places.extend(new.plan.metrics.iter().map(|m| m.measurer));
+        for x in old_places {
+            if (e.ends || !new_places.contains(&x)) && !gone.contains(&x) {
+                gone.push(x);
+            }
+        }
+        gone.sort();
+        let places = gone.into_iter().map(|x| (x, after(terminating))).collect();
+        Ok(TerminationEval { terminating, counts, publication, places })
     }
 
     /// The versions of a publication's line held, valid, each with the

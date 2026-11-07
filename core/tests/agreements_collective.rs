@@ -182,6 +182,7 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     };
     f(&mut t);
     t
@@ -3260,6 +3261,7 @@ fn a_deal_changes_only_with_everyone() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3345,6 +3347,7 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             transfers_counted: None,
             issues_under: None,
             control: Some(mor_control::control()),
+            termination: None,
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3447,6 +3450,7 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3622,6 +3626,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -5661,6 +5666,7 @@ fn a_work_is_released_to_the_public_domain() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5967,6 +5973,7 @@ fn a_timed_release() {
             transfers_counted: None,
             issues_under: None,
             control: Some(mor_control::control()),
+            termination: None,
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);

@@ -195,6 +195,7 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
     }
 }
 
@@ -387,6 +388,9 @@ pub struct Facts {
     /// The stated model's query answer, key 2, where stated apart from its
     /// answers (rule 99; F429): its powers by share by act type.
     pub control_listed: Vec<((Hash, u64), Value)>,
+    /// The termination terms' answers (task 15; Agreements, "Termination"):
+    /// (terminating act, the cMIP that answered, met or not yet met).
+    pub termination_answers: Vec<(Hash, Hash, bool)>,
 }
 
 impl Facts {
@@ -455,6 +459,12 @@ impl Facts {
                 self.control_answers.iter().map(|((s, t), v)| json!({ "model": hx(&mor_control::stated::cmip()), "spec": hx(s), "type": t, "answer": hx(&cbor::encode(v)) })).collect(),
             );
         }
+        if !self.termination_answers.is_empty() {
+            m.insert(
+                "termination_answers".into(),
+                self.termination_answers.iter().map(|(a, c, met)| json!({ "act": hx(a), "cmip": hx(c), "answer": if *met { "met" } else { "not yet met" } })).collect(),
+            );
+        }
         J::Object(m)
     }
 
@@ -514,6 +524,9 @@ impl Facts {
         }
         for x in &self.rail_invalid {
             v.rail_invalid.insert(*x);
+        }
+        for (a, _, met) in &self.termination_answers {
+            v.termination_answers.insert(*a, if *met { agreements::TerminationAnswer::Met } else { agreements::TerminationAnswer::NotYetMet });
         }
     }
 }
@@ -729,7 +742,26 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
         "publication" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
-            v.publication(&h("act")).map_or(json!("unknown"), |e| json!({ "counts": e.counts, "ends": e.ends }))
+            v.publication(&h("act")).map_or(json!("unknown"), |e| if e.unknown { json!("unknown") } else { json!({ "counts": e.counts, "ends": e.ends }) })
+        }
+        // S7r-2: a later version of a publication read as a terminating act
+        // (Agreements, "Termination"): whether it counts (true, false or
+        // unknown), the publication's state from it on, and each place it
+        // ends, with its state.
+        "termination" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.termination(&h("act")).map_or(json!("unknown"), |e| termination_json(&e))
+        }
+        // S7r-2: an abandonment declaration's own checks (rules 85 and 87).
+        "declaration" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            json!(match v.declaration(&h("act")) {
+                Ok(Ok(_)) => "counts",
+                Ok(Err(_)) => "counts for nothing",
+                Err(_) => "unknown",
+            })
         }
         // S7r: a split judged in full (rules 22, 27, 29): the mismatched
         // payouts, the role payouts whose evidence does not hold, and what is
@@ -831,6 +863,12 @@ impl Out {
 
 fn ask_status(act: &Hash) -> J {
     json!({ "question": "status", "act": hx(act) })
+}
+
+/// A terminating act's reading, as the vectors write it.
+pub fn termination_json(e: &agreements::TerminationEval) -> J {
+    let places: serde_json::Map<String, J> = e.places.iter().map(|(x, s)| (hx(x), json!(s.name()))).collect();
+    json!({ "counts": match e.counts { Some(b) => json!(b), None => json!("unknown") }, "publication": e.publication.name(), "places": places })
 }
 
 fn ask(q: &str, act: &Hash) -> J {
@@ -2824,6 +2862,8 @@ pub fn agreements(out: &mut Out) {
     s7l::agreements(out);
     s7l::key_delivery(out);
     s7j::agreements(out);
+    s7r::termination(out);
+    s7r::outside_holders(out);
 }
 
 pub fn development(out: &mut Vec<J>) {

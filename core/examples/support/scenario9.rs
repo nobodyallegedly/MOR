@@ -229,7 +229,7 @@ fn decisions(out: &mut Out) {
 
 /// A collective of Ana, Ben and Cy, its founding changed by `f` before
 /// every member signs it; its identity keyless, declaring it.
-fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> (Col, Person) {
+pub(super) fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> (Col, Person) {
     let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
     let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
     let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
@@ -251,7 +251,7 @@ fn band(w: &mut World, name: &str, f: &dyn Fn(&mut Terms, &[Hash])) -> (Col, Per
 /// first signer and signed by `signers`, each act for the collective citing
 /// `cite` on its chain: its id and the signature acts.
 #[allow(clippy::too_many_arguments)]
-fn clone_of(w: &mut World, col: &mut Col, parent: Hash, mark: Vec<(agreements::Power, Vec<usize>)>, signers: &[usize], cite: Vec<Hash>, f: &dyn Fn(&mut Terms)) -> (Hash, Vec<Hash>) {
+pub(super) fn clone_of(w: &mut World, col: &mut Col, parent: Hash, mark: Vec<(agreements::Power, Vec<usize>)>, signers: &[usize], cite: Vec<Hash>, f: &dyn Fn(&mut Terms)) -> (Hash, Vec<Hash>) {
     let mut t = view(w).terms(&parent).unwrap();
     t.parent = Some(parent);
     t.field4 = Field4::Mark(

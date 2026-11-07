@@ -481,7 +481,19 @@ fn verdict_vectors() {
                 }),
                 "publication" => with_facts(&v, &mirs, facts)
                     .publication(&h(&ask["act"]))
-                    .map_or(json!("unknown"), |e| json!({ "counts": e.counts, "ends": e.ends })),
+                    .map_or(json!("unknown"), |e| if e.unknown { json!("unknown") } else { json!({ "counts": e.counts, "ends": e.ends }) }),
+                // S7r-2 (Agreements, "Termination"): a later version read as a
+                // terminating act.
+                "termination" => with_facts(&v, &mirs, facts).termination(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let places: serde_json::Map<String, serde_json::Value> = e.places.iter().map(|(x, s)| (hex::encode(x), json!(s.name()))).collect();
+                    json!({ "counts": match e.counts { Some(b) => json!(b), None => json!("unknown") }, "publication": e.publication.name(), "places": places })
+                }),
+                // S7r-2: an abandonment declaration's own checks (rules 85, 87).
+                "declaration" => json!(match with_facts(&v, &mirs, facts).declaration(&h(&ask["act"])) {
+                    Ok(Ok(_)) => "counts",
+                    Ok(Err(_)) => "counts for nothing",
+                    Err(_) => "unknown",
+                }),
                 "split judged" => with_facts(&v, &mirs, facts).split(&h(&ask["act"])).map_or(json!("unknown"), |e| {
                     let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hex::encode(x.holder)).collect();
                     m.sort();
@@ -622,6 +634,15 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
         av.settled_out_of_turn.insert(h(x));
+    }
+    // The termination terms' answers (task 15), as the cMIP gave them.
+    for x in facts["termination_answers"].as_array().into_iter().flatten() {
+        let a = match x["answer"].as_str() {
+            Some("met") => mor_core::agreements::TerminationAnswer::Met,
+            Some("not yet met") => mor_core::agreements::TerminationAnswer::NotYetMet,
+            other => panic!("a termination answer: {other:?}"),
+        };
+        av.termination_answers.insert(h(&x["act"]), a);
     }
     // A rail Module's kind and binding, read from its specification (fields
     // 11 and 13), under the specification's hash.

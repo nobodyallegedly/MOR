@@ -20,12 +20,13 @@
 //!   9 => { * uint => hash },  ; cMIPs, at most one per task
 //!   ? 10 => hash,             ; the party it designates to sign its price tags
 //!   ? 11 => [+ hash],         ; the split service's backups, in order
-//!   ? 12 => any               ; what counts as a failed attempt (only with 11)
+//!   ? 12 => any,              ; what counts as a failed attempt (only with 11)
+//!   ? 13 => [ hash, any ]     ; termination terms, task 15 (Agreements, "Termination")
 //! }
 //! partner = { 0 => hash, 1 => uint, ? 2 => tstr }
 //! ```
 
-use super::formats::{b, distinct, hash, hashes, hashes_value, nonempty, tuple, uint, AgreementsError, R, MILLION, SPLIT_TASK};
+use super::formats::{b, distinct, hash, hashes, hashes_value, nonempty, tuple, uint, AgreementsError, R, MILLION, SPLIT_TASK, TERMINATION_TERMS_TASK};
 use super::open_formats::{RefundTerms, Sold, SplitPlan};
 use crate::act::Inside;
 use crate::cbor::{self, Value};
@@ -113,6 +114,10 @@ pub struct PublicationAct {
     pub publication: Publication,
     /// `(first, previous)` for a later version.
     pub follows: Option<(Hash, Hash)>,
+    /// 13: its termination terms, `[cmip, params]` (task 15; Agreements,
+    /// "Termination"), or field 9's task 15 with no parameters. Read with
+    /// the act, beside [`Publication`], whose fields it leaves as they were.
+    pub termination: Option<(Hash, Value)>,
 }
 
 impl Publication {
@@ -216,7 +221,18 @@ impl Publication {
         if sold.as_ref().is_some_and(|s| s.is_empty()) && follows.is_none() {
             return Err(AgreementsError::Check("publication: only a later version sells nothing, ending it; a first version selling nothing omits field 0, a split agreement"));
         }
-        Ok(PublicationAct { publication, follows })
+        let termination = Self::termination_of(&inside.payload)?.or_else(|| publication.cmips.iter().find(|(t, _)| *t == TERMINATION_TERMS_TASK).map(|(_, h)| (*h, Value::Null)));
+        Ok(PublicationAct { publication, follows, termination })
+    }
+
+    /// Field 13, the termination terms (task 15; Agreements, "Termination"):
+    /// `[cmip, params]`, the same specification as field 9's task 15 where
+    /// both are present.
+    pub fn termination_of(payload: &[(Value, Value)]) -> R<Option<(Hash, Value)>> {
+        let Some((_, v)) = payload.iter().find(|(k, _)| *k == Value::Uint(13)) else { return Ok(None) };
+        let a = tuple(v, 2, "publication 13: its termination terms, [cmip, params]")?;
+        let h = hash(&a[0], "publication 13: the termination terms' cMIP")?;
+        Ok(Some((h, a[1].clone())))
     }
 
     /// A publication's payload decoded strictly, every check of its format
@@ -230,7 +246,7 @@ impl Publication {
         let mut f: Vec<(u64, &Value)> = vec![];
         for (k, v) in payload {
             match k {
-                Value::Uint(n) if *n <= 12 && !f.iter().any(|(m, _)| m == n) => f.push((*n, v)),
+                Value::Uint(n) if *n <= 13 && !f.iter().any(|(m, _)| m == n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("publication: a field its format does not define")),
             }
         }
@@ -298,6 +314,11 @@ impl Publication {
                 x
             }
         };
+        if let Some(t) = Self::termination_of(payload)? {
+            if cmips.iter().find(|(k, _)| *k == TERMINATION_TERMS_TASK).is_some_and(|(_, h)| *h != t.0) {
+                return Err(AgreementsError::Check("publication: field 13 and field 9's task 15 name the same specification (\"Termination\")"));
+            }
+        }
         let failed = get(12).cloned();
         if failed.is_some() && backups.is_empty() {
             return Err(AgreementsError::Check("publication 12: what counts as a failed attempt goes with backups (field 11)"));

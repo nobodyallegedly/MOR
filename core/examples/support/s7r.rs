@@ -374,3 +374,307 @@ fn roles_and_metrics(out: &mut Out) {
         out.case(&mut w, name, rule, why, facts, ask_j(&sx), v, None);
     }
 }
+
+// ---------------------------------------------------------------- S7r-2: termination (F436.7, F436.8)
+
+/// A test termination-terms cMIP (task 15), for the vectors only: never
+/// shipped, never a default. Its parameters ([`test_termination_params`]):
+/// a minimum term (key 0), a point on the publication's time reference
+/// before which no terminating act counts; and the parties that may
+/// terminate their own place (key 1). For a terminating act at or after
+/// the point it answers met where the owners' side signed it, or where it
+/// only drops the places of parties key 1 lists, each of them signing it;
+/// otherwise, and before the point, not yet met. The vectors state its
+/// answers as facts (`termination_answers`), as a verifier holding it
+/// would compute them from the act's place on the time reference.
+fn test_termination_cmip() -> Hash {
+    spec("a test termination-terms cMIP, for the vectors only (S7r-2), never a default")
+}
+
+fn test_termination_params(min: u64, own: &[Hash]) -> Value {
+    Value::Map(vec![
+        (Value::Uint(0), Value::Uint(min)),
+        (Value::Uint(1), Value::Array(own.iter().map(|h| Value::Bytes(h.to_vec())).collect())),
+    ])
+}
+
+/// The test cMIP's answer: `point` is the act's place on the time
+/// reference; `owners` whether the owners' side signed it; `own` whether
+/// it only drops places of parties key 1 lists, each signing it.
+fn test_termination_answer(min: u64, point: u64, owners: bool, own: bool) -> bool {
+    point >= min && (owners || own)
+}
+
+/// A publication act carrying field 13, the termination terms.
+fn publication_with_terms(w: &mut World, by: &mut Person, p: &Publication, terms: Option<(Hash, Value)>, objects: Option<Vec<Object>>) -> Hash {
+    let mut m = p.to_map();
+    if let Some((h, params)) = terms {
+        m.push((Value::Uint(13), Value::Array(vec![Value::Bytes(h.to_vec()), params])));
+    }
+    ag_act(w, by, agreements::types::PUBLICATION, m, objects)
+}
+
+/// 7.7b to 7.7d: a publication whose termination terms set a minimum term
+/// and let its partner, a label, terminate its own place; a reader without
+/// their cMIP; and, under 7.7's default, a partner alone.
+pub fn termination(out: &mut Out) {
+    const MIN: u64 = 100;
+    let cmip = test_termination_cmip();
+    let mut w = World::new();
+    let mut ana = w.genesis("ana, of the third group", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben, of the third group", vec![own_home()], None, None);
+    let mut label = w.genesis("a label, partner for visibility", vec![own_home()], None, None);
+    let mut s = w.genesis("the third group's split service", vec![own_home()], None, None);
+    let work = spec("a song, step 7.7b");
+    let creators = [ana.id, ben.id];
+    let c = claim_act(&mut w, &mut ana, &creators, work);
+    sign(&mut w, &mut ben, &c);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "The third group's song: Ana and Ben, half each.".into();
+    owning(&mut t, c, &[(ana.id, 500_000), (ben.id, 500_000)]);
+    let own = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &own);
+    sign(&mut w, &mut ben, &own);
+    let bake = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None); w.add(&a) };
+    let mut v1 = publication_of(own, s.id, vec![Partner { identity: label.id, share: 150_000, label: Some("label".into()) }], vec![agreements::Sold::Bake(bake)], test_plan());
+    v1.time = Some((spec("a block-height time reference"), Value::Null));
+    let terms = Some((cmip, test_termination_params(MIN, &[label.id])));
+    let p1 = publication_with_terms(&mut w, &mut ana, &v1, terms.clone(), obj(own));
+    sign(&mut w, &mut ben, &p1);
+    sign(&mut w, &mut label, &p1);
+    sign(&mut w, &mut s, &p1);
+    let base = w.log.clone();
+    let later = |w: &mut World, by: &mut Person, p: &Publication| publication_with_terms(w, by, p, terms.clone(), Some(vec![Object { chain: p1, predecessor: p1 }, Object { chain: own, predecessor: own }]));
+    let stated = |x: Hash, met: bool| Facts { termination_answers: vec![(x, cmip, met)], ..Default::default() };
+    let mut ending = v1.clone();
+    ending.sold = Some(vec![]);
+
+    // 7.7b: before the point, the owners' side alone ends it: not yet met.
+    let mut w1 = replay(&base);
+    let early = later(&mut w1, &mut ana.clone(), &ending);
+    sign(&mut w1, &mut ben.clone(), &early);
+    let met = test_termination_answer(MIN, 60, true, false);
+    out.case(&mut w1, "7.7b the owners' side alone ends a publication before its termination terms' minimum term: not yet met, the version does not count", "Agreements, \"Termination\"; task 15",
+        "The act sits at point 60 on the time reference, before the minimum term at 100: the termination terms answer not yet met, so the terminating act does not count.",
+        stated(early, met), ask("publication", &early), json!({ "counts": false, "ends": true }), None);
+    out.case(&mut w1, "7.7b the same act read as a termination: the publication and every place in it stay active", "Agreements, \"Termination\"",
+        "A terminating act that does not count terminates nothing.",
+        stated(early, met), ask("termination", &early),
+        json!({ "counts": false, "publication": "active", "places": places(&[label.id, s.id], "active") }), None);
+    out.case(&mut w1, "7.7b the version before it still counts: sales under it stand", "Agreements rule 11; \"Termination\": what stands",
+        "A purchase under any version counts; the version the act would have ended still sells.",
+        stated(early, met), ask("publication", &p1), json!({ "counts": true, "ends": false }), None);
+    // After the point: met, it counts, the publication terminated.
+    let mut w2 = replay(&base);
+    let end = later(&mut w2, &mut ana.clone(), &ending);
+    sign(&mut w2, &mut ben.clone(), &end);
+    let met = test_termination_answer(MIN, 140, true, false);
+    out.case(&mut w2, "7.7b after the minimum term the owners' side alone ends it: met, it counts, the publication terminated", "Agreements, \"Termination\"; rule 11",
+        "At point 140, past the minimum term, the termination terms answer met for the owners' side's terminating act.",
+        stated(end, met), ask("termination", &end),
+        json!({ "counts": true, "publication": "terminated", "places": places(&[label.id, s.id], "terminated") }), None);
+    // 7.7c: a reader without the cMIP: unknown from the act on.
+    out.case(&mut w2, "7.7c a reader without the termination terms' cMIP reads the terminating act: unknown", "Agreements, \"Termination\"; rule 35",
+        "It holds no answer of the cMIP: whether the act counts is unknown, never active by default.",
+        Facts::default(), ask("publication", &end), json!("unknown"), None);
+    out.case(&mut w2, "7.7c the same reader: the publication's state unknown from that act on, never active, never terminated", "Agreements, \"Termination\"",
+        "Unknown from the terminating act on; the version before it still counts.",
+        Facts::default(), ask("termination", &end),
+        json!({ "counts": "unknown", "publication": "unknown", "places": places(&[label.id, s.id], "unknown") }), None);
+    out.case(&mut w2, "7.7c the same reader: the version before the act still counts", "Agreements rule 11",
+        "Only what the terminating act would end is unknown.",
+        Facts::default(), ask("publication", &p1), json!({ "counts": true, "ends": false }), None);
+    // 7.7d: the label terminates its own place, as the terms let it.
+    let mut alone = v1.clone();
+    alone.partners = vec![];
+    let mut w3 = replay(&base);
+    let leave = later(&mut w3, &mut label.clone(), &alone);
+    let met = test_termination_answer(MIN, 150, false, true);
+    out.case(&mut w3, "7.7d after the minimum term the label alone drops itself from field 2: met, its place terminated, the publication active", "Agreements, \"Termination\": termination terms may widen who terminates",
+        "The terms let the label terminate its own place; its part falls to the owners' line from the next payment.",
+        stated(leave, met), ask("termination", &leave),
+        json!({ "counts": true, "publication": "active", "places": places(&[label.id], "terminated") }), None);
+    let mut w4 = replay(&base);
+    let leave_early = later(&mut w4, &mut label.clone(), &alone);
+    let met = test_termination_answer(MIN, 70, false, true);
+    out.case(&mut w4, "7.7d the same version by the label before the minimum term: not yet met, it does not count", "Agreements, \"Termination\"",
+        "Before the point the terms let no termination count.",
+        stated(leave_early, met), ask("termination", &leave_early),
+        json!({ "counts": false, "publication": "active", "places": places(&[label.id], "active") }), None);
+
+    // 7.7d, the default: no termination terms, a partner alone.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana, of the second group", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben, of the second group", vec![own_home()], None, None);
+    let mut label = w.genesis("a partner without terms", vec![own_home()], None, None);
+    let mut s = w.genesis("the second group's split service", vec![own_home()], None, None);
+    let work = spec("a song, step 7.7d");
+    let creators = [ana.id, ben.id];
+    let c = claim_act(&mut w, &mut ana, &creators, work);
+    sign(&mut w, &mut ben, &c);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "The second group's song: Ana and Ben, half each.".into();
+    owning(&mut t, c, &[(ana.id, 500_000), (ben.id, 500_000)]);
+    let own = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &own);
+    sign(&mut w, &mut ben, &own);
+    let bake = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None); w.add(&a) };
+    let v1 = publication_of(own, s.id, vec![Partner { identity: label.id, share: 100_000, label: None }], vec![agreements::Sold::Bake(bake)], test_plan());
+    let p1 = ag_act(&mut w, &mut ana, agreements::types::PUBLICATION, v1.to_map(), obj(own));
+    sign(&mut w, &mut ben, &p1);
+    sign(&mut w, &mut label, &p1);
+    sign(&mut w, &mut s, &p1);
+    let mut alone = v1.clone();
+    alone.partners = vec![];
+    let objs = Some(vec![Object { chain: p1, predecessor: p1 }, Object { chain: own, predecessor: own }]);
+    let mut wd = replay(&w.log.clone());
+    let by_partner = ag_act(&mut wd, &mut label.clone(), agreements::types::PUBLICATION, alone.to_map(), objs.clone());
+    out.case(&mut wd, "7.7d with no termination terms, a partner alone drops itself: it does not count, the default being the owners' side's", "Agreements, \"Termination\": the defaults, by kind; rule 11",
+        "Without termination terms, only the owners' side terminates another party's place, or its own.",
+        Facts::default(), ask("termination", &by_partner),
+        json!({ "counts": false, "publication": "active", "places": places(&[label.id], "active") }), None);
+    let by_owners = ag_act(&mut w, &mut ana, agreements::types::PUBLICATION, alone.to_map(), objs);
+    sign(&mut w, &mut ben, &by_owners);
+    out.case(&mut w, "7.7d with no termination terms, the owners' side alone drops the partner: it counts, the partner's place terminated", "Agreements, \"Termination\"; rule 11",
+        "The owners' side terminates alone any other party's place; the partner's part falls to the owners' line.",
+        Facts::default(), ask("termination", &by_owners),
+        json!({ "counts": true, "publication": "active", "places": places(&[label.id], "terminated") }), None);
+
+    // Field 36: a deal's termination terms; a collective names none; field
+    // 2's task 15, where present, names the same cMIP.
+    let invalid = |x: &Hash| json!({ "question": "agreement invalid", "act": hx(x) });
+    let mut w = World::new();
+    let mut ana = w.genesis("ana, with notice terms", vec![own_home()], None, None);
+    let ben = w.genesis("ben, with notice terms", vec![own_home()], None, None);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "A deal naming termination terms: a notice.".into();
+    t.termination = Some((cmip, test_termination_params(30, &[])));
+    let ok = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    out.case(&mut w, "a deal naming termination terms (field 36): not invalid", "Agreements, \"Termination\"; \"Terms (type 0)\"",
+        "A deal may name termination terms, a cMIP and its parameters, as field 6 names a time reference.", Facts::default(), invalid(&ok), json!("not invalid"), None);
+    let mut t2 = t.clone();
+    t2.cmips.push((agreements::TERMINATION_TERMS_TASK, spec("another termination-terms cMIP")));
+    let bad = ag_act(&mut w, &mut ana, agreements::types::TERMS, t2.to_map(), None);
+    out.case(&mut w, "a deal whose field 36 and field 2's task 15 name different cMIPs: invalid", "Agreements, \"Terms (type 0)\"",
+        "Where both name the termination terms' cMIP, they name the same specification.", Facts::default(), invalid(&bad), json!("invalid"), None);
+    let ids = [ana.id, ben.id, spec("a third member")];
+    let mut c = collective_terms(&ids, spec("an authority"), spec("a keeper"), vec![ids[1]], 1);
+    c.termination = Some((cmip, test_termination_params(30, &[])));
+    let col = ag_act(&mut w, &mut ana, agreements::types::TERMS, c.to_map(), None);
+    out.case(&mut w, "a collective's terms naming termination terms: invalid", "Agreements, \"Termination\": a collective names no termination terms",
+        "A collective's agreement ends as rule 91 says, a member's place as rule 70 says; no termination terms reach either.", Facts::default(), invalid(&col), json!("invalid"), None);
+}
+
+/// Places, each with `state`, as [`termination_json`] writes them.
+fn places(xs: &[Hash], state: &str) -> J {
+    let m: serde_json::Map<String, J> = xs.iter().map(|x| (hx(x), json!(state))).collect();
+    J::Object(m)
+}
+
+/// 3.7bb and 3.7bc: holders who are no party, declared absent only under
+/// the clause that bound them: a buyer, by the version in force where the
+/// line placed its transfer (F436.6 D); a stake successor, by the clause
+/// that bound the holder it succeeded (F437.1, decided in F436.8).
+pub fn outside_holders(out: &mut Out) {
+    use agreements::{AbsenceDeclaration, Record, Resignation, SuccessionPlan};
+    let both = |t: &mut Terms| {
+        if let Some(a) = t.abandonment.as_mut() {
+            a.outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
+        }
+    };
+    let record = |w: &mut World, by: &mut Person, f: Hash, r: Record| {
+        let a = w.everyday_act(by, mirs().agreements, agreements::types::RECORD, r.to_map(), obj(f), None);
+        w.add(&a)
+    };
+    let declare = |w: &mut World, by: &mut Person, f: Hash, agreement: Hash, clause: Hash, party: Hash, outs: Vec<u64>| {
+        ag_act(w, by, agreements::types::DECLARATION, AbsenceDeclaration { agreement, clause, party, outcomes: outs }.to_map(), { let _ = f; obj(agreement) })
+    };
+
+    // 3.7bb: a buyer of a tenth of the label's stake in itself.
+    let mut w = World::new();
+    let (mut col, mut authority) = super::scenario9::band(&mut w, "a label with an outside buyer", &|t, _| both(t));
+    let (f, cid) = (col.founding, col.id);
+    let mut buyer = w.genesis("a buyer of a tenth of the label", vec![own_home()], None, None);
+    let tr = StakeTransfer { agreement: f, stake: 0, to: buyer.id, share: 100_000, record: vec![] };
+    let x = ag_act(&mut w, &mut col.m[0], agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(f));
+    sign(&mut w, &mut buyer, &x);
+    w.chain_sign(&col.m[0], x);
+    let placed = record(&mut w, &mut col.m[1].acting_for(cid, vec![cid]), f, Record { clone: None, signatures: None, registers: Some(vec![x]) });
+    let (ana_id, ben_id, buyer_id) = (col.m[0].id, col.m[1].id, buyer.id);
+    let (k, sigs) = super::scenario9::clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2]), (agreements::Power::Judicial, vec![0, 1, 2])], &[0, 1, 2], vec![placed], &|t| {
+        if let Some(a) = t.abandonment.as_mut() {
+            a.authority = Authority::Named(ben_id);
+        }
+        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: ben_id });
+        let st = &mut t.stakes.as_mut().unwrap()[0];
+        for (h, n) in st.holders.iter_mut() {
+            if *h == agreements::Who::Id(ana_id) {
+                *n -= 100_000;
+            }
+        }
+        st.holders.push((agreements::Who::Id(buyer_id), 100_000));
+    });
+    w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k, &sigs)]), ..Default::default() });
+    let by_member = declare(&mut w, &mut col.m[1].clone(), f, k, k, buyer_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bb the member the new clause names declares the buyer absent, field 1 the latest version: counts for nothing", "Agreements rules 85 and 87 (draft 24, F436.6 D)",
+        "A holder that bought in is judged under the clause of the version in force where the line placed its transfer, the founding here; field 1 must name it.",
+        Facts::default(), ask("declaration", &by_member), json!("counts for nothing"), None);
+    let by_keeper = declare(&mut w, &mut authority, f, k, f, buyer_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bb the authority of the clause the buyer accepted declares it, field 1 that version: counts", "Agreements rules 85 and 87",
+        "The clause the buyer accepted applies: its authority, its outcomes.",
+        Facts::default(), ask("declaration", &by_keeper), json!("counts"), None);
+
+    // 3.7bc: Cy resigns, its plan naming a stake successor; the clause
+    // changes after; its stake passes; the successor is judged under the
+    // clause that bound Cy.
+    let mut w = World::new();
+    let heir = w.genesis("cy's stake successor", vec![own_home()], None, None);
+    let heir_id = heir.id;
+    let (mut col, mut authority) = super::scenario9::band(&mut w, "a label whose founder resigns", &|t, ids| {
+        both(t);
+        t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: ids.to_vec() };
+        t.succession = Some(vec![SuccessionPlan { party: ids[2], stakes: Some(vec![(heir_id, 1_000_000)]), seats: None, entry: None }]);
+    });
+    let (f, cid) = (col.founding, col.id);
+    let (ana_id, ben_id, cy_id) = (col.m[0].id, col.m[1].id, col.m[2].id);
+    let res = ag_act(&mut w, &mut col.m[2], agreements::types::RESIGNATION, Resignation { agreement: f, area: None, drafts: vec![] }.to_map(), obj(f));
+    let line = record(&mut w, &mut col.m[1].acting_for(cid, vec![cid]), f, Record { clone: None, signatures: None, registers: Some(vec![res]) });
+    let keep = vec![ana_id, ben_id];
+    let (k1, sigs) = super::scenario9::clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1]), (agreements::Power::Judicial, vec![0, 1])], &[0, 1], vec![line], &|t| {
+        t.parties = keep.clone();
+        t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
+        t.departed = Some(vec![cy_id]);
+        if let Some(a) = t.abandonment.as_mut() {
+            a.authority = Authority::Named(ben_id);
+        }
+        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: ben_id });
+    });
+    let (rot, chain2) = w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k1, &sigs)]), ..Default::default() });
+    col.chain = chain2;
+    let on_cy = declare(&mut w, &mut authority, f, k1, f, cy_id, vec![]);
+    out.case(&mut w, "3.7bc Cy, departed, declared absent by the authority of the clause it last signed: counts, its stake passing by succession", "Agreements rules 85, 87 and 89",
+        "A departed holder is judged by the clause of the version it last signed as a party, the founding; its plan names a stake successor, so no outcome is stated.",
+        Facts::default(), ask("declaration", &on_cy), json!("counts"), None);
+    let registered = record(&mut w, &mut col.m[1].acting_for(cid, vec![rot]), f, Record { clone: None, signatures: None, registers: Some(vec![on_cy]) });
+    let (k2, sigs2) = super::scenario9::clone_of(&mut w, &mut col, k1, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], vec![registered], &|t| {
+        let st = &mut t.stakes.as_mut().unwrap()[0];
+        for (h, _) in st.holders.iter_mut() {
+            if *h == agreements::Who::Id(cy_id) {
+                *h = agreements::Who::Id(heir_id);
+            }
+        }
+        t.departed = None;
+        t.succession = None;
+    });
+    let (passes, _) = w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k2, &sigs2)]), ..Default::default() });
+    out.case(&mut w, "3.7bc the rotation declaring the clone that passes Cy's stake to its successor, after the record registering the declaration: valid", "Agreements rules 69, 83 and 89",
+        "The stake passes by succession, as Cy's plan says; Cy's signature is not needed.", Facts::default(), ask_status(&passes), json!("valid"), None);
+    let by_member = declare(&mut w, &mut col.m[1].clone(), f, k2, k2, heir_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bc the member the clause names since Cy's resignation declares the successor absent, field 1 the latest version: counts for nothing", "Agreements rule 85 (F437.1: a stake passes with the clause that bound its holder)",
+        "The successor is judged under the clause that bound Cy, carried through the succession: the founding's, not one changed after Cy left.",
+        Facts::default(), ask("declaration", &by_member), json!("counts for nothing"), None);
+    let by_keeper = declare(&mut w, &mut authority, f, k2, f, heir_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bc the authority of the clause that bound Cy declares the successor absent, field 1 that version: counts", "Agreements rules 85 and 87 (F437.1)",
+        "Whatever the holder held is what passed: the clause included.",
+        Facts::default(), ask("declaration", &by_keeper), json!("counts"), None);
+}

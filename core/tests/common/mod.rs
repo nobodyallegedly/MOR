@@ -843,6 +843,7 @@ pub fn deal_terms(parties: &[Hash], text: &str) -> mor_core::agreements::Terms {
         transfers_counted: None,
         issues_under: None,
         control: None,
+        termination: None,
     }
 }
 
