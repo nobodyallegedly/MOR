@@ -1768,8 +1768,22 @@ struct SpecsIn {
     money: String,
     agreements: String,
     development: String,
+    /// Superseded by `extensions` (F436's R38): layers a caller states
+    /// for an extension it gives no specification of. An extension listed
+    /// in `extensions` is read from its bytes, whatever is stated here.
     #[serde(default)]
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
+    /// The extensions' specifications the client holds, each one's content,
+    /// hex: the layers each declares (Development field 10) are read from
+    /// its bytes, and its spec hash is the hash of the content (F436's R38:
+    /// field 10 is the specification's, never the calling app's word).
+    #[serde(default)]
+    extensions: Vec<String>,
+    /// The Modules' specifications the client holds, each one's content,
+    /// hex: a fee payout's receiver is checked against the identity each
+    /// names as paid (Development field 7), or its creator (F436's R13).
+    #[serde(default)]
+    modules: Vec<String>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
     /// The rail Modules the client adopted: each one's specification
@@ -1858,15 +1872,28 @@ impl SpecsIn {
     }
 
     fn ext(&self) -> R<std::collections::BTreeMap<Hash, Vec<u64>>> {
-        self.ext_layers
+        let mut out: std::collections::BTreeMap<Hash, Vec<u64>> = self
+            .ext_layers
             .iter()
             .map(|(k, v)| Ok((unhex(k)?, v.clone())))
-            .collect()
+            .collect::<R<_>>()?;
+        for e in &self.extensions {
+            let content = hex::decode(e).map_err(err)?;
+            let spec = mor_core::development::Spec::decode(&content, &Default::default()).map_err(err)?;
+            out.insert(mor_core::development::Spec::hash_of(&content), spec.layers.unwrap_or_default());
+        }
+        Ok(out)
     }
 
     fn view<'a>(&self, v: &'a chain::Verifier) -> R<agreements::AgreementsView<'a>> {
         let mut view = agreements::AgreementsView::new(v, self.mirs()?).with_control(mor_control::held());
         view.ext_layers = self.ext()?;
+        for m in &self.modules {
+            let content = hex::decode(m).map_err(err)?;
+            if let Some((h, to)) = agreements::AgreementsView::fee_payee_from(&content) {
+                view.fee_payees.insert(h, to);
+            }
+        }
         for (k, log) in &self.keeper_logs {
             view.keeper_logs
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);

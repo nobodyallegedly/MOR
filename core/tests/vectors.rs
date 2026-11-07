@@ -479,6 +479,17 @@ fn verdict_vectors() {
                     m.dedup();
                     json!({ "mismatched": m })
                 }),
+                "publication" => with_facts(&v, &mirs, facts)
+                    .publication(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| json!({ "counts": e.counts, "ends": e.ends })),
+                "split judged" => with_facts(&v, &mirs, facts).split(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hex::encode(x.holder)).collect();
+                    m.sort();
+                    m.dedup();
+                    let mut u: Vec<String> = e.unevidenced.iter().map(hex::encode).collect();
+                    u.sort();
+                    json!({ "mismatched": m, "unevidenced": u, "metric_problems": e.metric_problems })
+                }),
                 "record" => with_facts(&v, &mirs, facts)
                     .record(&h(&ask["collective"]), &h(&ask["act"]))
                     .map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(hex::encode) })),
@@ -594,6 +605,17 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for r in facts["rail_payments"].as_array().into_iter().flatten() {
         av.payments.insert(b(&r["proof"]), b(&r["payment"]));
+    }
+    for x in facts["delivery_specs"].as_array().into_iter().flatten() {
+        av.delivery_records.insert(h(x));
+    }
+    for x in facts["module_specifications"].as_array().into_iter().flatten() {
+        if let Some((m, to)) = mor_core::agreements::AgreementsView::fee_payee_from(&b(x)) {
+            av.fee_payees.insert(m, to);
+        }
+    }
+    for r in facts["rail_amounts"].as_array().into_iter().flatten() {
+        av.rail_amounts.insert(b(&r["proof"]), r["amount"].as_u64().unwrap());
     }
     for x in facts["judges_lapsed"].as_array().into_iter().flatten() {
         av.judges_lapsed.insert((h(&x["question"]), h(&x["judge"])));
