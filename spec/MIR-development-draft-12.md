@@ -473,6 +473,7 @@ A MIP (kind 8) is a proposal toward a successor protocol. It names its creator, 
 - Module identity by hash; frozen once uploaded: 2, 8.
 - Consent by whoever bears the cost, including creator-side fees: 2.
 - Moving off a cMIP by cloning onto another: 1.
+- Task 15, termination terms: a terminating act counting only as their cMIP answers, met, not yet met or unknown; a reader without the cMIP showing unknown from the act on; terms naming them shown before signing: 1, 7.
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - A publication's split shown with its computed payouts before signing: 2.
 - A bake in the creator's name signed with a stolen key, disowned by the creator's rotation and relied on by another identity: shown as disputed, and the specification unclaimed by the creator: 8.

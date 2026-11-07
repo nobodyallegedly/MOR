@@ -484,6 +484,31 @@ pub fn termination(out: &mut Out) {
     out.case(&mut w2, "7.7c the same reader: the version before the act still counts", "Agreements rule 11",
         "Only what the terminating act would end is unknown.",
         Facts::default(), ask("publication", &p1), json!({ "counts": true, "ends": false }), None);
+    // 7.7b, a place: the owners' side alone drops the label, before and
+    // after the minimum term.
+    let mut dropped = v1.clone();
+    dropped.partners = vec![];
+    let mut w5 = replay(&base);
+    let drop_early = later(&mut w5, &mut ana.clone(), &dropped);
+    sign(&mut w5, &mut ben.clone(), &drop_early);
+    let met = test_termination_answer(MIN, 60, true, false);
+    out.case(&mut w5, "7.7b the owners' side alone drops the label before the minimum term: not yet met, the label's place stays active", "Agreements, \"Termination\"; rule 11",
+        "The minimum term protects the label's place as it protects the publication.",
+        stated(drop_early, met), ask("termination", &drop_early),
+        json!({ "counts": false, "publication": "active", "places": places(&[label.id], "active") }), None);
+    let mut w6 = replay(&base);
+    let drop_late = later(&mut w6, &mut ana.clone(), &dropped);
+    sign(&mut w6, &mut ben.clone(), &drop_late);
+    let met = test_termination_answer(MIN, 140, true, false);
+    out.case(&mut w6, "7.7b the owners' side alone drops the label after the minimum term: met, the label's place terminated, the publication active", "Agreements, \"Termination\"; rule 11",
+        "Past the point the default stands: the owners' side terminates the label's place; its part falls to the owners' line.",
+        stated(drop_late, met), ask("termination", &drop_late),
+        json!({ "counts": true, "publication": "active", "places": places(&[label.id], "terminated") }), None);
+    out.case(&mut w6, "7.7c a reader without the cMIP reads the owners' side dropping the label: unknown for the label's place, the publication active", "Agreements, \"Termination\"; rule 35",
+        "The act terminates a place, never the publication: only that place's state is unknown from it on.",
+        Facts::default(), ask("termination", &drop_late),
+        json!({ "counts": "unknown", "publication": "active", "places": places(&[label.id], "unknown") }), None);
+
     // 7.7d: the label terminates its own place, as the terms let it.
     let mut alone = v1.clone();
     alone.partners = vec![];
@@ -595,17 +620,19 @@ pub fn outside_holders(out: &mut Out) {
     let (mut col, mut authority) = super::scenario9::band(&mut w, "a label with an outside buyer", &|t, _| both(t));
     let (f, cid) = (col.founding, col.id);
     let mut buyer = w.genesis("a buyer of a tenth of the label", vec![own_home()], None, None);
+    let mut friend = w.genesis("a judge friendlier to the members", vec![own_home()], None, None);
+    let friend_id = friend.id;
     let tr = StakeTransfer { agreement: f, stake: 0, to: buyer.id, share: 100_000, record: vec![] };
     let x = ag_act(&mut w, &mut col.m[0], agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(f));
     sign(&mut w, &mut buyer, &x);
     w.chain_sign(&col.m[0], x);
     let placed = record(&mut w, &mut col.m[1].acting_for(cid, vec![cid]), f, Record { clone: None, signatures: None, registers: Some(vec![x]) });
-    let (ana_id, ben_id, buyer_id) = (col.m[0].id, col.m[1].id, buyer.id);
+    let (ana_id, buyer_id) = (col.m[0].id, buyer.id);
     let (k, sigs) = super::scenario9::clone_of(&mut w, &mut col, f, vec![(agreements::Power::Constitutional, vec![0, 1, 2]), (agreements::Power::Judicial, vec![0, 1, 2])], &[0, 1, 2], vec![placed], &|t| {
         if let Some(a) = t.abandonment.as_mut() {
-            a.authority = Authority::Named(ben_id);
+            a.authority = Authority::Named(friend_id);
         }
-        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: ben_id });
+        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: friend_id });
         let st = &mut t.stakes.as_mut().unwrap()[0];
         for (h, n) in st.holders.iter_mut() {
             if *h == agreements::Who::Id(ana_id) {
@@ -615,8 +642,8 @@ pub fn outside_holders(out: &mut Out) {
         st.holders.push((agreements::Who::Id(buyer_id), 100_000));
     });
     w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k, &sigs)]), ..Default::default() });
-    let by_member = declare(&mut w, &mut col.m[1].clone(), f, k, k, buyer_id, vec![outcomes::STAKE_REDISTRIBUTED]);
-    out.case(&mut w, "3.7bb the member the new clause names declares the buyer absent, field 1 the latest version: counts for nothing", "Agreements rules 85 and 87 (draft 24, F436.6 D)",
+    let by_member = declare(&mut w, &mut friend, f, k, k, buyer_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bb the judge the new clause names declares the buyer absent, field 1 the latest version: counts for nothing", "Agreements rules 85 and 87 (draft 24)",
         "A holder that bought in is judged under the clause of the version in force where the line placed its transfer, the founding here; field 1 must name it.",
         Facts::default(), ask("declaration", &by_member), json!("counts for nothing"), None);
     let by_keeper = declare(&mut w, &mut authority, f, k, f, buyer_id, vec![outcomes::STAKE_REDISTRIBUTED]);
@@ -630,6 +657,8 @@ pub fn outside_holders(out: &mut Out) {
     let mut w = World::new();
     let heir = w.genesis("cy's stake successor", vec![own_home()], None, None);
     let heir_id = heir.id;
+    let mut friend = w.genesis("a judge the remaining members prefer", vec![own_home()], None, None);
+    let friend_id = friend.id;
     let (mut col, mut authority) = super::scenario9::band(&mut w, "a label whose founder resigns", &|t, ids| {
         both(t);
         t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: ids.to_vec() };
@@ -645,9 +674,9 @@ pub fn outside_holders(out: &mut Out) {
         t.grammar.as_mut().unwrap().chain_key = Holding::Shares { threshold: 2, members: keep.clone() };
         t.departed = Some(vec![cy_id]);
         if let Some(a) = t.abandonment.as_mut() {
-            a.authority = Authority::Named(ben_id);
+            a.authority = Authority::Named(friend_id);
         }
-        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: ben_id });
+        t.grammar.as_mut().unwrap().recovery = Some(Recovery::Escrow { authority: friend_id });
     });
     let (rot, chain2) = w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k1, &sigs)]), ..Default::default() });
     col.chain = chain2;
@@ -655,8 +684,7 @@ pub fn outside_holders(out: &mut Out) {
     out.case(&mut w, "3.7bc Cy, departed, declared absent by the authority of the clause it last signed: counts, its stake passing by succession", "Agreements rules 85, 87 and 89",
         "A departed holder is judged by the clause of the version it last signed as a party, the founding; its plan names a stake successor, so no outcome is stated.",
         Facts::default(), ask("declaration", &on_cy), json!("counts"), None);
-    let registered = record(&mut w, &mut col.m[1].acting_for(cid, vec![rot]), f, Record { clone: None, signatures: None, registers: Some(vec![on_cy]) });
-    let (k2, sigs2) = super::scenario9::clone_of(&mut w, &mut col, k1, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], vec![registered], &|t| {
+    let (k2, sigs2) = super::scenario9::clone_of(&mut w, &mut col, k1, vec![(agreements::Power::Constitutional, vec![0, 1])], &[0, 1], vec![rot], &|t| {
         let st = &mut t.stakes.as_mut().unwrap()[0];
         for (h, _) in st.holders.iter_mut() {
             if *h == agreements::Who::Id(cy_id) {
@@ -667,14 +695,14 @@ pub fn outside_holders(out: &mut Out) {
         t.succession = None;
     });
     let (passes, _) = w.rotate(&col.chain, Rot { declarations: Some(vec![agreements::clone_declaration(&mirs().agreements, &k2, &sigs2)]), ..Default::default() });
-    out.case(&mut w, "3.7bc the rotation declaring the clone that passes Cy's stake to its successor, after the record registering the declaration: valid", "Agreements rules 69, 83 and 89",
+    out.case(&mut w, "3.7bc the rotation declaring the clone, put in force under that declaration, that passes Cy's stake to its successor: valid", "Agreements rules 69, 83 and 89",
         "The stake passes by succession, as Cy's plan says; Cy's signature is not needed.", Facts::default(), ask_status(&passes), json!("valid"), None);
-    let by_member = declare(&mut w, &mut col.m[1].clone(), f, k2, k2, heir_id, vec![outcomes::STAKE_REDISTRIBUTED]);
-    out.case(&mut w, "3.7bc the member the clause names since Cy's resignation declares the successor absent, field 1 the latest version: counts for nothing", "Agreements rule 85 (F437.1: a stake passes with the clause that bound its holder)",
+    let by_member = declare(&mut w, &mut friend, f, k2, k2, heir_id, vec![outcomes::STAKE_REDISTRIBUTED]);
+    out.case(&mut w, "3.7bc the judge the clause names since Cy's resignation declares the successor absent, field 1 the latest version: counts for nothing", "Agreements rule 85: a stake passes with the clause that bound its holder",
         "The successor is judged under the clause that bound Cy, carried through the succession: the founding's, not one changed after Cy left.",
         Facts::default(), ask("declaration", &by_member), json!("counts for nothing"), None);
     let by_keeper = declare(&mut w, &mut authority, f, k2, f, heir_id, vec![outcomes::STAKE_REDISTRIBUTED]);
-    out.case(&mut w, "3.7bc the authority of the clause that bound Cy declares the successor absent, field 1 that version: counts", "Agreements rules 85 and 87 (F437.1)",
+    out.case(&mut w, "3.7bc the authority of the clause that bound Cy declares the successor absent, field 1 that version: counts", "Agreements rules 85 and 87",
         "Whatever the holder held is what passed: the clause included.",
         Facts::default(), ask("declaration", &by_keeper), json!("counts"), None);
 }
