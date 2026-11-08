@@ -69,7 +69,8 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 - Questions: the session records each in plain words, with its options, its lean and the cost; continues elsewhere where it can; stops where a MIR is flawed.
 - Report in `docs/`, plain words first; a branch `claude/…`, a pull request, no merge.
 - The rules that never bend, at the end.
-- Saved here (`docs/lead/prompts/`) and in the project (`claude/MOR-…-prompt.md`). Given to Nobody, allegedly, as a code box **only when it is time to send it** (his rule, 23 October 2026); until then, say it is ready and where it is.
+- **A cMIP is the task it plugs into.** Nobody, allegedly, 7 November 2026: "Always ask this question “what is the task the cMIP plugs into.” Because that’s all a cMIP does." Before proposing, accepting or writing any cMIP (or a sentence that names one), say which task it plugs into, what the task accepts and what it produces; a cMIP with no task is a gap in the texts, not a design.
+- Saved here (`docs/lead/prompts/`) and in the project (`claude/MOR-…-prompt.md`). Given to Nobody, allegedly, as a code box **only when it is time to send it** (his rule, 23 October 2026); until then, say it is ready and where it is. *Repeated 5 November 2026, after the MOR lead shared S7n-3's and S7o's prompts while main's tests still ran:* "Please, avoid sharing prompts in chat unless it is time to launch them." Time to launch means main green (or the branch ready) and nothing blocking; a prompt waiting on a run is announced, not shown.
 
 ## Nobody, allegedly's part from here
 
