@@ -590,6 +590,131 @@ pub fn termination(out: &mut Out) {
         "A collective's agreement ends as rule 91 says, a member's place as rule 70 says; no termination terms reach either.", Facts::default(), invalid(&col), json!("invalid"), None);
 }
 
+/// 1.9i: a deal with a notice term (F436.9). The deal's termination terms
+/// (field 36) are the test cMIP of 7.7b, its key 0 here the point on the
+/// deal's time reference where the notice's period ends; its answers are
+/// stated as facts, as a verifier holding it would compute them from the
+/// block the marked clone names. A clone terminates only where it carries
+/// the termination mark (field 37); the terms are asked about no other.
+pub fn deal_termination(out: &mut Out) {
+    use agreements::Terminates;
+    const NOTICE_ENDS: u64 = 120;
+    let cmip = test_termination_cmip();
+    let mut w = World::new();
+    let mut ana = w.genesis("ana, of the second film", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben, of the second film", vec![own_home()], None, None);
+    let work = spec("a second film, step 1.9i");
+    let creators = [ana.id, ben.id];
+    let c = claim_act(&mut w, &mut ana, &creators, work);
+    sign(&mut w, &mut ben, &c);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "The second film: Ana and Ben, half each; either may end it on notice.".into();
+    owning(&mut t, c, &[(ana.id, 500_000), (ben.id, 500_000)]);
+    t.time = Some((spec("a block-height time reference"), Value::Null));
+    t.termination = Some((cmip, test_termination_params(NOTICE_ENDS, &[])));
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let base = w.log.clone();
+    let clone = |text: &str, mark: Option<Terminates>| {
+        let mut x = t.clone();
+        x.parent = Some(d);
+        x.text = text.into();
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        x.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        x.terminates = mark;
+        x
+    };
+    let both = |w: &mut World, x: &Terms| {
+        let k = ag_act(w, &mut ana.clone(), agreements::types::TERMS, x.to_map(), obj(d));
+        sign(w, &mut ana.clone(), &k);
+        sign(w, &mut ben.clone(), &k);
+        k
+    };
+    let stated = |x: Hash, met: bool| Facts { termination_answers: vec![(x, cmip, met)], ..Default::default() };
+    let ending = clone("The second film's deal ends: each keeps its half; nothing more is owed.", Some(Terminates::Deal));
+    let mut everyone = vec![ana.id, ben.id];
+    everyone.sort();
+
+    // Before the notice's period has run: not yet met.
+    let mut w1 = replay(&base);
+    let early = both(&mut w1, &ending);
+    let met = test_termination_answer(NOTICE_ENDS, 80, true, false);
+    out.case(&mut w1, "1.9i a deal's marked clone, every party signing, before its notice has run: not yet met, it does not count, the deal active", "Agreements rule 47, \"Termination\"; terms field 37",
+        "The clone carries the termination mark naming the deal; it names a block at point 80, before the notice ends at 120: the termination terms answer not yet met.",
+        stated(early, met), ask("termination", &early),
+        json!({ "counts": false, "deal": "active", "places": places(&everyone, "active") }), None);
+    // After it: met, the deal terminated.
+    let mut w2 = replay(&base);
+    let late = both(&mut w2, &ending);
+    let met = test_termination_answer(NOTICE_ENDS, 150, true, false);
+    out.case(&mut w2, "1.9i the same marked clone after the notice has run: met, it counts, the deal terminated", "Agreements rule 47, \"Termination\"; terms field 37",
+        "At point 150, past the notice's end, the termination terms answer met: the deal and every party's place are terminated, everything owed before still owed.",
+        stated(late, met), ask("termination", &late),
+        json!({ "counts": true, "deal": "terminated", "places": places(&everyone, "terminated") }), None);
+    out.case(&mut w2, "1.9i a reader without the termination terms' cMIP reads the marked clone: unknown from it on", "Agreements, \"Termination\"; rule 35",
+        "It holds no answer of the cMIP: whether the clone counts is unknown, never active by default.",
+        Facts::default(), ask("termination", &late),
+        json!({ "counts": "unknown", "deal": "unknown", "places": places(&everyone, "unknown") }), None);
+    out.case(&mut w2, "1.9i the same reader asks whether the marked clone exists: unknown", "Agreements rule 47; \"Termination\"",
+        "A marked clone of a deal naming termination terms counts only when they answer met; without their answer, unknown.",
+        Facts::default(), json!({ "question": "agreement exists", "act": hx(&late) }), json!("unknown"), None);
+
+    // A clone without the mark, stating that nothing more is owed.
+    let mut w3 = replay(&base);
+    let plain = both(&mut w3, &clone("The second film: no further obligations between Ana and Ben.", None));
+    out.case(&mut w3, "1.9i a clone without the termination mark stating no further obligations: no terminating act, the deal active", "Agreements rule 47, \"Termination\": a clone without the mark terminates nothing",
+        "Termination is what the parties say, never inferred from a clone's content: the termination terms are not asked.",
+        Facts::default(), ask("termination", &plain),
+        json!({ "counts": false, "deal": "active", "places": {} }), None);
+    out.case(&mut w3, "1.9i the unmarked clone is a version of the deal like any other: it exists once complete", "Agreements rule 47",
+        "Every party signed it; no termination terms are asked of an unmarked clone.",
+        Facts::default(), json!({ "question": "agreement exists", "act": hx(&plain) }), json!("exists"), None);
+
+    // A place: the mark names Ben's place, Ben no longer listed.
+    let mut w4 = replay(&base);
+    let mut leaving = clone("Ben leaves the second film's deal, keeping his half.", Some(Terminates::Places(vec![ben.id])));
+    leaving.parties = vec![ana.id];
+    let ben_out = both(&mut w4, &leaving);
+    let met = test_termination_answer(NOTICE_ENDS, 150, true, false);
+    out.case(&mut w4, "1.9i a marked clone naming one party's place, after the notice: that place terminated, the deal active", "Agreements, \"Termination\"; terms field 37",
+        "The mark names Ben's place; the clone no longer lists him. Ben keeps what he holds (rule 98.2).",
+        stated(ben_out, met), ask("termination", &ben_out),
+        json!({ "counts": true, "deal": "active", "places": places(&[ben.id], "terminated") }), None);
+
+    // The mark's format.
+    let invalid = |x: &Hash| json!({ "question": "agreement invalid", "act": hx(x) });
+    let mut w5 = replay(&base);
+    let still = both(&mut w5, &clone("Ben's place ended, yet Ben still listed.", Some(Terminates::Places(vec![ben.id]))));
+    out.case(&mut w5, "a mark naming a party the clone still lists: invalid", "Agreements, \"Terms (type 0)\": the termination mark",
+        "Each place the mark names is a party of the parent and none of the clone.", Facts::default(), invalid(&still), json!("invalid"), None);
+    let stranger = spec("someone who is no party");
+    let mut w6 = replay(&base);
+    let odd = both(&mut w6, &clone("A place that was never in the deal.", Some(Terminates::Places(vec![stranger]))));
+    out.case(&mut w6, "a mark naming someone who is no party of the parent: invalid", "Agreements, \"Terms (type 0)\": the termination mark",
+        "Only a party of the parent has a place to terminate.", Facts::default(), invalid(&odd), json!("invalid"), None);
+    let mut w7 = replay(&base);
+    let mut f = t.clone();
+    f.text = "Founding terms carrying the termination mark.".into();
+    f.terminates = Some(Terminates::Deal);
+    let founding = ag_act(&mut w7, &mut ana.clone(), agreements::types::TERMS, f.to_map(), None);
+    out.case(&mut w7, "founding terms carrying the termination mark: invalid", "Agreements, \"Terms (type 0)\": the termination mark",
+        "The mark appears only in a deal's clone.", Facts::default(), invalid(&founding), json!("invalid"), None);
+    let ok = ag_act(&mut w7, &mut ana.clone(), agreements::types::TERMS, ending.to_map(), obj(d));
+    out.case(&mut w7, "a deal's clone carrying the termination mark naming the deal, drafted: not invalid", "Agreements, \"Terms (type 0)\": the termination mark",
+        "`[0]`, the deal, in a deal's clone; one party has drafted it, the other not yet signed.", Facts::default(), invalid(&ok), json!("not invalid"), None);
+    let mut wc = World::new();
+    let mut x = wc.genesis("x, of a collective", vec![own_home()], None, None);
+    let ids = [x.id, spec("a second member"), spec("a third member")];
+    let mut ct = collective_terms(&ids, spec("an authority"), spec("a keeper"), vec![ids[1]], 1);
+    ct.parent = Some(spec("a collective's agreement before"));
+    ct.terminates = Some(Terminates::Deal);
+    let col = ag_act(&mut wc, &mut x, agreements::types::TERMS, ct.to_map(), None);
+    out.case(&mut wc, "a collective's terms carrying the termination mark: invalid", "Agreements, \"Terms (type 0)\": the termination mark; \"Termination\"",
+        "A collective's agreement ends as rule 91 says, a member's place as rule 70 says; the mark is a deal's.", Facts::default(), invalid(&col), json!("invalid"), None);
+}
+
 /// Places, each with `state`, as [`termination_json`] writes them.
 fn places(xs: &[Hash], state: &str) -> J {
     let m: serde_json::Map<String, J> = xs.iter().map(|x| (hx(x), json!(state))).collect();

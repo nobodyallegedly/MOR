@@ -196,6 +196,7 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         issues_under: None,
         control: Some(mor_control::control()),
         termination: None,
+        terminates: None,
     }
 }
 
@@ -868,7 +869,13 @@ fn ask_status(act: &Hash) -> J {
 /// A terminating act's reading, as the vectors write it.
 pub fn termination_json(e: &agreements::TerminationEval) -> J {
     let places: serde_json::Map<String, J> = e.places.iter().map(|(x, s)| (hx(x), json!(s.name()))).collect();
-    json!({ "counts": match e.counts { Some(b) => json!(b), None => json!("unknown") }, "publication": e.publication.name(), "places": places })
+    let counts = match e.counts { Some(b) => json!(b), None => json!("unknown") };
+    // A deal's clone (F436.9) names the deal's state; a publication's
+    // version, the publication's.
+    if e.deal {
+        return json!({ "counts": counts, "deal": e.publication.name(), "places": places });
+    }
+    json!({ "counts": counts, "publication": e.publication.name(), "places": places })
 }
 
 fn ask(q: &str, act: &Hash) -> J {
@@ -2863,6 +2870,7 @@ pub fn agreements(out: &mut Out) {
     s7l::key_delivery(out);
     s7j::agreements(out);
     s7r::termination(out);
+    s7r::deal_termination(out);
     s7r::outside_holders(out);
 }
 

@@ -1499,6 +1499,13 @@ impl<'a> AgreementsView<'a> {
     }
 
     fn agreement_as(&self, id: &Hash, rollback: bool) -> R<Agreement> {
+        self.agreement_asking(id, rollback, true)
+    }
+
+    /// As [`Self::agreement_as`]; `ask_termination` false reads a deal's
+    /// marked clone by its signatures alone, its termination terms not yet
+    /// asked ([`Self::termination`] asks them itself).
+    pub(super) fn agreement_asking(&self, id: &Hash, rollback: bool, ask_termination: bool) -> R<Agreement> {
         let lineage = self.lineage(id)?;
         let terms = lineage[0].1.clone();
         let signed = self.signers(id, &terms.parties);
@@ -1549,6 +1556,15 @@ impl<'a> AgreementsView<'a> {
                     );
                 }
             }
+            // The termination mark (field 37; "Termination"; rule 47): the
+            // places it names are the parent's parties'.
+            if invalid.is_none() {
+                if let Some(super::Terminates::Places(xs)) = &terms.terminates {
+                    if !xs.iter().all(|x| parent.parties.contains(x)) {
+                        invalid = Some("the termination mark names places of the parent's parties (field 37)".into());
+                    }
+                }
+            }
             let mut holders_signed = true;
             // Rule 94: in a deal, the version names the transfers it counts
             // (field 31); a transfer it counts makes its buyer the holder
@@ -1575,7 +1591,7 @@ impl<'a> AgreementsView<'a> {
                     holders_signed = false;
                 }
             }
-            let complete = invalid.is_none()
+            let mut complete = invalid.is_none()
                 && parent_exists
                 && voices.iter().all(|p| parent_signers.contains(p))
                 && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p))
@@ -1586,6 +1602,19 @@ impl<'a> AgreementsView<'a> {
                 unsigned.extend(Self::newcomers(parent, &terms).into_iter().filter(|p| !all_sigs.contains(p)));
                 if let Some(x) = self.unfollowed(id, &unsigned) {
                     return Err(AgreementsError::Missing(x));
+                }
+            }
+            // Rule 47, "Termination" (F436.9): the deal's termination terms
+            // (field 36 of the version it clones) are asked only about a
+            // clone carrying the termination mark, which counts only when
+            // they answer met; with no answer held, unknown.
+            if ask_termination && complete && terms.terminates.is_some() {
+                if let Some((cmip, _)) = parent.termination_terms() {
+                    match self.termination_answers.get(id) {
+                        Some(super::TerminationAnswer::Met) => {}
+                        Some(super::TerminationAnswer::NotYetMet) => complete = false,
+                        None => return Err(AgreementsError::Missing(cmip)),
+                    }
                 }
             }
             return Ok(Agreement {

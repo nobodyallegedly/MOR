@@ -105,6 +105,7 @@ fn label() -> Terms {
         issues_under: None,
         control: Some(mor_control::control()),
         termination: None,
+        terminates: None,
     }
 }
 

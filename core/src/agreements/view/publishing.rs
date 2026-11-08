@@ -94,8 +94,12 @@ pub struct TerminationEval {
     pub terminating: bool,
     /// Whether it counts: `Some(true)`, `Some(false)`, or `None` unknown.
     pub counts: Option<bool>,
-    /// The publication's state from this act on.
+    /// The agreement's state from this act on: the publication's, or, where
+    /// `deal`, the deal's.
     pub publication: Activity,
+    /// Whether the act is a deal's clone (rule 47; terms field 37), not a
+    /// publication's later version.
+    pub deal: bool,
     /// Each place of the version it follows that it no longer names (a
     /// partner, the split service, a backup, a metric's measurer), with
     /// that place's state from this act on.
@@ -452,6 +456,9 @@ impl<'a> AgreementsView<'a> {
     /// place in it, stay active; one whose counting is unknown leaves them
     /// unknown from it on, never active by default (rule 35).
     pub fn termination(&self, id: &Hash) -> R<TerminationEval> {
+        if self.pub_act(id).is_none() {
+            return self.deal_termination(id);
+        }
         let e = self.publication(id)?;
         let Some((_, prev)) = e.follows else {
             return Err(AgreementsError::Check("a first version terminates nothing: it completes the publication"));
@@ -485,7 +492,55 @@ impl<'a> AgreementsView<'a> {
         }
         gone.sort();
         let places = gone.into_iter().map(|x| (x, after(terminating))).collect();
-        Ok(TerminationEval { terminating, counts, publication, places })
+        Ok(TerminationEval { terminating, counts, publication, deal: false, places })
+    }
+
+    /// A deal's clone read as a terminating act (rule 47; "Termination";
+    /// F436.9): it is one only where it carries the termination mark (terms
+    /// field 37), whatever else it states. A marked clone counts where it
+    /// is complete, its termination terms (field 36 of the version it
+    /// clones) answering met where the deal names them, unknown where no
+    /// answer is held; the places it names (or, naming the deal, every
+    /// party's of the version it clones) are terminated from it on.
+    fn deal_termination(&self, id: &Hash) -> R<TerminationEval> {
+        let a = self.agreement_asking(id, false, false)?;
+        if a.terms.is_collective() {
+            return Err(AgreementsError::Check("a collective's agreement is terminated as rule 91 says, a member's place as rule 70 says: it names no termination mark"));
+        }
+        let Some(pid) = a.terms.parent else {
+            return Err(AgreementsError::Check("founding terms terminate nothing: they complete the deal"));
+        };
+        let parent = self.agreement(&pid)?.terms;
+        let Some(mark) = a.terms.terminates.clone() else {
+            // A clone without the mark is never a terminating act.
+            return Ok(TerminationEval { terminating: false, counts: Some(false), publication: Activity::Active, deal: true, places: vec![] });
+        };
+        let complete = a.invalid.is_none() && a.exists == Some(true);
+        let counts = if !complete {
+            Some(false)
+        } else {
+            match parent.termination_terms() {
+                None => Some(true),
+                Some(_) => match self.termination_answers.get(id) {
+                    Some(TerminationAnswer::Met) => Some(true),
+                    Some(TerminationAnswer::NotYetMet) => Some(false),
+                    None => None,
+                },
+            }
+        };
+        let after = match counts {
+            Some(true) => Activity::Terminated,
+            None => Activity::Unknown,
+            Some(false) => Activity::Active,
+        };
+        let (publication, mut ended) = match mark {
+            super::Terminates::Deal => (after, parent.parties.clone()),
+            super::Terminates::Places(xs) => (Activity::Active, xs),
+        };
+        ended.sort();
+        ended.dedup();
+        let places = ended.into_iter().map(|x| (x, after)).collect();
+        Ok(TerminationEval { terminating: true, counts, publication, deal: true, places })
     }
 
     /// The versions of a publication's line held, valid, each with the

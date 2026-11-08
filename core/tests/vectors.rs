@@ -486,7 +486,12 @@ fn verdict_vectors() {
                 // terminating act.
                 "termination" => with_facts(&v, &mirs, facts).termination(&h(&ask["act"])).map_or(json!("unknown"), |e| {
                     let places: serde_json::Map<String, serde_json::Value> = e.places.iter().map(|(x, s)| (hex::encode(x), json!(s.name()))).collect();
-                    json!({ "counts": match e.counts { Some(b) => json!(b), None => json!("unknown") }, "publication": e.publication.name(), "places": places })
+                    let counts = match e.counts { Some(b) => json!(b), None => json!("unknown") };
+                    if e.deal {
+                        json!({ "counts": counts, "deal": e.publication.name(), "places": places })
+                    } else {
+                        json!({ "counts": counts, "publication": e.publication.name(), "places": places })
+                    }
                 }),
                 // S7r-2: an abandonment declaration's own checks (rules 85, 87).
                 "declaration" => json!(match with_facts(&v, &mirs, facts).declaration(&h(&ask["act"])) {

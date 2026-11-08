@@ -1290,6 +1290,36 @@ pub struct Terms {
     /// 36: termination terms, `[cmip, params]`, task 15 (Agreements,
     /// "Termination"): in a deal only.
     pub termination: Option<(Hash, Value)>,
+    /// 37: the termination mark, in a deal's clone only (Agreements,
+    /// "Termination"; rule 47; F436.9): the clone terminates what it names.
+    pub terminates: Option<Terminates>,
+}
+
+/// What a deal's clone carrying the termination mark (terms field 37)
+/// terminates: `[0]`, the deal; `[1, parties]`, those parties' places,
+/// ascending, none twice.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Terminates {
+    Deal,
+    Places(Vec<Hash>),
+}
+
+impl Terminates {
+    pub fn to_value(&self) -> Value {
+        match self {
+            Terminates::Deal => Value::Array(vec![Value::Uint(0)]),
+            Terminates::Places(xs) => Value::Array(vec![Value::Uint(1), hashes_value(xs)]),
+        }
+    }
+
+    fn decode(v: &Value) -> R<Terminates> {
+        let a = nonempty(v, "terms field 37: the termination mark")?;
+        match (uint(&a[0], "terms field 37: its form")?, a.len()) {
+            (0, 1) => Ok(Terminates::Deal),
+            (1, 2) => Ok(Terminates::Places(hashes(&a[1], "terms field 37: the parties whose places it terminates")?)),
+            _ => Err(AgreementsError::Shape("terms field 37: [0], the deal, or [1, parties], their places")),
+        }
+    }
 }
 
 impl Terms {
@@ -1523,6 +1553,9 @@ impl Terms {
         if let Some((h, p)) = &self.termination {
             m.push((Value::Uint(36), Value::Array(vec![b(h), p.clone()])));
         }
+        if let Some(x) = &self.terminates {
+            m.push((Value::Uint(37), x.to_value()));
+        }
         m
     }
 
@@ -1586,7 +1619,7 @@ impl Terms {
                         "terms fields 20, 30, 32 and 34 are a control model's parameters (field 35, Agreements rule 99)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || (26..=36).contains(n) => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || (26..=37).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1693,6 +1726,7 @@ impl Terms {
                     Ok((hash(&a[0], "terms field 36: the termination terms' cMIP")?, a[1].clone()))
                 })
                 .transpose()?,
+            terminates: get(37).map(Terminates::decode).transpose()?,
         })
     }
 
@@ -1716,6 +1750,21 @@ impl Terms {
         if let (Some((h, _)), Some(c)) = (&self.termination, self.cmip(TERMINATION_TERMS_TASK)) {
             if h != c {
                 return Err(AgreementsError::Check("field 36 and field 2's task 15 name the same specification (\"Termination\")"));
+            }
+        }
+        // The termination mark (field 37; "Termination"; rule 47): in a
+        // deal's clone only; its places ascending, none twice.
+        if let Some(t) = &self.terminates {
+            if self.grammar.is_some() || self.parent.is_none() {
+                return Err(AgreementsError::Check("the termination mark (field 37) appears only in a deal's clone: founding terms, or terms carrying a key grammar (field 12), that carry it are invalid (\"Termination\")"));
+            }
+            if let Terminates::Places(xs) = t {
+                if !xs.windows(2).all(|w| w[0] < w[1]) {
+                    return Err(AgreementsError::Check("the termination mark's places are ascending, none twice (field 37)"));
+                }
+                if xs.iter().any(|x| self.parties.contains(x)) {
+                    return Err(AgreementsError::Check("the termination mark names no party of the clone (field 37)"));
+                }
             }
         }
         Ok(())
