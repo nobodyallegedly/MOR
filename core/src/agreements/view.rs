@@ -1580,6 +1580,33 @@ impl<'a> AgreementsView<'a> {
                 }
                 p
             };
+            // F436.10, as F440 read it: a deal's clone that leaves out a
+            // party of the parent whose place is still active, without the
+            // termination mark naming that party's place, is invalid;
+            // nothing is removed silently. A place already ended needs no
+            // mark: by an absence outcome removing the party's voice (rule
+            // 89), or by its own act, a transfer of its whole stake (rule 10)
+            // that this clone counts (field 31).
+            if invalid.is_none() {
+                let named: &[Hash] = match &terms.terminates {
+                    Some(super::Terminates::Places(xs)) => xs,
+                    _ => &[],
+                };
+                let me = |p: &Hash| Who::Id(*p);
+                let sold_all = |p: &Hash| {
+                    parent.stakes.iter().flatten().any(|st| st.share_of(&me(p)) > 0)
+                        && as_counted.stakes.iter().flatten().all(|st| st.share_of(&me(p)) == 0)
+                };
+                if parent
+                    .parties
+                    .iter()
+                    .any(|p| !terms.parties.contains(p) && !named.contains(p) && voices.contains(p) && !sold_all(p))
+                {
+                    invalid = Some(
+                        "a deal's clone that leaves out a party of the parent whose place is still active, without the termination mark naming that party's place, is invalid (field 37; rule 47; F436.10)".into(),
+                    );
+                }
+            }
             let (mut asked, _) = Self::must_sign_parts(&as_counted, &terms);
             for h in super::pay::pay_signers_by(parent, &terms, &|i, st| self.roster_with(i, st, &counted)) {
                 if !asked.contains(&h) {

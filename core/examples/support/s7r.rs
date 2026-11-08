@@ -685,6 +685,15 @@ pub fn deal_termination(out: &mut Out) {
 
     // The mark's format.
     let invalid = |x: &Hash| json!({ "question": "agreement invalid", "act": hx(x) });
+    // F436.10: the clone of the one-place case above (Ben's place marked,
+    // counting as the mark says), here without the mark: invalid.
+    let mut w8 = replay(&base);
+    let mut dropped = clone("Ben leaves the second film's deal, keeping his half.", None);
+    dropped.parties = vec![ana.id];
+    let ben_dropped = both(&mut w8, &dropped);
+    out.case(&mut w8, "1.9i a clone leaving out a party of the parent without the termination mark: invalid", "Agreements rule 47; \"Terms (type 0)\": the termination mark (F436.10)",
+        "The clone no longer lists Ben and carries no mark naming his place: nothing is removed silently.",
+        Facts::default(), invalid(&ben_dropped), json!("invalid"), None);
     let mut w5 = replay(&base);
     let still = both(&mut w5, &clone("Ben's place ended, yet Ben still listed.", Some(Terminates::Places(vec![ben.id]))));
     out.case(&mut w5, "a mark naming a party the clone still lists: invalid", "Agreements, \"Terms (type 0)\": the termination mark",

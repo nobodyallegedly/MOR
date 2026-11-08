@@ -3878,6 +3878,8 @@ fn s7g_agreements_b(out: &mut Out) {
     c.parties = vec![jo.id, lu.id];
     c.text = "The inner deal, Lu in Kai's place.".into();
     c.field4 = mark_all(&[jo.id, kai.id]);
+    // F436.10: Kai left out, so the mark names Kai's place.
+    c.terminates = Some(agreements::Terminates::Places(vec![kai.id]));
     let v2 = ag_act(&mut w, &mut jo, TERMS, c.to_map(), obj(inner));
     sign(&mut w, &mut jo, &v2);
     sign(&mut w, &mut kai, &v2);
