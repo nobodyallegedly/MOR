@@ -133,6 +133,7 @@ export const TASKS: Record<number, [layer: string, name: string]> = {
   12: ['Agreements', 'Grant limits'],
   13: ['Agreements', 'Work claims'],
   14: ['Agreements', 'Absence proof'],
+  15: ['Agreements', 'Termination terms'],
 };
 
 /** A rail Module's kind (field 11) and the set its proof binds (field 13), as the core reads them (Development draft 10, F301). */
