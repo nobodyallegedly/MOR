@@ -167,7 +167,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 - **Termination.** The agreed way out: one side ending, for the future, an agreement or a party's place in it, by a terminating act under the agreement's termination rule, everything owed before still owed and everything placed standing ("Termination"). The way out no term reaches is another thing: a member's resignation, a holder's transfer of its own share, a release, a fork or closing, succession (Part three; rule 98).
 - **Active, terminated.** The core's only two states of an agreement, and of a party's place in it, unknown where a verifier cannot tell ("Termination"). A terminated place moves no stake: a party whose place is terminated keeps what it holds and is owed (rule 98.2).
 - **Termination terms.** A cMIP an agreement names, with its parameters, for task 15 (terms field 36, publication field 13): the conditions under which a terminating act counts, a notice, a minimum term or a veto among them, or a widening of who may terminate ("Termination"; section 22).
-- **A deal's end.** A deal has no closing act: it is terminated, or winds down, by a clone every party signs, stating its new conditions: where its stakes went, what is still owed, and to whom it now pays (rules 15, 47; "Termination").
+- **A deal's end.** A deal has no closing act: it is terminated, or winds down, by a clone every party signs, terminating only where it carries the termination mark (terms field 37), stating its new conditions: where its stakes went, what is still owed, and to whom it now pays (rules 15, 47; "Termination").
 - **Creditor's release.** An act by which a creditor ends an obligation owed to it without full payment (Money type 4; rule 92).
 
 ## Part one: the grammar of agreeing
@@ -584,7 +584,7 @@ Signature acts by parties the mark does not name bind those parties (rule 1), bu
 
 **Active and terminated.** An agreement is active from the act that completes it (a deal, every party's signature on its founding version; a collective, its founding; a publication, every party's signature on its first version) until a terminating act counts; from then on it is terminated. A party's place in an agreement is active from the version that names it, which it signed, until a terminating act for that place counts, or the party leaves by its own act (a resignation, rule 70; a transfer of its whole stake, rule 10), or an outcome of the abandonment clause removes its voice (rule 89); from then on it is terminated. Where a verifier cannot tell whether a terminating act counts, the agreement's or the place's state is unknown from that act on, never active by default (rule 35).
 
-**A terminating act** is a version of the agreement that sells nothing, or that names a party's place terminated, or the clone rule 47 describes for a deal, signed under the agreement's termination rule: the default of its kind (below) where the agreement names no termination terms; where it names them (task 15), the act counts only when the termination terms' cMIP answers met. A party the terminating version newly names in a terminated party's place signs it to accept.
+**A terminating act** is a version of the agreement that sells nothing, or that names a party's place terminated, or a deal's clone carrying the termination mark (terms field 37), which names what it terminates, the deal or named parties' places (rule 47), signed under the agreement's termination rule: the default of its kind (below) where the agreement names no termination terms; where it names them (task 15), the act counts only when the termination terms' cMIP answers met. A party the terminating version newly names in a terminated party's place signs it to accept. A deal's clone without the mark is never a terminating act, whatever it states.
 
 **Termination terms may widen who terminates.** Where an agreement names termination terms, "the act counts only when the termination terms' cMIP answers met" is read for any terminating act, whoever signed it: a party other than the default's (a partner, a split service, the measurer) may terminate its own place where the terms the parties signed let it. Where they answer not yet met, the act does not count, and the agreement or the place stays active; a later terminating act may count. Without termination terms, the defaults below stand.
 
@@ -596,7 +596,7 @@ Signature acts by parties the mark does not name bind those parties (rule 1), bu
 
 *Stated cost: termination terms are a deal term, never the way out. Owners whose termination terms never answer met, a veto they signed, keep the way out: each holder may transfer its own share (rule 10), and the owners may release the work (rule 55), after which the publication sells nothing ("Owners that ended", rule 12). The core gives no termination and withholds none: what the parties signed is theirs.*
 
-*Client conformance:* **before a signature on an agreement naming termination terms, or on a version changing them, the client shows the cMIP's creator and enough of its hash to tell it apart (Development rule 13); which terminations it reaches (the agreement, which places) and whom it protects; and what it adds to the default, in the cMIP's own declared summary (a period and on which time reference; a payment and to whom; a signature required), with a plain warning where the terms let no termination count without a named party's signature (a veto) or before a point (a minimum term). A client MUST NOT sign terms naming a termination-terms cMIP it does not implement.** **A holder buying into an ownership agreement is shown, before paying, the publications in force over the stake and their termination terms**, since it steps into the owners' side bound by them; a buyer of a work is shown nothing, since a purchase accepts the sale and no term of the agreement. **A client acting for the owners' side shows, before a terminating act, what the act ends and that everything received before is still split and paid.** **A client that does not hold the termination terms' cMIP shows the agreement's state, or the place's, as unknown from the terminating act on.**
+*Client conformance:* **before a signature on an agreement naming termination terms, or on a version changing them, the client shows the cMIP's creator and enough of its hash to tell it apart (Development rule 13); which terminations it reaches (the agreement, which places) and whom it protects; and what it adds to the default, in the cMIP's own declared summary (a period and on which time reference; a payment and to whom; a signature required), with a plain warning where the terms let no termination count without a named party's signature (a veto) or before a point (a minimum term). **A minimum term or a notice is checkable only where the terminating act names a block, or an anchor shows it made after a point; otherwise the termination terms' answer is unknown** (rule 33's "not before"). A client MUST NOT sign terms naming a termination-terms cMIP it does not implement.** **A holder buying into an ownership agreement is shown, before paying, the publications in force over the stake and their termination terms**, since it steps into the owners' side bound by them; a buyer of a work is shown nothing, since a purchase accepts the sale and no term of the agreement. **A client acting for the owners' side shows, before a terminating act, what the act ends and that everything received before is still split and paid.** **A client that does not hold the termination terms' cMIP shows the agreement's state, or the place's, as unknown from the terminating act on.**
 
 #### Rule 49. Moving off a cMIP
 
@@ -1210,7 +1210,7 @@ A sale through a publication is divided once, by its split service: **partners f
 - **Nesting is bounded at 8 layers**, a freeze parameter ("Parameters").
 - **When an inner agreement ends, its shares move by ordinary acts, and what is still owed stays visible:**
   - **A collective is liquidated by ordinary sales and transfers before its closing**: each share it holds sold or moved by a transfer (rule 10), or released (rule 55), an absentee's money share following the collective's own rules, as rule 91 and "Closing (type 20)" say.
-  - **A deal ends, or winds down, by a clone every party signs** (rule 47), a terminating act, counting only as its termination terms answer where it names them ("Termination").
+  - **A deal ends, or winds down, by a clone every party signs** (rule 47), a terminating act where it carries the termination mark, counting only as its termination terms answer where it names them ("Termination").
   - Either way, a publication keeps reading the inner agreement's line, its own terms unchanged.
 
 *A deal's last clone needs nothing new: it is an ordinary clone of a deal.*
@@ -2008,7 +2008,7 @@ The split service's receipt relies as the publication's party; a payer's claim n
 
 *Checkable: the relying act names the version. Without it, a party who rotates and disowns its signature on a completed version would uncomplete it for everyone, the parent coming back into force under purchases and splits already made under the version.* A version nothing relies on yet is judged by its signatures as Identity judges them.
 
-**A deal is terminated, or winds down, by such a clone** ("Termination"). A deal has no closing act. Its parties terminate it, or wind it down, by a clone every party signs, stating its new conditions: where its shares went, and what is still owed (open obligations); where the deal names termination terms (field 36), the clone counts only when they answer met. What those conditions are depends on the deal. Each party's own way out is its transfer (rule 10), which no term reaches. A party who is absent is handled by the absence rules (rules 85 to 89; in a deal one identity judges absence): where the deal provides it, the declaration removes the absent party's voice (rule 89), and the clone completes with the parties whose voice remains; the absent party's stake is never reduced without it (rule 48).
+**A deal is terminated, or winds down, by such a clone** ("Termination"). A deal has no closing act. Its parties terminate it, or wind it down, by a clone every party signs, stating its new conditions: where its shares went, and what is still owed (open obligations). A clone terminates only where it carries the termination mark (field 37), naming the deal or the parties' places it terminates; a clone without the mark terminates nothing, whatever it states. Where the deal names termination terms (field 36), they are asked only about a marked clone, which counts only when they answer met. What those conditions are depends on the deal. Each party's own way out is its transfer (rule 10), which no term reaches. A party who is absent is handled by the absence rules (rules 85 to 89; in a deal one identity judges absence): where the deal provides it, the declaration removes the absent party's voice (rule 89), and the clone completes with the parties whose voice remains; the absent party's stake is never reduced without it (rule 48).
 
 *Stated cost: one silent party blocks every change to a deal, however large: one person can hold everything until all agree, as in deal making in everyday life. The ways out: the abandonment clause, whose declaration is not a clone, can remove an absent party's voice where the deal provides it (rule 89); succession plans; and, for many parties or a long relationship, a collective.*
 
@@ -2578,6 +2578,8 @@ terms-payload = {
   ? 36 => [ hash, any ],    ; termination terms: a cMIP and its parameters, task 15 ("Termination"); in a deal only
                             ; (a collective's terms carrying it, or naming task 15 in field 2, are invalid); the
                             ; same specification as field 2's task 15 where both are present
+  ? 37 => terminates,       ; the termination mark: in a deal's clone only, which terminates what it names (rule 47;
+                            ; "Termination")
   ? 6 => [ hash, any ],     ; time reference: the task cMIP and its parameters; a naming for task 10, the same
                             ; specification as field 2's task 10 where both are present
   ? 7 => owners,            ; the stake: the holders of the target and their shares (only with field 33, and then
@@ -2616,6 +2618,7 @@ terms-payload = {
 target   = [ 0, claim: hash ]                 ; a work's ownership agreement: the work's claim (type 3), by its act id
          / [ 1, null ]                        ; a collective's: the collective itself, the identity whose genesis
                                               ; declares these terms or the terms they clone
+terminates = [ 0 ] / [ 1, [+ hash] ]          ; the deal / the places of these parties
 owners   = [+ [ holder: hash, share: uint ]]  ; the one stake, on the target, index 0: holders distinct, each share
                                               ; above zero, summing to 1,000,000; leftovers by largest remainder, the
                                               ; order of holders deciding nothing
@@ -2799,6 +2802,8 @@ Terms breaking any of these are invalid. The entry records only that each is dep
 **The control model** (field 35) appears only in terms carrying a key grammar (field 12): terms of a deal carrying it are invalid. It names one cMIP, by its hash, and that cMIP's parameters, in the cMIP's own format, as field 6 names a time reference. A specification named there is named for no task and as no extension. Naming it, changing it or changing its parameters is a constitutional change (rule 98). *A collective naming none is judged by the last resort alone (rule 98).*
 
 **Termination terms** (field 36) appear only in terms of a deal: terms carrying a key grammar (field 12) that carry field 36, or name task 15 in field 2, are invalid. Field 36 names one cMIP, by its hash, and its parameters, in the cMIP's own format, as field 6 names a time reference; where field 2 names a cMIP for task 15 too, the two name the same specification, and terms where they differ are invalid. A publication's field 13 and its field 9's task 15 likewise ("Termination"; task 15).
+
+**The termination mark** (field 37) says that a deal's clone terminates, and names what: `[0]`, the deal; `[1, parties]`, the places of those parties, ascending, none twice, each a party of the parent and none a party of the clone. It appears only in a deal's clone: founding terms, or terms carrying a key grammar (field 12), that carry it are invalid ("Termination"; rule 47).
 
 *Six layers, one per MIR: a collective can name one rule for its texts and another for its bakes, since Text and Envelopes are layers of their own; releases of code and other bakes are both Envelopes acts, so an area by act type still names a single type within that layer.*
 
@@ -3804,7 +3809,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 - A minimum term not yet met: the terminating version does not count, sales under the old version stand: 7.7b.
 - A reader without the termination terms' cMIP: unknown from the act on: 7.7c.
 - A partner terminating its own place under terms that let it: 7.7d.
-- A deal with a notice term: 1.
+- A deal with a notice term: its marked clone before the notice does not count, after it the deal is terminated; a clone without the mark terminates nothing: 1.
 
 #### Forked deals
 
