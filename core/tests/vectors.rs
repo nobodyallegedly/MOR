@@ -479,6 +479,34 @@ fn verdict_vectors() {
                     m.dedup();
                     json!({ "mismatched": m })
                 }),
+                "publication" => with_facts(&v, &mirs, facts)
+                    .publication(&h(&ask["act"]))
+                    .map_or(json!("unknown"), |e| if e.unknown { json!("unknown") } else { json!({ "counts": e.counts, "ends": e.ends }) }),
+                // S7r-2 (Agreements, "Termination"): a later version read as a
+                // terminating act.
+                "termination" => with_facts(&v, &mirs, facts).termination(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let places: serde_json::Map<String, serde_json::Value> = e.places.iter().map(|(x, s)| (hex::encode(x), json!(s.name()))).collect();
+                    let counts = match e.counts { Some(b) => json!(b), None => json!("unknown") };
+                    if e.deal {
+                        json!({ "counts": counts, "deal": e.publication.name(), "places": places })
+                    } else {
+                        json!({ "counts": counts, "publication": e.publication.name(), "places": places })
+                    }
+                }),
+                // S7r-2: an abandonment declaration's own checks (rules 85, 87).
+                "declaration" => json!(match with_facts(&v, &mirs, facts).declaration(&h(&ask["act"])) {
+                    Ok(Ok(_)) => "counts",
+                    Ok(Err(_)) => "counts for nothing",
+                    Err(_) => "unknown",
+                }),
+                "split judged" => with_facts(&v, &mirs, facts).split(&h(&ask["act"])).map_or(json!("unknown"), |e| {
+                    let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hex::encode(x.holder)).collect();
+                    m.sort();
+                    m.dedup();
+                    let mut u: Vec<String> = e.unevidenced.iter().map(hex::encode).collect();
+                    u.sort();
+                    json!({ "mismatched": m, "unevidenced": u, "metric_problems": e.metric_problems })
+                }),
                 "record" => with_facts(&v, &mirs, facts)
                     .record(&h(&ask["collective"]), &h(&ask["act"]))
                     .map_or(json!("unknown"), |e| json!({ "line": e.line, "puts": e.puts.map(hex::encode) })),
@@ -595,11 +623,31 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     for r in facts["rail_payments"].as_array().into_iter().flatten() {
         av.payments.insert(b(&r["proof"]), b(&r["payment"]));
     }
+    for x in facts["delivery_specs"].as_array().into_iter().flatten() {
+        av.delivery_records.insert(h(x));
+    }
+    for x in facts["module_specifications"].as_array().into_iter().flatten() {
+        if let Some((m, to)) = mor_core::agreements::AgreementsView::fee_payee_from(&b(x)) {
+            av.fee_payees.insert(m, to);
+        }
+    }
+    for r in facts["rail_amounts"].as_array().into_iter().flatten() {
+        av.rail_amounts.insert(b(&r["proof"]), r["amount"].as_u64().unwrap());
+    }
     for x in facts["judges_lapsed"].as_array().into_iter().flatten() {
         av.judges_lapsed.insert((h(&x["question"]), h(&x["judge"])));
     }
     for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
         av.settled_out_of_turn.insert(h(x));
+    }
+    // The termination terms' answers (task 15), as the cMIP gave them.
+    for x in facts["termination_answers"].as_array().into_iter().flatten() {
+        let a = match x["answer"].as_str() {
+            Some("met") => mor_core::agreements::TerminationAnswer::Met,
+            Some("not yet met") => mor_core::agreements::TerminationAnswer::NotYetMet,
+            other => panic!("a termination answer: {other:?}"),
+        };
+        av.termination_answers.insert(h(&x["act"]), a);
     }
     // A rail Module's kind and binding, read from its specification (fields
     // 11 and 13), under the specification's hash.

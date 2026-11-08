@@ -19,12 +19,12 @@ import { mirFileHash } from '../../genesis/src/core.ts';
 
 /** The six, in the MICS's order, with the file each is shipped as. */
 export const MIR_TEXTS = [
-  { layer: 'Identity', file: 'MIR-identity-draft-15.md' },
-  { layer: 'Envelopes', file: 'MIR-envelopes-draft-11.md' },
+  { layer: 'Identity', file: 'MIR-identity-draft-16.md' },
+  { layer: 'Envelopes', file: 'MIR-envelopes-draft-12.md' },
   { layer: 'Text', file: 'MIR-text-draft-11.md' },
-  { layer: 'Money', file: 'MIR-money-draft-13.md' },
-  { layer: 'Agreements', file: 'MIR-agreements-draft-23.md' },
-  { layer: 'Development', file: 'MIR-development-draft-11.md' },
+  { layer: 'Money', file: 'MIR-money-draft-14.md' },
+  { layer: 'Agreements', file: 'MIR-agreements-draft-24.md' },
+  { layer: 'Development', file: 'MIR-development-draft-12.md' },
 ] as const;
 
 export interface Recomputed {

@@ -104,6 +104,8 @@ fn label() -> Terms {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     }
 }
 

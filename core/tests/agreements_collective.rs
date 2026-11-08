@@ -182,6 +182,8 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     };
     f(&mut t);
     t
@@ -3260,6 +3262,8 @@ fn a_deal_changes_only_with_everyone() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3345,6 +3349,8 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             transfers_counted: None,
             issues_under: None,
             control: Some(mor_control::control()),
+            termination: None,
+            terminates: None,
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3447,6 +3453,8 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3622,6 +3630,8 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -5661,6 +5671,8 @@ fn a_work_is_released_to_the_public_domain() {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5967,6 +5979,8 @@ fn a_timed_release() {
             transfers_counted: None,
             issues_under: None,
             control: Some(mor_control::control()),
+            termination: None,
+            terminates: None,
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -9227,6 +9241,8 @@ fn review_f190_1_a_party_left_alone_on_a_dropped_branch_reopens_nothing() {
         c.parent = Some(d);
         c.text = "B: Ben leaves, Ana alone.".into();
         c.parties = vec![l.ana.id];
+        // F436.10: Ben's place, still active, ended by the mark.
+        c.terminates = Some(agreements::Terminates::Places(vec![l.ben.id]));
         c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
         let k = agreements_act(&mut l.w, &mut l.ana, agreements::types::TERMS, c.to_map(), obj(d));
         sign(&mut l.w, &mut l.ana, &k);
@@ -9708,6 +9724,8 @@ fn f192_a_party_alone_on_a_dropped_branch_reopens_nothing() {
         c.parent = Some(d);
         c.text = "B: Ben leaves, Ana alone.".into();
         c.parties = vec![l.ana.id];
+        // F436.10: Ben's place, still active, ended by the mark.
+        c.terminates = Some(agreements::Terminates::Places(vec![l.ben.id]));
         c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![l.ana.id, l.ben.id]) }]);
         let k = agreements_act(&mut l.w, &mut l.ana, agreements::types::TERMS, c.to_map(), obj(d));
         sign(&mut l.w, &mut l.ana, &k);
@@ -11231,7 +11249,12 @@ fn draft_11_f254_an_agreement_is_named_by_its_line_and_carries_what_it_signed() 
     assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true));
     // The work's agreement re-versions: Ben out, Cy in. What the line
     // signed stays signed.
-    let w3t = deal_clone(&w2t, we2, &|t| t.parties = vec![t.parties[0], cy.id]);
+    // F436.10: Ben's place, still active, ended by the mark.
+    let ben_id = ben.id;
+    let w3t = deal_clone(&w2t, we2, &|t| {
+        t.parties = vec![t.parties[0], cy.id];
+        t.terminates = Some(agreements::Terminates::Places(vec![ben_id]));
+    });
     let we3 = deal_signed_by(&mut w, &w3t, &mut [&mut ana, &mut ben, &mut cy], Some(we2));
     assert_eq!(view(&w).version_in_force(&we).unwrap(), we3);
     assert_eq!(view(&w).agreement(&pe).unwrap().exists, Some(true), "carried through every later version (F254)");
@@ -12666,6 +12689,60 @@ fn a_sold_stake_is_asked_through_the_version_1_9h() {
     assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(false), "the buyer counts nothing toward it");
     sign(&mut w, &mut ivy, &unnamed);
     assert_eq!(view(&w).agreement(&unnamed).unwrap().exists, Some(true), "the seller's signature");
+}
+
+/// F436.10, as F440 decided it ((a), Nobody, allegedly): a deal's clone
+/// leaving out a party whose place is still active, without the termination
+/// mark naming it, is invalid; a party whose place already ended by its own
+/// act, a transfer of its whole stake the clone counts (field 31), may be
+/// left out without the mark. The absence half is
+/// `scenario_1_step_9_absence_is_the_authoritys_judgment`.
+#[test]
+fn f436_10_a_party_left_out_needs_the_mark_unless_its_place_already_ended() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut carla = w.genesis("carla, who buys ben's whole stake", vec![own_home()], None, None);
+    let film = spec("the film, F436.10");
+    let mut t = deal_terms(ana.id, ben.id);
+    t.stakes = Some(vec![agreements::Stake { object: Who::Id(film), holders: vec![(Who::Id(ana.id), 500_000), (Who::Id(ben.id), 500_000)] }]);
+    on_claim(&mut w, &mut ana, &mut t);
+    let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    assert_eq!(view(&w).agreement(&d).unwrap().exists, Some(true));
+    // Ben sells his whole stake to Carla, on his own line.
+    let tr = agreements::StakeTransfer { agreement: d, stake: 0, to: carla.id, share: 500_000, record: vec![] };
+    let x = agreements_act(&mut w, &mut ben, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(d));
+    let (_, ben2) = w.chain_sign(&ben, x);
+    ben = ben2;
+    sign(&mut w, &mut carla, &x);
+    assert!(view(&w).transfer(&x).unwrap().effective);
+    let (aid, bid, cid) = (ana.id, ben.id, carla.id);
+    let version = |w: &mut World, ana: &mut Person, counted: Option<Vec<Hash>>, parties: Vec<Hash>, mark: Option<agreements::Terminates>, words: &str| {
+        let mut c = t.clone();
+        c.parent = Some(d);
+        c.text = words.into();
+        c.parties = parties;
+        let holder = if counted.is_some() { cid } else { bid };
+        c.stakes.as_mut().unwrap()[0].holders = vec![(Who::Id(aid), 500_000), (Who::Id(holder), 500_000)];
+        c.transfers_counted = counted;
+        c.terminates = mark;
+        c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![aid, bid]) }]);
+        agreements_act(w, ana, agreements::types::TERMS, c.to_map(), obj(d))
+    };
+    let invalid = |w: &World, k: &Hash| view(w).agreement(k).unwrap().invalid;
+    // Ben still holds his stake (the sale not counted): his place is
+    // active; leaving him out without the mark is invalid.
+    let k = version(&mut w, &mut ana, None, vec![aid, cid], None, "Carla in, Ben out, no mark, no sale counted.");
+    assert!(invalid(&w, &k).is_some_and(|e| e.contains("F436.10")), "{:?}", invalid(&w, &k));
+    // The same with the mark naming Ben's place: not invalid.
+    let k = version(&mut w, &mut ana, None, vec![aid, cid], Some(agreements::Terminates::Places(vec![bid])), "Carla in, Ben's place ended by the mark.");
+    assert_eq!(invalid(&w, &k), None);
+    // Counting the sale of his whole stake: Ben's place ended by his own
+    // act; leaving him out needs no mark.
+    let k = version(&mut w, &mut ana, Some(vec![x]), vec![aid, cid], None, "Carla in, counting Ben's sale of his whole stake.");
+    assert_eq!(invalid(&w, &k), None);
 }
 
 /// The label, with a stake in itself held by its three members and Dana, an

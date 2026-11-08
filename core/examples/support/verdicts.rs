@@ -46,6 +46,7 @@ mod s7j_identity;
 #[path = "s7k.rs"]
 mod s7k;
 mod s7l;
+mod s7r;
 
 pub fn mirs() -> Mirs {
     let t = |s: &str| sha256(format!("{s}, test value until the freeze").as_bytes());
@@ -194,6 +195,8 @@ fn deal(parties: &[Hash], keepers: Option<Keepers>) -> Terms {
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     }
 }
 
@@ -356,6 +359,9 @@ pub struct Facts {
     pub rail_valid: Vec<(Hash, Hash)>,
     /// The rail Module's answer of which payment a proof is (Money rule 12).
     pub rail_payments: Vec<(Vec<u8>, Vec<u8>)>,
+    pub rail_amounts: Vec<(Vec<u8>, u64)>,
+    pub module_specifications: Vec<Vec<u8>>,
+    pub delivery_specs: Vec<Hash>,
     /// Private acts this verifier found in their sealed form at a home, with
     /// the home's operator (Identity, "Private links").
     pub found_at_home: Vec<(Hash, Hash)>,
@@ -383,6 +389,9 @@ pub struct Facts {
     /// The stated model's query answer, key 2, where stated apart from its
     /// answers (rule 99; F429): its powers by share by act type.
     pub control_listed: Vec<((Hash, u64), Value)>,
+    /// The termination terms' answers (task 15; Agreements, "Termination"):
+    /// (terminating act, the cMIP that answered, met or not yet met).
+    pub termination_answers: Vec<(Hash, Hash, bool)>,
 }
 
 impl Facts {
@@ -415,6 +424,15 @@ impl Facts {
         if !self.found_at_home.is_empty() {
             m.insert("found_at_home".into(), self.found_at_home.iter().map(|(a, o)| json!({ "act": hx(a), "operator": hx(o) })).collect());
         }
+        if !self.delivery_specs.is_empty() {
+            m.insert("delivery_specs".into(), self.delivery_specs.iter().map(|c| json!(hx(c))).collect());
+        }
+        if !self.module_specifications.is_empty() {
+            m.insert("module_specifications".into(), self.module_specifications.iter().map(|c| json!(hx(c))).collect());
+        }
+        if !self.rail_amounts.is_empty() {
+            m.insert("rail_amounts".into(), self.rail_amounts.iter().map(|(p, a)| json!({ "proof": hx(p), "amount": a })).collect());
+        }
         if !self.rail_payments.is_empty() {
             m.insert("rail_payments".into(), self.rail_payments.iter().map(|(p, x)| json!({ "proof": hx(p), "payment": hx(x) })).collect());
         }
@@ -440,6 +458,12 @@ impl Facts {
             m.insert(
                 "control_answers".into(),
                 self.control_answers.iter().map(|((s, t), v)| json!({ "model": hx(&mor_control::stated::cmip()), "spec": hx(s), "type": t, "answer": hx(&cbor::encode(v)) })).collect(),
+            );
+        }
+        if !self.termination_answers.is_empty() {
+            m.insert(
+                "termination_answers".into(),
+                self.termination_answers.iter().map(|(a, c, met)| json!({ "act": hx(a), "cmip": hx(c), "answer": if *met { "met" } else { "not yet met" } })).collect(),
             );
         }
         J::Object(m)
@@ -477,6 +501,17 @@ impl Facts {
         for (p, x) in &self.rail_payments {
             v.payments.insert(p.clone(), x.clone());
         }
+        for (p, a) in &self.rail_amounts {
+            v.rail_amounts.insert(p.clone(), *a);
+        }
+        for c in &self.delivery_specs {
+            v.delivery_records.insert(*c);
+        }
+        for c in &self.module_specifications {
+            if let Some((m, to)) = mor_core::agreements::AgreementsView::fee_payee_from(c) {
+                v.fee_payees.insert(m, to);
+            }
+        }
         for (q, j) in &self.judges_lapsed {
             v.judges_lapsed.insert((*q, *j));
         }
@@ -490,6 +525,9 @@ impl Facts {
         }
         for x in &self.rail_invalid {
             v.rail_invalid.insert(*x);
+        }
+        for (a, _, met) in &self.termination_answers {
+            v.termination_answers.insert(*a, if *met { agreements::TerminationAnswer::Met } else { agreements::TerminationAnswer::NotYetMet });
         }
     }
 }
@@ -701,6 +739,46 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                 json!({ "mismatched": m })
             })
         }
+        // S7r: a publication counts or not (rule 11; the owners' side's exit).
+        "publication" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.publication(&h("act")).map_or(json!("unknown"), |e| if e.unknown { json!("unknown") } else { json!({ "counts": e.counts, "ends": e.ends }) })
+        }
+        // S7r-2: a later version of a publication read as a terminating act
+        // (Agreements, "Termination"): whether it counts (true, false or
+        // unknown), the publication's state from it on, and each place it
+        // ends, with its state.
+        "termination" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.termination(&h("act")).map_or(json!("unknown"), |e| termination_json(&e))
+        }
+        // S7r-2: an abandonment declaration's own checks (rules 85 and 87).
+        "declaration" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            json!(match v.declaration(&h("act")) {
+                Ok(Ok(_)) => "counts",
+                Ok(Err(_)) => "counts for nothing",
+                Err(_) => "unknown",
+            })
+        }
+        // S7r: a split judged in full (rules 22, 27, 29): the mismatched
+        // payouts, the role payouts whose evidence does not hold, and what is
+        // wrong with its metric payouts.
+        "split judged" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.split(&h("act")).map_or(json!("unknown"), |e| {
+                let mut m: Vec<String> = e.mismatched.iter().chain(e.partners_mismatched.iter()).map(|x| hx(&x.holder)).collect();
+                m.sort();
+                m.dedup();
+                let mut u: Vec<String> = e.unevidenced.iter().map(|x| hx(x)).collect();
+                u.sort();
+                json!({ "mismatched": m, "unevidenced": u, "metric_problems": e.metric_problems })
+            })
+        }
         // A record of a collective (rule 69): whether it is a line, and the
         // clone it puts in force.
         "record" => {
@@ -786,6 +864,18 @@ impl Out {
 
 fn ask_status(act: &Hash) -> J {
     json!({ "question": "status", "act": hx(act) })
+}
+
+/// A terminating act's reading, as the vectors write it.
+pub fn termination_json(e: &agreements::TerminationEval) -> J {
+    let places: serde_json::Map<String, J> = e.places.iter().map(|(x, s)| (hx(x), json!(s.name()))).collect();
+    let counts = match e.counts { Some(b) => json!(b), None => json!("unknown") };
+    // A deal's clone (F436.9) names the deal's state; a publication's
+    // version, the publication's.
+    if e.deal {
+        return json!({ "counts": counts, "deal": e.publication.name(), "places": places });
+    }
+    json!({ "counts": counts, "publication": e.publication.name(), "places": places })
 }
 
 fn ask(q: &str, act: &Hash) -> J {
@@ -1218,6 +1308,7 @@ pub fn identity(out: &mut Out) {
     s7g_development_identity(out);
     s7i::identity(out);
     s7j_identity::identity(out);
+    s7r::identity(out);
     s7k::identity(out);
     s7k::identity_rule_40(out);
 }
@@ -1438,6 +1529,42 @@ pub fn money(out: &mut Out) {
             w.add(x);
         }
         out.case(&mut w, name, "Money rule 12; rules 10 and 11", why, facts, ask("paid toward", &oid), v, None);
+    }
+    // Money rule 12's batch total (F436's R25): two payouts of one payment
+    // under one batch, toward two debts of the debtor's, counted only where
+    // their amounts together do not exceed what the payment shows (the
+    // amount the rail's answer states, Money rule 8).
+    {
+        let mut w = World::new();
+        for (x, _) in &log {
+            if ![r1, r2, r3].contains(&x.id()) {
+                w.add(x);
+            }
+        }
+        let ob2 = Fin::Obligation(money::Obligation { debtor: debtor.id, creditor: payee.id, amount: Amount { unit, value: 100 }, pointer, agreement: None });
+        let oid2 = { let a = w.everyday_act(&mut debtor, mirs().money, 1, ob2.to_map(), None, None); w.add(&a) };
+        w.ack(&mut payee, oid2);
+        let batch = spec("a batch");
+        let proof = b"one batched payment's proof".to_vec();
+        let mut put = |w: &mut World, fulfils: Hash| {
+            let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(debtor.id), payee: payee.id, amount: Amount { unit, value: 60 }, fulfils, previous: None, forward: None, batch: Some(batch), purchase: None });
+            let a = w.everyday_act(&mut payee, mirs().money, 2, r.to_map(), None, None);
+            w.add(&a)
+        };
+        let b1 = put(&mut w, oid);
+        let b2 = put(&mut w, oid2);
+        let log2 = w.log.clone();
+        for (shown, v, name, why) in [
+            (120u64, json!(60), "two receipts of one payment under one batch, 60 and 60, the rail stating 120: each counts", "Money rule 12: receipts naming different purposes share one payment under the batch they both name, their amounts together not above what the payment shows."),
+            (100u64, json!(0), "the same, the rail stating 100: neither counts", "Money rule 12: their amounts together exceed what the payment shows; neither counts until the receiver signs a receipt that resolves them."),
+        ] {
+            let mut w = World::new();
+            for (x, _) in &log2 {
+                w.add(x);
+            }
+            let facts = Facts { rail_valid: vec![(b1, pointer), (b2, pointer)], rail_payments: vec![(proof.clone(), b"payment B".to_vec())], rail_amounts: vec![(proof.clone(), shown)], ..Default::default() };
+            out.case(&mut w, name, "Money rule 12; rule 8 (the rail's answer states the amount)", why, facts, ask("paid toward", &oid), v, None);
+        }
     }
     // An answer that depends on whether two unstated records are one payment is unknown; one that does not, stands.
     // A vow sold by a lone seller's offer: the club's receipt and the fan's claim of one payment.
@@ -2736,11 +2863,15 @@ pub fn agreements(out: &mut Out) {
     s7g_agreements_b(out);
     s7g_agreements_c(out);
     scenario9::agreements(out);
+    s7r::agreements(out);
     scenario9::control_models(out);
     s7i::agreements(out);
     s7l::agreements(out);
     s7l::key_delivery(out);
     s7j::agreements(out);
+    s7r::termination(out);
+    s7r::deal_termination(out);
+    s7r::outside_holders(out);
 }
 
 pub fn development(out: &mut Vec<J>) {
@@ -2910,9 +3041,12 @@ fn s7g_identity(out: &mut Out) {
     let rc = w.receipt(&mut hm, &uma.id, &t, 1);
     w.ack(&mut wit, rc);
     w.rotate(&hm, Rot { kept: Some(vec![]), ..Default::default() });
-    out.case(&mut w, "a rotation whose only receipt its home's rotation voided, the receipt acknowledged: pending, not contested", "Identity, receipt check 6: it blocks nothing; \"Definitions\": a contested position comes from rules 40, 44 and 4",
-        "The voided receipt is a visible dispute and never support; no conflict under rules 40, 44 or 4 stands: the rotation waits on a receipt.",
-        Facts::default(), chain_of(&uma.id), json!({ "counting": [hx(&uma.id)], "next": "pending", "dishonest": [] }), None);
+    // Moved by F436.6 A (receipt check 5, draft 16): the receipt counted
+    // toward the home rule, so it keeps counting whatever the home's later
+    // rotation keeps; before, it was voided and the rotation pending.
+    out.case(&mut w, "a rotation whose only receipt its home's later rotation kept nothing of, the receipt acknowledged: the receipt counted, and keeps counting", "Identity, receipt check 5: a receipt that counted toward the home rule at a position keeps counting there whatever its operator's later rotation keeps, shown as disputed",
+        "The receipt made the rotation count; the home's later rotation, keeping no receipt line, cannot unmake that: the rotation counts.",
+        Facts::default(), chain_of(&uma.id), json!({ "counting": [hx(&uma.id), hx(&t)], "next": "end", "dishonest": [] }), None);
 
     // Row 10 (rule 40): homes split, none meeting the rule: contested.
     let mut w = World::new();
@@ -3744,6 +3878,8 @@ fn s7g_agreements_b(out: &mut Out) {
     c.parties = vec![jo.id, lu.id];
     c.text = "The inner deal, Lu in Kai's place.".into();
     c.field4 = mark_all(&[jo.id, kai.id]);
+    // F436.10: Kai left out, so the mark names Kai's place.
+    c.terminates = Some(agreements::Terminates::Places(vec![kai.id]));
     let v2 = ag_act(&mut w, &mut jo, TERMS, c.to_map(), obj(inner));
     sign(&mut w, &mut jo, &v2);
     sign(&mut w, &mut kai, &v2);

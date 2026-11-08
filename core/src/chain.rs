@@ -1015,6 +1015,10 @@ impl Verifier {
             let names = match h.inside.type_ {
                 types::LINK_CONFIRMATION => h.inside.objects.iter().flatten().any(|o| o.predecessor == rotation),
                 types::WITNESS => h.inside.acks.iter().flatten().any(|a| *a == rotation),
+                // F436.5 (Identity section 8, draft 16): or by a chain
+                // signature of the successor naming the rotation, which a
+                // collective signs under its key grammar.
+                types::CHAIN_SIGNATURE => matches!(h.payload(), Some(Payload::ChainSignature(c)) if c.signs == rotation),
                 _ => false,
             };
             if !names {
@@ -1116,6 +1120,31 @@ impl Verifier {
 
     /// The standing of an act this verifier holds. An act it does not hold
     /// is unknown to it (Identity draft 13, F298).
+    /// Where an escape counting at its position lists an identity-chain act
+    /// (a rotation or a chain signature) of `signer` as abandoned, its
+    /// position (Identity section 11; F436.1): the escape counts there and
+    /// the act, abandoned, never counts.
+    pub fn escape_abandoned_at(&self, signer: &Hash, act: &Hash) -> Option<usize> {
+        let x = self.acts.get(act)?;
+        let (n, prev) = match x.payload()? {
+            Payload::Rotation(r) => (r.position, r.prev),
+            Payload::ChainSignature(c) => (c.position, c.prev),
+            _ => return None,
+        };
+        let res = self.resolve(signer);
+        let n = n as usize;
+        if n == 0 || n >= res.links.len() || res.links[n - 1].act != prev || res.links[n].act == *act {
+            return None;
+        }
+        let esc = res.links[n].act;
+        if !matches!(self.acts.get(&esc).and_then(|h| h.payload()), Some(Payload::Rotation(r)) if r.homeless) {
+            return None;
+        }
+        let st = res.states[n - 1].clone();
+        let abandons = self.endorsements(signer, &prev, &st, &esc).any(|e| e.abandoned.as_ref().is_some_and(|a| a.contains(act)));
+        abandons.then_some(n)
+    }
+
     pub fn status(&self, act: &Hash) -> Status {
         match self.acts.get(act) {
             None => Status::Unknown,
@@ -1609,6 +1638,52 @@ impl Verifier {
             Effective::Single(op) => vec![op],
             Effective::Threshold(_) => st.operators(),
         };
+        // Receipt check 4 (F436.6 B): at a position contested by two
+        // rotations revealing the same chain key, each is judged under the
+        // audit requirement in effect before the position; a rotation alone
+        // at its position under the one it declares or inherits.
+        let contested_pos = pool.len() >= 2;
+        let audit_for = |c: &Cand| if contested_pos { st.audit.clone() } else { c.state.audit.clone() };
+        // Receipt check 5 (F436.6 A): the receipts that counted toward the
+        // home rule at this position, the operators' later rotations left
+        // aside, keep counting whatever those rotations keep or disown,
+        // shown as disputed.
+        let mut kept_counting: BTreeSet<Hash> = BTreeSet::new();
+        {
+            let mut pre: BTreeMap<Hash, u64> = BTreeMap::new();
+            let mut by: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
+            for op in &voters {
+                let Operator::Id(o) = op else { continue };
+                if dishonest.iter().any(|(d, p)| d == op && *p < n) {
+                    continue;
+                }
+                let mut sup: Vec<(Hash, Vec<Hash>)> = vec![];
+                for c in cands {
+                    let a = audit_for(c);
+                    let rs: Vec<Hash> = self
+                        .receipts(o, id, &c.id, n)
+                        .filter(|r| matches!(self.judge_receipt_as(cx, r, a.as_ref(), rd, true), Judged::Support { .. }))
+                        .map(|r| r.id)
+                        .collect();
+                    if !rs.is_empty() {
+                        sup.push((c.id, rs));
+                    }
+                }
+                if let [(c, rs)] = &sup[..] {
+                    if eligible(c) {
+                        *pre.entry(*c).or_default() += 1;
+                        by.entry(*c).or_default().extend(rs.iter().copied());
+                    }
+                }
+            }
+            let need = match eff {
+                Effective::Single(_) => 1,
+                Effective::Threshold(k) => k,
+            };
+            if let Some((w, _)) = pre.iter().find(|(_, v)| **v >= need) {
+                kept_counting.extend(by.remove(w).unwrap_or_default());
+            }
+        }
         let mut votes: BTreeMap<Hash, u64> = BTreeMap::new();
         let mut t = Tally {
             winner: None,
@@ -1630,10 +1705,15 @@ impl Verifier {
                     let mut sup: Vec<(Hash, bool)> = vec![];
                     for c in cands {
                         let mut best: Option<bool> = None;
+                        let a = audit_for(c);
                         for r in self.receipts(&o, id, &c.id, n) {
-                            match self.judge_receipt(cx, r, c.state.audit.as_ref(), rd) {
+                            match self.judge_receipt(cx, r, a.as_ref(), rd) {
                                 Judged::Support { protected } => {
                                     best = Some(best.unwrap_or(false) || protected)
+                                }
+                                _ if kept_counting.contains(&r.id) => {
+                                    t.disputed = true;
+                                    best = Some(true);
                                 }
                                 Judged::Disputed => t.disputed = true,
                                 Judged::No => {}
@@ -1642,6 +1722,13 @@ impl Verifier {
                         if let Some(p) = best {
                             sup.push((c.id, p));
                         }
+                    }
+                    // Rule 44 with receipt check 4 (F436.6 B): at a position
+                    // contested by two rotations under the audit before it,
+                    // one home's receipts of both are a conflict whether or
+                    // not either is cosigned yet: contested, never pending.
+                    if contested_pos && sup.is_empty() && cands.iter().filter(|c| self.receipts(&o, id, &c.id, n).next().is_some()).count() >= 2 {
+                        t.contested = true;
                     }
                     if sup.len() >= 2 {
                         // A standing conflict: this home counts for nothing here.
@@ -1694,9 +1781,28 @@ impl Verifier {
     /// A receipt this verifier cannot judge, or one pending (its operator's
     /// chain not resolved this far), counts as `rd` takes it ([`Reading`]).
     fn judge_receipt(&self, cx: &mut Cx, r: &Held, audit: Option<&identity::Audit>, rd: Reading) -> Judged {
+        self.judge_receipt_as(cx, r, audit, rd, false)
+    }
+
+    /// Receipt checks as [`Self::judge_receipt`]; with `ignore_later`, the
+    /// operator's later rotations left aside (none judging the receipt, and
+    /// none abandoned by an escape): whether the receipt would count toward
+    /// the home rule but for them (receipt check 5, F436.6 A).
+    fn judge_receipt_as(&self, cx: &mut Cx, r: &Held, audit: Option<&identity::Audit>, rd: Reading, ignore_later: bool) -> Judged {
         let op = *r.signer().unwrap();
         let res = self.resolve_cx(cx, &op);
-        let Some(k) = self.bound(&res, r) else {
+        let bound = self.bound(&res, r).or_else(|| {
+            if !ignore_later {
+                return None;
+            }
+            // A receipt bound to a rotation of its operator that an escape
+            // abandons: judged as if that rotation still counted.
+            let b = r.act.outside.binding.as_ref()?;
+            let p = self.escape_abandoned_at(&op, b)?;
+            let Some(Payload::Rotation(rot)) = self.acts.get(b)?.payload() else { return None };
+            rot.signing_key.as_ref().is_some_and(|key| key.made(&r.act.signature)).then_some(p)
+        });
+        let Some(k) = bound else {
             let st = self.status_cx(cx, r);
             return if matches!(st, Status::Unknown | Status::Pending) && self.takes(cx, st, rd) {
                 Judged::Support { protected: false }
@@ -1714,7 +1820,8 @@ impl Verifier {
         if audit.is_some() && !cosigned {
             return Judged::No;
         }
-        if let Some(j) = self.judging(&res, k) {
+        let judging = if ignore_later { None } else { self.judging(&res, k) };
+        if let Some(j) = judging {
             match self.judge(cx, r, &res.links[j].act, &op) {
                 Judgement::Kept => Judged::Support { protected: true },
                 _ if cosigned => Judged::Support { protected: true },
@@ -2489,6 +2596,27 @@ impl Verifier {
         let Some(k) = res.position_of(binding) else {
             if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(binding)) {
                 return Status::Unknown;
+            }
+            // F436.1 (Identity, everyday check 2): an act bound to a rotation
+            // an escape abandons is judged as rule 34 judges an act outside a
+            // kept ancestry: void, or, relied on, valid and shown as disputed;
+            // never silently invalid.
+            if let Some(Payload::Rotation(r)) = self.acts.get(binding).and_then(|b| b.payload()) {
+                if self.escape_abandoned_at(signer, binding).is_some() {
+                    if !r.signing_key.as_ref().is_some_and(|key| key.made(&x.act.signature)) {
+                        return Status::Invalid;
+                    }
+                    if self.recorded.contains(&x.id) {
+                        return Status::Disputed;
+                    }
+                    return match self.acknowledged(cx, x) {
+                        Ack::Yes => Status::Disputed,
+                        Ack::Unknown => Status::Unknown,
+                        _ if self.keepers_unknown.contains(&x.id) => Status::Unknown,
+                        Ack::Pending => Status::Pending,
+                        Ack::No => Status::Void,
+                    };
+                }
             }
             if res.waiting().contains(binding) || self.acts.get(binding).is_some_and(|b| self.on_waiting(cx, &res, b)) {
                 return Status::Pending;

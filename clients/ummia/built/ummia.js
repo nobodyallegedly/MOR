@@ -9122,8 +9122,8 @@ async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new 
   return { cards: found, lines: lines2 };
 }
 var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
-var MICS_HASH = "00f025cf1dcbb1f959d68413b8f70d3072f91b66e1155881f60e41fd120d6635";
-var SUITE_HASH = "7c08c3b7ce302be2c4d8b8594914d93612834d6dbddf0be16fb631a1f26515fd";
+var MICS_HASH = "bbf9331c6aeaa055e7a63411e3325448f1424dc53b2feba2eda921d8906c315d";
+var SUITE_HASH = "a44ffcb3d741a8463ff9f11bddc81df4d5c8dff8bfd7cd805b57e606aeaa7d92";
 var BUILT_IN = [
   { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
   { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },
@@ -9288,7 +9288,8 @@ var TASKS = {
   11: ["Envelopes", "Anchoring"],
   12: ["Agreements", "Grant limits"],
   13: ["Agreements", "Work claims"],
-  14: ["Agreements", "Absence proof"]
+  14: ["Agreements", "Absence proof"],
+  15: ["Agreements", "Termination terms"]
 };
 var LISTING_READ = 5e3;
 var message2 = (err) => err instanceof Error ? err.message : String(err);

@@ -630,6 +630,8 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, _work: Hash) -> Terms
         transfers_counted: None,
         issues_under: None,
         control: Some(mor_control::control()),
+        termination: None,
+        terminates: None,
     }
 }
 

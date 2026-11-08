@@ -401,6 +401,8 @@ pub fn inner_deal_consent(out: &mut Out) {
         c.parties = vec![jo.id, lu.id];
         c.text = text.into();
         c.field4 = mark_all(&[jo.id, kai.id]);
+        // F436.10: Kai left out, so the mark names Kai's place.
+        c.terminates = Some(agreements::Terminates::Places(vec![kai.id]));
         let v2 = { let a = w.everyday_act(jo, mirs().agreements, agreements::types::TERMS, c.to_map(), obj(inner), acks); w.add(&a) };
         sign(w, jo, &v2);
         sign(w, kai, &v2);

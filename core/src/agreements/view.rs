@@ -46,7 +46,7 @@ pub mod reference_absence_proof;
 /// The publication (rules 11 to 17): publications judged, their price
 /// tags, purchases by tag, and shares by reference.
 mod publishing;
-pub use publishing::{PublicationEval, PublicationTip, TagUnder};
+pub use publishing::{Activity, PublicationEval, PublicationTip, TagUnder, TerminationAnswer, TerminationEval};
 /// Client conformance on a deal's versions (F221, F222).
 mod deals;
 pub use deals::SuccessorCheck;
@@ -134,6 +134,19 @@ pub struct AgreementsView<'a> {
     /// ([`AgreementsError::PaymentUnstated`], [`Self::paid_toward`],
     /// [`Self::disagreements`]). A fact the caller states, like `rail_valid`.
     pub payments: BTreeMap<Vec<u8>, Vec<u8>>,
+    /// The amount the rail's answer states the hop moved, read from the
+    /// proof (Money rule 8, F436's R14), by proof (field 1). Read by Money
+    /// rule 12's batch total: records of one payment under one batch whose
+    /// amounts together exceed it count for none until the receiver
+    /// resolves them. A fact the caller states, like `rail_valid`.
+    pub rail_amounts: BTreeMap<Vec<u8>, u64>,
+    /// For each Module whose specification the caller holds, by its spec
+    /// hash, the identity its fee is paid to: the one its field 7 names as
+    /// paid, or its creator where it names none (F436's R13). Read from the
+    /// specification's bytes ([`Self::fee_payee_from`]). A fee payout to
+    /// any other receiver is a mismatch; a Module not listed leaves the
+    /// receiver unchecked, as its amount already is.
+    pub fee_payees: BTreeMap<Hash, Hash>,
     /// Set when an answer compared two records whose sameness rests on a
     /// payment not stated in [`Self::payments`] ([`Self::unstated_payment_read`]).
     unstated: std::cell::Cell<bool>,
@@ -170,6 +183,15 @@ pub struct AgreementsView<'a> {
     /// Consulted only where the clause names such a cMIP; with none, the
     /// declaration is the authority's judgment, a stated cost.
     pub absence_accepted: BTreeSet<(Hash, Hash)>,
+    /// The termination terms' answers (task 15; Agreements, "Termination"),
+    /// by terminating act: met, or not yet met, as the cMIP the agreement
+    /// names answered it, judging the acts that act's history holds. The
+    /// cMIP's answer, a fact the caller states, like `absence_accepted`:
+    /// the core reads no cMIP. An act not listed is unknown: a verifier
+    /// that does not hold the cMIP, or its answer, shows the agreement's or
+    /// the place's state as unknown from that act on, never active by
+    /// default. Consulted only where the agreement names termination terms.
+    pub termination_answers: BTreeMap<Hash, TerminationAnswer>,
     /// The anchors this verifier checked (Envelopes, task "Anchoring",
     /// F173), each act judged by its earliest anchor on each reference:
     /// with an anchoring cMIP it carries (`Anchors::add_proof`), or as the
@@ -632,6 +654,8 @@ impl<'a> AgreementsView<'a> {
             rail_valid: BTreeMap::new(),
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
+            rail_amounts: BTreeMap::new(),
+            fee_payees: BTreeMap::new(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -639,6 +663,7 @@ impl<'a> AgreementsView<'a> {
             as_if_answered: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
+            termination_answers: BTreeMap::new(),
             anchored: Default::default(),
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
@@ -704,6 +729,8 @@ impl<'a> AgreementsView<'a> {
             rail_valid: self.rail_valid.clone(),
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
+            rail_amounts: self.rail_amounts.clone(),
+            fee_payees: self.fee_payees.clone(),
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
@@ -711,6 +738,7 @@ impl<'a> AgreementsView<'a> {
             as_if_answered: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
+            termination_answers: self.termination_answers.clone(),
             anchored: self.anchored.clone(),
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
@@ -1471,6 +1499,13 @@ impl<'a> AgreementsView<'a> {
     }
 
     fn agreement_as(&self, id: &Hash, rollback: bool) -> R<Agreement> {
+        self.agreement_asking(id, rollback, true)
+    }
+
+    /// As [`Self::agreement_as`]; `ask_termination` false reads a deal's
+    /// marked clone by its signatures alone, its termination terms not yet
+    /// asked ([`Self::termination`] asks them itself).
+    pub(super) fn agreement_asking(&self, id: &Hash, rollback: bool, ask_termination: bool) -> R<Agreement> {
         let lineage = self.lineage(id)?;
         let terms = lineage[0].1.clone();
         let signed = self.signers(id, &terms.parties);
@@ -1521,6 +1556,15 @@ impl<'a> AgreementsView<'a> {
                     );
                 }
             }
+            // The termination mark (field 37; "Termination"; rule 47): the
+            // places it names are the parent's parties'.
+            if invalid.is_none() {
+                if let Some(super::Terminates::Places(xs)) = &terms.terminates {
+                    if !xs.iter().all(|x| parent.parties.contains(x)) {
+                        invalid = Some("the termination mark names places of the parent's parties (field 37)".into());
+                    }
+                }
+            }
             let mut holders_signed = true;
             // Rule 94: in a deal, the version names the transfers it counts
             // (field 31); a transfer it counts makes its buyer the holder
@@ -1536,6 +1580,33 @@ impl<'a> AgreementsView<'a> {
                 }
                 p
             };
+            // F436.10, as F440 read it: a deal's clone that leaves out a
+            // party of the parent whose place is still active, without the
+            // termination mark naming that party's place, is invalid;
+            // nothing is removed silently. A place already ended needs no
+            // mark: by an absence outcome removing the party's voice (rule
+            // 89), or by its own act, a transfer of its whole stake (rule 10)
+            // that this clone counts (field 31).
+            if invalid.is_none() {
+                let named: &[Hash] = match &terms.terminates {
+                    Some(super::Terminates::Places(xs)) => xs,
+                    _ => &[],
+                };
+                let me = |p: &Hash| Who::Id(*p);
+                let sold_all = |p: &Hash| {
+                    parent.stakes.iter().flatten().any(|st| st.share_of(&me(p)) > 0)
+                        && as_counted.stakes.iter().flatten().all(|st| st.share_of(&me(p)) == 0)
+                };
+                if parent
+                    .parties
+                    .iter()
+                    .any(|p| !terms.parties.contains(p) && !named.contains(p) && voices.contains(p) && !sold_all(p))
+                {
+                    invalid = Some(
+                        "a deal's clone that leaves out a party of the parent whose place is still active, without the termination mark naming that party's place, is invalid (field 37; rule 47; F436.10)".into(),
+                    );
+                }
+            }
             let (mut asked, _) = Self::must_sign_parts(&as_counted, &terms);
             for h in super::pay::pay_signers_by(parent, &terms, &|i, st| self.roster_with(i, st, &counted)) {
                 if !asked.contains(&h) {
@@ -1547,7 +1618,7 @@ impl<'a> AgreementsView<'a> {
                     holders_signed = false;
                 }
             }
-            let complete = invalid.is_none()
+            let mut complete = invalid.is_none()
                 && parent_exists
                 && voices.iter().all(|p| parent_signers.contains(p))
                 && Self::newcomers(parent, &terms).iter().all(|p| all_sigs.contains(p))
@@ -1558,6 +1629,19 @@ impl<'a> AgreementsView<'a> {
                 unsigned.extend(Self::newcomers(parent, &terms).into_iter().filter(|p| !all_sigs.contains(p)));
                 if let Some(x) = self.unfollowed(id, &unsigned) {
                     return Err(AgreementsError::Missing(x));
+                }
+            }
+            // Rule 47, "Termination" (F436.9): the deal's termination terms
+            // (field 36 of the version it clones) are asked only about a
+            // clone carrying the termination mark, which counts only when
+            // they answer met; with no answer held, unknown.
+            if ask_termination && complete && terms.terminates.is_some() {
+                if let Some((cmip, _)) = parent.termination_terms() {
+                    match self.termination_answers.get(id) {
+                        Some(super::TerminationAnswer::Met) => {}
+                        Some(super::TerminationAnswer::NotYetMet) => complete = false,
+                        None => return Err(AgreementsError::Missing(cmip)),
+                    }
                 }
             }
             return Ok(Agreement {
@@ -3828,8 +3912,18 @@ impl<'a> AgreementsView<'a> {
         if !lineage.iter().any(|(v, _)| *v == d.clause) {
             return Ok(Err("the clause it applies is not a version of the agreement it names (rule 85, F313)".into()));
         }
-        let Some(clause) = t.abandonment.clone() else {
-            return Ok(Err("the agreement it names carries no abandonment clause".into()));
+        // F436.6 D (rule 85, draft 24): the clause of the version the holder
+        // last signed as a party; or, for a holder that bought in, of the
+        // version in force where the collective's line placed its transfer;
+        // a holder that did neither, the clause in force.
+        let expected = self.holder_clause_version(&d, lineage)?;
+        if d.clause != expected {
+            return Ok(Err(
+                "field 1 is not the version whose clause judges this holder: the version it last signed as a party, or, having bought in, the version in force where the collective's line placed its transfer (rule 85)".into(),
+            ));
+        }
+        let Some(clause) = lineage.iter().find(|(v, _)| *v == expected).and_then(|(_, x)| x.abandonment.clone()) else {
+            return Ok(Err("the version whose clause judges this holder carries no abandonment clause (rule 85)".into()));
         };
         if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
             return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
@@ -3850,6 +3944,93 @@ impl<'a> AgreementsView<'a> {
             return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
         }
         Ok(Ok((d, clause)))
+    }
+
+    /// Rule 85 (F436.6 D; F437.1, decided by Nobody, allegedly, F436.8): the
+    /// version whose abandonment clause judges a holder of a collective's
+    /// stake in itself who is no party. The latest version of the lineage
+    /// the holder signed as a party (its drafter, or by a signature act
+    /// naming it); else, where the collective's line placed a transfer to
+    /// it, the agreement in force at the act that placed it (the latest such
+    /// placement); else, for a stake successor, the version that bound the
+    /// holder it succeeded, found the same way, carried through successions;
+    /// else the clause in force.
+    fn holder_clause_version(&self, d: &AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Hash> {
+        Ok(self.holder_clause_of(&d.party, lineage, &mut vec![])?.unwrap_or(lineage[0].0))
+    }
+
+    /// [`Self::holder_clause_version`] for `party`, `None` where nothing
+    /// bound it (the clause in force then applies); `seen` stops a loop of
+    /// plans naming each other.
+    fn holder_clause_of(&self, party: &Hash, lineage: &[(Hash, Terms)], seen: &mut Vec<Hash>) -> R<Option<Hash>> {
+        if seen.contains(party) {
+            return Ok(None);
+        }
+        seen.push(*party);
+        let d = AbsenceDeclaration { agreement: lineage[0].0, clause: lineage[0].0, party: *party, outcomes: vec![] };
+        let d = &d;
+        for (v, vt) in lineage {
+            if !vt.parties.contains(&d.party) {
+                continue;
+            }
+            let drafted = self.v.get(v).and_then(|h| h.act.outside.signer) == Some(d.party);
+            if drafted || !self.signers(v, &[d.party]).is_empty() {
+                return Ok(Some(*v));
+            }
+        }
+        let versions: Vec<Hash> = lineage.iter().map(|(v, _)| *v).collect();
+        let Some(collective) = self.collective_of(&lineage[0].0)? else {
+            return Ok(None);
+        };
+        let col = self.col(&collective);
+        let mut best: Option<(usize, Hash)> = None;
+        for x in self.col_acts(&col) {
+            if self.status(&x.id) != Status::Valid {
+                continue;
+            }
+            let mut places: Vec<Hash> = x.inside.acks.iter().flatten().copied().collect();
+            if self.is_agreements(x, types::RECORD) {
+                if let Ok(e) = self.record_eval(&col, x) {
+                    if e.line {
+                        places.extend(e.places.iter().copied());
+                    }
+                }
+            }
+            for y in places {
+                let Some(h) = self.v.get(&y) else { continue };
+                if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+                    continue;
+                }
+                let Ok(e) = self.transfer(&y) else { continue };
+                if !e.effective || e.transfer.to != d.party || !versions.contains(&e.transfer.agreement) {
+                    continue;
+                }
+                if let Ok(Some(v)) = self.in_force(&x.id) {
+                    if let Some(i) = versions.iter().position(|w| *w == v) {
+                        // The latest placement: the version nearest the head.
+                        if best.is_none_or(|(j, _)| i < j) {
+                            best = Some((i, v));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_, v)) = best {
+            return Ok(Some(v));
+        }
+        // A stake successor: the stake passed with the clause that bound its
+        // holder (F437.1). The holder it succeeded is the party of a plan,
+        // in a version of the lineage, naming it as a stake successor.
+        for (_, vt) in lineage {
+            for p in vt.succession.iter().flatten() {
+                if p.party != d.party && p.stakes.iter().flatten().any(|(s, _)| *s == d.party) {
+                    if let Some(v) = self.holder_clause_of(&p.party, lineage, seen)? {
+                        return Ok(Some(v));
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 
     /// A declaration as the act `by` uses it (rule 51, F172): the record
@@ -7386,7 +7567,9 @@ impl<'a> AgreementsView<'a> {
             .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
             .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == act))
             .filter(|x| !self.refuses(&x.id))
-            .filter_map(|x| res.position_of(&x.id))
+            // F436.1 (rule 10): a successor's debt accepted stands whatever
+            // an escape of the successor later abandons.
+            .filter_map(|x| res.position_of(&x.id).or_else(|| self.v.escape_abandoned_at(signer, &x.id)))
             .min()
     }
 
@@ -7875,7 +8058,9 @@ impl<'a> AgreementsView<'a> {
             if !endings.contains(&c.signs) {
                 continue;
             }
-            let Some(p) = self.v.resolve(&signer).position_of(&x.id) else { continue };
+            // F436.1 (rules 10, 91): a chain signature on an ending stands
+            // whatever an escape of its signer later abandons.
+            let Some(p) = self.v.resolve(&signer).position_of(&x.id).or_else(|| self.v.escape_abandoned_at(&signer, &x.id)) else { continue };
             // F153: a member's chain signature counting only through the
             // verifier's own attempts is left aside (the ending is then
             // judged unknown by `binding`).
@@ -8163,6 +8348,31 @@ impl<'a> AgreementsView<'a> {
         // whether a record naming another purpose is this payment; only
         // then whether the receiver's receipts of it resolve the conflict.
         let one = |x: &Hash, p: &[u8]| self.same_payment_of((Some(x), p), (Some(id), proof));
+        // Money rule 12's batch total (F436's R25): receipts of one payment
+        // sharing it under one batch count only where their amounts
+        // together do not exceed what the payment shows, the amount the
+        // rail's answer states; otherwise none counts until the receiver
+        // resolves them.
+        if let (Some(b), Some(&shown)) = (batch, self.rail_amounts.get(proof)) {
+            let own = match self.v.get(id).map(|h| Fin::decode(h.inside.type_, &h.inside.payload)) {
+                Some(Ok(Fin::Receipt(rc))) => rc.amount.value,
+                _ => 0,
+            };
+            let mut total = own;
+            for h in self.v.held_acts() {
+                if h.inside.spec != self.mirs.money || &h.id == id {
+                    continue;
+                }
+                if let Ok(Fin::Receipt(rc)) = Fin::decode(h.inside.type_, &h.inside.payload) {
+                    if &rc.rail == rail && rc.batch.as_ref() == Some(b) && self.author(h) == Some(rc.payee) && one(&h.id, &rc.proof) {
+                        total = total.saturating_add(rc.amount.value);
+                    }
+                }
+            }
+            if total > shown {
+                return true;
+            }
+        }
         let conflict = records.iter().any(|(x, p, _, same, o, b)| !same && !o && !(batch.is_some() && batch == b.as_ref()) && one(x, p));
         if !conflict {
             return false;
@@ -8320,6 +8530,58 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
+
+    /// The identity a Module's fee is paid to, read from its specification's
+    /// content (Development field 7): `paid`, or its creator where it names
+    /// none; with its spec hash. `None` where the content is no
+    /// specification, or names neither.
+    pub fn fee_payee_from(content: &[u8]) -> Option<(Hash, Hash)> {
+        let sp = crate::development::Spec::decode(content, &Default::default()).ok()?;
+        let to = sp.fee.as_ref().and_then(|f| f.paid).or(sp.creator)?;
+        Some((crate::development::Spec::hash_of(content), to))
+    }
+
+    /// Money rule 4, read before any proof: a held receipt or claim naming
+    /// a rail Module that no held act names as one of the payee's rails (a
+    /// payee pointer, a grantee's included, a vault entry of the payee's
+    /// chain, or a claim's refund rail) counts for nothing, whatever its
+    /// rail's proof shows. Where any held act names the Module, the rail's
+    /// answer decides ([`Self::rail_named_at`]).
+    pub(super) fn rail_never_listed(&self, id: &Hash) -> bool {
+        use crate::money::{self as fin, Payload as Fin};
+        let Some(x) = self.v.get(id).filter(|h| h.inside.spec == self.mirs.money) else { return false };
+        let (rail, payee) = match Fin::decode(x.inside.type_, &x.inside.payload) {
+            Ok(Fin::Receipt(r)) => (r.rail, r.payee),
+            Ok(Fin::Claim(c)) => (c.rail, c.payee),
+            _ => return false,
+        };
+        // A verifier holding no rail list of the payee cannot tell.
+        let mut listed = false;
+        for h in self.v.held_acts() {
+            if h.inside.spec != self.mirs.money {
+                continue;
+            }
+            match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::PayeePointer(q)) if q.rails.iter().any(|r| r.module == rail) => return false,
+                Ok(Fin::PayeePointer(q)) if q.payee == payee => listed = true,
+                Ok(Fin::Claim(c)) if c.refund.as_ref().is_some_and(|r| r.module == rail) => return false,
+                _ => {}
+            }
+        }
+        let res = self.v.resolve(&payee);
+        if res.links.is_empty() {
+            return false;
+        }
+        for st in &res.states {
+            if let Ok(Some(Some(entries))) = fin::vault_in(&self.mirs.money, &st.declarations) {
+                if entries.iter().any(|e| e.rail_module == rail) {
+                    return false;
+                }
+                listed = true;
+            }
+        }
+        listed
+    }
 
     /// Whether a held receipt or claim counts for its payee where the rail
     /// answered it paid (Money rules 4, 12 to 15; [`Self::payment_counts`]),
@@ -8775,6 +9037,12 @@ impl<'a> AgreementsView<'a> {
             return true;
         }
         if self.rail_invalid.contains(id) {
+            return false;
+        }
+        // Money rule 4 (F436, Fable's R39): a record naming a rail Module
+        // the payee never listed counts for nothing before any proof is
+        // read, never as unanswered.
+        if self.rail_never_listed(id) {
             return false;
         }
         // Only a receipt or claim has a verification answer (Money rule 8):
@@ -10539,6 +10807,15 @@ impl<'a> AgreementsView<'a> {
             };
             if owed && !s.payouts.iter().any(|x| x.fee_module == Some(f.module)) && !e.fees_skipped.contains(&f.module) {
                 e.fees_skipped.push(f.module);
+            }
+        }
+        // F436's R13: a fee payout's receiver is the identity the Module's
+        // specification names as paid, or its creator where it names none.
+        for x in s.payouts.iter().filter(|x| x.fee_module.is_some()) {
+            if let Some(r) = x.fee_module.as_ref().and_then(|m| self.fee_payees.get(m)) {
+                if *r != x.receiver {
+                    e.mismatched.push(Mismatch { stake: 0, holder: x.receiver, paid: x.amount, due: 0 });
+                }
             }
         }
         if !e.fees_skipped.is_empty() {
