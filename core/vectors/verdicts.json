@@ -8621,7 +8621,7 @@
         },
         "facts": {},
         "name": "1.9i a clone leaving out a party of the parent without the termination mark: invalid",
-        "rule": "Agreements rule 47; \"Terms (type 0)\": the termination mark (F436.10)",
+        "rule": "Agreements rule 47; \"Terms (type 0)\": the termination mark",
         "verdict": "invalid",
         "why": "The clone no longer lists Ben and carries no mark naming his place: nothing is removed silently."
       },

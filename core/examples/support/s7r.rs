@@ -691,7 +691,7 @@ pub fn deal_termination(out: &mut Out) {
     let mut dropped = clone("Ben leaves the second film's deal, keeping his half.", None);
     dropped.parties = vec![ana.id];
     let ben_dropped = both(&mut w8, &dropped);
-    out.case(&mut w8, "1.9i a clone leaving out a party of the parent without the termination mark: invalid", "Agreements rule 47; \"Terms (type 0)\": the termination mark (F436.10)",
+    out.case(&mut w8, "1.9i a clone leaving out a party of the parent without the termination mark: invalid", "Agreements rule 47; \"Terms (type 0)\": the termination mark",
         "The clone no longer lists Ben and carries no mark naming his place: nothing is removed silently.",
         Facts::default(), invalid(&ben_dropped), json!("invalid"), None);
     let mut w5 = replay(&base);
