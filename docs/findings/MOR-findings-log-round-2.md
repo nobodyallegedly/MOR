@@ -34,6 +34,9 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Beside it, Fable on the signed facts** (`docs/reviews/fable-signed-facts.md`, pull request 135): the facts computable and the same for everyone, yes (declarations in the core's vocabulary from tasks 14 and 15 and the control model's query, before the freeze); the list of facts not in the core but in a terms-reading cMIP the signer's client chooses (a new task, 16); **the summary's hash in the signature, not at all**: it adds nothing the terms' hash does not fix, anyone can compute it, and it would read as consent the signer can never rebut. *The MOR lead, who proposed the hash, takes that judgment.* Not decided by Nobody, allegedly, yet; it goes with the decisions before the rewrite.
 
+**The gate, what leaves the core, decided one at a time by Nobody, allegedly:**
+1. **Client conformance's "show before signing" family leaves the core** ("Yes"): replaced by one sentence of client conformance (*before a signature that binds a person to terms, the client shows what its terms-reading cMIP produces from them, names that cMIP, and shows what the person can always do, rule 98*), a new client-chosen task, terms reading (16), and the declarations of tasks 14 and 15 and the control model's query; the particular warnings move to a founding terms-reading cMIP, outside the core. Nothing in a reading is ever a condition of a way-out act.
+
 ## F436. The rehearsal's decisions (7 November 2026)
 
 Taken one at a time after comparing the two assessments (`docs/lead/rehearsal-1-comparison.md`). Written into the texts in one pass when all are taken.
