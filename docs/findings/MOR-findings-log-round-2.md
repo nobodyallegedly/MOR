@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F441. Agreements written again from scratch (10 November 2026)
+
+**Decided by Nobody, allegedly:** a total rewrite of Agreements from scratch, no editing of draft 24 ("Now we have a much more educated view of what matters"; "I think it is worth it"). The law does not change: no verdict moves, no byte of any format moves; the standard is one rule, one place, one meaning, in reading order. Plan: Fable, `docs/reviews/fable-agreements-rewrite.md` (pull request 136): first the decisions on what leaves the core and the open items of the last reviews; then an inventory of every verdict-bearing sentence of draft 24 (its own session); then the writing, by part, from the four-part grammar; then verification by the inventory diff, **an independent verifier built from the new text alone and run against the vectors** (the vectors alone verify the code, not the text), the suite's boxes and a cold reader; then the second rehearsal on the result.
+
+**Beside it, Fable on the signed facts** (`docs/reviews/fable-signed-facts.md`, pull request 135): the facts computable and the same for everyone, yes (declarations in the core's vocabulary from tasks 14 and 15 and the control model's query, before the freeze); the list of facts not in the core but in a terms-reading cMIP the signer's client chooses (a new task, 16); **the summary's hash in the signature, not at all**: it adds nothing the terms' hash does not fix, anyone can compute it, and it would read as consent the signer can never rebut. *The MOR lead, who proposed the hash, takes that judgment.* Not decided by Nobody, allegedly, yet; it goes with the decisions before the rewrite.
+
 ## F436. The rehearsal's decisions (7 November 2026)
 
 Taken one at a time after comparing the two assessments (`docs/lead/rehearsal-1-comparison.md`). Written into the texts in one pass when all are taken.
