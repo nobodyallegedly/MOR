@@ -1,0 +1,15 @@
+The task list Agreements needs, before it is written again from scratch, in the MOR repository (`nobodyallegedly/MOR`), on main. Read first: on `claude/lead-records-2`, **F441** in `docs/findings/MOR-findings-log-round-2.md` (the rewrite and its three gate decisions); your `docs/reviews/fable-agreements-rewrite.md` (pull request 136) and `fable-signed-facts.md` (pull request 135); the stranger's `docs/reviews/fable-fresh-eyes.md` (pull request 134), sections 3 and 6; Agreements draft 24 and Development draft 12's task table.
+
+**What was decided** (Nobody, allegedly, 10 November): Agreements is written again from scratch; the law does not change. Everything that is not a rule leaves the frozen texts for companion material, stated costs staying beside their rules. Client conformance's "show before signing" family is replaced by one sentence and a client-chosen terms-reading task. And the publishing model leaves the core: "we have clearly overdefined the details. The game we need to play is the same we did in the past: what's the underlining tasks list so that people can build all of it in the cMIPs above it."
+
+**The question:** what must the core keep, and what is the list of tasks, so that everything else in draft 24 (partners, role and metric shares, backup services, fees, the measurer, and anything else that is one way of doing business rather than the language of agreeing) can be built in cMIPs above it, by anyone, without the core naming it?
+
+**Please give:**
+1. **The guarantees the core keeps,** each in one sentence: what no cMIP may be trusted with, because a cMIP that broke it would harm someone who did not choose that cMIP (for example: a split sums exactly; only the signed plan pays; no share shrinks without its holder; a fee only to the receiver its Module declares; the way out). For each, why a cMIP cannot hold it.
+2. **The task list:** every task, existing (Development's table) or new, with what it accepts and what it produces, in the core's words; for each, which parts of draft 24 move into a cMIP under it, and the declaration in the core's vocabulary it must produce where it decides someone's fate (as for tasks 14, 15 and the control model's query). Fewer tasks are better: merge where two do one job.
+3. **What draft 24 holds that is neither a guarantee nor a task**, and so leaves without a home in the core: say where it goes (a founding cMIP, a Module, the companion).
+4. **The founding cMIPs** the move requires, so that what works today still works on day one: which, and what each carries from draft 24.
+5. **What could go wrong:** a guard that today lives inside the publishing model and would be lost if the model left; any verdict the move would change; the way out, checked.
+6. **Your view:** the shortest core that keeps every guarantee, and whether the line can be drawn as asked.
+
+Plain words first, then precisely. Do not change texts, code or vectors; decide nothing. Write `fable-task-list.md` (in the repository: `docs/reviews/`, branch `claude/fable-task-list`, a pull request, no merge). Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
