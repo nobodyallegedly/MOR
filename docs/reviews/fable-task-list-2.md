@@ -224,7 +224,7 @@ By the question each of the 269 Agreements cases asks.
 
 **5. What the way out depends on here.** Three things. (a) **Task 26's "stays" must always be available and must need no cMIP**, so that a party can complete a deal while holding no absence-outcome cMIP at all; otherwise entering a deal depends on a module. (b) **Task 15 and task 27 answering "unknown"** must never block the default way out: a transfer of one's whole stake, a resignation, a default termination. S6 says so for termination; it should be said for all three. (c) **D3 leaves a holder who never signs a receipt, on a rail whose proof does not bind the destination, forever shown unpaid.** That is the decided stated cost; it sits on the hand, and the hand's own way out (leaving by a terminating act) does not clear it.
 
-**6. Nineteen tasks, fourteen declarations.** More tasks means more to show before a signature. The fixed shape of `fable-small-tasks.md`, section 5, is the only thing keeping duty 1 a reading and not a wall. If a declaration cannot be said in that shape, the cMIP declares "not stated" and the client shows that.
+**6. Nineteen tasks, fifteen declarations.** More tasks means more to show before a signature. The fixed shape of `fable-small-tasks.md`, section 5, is the only thing keeping duty 1 a reading and not a wall. If a declaration cannot be said in that shape, the cMIP declares "not stated" and the client shows that.
 
 ## My view
 
