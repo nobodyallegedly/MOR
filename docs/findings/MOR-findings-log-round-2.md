@@ -44,6 +44,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 Nobody, allegedly, on how the stranger was asked: "It wasn't over prompted. Small questions lead to all this"; "I never used the word grammar in my prompt". The stranger named its own test a "grammar test", independently of the texts' "the grammar of agreeing".
 
+**The inventory's disagreements (S8a, pull request 142, file 17), decided one at a time by Nobody, allegedly, 11 November.** *R-43, in a deal, who must sign a change:* **every party whose voice remains** ("Yes", to the second reading, after a scenario: three parties, one vanishes). A deal never freezes on a party who is not there; a voice is removed only by a recognised act, never by the other parties' vote: an absence declaration under the clause the party signed (rule 89), the party's own act (transfer of its whole stake, or termination of its own place where the terms allow), or succession, its voice passing to the successor. A voiceless party keeps its stake and its pay: nothing pays it less without it (R-92, R-206). *Stated cost, as the MOR lead put it and Nobody, allegedly, accepted:* a party wrongly declared absent regains its voice only by a later version naming it. The rewrite says it once.
+
 ## F436. The rehearsal's decisions (7 November 2026)
 
 Taken one at a time after comparing the two assessments (`docs/lead/rehearsal-1-comparison.md`). Written into the texts in one pass when all are taken.
