@@ -1,4 +1,4 @@
-**Status: the rows of every part are done (front matter, parts one to six); the analyses (restatements, two-way readings, vectors and tests no sentence states, counts) are not written yet.**
+**Status: the rows of every part are done (front matter, parts one to six), with the two-way readings and the guarantees nothing exercises; the restatements, the vectors and tests no sentence states, the counts and the method are not written yet.**
 
 # Agreements draft 24: the inventory of verdict-bearing sentences
 
