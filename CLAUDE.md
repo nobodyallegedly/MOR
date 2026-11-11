@@ -4,6 +4,7 @@ Start with `docs/state-of-mor.md` (what exists now), then `docs/build-brief-v1.m
 
 **Names.** Never write the author's personal name or nicknames in anything that enters this repository: files, commit messages, branch names, pull requests. Write "Nobody, allegedly". Earlier records keep their wording; do not copy the name from them into anything new.
 
+- **Only `docs/decisions.md` records what Nobody, allegedly, decided**, in his words, quoted exactly, under the current stint's wish, which stays at the top. Everything else (findings, reviews, prompts, reports, a lead's settlement) is a proposal or a record of work, labelled with whose it is. Never write "decided by Nobody, allegedly" over words he did not write; never paraphrase his decisions into a prompt, quote them. Every prompt for a stint opens with its wish, quoted.
 - The protocol is defined by the drafts in `spec/`: the MICS document, the six MIRs and the freeze test suite. `docs/findings/` records why each rule exists. Never guess at a rule: if the spec is silent or unclear, ask Nobody, allegedly.
 - The freeze test suite is the specification of what to test.
 - Rust for the core library, relays and homes; TypeScript for clients.

@@ -1,0 +1,13 @@
+Write Agreements from scratch, in the MOR repository (`nobodyallegedly/MOR`), from main. Read **only** `docs/strangers-2026-11/` (its README, `agreement-tasks.md` and `agreement-grammar.md`). Do not open `spec/`, `docs/findings/`, `docs/reviews/`, `docs/agreements-inventory/`, `docs/agreements-marking/`, `core/` or `cmips/`: nothing of the earlier Agreements is to be translated.
+
+**In plain words:** MOR is a protocol for media, money and agreements between people. Agreements is its layer for agreeing. Its earlier text grew by solving case after case and can no longer be fixed. Nobody, allegedly, decided: "a total rewrite of agreements from scratch"; "we have clearly overdefined the details. The game we need to play is the same we did in the past: what's the underlining tasks list so that people can build all of it in the cMIPs above it"; "more tasks means less defining for each one"; "No translation, fresh from the research we had all agreed was excellent direction." The research is the two texts you read: what an agreement needs, reasoned from first principles, and the grammar that expresses it.
+
+**What MOR is, as far as you need it:** an act is a signed statement; every act is published or signed again, never updated. A cMIP is a published specification that fills one task the core names: it accepts what the task says and produces what the task says, and anyone may write one. The core is what every act is written in, and what no cMIP may be trusted to break. The other layers provide the operations the grammar names (state, sign, deliver, order, control); name the operation where you need one and do not define it. MOR is built to be a good ancestor: the way out must be right.
+
+**Please write:**
+1. **The text**, in this shape: purpose; definitions; the data each act carries; the validity rules a verifier checks (MUST, SHOULD, MAY); the tasks handed to cMIPs, each one question, with what it accepts and what it produces; the reasoning behind each rule, beside it; open parameters. Each rule said once, in one place; no sentence that reads two ways; words that mean one thing.
+2. **For every rule, its two answers**: which lie it exposes that signed, ordered text cannot already expose; and whom it protects who did not choose it. A rule that cannot answer both is a task, or it is left out.
+3. **Where a case does not fit the grammar**, leave it to a task or write it as a stated cost. Do not add a rule to close it.
+4. **What you needed and did not have**, as a short list at the end.
+
+Plain words first, then precisely. Write `docs/agreements-from-scratch/draft-1.md` (branch `claude/agreements-from-scratch`, a pull request, no merge). Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
