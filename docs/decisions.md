@@ -77,6 +77,9 @@ The research is `docs/strangers-2026-11/`.
 
 **How records are kept.** He: "When quoting me, if you suspect a typo, run it by me pls." "Be mindful of taking isolated sentences out of context and give them too much weight" "My words matter less than our words within that conversation do." To reshaping this ledger as exchanges: "Yes pls"
 
+**Case study 22 and the order of work.** The Dubsar Suite lead relayed four MICS gaps found by case study 22 (pull request 158); the MOR lead proposed testing its seven assumptions against draft 6. He: "Yes, it’s interesting data. Or, maybe, first we settle what we already had, keep working on that direction and then test this later"
+- *Arrived at (to check):* settle draft 6's open items first, in the same direction; test case study 22 against the grammar afterwards.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
