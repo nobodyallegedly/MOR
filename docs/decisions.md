@@ -4,6 +4,8 @@
 
 *Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), and confirmed "referees" as referrers.*
 
+*How his words are read: as one train of thought, later answers refining earlier ones; never one isolated sentence given more weight than the exchange gives it (his words, 12 November: "Be mindful of taking isolated sentences out of context and give them too much weight").*
+
 *How an entry is written: the date; the question, marked with whose it was (the MOR lead's, Fable's, a session's); his answer, quoted exactly, however short. Where a record elsewhere says more than his words, his words here are what binds.*
 
 ## Current wish

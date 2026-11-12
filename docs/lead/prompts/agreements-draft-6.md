@@ -9,6 +9,8 @@ Agreements from scratch, draft 6, in the MOR repository (`nobodyallegedly/MOR`).
 - Asked whether resolving needs everyone who signed the previous version even where the Terms let fewer change them: "Terms rule, because they were agreed by all signers"
 - On withdrawing an open offer: "The offer does not end, it is simply not open to new IDs anymore. Whoever bought the rights should still be able to point to a valid agreement that says so"
 
+**Read these as one train of thought, not as separate rulings.** He was thinking aloud; a later answer refines an earlier sentence ("Terms rule" settles who signs a resolving version). Do not turn any single sentence into a rule of its own, and do not give a phrase more weight than the whole exchange gives it.
+
 **Please write draft 6:** draft 5 with these brought in, and what depends on them, nothing else:
 1. **An agreement never ends; it resolves:** a new version with new conditions, under the Terms' own rule. Wherever draft 5 speaks of ending, terminating or revoking Terms, it is brought in line. What happens to the work and its shares is in the resolving version's conditions; the grammar does not list the ways.
 2. **The last version keeps binding**, as in his example: it stays valid and keeps protecting those in it.
