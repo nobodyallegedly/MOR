@@ -59,6 +59,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, asked by the MOR lead whether a spot is earned per proof, not once (each filling tied to the proof that earned it; the cMIP saying whether a spot holds one or many): "Yes, it leverages the above discussion as intended I think"
 - 12 November, asked by the MOR lead where a relay stops "holding" and starts "being seen": "Relay was just an example. I don’t think it should be defined, what matters is “HOLD” with cMIP defined what the proof is, no?"
 - 12 November: "Can we attempt  to solve incompatible forks (a fork that should not exist) for all sorts of acts that need it?" Asked by the MOR lead whether one shape fits all acts (a fork is shown, never chosen; it ends only by a join that names every branch and says which continues, or merges them; the join is signed by whoever could sign the last act both branches share; what others relied on in a dropped branch stands, shown as disputed): "I think it does. Let’s focus on unresolved forks…"
+- 12 November, on unresolved forks, to the MOR lead's three ways out (a resolver named in advance; if none, each party carries on from the last Terms all shared; what happened stays visible): "Resolver makes sense, the problem potentially exists, so deciding in advance how to solve it makes sense, and this way does not force a single way to do it."
 
 ## Not carried into this stint unless he says so
 
