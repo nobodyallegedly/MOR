@@ -36,6 +36,11 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, asked by the MOR lead whether someone in an agreement can be a work (another agreement) rather than a person, the money going to whoever that agreement names as its receiver now: "I think it is essential… it ensures a series of split is possible."
 - 12 November: "It’s already there in some shape. The collective agreement feeds its share structure to the collective deals." Then: "With lineage it’s sort of the same. The new agreement pints to the other agreement as one party, no collective involved"
 - 12 November, on the payer who is in neither agreement: "That was a problem when we first look at it… some participants are not tied to a specific ID when the agreement is drafted, they are tied to a role that will be linked to an ID in the future. (The repost was the easy one… but there are more)"
+- 12 November, on the holes the late-roles research shows (`docs/strangers-2026-11/late-roles.md`), answering the MOR lead's four points (attention roles; shared pools; the middle of the chain; the ones nobody anticipated):
+  - "1. Yes, but seen by the agreed witness and with the possibility to reject all that is not tied to a settlement."
+  - "2. Sadly some rails will need pools… this headache won’t be easy."
+  - "3. Is the reason reputation tracking no platform owns or computes is important."
+  - "4… Mor won’t force the shower, it will sustain it, that should lower the difficulty for this bit"
 
 ## Not carried into this stint unless he says so
 
