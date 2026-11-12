@@ -90,6 +90,9 @@ The research is `docs/strangers-2026-11/`.
 - Then, on exit scams, after the MOR lead listed escrow designs (two of three keys, timeouts, exposure capped by stake) and an early alarm computed from signed acts: "And cannazone closed after DDOS without scamming anyone… both exist"; "Exit scams… maybe there is a way to solve them, MOR only offers ways to ring the alarm"; "Yes, but it all happens elsewhere. MOR just tracks receipts"
 - *Arrived at (to check):* nothing new in the grammar; buyers who get nothing contest, on the record; getting money back is what an escrow service (a hand, under its service agreement, for a fee) is built for, as a cMIP; without one, the buyer's risk is a stated cost. Preventing exit scams happens elsewhere, in how services are built; MOR tracks receipts, from which anyone can raise the alarm.
 
+**A later version and a closed spot** (draft 6's open list). The MOR lead asked whether a later version could undo a closed spot or remove fillings already earned (an offer's author signing that earlier licences no longer count). He: "Whoever paid the agreement has the rights the agreement offer."
+- *Arrived at (to check):* a filling earned under a version keeps the rights that version offered; no later version removes them without the holder's own signature. Reopening a closed spot to new identities is a new version under the Terms' own rule, and touches no earned filling.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
