@@ -55,6 +55,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, on the shower test 2 (pull request 154), where "receiver now" rests on Terms in force and nothing ends Terms: "Old terms stopping is a headache I did not get to understand quite yet… that’s where a whole lot of special cases were born if I remember right"
 - 12 November, asked by the MOR lead whether Terms stop being in force when Terms replacing them are in force (latest per the agreement's place, otherwise "as shown"), two competing replacements being a fork that is shown and never chosen: "Yes, less likely to bloat and overdefine."
 - 12 November, asked by the MOR lead whether a spot is earned per proof, not once (each filling tied to the proof that earned it; the cMIP saying whether a spot holds one or many): "Yes, it leverages the above discussion as intended I think"
+- 12 November, asked by the MOR lead where a relay stops "holding" and starts "being seen": "Relay was just an example. I don’t think it should be defined, what matters is “HOLD” with cMIP decoifying what the proof is, no?"
 
 ## Not carried into this stint unless he says so
 
