@@ -62,6 +62,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, on unresolved forks, to the MOR lead's three ways out (a resolver named in advance; if none, each party carries on from the last Terms all shared; what happened stays visible): "Resolver makes sense, the problem potentially exists, so deciding in advance how to solve it makes sense, and this way does not force a single way to do it."
 - 12 November, on the MOR lead's scenario of a fork of Terms (2a signed by two of three parties, 2b by another two): "Both term 2a and 2b are invalid as they do not carry the required signatures that were in term 1." Asked whether, for a real fork (the Terms let fewer than all replace them, or the same people sign two replacements), the Terms both branches replaced stay in force until a join or a resolver settles it: "It does, and more sense than anyone ending up stuck in the first one"
 - 12 November, asked by the MOR lead whether ending an agreement is a replacement by Terms that say "ended": "That agreement can be ended in multiple ways… what happens to the work and its shares draws different ends."
+- 12 November, then: "Not sure still pondering. An agreement never ends, it can resolve. It’s a new version of the agreement with new conditions signed by all signers of previous version"
 
 ## Not carried into this stint unless he says so
 
