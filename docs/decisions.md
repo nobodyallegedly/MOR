@@ -34,6 +34,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November: "Yes tat is what I meant. I think testing cMIPs for other models is important, but the focus is: this is how I PERSONALY would use it"
 - 12 November, on the shower test (pull request 151): "The shower is an idea, the exact text does not need to hold. What needs to hold is: can I with a single click reward all the people that contributed to the service or good via MOR"
 - 12 November, asked by the MOR lead whether someone in an agreement can be a work (another agreement) rather than a person, the money going to whoever that agreement names as its receiver now: "I think it is essential… it ensures a series of split is possible."
+- 12 November: "It’s already there in some shape. The collective agreement feeds its share structure to the collective deals." Then: "With lineage it’s sort of the same. The new agreement pints to the other agreement as one party, no collective involved"
 
 ## Not carried into this stint unless he says so
 
