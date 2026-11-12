@@ -65,6 +65,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, then: "Not sure still pondering. An agreement never ends, it can resolve. It’s a new version of the agreement with new conditions signed by all signers of previous version"
 - 12 November: "« we agree to resolve the previous agreement » is really what happens. The agreement stays and is useful. Imagine they all agree to make the work public and free, then one person attempts to sell it again but individually, the previous agreement says « sorry can’t do this alone, the other two signatures are needed » so the cheater has to modify and bake again…" ("really" corrected with him from "cruelly")
 - 12 November, asked by the MOR lead whether resolving needs everyone who signed the previous version even where the Terms let fewer change them: "Terms rule, because they were agreed by all signers" ("were" corrected with him from "they'd were")
+- 12 November, on withdrawing an open offer: "The offer does not end, it is simply not open to new IDs anymore. Whoever bought the rights should still be able to point to a valid agreement that says so"
 
 ## Not carried into this stint unless he says so
 
