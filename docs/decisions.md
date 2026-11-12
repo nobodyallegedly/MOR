@@ -32,6 +32,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November: "I’m actually done reading. Some of it looks good in theory but only building cMIPs above it will confirm it to my eyes."
 - 12 November, asked whether the Dubsar Suite or the MOR lead should build the first cMIPs on draft 1: "Foundation cMIPs are for the “shower” model"
 - 12 November: "Yes tat is what I meant. I think testing cMIPs for other models is important, but the focus is: this is how I PERSONALY would use it"
+- 12 November, on the shower test (pull request 151): "The shower is an idea, the exact text does not need to hold. What needs to hold is: can I with a single click reward all the people that contributed to the service or good via MOR"
 
 ## Not carried into this stint unless he says so
 
