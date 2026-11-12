@@ -87,7 +87,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* "agreement as a party" is the grammar's central idea; collectives, works, services and their deals are what people build with it.
 
 **An offer whose author is gone** (draft 6's open list). The MOR lead proposed that an offer may name its closer or an end date, and that one naming neither carries a stated cost. He: "So, an agreement with unknown parties where the sole agreement creator goes absent, without an automatic mechanism that delivers on the agreement. 8.d say that’s what the contest is for." The lead said a contest records "paid, not delivered" but cannot give money back with nobody left to sign. He: "That’s something payment services can build on. We escrow the payment and you get the peace of mind in exchange of a fee. That’s how the deep web black market works"
-- *Arrived at (to check):* nothing new in the grammar; buyers who get nothing contest, on the record; getting money back is what an escrow service (a hand, under its service agreement, for a fee) is built for, as a cMIP; without one, the buyer's risk is a stated cost.
+- Then, on exit scams, after the MOR lead listed escrow designs (two of three keys, timeouts, exposure capped by stake) and an early alarm computed from signed acts: "And cannazone closed after DDOS without scamming anyone… both exist"; "Exit scams… maybe there is a way to solve them, MOR only offers ways to ring the alarm"; "Yes, but it all happens elsewhere. MOR just tracks receipts"
+- *Arrived at (to check):* nothing new in the grammar; buyers who get nothing contest, on the record; getting money back is what an escrow service (a hand, under its service agreement, for a fee) is built for, as a cMIP; without one, the buyer's risk is a stated cost. Preventing exit scams happens elsewhere, in how services are built; MOR tracks receipts, from which anyone can raise the alarm.
 
 ## Not carried into this stint unless he says so
 
