@@ -86,6 +86,9 @@ The research is `docs/strangers-2026-11/`.
 **The key concept.** He: "I’m really happy with the work done on this round. The key concept is « agreement as a party » then it’s what you build with it that changes"
 - *Arrived at (to check):* "agreement as a party" is the grammar's central idea; collectives, works, services and their deals are what people build with it.
 
+**An offer whose author is gone** (draft 6's open list). The MOR lead proposed that an offer may name its closer or an end date, and that one naming neither carries a stated cost. He: "So, an agreement with unknown parties where the sole agreement creator goes absent, without an automatic mechanism that delivers on the agreement. 8.d say that’s what the contest is for." The lead said a contest records "paid, not delivered" but cannot give money back with nobody left to sign. He: "That’s something payment services can build on. We escrow the payment and you get the peace of mind in exchange of a fee. That’s how the deep web black market works"
+- *Arrived at (to check):* nothing new in the grammar; buyers who get nothing contest, on the record; getting money back is what an escrow service (a hand, under its service agreement, for a fee) is built for, as a cMIP; without one, the buyer's risk is a stated cost.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
