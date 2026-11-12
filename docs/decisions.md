@@ -29,6 +29,7 @@ The research is `docs/strangers-2026-11/`.
 - 12 November: "found it strange that “task” is not defined."
 - 12 November: "Isn’t “how the 49 tasks land” more of a companion section, it says: this is how the research was used."
 - 12 November: "The result is clearly going in the right direction. It’s not ruling… it!s setting up grammar for people to decide how to agree on rules. Solid stuff,much much much better"
+- 12 November: "I’m actually done reading. Some of it looks good in theory but only building cMIPs above it will confirm it to my eyes."
 
 ## Not carried into this stint unless he says so
 
