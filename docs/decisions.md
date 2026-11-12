@@ -47,6 +47,7 @@ The research is `docs/strangers-2026-11/`.
   > Prove you have received Y and earn spit 2.
   > Prove that you are holding Z and earn spot 3 (relays for example)
   > Prove that your ID fits the conditions in W and earn spot 4"
+- 12 November, on draft 2's rule 11 (pull request 152), where counts not tied to a settlement can be rejected: "Well, more than rejected is never setup to be counted. “Show me referees that lead to settlement only”"
 
 ## Not carried into this stint unless he says so
 
