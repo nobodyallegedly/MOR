@@ -49,6 +49,7 @@ The research is `docs/strangers-2026-11/`.
   > Prove that your ID fits the conditions in W and earn spot 4"
 - 12 November, on draft 2's rule 11 (pull request 152), where counts not tied to a settlement can be rejected: "Well, more than rejected is never setup to be counted. “Show me referees that lead to settlement only”"
 - 12 November, then: "Advertisement industry can still build a model that still rewards pure attention, if they wish."
+- 12 November: "Yes, I never ment for a rejection to be something. It was in a cMIP driven scenario."
 
 ## Not carried into this stint unless he says so
 
