@@ -91,7 +91,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* nothing new in the grammar; buyers who get nothing contest, on the record; getting money back is what an escrow service (a hand, under its service agreement, for a fee) is built for, as a cMIP; without one, the buyer's risk is a stated cost. Preventing exit scams happens elsewhere, in how services are built; MOR tracks receipts, from which anyone can raise the alarm.
 
 **A later version and a closed spot** (draft 6's open list). The MOR lead asked whether a later version could undo a closed spot or remove fillings already earned (an offer's author signing that earlier licences no longer count). He: "Whoever paid the agreement has the rights the agreement offer."
-- *Arrived at (to check):* a filling earned under a version keeps the rights that version offered; no later version removes them without the holder's own signature. Reopening a closed spot to new identities is a new version under the Terms' own rule, and touches no earned filling.
+- Then, on whether that version can itself limit the rights: "That version could have conditions tied to time, creators statements… bla bla bla… core does not care"
+- *Arrived at (to check):* a filling earned under a version has exactly the rights that version offers, conditions included (a time limit, a creator's statement, anything its cMIPs read); the core does not care what they are. No later version changes them without the holder's own signature. Reopening a closed spot to new identities is a new version under the Terms' own rule, and touches no earned filling.
 
 ## Not carried into this stint unless he says so
 
