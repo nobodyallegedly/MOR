@@ -41,6 +41,7 @@ The research is `docs/strangers-2026-11/`.
   - "2. Sadly some rails will need pools… this headache won’t be easy."
   - "3. Is the reason reputation tracking no platform owns or computes is important."
   - "4… Mor won’t force the shower, it will sustain it, that should lower the difficulty for this bit"
+- 12 November, on roles filled later: "Maybe a customizable “future participants” with the the cMIP specifying how that participant is defined and confirmed"
 
 ## Not carried into this stint unless he says so
 
