@@ -5,7 +5,7 @@ Agreements from scratch, draft 4, in the MOR repository (`nobodyallegedly/MOR`).
 **What Nobody, allegedly, said after the second shower test, in his words, with the questions he answered** (the questions are the MOR lead's; only his answers decide):
 - On old Terms stopping: "Old terms stopping is a headache I did not get to understand quite yet… that’s where a whole lot of special cases were born if I remember right". Asked whether Terms stop being in force when Terms replacing them are in force (latest per the agreement's place, otherwise "as shown"), two competing replacements being a fork that is shown and never chosen: "Yes, less likely to bloat and overdefine."
 - Asked whether a spot is earned per proof, not once (each filling tied to the proof that earned it; the cMIP saying whether a spot holds one or many): "Yes, it leverages the above discussion as intended I think"
-- Asked where a relay stops "holding" and starts "being seen": "Relay was just an example. I don’t think it should be defined, what matters is “HOLD” with cMIP decoifying what the proof is, no?"
+- Asked where a relay stops "holding" and starts "being seen": "Relay was just an example. I don’t think it should be defined, what matters is “HOLD” with cMIP defined what the proof is, no?"
 
 **Please write draft 4:** draft 3 with these three changes and what depends on them, nothing else:
 1. **Replacing Terms:** one rule, with no list of cases. Whatever in draft 3 waits on it (its open parameter on Terms stopping, "receiver now", the fork and place rules it rests on) is brought in line, and each test finding it answers is marked so.
