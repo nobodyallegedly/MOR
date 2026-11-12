@@ -24,6 +24,12 @@ The research is `docs/strangers-2026-11/`.
 - 11 November, on the cMIPs: "Just be mindful to not attempt to solve something the cMIPs will."
 - 11 November, on how records are kept: "New stint usually begin from a clear wish from my end. Keeping that wish at the top during the whole stint matters"; to this ledger and the rule in `CLAUDE.md`: "Let's try, yes"
 
+## His reading notes on draft 1 (pull request 147)
+
+- 12 November: "found it strange that “task” is not defined."
+- 12 November: "Isn’t “how the 49 tasks land” more of a companion section, it says: this is how the research was used."
+- 12 November: "The result is clearly going in the right direction. It’s not ruling… it!s setting up grammar for people to decide how to agree on rules. Solid stuff,much much much better"
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
