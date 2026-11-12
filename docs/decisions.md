@@ -42,6 +42,11 @@ The research is `docs/strangers-2026-11/`.
   - "3. Is the reason reputation tracking no platform owns or computes is important."
   - "4… Mor won’t force the shower, it will sustain it, that should lower the difficulty for this bit"
 - 12 November, on roles filled later: "Maybe a customizable “future participants” with the the cMIP specifying how that participant is defined and confirmed"
+- 12 November, on the "future participants" slot: "To be used only for what point 4 covered, the rest is defined with the list. What do you think?" Then, on the list:
+  > "Prove that you have done X and earn spot 1.
+  > Prove you have received Y and earn spit 2.
+  > Prove that you are holding Z and earn spot 3 (relays for example)
+  > Prove that your ID fits the conditions in W and earn spot 4"
 
 ## Not carried into this stint unless he says so
 
