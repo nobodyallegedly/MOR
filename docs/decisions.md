@@ -50,6 +50,8 @@ The research is `docs/strangers-2026-11/`.
 - 12 November, on draft 2's rule 11 (pull request 152), where counts not tied to a settlement can be rejected: "Well, more than rejected is never setup to be counted. “Show me referees that lead to settlement only”"
 - 12 November, then: "Advertisement industry can still build a model that still rewards pure attention, if they wish."
 - 12 November: "Yes, I never ment for a rejection to be something. It was in a cMIP driven scenario."
+- 12 November, in the draft 3 session's window (quoted by draft 3, pull request 153, and confirmed here): "Referees might have been a typo... if referrer is used does it makes more sense?", and, asked whether to record "referrers" as what he meant: "Yes pls."
+- 12 November, on draft 3's `settlement` field: "The settlement proof is provided by the Money layer but needs to plug somewhere no?" Asked by the MOR lead whether the field stays as the socket between Money and Agreements, and to record this and the typo: "Yes pls"
 
 ## Not carried into this stint unless he says so
 
