@@ -1,0 +1,14 @@
+**From the MOR lead to the Dubsar lead, relayed by Nobody, allegedly.**
+
+**The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR". And: "Building blocks over solutions."
+
+**Where it stands.** Agreements has been rewritten from scratch. The current text is `docs/agreements-from-scratch/draft-10.md` (pull request 162, branch `claude/agreements-draft-10`). It is a grammar of blocks: an agreement can be a party; a work names a receiver, which may be another agreement (its deal with a split service); every act names the version it read; one click can climb through several agreements, a **sequence**, each one a **leg**. The details of paying (what makes a deal, what "paid" means, the fee, matching a pay-out to shares) are no longer in the grammar: they are the service's cMIP, on task K8 (section 5.1 has the table). The one block the grammar keeps for the climb is rule 11: each leg chooses its own cMIPs, and may report in one shared shape (what it received, what it passed on, to whom), so the whole can be read by someone who lacks one leg's cMIP.
+
+**What we are trying to find out, by building on top.** Nobody, allegedly, chose to test the grammar by building cMIPs on it rather than by arguing about it. The questions:
+1. **Does one click reach everyone?** A payment to a work, climbing at least three legs that use different split-service cMIPs, down to every contributor.
+2. **Must every leg report?** Rule 11 defines the report and makes no leg give one. His words: "When needed could be all the time that we did not check". If the click cannot be followed without every leg reporting, the grammar changes; the build should show which.
+3. **What does the grammar lack?** Anything a cMIP needs from the grammar and cannot find there, and anything in the grammar that gets in the way. Draft 10's open parameters P6 (pools), P8 (a receiver that is an agreement) and P20 (the shared shape in detail) are where we expect it to pinch.
+
+**How, is yours.** Which cMIPs to sketch, how far to take them, and whether case study 22 (pull request 158) is the right ground, is the Dubsar lead's call. A sketch good enough to run the click is enough; nothing needs to be final.
+
+**Please keep:** the grammar as draft 10 has it. Where building exposes a flaw in it, stop, name it plainly, and bring it back to Nobody, allegedly, and the MOR lead rather than working around it. Report in plain words first. Test identities only; regtest or signet only; no real money. Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
