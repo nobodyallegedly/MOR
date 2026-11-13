@@ -14,6 +14,7 @@
 - **Part F**: draft 13. One table for its changes, what the second click test showed and which change answers it, where each change landed, where the ledger's lines say more than the three exchanges it was written from, and draft 12's list of open items, unchanged. From draft 13, `draft-13.md` holds the grammar alone; `draft-12.md` stays in the repository.
 - **Part G**: draft 14. One table for its changes, where each landed, where the ledger's lines and the MOR lead's proposal say more than the one exchange it was written from, and draft 13's list of open items, unchanged. From draft 14, `draft-14.md` holds the grammar alone; `draft-13.md` stays in the repository.
 - **Part H**: draft 15. One table for its changes, every word that was renamed, where the ledger's lines and the brief say more than the three exchanges it was written from, where each change landed, and draft 14's list of open items, unchanged. From draft 15, `draft-15.md` holds the rules alone, and each rule's plain words and reasoning are in `reasons-15.md`; `draft-14.md` stays in the repository.
+- **Part I**: draft 16. One table for its changes, every word that changed, where the ledger's lines and the brief say more than the three exchanges it was written from, where each change landed, and draft 15's lists of open items, unchanged. From draft 16, `draft-16.md` holds the rules and `reasons-16.md` the plain words and reasoning; `draft-15.md` and `reasons-15.md` stay in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -1031,3 +1032,198 @@ Draft 13's other items (8 to 15, the contest; 17 and 18, an outvoted member; 19 
 22. **Words.** "Leg by leg only", "data", "paths", "with signature", "implied" and "leg" are his. "The two sides", "the other side of its own leg" and "where that side receives" are the MOR lead's. "An agreed path" is the brief's. "The path itself" (item 2) is Claude's.
 23. **Words that may be typos.** Quoted as the ledger has them: "This to me this is data."
 24. **Nothing was tested.** No test was run against draft 14. Whether one leg, with no place named, reads as written is for a test to show; so is whether a partner's view can be built at all as a data cMIP.
+
+---
+
+# Part I. Draft 16
+
+**Read for draft 16, and nothing else:** `docs/agreements-from-scratch/draft-15.md`, `reasons-15.md`, this file and `companion-3.md` (branch `claude/agreements-draft-15-uauhua`, pull request 169); `docs/decisions.md` and `docs/lead/proposals/report-block-2.md` (branch `claude/lead-records-2`). Draft 16 is draft 15 with five changes, numbered as its brief numbers them, and nothing else. Three exchanges of the ledger are brought in, each read as a whole: **"The contest is an act"**, **"The condition is a task"** and **"A fork, from MOR's side"**. Two earlier exchanges that the changes rest on, "The contest" and "Forks", were read again in the ledger. No research text, spec, earlier draft, review, test report or sketch code was opened. `report-block-2.md` is not changed.
+
+**The test for every change**, in the words of Nobody, allegedly: "What the previous version of agreement focused on solving issues… this one supports and specifies the language for creating solutions".
+
+## I.1 Changes, and where each comes from
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **The contest is an act.** He: "Contest is MOR act though. It is just extended. I contest an offer (an agreement with unknown participant at the time of signing) or I contest a vow (which is the same thing but without bytes attached)". And: "Making greed legible does not work without contest, it makes it core." With the earlier exchange **The contest**: "The contest comes only if goods or service were not delivered after payment."; "the signers of the agreement are contested at first, not the services they pick. If the signer believe the mistake is at the service they contest the service" | **The contest is an act, and a block.** A contest is a Statement of kind `contest`, the third kind this text defines. It is made against an offer or a vow, and reaches the signers of what it is made against (G11.8, rewritten). A buyer's contest is kept as draft 15 has it: only where what was bought was not delivered after payment. "Offer" and "vow" are defined, each by his words. Draft 15's first question (does G11.8 stay) is answered: it stays. |
+| 2 | **The condition is a task.** He: "Condition is the right task, triggered or not is what the core cares about. How it triggers is cMIP" | **The condition: triggered or not.** G10.7 reads only whether the condition a version names has triggered or not, as its cMIP answers. How it triggers, and what its triggering stops, are that cMIP's. The answer **no longer applies** is not kept: it said what the condition stops. The answer is **triggered**, said of the condition. The condition stays a cMIP answering K4; no task is added. Draft 15's second question is answered: G10.7 stays, cut down. |
+| 3 | **A fork, from MOR's side.** He: "I think it would be more correct to state that two acts got signed by all parties that needed to sign their update. (It is seen from MOR perspective, not the user). A client that sees both tips should not show it as a resolved act, what needs to happen is something that stops both tips until resolved."; "It is resolved by making one of the two void with an update."; to "never counted as the next version": "Yes pls" | **Forks.** A fork is two updates of the same act, each signed by all the parties that needed to sign it. Both tips stop: nothing built on either counts, and the last shared version stays in force (G4.7, G12.2). It is resolved by an update of the shared act that continues one tip; the other is set aside, and never counted as the next version (G12.3). Two rival resolving updates are themselves a fork (G12.7). A power to resolve, given in advance, and what others relied on, are as draft 15 has them (G12.4, G12.5). Draft 15's proposal (section 8.2, items 3 and 4: both branches bind; two joins) is not taken and is removed. P9 is rewritten. |
+| 4 | The same exchange: "A client that sees both tips should not show it as a resolved act" | **A client's duty.** Written once, as client conformance, which no verifier can check (G12.8). "Client" is defined. |
+| 5 | The brief's, as housekeeping. | **The files.** The rules are in `draft-16.md`; each rule's plain words and reasoning are in `reasons-16.md`, which is `reasons-15.md` changed only under G4, G6, G10, G11 and G12 and in two sentences of its opening; this part is added here; `companion-3.md` is changed in two rows and its head. `draft-15.md` and `reasons-15.md` stay in the repository. |
+
+Draft 15 had fourteen grammar rules and thirteen tasks; so has draft 16. No grammar rule or task is added or removed. Clauses: G10.7 and G11.8 are rewritten under the same numbers; G12.1 to G12.6 are reworked under the same numbers; G12.7 and G12.8 are new. One field is renamed (`joins` is `resolves`), and `continues` is now required beside it. One value is added to `kind`: `contest`. Definitions added: offer, vow, update, built on a tip, resolve and resolving update, set aside, client, triggered. Definitions changed: Statement, contest, power, fork, condition, apply, the answer "triggered" (in place of "no longer applies"), the qualifier "disputed". "Join" and "dropped" are no longer terms. Parameters changed: P9, P21. Costs changed: "A contest reaches one agreement" (words), "Honest forks", "A fork of Terms holds the agreement where it was" (one cost added to it: a fork as a veto), "A join does not undo" (now "Resolving does not undo"), "No longer applies is as sure as its condition" (now "Triggered is as sure as its condition's cMIP").
+
+## I.2 Every word that changed
+
+| Draft 15 | Draft 16 | Why |
+|---|---|---|
+| "join": an act that ends a fork and says which branch continues | "resolving update" | his words: "It is resolved by making one of the two void with an update." |
+| "join": an act that merges the branches | not kept | the same words: a fork is resolved by continuing one tip |
+| a fork "ends" | a fork "is resolved" | his word |
+| "dropped", of a branch | "set aside", of a tip: it "never counted as the next version" | the MOR lead's wording, "void" having been retired; he: "Yes pls" |
+| the first act of a branch | "tip" | his word |
+| a replacing Terms act; a signer's next act | also called an "update" | his word; it names a new act, and no act is ever changed |
+| the field `joins` | the field `resolves` | "join" is no longer a term |
+| `continues`: optional in a join | `continues`: required beside `resolves` | no merging |
+| the answer **no longer applies**, said of a filling | the answer **triggered**, said of a condition | his words: "triggered or not is what the core cares about" |
+| "no longer applies", a defined answer | "no longer applies", plain words only | the same |
+| a condition "is met" | a condition "has triggered" | his word |
+| "the rule in `condition`" | "the cMIP (a rule, task K4) named in `condition`" | "How it triggers is cMIP" |
+| "contest": a Statement of a kind a cMIP gives | "contest": a Statement of kind `contest`, an act of the grammar | "Contest is MOR act though." |
+| "the agreement the buyer bought under" | "the offer or vow the buyer bought under" | "I contest an offer… or I contest a vow" |
+| G11.8's title, "The contest, one agreement at a time" | "The contest: an act, made against an offer or a vow" | the brief |
+| "settling a fork in advance"; "a power to sign the join" | "resolving a fork in advance"; "a power to resolve" | as above |
+
+New words: **offer** and **vow** (his), **client** (his), **built on** (Claude's, for "nothing built on either counts", the MOR lead's reading).
+
+## I.3 Where the ledger's arrived-at lines, and the brief, say more than the exchanges
+
+The arrived-at lines are the MOR lead's, marked "to check". Each item is something a line, or the brief, says that the exchange, read as a whole, does not itself say, with what draft 16 does. Item numbers in brackets are draft 16's section 8.2.
+
+**The contest is an act.**
+
+1. **"as an act, not as a policy: a block"**. His words: "Contest is MOR act though. It is just extended." "Block" and "not as a policy" are the lead's. Draft 16 writes the act, and no new policy (item 14).
+2. **"MOR act"**. The line reads it as: stays in the grammar. His words may also mean an act of MOR as a whole, which the core has and Agreements extends. Draft 16 gives the contest a kind in this text, and lists the other reading (item 5; section 8.1).
+3. **"It is just extended."** Not in the line. Draft 16 does not know what is extended, and says so (item 5).
+4. **"an agreement whose participants were unknown when it was signed"**. His words: "an agreement with unknown participant at the time of signing", one participant. Draft 16 quotes him and reads it as: Terms that name a party by role (item 4).
+5. **"Whom it reaches follows from what it is made against: the signers of that offer or vow."** Not in this exchange. It joins his words here to the earlier exchange "The contest". Draft 16 follows the brief (item 15).
+6. **The brief: "Keep what draft 15 says of when a buyer contests only where the exchange supports it."** This exchange says nothing of when. The earlier one does: "The contest comes only if goods or service were not delivered after payment." Kept on that (item 6).
+7. **"legibility only works if what is made legible can be contested"**. His words: "Making greed legible does not work without contest, it makes it core." The line leaves out "greed". No grammar rule rests on it (item 24).
+8. **"The MOR lead's lean is withdrawn."** The lead's own record of his own lean; nothing of his is added.
+
+**The condition is a task.**
+
+9. **"the condition stays as a task"**. His words: "Condition is the right task". In draft 15 it was a field naming a rule, and no task of its own. Draft 16 adds no task (items 2 and 16).
+10. **"the core cares only whether it has triggered or not"**. "Only" is the lead's and the brief's. Draft 16 follows the brief, and so drops the answer "no longer applies" (items 1 and 17).
+11. **The brief: "what it stops and how it triggers are that cMIP's."** His words: "How it triggers is cMIP". What it stops is from draft 15 (the condition itself says what it stops), now given to the cMIP (item 18).
+
+**A fork, from MOR's side.**
+
+12. **"seen from MOR's side"**. His words: "(It is seen from MOR perspective, not the user)". Draft 16 reads it as: from the acts alone, saying nothing of what anyone meant (G12.1).
+13. **"nothing built on either counts until it is resolved, and the last shared version stays in force"**. His words: "what needs to happen is something that stops both tips until resolved." The rest is the lead's reading, put to him; he answered the next point and did not object. The last shared version staying in force is from the earlier exchange "Forks" (item 19).
+14. **"A client that sees both tips does not show either as a resolved act (a client duty)"**. His words: "should not show it as a resolved act". "Either" and "a client duty" are the lead's; "client conformance, unverifiable by a verifier" is the brief's. Draft 16 writes MUST NOT, having no SHOULD (items 10 and 23).
+15. **"resolved by an update, signed as an update must be, that continues one tip"**. His words: "It is resolved by making one of the two void with an update." The rest is the lead's. Draft 16 reads "as an update must be" as: as an update of the shared act (items 9 and 20).
+16. **"the other never counted as the next version"**. The lead's wording, put to him because "void" was retired on 13 November; he: "Yes pls".
+17. **"what others relied on in it stands, shown as disputed"**. Not in this exchange; from "Forks". Kept as draft 15 has it (item 21).
+18. **"Two rival resolving updates are themselves a fork, resolved the same way."** Not in his words; the lead's, from what draft 15 proposed on two joins. Written, with its cost (item 22).
+19. **"The writer's proposal for draft 15 (both branches binding) is not taken."** His words do not mention the proposal; they answer it by saying what would be "more correct". Draft 16 removes it.
+20. **The brief: "say what is left of 'join'."** His words do not use the word here. Draft 16: the word goes; the act that names which tip continues stays as the resolving update; merging is not kept (item 8). That merging goes is Claude's reading of "making one of the two void", and the earlier exchange "Forks", as `reasons-15.md` records it, had accepted a join that "merges them".
+21. **One signer's own line.** The line, like his words, speaks of updates and versions. Draft 16 reads it for every line (item 7; P9).
+
+## I.4 Where each change landed
+
+- **Head:** the file names, and Part I.
+- **Section 2:** the definitions named in I.1; the answers (triggered); the qualifier disputed.
+- **Section 3:** `kind` (the value `contest`); `condition` (words); `resolves` and `continues`, in both tables; the two paragraphs after the Statement table.
+- **G4.7, G4.8:** a fork of Terms in the new words: both tips stop, the last shared version stays in force; "not a tip".
+- **G6.2:** both tips stop; "resolved".
+- **G10.5:** reads whether the condition has triggered.
+- **G10.7:** rewritten (change 2).
+- **G11.8:** rewritten (change 1).
+- **G12:** G12.1 to G12.6 reworked, G12.7 and G12.8 new, its lie and whom it protects (changes 3 and 4).
+- **G13.1:** the field name.
+- **Section 5:** K4's and K12's rows (the condition). **5.1:** the rows "A condition" and "Resolving a fork in advance"; the escrow paragraph; the last paragraph, which no longer asks two questions.
+- **Section 6:** P9 rewritten; P21 (words, and one sentence).
+- **Section 7:** the five costs named in I.1.
+- **Section 8.1:** the list of answers; two lines added (the core's contest; clients).
+- **Section 8.2:** rewritten: the choices draft 16 made, and where the lines and the brief say more than the exchanges. Draft 15's two questions and its proposal are gone from it (I.5).
+- **Section 8.3:** rewritten: what is left as draft 15 has it.
+- **Section 8.4:** a list "From draft 15's list" added; three older lines noted as answered or renamed.
+- **`reasons-16.md`:** the head; two sentences of the opening; G4 (plain words, two sentences of the reasoning); G6 (the end of the reasoning); G10 (one paragraph of the plain words, one clause of "Protects", and a new passage "The condition is a task"); G11 (the plain words of the contest, one sentence of "The contest", and a new passage "The contest is an act"); G12 (plain words, lie, protects, two sentences of the reasoning, and three new passages). Each is marked "(draft 16)" where it is new.
+- **`companion-3.md`:** the heading, one note, and rows #41 and #43.
+
+## I.5 Draft 15's lists of open items, unchanged, and what draft 16 does with them
+
+What follows the notes below is sections 8.2 and 8.3 of `draft-15.md`, moved and not edited. "This text" and "draft 15" there mean draft 15; "join", "dropped", "branch" and "no longer applies" there have draft 15's meanings (I.2).
+
+What draft 16 does with them:
+
+- **8.2, item 1** (the buyer's contest): answered, from "The contest is an act". It stays, as an act (G11.8).
+- **8.2, item 2** (the condition): answered, from "The condition is a task". It stays; the grammar reads only triggered or not; the answer "no longer applies" is not kept (G10.7).
+- **8.2, item 3** (what a fork removes): the proposal is not taken. Both tips stop (G12.2; P9).
+- **8.2, item 4** (two joins): the proposal is not taken as written. What stays of it, in the MOR lead's line: two rival resolving updates are themselves a fork (G12.7), with the cost the proposal named (section 7).
+- **8.2, items 5 to 11:** not touched; they stand as written.
+- **8.3, item 9** (the contest, "one agreement at a time"): G11.8 has a new title; a contest still reaches one agreement's signers.
+- **8.3, item 15** ("applies"): "apply" and "no longer applies" are now plain words, not an answer.
+- **8.3, item 23** (nothing was tested): no test was run against draft 16 either.
+- **Every other item** stands as written. They are summed up in draft 16's section 8.4.
+
+**8.2 For Nobody, allegedly**
+
+Draft 15 is draft 14 with eight changes (`history.md`, Part H). Three exchanges are brought in, each read as a whole: "The two sides of a leg", "The wrong cMIP" and "What the grammar is for". The rest is the MOR lead's, as technical wording, following the column "the grammar's (MOR)" of section 9 of Fable's review.
+
+**Two questions.** Fable's review calls two things in this text solutions, which a cMIP could state. Both are kept exactly as draft 14 has them. Whether they stay is his.
+
+1. **The buyer's contest (G11.8).** In plain words: G11.8 says that a buyer who was not delivered to contests the people they bought from first, and not the service those people picked. Fable's point: a contest is a Statement made within the agreement the buyer bought under, and by that alone it reaches that agreement and no other. The rest is a policy about who is blamed first, a verifier computes nothing from it, and a cMIP of kind (K11) could say all of it. *The question:* does G11.8 stay in the grammar, or become a cMIP's? If it goes, the grammar keeps only what it already has: a Statement is made within one agreement.
+2. **The condition (G10.7).** In plain words: G10.7 lets a version name one rule under which the rights it offered no longer apply, and gives a verifier an answer of its own for it. Fable's point: G10.6 says these grammar rules do not read rights, and G10.7 then gives a verdict on them; the spot's cMIP (K12) already answers whether a spot takes new people, and could answer whether a filling's rights have stopped. *The question:* does G10.7 stay, with its field `condition` and its answer **no longer applies**, or does that answer become the spot's cMIP's?
+
+**A proposal, not a decision: what a fork removes, and two joins (P9).** Nothing below is in the grammar rules. It is the least reading Claude can find that follows from two things already in the text: what others relied on stands (G12.5), and nothing counts until all have signed (G4.10). It is for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+3. **What a fork removes.** In plain words: someone signs two acts that each claim to be their next one. The text answers "fork" and does not say what that takes away. So it does not say whether a person could fork on purpose to make their own signature stop counting. *Proposed:* a fork takes nothing away from what its signer signed. Both acts are theirs. It takes away only the answers that would need a choice between the two branches.
+   - (a) A fork is answered for the two acts and for what follows each of them: the branches (G12.1). That signer's acts before the shared act are in no branch, and are read as they were.
+   - (b) While the fork stands, every act in either branch still binds its own signer (G5.1(a)), and is counted wherever these grammar rules count it, shown with the fork. An assent in a branch is still counted by G4.1. So nobody makes their own assent uncountable by forking.
+   - (c) What is answered **fork**, and nothing else, is whatever needs the one act that follows the shared act: which act is that signer's latest, and which of two statements that contradict each other is theirs.
+   - (d) Where a join drops a branch that holds an assent, Terms that came into force counting that assent stay in force: Terms stop only by replacement (G4.9). What others relied on in that branch stands, shown as disputed (G12.5).
+
+   *The reasoning.* Until Terms are in force, a signer already has a way to take an assent back: the counter signature (G4.10). A fork must not be a second, hidden way, and need not be one. Once Terms are in force, the others have relied on that assent, and what others relied on stands. And a person is bound by what they signed in their own name (G5.1(a)): signing a second story does not unsign the first. *What it costs:* a signer who forks honestly (a lost device) is bound by both branches until a join; they did sign both.
+4. **Two joins.** In plain words: a fork of Terms is ended by a join, signed by those who could have replaced the Terms. Where the Terms let fewer than all replace them, two different groups can each sign a join. The text says "A join is not a branch" and has no word for two joins. *Proposed:* two joins of the same fork, each carrying the signatures G12.3 asks for, are two acts that each count as the next act after the same shared act. By G12.1's own words that is a fork. "A join is not a branch" is then read as: not a branch of the fork it names. Neither join ends the first fork while the other stands. The Terms before the fork stay in force (G4.7). The fork of joins ends as any fork does: by a join that names both, signed in the same way, or under a power given in advance (G12.4). What others relied on, in a branch either join continued, stands, shown as disputed (G12.5).
+
+   *The reasoning.* It adds no word and no grammar rule: G12.1 already defines a fork as two acts that each count as the next. A join that could be undone by a rival join, with a verifier picking one, would break "shown, never chosen". *What it costs, and it is larger than one sentence:* under a power that lets fewer than all replace Terms, any group able to use that power can hold the agreement where it was, by signing a rival replacement and then a rival join. A fork is then a veto. The way out can be said in the language: a power to sign the join whose rule accepts only the one join it computes from the acts and the place (G12.4). That is a cMIP's.
+
+**Where the ledger's arrived-at lines, and the brief, say more than the exchanges.** The arrived-at lines are the MOR lead's readings, marked "to check". Draft 15 follows the exchange where the two differ. The full list is in `history.md` (section H.3); the ones that change what a rule says:
+
+5. **"a collective signature, under the power x gave".** His words: "The delegate signs for the agreement, isn’t that a collective signature of sorts? I sign this agreement y under agreement x, parties are at agreement x, I sign on their behalf." It is a question, and "of sorts". Asked whether the gap is closed: "I think it is. And if it isn’t a cMIP closes it." Draft 15 writes the signature as a grammar rule (G1.2) because the brief asks for it. If "I think it is" is a leaning, G1.2 rests on a leaning.
+6. **"it binds x's parties as x's Terms say".** Not in his words; it is the brief's, as the MOR lead's wording. His words say "I sign on their behalf". Draft 15 writes the binding through G5.1(b), which was already there: nobody is bound except through Terms they signed that give the power.
+7. **"each member may also inform the agreement she is under".** His words: "each member also has to inform the agreement it is under that it got paid, no?" He said "has to", as a question. The line says "may". Draft 15 writes no grammar rule for it: it is that agreement's own Terms' to call for (section 5.2).
+8. **"the grammar gives no default for a party's own part or its own leaving, and is not meant to".** His words in "What the grammar is for" do not mention leaving, or defaults. They say the cMIP builds what is needed, and "the core just want to get the answer, allowed to edit this task or not." The line is the answer to Fable's question, which he confirmed as a whole ("Yes, that’s me."). Draft 15 changes no grammar rule for it. It answers P15, and adds two rows to section 5.2.
+9. **"allowed to edit this task or not".** His word is "task": a part of an agreement that a power may or may not reach. G5.2 says "the version in force and the proposed version", which is Fable's and the brief's wording for what the rule must be given so that it can tell which part changed.
+10. **"Which lines of a report each side receives is the task's cMIP's".** The exchange "The wrong cMIP" is about a band that is not counted when a song's Terms change. It does not mention reports. The brief applies its principle ("you did not use the right cMIP then") to report lines. Draft 15 follows the brief (G11.3) and marks it here.
+11. **"Invalid".** Of two replacements each signed by two of three parties he said (quoted under rule 4 in draft 14, and under G4 in `reasons-15.md`): "Both term 2a and 2b are invalid as they do not carry the required signatures that were in term 1." Draft 14 kept "invalid" for it, and Fable's review found that the text's own definition then made it "not shown". Draft 15 draws one line (section 2) and answers **not shown** (G4.8). The effect is the same: such a replacement replaces nothing. If his "invalid" was meant as the answer's name, the line moves.
+
+**8.3 Left as draft 14 has it**
+
+Each item is where one of draft 15's changes touches something the exchanges do not cover. Each is left as draft 14 has it, or says the least that lets the text be read, and says so.
+
+**How an agreement signs (G1.2).**
+
+1. **An agreement whose Terms give no power.** The exchange is about a delegate. For an agreement with no delegate and no vote, draft 14 says it signs by "every one of its signers", from his "signed by all". By which acts each of them signs is still not said (P17).
+2. **A signature under other Terms.** G1.2 asks that `under` name Terms of the agreement itself. Whether an agent named in a separate delegation, which the agreement signed, also makes the agreement's signature is a power through a power (P2), and is not said.
+3. **What the parties are bound to.** "As x's Terms say": how wide a power must be for an assent to another agreement to bind every party is that power's rule's. A party of x that is itself an agreement, and did not sign x, is not bound: one level.
+4. **Taking it back.** Whether an agreement can make a counter signature (G4.10) is as draft 14 has it: not said.
+
+**The two sides of a leg (G11.1).**
+
+5. **A member who tells her own agreement.** Left to that agreement's Terms (section 8.2, item 7).
+6. **A receiving side that signed nothing.** The exchange: the gap "is real", and "a cMIP closes it". What such a cMIP is, is not said, as for every data cMIP.
+7. **What a doer's report carries.** K8's row is unchanged. It still asks one report for everything passed on. Which of its lines reach which side is now the task's cMIP's (G11.3); how one signed report is shown in part is not said, and may be the block's (section 8.1).
+8. **"the choice of cMIP stands on the leg".** His earlier words, from when a leg was read as one agreement of a sequence. A leg is now one obligation between two sides, carried out under one agreement's Terms, so the choice still stands on the leg (G11.1). That is Claude's reading of the two together.
+9. **The contest.** The ledger's line says a contest "goes leg by leg". With "leg" meaning one thing, G11.8 says "one agreement at a time". The clause is otherwise unchanged.
+
+**The seam with the block (G11.7).**
+
+10. **"By default".** Whether a payer can state that no confirmation is called for is not said; it would be the payment's to carry, in the layer that holds value (section 8.1).
+11. **The block is not changed.** What it would need is in section 8.1. Until it says so, G11.7 and R2 still disagree on paper.
+
+**Receivers that point onward (G1.4, G11.6; P8).**
+
+12. **Inside one leg.** A work names its deal as receiver, and the deal names the service: G1.4 must read through one agreement to find who receives. Draft 14 read one step and did not say what follows. Draft 15 reads on until a party is reached, sets no limit, and answers **not shown** where an agreement is met twice. That is Claude's least reading, for the MOR lead to confirm.
+13. **Which version of the agreements pointed through.** A payment names the version of the work it read. For an agreement that version's receiver points to, G1.4 reads the version the act names, if it names one, and otherwise its Terms in force.
+
+**Words (section 2).**
+
+14. **"Rule".** The ledger, the block and the exchanges use "rule" in both senses. The brief itself writes "rule 11.8" and "a power's rule". This text writes G11.8, and keeps "rule" for the people's own.
+15. **"Succession"**, **"receiver for an act"**, **"receiving side"**, **"applies"** and **"own line"** are Claude's choices, as technical wording, for the MOR lead to change.
+
+**From Fable's review, and not in its section 9 table.** Left untouched, and listed so that they are not lost:
+
+16. G4.10 reads "until every party has signed" as "until those Terms are in force"; where Terms come into force on fewer signatures, the two differ (its section 3, item 9).
+17. G4.1 counts "every party named as a signer"; G4.8 asks for "every party bound by them". Someone who filled a spot and assented is bound and is not named as a signer (item 10).
+18. Whether Terms hold the Control task is decided, in G11.2, by whether they "give a part to any other party". Shares have no form in the grammar, and the text does not say that the answer is unchecked without the body's cMIP (item 11).
+19. No grammar rule makes anything be shown to anyone. G11.4(e) is an answer a verifier gives when asked; what a person is shown before paying or signing is a client's (item 12; section 5.2).
+20. An act an agent makes after their delegation was replaced is read "as shown" where the Terms name no place (G5.4). That is not among the stated costs (its section 4).
+21. "The payer pays the work and needs to know nothing else" overstates: a payer who fills a spot is recognised only through that spot's cMIP (its section 1). The sentence is in `reasons-15.md`, unchanged.
+
+**The rest.**
+
+22. **What a data cMIP is**, which task it answers, and how Terms name one: not said, as before.
+23. **Nothing was tested.** No test was run against draft 15.
