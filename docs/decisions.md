@@ -109,6 +109,9 @@ The research is `docs/strangers-2026-11/`.
 **Which version a discharge divides by** (draft 7, P14). The MOR lead's case: Fen pays under version 1 (Ana 50%); version 2 (Ana 40%) follows; the deal pays out after it. He: "Fen has a signed agreement of sorts, no? Whatever was signed (I accept your offer) matters. Then, dynamic conditions (we reserve the right to…) can only work if the signed deal stated so. Only a signed condition can update the agreement on one end"
 - *Arrived at (to check):* a payment is divided by the version it was made under (the one the payer accepted and its act names), so Ana gets 50% of Fen's payment; a later version applies to it only where the version signed said so in advance ("we reserve the right to…"); only a signed condition changes what one side receives.
 
+**Whose anchoring wins** (draft 7, P13 and P11). The MOR lead proposed that a place or clock named in the Terms binds every reader of that agreement, a reader's own choice applying only where the Terms name none. He: "Whatever the agreement states as reference clock is the clock everyone has to use for that agreement."
+- *Arrived at (to check):* the place and the clock an agreement names are the ones every reader uses for it; a reader's own anchoring applies only where the agreement names none.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
