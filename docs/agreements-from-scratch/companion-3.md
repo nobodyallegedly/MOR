@@ -1,4 +1,4 @@
-# Agreements, from scratch: companion (written for draft 8, kept up to draft 15)
+# Agreements, from scratch: companion (written for draft 8, kept up to draft 16)
 
 13 November 2026. A record of work by Claude: how the research is used in `draft-8.md`. Not a decision, and not part of the grammar. Nothing here is read by a verifier.
 
@@ -15,6 +15,8 @@
 *Changed for draft 14, only where its changes touch this file (`history.md`, Part G): a report moves between the two sides of its own leg, in every layer, and a call names no place and no reader; a report is data, and any path beyond one leg is one people agreed to, with their signature, built as a data cMIP (rule 11.6). The report block is now the MOR lead's second proposal. Rows changed in section 2: #21; in section 1, the pointer to the proposal, and one sentence added at the end. No rule, clause or task number changes, so everything else reads the same against `draft-14.md`.*
 
 *Changed for draft 15, only where its changes touch this file (`history.md`, Part H): the heading, which still said "companion to draft 8"; row #29 in section 2; and one sentence added at the end of section 1. Draft 15 writes the grammar rules G1 to G14 where this file writes "rule 1" to "rule 14": the numbers are the same, so "rule 11.6" here is G11.6 there. Five words changed meaning or name in draft 15 (`history.md`, section H.2): a "leg" is one obligation between two sides, not one agreement of a sequence; the side that receives is the "receiving side"; the "receiver now" is the "receiver for an act"; the baker's "sequence" is a "succession"; and a filling's rights "apply" or "no longer apply" where this file says "in force". The rows below are otherwise not reworded, and read the same against `draft-15.md`. Each rule's reasoning is now in `reasons-15.md`.*
+
+*Changed for draft 16, only where its changes touch this file (`history.md`, Part I): rows #41 and #43 in section 2, and the heading. A contest is an act of the grammar, made against an offer or a vow (rule 11.8). A fork is resolved by an update that continues one tip, and "join" is no longer a term (rule 12). Of a condition the grammar reads only whether it has triggered or not, as its cMIP answers (rule 10.7): where rows #31 and #48 speak of a condition, and #48 of rights "no longer in force", read that. No rule or task number changes (rule 12 gains clauses 12.7 and 12.8), so everything else reads the same against `draft-16.md`. Each rule's reasoning is now in `reasons-16.md`.*
 
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
@@ -84,9 +86,9 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 38 | Recover | K8, designed in advance; cost |
 | 39 | Conceal | cost |
 | 40 | Reveal | Deliver the Terms; check against fingerprint (rule 2) |
-| 41 | Raise | Statement of a K11 kind, delivered (K9); a buyer's contest, where what was bought was not delivered after payment, reaches the signers of the agreement bought under first, and they contest their service if they believe the fault is its (rule 11.8); it stays on the record (costs "A contest reaches one leg", "Paid, and the author gone") |
+| 41 | Raise | Statement of a K11 kind, delivered (K9); a contest: a Statement of kind `contest`, an act of the grammar, made against an offer or a vow and reaching its signers (rule 11.8); a buyer's contest, where what was bought was not delivered after payment, reaches the signers of the offer or vow bought under, and they contest their service if they believe the fault is its (rule 11.8); it stays on the record (costs "A contest reaches one agreement", "Paid, and the author gone") |
 | 42 | Hear | K9 plus K4 waiting rule |
-| 43 | Judge | K10; power; rule 5; for a fork: a join, which may be signed under a power given in advance (rule 12.4) |
+| 43 | Judge | K10; power; rule 5; for a fork: an update that resolves it by continuing one tip (rule 12.3), which may be signed under a power given in advance (rule 12.4) |
 | 44 | Final | the power's K4 rule |
 | 45 | Enforce | from posted value: K8; otherwise cost; what a proven liar loses in standing: K13 |
 | 46 | Complete | Statement of a K11 kind |
