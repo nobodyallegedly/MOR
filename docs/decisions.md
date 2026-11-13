@@ -122,8 +122,11 @@ The research is `docs/strangers-2026-11/`.
 - The MOR lead proposed that a delegation can never take away the delegator's own ability to end it (a core guarantee, part of the way out), the agent's pay and notice living in the deal beside it. He: "Yes, we’re not Law. So, core defending employment rights is not a good idea. But, a cMIP should be able to do so if the parties need it." Asked whether (a) the core guarantees only that a delegator can always take its delegation back, or (b) a grant can be made irrevocable by its own terms: "I lean a. The default is delegator can end it, but with provision that an agreement can add conditions to its ability to do so."
 - *Arrived at (to check):* by default a delegator can end its delegation at any time, by its own signature (an identity) or by its Terms' rule (an agreement); an agreement may add signed conditions to that ability (notice, a term, a cause); protections for the agent (pay, notice, severance) are cMIPs the parties choose; the core is not labour law.
 
-**Withdrawing an assent** (draft 7, P10 and F3). The MOR lead proposed that until Terms are in force an assent is like an offer and may be withdrawn. He: "Yes, a counter signature is a good idea. Nothing counts untill all parties have signed,"
+**Withdrawing an assent** (draft 7, P10 and F3). The MOR lead proposed that until Terms are in force an assent is like an offer and may be withdrawn. He: "Yes, a counter signature is a good idea. Nothing counts until all parties have signed," ("until" corrected with him)
 - *Arrived at (to check):* nothing counts until every party has signed; until then a party may withdraw its assent by a signed act.
+
+**A lone sale in another agreement** (draft 6's list, item 6). The MOR lead proposed leaving it as a stated cost: a fresh agreement claiming to sell a work, unsigned by its owners, is visible to anyone who checks. He: "That’s when we look at the envelope of the work. Who baked it? So, the thief should be at least forced to edit it and bake it again."
+- *Arrived at (to check):* a work's envelope says who baked it; an agreement selling those bytes is read against its bakers (and those holding from them), so a stranger's sale of them is visibly not theirs; to sell it as their own, a thief must edit and bake again, which gives a new fingerprint whose lineage shows where it came from.
 
 ## Not carried into this stint unless he says so
 
