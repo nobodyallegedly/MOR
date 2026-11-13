@@ -119,6 +119,7 @@ The research is `docs/strangers-2026-11/`.
 
 **Grants** (draft 7, P3: may a principal always end a grant alone?). He: "A grant is different, but, maybe we should slow down and look at what it is for potentially… employment." The MOR lead walked a bakery: the authority to act for it (a grant) apart from the job (a deal with its own pay and notice). He: "Wait… act as you… but as a business… a collective… therefore an agreement, there is no « you » anymore, there is agreement as a party… an agent acts for an ID different flavor of the same delegation"
 - *Arrived at so far (to check):* a grant is a delegation, from an identity or from an agreement as a party; acting for an agreement and acting for an identity are flavours of the same delegation. Still open: who may end it.
+- The MOR lead proposed that a delegation can never take away the delegator's own ability to end it (a core guarantee, part of the way out), the agent's pay and notice living in the deal beside it. He: "Yes, we’re not Law. So, core defending employment rights is not a good idea. But, a cMIP should be able to do so if the parties need it."
 
 ## Not carried into this stint unless he says so
 
