@@ -173,6 +173,9 @@ The research is `docs/strangers-2026-11/`.
 - He then: "Also, if you keep that quote a collective becomes nearly impossible to build." Asked which: "\"an agreement as a party never signs\""
 - *Arrived at (to check):* draft 11's rule that an agreement named as a party never signs is dropped; with it, no collective could sign anything. An agreement signs as its own Terms require (a small work by all its owners, a collective by a vote or a named delegate, as its rule says).
 
+**An outvoted member and being seen** (draft 12, pull request 165, section 8.2 item 15). The MOR lead asked whether a member outvoted in a collective has agreed to be seen, leaning yes, through the rule she signed. He: "That’s up to the cMIP to decide, not me. Then, it’s up to the signers to decide at inception of the agreement. If the rules of the agreement state « majority decides » then majority decides."
+- *Arrived at (to check):* not the grammar's to answer. Which consent a data cMIP asks for is that cMIP's; which cMIP and which rule apply is the signers' choice when they make the agreement; where its rules say the majority decides, the majority decides.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
