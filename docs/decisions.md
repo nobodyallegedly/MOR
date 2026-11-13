@@ -112,6 +112,9 @@ The research is `docs/strangers-2026-11/`.
 **Whose anchoring wins** (draft 7, P13 and P11). The MOR lead proposed that a place or clock named in the Terms binds every reader of that agreement, a reader's own choice applying only where the Terms name none. He: "Whatever the agreement states as reference clock is the clock everyone has to use for that agreement."
 - *Arrived at (to check):* the place and the clock an agreement names are the ones every reader uses for it; a reader's own anchoring applies only where the agreement names none.
 
+**The work's side of its deal** (draft 7, open item 5: who owes the service's fee; what the old service owes for payments arriving after a switch). The MOR lead proposed the fee taken at discharge and the old deal still covering what arrives under it. He: "The service fee is an agreed aspect of the service deal. The agreement states all that is needed to solve these."
+- *Arrived at (to check):* the grammar decides neither; the deal states its fee and what happens to payments that arrive after a switch.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
