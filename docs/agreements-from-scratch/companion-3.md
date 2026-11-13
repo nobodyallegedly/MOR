@@ -6,6 +6,8 @@
 
 *Changed for draft 10, only where its five changes touch this file (`history.md`, Part C). Rule numbers below are draft 10's where a row was changed: rule 11 is now "Legs of a sequence"; draft 9's rule 11 (the agreed witness) and its rules 1.6 to 1.9, 10.7 and 10.9 are cMIPs' business (`draft-10.md`, section 5.1); draft 9's rule 10.8 is rule 10.7; task K14 is gone. "Chain" is said only of one agreement's versions, and agreements linked to one another are a "sequence". Rows changed in section 2: #11, #13, #17, #19, #21, #23, #26, #31, #43 and #48; in section 1, one row and the paragraph after the table; in section 3, four rows and the two closing points. Everything else reads the same against `draft-10.md`.*
 
+*Changed for draft 11, only where its changes touch this file (`history.md`, Part D): the report is a block of MOR's shared language, which `draft-11.md` uses and does not define; a leg may call for reports, and a leg report answers that call (rule 11, task K8). Rows changed in section 2: #21, #25 and #26; in section 1, the last sentence. No rule or task number changes, so everything else reads the same against `draft-11.md`.*
+
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
 **Why this file exists.** Nobody, allegedly, on draft 1: "Isn’t “how the 49 tasks land” more of a companion section, it says: this is how the research was used." So the landing table left the draft, with the rest of what records the research's use rather than the grammar itself.
@@ -24,7 +26,7 @@
 | `agreement-grammar.md` | The five operations, the two properties (Keep and Check), the silent sixth operation (Apply, which needs no trust), the closed-world rule, the residue (truth, minds, hands), the second test ("a fork convicts itself"; a shared sequence needed only for scarcity and freshness; ownership as global as its witness set), and the third test (the record holds no value; receipts are the only clean proof that value moved). |
 | `late-roles.md` | The four ways a role meets its person (doing, receiving, holding, being), read against the four spots in Nobody, allegedly's words (rule 10); the roles no agreement could anticipate (rule 10.4); the fraud of counted attention (in draft 10, the cMIP of the spot, task K12; cost "Counted attention leans on whoever counts"); fixed pools (P6); and the payer as sole confirmer (rule 10's lie). |
 
-What came after the research, and is not from it: the central idea, in the words of Nobody, allegedly, "The key concept is « agreement as a party » then it’s what you build with it that changes" (rule 1); paying through a sequence (rule 1.3 and 1.4, with rule 11; its details are a service's cMIP); forks and how they end (rule 12); "now" as what an act cites (rule 13); and the baker (rule 14). Each comes from an exchange recorded in `docs/decisions.md`, and `draft-8.md` says which. From draft 10, the shared shape in which each leg of a sequence reports (rule 11) comes from the exchange "Building blocks in draft 9".
+What came after the research, and is not from it: the central idea, in the words of Nobody, allegedly, "The key concept is « agreement as a party » then it’s what you build with it that changes" (rule 1); paying through a sequence (rule 1.3 and 1.4, with rule 11; its details are a service's cMIP); forks and how they end (rule 12); "now" as what an act cites (rule 13); and the baker (rule 14). Each comes from an exchange recorded in `docs/decisions.md`, and `draft-8.md` says which. From draft 10, the choice of cMIP per leg (rule 11.1) comes from the exchange "Building blocks in draft 9". From draft 11, the report is a block of MOR's shared language (the MOR lead's proposal, `docs/lead/proposals/report-block-1.md`), from the exchange "The report, after the click test"; rule 11 only uses it.
 
 ---
 
@@ -54,12 +56,12 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 18 | Inspect | K5; rule 8 |
 | 19 | Measure | K5; rule 8; counts of being seen: the spot's cMIP (K12), with the `settlement` socket (rule 8.5) |
 | 20 | Acknowledge | Statement with `answers`; K9 |
-| 21 | Record | Statements; rule 6; what an act relied on: `relies_on` (rule 13.2); what a leg received and passed on: its leg report (rule 11); read across agreements: K13 |
+| 21 | Record | Statements; rule 6; what an act relied on: `relies_on` (rule 13.2); what a leg received, passed on, kept and still owes: a leg report, where the leg called for one (rule 11; task K8); read across agreements: K13 |
 | 22 | Show | Deliver (K9) |
 | 23 | Hold | K8; a service is a hand, under its deal with the work (rule 1.3; the service's cMIP, K8); escrow: a service's cMIP; a pool: P6 |
 | 24 | Secure | guarantor: assent; pledge: K8 |
-| 25 | Separate | K8; rule 8; cost |
-| 26 | Divide | K4 computes, K8 pays; what is owed to a work goes to its receiver, and where that is an agreement it is the next leg, which makes a series of splits possible (rule 1.4); each leg reports what it received and passed on, and to whom (rule 11); where a work is paid, the division, the version divided by, the fee and late payments: the service's cMIP (K8); from a pool: P6 |
+| 25 | Separate | K8; rule 8; cost; in a leg report, what was kept is stated apart from what is still owed (task K8) |
+| 26 | Divide | K4 computes, K8 pays; what is owed to a work goes to its receiver, and where that is an agreement it is the next leg, which makes a series of splits possible (rule 1.4); a leg may call for reports of what was received and passed on, and to whom (rule 11; the report is the shared language's); where a work is paid, the division, the version divided by, the fee and late payments: the service's cMIP (K8); from a pool: P6 |
 | 27 | Authorise | a delegation, as Terms; rule 5, and 5.5 for who ends it |
 | 28 | Scope | the power's K4 rule |
 | 29 | Name | `for` and `under`; rule 5; one act for many: P12; an act made for an agreement: P17 |
