@@ -204,6 +204,11 @@ The research is `docs/strangers-2026-11/`.
 
 **The contest is an act** (draft 15, pull request 169, section 8.2 item 1). The MOR lead leaned that the buyer's contest (G11.8) is a solution, to go to a cMIP, the grammar keeping only that a Statement is made within one agreement. He: "Contest is MOR act though. It is just extended. I contest an offer (an agreement with unknown participant at the time of signing) or I contest a vow (which is the same thing but without bytes attached)"
 - *Arrived at (to check):* the contest stays in the grammar, as an act, not as a policy: a block. It is made against an offer (an agreement whose participants were unknown when it was signed) or against a vow (the same, with no bytes attached). Whom it reaches follows from what it is made against: the signers of that offer or vow. The MOR lead's lean is withdrawn.
+- He then: "Making greed legible does not work without contest, it makes it core."
+- *Arrived at (to check):* why the contest is core: legibility only works if what is made legible can be contested.
+
+**The condition is a task** (draft 15, section 8.2 item 2). The MOR lead leaned that the `condition` field stays as a socket, and whether it is met is answered by the cMIP it names. He: "Condition is the right task, triggered or not is what the core cares about. How it triggers is cMIP"
+- *Arrived at (to check):* the condition stays as a task: the core cares only whether it has triggered or not; how it triggers is the cMIP's.
 
 ## Not carried into this stint unless he says so
 
