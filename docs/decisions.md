@@ -126,7 +126,7 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* nothing counts until every party has signed; until then a party may withdraw its assent by a signed act.
 
 **A lone sale in another agreement** (draft 6's list, item 6). The MOR lead proposed leaving it as a stated cost: a fresh agreement claiming to sell a work, unsigned by its owners, is visible to anyone who checks. He: "That’s when we look at the envelope of the work. Who baked it? So, the thief should be at least forced to edit it and bake it again."
-- *Arrived at (to check):* a work's envelope says who baked it; an agreement selling those bytes is read against its bakers (and those holding from them), so a stranger's sale of them is visibly not theirs; to sell it as their own, a thief must edit and bake again, which gives a new fingerprint whose lineage shows where it came from.
+- *Arrived at (to check):* a work's envelope says who baked it; an agreement selling those bytes is read against its bakers (and those holding from them), so a stranger's sale of them is visibly not theirs; to sell it as their own, a thief must edit and bake again, which gives a new fingerprint whose lineage shows where it came from. He then: "So, the baker has to be one of the parties the agreement for that envelope states."
 
 ## Not carried into this stint unless he says so
 
