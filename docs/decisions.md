@@ -141,6 +141,8 @@ The research is `docs/strangers-2026-11/`.
 
 **The rest of draft 7's list, settled by the MOR lead under his delegation for technical wording and mechanics** (recorded as the lead's): rule 10, the central idea, is renumbered first; the companion is rewritten for the new text; "invalid" is one word across the layers; how a payment names its version is Money's to say, Agreements only reading it; escrow is a service's cMIP, its deal with whom and how a contest reaches it being that cMIP's.
 
+**A principle, his:** "Building blocks over solutions."
+
 - *Aside, his:* "FYI… machine, allegedly refuse the grant in the tests « I’m an identity, I sign my own stuff, I.m paraphrasing"
 
 ## Not carried into this stint unless he says so
