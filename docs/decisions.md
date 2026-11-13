@@ -104,7 +104,7 @@ The research is `docs/strangers-2026-11/`.
 
 **The receiver and the service agreement** (draft 7, pull request 159, open item P8(c)). The MOR lead proposed keeping both, the service agreement taking precedence when a version names both. He: "I mean, receiver still exists, it happen to also accept agreements hashes as input, no?"
 - The MOR lead read it back as "a split service is just an agreement named as the receiver". He: "Almost, the target is not the split service but the agreement with the split service, not some kind of public offer."
-- *Arrived at (to check):* one mechanism, not two: the receiver may be an identity or an agreement, named by its fingerprint; for a split, the receiver is the agreement between this work and its split service (their deal), never the service itself nor its public offer.
+- *Arrived at (to check):* one mechanism, not two: the receiver may be an identity or an agreement, named by its fingerprint; for a split, the receiver is the agreement between this work and its split service (their deal), never the service itself nor its public offer. He added: "A split service can figure out a way to have agreements with customers automated on its end." (So a service may make its deals automatically; each work still has its own signed deal.)
 
 ## Not carried into this stint unless he says so
 
