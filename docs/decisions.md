@@ -4,7 +4,7 @@
 
 *How his words are read: as one train of thought, later answers refining earlier ones; never one isolated sentence given more weight than the exchange gives it ("Be mindful of taking isolated sentences out of context and give them too much weight", 12 November).*
 
-*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I); and confirmed "referees" as referrers.*
+*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I), "Don*t" (Don't), "expect it" (expects it), "everything else’s" (everything else); and confirmed "referees" as referrers.*
 
 ## Current wish
 
