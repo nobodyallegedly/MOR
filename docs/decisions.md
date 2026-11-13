@@ -184,6 +184,8 @@ The research is `docs/strangers-2026-11/`.
 
 **Reports are data** (draft 13, pull request 166, section 8.2 item 21). The MOR lead named a tension: the report block is for all of MOR, and seeing further was to be in Agreements only; he leaned that in every layer a call sends reports only between the two sides of its own leg, naming outside readers being Agreements' alone. He: "Leg by leg only." The MOR lead asked whether that holds in Agreements too, withdrawing his fix in which each leg's call names a partner. He: "This to me this is data. Data needs to move along paths that people agree, with signature."
 - *Arrived at (to check):* in the core, in every layer, a report moves leg by leg only: between the doer and the receiver of its own leg. A report is data, and data moves only along paths people agreed to, with their signature. Any other path (a partner seeing further, a request from upstream) is such an agreed path, built as a data cMIP, never by a call in the core naming an outside reader. The MOR lead's fix from the second click test (calls naming the partner) is withdrawn.
+- The MOR lead then said the report proposal would lose its "where". He: "Well we had agreed the where was needed, we just did not realize the where was implied."
+- *Arrived at (to check):* the "where" stays, and is implied by the leg: a report goes to the other side of its own leg, where that side receives; no call needs to name a place.
 
 ## Not carried into this stint unless he says so
 
