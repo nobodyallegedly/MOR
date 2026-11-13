@@ -13,6 +13,7 @@
 - **Part E**: draft 12. One table for its changes, where each landed, where the ledger's lines say more than the three exchanges it was written from, and draft 11's list of open items, unchanged. From draft 12, `draft-12.md` holds the grammar alone; `draft-11.md` stays in the repository.
 - **Part F**: draft 13. One table for its changes, what the second click test showed and which change answers it, where each change landed, where the ledger's lines say more than the three exchanges it was written from, and draft 12's list of open items, unchanged. From draft 13, `draft-13.md` holds the grammar alone; `draft-12.md` stays in the repository.
 - **Part G**: draft 14. One table for its changes, where each landed, where the ledger's lines and the MOR lead's proposal say more than the one exchange it was written from, and draft 13's list of open items, unchanged. From draft 14, `draft-14.md` holds the grammar alone; `draft-13.md` stays in the repository.
+- **Part H**: draft 15. One table for its changes, every word that was renamed, where the ledger's lines and the brief say more than the three exchanges it was written from, where each change landed, and draft 14's list of open items, unchanged. From draft 15, `draft-15.md` holds the rules alone, and each rule's plain words and reasoning are in `reasons-15.md`; `draft-14.md` stays in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -862,3 +863,171 @@ Draft 13 is draft 12 with four changes: the buyer's seat (rule 11.7); the contes
 27. **Nothing was tested.** The second click test was built on draft 12. No test was run against draft 13: whether a buyer's confirmation, a contest and a partner named by every leg read as written is for a test to show.
 
 **What draft 14 does with it.** Item 6 (beyond the buyer's default): a call names no reader, so the buyer is not named by one; beyond their own leg, only a path people signed for. Its last sentence ("a call may name any place") no longer holds. Item 7 (enough for the wish?): stands, and is sharper, since no way to see further is left in the block (draft 14, section 8.2, item 5). Item 16 ("at inception"): the case of a later call naming a reader from outside falls away; the case of a later data cMIP stands. Item 21 (a reader from outside): answered by "Reports are data": no call, in any layer, names a place or an outside reader; whether a data cMIP is Agreements' alone stays open. Item 22 (what a data cMIP adds): the lead's settlement, "stitching only", went with the fix it belonged to; a data cMIP is now the path itself; what it is, and which task it answers, is still not said. Item 23 (a receiver who confirms): a confirmation no longer reaches a partner's place; that someone confirms under a call they did not sign stands. Item 24 (words): "stitching" is no longer a word of the text. Item 26: the test's proposal to attack the partner's view falls with that view. Item 27: no test was run against draft 14 either. Items 1 to 5, 8 to 15, 17 to 20 and 25 stand as written.
+
+---
+
+# Part H. Draft 15
+
+**Read for draft 15, and nothing else:** `docs/agreements-from-scratch/draft-14.md`, this file and `companion-3.md` (branch `claude/agreements-draft-14-0z0ah5`, pull request 167); `docs/decisions.md` and `docs/lead/proposals/report-block-2.md` (branch `claude/lead-records-2`); and Fable's review, `docs/reviews/fable-agreements-draft-14.md` (branch `claude/fable-agreements-draft-14`, pull request 168), above all its section 9. Draft 15 is draft 14 with eight changes, numbered as its brief numbers them, and nothing else. Three exchanges of the ledger are brought in, each read as a whole: **"The two sides of a leg"** (with its last lines, on the delegate), **"The wrong cMIP"** and **"What the grammar is for"**. No research text, earlier draft, test report or sketch code was reopened. `report-block-2.md` is not changed.
+
+**The test for every change**, in the words of Nobody, allegedly: "What the previous version of agreement focused on solving issues… this one supports and specifies the language for creating solutions". A finding is the grammar's only where a needed solution cannot be said in the language; where it can, it is a cMIP's, and the text says so and stops.
+
+## H.1 Changes, and where each comes from
+
+Each change is from the column "the grammar's (MOR)" of the table in section 9 of Fable's review. Each is the MOR lead's, as technical wording, given in the brief, except where an exchange decides it.
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **The two sides of a leg**, its last lines. He: "The delegate signs for the agreement, isn’t that a collective signature of sorts? I sign this agreement y under agreement x, parties are at agreement x, I sign on their behalf." Asked whether the gap is closed: "I think it is. And if it isn’t a cMIP closes it." | **How an agreement signs.** `for` may name an agreement as well as a person. An act whose `for` names agreement x and whose `under` names Terms of x that give the power is x's signature; it binds x's parties as x's Terms say (G1.2, G5.1(b)). Said once, in G1.2. P17 is cut down to what is still not said. |
+| 2 | **The two sides of a leg**, its first lines. He: "Oh what leg?"; "If it’s  a collective agreement with a service and the service is a split there are many legs. Each member receives the payment and can confirm in the other direction, but each member also has to inform the agreement it is under that it got paid, no?" And **The wrong cMIP**: "The answer is often: you did not use the right cMIP then." | **The two sides of a leg.** A leg is one obligation carried out, between whoever carries it out (the doer) and whoever receives it (the receiving side). A split's payout is one leg for each one paid; a payment to a work is a leg between the payer and the work's receiver (G11.1). Which lines of a report each side receives is the task's cMIP's (G11.3). "Leg" means that and nothing else, throughout. |
+| 3 | Fable's review, section 2: G11.7 against the block's R2. The way to close it is the MOR lead's, in the brief. | **The seam with the report block.** A payment is the act that holds the task of paying; the payer, its signer, may call for the receiving side's confirmation; the buyer's confirmation by default is that call, made by default (G11.7). It cannot be said in full without the block: what the block would need is in the draft's section 8.1. The block's file is not changed. |
+| 4 | **What the grammar is for.** He: "« Two of us can change these terms » so the cMiP builds a 2 out of 3 signature scheme.  Verifier accepts or declines based on the cMIP. « These terms » that’s what needs to be defined… the whole agreement? Part of it (specific tasks) the cMIP can build the solution that is needed."; "Exactly, the core just want to get the answer, allowed to edit this task or not." | **One sentence for a power's rule.** The rule of a power for replacement is given the version in force and the proposed version, and answers allowed or not; which parts it lets through is its cMIP's (G5.2; K4's row). P15 is answered: no default of the grammar's. |
+| 5 | Fable's review, P8. The MOR lead's, in the brief. | **Receivers that point onward, and loops.** The grammar never follows a receiver beyond one leg (G11.6). G1.4 reads a receiver, through any agreement it names, until a party is reached: that is the receiving side of one leg. Depth and loops across legs are for whoever follows further: a data cMIP. P8 is rewritten. |
+| 6 | Fable's review, P9 and "two joins". The brief asks for a proposal, not a decision. | **What a fork removes, and two joins.** Nothing in the grammar rules changes. A least reading is proposed, with its reasoning, in the draft's section 8.2 (items 3 and 4). P9 points to it. |
+| 7 | Fable's review, section 3. The choices are Claude's, as technical wording, for the MOR lead to change. | **Words with one meaning each.** Listed in full in H.2. |
+| 8 | The brief's, as housekeeping. | **The rules alone.** `draft-15.md` holds the purpose in a paragraph, the definitions, the data, the grammar rules (precisely, each with its lie and whom it protects in one line), the tasks, the open parameters, the stated costs and what is open. Each rule's plain words, its lies and protections in full, and its reasoning are moved to `reasons-15.md`, keyed by rule number. Draft 14's section 0 is not kept in the draft: its general paragraphs open `reasons-15.md`, and its list of the fourteen rules in plain words, which repeated each rule's own plain words, is dropped. The paragraphs "Why these, and why so few" and "Why K13 is a task of its own" moved from section 5 to the end of `reasons-15.md`. `companion-3.md`'s heading is fixed. |
+
+Draft 14 had fourteen grammar rules and thirteen tasks; so has draft 15. No grammar rule or task is added or removed, and no number moves: draft 14's "rule 4.8" is draft 15's G4.8. No field is added or removed; `for` and `under` may now name an agreement. Definitions added: signature of an agreement, succession, doer and receiving side, payment, receiver for an act, apply. Definitions changed: grammar rule, rule, chain, sequence, leg, leg report, buyer, party, receiver, in force, the answers "no longer applies" and "invalid", with a line between invalid and not shown. A new section 5.2 lists what can be said in the language and so is a cMIP's. Parameters changed: P8, P9, P12, P15, P17, P18, P19, P20 (words only), P21 (words only). No cost is added; seven are changed in words, and "No default way out" gains one clause. The buyer's contest (G11.8) and the condition (G10.7) are not taken out: they are questions for Nobody, allegedly (the draft's section 8.2, items 1 and 2).
+
+## H.2 Every renaming
+
+| Draft 14 | Draft 15 | Why |
+|---|---|---|
+| "rule 1" to "rule 14"; "rule 4.8"; bare clause numbers such as "(4.1)" | G1 to G14; G4.8; always with the G | so that "rule" has one meaning |
+| "rule" for a grammar rule ("this rule", "no rule") | "grammar rule" | the same |
+| "rule" for a cMIP answering K4 | unchanged: "rule" alone now means only this | it is the word of Nobody, allegedly, for it: "If the rules of the agreement state « majority decides »" |
+| "leg": one agreement of a sequence | "an agreement of a sequence" | "leg" has one meaning |
+| "leg": a path with two sides | "leg": one obligation carried out, between the doer and the receiving side | the exchange "The two sides of a leg" |
+| "receiver": the side of a leg or report that something was passed on to | "receiving side" | "receiver" has one meaning |
+| "receiver": the field `receiver` | unchanged: "receiver" now means only this | his word for the field |
+| "receiver now" | "receiver for an act", "the receiver for the act" | it is the receiver named by the version the act names, which may not be the receiver now |
+| "sequence": the baker's rights passing from holder to holder | "succession" | it runs forward in time; a sequence is agreements paying into one another |
+| "the baker's sequence" (P18) | "the baker's succession" | the same |
+| "Own chain" (name of rule 6) | "Own line" | "chain" is one agreement's versions only; one signer's acts are a line |
+| "where chains name each other" (rule 13, plain words) | "where lines of acts name each other" | the same |
+| "a deed, a chain, a holding, an identity" (rule 10, reasoning) | "a deed, a handing on, a holding, an identity" | the same |
+| "Ordering and chaining show patterns" (cost) | "Ordering and lines show patterns" | the same |
+| "in force", of a filling and its rights | "apply" | "in force" is said of Terms only |
+| "no longer in force, by its own condition" (answer; title of 10.7; a cost) | "no longer applies, by its own condition" | the same; nearer his "does not apply anymore" |
+| "invalid", for a replacement without the signatures required (4.8) | "not shown" | one line between the two: where an act not held could change the answer, it is not shown |
+| "invalid: an act never counted … the acts held show" | "invalid: an act cannot count … the act itself shows it" | the same |
+| "The contest, leg by leg" (title of 11.8) | "The contest, one agreement at a time" | a contest reaches an agreement, which is not a leg |
+| "A contest reaches one leg" (cost) | "A contest reaches one agreement" | the same |
+| "A sequence is readable only as far as its legs call for reports" (cost) | "… as far as its agreements call for reports" | Terms carry a call, not a leg |
+| "Reading the whole" (title of 11.4) | "Reading across legs" | it reads legs; nothing reads a whole |
+| "the buyer's own leg" | "the buyer's leg", "a leg with the buyer as its doer" | a leg has two sides and belongs to neither |
+| "its people", of an agreement that signs (1.2) | "its parties" | his word: "parties are at agreement x" |
+| "a holder who receives for the others" (K8's row) | "a party who receives for the others" | "holder" is used of a filling |
+| sections 8.2 and 8.3 | sections 8.2 (for Nobody, allegedly), 8.3 (left as draft 14 has it) and 8.4 (still open from earlier drafts) | one more list |
+
+Words chosen in draft 15 that are Claude's, for the MOR lead to change: "succession", "receiver for an act", "receiving side", "applies", "own line", "signature of an agreement".
+
+## H.3 Where the ledger's arrived-at lines, and the brief, say more than the exchanges
+
+The arrived-at lines are the MOR lead's, marked "to check". Each item is something a line, or the brief, says that the exchange, read as a whole, does not itself say, with what draft 15 does. Item numbers in brackets are draft 15's section 8.2.
+
+**The two sides of a leg.**
+
+1. **"a collective signature, under the power x gave"**. His words: "isn’t that a collective signature of sorts?", a question, and "of sorts". The words "under the power x gave" are the lead's; his are "I sign this agreement y under agreement x". Draft 15 writes it as G1.2 (item 5).
+2. **"The members signed y through x"**. The lead's sentence, put to him; he did not object, and answered the next question. Draft 15 uses it in G11.2 ("has signed the deal through its agreement").
+3. **"The gap is closed"**. His words: "I think it is. And if it isn’t a cMIP closes it." "I think" is his (item 5).
+4. **"where it is not (x gave no such power)"**. The bracket is the lead's. His words do not say when it is not closed. Draft 15 writes: where the receiving side did not sign, itself or through an agreement's signature (G11.2).
+5. **"it binds x's parties as x's Terms say"**. The brief's, not the ledger's and not his. Draft 15 writes it through G5.1(b) (item 6).
+6. **"each member may also inform the agreement she is under"**. His words: "each member also has to inform the agreement it is under that it got paid, no?" Draft 15 writes no grammar rule (item 7).
+7. **"makes many legs: each member receives and can confirm to the service"**. His words, nearly: "there are many legs. Each member receives the payment and can confirm in the other direction". That a leg is therefore "one obligation carried out, between whoever carries it out and whoever receives it" is the brief's wording.
+8. **The first arrived-at line**, replaced in the ledger by the second: "it is not closed by the grammar. It is for agreements of a more complex nature, which can bridge it with a data cMIP.". Draft 15 follows the second line, and keeps his sentence for the case the signature does not cover: "I’d use a data cMIP to bridge the gaps."
+9. **Not in the lines: who receives a report's lines.** The exchange does not say which lines of a report each side receives. The brief places it with the task's cMIP, from "The wrong cMIP" (item 10).
+
+**The wrong cMIP.**
+
+10. **"no change to the grammar"**. His words: "That deal could exist… but it’s not the only option." Draft 15 changes no grammar rule for the band that is not counted; it is a row of section 5.2, and a sentence in P17.
+11. **"Before bringing a fix to the grammar, the MOR lead first asks whether choosing another cMIP answers it."** The lead's working rule, from "The answer is often: you did not use the right cMIP then." Draft 15 uses it as the test of section 5.2. "Often" is his: not always.
+12. **Applied to report lines.** The exchange is not about reports (item 10).
+
+**What the grammar is for.**
+
+13. **"the grammar gives no default for a party's own part or its own leaving, and is not meant to"**. From Fable's reading, which he confirmed as a whole. His four sentences do not mention leaving or defaults (item 8).
+14. **"A power's rule is asked about one change"**. His words: "allowed to edit this task or not." "Task" is his; "one change", and "the version in force and the proposed version", are Fable's and the brief's (item 9).
+15. **"where it can, building it is the Dubsar Suite's"**. His words: "Dubsar has been solving them, not Mor." Draft 15 says "a cMIP's", and names no one as its builder.
+16. **Not in the lines: Fable's table.** The split of findings into "the grammar's" and "a cMIP's" is Fable's, in its section 9. He confirmed the exchange ("Yes, that’s me."), not each row. Draft 15 follows the table as the brief asks, and section 5.2 says where its rows come from.
+
+## H.4 Where each change landed
+
+- **Head:** rewritten: what the file is, how to read it (G numbers; "rule"), the test of the text, the block.
+- **Section 0:** not in the draft (H.1, change 8).
+- **Section 1:** one paragraph, and the constraint that every grammar rule is checked from copies of acts.
+- **Section 2:** the definitions named in H.1.
+- **Section 3:** `for`, `under`, `in_force` (words), and one sentence on a payment.
+- **G1:** G1.2 ("An agreement's signature" added; the last sentence, on what is not said, removed); G1.4 (a receiver read through an agreement until a party is reached; no further; an agreement met twice); G1.5 (words).
+- **G4:** G4.8, the answer for a replacement that lacks a signature. Nothing else.
+- **G5:** G5.1(b) (`for` may name an agreement); G5.2 (one sentence on a power's rule); G5.4 (words); G5.5 (a delegator that is an agreement ends by its signature).
+- **G6:** its name.
+- **G10:** G10.7, "apply" and "no longer applies"; its last sentences on invalid and not shown.
+- **G11:** G11.1 (sequence, and leg); G11.2 (the receiving side; who signed; the gap a cMIP closes); G11.3 (which lines each side receives); G11.4 (title; (a) rewritten; (e) words); G11.5 (words); G11.6 (never beyond one leg); G11.7 (the payer's call, made by default); G11.8 (title, and "any other agreement of the sequence"). G11.6(b) and (c) are unchanged.
+- **G14:** "succession"; "cannot count".
+- **G2, G3, G7, G8, G9, G12, G13:** unchanged but for numbers written with a G. G12.3 still says "A join is not a branch".
+- **Every grammar rule:** the lie and the protection in one line each; the full ones are in `reasons-15.md`.
+- **Section 5:** K4's row and K8's row; 5.1, two cells and one sentence; 5.2, new.
+- **Section 6:** the parameters named in H.1.
+- **Section 7:** words, in "'Now' is what was read", "A sequence is readable only as far as its agreements call for reports", "One leg, and no further", "A contest reaches one agreement", "No longer applies is as sure as its condition", "Ownership is as wide as its place", "Ordering and lines show patterns"; one clause in "No default way out".
+- **Section 8:** 8.1, the block's item rewritten and a new item on the seam, three items reworded and one added; 8.2 and 8.3, new; 8.4, draft 14's 8.3 brought up to date.
+- **`reasons-15.md`:** moved from draft 14 with numbers written with a G and the words of H.2. New or rewritten passages, each marked "(draft 15)" or listed here: the opening (two sentences, and the four words kept apart); G1, plain words (how it signs; a receiver read until a person) and "An agreement's signature"; G4, "Who can replace" (not shown); G5, "What a power's rule is asked"; G6, one sentence; G10, the wording of "applies"; G11, plain words rewritten, the lies and protections reworded, and three paragraphs ("The two sides of a leg", "The buyer's call, made by default", "Never beyond one leg"); G13 and G14, words.
+- **`companion-3.md`:** its heading; one note for draft 15; row #29; one sentence at the end of section 1.
+
+## H.5 Draft 14's list of open items, unchanged, and what draft 15 does with it
+
+What follows the notes below is section 8.2 of `draft-14.md`, moved and not edited. "This text" and "draft 14" there mean draft 14; rule numbers there are draft 14's, written "rule 11.6" where draft 15 writes G11.6; "leg", "receiver" and "receiver now" there have draft 14's meanings (H.2).
+
+What draft 15 does with it:
+
+- **Item 3** (a receiver who confirms under a call they did not sign): whoever receives is the receiving side whether or not they signed; where they did not, themselves or through an agreement's signature, a cMIP closes it (G11.2).
+- **Item 9** (who the two sides are): answered, from "The two sides of a leg". The doer and the receiving side (G11.1). Its first bullet (signers who are not themselves paid): the parties an agreement's signature binds signed the deal through their agreement (G1.2, G11.2). Its second (whether each receiver is shown the whole): the task's cMIP's (G11.3). Its third: item 3.
+- **Item 10** ("where that side receives"; where a buyer receives): not touched.
+- **Item 14** (reading the whole): renamed "Reading across legs"; otherwise as it was.
+- **Item 22** (words): "the two sides" now has a definition; the other words stand.
+- **Item 24** (nothing was tested): a test was since built on draft 14 (`docs/click-sketch-14-report.md`, named in the ledger's exchange "The wrong cMIP"). It was not read for draft 15, beyond what the ledger and Fable's review quote of it. No test was run against draft 15.
+- **Every other item** stands as written. The ones a reader of draft 15 meets directly are in its section 8.4.
+
+
+Draft 14 is draft 13 with two changes. **Leg by leg only:** a report moves between the two sides of its own leg, in every layer; a call says whether a report is wanted and from whom, and names no place and no reader (rules 11.2, 11.6). **Reports are data:** any path beyond one leg is one people agreed to, with their signature, built as a data cMIP (rule 11.6(a)). Both come from one exchange, "Reports are data", read as a whole. Its arrived-at lines are the MOR lead's reading, and `report-block-2.md` is his proposal from it. The partner's view by calls alone (draft 13's rule 11.6(a)) is gone: it was the MOR lead's fix, and he withdrew it in that exchange. Each item below is where a change touches something the exchange does not cover. Each is left as draft 13 has it, or says the least that lets the text be read, and says so. Draft 13's own list is kept, unchanged, in `history.md` (Part G, section G.4). Where the ledger's arrived-at lines and the proposal say more than the exchange is listed there too (section G.3); the ones that matter most are items 9, 11, 12 and 17 below.
+
+**Draft 13's open items that these changes touch: what is answered, and what stays open.**
+
+1. **A reader from outside** (draft 13's item 21). In plain words: draft 13 let a call name a partner's place, and could not say whether that was for every layer or for Agreements alone. *Answered:* for neither. "Leg by leg only." In every layer, this one included, a report moves between the two sides of its own leg, and no call names a place or a reader from outside (rules 11.2, 11.6). The tension is gone: the block is the same everywhere in MOR, and what goes beyond a leg is not the block's at all. It is a path people signed for. *Stays open:* whether a data cMIP is Agreements' alone. His earlier words were "the grammar to support it should be there, in agreements only" and "DATA cMIPs focused on agreements". This exchange neither repeats nor withdraws them. Draft 14 keeps the least: the agreeing is done in an agreement people signed (rule 11.6(c)).
+2. **What a data cMIP adds** (draft 13's item 22). *What changes:* in draft 13 the call did the work, and a data cMIP added only the stitching of legs. With the call's reach withdrawn, a data cMIP is the path itself: who may read what beyond a leg, and by whose signature. Stitching is one thing it may say. *Stays open:* what such a cMIP is, which task of section 5 it answers, how Terms name one, and whose signatures it needs (item 16). No task is added.
+3. **A receiver who confirms** (draft 13's item 23). *Answered in part:* a confirmation no longer goes to a partner's place. It goes to the other side of its own leg, and no further. *Stays open:* someone paid by a leg whose Terms they did not sign still confirms under its call (rule 11.2), as draft 13 has it. The proposal calls a leg "two sides who both signed". Whether such a receiver is a side who signed, and by what, is not said (item 9).
+4. **Beyond the buyer's default** (draft 13's item 6). On "The payer's seat" he was asked whether a leg's call may name "whoever paid", and his words gave no yes or no. *Answered, for a call:* no. A call names no reader. Beyond their own leg the buyer sees only along a path people signed for (rule 11.7). *Stays open:* everything else about the buyer's seat (draft 13's items 1 to 5: whose leg, may or must, who confirms, with no call written, access).
+5. **Is that enough for the wish?** (draft 13's item 7). *Stays open, and sharper.* By the grammar the one who clicks sees that the payment arrived, and nothing of whether it reached "all the people that contributed". Draft 13 had a way with the block alone: every leg naming the buyer, or a partner. Draft 14 has none until a data cMIP is written and signed for. Whether that is what he wants for the wish is his. It is written as a cost (section 7, "One leg, and no further").
+6. **"At inception"** (draft 13's item 16). One of its two cases falls away: a later version that adds a call naming a reader from outside. The other stands: a later version that names a data cMIP, made under a power the first Terms gave.
+7. **The second test's partner view** (draft 13's items 26 and 27). The test built the partner's view with calls that named the partner (its 2d). That way is no longer in the text. So what the test showed of it shows nothing of draft 14, and its proposal to attack that view falls with it. No test was run against draft 14.
+
+Draft 13's other items (8 to 15, the contest; 17 and 18, an outvoted member; 19 and 20, one level and a holder's own part; 24 and 25, words) are not touched, and stand as written.
+
+**Leg by leg only.**
+
+8. **"Only", after "by default".** On the payer's seat he said: "Leg by leg by default." Here: "Leg by leg only." Draft 14 reads the two as one train of thought: the core gives one leg, and only one; "by default" is what holds until people agree a further path, with signature. If "only" means that no further path should exist at all, rule 11.6(a) changes.
+9. **Who the two sides are.** His words name no sides. "The two sides of its own leg" is the MOR lead's, and the proposal adds "who both signed". For the Control task, rule 11.2 names a doer and each receiver, and that is all draft 14 uses. Not said, and left as draft 13 has it:
+   - In a deal, the work's people signed the Terms and made the call, but the money goes to others (each owner, the next work's receiver). Draft 13 sent a leg's reports to the signers of its call. Draft 14 says "the other side of its own leg" and does not say whether those signers, where they are not themselves paid, are on it.
+   - Where a leg pays several receivers, the doer's report states everything passed on, and to whom (K8's row). Whether each receiver is shown the whole of it, or only their own part, is not said. Read as written, every bandmate sees what every other was paid.
+   - A receiver who signed nothing in the leg (item 3).
+10. **"Where that side receives".** His words: "the where was implied". Implied by what is not in them: "by the leg", and "where that side receives", are the MOR lead's. How that is found without a server address is open in the proposal too (section 8.1). And where a buyer receives, who signed nothing but the payment, is not said.
+11. **"Never names a place."** His words say that the where was implied, not that a call may never state one. The ledger's line says "no call needs to name a place". That a call names none is the brief's, and the proposal's (R1, R3). Draft 14 follows them: nothing in `calls` holds a place.
+12. **A call that the leg's people signed.** His words do not say that a call cannot name a reader. A call sits in signed Terms; a call naming a partner would be something those signers agreed to, with signature. The MOR lead withdrew that fix in his own question, and the answer did not bring it back. Draft 14 follows the withdrawal, as its brief asks. Whether his principle would in fact allow such a call, for the people who signed it, is not said. What it would not cover is the people of the leg who did not sign those Terms (item 3).
+13. **Before paying.** In draft 13 a reader saw, before paying, which legs called for reports and where each call sent them, and so which legs had agreed to be read from outside. Now a reader sees which legs called, from whom, and whether their Terms name a data cMIP (rule 11.4(e)). How Terms name one is not said, so that last answer cannot yet be given.
+14. **Reading the whole** (rule 11.4). Left as draft 13 has it. It now serves only a reader who holds the reports of several legs: someone who is a side of each, or who stands on a path their people signed for. Whether reading across legs should leave the grammar altogether, for data cMIPs, is still open (draft 12's item 2).
+
+**Reports are data.**
+
+15. **What "this" is.** "This to me this is data." He was asked whether leg by leg holds in Agreements too. The MOR lead reads "this" as: a report is data. It may also be read as: seeing further is a matter of data. Both give the same rule here, and draft 14 writes the first.
+16. **Whose signature.** "Data needs to move along paths that people agree, with signature." Which people is not in his words. Draft 14 writes "the people whose data it carries", which is the proposal's wording. Not said: whether that is both sides of every leg read, each receiver named in a report, or also the reader; and, where an agreement signs by a vote, rule 11.6(b) is unchanged.
+17. **"Built as a data cMIP".** Not in this exchange. It is from the earlier one, "A person who receives for others": "For everything else’s it’s DATA cMIPs focused on agreements". The brief asks for it, and draft 14 writes it. What a data cMIP is remains unsaid (item 2).
+18. **"Only" along agreed paths.** His words say data "needs to move along paths that people agree". The ledger's line says "only along". Draft 14 writes the rule as a verifier can check it: no call, field or answer of this text carries a report beyond its leg.
+19. **A request from upstream.** Earlier: "upstream of payment can request, and anyone upstream of them should be able to do so too", said inside what he called "a huge stretch on purpose". As in draft 13, it is no rule. It is one of the paths a data cMIP may give, where the people concerned signed for it.
+20. **Data that is not a report.** His sentence is about data. Draft 14 writes it for reports only, which is what the exchange was about. Other things in this text also show people to those who signed nothing with them, and are left as draft 13 has them: Terms and their calls, read by anyone before paying (rule 11.2); what a payer learns of a work; and standing, which reads one signer's acts across many agreements (task K13; cost "Ordering and chaining show patterns"). Whether the principle reaches any of those is not said.
+21. **What is still "Agreements only"** (rule 11.6(c)). One leg is now the block's, for every layer. What draft 14 keeps as Agreements' own is only that a further path is agreed in an agreement people signed. Whether that is all his "in agreements only" meant, after this exchange, is not said (item 1).
+
+**The rest.**
+
+22. **Words.** "Leg by leg only", "data", "paths", "with signature", "implied" and "leg" are his. "The two sides", "the other side of its own leg" and "where that side receives" are the MOR lead's. "An agreed path" is the brief's. "The path itself" (item 2) is Claude's.
+23. **Words that may be typos.** Quoted as the ledger has them: "This to me this is data."
+24. **Nothing was tested.** No test was run against draft 14. Whether one leg, with no place named, reads as written is for a test to show; so is whether a partner's view can be built at all as a data cMIP.
