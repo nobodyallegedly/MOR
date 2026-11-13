@@ -115,7 +115,8 @@ The research is `docs/strangers-2026-11/`.
 **The work's side of its deal** (draft 7, open item 5: who owes the service's fee; what the old service owes for payments arriving after a switch). The MOR lead proposed the fee taken at discharge and the old deal still covering what arrives under it. He: "The service fee is an agreed aspect of the service deal. The agreement states all that is needed to solve these."
 - *Arrived at (to check):* the grammar decides neither; the deal states its fee and what happens to payments that arrive after a switch.
 
-**What void changes** (draft 7, open item 7). After "The agreement states all that is needed to solve these", the MOR lead read it as: the version states whether a void holder is still a party and whether a filling can leave void; the grammar only reads it. *Arrived at (to check).*
+**What void changes** (draft 7, open item 7). After "The agreement states all that is needed to solve these", the MOR lead read it as: the version states whether a void holder is still a party and whether a filling can leave void; the grammar only reads it. Draft 8 (pull request 160) flagged that this rested on no answer of his to that question. Asked directly (does a void holder stay a party; can a void filling become valid again): "The question depends on how things are setup. Void simply means, watever applied before this does not apply anymore… it is updating the agreement within its conditions. Nothing stops the agreement to be updated again. So, offering again, and plug in values already in the chain (or not) is an option"
+- *Arrived at (to check):* void means that what applied before no longer applies: the agreement changing within its own conditions; nothing more is defined for it; the agreement can always be given a new version again, an offer renewed, reusing values already in the chain or not.
 
 **Grants** (draft 7, P3: may a principal always end a grant alone?). He: "A grant is different, but, maybe we should slow down and look at what it is for potentially… employment." The MOR lead walked a bakery: the authority to act for it (a grant) apart from the job (a deal with its own pay and notice). He: "Wait… act as you… but as a business… a collective… therefore an agreement, there is no « you » anymore, there is agreement as a party… an agent acts for an ID different flavor of the same delegation"
 - *Arrived at so far (to check):* a grant is a delegation, from an identity or from an agreement as a party; acting for an agreement and acting for an identity are flavours of the same delegation. Still open: who may end it.
@@ -137,6 +138,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* as proposed.
 
 **The rest of draft 7's list, settled by the MOR lead under his delegation for technical wording and mechanics** (recorded as the lead's): rule 10, the central idea, is renumbered first; the companion is rewritten for the new text; "invalid" is one word across the layers; how a payment names its version is Money's to say, Agreements only reading it; escrow is a service's cMIP, its deal with whom and how a contest reaches it being that cMIP's.
+
+- *Aside, his:* "FYI… machine, allegedly refuse the grant in the tests « I’m an identity, I sign my own stuff, I.m paraphrasing"
 
 ## Not carried into this stint unless he says so
 
