@@ -151,6 +151,9 @@ The research is `docs/strangers-2026-11/`.
 **Chain and sequence.** On reading the draft 10 prompt, he: "I used the words « chain of agreements » but sequence is better, so chain only points at chains of the same act… if that makes any sense"
 - *Arrived at (to check):* "chain" names only the versions of one act (one agreement's own history); agreements linked to one another (a payment passing from one to the next, the baker's rights passing on) form a "sequence". The MOR lead applies this throughout draft 10 as technical wording.
 
+**Must every leg report?** (draft 10, pull request 162, section 8.2 item 4). The MOR lead proposed keeping his "where needed": the report defined, no leg made to give one. He: "When needed could be all the time that we did not check". The MOR lead then proposed leaving rule 11 as draft 10 has it and letting the shower test answer it. He: "Good idea, test by building on top, I like it"
+- *Arrived at (to check):* not decided; rule 11 stays as draft 10 has it; whether every leg must report is for a test that builds cMIPs on top of the grammar to show; if a click cannot be followed without every leg reporting, rule 11 changes.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
