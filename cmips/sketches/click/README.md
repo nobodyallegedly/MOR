@@ -50,3 +50,7 @@ What all three must produce for the climb to be read: a leg report (rule 11.2) w
 `click-12.ts` runs the same scenario on draft 12 (pull request 165) and the report block, proposal 1: each leg's Terms carry a call (from the doer and the receivers, and where); the doer reports what it received, passed on, kept and still owes; each person paid confirms; the two halves are tied by the settlement both name; reports go only where the call says, so each seat reads only the legs it signed (one leg, rule 11.6). Twelve runs, read from the seats of the payer, a film owner, a band member, the producer and a partner, in `run-output-12.md`. The findings are in `docs/click-sketch-12-report.md`.
 
 Run it: `node --experimental-strip-types cmips/sketches/click/click-12.ts`.
+
+## Run again on draft 14
+
+`click-14.ts` runs it on draft 14 (pull request 167) and the report block, proposal 2: each report is addressed to the other side of its own leg and no one else; the buyer's own leg (the receiver confirms to the buyer, then access); a band that signs its deal through a delegate; a partner's data path, sketched only as far as whose signatures it needs; a contest on an undelivered purchase. Where draft 14 leaves "the other side" open (its item 9), both readings are run. Twelve runs in `run-output-14.md`; findings in `docs/click-sketch-14-report.md`.
