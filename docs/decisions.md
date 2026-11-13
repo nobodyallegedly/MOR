@@ -170,6 +170,8 @@ The research is `docs/strangers-2026-11/`.
 
 **Who signs the deal, and who can call** (draft 11, pull request 164, section 8.2 item 4; P17). The MOR lead: draft 11 keeps that an agreement named as a party never signs, so in a deal with a service only the service could make a call; that contradicts "for an agreement as party, all signature or whatever satisfies the collective agreement". He: "The service signed with work and pointed to the receiver. Or are we exploring another scenario? So, I am assuming everyone on the work signed an agreement that pointed to a receiver. So, the agreement with the service is signed by all, the report about the payment only comes from the receiver. It’s in that agreement that a request for surviliance can be cooked."
 - *Arrived at (to check):* the same scenario. Everyone on the work signed the work agreement naming its receiver; the deal with the service is signed by all of them, as the work's Terms require, and by the service. The report about a payment comes from its receiver. A request for reports beyond that (surveillance) can only be written into that deal, which all of them signed. For the grammar: a party that is an agreement signs, as its own Terms require; draft 11's "never signs" gives way (P17).
+- He then: "Also, if you keep that quote a collective becomes nearly impossible to build." Asked which: "\"an agreement as a party never signs\""
+- *Arrived at (to check):* draft 11's rule that an agreement named as a party never signs is dropped; with it, no collective could sign anything. An agreement signs as its own Terms require (a small work by all its owners, a collective by a vote or a named delegate, as its rule says).
 
 ## Not carried into this stint unless he says so
 
