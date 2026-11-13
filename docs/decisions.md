@@ -202,6 +202,9 @@ The research is `docs/strangers-2026-11/`.
 - "Yes, so findings issues is still very important to the process, Dubsar has been solving them, not Mor."
 - *Arrived at (to check):* the grammar gives no default for a party's own part or its own leaving, and is not meant to. A power's rule is asked about one change and answers allowed or not; which parts of an agreement it lets through is its cMIP's. The previous Agreements solved issues; this one specifies the language for creating solutions. Finding issues still matters: where a solution cannot be said in the language, it is MOR's; where it can, building it is the Dubsar Suite's.
 
+**The contest is an act** (draft 15, pull request 169, section 8.2 item 1). The MOR lead leaned that the buyer's contest (G11.8) is a solution, to go to a cMIP, the grammar keeping only that a Statement is made within one agreement. He: "Contest is MOR act though. It is just extended. I contest an offer (an agreement with unknown participant at the time of signing) or I contest a vow (which is the same thing but without bytes attached)"
+- *Arrived at (to check):* the contest stays in the grammar, as an act, not as a policy: a block. It is made against an offer (an agreement whose participants were unknown when it was signed) or against a vow (the same, with no bytes attached). Whom it reaches follows from what it is made against: the signers of that offer or vow. The MOR lead's lean is withdrawn.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
