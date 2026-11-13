@@ -2,6 +2,8 @@
 
 13 November 2026. A record of work by Claude: how the research is used in `draft-8.md`. Not a decision, and not part of the grammar. Nothing here is read by a verifier.
 
+*Changed for draft 9, in two rows of section 2 only: #6 Commit (a counter signature, from S37 in `draft-9.md`) and #48 End (no term "void", from S39 and W2 there). Draft 9 changes no rule number, so everything else here reads the same against `draft-9.md`.*
+
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
 **Why this file exists.** Nobody, allegedly, on draft 1: "Isn’t “how the 49 tasks land” more of a companion section, it says: this is how the research was used." So the landing table left the draft, with the rest of what records the research's use rather than the grammar itself.
@@ -35,7 +37,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 3 | Able | K3; cost |
 | 4 | Align | rule 3; K1; K10 decides late |
 | 5 | Free | K3; cost |
-| 6 | Commit | assent; nothing counts until the Terms are in force (rule 4.1), and until then an assent may be withdrawn (rule 4.10); by act: a spot of kind done (rule 10), with a K4 rule in `in_force` |
+| 6 | Commit | assent; nothing counts until the Terms are in force (rule 4.1), and until then a party may cancel its own assent by a counter signature (rule 4.10); by act: a spot of kind done (rule 10), with a K4 rule in `in_force` |
 | 7 | Exchange | Deliver (K9); rule 4 |
 | 8 | Order | Order layer; rule 7; order from what acts cite (rule 13.3) |
 | 9 | Keep | property (durable) |
@@ -77,7 +79,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 45 | Enforce | from posted value: K8; otherwise cost; what a proven liar loses in standing: K13 |
 | 46 | Complete | Statement of a K11 kind |
 | 47 | Amend | a new version, with the signatures the last one requires (rules 4.8, 5.2) |
-| 48 | End | nothing ends: an agreement only gets a new version, whose conditions say what becomes of the work and its shares (rule 4.9); an offer closes to new identities, by a version or by its own condition (rules 10.5, 10.9); rights end as **void**, under the rule their own version names (rule 10.8); a delegation is ended by its delegator (rule 5.5) |
+| 48 | End | nothing ends: an agreement only gets a new version, whose conditions say what becomes of the work and its shares (rule 4.9); an offer closes to new identities, by a version or by its own condition (rules 10.5, 10.9); rights are in force, or no longer in force, by the condition their own version names (rule 10.8); a delegation is ended by its delegator (rule 5.5) |
 | 49 | Leave | Transfer of a part, or a new version whose conditions divide (rule 4.9) |
 
 ---
