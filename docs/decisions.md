@@ -126,8 +126,13 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* nothing counts until every party has signed; until then a party may withdraw its assent by a signed act.
 
 **A lone sale in another agreement** (draft 6's list, item 6). The MOR lead proposed leaving it as a stated cost: a fresh agreement claiming to sell a work, unsigned by its owners, is visible to anyone who checks. He: "That’s when we look at the envelope of the work. Who baked it? So, the thief should be at least forced to edit it and bake it again."
-- *Arrived at (to check):* a work's envelope says who baked it; an agreement selling those bytes is read against its bakers (and those holding from them), so a stranger's sale of them is visibly not theirs; to sell it as their own, a thief must edit and bake again, which gives a new fingerprint whose lineage shows where it came from. He then: "So, the baker has to be one of the parties the agreement for that envelope states." Asked whether a buyer who bought the work outright counts through the chain of transfers that starts with the baker: "The baked, through the chain of agreements of the work has sold her bakers rights, no?"
+- *Arrived at (to check):* a work's envelope says who baked it; an agreement selling those bytes is read against its bakers (and those holding from them), so a stranger's sale of them is visibly not theirs; to sell it as their own, a thief must edit and bake again, which gives a new fingerprint whose lineage shows where it came from. He then: "So, the baker has to be one of the parties the agreement for that envelope states." Asked whether a buyer who bought the work outright counts through the chain of transfers that starts with the baker: "The baker, through the chain of agreements of the work has sold her bakers rights, no?" ("baker" corrected with him)
 - *Arrived at (to check):* an agreement for a baked work counts only if the baker is one of its parties, or holds the baker's rights through the chain of the work's own agreements that starts with the baker; a stranger with no such chain has none.
+
+**An offer that closes by itself** (draft 7, open item 13). The MOR lead proposed that an offer may close by its own signed condition ("open until June", "first 100 buyers"), and otherwise stays open until a new version closes it. He: "Yes. And agreed"
+- *Arrived at (to check):* as proposed.
+
+**The rest of draft 7's list, settled by the MOR lead under his delegation for technical wording and mechanics** (recorded as the lead's): rule 10, the central idea, is renumbered first; the companion is rewritten for the new text; "invalid" is one word across the layers; how a payment names its version is Money's to say, Agreements only reading it; escrow is a service's cMIP, its deal with whom and how a contest reaches it being that cMIP's.
 
 ## Not carried into this stint unless he says so
 
