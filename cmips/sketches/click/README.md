@@ -44,3 +44,9 @@ What all three must produce for the climb to be read: a leg report (rule 11.2) w
 - shares written in each work's body, read by the services' cMIPs (K1, K4);
 - the shared shape's "what" is an amount and the payout's settlement (P20);
 - the band's service, in one variant, states the amount it received (a field draft 10 does not have), to test what rule 11.4 asks about reports that do not agree.
+
+## Run again on draft 12
+
+`click-12.ts` runs the same scenario on draft 12 (pull request 165) and the report block, proposal 1: each leg's Terms carry a call (from the doer and the receivers, and where); the doer reports what it received, passed on, kept and still owes; each person paid confirms; the two halves are tied by the settlement both name; reports go only where the call says, so each seat reads only the legs it signed (one leg, rule 11.6). Twelve runs, read from the seats of the payer, a film owner, a band member, the producer and a partner, in `run-output-12.md`. The findings are in `docs/click-sketch-12-report.md`.
+
+Run it: `node --experimental-strip-types cmips/sketches/click/click-12.ts`.
