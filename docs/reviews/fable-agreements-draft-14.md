@@ -160,3 +160,43 @@ What is ready now, given only a core act format, is the part with no agreement a
 - `companion-3.md` is headed "companion to draft 8".
 
 **The shortest list, after everything.** For Nobody, allegedly, one question: where Terms are silent, does a party keep its own part and its own way to leave, as a delegator keeps the power to end a delegation? For the MOR lead, before a box: `for` naming an agreement; who the two sides of a leg are; what a fork removes; and the rules alone, as one text a stranger can hold.
+
+## 9. Addendum, 13 November, evening: each finding with its address
+
+*After a short exchange with Nobody, allegedly, on this review's one question. His sentences are quoted exactly as he wrote them, for the MOR lead to enter in `docs/decisions.md` if he confirms them there; this file records them and decides nothing.*
+
+I gave him an example: three owners, shares of 40, 30 and 30, Terms saying "two of us can change these Terms" and nothing on shares or on leaving; two of them then rewrite the third's share to 1.
+
+His words:
+
+- "« Two of us can change these terms » so the cMiP builds a 2 out of 3 signature scheme.  Verifier accepts or declines based on the cMIP. « These terms » that’s what needs to be defined… the whole agreement? Part of it (specific tasks) the cMIP can build the solution that is needed."
+- "Exactly, the core just want to get the answer, allowed to edit this task or not."
+- "What the previous version of agreement focused on solving issues… this one supports and specifies the language for creating solutions"
+- "Yes, so findings issues is still very important to the process, Dubsar has been solving them, not Mor."
+
+**What this corrects in the review.** The question at the end of section 8 is answered, and not in the way I asked it. The grammar gives no default for a party's own part or its own leaving, and is not meant to. A power's rule is asked about one change and answers allowed or not; which parts of an agreement it lets through is the cMIP's. So section 5, item 1 ("the owner is protected less than the buyer") and item 3 ("no default exit") are not gaps in the grammar. They are things the owners' rule did not say.
+
+**One thing for the text, small.** For a cMIP to answer "this part, yes; the shares, no", the rule behind a power to replace Terms must be given the version in force and the proposed one. K4's row says it accepts "the acts held", which allows that without saying it.
+
+**Each finding of this review, by who would act on it.** By his fourth sentence, a finding is still worth making; what changes is where it goes.
+
+| Finding | It cannot be said in this language: the grammar's (MOR) | It can be said, and someone must build or choose it: a cMIP's (the Dubsar Suite) |
+|---|---|---|
+| How an agreement signs; `for` naming an agreement (section 2; section 8, item 4) | yes | |
+| What a fork removes (P9); two joins (section 2) | yes | |
+| Who the two sides of a leg are (section 3, item 1; section 8, item 3) | yes, with the report block | |
+| A report with no call, against R2 (section 2) | yes, a seam between two texts | |
+| Words with two meanings; invalid or not shown (section 3) | yes | |
+| Depth and loops of receivers (P8) | yes | |
+| A power's rule given both versions (above) | one sentence | |
+| An owner's share under a power (section 5, item 1) | | a rule that says what the power reaches |
+| A party leaving (section 4; section 5, item 3) | | a power whose rule accepts only a version taking its own signer out |
+| A power only its holder may end (section 5, item 2) | | what the delegation's Terms say; a terms reading that shows it |
+| A group that co-owns and is not counted (section 8, item 1) | | Terms whose rule counts it |
+| An outvoted member seen from beyond their leg (section 5, item 4) | | the data cMIP's own consent |
+| A contest that reaches one leg; money already passed on (section 5, item 5; section 8, item 5) | | escrow, as a service's cMIP |
+| The buyer's contest and the condition, as solutions in the grammar (section 2) | to take out, if he agrees | to state |
+| Nothing shown before signing (section 5, item 8) | | a terms-reading cMIP, and the client |
+| Pools (P6) | what a leg report names | when and how a pool is divided |
+
+**What a review of this text should test, from here.** Three things, and no longer "who is hurt": whether a needed solution can be said at all; whether a signed sentence reads one way for two verifiers; and whether the text says what it does not know. On the third, draft 14 is at its best.
