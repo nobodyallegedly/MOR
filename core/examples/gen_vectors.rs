@@ -17,6 +17,8 @@ use std::path::Path;
 mod common;
 #[path = "support/verdicts.rs"]
 mod verdicts;
+#[path = "support/agreements_new.rs"]
+mod agreements_new;
 
 fn hx(b: &[u8]) -> String {
     hex::encode(b)
@@ -612,6 +614,7 @@ fn main() {
     write(&dir, "textual-forms.json", &textual_forms());
     write(&dir, "signatures.json", &signatures());
     write(&dir, "verdicts.json", &verdict_vectors());
+    agreements_new::write(&dir);
 }
 
 /// The verdict vectors (`support/verdicts.rs`): complete acts, in one pool

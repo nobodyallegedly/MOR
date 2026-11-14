@@ -1,0 +1,642 @@
+{
+  "about": "Acts of the new Agreements encoding that pass the checker: shape, fields and signature, and no case of invalid the bytes show (docs/agreements-from-scratch/encoding-1.md). Each case lists the acts a verifier holds, in order (each act's id, its complete bytes in hex, and its content key where it is private); the answer is about the last act. Notes are what the act leaves unread or already answers by itself, by the rule named. Every identity is a test identity: stand-in hashes, test keys derived from labels.",
+  "cases": [
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e03fba6b0e4e252b5f4705ad625a5cb0eb472ab9f0fd959d2056f09cc4cc6eb303582003270768574430f603ca11eaafb12ed2676a7aa39d39cc36f6818cb6fdfa38600458180c620f46a6675f861ad0cefa7197f8bf1124d0f715c544c4055820136c7745896fec5b9fb1855cc0f6bc4e176c73d430e7deb3b86a39415a71196958e48a1fe41a20a627c525db03682693b97abb3934e31a950c274dd123e5f331a91f7fe613ea6f790f81a85f5236f9a2650c80cce83a6ab18bc5f2cead7955b9ef093d33fbc5a5e5732adc62101c9970cb7d641b5fc52205c13ccbd6608dd5336f99bfedcf7aeaeaf12c06e9def86a3f2704d6fc7eabb6b9c972afffe5e7d1ca34a602706200849df059dc21c59c917709f791df73b7c93833d77bc5af16ec7011ba84f2f05212616e676594ae54579437b311f9d97edf4e56cc075cabfd4e8b0de0368a3d3cc2b6521915b9a9631fb342085055eb2f8fc2ccb4117e2f225e7374df6b94f3778301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405ffd5b13251d3b19ebc0809b26391532b6b3c5b8da76b7c5b4a9ec674cda91eb6b60d9158bc46eb5a440683701de534acc294ad223ab07846508da9f3cc617b6",
+          "id": "011d9504f3a414c8c71f39fe198d7277c838a11d66670888fcd5292d0ce86158",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: the first Terms act, its required fields only",
+      "tests": "section 3.1; E19"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582071a69502517a48d88cb284aa266d130667fcd469245c25d59e8d84476cad1051035820e9a0b4c3071de182241c562440103f69237974f0ad70a149e44e79cc9fdae70504581821b7167a56403364d3a90dd2a34a125a315d4229a073590805582045142728f688361d51c3798985a430fe911fefc5b6e1a544091131df98739e7b5903cbc8cec0e1bbff94b31a15a9318d1b184e839f58c0f48ee3c9f65467dfd477ca3aa2b65166d747e2e93c14b908fac4a4f55418730e3cfb4d7539302152eb8a7807ae080578877c8082cef85cd9d95c4d4b4f602bdded58c1cc4cad50a3e04f1b2b9631759929603cec6df51985b75715c4a3cc54aaee62ba1c0691f7b3c921458b304f9f5461949b499ee249cf2ba2dbc11263b84ea35394baf77ba4a556f58210ee569d78889ce7f30cbacd30a5ae9dc82a763a5141fbae4539a13809c314dfa6a9423202c0dbbc3189b82b7da12cce4eb0e1ef4d83296dc8cdbf527293a2e75d03a1da7391e0359d7a584771fe9887bf011a7557a90193769d39d62f70cf420b9fe91504ce320f8aa9dc61edceba9dcd7a1a7bbe820b2ea739abf65f615b217486f6234019ed79670f22d5cef47219c186ebf0d52e493e7f72af3622051d819c618952ea02e950b327ebaf8f204511a95dd60787fd16bebe1d86ee819f9a4733f83ebf0d7d7a03c23297ffbcf05723f82960cfddb53a054de7547f087eee3a79a369c3f5a4b08c466ffa6065471b55b408084a6e62b72cfc6d533a7c04429ffa32974c26cdb92e287b8544e6a16c84b26bbfa9dfe78bf0f1c4ce69f25dee311073958f1eda043257634b72ab28a60a8f762f75af4c2856276fa5ebfc6e0e6e68b19fac15518345bb694337230661ade1e32c9c2f1f2e39fc32dbcd3547716b4471fa46f96a64df05c8b4d4ac927d88a64a60bdfe4828f3ffb14ea0cbb235e4389fb718c1b7ffd474c63a56a842b21264fe14b32a4f6a3d43c9c7c1726c6534146b1d0a5014a1cc6e0fd1825fe1f44d835397746efc4db6171ab81b8abbf598e7be869af3248b57e2ba3949250bbd61911fa3843cd6c375ccd2bfe92a9d78b2634d6ccaabda30fc203159b5048d63e738a26d292e2c488c9f56b6cffbc93a4d2cfe4bee1c9a328438513cb0c38a2ebf40f7aea37c5a08fc98fbea183e90ef24314b68c892c2d5a9e903a7da0f6c36e887cb4c788efb798760af321b93571ae3668ef01e455ca79b818516e78b2263d9622af58bdfba98d0e4be06386ef7ae98bfb67a9280c105a3e53dd84a482074930c8940f4cf85e2fde9ec0bdeb2f97ab62b630428c781de1c6324a402f36aa29334e1bb8a9a29497f4b81c5eaec38c3ac882f4682b43ff2320c97ca3b2f1cf8ce5cf6e05396b1c69feb9cc06f8bc616f3eceeecad9f4b31c56af63cd8c78634286a0586f972af61eed97f58c0ffe58921ebeda89c4157e4e3c1b630511f8767ecd63cb5b762b5ec96130839ce9eda4a3e793adc3ba8bd59ecc507e10341c462cf8bdeb15f9800b4578c512ff8ce3b3a8d2262b69aefc082993d2a064f8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584095fc63285f1a008fd31e1029d9e595cdbb3250e5bcd56a1d2d1bf1a2aa6722928d8597fe9dd91d1bf1304c8b613708141ba09509d73fd49d4334baf54af8a3c1",
+          "id": "88545b22c9ee87f26b72d2c522b2164c72be51bfc32ed6c9129cc717bfd82443",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: every optional field of section 3.1 at once",
+      "tests": "section 3.1; E5 to E18"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820fd34afe9a00007da49f47f5bdd820c8591101fa1aa8a470e7fb476d204210db0035820feb558f5891617b5ac115d6af0fd06e38e77c298ec203991ec241723cd61265604581891c71748bb25ccf84019325354e54780c26a09f3e7017821055820766f465c37c0848da7f6835fe75eff51a517da938344089a3fe34fbddd6629a6590156e6a38ac5a187798fdb7a77d5d731c04199b163d61ead6bc2500f70c4437bf03b26a893382adbfac883d205e533f374ae85c9aa01a9894b49bb42b1402bfef7acd2e0e7c34c0d8830ed32d10bdeaf4b867fff19b274d1462de31ed02187e464923f8f0e4e3f0e7c158f76d514e60372c2d38ea253a552e065efd9b95aa7329adbc192ef16be783505debf5c24055a1a4ee3b8c345828bc283fbe0af9f2d3f972ada8a8f66232ec5ec6a7dc9e5f4f756ef21549301fea2b05ecb251d29f7f716616cd1cdcd9625c91c77072b226769ceaf98941d0366195eacb6608b209e194996039a5aab8013de38c0adb8e865bacdc7402d51e53b630718ac3b108f154175c5598228dc0baffd7aeb9ab71e9a154362bf967fe789c74dd5e2d7dfeeb28573d7e2e82327d3de75a2272263a85e46f18f0d74ba7fbf66305511599731a3b7eb69aef31c0dd2f43e4cceadbf0781ae415c77a837c72bba8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840204069aa154dbaae8c631f95f6006894a6d779b60317f2862ae0b6ac7c4bf20543969a64bc9dada989ff5bf179f56413ef9c03877816481277e3fa5a6db72c1c",
+          "id": "8fb3fefc8bebc35e81135cdaac30201b30271783ff4e4b12d6e76c880a8e0db6",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a role of kind received",
+      "tests": "G10.1; E10"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e6cbeaa44825b266e5037b4e5e4f6e38bbd1358df95927aeefdb0546483b34e203582007ac4221d65edc6d545073c846f8d1878423cb763fb511aa86fc4b012ee95052045818810750fadf6a2967d1eda3aa85c574922f10c8cea07e0c5d055820e3d65e8e9e10cc1c02d64e04ec3e23bb07e15c300f712c143aeafa189fc0ce7d590156dac826a4e537415b980f5d9623f9394b5a033d5db70fd44aecfb28ff9c16d8e9a2c2a186f87f5284c33e34ca08eea6501b5377942de1e656b8c55a6faf3f2fd449f68219592eb35e24053255f6fff681ca46b70aaea9b2de72f72f53b049510f8ae15bff61531d57fdcb9d981de9bdef418d6a736d4ad5b1aa0935b9090bc03860a8b61795b0f19e86e3c36d43012a58f62d4995b7e31863bf6cf4ed48b2d32081aea71750a55f400d1acf56ec3815ec3922fb0af2cd34705856282f933c19dbabca77a2dcfa566ed03e190069cc0ae27d66b7312f811a116882de02b625fa9a87a8f37a213bff386a6e6b2ca6258c4070323d9b1eec16a1b0d4580ab7767023f64b78ca7724298b91341f43f1a9d877614bdcba77148414f42344801ef4ec03bfe4c6a7854b47bd3db30a288d6896ab07fa9e9b0f82223c45afc6b1940d371a456a33a7f2ab904321d323b77126816dff378c0f0ba48301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58406e1e8fd32b068ad604237ffbbad885e248b703b32903aaf9577bb779dc8966cf57ec8e1d36e5ea1a9cdb8ac615ed824f5cdc823fddf3b2885319b97f909b46a6",
+          "id": "3efccf5960887cb6127f8ea88eaf8039a64c33ff50c79ab8b99092332404cca3",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a role of kind holding",
+      "tests": "G10.1; E10"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820ef2d4e2abd00919ee5b69d042d7851699749631465852ce3ea66e2105d4dde950358200b4711bb1fa17347bda10b752871797e35dcd2b307baf4673801931c0e8fd496045818bf026e06f38f485aee0dfbfbdfa6b7a0fa10591048cedaa90558201a4b592e5c91e676a588f9526d17c3d3d61e39eb578c6273851cd1b1faa45b1a5901565e4767758f0278bd1fedb94cd6720cf96edc520a350ecd0d3d305b7adb687d7d8cb9376f351e2abac30645c7f34d132834cc29482f27f8f7b5d380493fbfc3ea561092a2090803827b29b5931f913df5de027bde961736405d6b8cfad84eac51cd3036e9314f8fc3ef0aa54663cb8419520f5546356b2cb5076bc374de06e64546ea938824c8585b8ef285e8efe34a93cdde3162a6b20deef06a035f3ce88c40a370c513b76b9b9d43b6f6c0bcc7f592c09fb0fbcf0c0eb64c5adab4eeb2862495ebd12e48d6805f2ec722503dcc12b2fa1ba837490fc33aa9bd1f011163940a2cdefc9e95aeb83d11040ea43e57e1007b93b664f5ac82731d90d7bbc4772f1e137f509603c9220ede1052b3c941a9bee85df2fc675fbbfca831e30a89ca1d451ab6cf3234c9894cf034b2f509a2e059bab024a4c00668a60b18cd9a62b2a09e2be51ee01668a8e8d51e68f13a0488771f49288181d18301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584060ad5b3eb576c9a3404d684cfe26261216acc63c57b325a612c102ebbe818148902e4ab56b44dd9636c64df48e2612e5785de98c5f4a21b972295bb64324fd3b",
+          "id": "97c5e27844efc120161427a2cdca914f7deb976c375bf722e69191c5814b9c65",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a role of kind fits",
+      "tests": "G10.1; E10"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258205569214b8617428ab070d3c3c5ecd8d99ba1e5b06f591746bc5df9b280114e0a035820f24cbe3587585d269f483bf756482774a94193f78b38d2052e6ecc8ef0c8c658045818971d34e6a69d33625d3d0093734c33f14c2a78683c7fbf680558208f8fb9efdf57476f61d4ebb5fb4beb7f4fd5abfb5f500971a48dece9ee2eab095901330bcdba839538eca102d722bd65326aacf6dc63a3ca0d0559bde059cd9ae052738ae7f687c470c031a004f75c1f8a00667630e192d24604593e8ecd786383d8074e5e9e848a0474bbcaf2de53452ad0cd48232e7e0c33cd06f16b6f1db209c0a902413af6211ed67775e2ce259b046d4ca44fd3497dc01298a924ef96ed778d84a8ec0ed1f7a44f4ee94dd0c0be0cf7abf1f2360e28a6c832a512ef9e70d9007030c6c6edf9e837a639e1d7918944568816f0bdba46b2f8a806e49fb04d83790f764aace03329fd9b9f0fde690047f3ac3febd92fc55edd51a5af21b07a6bea1d7468d87666b1689d0f9614c176e358656f8a744725ec76c3e5aa98bb5c60f6cdcbae85308206a1bc8cc34f198e92b733b548b82a24a0b1c05b4f169dde9863a248232d8ee137233669c53dd987f496c19b98cf8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58407e276437aadf1f07bec88f38da630b1be6b30a3853d6372e290a396d7cf96591f7aafa29f7d7678ac6e069e45208f4e60adc8cac26832446ee0f22d0714d6bd1",
+          "id": "8b43fa22496436628f4ce5b2e06f990514dc71982a5b2deafa5c1e83fbef691b",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a role of kind future, with no what",
+      "tests": "G10.1, G10.4; E10"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820b0faf89b7a5b852570e3db71609e3b7a4c7a9a65c3e80637524e862865094183035820201d36bb4596c4f5218e50f6678a0e6593c8cb989e08153e113faf5d19945467045818d2409ffa81cbfbd1964c2fcb09104b78d410d2bb3360238c05582070f3a94fd3e49aede9ccf1dc61e94e09fb26f1bf3f07e06ea15f1f7ca960f2f45901563559b3293fba2b0714dd3efc83433d3cd856a13f2d4fb03795c1602d8e6183458af0b187f47371f769e60dd18a2cc46db1f4f3c24da9511152a737ea51aa9fd15e13a7009d8241e6bf25bab8e6ff7b5ad2626cdf0501401d092ca42b82cb7d5383a0af3094d3d2d65df9e31beae90eb15d1451ce7f6b7d1328928760a4022c7af4c969a15737c381f40aec9a4bead8cc1d56b3a63a46c5bd6d8ff8a277c52f4cc28654ec664b899d271ecda49d6c1d6372cb2bcda2babaecd9da7e85c2b43c9210e6c00727df4a8de57287a08be73bf02de697ad5d0e489d4e3d3fbb6be79bd9c289ff577d79fed82dabe36a3dc6ee901ab73f65c3e5b798d2a3ccf66c424d8e6799e9265dc03493c71fe444e5a4261789fe84da5e7ba7d22819a212953d392636cc2044a171a677b8d86f7f57f38184ff248e3285da332e5260aaaacec7a25d7f3cc0f7ced46188eda1c7feafbca596abb89ef12bf28301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840c966ce5e9bd1a5531a5669eda8199f9c8cfd641a707f48bef9d010800439e1f119f85f0bc422745f331ab0c08f2073b5fe75fe033bf2fbd7f81922306bf27fab",
+          "id": "8e4ffbd52cd4065299fa85c40e1bc4b2593e688a09a8057e537387772542a72f",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G10.4"
+        ],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a role of kind future with a what, which is not read",
+      "tests": "G10.4; E10"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820b151f48418a5869d37ffeb55412ae196cb3f9172c7935e15b0b36eff6c4443bb03582004a003c6b26f176987f6f9784b0ed8bb77ad18298dc81595fd3e7af77a8885de0458187299f1625e3de01ac4640aa1c0d4b018d98681264d2c48660558206a90a0d61522357b2344f74b66ffb66fb69244030b418b5f6c7e4ae517e7e0615901320924f2995ac5909428359d0a69e8ee3f4948f5deac4756a605b4abcad8c0ce1519f4b6582f41aefeef12bce3a2a5c0dc823ba0ab91c0372171cdd17582a6e144ac5ed0939394402b67d0ffbea529c06d053ac670c980a34c990e9a21072c50c8cf0c38d498b852410984e262d15a528319e93d408a04e3814bfa9de0c3f6281f79ddbf59611ae1f139663174b3ae728c59636e72bbe419442e13019c95fd0ebc4bafe0a08e615e1b334068b827602f885454a915af314eaeaa1d76ca40a20b70f92787f7ba8a8cf3b77b712f7d168add6193368339da1758c774f868dcbcd475a86a394a4e210bcfed146cd94428735b3437573b4d86273312faa5e4521ec52ef1a5301fa7405c14bfe15a16f4a04ff77fdacb81f07660dabc436127624f762e904d308a9605191f47421e0ac0c8584888a08301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584074fe03c79b15e3b6c3ca9dd8da7b6c11e7a625e7c555edf38f683a1e98c65477f4edcd3814dda027a48c21720eda67e20f800075521eab214c8f11ce7e2a0bd6",
+          "id": "dc1c80badabd9907f8caa39576b382f975fcbf1bfd6d809ebaa3cbf17b6c7bdc",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: no party named as a signer, an author named by role",
+      "tests": "G3.1, G4.1, G4.2; E13"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258208f96595d18944ef18fedb38106b09ef5d1b2f7ce76a1a57e552323a3ee965a910358204977e29916857b50a2f2928c2b8639fce1637b016f69c7e67a556f1eb452058504581871efad47f907aba62624c7db16551d889e3a6739c551f8db0558208227d93e54b89c5b95fdc8ea9ec93ffa1c032adc41a03bd0d9c95935720016a25901075a2f50aeb2a527705442f45c8951b9833713e5222207252e78c12f94c31e1524a4b23d69c7ece053ce43fc601ede2b5bd318b1889074c8f939bcfd8b2ea9eb648b64e1cd8680e61a8bd735073a5e4bd895703d2ca4c6c038f639880095274de4a80b19f7f1cda97eb1c82d223ce303a78e9107a5709f4dd27516bb8e9b1f2cc6f21409a37d744b3f2ae27033fc38b5189107cd619e5588562c31bd81e37126eceeb5782ba06122ef112d9d854775ad9f24b8046d09a62f23f2ac246fc5c7e582c173d36ac04c19a05eaf5667783c905b27711419b712c85490a0230c45757b837f77bf202ffad06a9319fef04059c75a7919d1c9046da50ba0f726634857fb6d716757aee2a7058301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840ff4571fa68e2a103854bbff50c4e771f46319f767e64bb89d9b888b0552dded641840d1de799bbc17ae60005e99ede2cddac4c0848503bb282c2809a84bd3d2f",
+          "id": "1b95db387d4d2c12f3409f40459e46fcbb141f0a6ab846a603bb08465316acab",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: the receiver is another agreement, by its root",
+      "tests": "G1.3; E12"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258203b148bddb9afb3927c07b825e3b7c0f847533ce76cfdd8400eb6116849a8863a0358204113cfbb536ce2924701b30d8ea66d8b632de1bca405424ba5714d6ba6bf571a045818e8853bc04f9cc11a635f96cca13d645005343a96987ed9a10558208c0ca8c691373e4993b19f2195f924161ca9cb902f4fdd2867812037e2c44d5458e6e9a48c5f11fc97c4fddf5fa852b3f46c4fa047ee4f3d810c5293ace658bdee3d3cbc2451ac67d15ecdc6493d9c9b7a6661a846a867940e8d60217c48e5d5aa5962ccdeb79a574f278394e03297451a6194067df6acc803b45c7db3b2ce095feaa3f63fc7cf37d8eff0307539f5b69ebea62e0e217805efa277dce456cf810d0816604111e31c1767216501c8854440ffd6f5cb18efe4ad96d70451ca00b438f944ed668c8f195cf8b37c231f97c0f66cf5300fcfc027b8d54e650ed636d38eee7e6dcfcc6c717a1ffa01564c808969c4ec4e4a11d428ffce60e5be4bc0fd360510215dbe7d4c8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58401ae9dc91b0e8a06d60cb8dcaab15452519d6b2a3921653231b7cff7401f112f28aa009dd3efe55c983ed116727027adb887091ee67824186d14dc603061a0a00",
+          "id": "e391741e2a8a5e9a0beedea43fed053fba026a93c4ae7782e4c4fd374cd466ce",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G1.4"
+        ],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: the receiver's index names no party (G1.4 answers not shown, a note)",
+      "tests": "G1.4; E12"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820340fed479f8be01e56b997f8cf38a56f450d2431ce2ca3c2766e666f8fb9140203582000648469dc57277b883cbf123b4babebf0daafef186db1ba86ee8d3738661353045818e5e51eee18adfd93e951cbce7797e866a29cb4fcd3f5e517055820a7ac3c134a11c760c38ab5c98b5658a7565fa2beec4b991f9658b1c5ce581bf859014cafc72f785054e6b6d343f68ba6f9cf6b0a949a8d18fc9b028a2946c25c0e3f8950c72b0b66549504b5f57ee068cc98c011fc877aa2b77cc0ef133140af2d9459cca0e239dfff002a82c6c9b72d48c85e296c3f06fe04721af7430cf6fa69154189ad048e4b09e6991a71443e44896f48408d16ab511d15089fddca5b7279bf8a21beb0749aa1c05f66b045306426ed8c104ba095eca601152f22a3f09bcc28aba8911baddfbbf735c5dc23082db77ccd4d9862549141b2b7f398b45f5b01f5ced8ae4e387a9fcd6bae33a44a4e3e04ec8e735ba54364d7e20de1809cd9c0500bee57dbb64238b5d3ed9f66412c52f8abcfbcd2e8ea8fba91cd80054321178c3e522e204b9df8de0b30c14704369f2d80c7e1efac33329728c8e62288d6efa60a81f41dbc43fa8b8822fbe3ad0c1a5435d6974fbbec7cb9129e05a7d7be0589a52e54dd67ed80605937c7c2ff8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584020bbe73be7709a0133f76169b188702de78343e91f7376da059f3c13e0afc6e4c954abd1b7bceef28c935e6253d2c34e0900180eb491367a20cf3cd11e580203",
+          "id": "718885f60304d217497a726f13e1b02f5364b7179512211e7232187300df4caf",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a version, naming replaces, agreement and previous",
+      "tests": "section 3.1; E17, E19"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258206c785e7cf4d7b45618bae293a748396db7285e7821b2dfb2b6a0c9b38551183603582074368b76c40a01fbdbdcba5fb7fd1df04c061ad04affd44602ed91fa43a2d04b04581817e89bc9767cb46e143343b56d3cb525613bc4b55468161805582029172e91f60af850ed30a6f9c787c4c685cd897c307eebdd3c1369886ef978eb59012af8f23906dba43945ed872fae523103ab420b8218cd1758bc261dd5da49fe5fd4ec5e00a648fc1afc1125119d09b0cbb97683cea2e3144114abfcd5e6d738a4d731b04e45047e58ff13831d22809d54129ddb2f5bcd22588eea6a11620e12f1ed84f6bfcaf5b66a4a658dc5db067227f96006a2dc609ace187f3510ed5fc4eaa1d6b1d83d811df537f4a36c1c2b334a9cdd42e8ff174e11f45b9137482736209bea1f7315e8fd57c0fe54b846a9c8a81b733381707c3622af5e64f3abef629b647d11c0adec097fd60f7ada54b86418eaec3cd75c83a3fabad93028cfb618739e9bf8da8abcb9c6ff75e882b656c1eb2bac7d1152547d7b97fc23b76810d15942be488df40c042b63567a499097f37023df9fb59b7b2bd07b3d9e43345a480a6e396b7a6d5a5a02abb7858301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840e3ce327b868aa8068afb17995fcb29d6bef1bd931577bd0e735e9acb08533ebf2fcc7d026f070996aea3aad8b64275f7cf0006d1d62901b1f62775b110b117db",
+          "id": "25e21afe20d1d222795665ab28fa0a4eae9cfe3e6d4dc7ee9ee990dfa7b0bfa1",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: an envelope, citing a transfer of its chain",
+      "tests": "G14.1; E19"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820d6400cf896d4a7f343fa532f06eff48b94a247f9f9e72fb7bbeccb73ac02dad603582031f74c18fe180289b00a802c14641c1cc9720fed5c7d9709fc80d0067aa13f1c04581877108d4388f48d43b653576f9c19fc08561853627109f7b505582078eb83e6f181b3f5bb891791586deb605c95e0cbe20aa2fdc60cbb70f7acdeec58ec9042e86411daa9aba744c6e2ec0f7267171e4a7184c2fe0b181c9a2051031f25a7112c78db91e36b8bfb382de5f26b441d2f7287b6c5a89c98044ac8516d6b7f184f9412b623e2247dd2d18b85866556c996cd410fe53dba8ed9d5d43827902ce790d35fc6d172fb71b25e115b4b0e99b31d10e3ad63a4893ca01052525138119d5cd9b67bbd4e7aa3f98b779618a9ef52ad1856d23c8106c867f2150bb9364a709255793db03f66f58d281fa4a02d3749ab27eda7be87ae6d9a3a03743b2a36b53f0ad6ce60ed75b2802a4d98ad374552727ce88a4b17012730132d25c32bbbb64953c4fbd0508b8cd5e4fa8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584082a58856f44823c2915c0b449ffb293bbc0b53f61cb51fdf24ad28e338b1bfc6cbc7cc8a79109be50e99350721f63ec6641d4fd968f69c2b4a191eeb5ab3d3d5",
+          "id": "267ec09ca456f712525e94ed2d39e8ebfbf04cb56b8ac67b5c38e771bba06ab5",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: two calls, from the doer and from the receiving side",
+      "tests": "G11.2; E16"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820b1df22b308019b853f7117604afd2cfbe629666901dc49613f4cba8908847db8035820f107fe95985223cc179d395107a408e27364fe9549fb91fe0224d29bea29516204581898453be88c2d992ca6cf423e2057a390266d7dc8d7ba651005582045d39ed5a68ea825efb4aec66f9b5cfdeac94904daaa307e9335a5f8e6d0f5e859014423c2f65fd515f1d565bd03d4d45893c86ad4c0c956899aa2c722a1d69355a63ea3568403a26f2901f26689bc93767656546e70df4d824b0120ebb747166122c55fd89621856f3d562273b4ef466092fd11c35715ae8bc1b2ab823bc753d66320dde5bd8c66abef3d4cc5049e6c7048774a063ace4fbca00c6c419b681cdf2305bd5a7da6d56fd8ce458e575be2d1625c879719c872c01ccda4a21570322e00c88064ddd52a3b1d2fdbf92b94f4d37d3416079a1dd4371dfdf6a371599abc18d09006515bf3f3d69f7a66210a9f8cc3bfa3dfe9e2e73068ee7f0e0024773f8d5613e254a079530bc4a8c64cb98e9837197092b693fc6abb14e8d297f7a8e68bfd57802ad28bb05509cc271faa40f18b2bb0819606b33d19e84867da79ef505636848783a0e5eac6005521ffde8fb38515a4b7d2b457e3724ab7b8f47cda9b82e0633862558301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840a2b922a7c18c0de07c071e780f61f97c132c35b375e1731fd2e63c031aa649f854157730e9b57f403245395cd3b9e7d7e546439da50e540c86924aec8e93cbcc",
+          "id": "53010853b92e305fcde5f8a4b4e53c316c5ca9037e8942aaa4ae3c189e4cc08d",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a resolving update, with no parties, authors or body",
+      "tests": "G12.3; E19"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258201d8f0a95f83013ab7e978ffed37579a841e130cfda31cbc882b2ad61a2b3c68903582007ada2e80145e1ff7fe764d5ae60eca16d34352b3a25e8e3a20cc07675bbbb6b045818d25268d88e35bf0da9dfb89bf696fa79897ffc6f5829de6e055820fc1063ef1e10847b66942190efb6f5110c16b2d5fcb96df323050520d24bcb3e59012a1e706064a50c87a1c7c0f56a250f766220b9a800cb3054aff81e77db7852f3c917037870bf9b3696eee104767d37d4739c644e409de3210b3a7f107367b82f8a0ab81bbacf1360a899d798ddf60cc0f448c26b33a83506b62ee02078b207ee6906dd53f2b72c2351c99c00af1d5c62b329ec91e96f37a7814f9ac96209cc357409c5ea049b4a4c8cba4185695e27575a63137b71ceb56686bdffc8004d127ba5f98d5f05c98de1dfaef2c75b59d1bf749da09f957ae98394e39100e86cc39095e1a0c40c4c7256ceafecc96a497448b43de285368fd2c34a370abebe67d049dcbe08448844fdb7821f68954711b305206c384c896faa1d473e46f0c345700e9bee646bff9b437c78a6bfc1a22788978b06b70479ab1cd19318abc74228e77c67b743c8d2d07ddc9489dd8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840440acf2c6664684db1b397bcfe65523f28aa9502f13abc81bcee766265388387aed8effcc4b88c015abb9517c98c704f67a799753df1a3db1db56c3d5d769136",
+          "id": "296ff7c340d6862084b5f0f448139da05bebe4f81d6d2e750c5069091e0325b4",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G12.3"
+        ],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: resolves and no continues: read as an act like any other",
+      "tests": "G12.3; E19"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820991cc8e53113fecc41da11250e32544978efc5e891d95eae06e412abb7e95ae9035820b1d1920c6872214d32665cbd61b843253e2959a6a86f85268b257164053d9ede045818d6d8cb509abe6a630ba592b6dc8da8456d9db205a733bc0e055820d4317226d17cd00cc2f5f59efa28fe1ff776875691c3f8e55c5358ab9e7e210f5901287a388f308c9c4e5c7057e5185a9a06939ff0e34a1e555ba056e50ca0b3926bfa38b8680ee553320dd089ba1ddb30cfd0ba454e97564ab58afc1f963adae3d0e8b50e7972e73cb429f9ac3c76f822f00f489d07aa9b63c03dce5d010ddf544d9ca55e5fda687eb7e1b2445af6ab9fb6eba54f20a34722a9b2952d5cd7aff6f32179712c6fb60024240e33d4d7c181a08efe7d36db1a13c15788833a160521595b3f521dda08478311e08b92c3271797dca727af4f7dd6cea087f87080de465318eb60d8f64e97a6f59c6d005c615d1bc17148227d4af35af9484fb5186f808e484147d3598efc2eb37c67e2008025cd4ec43b378868be7a53eef6e70ebeae739dc74d4a9430b365138505680f7ba73d69216acf5ad1cd44fd5346a2521f25a54ae7c65b1afede98ec8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840edfcacafa0e2547dd07049d30d158f5e27c0bedfa053b685189d448658bf7852af01e68b34713f693a91823b6c89a8e33bfede9ecdc3a36fa84f26c1f88783bb",
+          "id": "23c343fa862296492e5150f2264c19f863b59e9f0bcb9ac94147302131544515",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G2.2"
+        ],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: an entry of relies_on that is not a fingerprint is left unread",
+      "tests": "G2.2; E18"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258207eb19249c28e7b9641a48b3ef20ccf19ee2203145c7dc820111bc879eb66a7f4035820ad6b576a321ec8164ae221bdd2f2d008b49a04e0b8a9e64fc9be473f6b9a08f104581834ad4619fa0de1cf7ecad1a98cd6f726526ed4477a65970c055820dbbbae5d4054fbf5dc551b00690413436adb5b1b4262b283f486ded83820d05e59010cc7add19a9b3d6450dac292ad6648fcc828d6cd7b5b501d927ae158bf125a738d7529cc6ce403d2ba5327660e6dd1798e0de13a13c5668c033ab2919b3ef52e2e6549d9cc7e9555a064641b4dbe7b7cf3b71e29c25c16caa8f4599965c9863379f04628a1f1736e1100da3d1bd4b62232c449baae599947d2d6e7655d3bf01a72e99ab0808793949fc793e03eb45e364fe3a719c24cb4e66103977f3688d9d22770ba5a3e07f2146055273dc1e3ce84a92bc238fa759298bdcb4793e0253657346a7991f461ba0afe5761239e795f0d3a0cbf56474ae60fb8a960dda8cc38c76ae6bbf82a9e213370a10be514a2ad5dde81c609e38447acfbd6a3556e19b7f5f993d663df09d95a912a9cdb958301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58406f6d9730969023137ab1ea1ed8d588c95f731507b6040128718b3770e61648741181f5cf2be3ffee8694dd24dc1b9b29cbd6f8e9804bf680f2d473d92e77f59c",
+          "id": "255f490bad095d75f8fa7329ec2a798ce39e733222db4575af520a523e2d6b71",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G5.2"
+        ],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a power of kind replaces gives no power, and is left unread",
+      "tests": "G5.2; E14"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a5005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820a43ba9429653cd55d47099b1a18542df47907890f0fcaf4c8d63d93c197b340e035820867ee6446e1aa1547a5cc9c50d5ae3682d571e4af5781e4e4949725817f50693045818918fbe79b36e9e8e2b38cf1b842bd8e7abd5853b5e4f007c58e41ad085af7a22a517c0942aebe226bdfdfcedb40afb3e97a226323c37262883dfec81ecd030110005f6198fc88bc1e47acce87782f0999c552504285d6d4462add808d2ebdd6614497bbb88234923683969545aa1a80e928c3dc785a3b39aaf8482c4e4df7ce454581ee22ded0ec4f916358498faced130c9788c89be9f4504d69bd733d4cbd2226d90bc744fe7142ee3491b00a048617ef972b278324e8c2dd32b9409d163f354b6a5205003b7c3835268c173805ace9db98f046c00ec6eddcaf3a856d4efb1177a0a99f21674be462e213d54319be3e000434af02acfdaae32b9de87858301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584044e4cc28f6029308c75a46cba05f1a86453dd19e18baff9f941d9d59df71a33dc06758127bd63c6b90f01bae3650069e5594b8c25701080cca7973c94a68c83a",
+          "id": "b7d83a32f79b387e0200f1790c2302fb71e44f942b983433c6502afbc19e103f",
+          "key": "89ee8b2efb13316e313a8982c5adbbc99efb3ba7d4c361d195a7bb98c572a6b5"
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "terms: a private act, opened with its content key",
+      "tests": "E1"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582085381020b99a0f3bf01e8747a4f8fed2622de9ce921d5061306615fd6a6144a8035820efee7f8cdac471c71505aad44eae2cb9c7df3638c20b2a58e67f9b226a74f56f0458187e07e3788035012c47ed91486a494b62add0e3a38f0d6eb10558209ee31fbf44cfa7cd14b5327dda16f4cd528974a05b1314fc0264e01da5e8e53058bb9ba2f7d88edcec9262756de3afa75da13ba536ca73043fd66dee11b40bbcf1227f09a1c8d8cb2bc86f76c8ada4cd156bf72c0f54184b44f6c2b96d98dfa759d98f7fc321d988621fddaf3b4faff4ec8bf4e144b66b3a1eddd8d0503a4070b63da60db3c755896dbc01449987a67c2ef84ff5cc44f1b9d9b493e0b2994ff690490677f9f564a6cf6b2f9e240c23f16d3383dd5fe7466b7ab34298f78edf4f39c6f5bb42b9cb1453b9539ccf17276ddff786c19793cf2330f09df90c8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584077b4ee381a1586e258f40a98132703519b90baa15149fa00a19af75cf07fd29197cc46f49f2de72cae3990e3343144d6e78ba995277913104b813d92a2ca7c58",
+          "id": "3b3008740fe5180f3136cf9f2892e8b2f059adf8f02640f2c488f9f7b59fba93",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: an assent, its required fields only",
+      "tests": "section 3.2; E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820626f3b235b7d0288c7961463687bde6a132ff3021de0b990138a0e3bffb172e50358204c57f8b13ae04cab4c7c089ff967f5a1e05775aad00cebaf166d0f8794b8c67a045818b5b8651a5fbee865ee3a2ada79e495ba80c0ed14b458950c0558202bed8cd54ea0ad51ff845d726bf1f4ee727ebed685ef275bb3bbf40bb1011b8458dd8445ad6c8069d5c244379c1f580b2ff0b12e7c54f4ce7b63dc08b4fb4c2b5aa596e2cd452b256fa2725cc6fbab7df3da30782f1d8bcb3e0b45d186aad3f6fdc5eac83fdfeb9fa77d82cc4a4b15c6dae85f3eae965dd0ef3ec789ecd9c1ff0f9659a81071043ef1eb234b2b2970899df167b6947b2c3e13d4296d3c1746c11032393b886829c53ed785fd8f8d42699909ca69b775dd1bc2886525bef19537705532a7592e8978be10b5819075ff93d03d5c3bdf7f3577d55ccfe7df1a290d17fd5143f0cbdb7b1412f73de6dc70aecc0508324510c615eb99525e0a046b8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58406ae7d02c20e7e0c38cd48263cf5ab1692a2c0ad672a2fbb46cd383fd72607b5e05cf03bc27e83db0a86aef51b3740395fb6b9e13facae131e871151311c7a868",
+          "id": "ca7e5daadb099694291a92c5baf6ccd87094a178a6d707ccbc416039e9188a02",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: a counter signature, following the assent in the signer's line",
+      "tests": "G4.10; E17, E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820a4b164da173f7f588b6ddaf6179f8ab23e0e9df2223862d197065cdcb9027062035820c9796b1bb1a1288cb797a16d68728231e969797282c19b3e9c1de584c2181a4a045818b894940b883c30c57cb4b5148d0c420ef50c1f9fc786f7f4055820d416e58cae8d310b42e1a044cc36b49e662d64968b182b73a58c2e394cd3bb0a59010fab5f1039ce3f474b9e54d0849104552fad05e2084fb3e8b1bd46b899ae433125ba7b3b3a59f3e4952482b322fd9d8f570fd146299ecb4927da17869466797305e570d7ca7ee2ac947b9242c3a9e89d86c80c01206d329a21a78266ae7c3ef3424b2e0487d084c9743bb2d794b7ae077adb880c1c30a03139365878605396fc29ef54c039499c304ac1523de426ce3e70754433d69f75fbf7deddf09a19f5c4fe4ceb3c911135ee8ec7272d0ab0b1e7eb9372540f325e5426128ca3b7b73f5830e547c2d25278186f62ff728d7aba9cb4718d328ae72d5b35e3124bf9383cbd53ee76ded73c400b819751aff5f7479efd9faef36fde00adb59edd01319f16bd1c3c34f81f1f75d2c3c8c46b5937c6668301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840b0ba43fa10388683895d4108a56292d76f5d119cbb3f7e4a576b62d46c4563c94e1fbc6f63b8f1f64132c7087f8b46b219298679b799931eeb4d82259088d72c",
+          "id": "44e5d5fc03dba9948b2086027b81b9fcaef1eab9a9a428636191294737d17b6c",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: a contest, with content and a settlement",
+      "tests": "G11.8; E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e1aae64477438a47c25a889487a8eb7def5623bd45886c84d756288dafaea5a9035820fad0b7ee20d466b4731fe474f8b3d63ccb9b08daaf20f2a0ae24ca2aec31d13a0458188a0918d2b65759c6c926a4dfcdc0f05c6bbba3b01a0f6178055820c61c9c76220ef8708cd0a3bcbcdfa5afa6181cf58bb97bafbca8d57a4616463f58bbe0632a72aafb72f53af91067a99736261014dd99b011826c5c7b8a578c6f2838c0a2b841909eaee563a77bda537c6b388bce00ad2d05ee616b045635f4414a0200525bbb769216faad86965b74604bf8825d4bc74dffab5578c6f132e82ae6efe322c471221ab320f34c58bea67f19004461ed6f69f246b12bea25a46b16bf54a1f52b24b8fb017055ee9bd2bfee2b77b44fd12a4a9aae2cb6dd444c69b464e8c272f685498328cff3534f82d442ed5d61f06f5a0159349c69746a8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58401cbc59d7594d33b8461f01562f50bbc3d1dafa3d794a24bd6cbe54794e44fef5083678816a6affa295d3131281dbe437f24d85c46328b88a4ad856169aba0350",
+          "id": "3e8f6ff6bd6e8d4192e0d05d6969835fd7a1292ccd0da42b2560ad67440f767f",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: a contest with no content",
+      "tests": "G11.8; E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258209ac1230dcc5fe71c867c7dfa42b9464eb7a99a2c74c9e5afdcda8378f00122d60358204601771a9f3611957142ac45136286aae1cec3a0be5c57368435d7ef3dacae630458183b72fbf583cf9213b0cccbf068dcffb4d7642588ff0743cb05582051641e7d5fc5914e276bd232c2d274a11672e88b69970a89c1398d4383caa39358e409a2927b14519b27c0051b8e4cbb6193fba83b90e513f77c0fcafacfdccb0f65b5d9cb2318b8a9ed7c5828a5661fdb62da3ee4d417b031f01b660e2da1d417915e4bad993707f12c9ba4e47f1c9a669f06fb3a9f4763c0c0482fdbce95fbe149c05650d8e68dace84648a05fdfaf9f6d16dab0e7ed269838e1973c622d1400313dc947a5965fc324066d57edc0bfa0325bea5e6bb5bb2ca3dc1654df634c2770ca9daffb37ee310e3c15f2a87496b6338e67b29f298deed8046926942f8f714b88a678d760c769c6c35a6bb843b01eaccb6d913b1d0d79870ba881348041ff1e30b36e368301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840ae97dc2edb656babbf27e6dbcee95c8b75f1b8a1b4c6a1f0914864df60f09400355ea6ae8d6fe8fd77417e8c81d3b6c87e3f7ef6fb8461df5b77a4e301532f5a",
+          "id": "e430ada15235a3f33b91f4a7dae7f3401707f7385151742c7b2cd622d29ef92d",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: a kind defined by a cMIP (K7), with content",
+      "tests": "K7; E15"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258202196c5a21d9e845f5edf23bf6ff847c2dd76d66b92730de1d220cb9d5cd3658f03582086a194f6e44db2f73a046648db410c12c6aabe7691551842545eaf605e36d86a0458180c367f774e6a4c5bcf78ca22b3409cdbacd668186f969aa4055820b49ebeffedd971dfc92e66fa344f6e78aae2c9d43f2a4e71086ab3477a0934c9590103aad06adcc2420c2ab68cdbd7c035304d6f0c2e58c2cfe638b92c6d42b75817ed1a21c9d92a44dd3eaef62979f7f3c4ff82613e7d7e87936a66d9b7fdaec4b6c9001f10cdb1db4a4e42919883bd69ca6a93cf00def1a97c8b25b407bb3de14d46278d671ebe2cb70835b09daf5c8b7a4865f0ee2cfcec7656bf496e17ae65b080a73cbacde1d7a6f0e1f6a79ab74a76165bec69b491550a4f2cebf584dbaf2327871aa4f2ea013756c4ed528e1770cb82e6dd8c60aa050f4e80f7aa7763b3fd8f3602c6a9adf139f8449aa6ed7fd8196282407eba7f8fd2e47d97a095adba9cc879deb1f788d07a47231f376c4434b7587042759af37be4765b9ec817e73470557958fe8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584090e1aa36b8acae0e89dd85ad1badcfbb4acce600857750dcdbb6746b196f67815207fd53be06ada110b78029cd0cdae218b99dd0f61feb30633fedcd7f44d39c",
+          "id": "8959fd2c9b1ac3423395f2d3f8f8b739125f6efd64a20cd10858aae5d376e001",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: made for a signer, under a delegation",
+      "tests": "G5.1(b); E11, E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582058fad62f259b7a1797d6fe93cc436f3cf1912b300efa4ff8b03349d72958f203035820bc3c6196ce9b316bf21108c2623fcfa86217d7a38f61cbc277b5d12f08bd37be0458188bfb4cfb9d32678e426ade1b23c20ad63caf65ad6ecfb258055820905d0160a2895b382e9da91319a2c3748774c857ab4e100f2aacb7b03310a4df59010359adeb1d2f360daee27da70b18ab8177ce5535a6e8cd6bc8a4cad9d70ab9a7ddb663c4571b5e5755ef968002fcca65ff67ad1b2cbaf3b10a1e4fabea710e695a406f0b03a620d43f623638b745f3a3027b56c0a0353c740b96f0faf2688a9b16c0b98acdeb3c4c6c34f6687e13f50b0cf7ba0f6a9a4a52e45d9a3ffd1bf77014a480971f53a13ac9f8e9eaec8fcef04cfc95588c222f3a94672d25f2432251927e7a95a827801a62fa3cb73ccebf55308cd72f5b9d0862f0291bd81ade1d682f8a849efb88ab37e2fac2018504d9de7b8f5e29eed648f0e66c21a98baedc63031bf127b0536f563bd5513e9c05506116831f4af69c3b881291a5e891fc50fae94d04ed8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405d732540db270069f5833311d56b0ccf695d529bd96cca19db24cd2feec83bd39542b7e9f2dca547d62470f48509f7e29c15f583dead2d01d179a55b705911bf",
+          "id": "ddc6909ca8bfaf64964cdc58a06d462c5f4915f97e3cf2af18bfc4254d02a62c",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: an agreement's signature, for its root, under its own Terms",
+      "tests": "G1.2; E11, E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582061b3857eb6f28b419d964c35de13d62dc688af61cc4d29e4547c706226dd6e1a0358200a27f6ffbfb7d5395e8537c7b9eea8f49021def0f8299664caa839d275e735d7045818da7e2734f83426c382f516ecea4deb53351a6aa5ccdd3e90055820128f6aaf6b434a9510c88cc85917920420fb2a1b97fa8477bd05da44cb0cb94d59014898f75749932b98588bd4553c0909fec1753c0c29b2add08c9531c554ec7eeccfbeab91eee31651c26df139dc944b4da77f2677570ecc3f5685e45f31692171e2850d2703edf33ed01219e2f1d0980234b6cc0f96cbd8e39b28054ef3adfcafc4731dc4b6c620c89e0c662d4145f2ef8d6ce58bb403c909cd2959a5b315ac2c8aedcfffac7a8d7987e8eff7faf8f6021a3f852e3fe16667177856e929f00c11d4f49fdb2f75f111e10d32699cef43255025765784c14e0e98c2647e014aae7a254aa93f87af652bca1fa7cf41316a81b54259b7e724d465b40b1552be0e50bb7388d398a02ed044b31ca0fdc316ecf157fba59c2846443af77298eefc7495a3ac0d3b103cd3b7cbf1cce10afc468475ebad141fbebdf8f8d7f361aa87008e674d4431c8cfc790409a49f124d870d913c1875e312d645137d3b9293af9e2fe1da715e5a7939651022f8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58401e224bded3cf954bfd1a48ff399a535fa4843dd6ea401f445d600ccf7ac65d6780304a0e48565c1a7d13b68739889bb820ea09a757badb8f19c8e9982722968d",
+          "id": "3c574b3572df95ba526d5cd8d25413d902ce3a7d28b97ccf8ca55d6271a85125",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: answers, relies_on and settlement",
+      "tests": "G13.1, G13.2, G8.5; E18"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820c39406be9c46fbd0393ab357ef38730ae01cf5be11fcf426ba1568ea5fce9a860358209fdaa6c2cc21f7372a673aadb2e884f22c3440d3149e9315f393018bd7094ef8045818bde1c77d46beb28e8c7a742a97f8f4cb9998f888467bad4605582098add0470d52341bcf5040a740896ecab31624bb2686f3a552fb16b787ba7304590146e465ce75fc0970c796a22117ce33e9cc022673020e21f83b8672e627c3971dea27da6dbf632fcfbba6ccd90994115ff034722bd033f7ec46e9dd3e06735351f280d454622812ce7b5322d5afc0a7be52d8e36156bacc2b02674023e606a0559a50d26877723610a1330881827d4323a3b2f5dca3ff3d113ca0f36aea819f1c28292bd08eb644f2c1f6482af6e73cb227a2327cc25fc91af3dc20726d454c9bbe76683be8a1664a6ae2e2d0f439da6e3df3a9d2a738cffbd8f7c983114d234904eb9bbf0acee049190a882855efdea3043b795268238d753d26247bd118612cd7b48ee9ea1c38f85a7d341a722065bbda6eab9a9aa182425fe11555de86912920ab064f87824f8b401adc2403daab8d9780a915747e5050410924fed6d8c4d500b6dc2d9e08f631ac01f237b84c4575f6497e972f87e1011c8f15597824b262fdc64565ecf44f8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58400b956fcdec162bae79526f8dd15181f7ab063f0db34ba66db7ff8bc19a8ed3cc329dea2b2e28c13a37e2e9b4acafe8ad39b5d117db9fc46346d928ee29c8c983",
+          "id": "336b32f73b4c77d75bf3e702b7e0c7e890acc505fd32d8dd3f711a71f52febe7",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: a resolving update in one signer's line",
+      "tests": "G12.3; E20"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820ec2a0de9168dd404d34bd4ac36ee2ec76f6d9eeba0f922e55823116d5206f680035820d3e82ca50d5799e39b2dab18470aba06272e1c84f4990b90e49c3ceb738dfab704581859e0fd17df310426ddc7aeade9ca07524e80cf23792bdcc80558206962b9aed8c49b02ce40322854f7304eec7279a72841b861c5fec635e5b611ed58bed421e8036c31823d1e39bebf5d5f7209b9bd32b3a6530b000acd7234c78bdd1f4e85ad744b26f6eefef42081067569aaa324684c4587c31606244562981eb721bca030fef2b2be4de841eb6911ee9b40a59870a8ed107de4ce5161ee8fee6cb13efeb4bc82b55cf24ba9ad6b99b111ebe3babafddfe11f85acdd4ad80adea0a2b002b84ddf935cf82803f9af0987997002f0c8219a8ade4a88599fbf9609a2ce0375a7f2d2d3630ddbfbab3804f3d9bece88a7243f0dafdfa24534e949da8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58407b98e6d9b4d7795381aa0d0e10fc5f16de61c9f77fe65beefbebd711e1da608e9b5aea690a633dad0748bf719239162982f40a3d378daf00807828a0a38d91da",
+          "id": "2e31d0ff016f013ed9d3939e650b0af8bec71ecaf6f9ffed8488dd0b9a3b37c9",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G2.2"
+        ],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "statement: an entry of relies_on that is not a fingerprint is left unread",
+      "tests": "section 3, G2.2"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a60058208fe2da7ab7714a9a72dcd21c15d1f17afce32212fc9a09ddbfa8fbf71f795342015820164a933e6603d63cc2bea2544f1ed6fa674e02d10353906aac54dae3c6cbb02f0258209a400e9f964400978bd7a115a033a6104224f16aad2638c63e87807df99447b5035820622f2d3ee81c1b48d37d1f91194ce95dd7109b1f2c9219ee7813ec7007a4657104581813dda45cdbd274587e7324baaa7e522f5adc298934914c99055820e2cc2635e8baa9a59a84f54c9d485e3db3ec8f9f1620f8c027736c733e372bb9590105fdbad0b6c8ec52f03220af9311e334cf50a581b1a37feaadb8379daf3b91ac31049842db4fd3ac1d2bb1fb3b07a9776b8289973de9ce4ebf6b9bd5adc557d5738f7d05c4d7e33f79977a637a07149141a99ff075547da10ee4c462bcef8880f2bb1a55396ff3a30e48588025d24793495201f60387d61f95537ea6294ae4e2d5bd1118b33a7c0d2bc7ab0596dc6e77bac2772b9d1990fbb1cff8170f43f67e9abee18c701ae1c77ef30de1bde97f378dce79222668470c17c6b88d9eee75f3efe1269d87020441c7e50c74b7e76b59c7af30beb12b5113d1a8d7a5d57bddab63be5d7cde4191d59a9174ac0ef997931984575ab6eceb897e5ed2fcfc021543777020f124d183015820e2b25d558bf1a25efb3581d8afd9e3ba987ae9fd8d74a3a497c1bf148210d26558408de69ff35e989db6227f4a879ad2ec953d520dbe9454452e95abc08b7d4de3083a67e028838d71ffc6f60b061d3d270d272042db691d9ec8e5edfbd3b25b7556",
+          "id": "73eee10acda63cca24c34a2bfb46ac396f5d28f70be613a04a40bfc67c71afd4",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+        "verdict": "pass"
+      },
+      "name": "report: the receiving side's confirmation of a payment, its call made by default",
+      "tests": "G11.7; E21, E22 (proposal)"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820859f55606314c957763e67eb63c88b88d2ba7ce5b586bbe2a4ddd7959d2f6478035820d5c926a32c94d95c11161b802838a9453fa9560fcfd12fcbfdf111c59070006b045818dd441cec3a95cf79ac4f8fbe075119b3b5db7799f15046e20558203fa1da43a528f0eab3c35488390cabef37ca3a5bed61e38bf12e1ba8308b362659029e05673da1c2488ea783d46413afb70922a26494eb537e7c24842f6c090f7fcee87ae8f9c1c07e1bafb01be4419724270883838114f301a8289383f0d91ff7d08913d0f35f3e85cf337bf26bc7ac561a18092676424eabd1f01b6e10ad0d1b2013d6d2ae4a0f9230ad37889f6309bac248856e6d3292887222dcf66e9ffc90f4b4cdad944165cec84e6af26f69dc32087563eb5caa5bb915e4d96807bf5b6e0dec50c381346d9e07729bce7cc64cf23e58cda49e9b4bedcdca9fd587ff32f6167fe3689e63f11b629217381b4084dc7b56a41dd34d82eb7435bc4ee32dabe5ecf2ca7487be57382836c42f6bbf675f4c2b3f0d97a26806f9122bb2199b59fcd8e0cfd0fc31858fef2c46081c4fdfacb7841a88a8ccb077c040bff1b337a2439f1f80ef03483dda40aeba5fd1530a54da005422d8147f49e710a4a87eaf5db95c6c38e2d3a993b330b96f5fd58995e458cdc89053a435bd489979b06940dc7003a1fcabd8aeb539e890b45fb5f5ca26271637e239498b781d760e769a9b10303fc065ac01fd0191ebee6d7b2744f336b108f9dafec72ba8f84da3116e7e6b3b6e364c38be10d17439fd439f7633457b9c7a7985fb19b5935e2e694f7cc6b60da250c4b12367fa40492674582d5061f5d89becc144d6654ab25a4bfe2d7a8dab6d5d41c40ba7dd5137d43a8fbbb9cb2a157441bcacbc85049862cf7b1f9a6bd11a5cc079b34997188bcd9812a0baf9c2123d368d2143193588dcb7828023d8c4e07ef3aaba1aa5a834cae0a366ea41d240125a00b314018987c64b3391191e7af9d6407c702a189aa0b9263019e9f7c5a14254788cd1cd915d38dc0f727f2123d5f7181d4702a7c40bb1379e166ffa1c036be801aa94a37c3e5956b6b0bc1ed997b24ee8da0a2448c477d994e470a6237b195d95ce008fa9762b2c06a6f05d318301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58401d6e092fae788a77ee90e2ce28d1bc3ad458ae8516629c2915811705e588e80c4fd666c89419a74c632a96d769e58a3ddad6d48c0ece51b822f57f0954e11132",
+          "id": "89cca5ad1156a75f7ce568d30afd95234f4b23f06c240dc53ff41d293d391193",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+        "verdict": "pass"
+      },
+      "name": "report: a doer's leg report, every kind of line",
+      "tests": "K6's row; E21, E22 (proposal)"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258201e85b4e2df82817689380dcb102e4828e8156855661ef08dfc8f8c48c7e78547035820040398522ba908c27ed0efeb6f9c3121900a4c7357cd934581cae28c543759fc04581854fac865bdd535668aa212385b4ca415eed79e963fbb340b05582011bd8515e6ae4e1e34f151366bd29408c1abd2b524ffbad38ddb90e134a1d3b45896e182b2e2a91075fa8c9184128f54acc5f8169100845f968e6d7cc7a282ab080c6bee1e2f98a7818e966b4ecd6124c0957a86970ea4f4b76c8d8f1b11bdb10cb89375e93e4d917aab8cc57def7e064548a0d4d9849f4b92d77e035e4b2c3b9f0e69dabd3ddd8421eb36e0da4246dd871aa8173043773468f8c04544488dd7a2d087e7660d1a43044f18141355274282f0683f94c16e818301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584083dcc7ccab20c9a34d711eab5b1d629b2f838355b4826285934841e059b111f9cbe3a4eb2267dd82deec3e318a6aa6e961b785d45ba1ffc3663e89f0fbe4424f",
+          "id": "1e0870dd065933b1f356d52741a47094d5b8084d6192b6d8306888d45b04675b",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+        "verdict": "pass"
+      },
+      "name": "report: the call it answers, and nothing more",
+      "tests": "the block's R2; E21 (proposal)"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e03fba6b0e4e252b5f4705ad625a5cb0eb472ab9f0fd959d2056f09cc4cc6eb303582003270768574430f603ca11eaafb12ed2676a7aa39d39cc36f6818cb6fdfa38600458180c620f46a6675f861ad0cefa7197f8bf1124d0f715c544c4055820136c7745896fec5b9fb1855cc0f6bc4e176c73d430e7deb3b86a39415a71196958e48a1fe41a20a627c525db03682693b97abb3934e31a950c274dd123e5f331a91f7fe613ea6f790f81a85f5236f9a2650c80cce83a6ab18bc5f2cead7955b9ef093d33fbc5a5e5732adc62101c9970cb7d641b5fc52205c13ccbd6608dd5336f99bfedcf7aeaeaf12c06e9def86a3f2704d6fc7eabb6b9c972afffe5e7d1ca34a602706200849df059dc21c59c917709f791df73b7c93833d77bc5af16ec7011ba84f2f05212616e676594ae54579437b311f9d97edf4e56cc075cabfd4e8b0de0368a3d3cc2b6521915b9a9631fb342085055eb2f8fc2ccb4117e2f225e7374df6b94f3778301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405ffd5b13251d3b19ebc0809b26391532b6b3c5b8da76b7c5b4a9ec674cda91eb6b60d9158bc46eb5a440683701de534acc294ad223ab07846508da9f3cc617b6",
+          "id": "011d9504f3a414c8c71f39fe198d7277c838a11d66670888fcd5292d0ce86158",
+          "key": null
+        },
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582085381020b99a0f3bf01e8747a4f8fed2622de9ce921d5061306615fd6a6144a8035820efee7f8cdac471c71505aad44eae2cb9c7df3638c20b2a58e67f9b226a74f56f0458187e07e3788035012c47ed91486a494b62add0e3a38f0d6eb10558209ee31fbf44cfa7cd14b5327dda16f4cd528974a05b1314fc0264e01da5e8e53058bb9ba2f7d88edcec9262756de3afa75da13ba536ca73043fd66dee11b40bbcf1227f09a1c8d8cb2bc86f76c8ada4cd156bf72c0f54184b44f6c2b96d98dfa759d98f7fc321d988621fddaf3b4faff4ec8bf4e144b66b3a1eddd8d0503a4070b63da60db3c755896dbc01449987a67c2ef84ff5cc44f1b9d9b493e0b2994ff690490677f9f564a6cf6b2f9e240c23f16d3383dd5fe7466b7ab34298f78edf4f39c6f5bb42b9cb1453b9539ccf17276ddff786c19793cf2330f09df90c8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584077b4ee381a1586e258f40a98132703519b90baa15149fa00a19af75cf07fd29197cc46f49f2de72cae3990e3343144d6e78ba995277913104b813d92a2ca7c58",
+          "id": "3b3008740fe5180f3136cf9f2892e8b2f059adf8f02640f2c488f9f7b59fba93",
+          "key": null
+        },
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582059f6fb23dead5c6dc97ebcfe97c89fada34599c78640759de085fcb4229a6ab903582048667173beba10bc0d8c862e344ada6a7ef7171dbe56cab1b8c558af9aef6f090458189c4133f6003a9cc233568938831f9e63449d37975bc63d720558204230cb20db2f20bfd76d670b4dd03f92aaf3bce632c8be79265a6c83eed0053958dd24efba6065be93e405f34267ed2b94961a47ecdc8f038b493a777bd758a5b3e71808a8d6f1f383e98e37e147b161184e71dc187d755fbf84e368fafebe621b988cdf96a19bca6502595c5f328641812821ef0bc6285af21a9ac97479325099634b914e847cb531698a8afe2603bba3bb81a52cf4aa492d60b37b7cd8a6d2ceb264d8b761828ad81c30924d8bf8771b81af50bda2109d8027fc1910746730ce667dc2e972a90d732055edbdaf5568b22bf4c9ba1e14b9c3059244aa71e0966ebb5361dae27b310ee7e98c7ac559d8bc55d1e3a036f789ac27a1f0608a7d8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840956d7fa66ddbd57b110778054a98093e18772f083a90153bd7ae1f3122c2a2ee4c72d7d0186c7984d9062ead1bdc90ddc6aaa66b7c6c24902931ecad1d00f503",
+          "id": "3b43390244f91f11238e4498e41994d1bf46b26917c5e737b0d0e2b9abb95abb",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "held: a signer's next act in the agreement names the one before",
+      "tests": "G6.1"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e03fba6b0e4e252b5f4705ad625a5cb0eb472ab9f0fd959d2056f09cc4cc6eb303582003270768574430f603ca11eaafb12ed2676a7aa39d39cc36f6818cb6fdfa38600458180c620f46a6675f861ad0cefa7197f8bf1124d0f715c544c4055820136c7745896fec5b9fb1855cc0f6bc4e176c73d430e7deb3b86a39415a71196958e48a1fe41a20a627c525db03682693b97abb3934e31a950c274dd123e5f331a91f7fe613ea6f790f81a85f5236f9a2650c80cce83a6ab18bc5f2cead7955b9ef093d33fbc5a5e5732adc62101c9970cb7d641b5fc52205c13ccbd6608dd5336f99bfedcf7aeaeaf12c06e9def86a3f2704d6fc7eabb6b9c972afffe5e7d1ca34a602706200849df059dc21c59c917709f791df73b7c93833d77bc5af16ec7011ba84f2f05212616e676594ae54579437b311f9d97edf4e56cc075cabfd4e8b0de0368a3d3cc2b6521915b9a9631fb342085055eb2f8fc2ccb4117e2f225e7374df6b94f3778301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405ffd5b13251d3b19ebc0809b26391532b6b3c5b8da76b7c5b4a9ec674cda91eb6b60d9158bc46eb5a440683701de534acc294ad223ab07846508da9f3cc617b6",
+          "id": "011d9504f3a414c8c71f39fe198d7277c838a11d66670888fcd5292d0ce86158",
+          "key": null
+        },
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820ffe947bf47cc48de9468b211067e9d47a39afd0ca5c399b4e47e77f789efb43f035820a0f1dec15a3ffc593fc93a0d13df3a26a79818692d8dfaf7d902d266f5b95b2b0458180cdd84d72f8df06b853f10d6465f5c719fc5080968104b18055820463c5022d6e1ae571241449a451aa35072b933dd5c72cfc7947dfba0930786a558dd1183fb4d92c43b5550835faf0deb67e8b10132a86f7d398414fd4573787f5b35699fdf1d57cb72716b2c77c3a8a6a83abeacbbe072d1428e1a1fad3c6d35dcde6db924917e738bd6c1c6c2e2f168160844b6b60fb1daba36d0b70f9e34eb760c819a7874768fdc6483327f59c2f469151a3e6ec9156c682884e8da4883023244e106228a2c8e5999c230d4b7596cc4210bcd7b1236ee20dd356cb68465067615fc30870f679d61a6e52f6c5cacaab4cd64da39ccf0c5be7ab0b51b5080fde7d020529a3e8f8064415a052d4ae2e92873e241974c35ddb50b017b37726e8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840b5f825c7188ac096e4ac84d6758fe6dc102c18adbfa26bc675d68d8dfac3f231a98dac1fe5e9e2c12592349a7a8cbfb3058d245a5dc01ad5dafbb8cf0d922b11",
+          "id": "0d02969d77b3d3c5ae119d5c9cbd57fede95943cacd5100426c1892502322bbd",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G6.1"
+        ],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "held: previous names an act not held: the act counts, its line unchecked before it",
+      "tests": "G6.1"
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820e03fba6b0e4e252b5f4705ad625a5cb0eb472ab9f0fd959d2056f09cc4cc6eb303582003270768574430f603ca11eaafb12ed2676a7aa39d39cc36f6818cb6fdfa38600458180c620f46a6675f861ad0cefa7197f8bf1124d0f715c544c4055820136c7745896fec5b9fb1855cc0f6bc4e176c73d430e7deb3b86a39415a71196958e48a1fe41a20a627c525db03682693b97abb3934e31a950c274dd123e5f331a91f7fe613ea6f790f81a85f5236f9a2650c80cce83a6ab18bc5f2cead7955b9ef093d33fbc5a5e5732adc62101c9970cb7d641b5fc52205c13ccbd6608dd5336f99bfedcf7aeaeaf12c06e9def86a3f2704d6fc7eabb6b9c972afffe5e7d1ca34a602706200849df059dc21c59c917709f791df73b7c93833d77bc5af16ec7011ba84f2f05212616e676594ae54579437b311f9d97edf4e56cc075cabfd4e8b0de0368a3d3cc2b6521915b9a9631fb342085055eb2f8fc2ccb4117e2f225e7374df6b94f3778301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405ffd5b13251d3b19ebc0809b26391532b6b3c5b8da76b7c5b4a9ec674cda91eb6b60d9158bc46eb5a440683701de534acc294ad223ab07846508da9f3cc617b6",
+          "id": "011d9504f3a414c8c71f39fe198d7277c838a11d66670888fcd5292d0ce86158",
+          "key": null
+        },
+        {
+          "bytes": "83a5005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258200a263c196627785ccb67eb3f17c5276120c9a567a76255f2e1b88a6657b8721d03582065821ddf123eb794b914c213be4449f7aa60fe67d7a97786da28e2196a372ffe04581870b3c72df6615e314ec4f2beabc6ebf2d30ea8f4be980ab758bb44de50200d4b874837cfe9d782b25de1292037142d1773f8f088cfa7acf330f1a34f91e3655d10f3dca518481ca4300ba56d39f25febdc4d5aca94661f3ce96b383c6f5e93c82b6ae1e267decdec7a4f9fc45a1a08e094e4dbf91bea53c483907846de6e4eb2d6b633d438938b01b25299a3c9bca5a30a552ea9001d4d6b9541f41df75525ed58326b6015ebdfc70aeb1d82e1a24a2a4519216a1d14fb9ec1cea3811089b248c1924ef032c4dfd822486d26278647b02d016d30878301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58401770fc03ecde6d339b4d5ce52b894874773fb10d30095039762c72be92496a9e530e4c8f00f55b475fcb45cf85d0984130480f5d44c90051ee278491ac5daabb",
+          "id": "c7cfa3b6c2327a4587cb827d7ae99fc3ddfcbd2d16190b573310ee0eabc578f6",
+          "key": null
+        },
+        {
+          "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820eb280dd6cbbb9882809c678a243d6638c9d4a42624771f3c78a9a5d10b90d1a5035820b76eba2042fc3471131f4044c176b7c4fa2c69b1249829044ec5ccaa145e16cd0458188aa4d7051a40f019f44f4e2dc3a19f07b282e200f3976025055820ef21e987eecede68cbb2be22fe7227d4ff99e128d93b6829661be4975df598dd58dd89f40bffbe91edd5807149c54afa7e86c7c33ccd3de7b6c328d846f31563dc43fa822a9ea29cd8bb2924baa8c2f5141cd6a28c60e81e26fc64ce4593e129ed35d697eed5b933a9c76a25bd23e15c48a6fb7b072237e0a3c4b5d06deb1d6ca64caaf9e5cede8cd84408f985bbf29c6b24265a8e10c9836d54c373b79dbefe401ef859cc197f73c6d645e857786373ab2e54bbc8c04d0382535523cf9c1529e4684caf059995153d11c7bb73452294fd2cd3c27728f88b9d91e586bc47ca4cbf00632e26bdd2bdd1a1c215c2c23ab8ca3bdf6dcdd6c6c3346765a9a6a8f88301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58407c0170072dc2ae1bc727e7b54068fa164ecc9976ab29b2034b4650665a58435ff52a2bb1d5e70545b3aafff9bc055f44fb374f29a35a627b07da854eddfc23d7",
+          "id": "a31a8113e425acaa9200970380f74d6741a681398f549fb2163fd9c1cc911509",
+          "key": null
+        }
+      ],
+      "answer": {
+        "notes": [
+          "G6.1"
+        ],
+        "rule": null,
+        "says": "a Statement act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+        "verdict": "pass"
+      },
+      "name": "held: previous names a private act held without its key: its line is unchecked before it",
+      "tests": "G6.1, G9"
+    }
+  ],
+  "spec": {
+    "draft_24": "af5e41f9476deff36fb97397815b96293288d190f2fcf9e24d636465eefc0439",
+    "report_block_3": "99a3b2d6711c0541128e93c2d893b19f3eede2b9f24b9cdf40cc37d65a9a6d78",
+    "types": {
+      "report": [
+        "99a3b2d6711c0541128e93c2d893b19f3eede2b9f24b9cdf40cc37d65a9a6d78",
+        0
+      ],
+      "statement": [
+        "af5e41f9476deff36fb97397815b96293288d190f2fcf9e24d636465eefc0439",
+        1
+      ],
+      "terms": [
+        "af5e41f9476deff36fb97397815b96293288d190f2fcf9e24d636465eefc0439",
+        0
+      ]
+    }
+  }
+}

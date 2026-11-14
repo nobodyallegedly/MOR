@@ -38,6 +38,12 @@
 //!   collective needs, judged on its own sequence (F109): which agreement
 //!   is in force for an act, and whether its areas' holders consented.
 //!
+//! Agreements from scratch (draft 24; `docs/agreements-from-scratch/encoding-1.md`):
+//!
+//! - [`agreements_new`]: the bytes of the new acts (Terms, Statement, and the
+//!   report as a proposal), strict both ways, and the checks the bytes alone
+//!   allow. Beside the earlier module, which it neither reads nor changes.
+//!
 //! Development (F268):
 //!
 //! - [`development`]: what a specification declares that the library
@@ -55,6 +61,7 @@ pub mod money;
 pub mod hash;
 pub mod identity;
 pub mod agreements;
+pub mod agreements_new;
 pub mod lock;
 pub mod merkle;
 pub mod mmr;

@@ -866,6 +866,12 @@ def main():
         n += 1
         judged += 1
 
+    # The new Agreements acts (agreements-new/), judged again from encoding-1.
+    import agreements_new_check
+    k = agreements_new_check.main()
+    n += k
+    judged += k
+
     print(f"all {n} vectors agree ({judged} verdict vectors judged here)")
 
 
