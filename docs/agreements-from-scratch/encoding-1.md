@@ -40,7 +40,7 @@ Draft 24 has three answers for an act that does not hold, and this text keeps th
 | Statement | draft 24's, `SPEC_DRAFT_24` | 1 |
 | Report (a proposal) | the report block's third proposal's, `SPEC_REPORT_BLOCK_3` | 0 |
 
-A spec hash is computed as the core computes a MIR's from its file (Development rule 26; `Spec::mir_file_hash` in the core library): `tagged_hash("MOR/spec", {0 => 4, 9 => text})`, where `text` is the file's content with at most one final line break removed, and must be canonical text. **[lead]**
+A spec hash is computed as the core computes a MIR's from its file (Development rule 26; `Spec::mir_file_hash` in the core library): `tagged_hash("MOR/spec", {0 => 4, 9 => text})`, where 4 is the kind of a MIR in Development's numbering, and `text` is the file's content with its final line break removed if it has one (only one; nothing else is removed), which must be canonical text. **[lead]**
 
 - `SPEC_DRAFT_24` = `af5e41f9476deff36fb97397815b96293288d190f2fcf9e24d636465eefc0439`, of `docs/agreements-from-scratch/draft-24.md` as it stands on this branch.
 - `SPEC_REPORT_BLOCK_3` = `99a3b2d6711c0541128e93c2d893b19f3eede2b9f24b9cdf40cc37d65a9a6d78`, of `docs/lead/proposals/report-block-3.md`.
@@ -61,11 +61,11 @@ Draft 24, section 3: "Each field holds one kind of value". Each kind is written 
 | --- | --- | --- |
 | an act: a Terms act, a Statement, a report; a version; the root | its act id, `tagged_hash("MOR/act", outside)` | the act's encoded outside, which commits to its locked inside; the signature is not part of it (Envelopes, "How it fits together") |
 | the root of an agreement | the act id of its first Terms act | as any act |
-| a cMIP (in a socket, a K7 kind, a power's K7 kind) | its spec hash, `tagged_hash("MOR/spec", content)` | its specification's content, as Development gives it |
-| the body's words | the work hash, `tagged_hash("MOR/work", words)` **[lead]** | the words' bytes: for text, its canonical text as UTF-8 |
+| a cMIP (in a socket, a K7 kind, a power's K7 kind) | its spec hash, `tagged_hash("MOR/spec", content)` | its specification's encoded content, as Development gives it for its kind (E2's map is that content for a MIR's text) |
+| the body's words | the work hash, `tagged_hash("MOR/work", words)` **[lead]** | the words' bytes as they are; for text, its canonical text as UTF-8 |
 | an envelope (`envelope`) | the bake's act id (the core's bake is draft 24's envelope: section 9, item 8) | as any act |
 | the act of the envelope's chain cited (`envelope_at`) | that act's id: the bake's, where the Terms cite the bake; a transfer's otherwise | as any act |
-| a settlement (`settlement`; a line's `by`) | the Money act's id (a receipt or a claim) | as any act |
+| a settlement (`settlement`; a line's `by`) | the act id of the Money act that is the settlement (a receipt or a claim); never the payment's own id, where the two are different acts | as any act |
 | a payment (a report's call) | the Money act's id | as any act |
 | a role's `what` | a fingerprint its spot's cMIP (K5) reads | as that cMIP says |
 | a signer (a party, `for`, a line's `to`) | the identity hash | its genesis |
@@ -127,7 +127,7 @@ the same first items as E9; a role is never written here. Anything else is rejec
 receiver = uint / hash
 ```
 
-Anything else is rejected. A position that names no party named as a signer or a role (beyond the list, or an agreement's entry) is read: draft 24 answers that no one receives by these Terms, **not shown** (G1.4); the checker gives it as a note. *To name an agreement as receiver, whether or not it is a party, its root is written.*
+Anything else is rejected. A position (counting from 0) that names no party named as a signer or a role (beyond the list, or an agreement's entry) is read: draft 24 answers that no one receives by these Terms, **not shown** (G1.4); the checker gives it as a note. *To name an agreement as receiver, whether or not it is a party, its root is written.*
 
 **E13. Authors** are positions in `parties`:
 
@@ -135,7 +135,7 @@ Anything else is rejected. A position that names no party named as a signer or a
 authors = [+ uint]   ; sorted, each once (E18)
 ```
 
-An entry that is not an unsigned integer is rejected. A position beyond the list, or naming a party named as an agreement, makes the Terms **invalid** (G3.1: "an author who is not one of those parties makes them invalid").
+Positions count from 0, as in E12. An entry that is not an unsigned integer is rejected. A position beyond the list, or naming a party named as an agreement, makes the Terms **invalid** (G3.1: "an author who is not one of those parties makes them invalid").
 
 **E14. A power** is its kind and its rule:
 
@@ -174,7 +174,7 @@ Anything else is rejected. It is always written, in Terms and in Statements (dra
 
 - **No empty list.** A list field holds one or more entries. A list with nothing in it is left out: absent means none (no power, no call, nothing relied on). An empty list is rejected. The one exception is `previous` (E17), which writes "none" as `[]`, as `prev` does.
 - **Sets are sorted.** `authors`, `relies_on`, `powers`, `calls`, `answers`, `resolves`, and a report's `relies_on`, are sets: their entries are in the bytewise order of their deterministic encodings, as a map's keys are, and each entry appears once. An entry out of order, or twice, is rejected. Order carries no meaning in them. **[lead]**
-- **Two lists keep the writer's order**, because positions in them are named: `parties` (by `authors` and `receiver`) and a report's `lines` (by a later line's `closes`). The same party twice in `parties` is rejected.
+- **Two lists keep the writer's order**, because positions in them are named: `parties` (by `authors` and `receiver`) and a report's `lines` (by a later line's `closes`). The same party twice in `parties` (the same bytes) is rejected; two roles that are meant as two seats differ in their bytes (in their spot's parameters, for instance), and a signer named directly and the same signer able to fill a role are two different entries.
 
 **E19 and E20** are the presence rules of Terms and of a Statement (sections 4 and 5).
 
@@ -213,7 +213,7 @@ The keys follow the order of draft 24's table (section 3.1). **E19. Presence.**
 - `agreement` (1) is written exactly when `replaces` (0) is; one without the other is rejected.
 - `envelope_at` (12) is written exactly when `envelope` (11) is; one without the other is rejected (section 3.1).
 - `continues` (18) is written only beside `resolves` (17), and names one of its entries; otherwise rejected.
-- `parties`, `authors` and `body` (2, 3, 4) are required, except in a **resolving update**, written with both `resolves` and `continues`. Terms with `resolves` and no `continues` "resolve nothing, and are read as an act like any other" (G12.3), so they need all three. **[lead]**
+- `parties`, `authors` and `body` (2, 3, 4) are required, except in an act **written as a resolving update**, with both `resolves` and `continues`. This is a rule of the bytes only: whether the act in fact resolves a fork is the grammar's (G12.3), from other acts, and an act written so that resolves nothing is not rejected for lacking them. Nothing more is asked of its bytes here (see the report's questions on a resolving update). Terms with `resolves` and no `continues` "resolve nothing, and are read as an act like any other" (G12.3), so they need all three. **[lead]**
 - Every other field is optional.
 
 **What Terms show by themselves** (the checker answers **invalid**, the rule named):
@@ -277,9 +277,9 @@ amount = [ unit: hash, value: uint ]                  ; as Money writes an amoun
 line-ref = [ report: hash, line: uint ]               ; a report's act id, and a line's position in it
 ```
 
-**E21. The report.** A report names the call it answers (the block's R2: "A report that names no call is no report"); one without it is rejected. It names **one call** (the block's R2 [3]; draft 24, section 3.2). The call's task, where written, is 1 to 8. It carries **no `previous`**: it stands in no line (section 3.2). Its signer is the act's signer, on its outside. `relies_on` is a set of fingerprints (E18). *The acts a report relied on are its call's act, each line's `by`, and `relies_on`: each is named once, in the field that says why it is named.* **[lead]**
+**E21. The report.** A report names the call it answers (the block's R2: "A report that names no call is no report"); one without it is rejected. It names **one call** (the block's R2 [3]; draft 24, section 3.2). The call's task, where written, is 1 to 8. It carries **no `previous`**: it stands in no line (section 3.2). Its signer is the act's signer, on its outside. `relies_on` is a set of fingerprints (E18). *The acts a report relied on are its call's act, each line's `by`, and `relies_on`: each is meant to be named in the field that says why it is named, and `relies_on` for the rest. The bytes do not refuse an act named in two of these fields, or two lines with the same `by`; neither is rejected.* **[lead]** *The checker cannot tell, from bytes, whether `[act]` names a payment or Terms: a report naming Terms without the task is not rejected.*
 
-**E22. Lines** (K6's row). Each line is one of the five forms; anything else is rejected, and so is an amount that is not `[unit, value]`, and a `closes` that is not `[report, line]`. A receiving side's confirmation is a report whose lines are received lines. **Two amounts match** where their bytes are the same: the same unit and the same value (G11.4(c)). **"Still owed" can be named** by a later line (section 8.2, item 15): by the report it was stated in and its position in that report's `lines`, which a later passed-on line names in `closes`. Whether that later line closes it is a K6 cMIP's, as draft 24 says; the bytes only let it be said.
+**E22. Lines** (K6's row). Each line is one of the five kinds, written in the six forms above (a passed-on line with or without `closes`); anything else is rejected, and so is an amount that is not `[unit, value]`, and a `closes` that is not `[report, line]`. A receiving side's confirmation is a report whose lines are received lines. **Two amounts match** where their bytes are the same: the same unit and the same value (G11.4(c)). **"Still owed" can be named** by a later line (section 8.2, item 15): by the report it was stated in and its position in that report's `lines`, counting from 0, which a later passed-on line names in `closes`. Whether that later line closes it is a K6 cMIP's, as draft 24 says; the bytes only let it be said.
 
 ## 7. Among the acts held: `previous` (G6.1)
 
@@ -301,15 +301,15 @@ For one act, in this order, the first failing step giving the answer (invalid be
 4. An everyday act (E1, E3): no signer, **rejected**, E1; `prev` absent or of two entries, **rejected**, Envelopes rule 13; `objects` or `acks`, **rejected**, E3.
 5. The signature (E1): does not verify, **rejected**, E1; a scheme not implemented, remembered.
 6. The payload (E4 to E22): **rejected**, the rule named.
-7. What the payload shows by itself (sections 4 and 5), and with several acts, E23: **invalid**, the grammar rule named; every case found is listed.
+7. What the payload shows by itself (sections 4 and 5), and with several acts, E23: **invalid**; every case found is listed in `invalid`, and `rule` is the first of them, in the order of section 4's list (G2.1, then the roles' G10.1 and G2.1 by party, then G4.2, then G3.1), and G6.1 last.
 8. A scheme not implemented: **unknown**, E1. Otherwise **pass**, with the notes.
 
-Where an act fails several rules of one step, the checker names one; each vector fails one rule only. **The answer is written** (the binding's and the tool's `--json`): `{ verdict, act, id, signer, rule, says, invalid: [{ rule, says }], notes: [{ rule, says }] }`, `verdict` one of `pass`, `rejected`, `invalid`, `unknown`, `cannot open`, `not this encoding`. These words are the checker's: the grammar's answer words (shown, not shown, fork, valid, not valid, unchecked, with their qualifiers) are written with the grammar verifier, later (section 10, item 15).
+Where an act is rejected for several reasons, the checker names the first it meets and stops; which one is not fixed by this text, so each rejected vector fails one rule only. **The answer is written** (the binding's and the tool's `--json`): `{ verdict, act, id, signer, rule, says, invalid: [{ rule, says }], notes: [{ rule, says }] }`, `verdict` one of `pass`, `rejected`, `invalid`, `unknown`, `cannot open`, `not this encoding`. These words are the checker's: the grammar's answer words (shown, not shown, fork, valid, not valid, unchecked, with their qualifiers) are written with the grammar verifier, later (section 10, item 15).
 
 ## 10. Draft 24's section 10, item by item
 
 1. **Each field's kind.** E5 to E17: a fingerprint (E5), a list of fingerprints (E18), an identifier (E6), a socket (E7), and the words: a Statement's kind (E15), a power's kind (E14), a role's kind (E10), a call's "from whom" (E16), all as small unsigned integers. **Refused as shape** (rejected): every field holding another kind than its own, but for three that reach the grammar rules: a body's words or a socket's cMIP not a fingerprint (invalid, G2.1, E7, E8); a role's kind or `what` not one G10.1 allows (invalid, G10.1, E10); an entry of `relies_on` not a fingerprint (left unread, G2.2).
-2. **Required and optional fields.** E19 and E20. "None" for a first act's `previous` is `[]` (E17). A field section 3 does not give is rejected (E4): the bytes say that they do not allow it.
+2. **Required and optional fields.** E19 and E20. `relies_on` "if anything else is used": whether something else was used is not in the bytes, so the field is optional and its lack is never refused. "None" for a first act's `previous` is `[]` (E17). A field section 3 does not give is rejected (E4): the bytes say that they do not allow it.
 3. **Lists.** E18: the lists are `parties`, `authors`, `powers`, `calls`, `relies_on`, `answers`, `resolves`, and a report's `relies_on` and `lines`. Order matters only in `parties` and `lines`; the others are sorted. Duplicates are rejected. An empty list is never written: absent is the one form of "none", so an empty `powers` cannot be written, and no power is `powers` left out; an empty `data` socket is the field left out (one leg).
 4. **The entries of `parties`.** E9 and E10, told apart by their first item. A role is named by `authors` and `receiver` by its position in `parties` (E12, E13).
 5. **Fingerprints.** E5's table. One hash function, SHA-256, under the core's tags, which name the kinds apart (`MOR/act`, `MOR/spec`, `MOR/work`); an identity hash is a genesis's act id. A fingerprint is told from anything else by being a 32-byte byte string, in a field that holds one.
@@ -317,13 +317,13 @@ Where an act fails several rules of one step, the checker names one; each vector
 7. **A call.** E16: `[task, from]` in `calls`, nothing more, one per task. The payer's call made by default is not written (G11.7): a report names it by naming the payment, or its settlement (E21).
 8. **A report.** Section 6, a proposal: the call it answers by `[act]` or `[act, task]`, its `relies_on`, its signer on the outside, one call, no `previous`; the lines of K6's row, each with its amount and the act it came or went by; "still owed" named by `[report, line]`. Written under the block's own proposal's hash, so that Agreements' encoding only refers to it (E2).
 9. **An amount.** As Money writes one, `[unit, value]` (Money, "amount"); two match where their bytes are the same (E22).
-10. **A payment and a settlement.** Money's acts, named by act id (E5). How a payment names the version it read is Money's to say. A confirmation names the payment, or its settlement, as its call (E21). The buyer's assent and the payment are **two acts** (one signer per act; the assent is a Statement of this encoding, the payment a Money act); a verifier finds the payer's assent to the version a payment names as a Statement of kind assent, signed by the payment's signer, whose `terms` is that version.
+10. **A payment and a settlement.** Money's acts, named by act id (E5). How a payment names the version it read is Money's to say, and so is whether two settlements are "of the same payment" (G11.4(b)): that is Money's answer, handed to the grammar verifier, not in these bytes. A confirmation names the payment, or its settlement, as its call (E21). The buyer's assent and the payment are **two acts** (one signer per act; the assent is a Statement of this encoding, the payment a Money act); a verifier finds the payer's assent to the version a payment names as a Statement of kind assent, signed by the payment's signer, whose `terms` is that version.
 11. **Signatures by several people.** None: one act by each signer, matched as E24 says.
 12. **The parts for machines of a body.** A cMIP's output, not bytes of an act: not fixed here. Each socket's output is written with the grammar verifier and the stub cMIPs (section 9, item 3, of draft 24).
-13. **The place's answer, the clock's answer, an envelope and its chain.** Another layer's (section 8.1); not fields of these acts. This encoding writes only `place` and `clock` as identifiers (E6), and `envelope` and `envelope_at` as act ids (E5). No layer gives a transfer act yet, so no checker can tell from bytes that `envelope_at` names an act of the envelope's chain, but where it names the bake itself (`envelope_at` equal to `envelope`).
+13. **The place's answer, the clock's answer, an envelope and its chain.** Another layer's (section 8.1); not fields of these acts. This encoding writes only `place` and `clock` as identifiers (E6), and `envelope` and `envelope_at` as act ids (E5). No layer gives a transfer act yet, so no checker can tell from bytes that `envelope_at` names an act of the envelope's chain, but where it names the bake itself (`envelope_at` equal to `envelope`). The checker gives no answer about `envelope_at` either way: such Terms pass, with no note.
 14. **What a verifier is told** (on whose behalf it reads, which anchoring it accepts): not in an act's bytes; the grammar verifier's input, later.
-15. **The answer words.** The checker's answers are written in section 9. The grammar's answers, their qualifiers and the rule named, are written with the grammar verifier, later.
-16. **Limits on untrusted input.** None beyond the act format's: no data item deeper than 128 levels (Envelopes rule 2). No size of an act, a field or a list is fixed; relays and homes set their own policy, as for every act. The vectors rely on no limit.
+15. **The answer words.** The checker's answers are written in section 9; the only "who said it" the checker gives is the act's signer. The grammar's answers, their qualifiers and the rule named, are written with the grammar verifier, later.
+16. **Limits on untrusted input.** None beyond the act format's: no data item deeper than 128 levels (Envelopes rule 2). No size of an act, a field or a list is fixed; relays and homes set their own policy, as for every act. The depths at which a verifier stops following (G9.2; P2, P8) are the grammar verifier's, and not in these bytes; the checker follows nothing beyond one `previous`. The vectors rely on no limit.
 17. **Vectors for a late update.** No new field: the namings are in the bytes (`replaces`, `previous`, `answers`, `relies_on`, `terms`, `under`, `settlement`). Those vectors are the grammar's, with its verifier.
 18. **Vectors for the baker's rights.** They need the envelope's chain, which no layer gives yet (item 13): not written. This encoding gives the bytes of Terms that name an envelope and cite an act of its chain (E19).
 19. **The field `envelope_at`.** One fingerprint, the act id of the bake or of a transfer of the envelope's chain (E5), key 12, written exactly when `envelope` is (E19). Telling that it is of that envelope's chain is the layer below's (item 13). Its name stays draft 24's.
