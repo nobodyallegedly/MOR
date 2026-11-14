@@ -4,7 +4,7 @@
 
 *How his words are read: as one train of thought, later answers refining earlier ones; never one isolated sentence given more weight than the exchange gives it ("Be mindful of taking isolated sentences out of context and give them too much weight", 12 November).*
 
-*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I), "Don*t" (Don't), "everything else’s" (everything else), "could be simply done" (couldn't be simply done); and confirmed "referees" as referrers.*
+*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I), "Don*t" (Don't), "everything else’s" (everything else), "could be simply done" (couldn't be simply done), "labeled void by the grantee" (the grantor); and confirmed "referees" as referrers.*
 
 ## Current wish
 
@@ -251,6 +251,10 @@ The research is `docs/strangers-2026-11/`.
 **A late rival** (draft 20, pull request 175, section 8.2 item 10, A6: an update to a version already replaced, under that old version's update condition, makes a fork and stops every version since). The MOR lead's example: v2 made the update condition stricter; two of three later sign an update to v1, whose condition was two of three. The MOR lead: the bytes alone cannot tell late from simultaneous; leaning that where an order shows the update came after its version was replaced, it replaces nothing and makes no fork; where none shows, a fork as now. He: "Only the knots or anchoring can"
 - *Arrived at (to check):* only knots (what acts cite) or anchoring can show that an update came after the version it names was replaced. Where they show it, the update replaces nothing and is no tip of a fork. Where they do not, it is a fork, as draft 20 has it.
 - He added: "For the previous one, the likelihood that they interacted with enough acts to set an order is pretty high"
+- And: "We’ll have data after the simulation, 1000 extra identities will be deployed, pros, prosumers and consumers. We’ll get a better idea of what knots can do…"
+
+**Setting aside what an agent made** (draft 20, section 8.2 item 11, A15: may an agent withdraw, by counter signature, an assent it made for a party). The MOR lead leaned yes, within the limits handed to the agent. He: "Anything made under a grant can be labeled void by the grantee, if someone relied on it the act still shows, but it is not the tip anymore" Asked whether he meant the grantor: "Yes. I did mean the grantor, sorry."
+- *Arrived at (to check), pending his answer on scope:* the grantor may set aside an act made under the grant; where someone relied on it, it still shows, and it is no longer a tip. Whether this reaches acts already complete (all parties signed) is not yet answered.
 
 ## Not carried into this stint unless he says so
 
