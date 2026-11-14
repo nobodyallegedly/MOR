@@ -19,6 +19,7 @@
 - **Part K**: draft 18. One table for its seven changes, where each task number and word went, where the ledger's lines and the brief say more than the four exchanges it was written from, where each change landed, the table of the C session's questions with the reading taken for each, and draft 17's lists of open items, unchanged. From draft 18, `draft-18.md` holds the rules and `reasons-18.md` the reasons; `draft-17.md` and `reasons-17.md` stay in the repository.
 - **Part L**: draft 19. One table for its three changes, every number and word that changed, where the ledger's lines and the brief say more than the two exchanges it was written from, where each change landed, and draft 18's lists of open items, unchanged. From draft 19, `draft-19.md` holds the rules and `reasons-19.md` the plain words and reasoning; `draft-18.md` and `reasons-18.md` stay in the repository.
 - **Part M**: draft 20. One table for its changes, the table of the second C session's questions with the reading taken for each and where it now stands, Part B and the seams with the report block, where the ledger's lines and the brief say more than the three exchanges it was written from, draft 19's lists of open items, unchanged, and where each change landed. From draft 20, `draft-20.md` holds the rules and `reasons-20.md` the plain words and reasoning; `draft-19.md` and `reasons-19.md` stay in the repository.
+- **Part N**: draft 21. One table for its changes, where the ledger's lines and the brief say more than the four exchanges it was written from, where each change landed, and draft 20's lists of open items, unchanged. From draft 21, `draft-21.md` holds the rules and `reasons-21.md` the plain words and reasoning; `draft-20.md` and `reasons-20.md` stay in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -1983,3 +1984,152 @@ Each item is where a change touches something the two exchanges do not cover. Ea
 - **`reasons-20.md`:** the head; new passages under G1, G4, G5, G6, G7, G11, G12, G13 and G14, and in the last section, on the tasks; each marked "(draft 20)".
 - **`companion-3.md`:** the heading, and one note.
 - **`docs/lead/proposals/report-block-3.md`:** new.
+
+# Part N. Draft 21
+
+**Read for draft 21, and nothing else:** `docs/agreements-from-scratch/draft-20.md`, `reasons-20.md`, this file and `companion-3.md`, and `docs/lead/proposals/report-block-3.md` (branch `claude/agreements-draft-20`, pull request 175); and `docs/decisions.md` (branch `claude/lead-records-2`). Of this file, its head and Part M were read. Not opened: the old Agreements MIR, `docs/findings/`, `docs/agreements-inventory/`, `docs/agreements-marking/`, the research texts and the lower layers' texts. Draft 21 is draft 20 with five changes, and nothing else. Four exchanges of the ledger are brought in, each read as a whole, with all their lines: **"A late rival"**, **"Setting aside what an agent made"**, **"The buyer signs the offer"** and **"A thief's Terms"**. In each, the last arrived-at line replaces the earlier ones, and the MOR lead's withdrawn leans are not used. They answer draft 20's section 8.2, items 10 to 13.
+
+**The principles for every choice**, in the words of Nobody, allegedly: "this one supports and specifies the language for creating solutions", and "We need to think more in « tasks » and output. We need to think like MOR." And: "My words matter less than our words within that conversation do."
+
+## N.1 The changes, and where each comes from
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **A late rival** (draft 20's 8.2, item 10; A6). The MOR lead: the bytes alone cannot tell late from simultaneous; leaning that where an order shows the update came after its version was replaced, it replaces nothing and makes no fork; where none shows, a fork as now. He: "Only the knots or anchoring can" | G4.7 rewritten in its middle: a **late update** (section 2, new) replaces nothing and is no tip, where the knots or an anchoring show it came after the version it names was replaced; which knots count (every naming G13.1 reads), which anchoring counts (the place the replaced version names; the clock the agreement names; else the reader's), and the answer. Where neither shows it, a fork, as draft 20. G4.8(c), G4.11(a), G12.1, G12.7 follow. |
+| 2 | **Setting aside what an agent made** (item 11; A15). The last arrived-at line replaces the earlier ones. He: "It’s never set aside, it’s always update. Whoever agreed to what was signed by the agent is still covered, the same way as any updates of terms." | G5.7, new: no act sets aside an act made under a power; the grantor acts on it only by a version of the grant, an update of the agreement, or, before Terms are in force, a counter signature; whoever agreed keeps what that version gave them, as under any update. G4.10 says the counter signature sets nothing aside, and that an agent's assent is cancelled as the party's own, the party itself included. No reading of draft 20 set an agent's act aside after Terms were in force; nothing was taken out. |
+| 3 | **The buyer signs the offer** (item 12; A26). He: "A buyer signs terms of an agreement with unknown party, that requires the buyer to pay, as a consequence." And: "Exactly, it’s simply that his hash was unknown when the agreement was drafted and signed by its maker." | Draft 20's premise (a buyer signs a payment and no Terms) is corrected: section 2, "Buyer" and "Payment"; G11.1; G11.4(e); G11.6(b), rewritten in its last part: the Terms asked about a report of the buyer's leg are the version the payment names, where the payer's assent to it is held, so a path beyond the buyer's leg is whatever the offer's data socket names; G11.7, its doer. The payment still holds the task of paying and its call. |
+| 4 | **A thief's Terms** (item 13; A2). He: "Yes. We cannot stop the attempt. But his signature is not on the original envelope so the agreement should be made valid, the owner of the bake rights have to be a party of the agreement that rules the envelope." Asked: "Invalid yes, sorry." Then: "I don*t think it’s anything new. An agreement that points to an envelope already needs the baker (or the holder of the bakers rights) to be valid" | G14.2 asked of whether Terms that name an envelope count at all; G14.3 rewritten: invalid where they name neither the baker nor a succession (they never count, for anything, their receiver included, and stay readable); not shown, and counting for nothing until shown, where the acts held do not yet establish G14.2; unchecked where something is lacking. Section 2: G14.3's case is now an invalid act, and the line between invalid and not shown says so. G1.4 gives G14.3's answer first. |
+| 5 | The brief's, as housekeeping | The rules are in `draft-21.md`; the plain words and reasoning in `reasons-21.md`, which is `reasons-20.md` changed only where these changes touch it; this part is added here; `companion-3.md` is changed in its heading, one note and four rows; section 10 gains to items 10, 15 and 16, and an item 17. `report-block-3.md` is not touched by these changes, so no `report-block-4.md` is written (draft 21's section 8.1). `draft-20.md` and `reasons-20.md` stay in the repository. |
+
+Draft 20 had fourteen grammar rules and eight tasks; so has draft 21. Added: one clause, G5.7; one defined term, "late update" (Claude's word). No task, field or answer word is added or removed. Clauses that gain sentences or are rewritten: G1.4, G4.7, G4.8(c), G4.10, G4.11(a), G11.1, G11.4(e), G11.6(b), G11.7, G12.1, G12.7, G14.2, G14.3. Section 2: counter signature, buyer, payment, update, late update (new), invalid, the line between invalid and not shown. Two rows in section 5.2. P17, P18, P19. Costs: "A fork of Terms holds the agreement where it was", "Order without an anchoring is partial", "Ownership is as wide as its place", "One leg, and no further", and one new, "What an agent signed stays signed".
+
+## N.2 Where the ledger's arrived-at lines, and the brief, say more than the exchanges
+
+The arrived-at lines are the MOR lead's, marked "to check". Each item is something a line, or the brief, says that the exchange, read as a whole, does not itself say, with what draft 21 does.
+
+**"A late rival".**
+
+1. **"Where they show it, the update replaces nothing and is no tip of a fork. Where they do not, it is a fork, as draft 20 has it."** The MOR lead's lean, which his words answer by naming what can show the order. Read as taking the lean; written in G4.7.
+2. **"only knots (what acts cite) or anchoring can show"**. Which knots, and which anchoring, the exchange does not say. Draft 21 reads every naming G13.1 reads, and the place and clock the agreement names (G4.7(a), (b); draft 21's 8.2, items 1 and 2).
+3. **"For the previous one, the likelihood that they interacted with enough acts to set an order is pretty high"** and **"We’ll have data after the simulation, 1000 extra identities will be deployed, pros, prosumers and consumers. We’ll get a better idea of what knots can do…"** His; not rules. Draft 21 writes nothing for them; `reasons-21.md` quotes them under G4.
+
+**"Setting aside what an agent made".**
+
+4. **The first two arrived-at lines** ("the grantor may set aside an act made under the grant …"; the scope "pending his answer") are replaced by the last, and not used. So is the MOR lead's "until complete" lean, which the last line withdraws, and his first lean (an agent may withdraw, within its limits).
+5. **"Whether the grantor may also withdraw, by counter signature, an assent the agent made before an agreement is complete (A15) follows the same reading: the grantor's act is an update of what was made in its name."** The MOR lead's. His words do not speak of the counter signature before completion. Draft 21 does not call a counter signature an update; it says what follows from his words with the rules the text has (G4.10, G5.7(c); draft 21's 8.2, items 5 and 10).
+6. **"grantee"**, his word, corrected with him to "grantor" ("Yes. I did mean the grantor, sorry."); the ledger's typo list records it.
+
+**"The buyer signs the offer".**
+
+7. **"So the buyer is a signer like any other"**. The MOR lead's; his "Exactly" follows it. Taken.
+8. **"a path beyond the leg for the buyer is whatever the offer's own Terms (their data socket) name"**. Followed. Draft 21 also asks the Terms of a receiving side reached through another agreement, as G11.6(a) already reads any report carrying the data of people under different Terms (draft 21's 8.2, items 6 and 11).
+9. **The MOR lead's lean** (a buyer who wants to see further signs up to a data path): withdrawn by the exchange, not used.
+
+**"A thief's Terms".**
+
+10. **The first arrived-at line** ("Terms that rule a baked envelope count only if whoever holds the baker's rights is a party … invalid: it never counts, for anything, its receiver included") is replaced by the last. What it said of "for anything, receiver included" is the meaning of "invalid" in this text (section 2), and the brief asks it; draft 21 writes it.
+11. **"Draft 20's narrower reading misread that rule; the grammar is to say it plainly."** Followed (G14.3). His word is "party"; G14.2 asks "bound by them", an assent in the party's name (draft 18's reading). Kept; its cost is listed (draft 21's 8.3, item 8).
+12. **"should be made valid"**, his, corrected with him to "invalid" ("Invalid yes, sorry."); the ledger's typo list records it.
+13. **The MOR lead's lean** (keep draft 20's reading): not used.
+
+**The brief.**
+
+14. **"Say which knots count, as precisely as a verifier needs."** Read as: name the fields, the acts, and the test, so that two builders give the same answer on the same acts (G4.7(a)); vectors for it are section 10, item 17.
+15. **"Take out any reading in draft 20 that sets an agent's act aside."** None was found after Terms are in force. Before, the counter signature is kept and said not to set anything aside; an agent's act that is a tip of a fork is the fork rule, left as draft 20 has it (draft 21's 8.3, item 5).
+16. **"Rework G11.6 and G11.7, and any place that read the buyer otherwise"**: also section 2 ("Buyer", "Payment"), G11.1, G11.4(e), and the cost "One leg, and no further".
+17. **"Where these touch `report-block-3.md`"**: they do not (draft 21's section 8.1).
+
+## N.3 Where each change landed
+
+- **Head:** the file names, Part N, "What draft 21 is", the block's third proposal standing.
+- **Section 2:** counter signature; buyer; payment; update; late update (new); invalid (G14.3's case moved into the list of invalid acts; "one answer is invalid without its act being so" gone); the line between invalid and not shown.
+- **G1.4** (Terms that name an envelope). **G4.7** (a late update; (a) to (d), new); **G4.8(c)**; **G4.10** (sets nothing aside; an agent's assent); **G4.11(a)**; G4's lie and protects. **G5.7** (new); G5's lie and protects. **G11.1**; **G11.4(e)**; **G11.6(b)** (the buyer's leg); **G11.7** (its doer; the buyer's own leg beyond it). **G12.1**; **G12.7**. **G14.2** (asked of whether the Terms count at all); **G14.3** (rewritten: (a) to (d)); G14's lie and protects.
+- **Section 5.2:** the row on a late rival reworded; one row added (a grantor who regrets an agent's act).
+- **Section 6:** P17, P18, P19.
+- **Section 7:** four costs reworded, one added.
+- **Section 8.1:** the seams: no fourth proposal. **Section 8.2:** rewritten; items 14 to 17 kept under their numbers. **Section 8.3:** rewritten: what is left as draft 20 has it. **Section 8.4:** a list "From draft 20's list" added.
+- **Section 9:** item 15. **Section 10:** items 4 (a pointer), 10, 15 and 16; item 17 new.
+- **`reasons-21.md`:** the head; the plain words of G14; new passages under G4, G5, G11, G12 and G14, each marked "(draft 21)".
+- **`companion-3.md`:** the heading, one note, and rows #11, #15, #27 and #47.
+
+## N.4 Draft 20's lists of open items, unchanged, and what draft 21 does with them
+
+What follows the notes below is sections 8.2 and 8.3 of `draft-20.md`, moved and not edited. "This text" and "draft 20" there mean draft 20.
+
+What draft 21 does with them:
+
+- **8.2, item 10** (A6, a late rival): answered by "A late rival" (G4.7).
+- **8.2, item 11** (A15, withdrawing an assent made by an agent): answered by "Setting aside what an agent made" (G5.7, G4.10).
+- **8.2, item 12** (A26, a buyer's path beyond the leg): answered by "The buyer signs the offer" (G11.6(b), G11.7).
+- **8.2, item 13** (A2, the Terms of a thief): answered by "A thief's Terms" (G14.3).
+- **8.2, items 14 to 17** (a pending payment, money still owed then paid, pools, the modules): still open, kept in draft 21's section 8.2 under the same numbers.
+- **8.3, item 13** (nothing tested against draft 20): nothing was tested against draft 21 either.
+- Everything else there is still open.
+
+**Section 8.2 of `draft-20.md`: For Nobody, allegedly**
+
+Draft 20 is draft 19 with five changes (`history.md`, Part M). Three exchanges of the ledger are brought in, each read as a whole: "An agent and the judicial", "The encoding first" and "After box 2". In plain words:
+
+- **The second C session's questions are answered in the text.** A stranger built a verifier from draft 19 alone and had to choose a reading in 46 places; 33 of them change an answer a verifier gives (A1 to A33). Each now has its answer written where a builder meets it, as precisely as a verifier needs, so that the question no longer arises. The table is in `history.md`, section M.2. Of Part B (B1 to B13), the form is fixed where it was cheap, and the rest is listed (section M.3).
+- **The seams with the report block are closed on this text's side**, and what the block would need is written as a proposal, `report-block-3.md`, for the MOR lead (section 8.1).
+- **What could not be decided at all** (a pending payment, money still owed and then paid, pools, the modules) is listed below, items 14 to 17, with what the encoding or a cMIP would need to settle each.
+- **An agent acts within the limits handed to it.** An agent who holds a power to assent for a party may assent, for that party, to an update that changes the judge, where the power's rule says yes; the update still needs the update condition's answer. In his words: "Your risk, your dial" (G5.6(f)).
+- **The encoding comes next.** Section 10 lists every place where this text leaves a choice to the bytes, so that the encoding session can start from it. In his words: "I think it’s best to do this properly first."
+
+**What the three exchanges answer, of draft 19's list.**
+
+- *Its 8.2, item 10* (an assent made under a power, to an update that changes the judge): answered by "An agent and the judicial". It is that party's signing where the power's rule says yes, and the update still passes the update condition (G5.6(f)).
+- *Its 8.2, item 15* (a possible typo): answered. The ledger records his correction: "could be simply done" is "couldn't be simply done".
+- *Its 8.3, item 17, and section 9, items 1 and 15* (nothing tested; the act as bytes; vectors): the order is now the ledger's: this draft, then the encoding of the new acts, its checker and vectors, then the full box; no further text-only box ("After box 2").
+
+**Where draft 20 does not take the second C session's reading.** The brief asks that its reading be taken unless it contradicts an exchange or the text's own principles. Eight were not taken as built, and one was made exact. Each is Claude's reading, for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+1. **A5, "built on a tip".** The C session read it one naming deep. Draft 20 reads it as far as the naming goes (section 2; G12.2). Why: "nothing built on either tip counts", and his "something that stops both tips until resolved" ("A fork, from MOR's side"); an act two namings away would otherwise count while the act it rests on does not.
+2. **A9, the counter signature under an `in_force` cMIP.** Taken, and made exact in one case: where an assent names the counter signature but the Terms could have been in force without it, the order is **not shown**, where the C session answered "before" (G4.10, G13.3). Why: the text's own "where neither names the other, … not shown".
+3. **A10, when replacing Terms came into force.** The C session took the later of the replacing act's position and each named signer's first assent. Draft 20 takes the first position at which the replacing Terms are valid and in force, counting only what the place shows up to it (G5.4, G13.3). Why: the C session's reading leaves out the update condition, which alone decides whether the version replaces (G4.8); under the defaults the two agree.
+4. **A14, an agreement that signs by all its signers.** The C session answered unchecked for any act but an assent. Draft 20 says which acts are one signing: the same act but for the signer and its own line (G1.2). Why: unchecked is said where a rule cannot be applied for lack of something (G9); here nothing was lacking but the sentence.
+5. **A15, an agreement's assent and a counter signature.** The C session let a counter signature cancel only its own signer's assent made in their own name. Draft 20 also lets one made for a party under a power of kind `counter_signature`, or as an agreement's signature, cancel the assent counted in that party's name (G4.10). Why: section 3.1 already lists `counter_signature` as a kind of power, which the C session's reading would leave with nothing to do.
+6. **A20, `previous` that names a record which is no act of an agreement.** The C session read it as an act not held. Draft 20 answers **invalid** (G6.1). Why: the verifier holds what is named, and unchecked is for what it lacks.
+7. **A28, a baker who fills a role.** The C session answered not shown always. Draft 20 says G14.2(a) is met where the acts held show the baker filling the role, with an assent in the baker's name (G14.3). Why: G10.3, "Each signer who fills a spot is a party in it from then on".
+8. **A30, a payment that names a version further along a branch set aside.** The C session answered not shown, as a limit of its build. Draft 20 says what "as if the tip had stood alone" means, so that it can be read (G12.5). Why: G12.5 already says such a payment is read so.
+9. **A21 to A24, A27,** and the rest: taken, and written where each arises (`history.md`, section M.2). In A24 one thing is added: a reader is also a side, for silence, where it is the receiver for the act of an agreement the Terms name as a party (G11.4(d)), as G11.2 reads a receiving side.
+
+**For him, undecided.** No answer to A1 to A33 was found to change something Nobody, allegedly, decided. Four are put before him all the same, because the reading reaches further than his words do. Each is written in the text as the least reading; none is decided.
+
+10. **A6, a late rival.** Any two updates of the same Terms are a fork, however late the second: two of three, where the update condition lets two of three update, can take an agreement back to a version long since replaced, and every version since stops until the fork is resolved (G4.7; section 7). The way out can be said in the language: an update condition that answers not valid for an update whose original is no longer the last version (section 5.2). Whether he wants the grammar itself to refuse a late rival is for him.
+11. **A15, withdrawing an assent made by an agent, or by an agreement.** His words: "Yes, a counter signature is a good idea. Nothing counts until all parties have signed". Draft 20 reads the counter signature as available to whoever may assent in a party's name (point 5). Whether he means that is for him.
+12. **A26, a buyer's path beyond the leg.** His words: "Leg by leg by default. Buyer needs to receive confirmation payment has been received." A buyer signs a payment and no Terms, so draft 20 answers no path beyond the leg for a report of the buyer's leg, whatever the receiving side's Terms name (G11.6(b)). "By default" may mean that a buyer could agree to more; how is not said.
+13. **A2, the Terms of a thief.** His words, of a lone sale: "That’s when we look at the envelope of the work. Who baked it? So, the thief should be at least forced to edit it and bake it again." Draft 20 reads "invalid" in G14.3 as an answer about the work: Terms for a baked work that name neither the baker nor a succession are still read by every other grammar rule (a receiver among them), and every answer about the work that rests on them says that they cannot count for it (section 2; G14.3). Whether he wants such Terms to count for nothing at all is for him.
+
+**What could not be decided from the text at all.** The second C session left four things unbuilt because nothing in the text or below it says them. Each stays open; what would settle it:
+
+14. **A payment that is pending** (section 9, item 7). No answer word exists for it here. *To settle it:* the Money layer's encoding says whether a payment or a settlement has a pending state, as which act, and what it names; then a cMIP of K6, or the encoding of the answer words (section 10), says what a verifier shows while it lasts. The least reading until then is unchecked (G9; section 8.3).
+15. **Money shown as still owed, and later paid** (P20). *To settle it:* the encoding of a leg report's lines (K6's row) gives a "still owed" line something a later line can name (the report it was stated in, and the amount and to whom); then a cMIP of K6 says whether a later report's "passed on" line, naming it, closes it. Until then a "still owed" line is shown as stated and tied to nothing.
+16. **Pools** (P6). *To settle it:* a cMIP of K6 for the pool, with a rule as its module, says when it is divided and how a claim is counted; and the encoding of a leg report says how one line names several settlements, or one settlement covers many counts, and whether one report answers several calls (the block's open point 3). Until then one report line names one settlement.
+17. **The modules** (a judge, a tally, identity, assurance, delivery, standing; section 5.3). None is a socket. *To settle each:* a cMIP in a socket that names it as a module, and the encoding of what that cMIP is handed and gives back (section 10); for the judge, also where in the Terms it is named (G5.6(c)). Nothing in the grammar needs to change for any of them.
+
+**Where the ledger's arrived-at lines say more than the exchanges.** The arrived-at lines are the MOR lead's readings, marked "to check". Draft 20 follows the exchange where a line says more. The full list is in `history.md`, section M.4; the ones that touch what a rule says:
+
+18. **"An agent and the judicial": "unless the delegation says otherwise".** The MOR lead's. His words: "The agent is operating within the limits (layer. Sockets, cMIPs and modules) that were handed to it." Draft 20 writes that the power's rule says how far the agent reaches, and that a verifier reads its output (G5.6(f)); it writes no default of its own beyond that.
+19. **"The encoding first": "The grammar verifier in Rust is a later, larger step; the players may start once the encoding and its checker exist."** The MOR lead's; the exchange does not say it. Draft 20 writes nothing about it.
+20. **"After box 2": "as the MOR lead's wording".** The exchange is his "Agreed" to the MOR lead's proposal. Draft 20 writes the answers to the 33 as technical wording, the MOR lead's to change, and lists where a reading reaches further than his words (items 10 to 13).
+
+**Words.** "Built on a tip … however many namings lie between", "one signing", "who is a side, for silence", "as if the tip had stood alone" (as now defined) and "rejected" for a field of the wrong kind are Claude's. "Your risk, your dial" is his.
+
+**Section 8.3 of `draft-20.md`: Left as draft 19 has it**
+
+Each item is where a change touches something the three exchanges and the MOR lead's wording do not cover. Each is left as draft 19 has it, or says the least that lets the text be read, and says so.
+
+1. **How a role is named** by `authors` and `receiver`. Section 3.1 lets both name a role and gives no way to point at one; the C session gave each role a label. Left to the encoding (section 10).
+2. **The new version's own `in_force`** (G4.1, G4.8): as draft 19 (its 8.3, item 1).
+3. **Terms that no one signed** (G4.8(a)): as draft 19.
+4. **An assent that is a tip in its signer's own line** (P9): as draft 19. Whether its signer is bound meanwhile is not said.
+5. **The numbers at which a verifier stops** (G9.2; P2, P8): not fixed; a fourth thing it may stop at is now named (counter signatures that lean on one another), and its number is not fixed either.
+6. **A report in no line** (section 3.2, from B3): these grammar rules read none; whether the block makes a report stand in its signer's line is the block's.
+7. **Who the judge is** (G5.6(d), B10): still a duty of the cMIP author; a verifier applies the cMIP and cannot see inside it.
+8. **G3.2 and G12.8** (B11): duties of cMIPs and of clients, which a verifier does not check.
+9. **A delegation's conditions beside a named update condition** (G5.5): where both are named, the update condition is the whole answer, and the words' conditions are read only by its cMIP (from A33). Whether people who wrote a notice in the words expected it to be read by the grammar is not said.
+10. **A filling within a branch set aside** (G12.5, from A31): no later version is named as changing its rights. Whether the continued line's versions should reach it is not said.
+11. **A payment that is pending** (draft 19's 8.3, item 11): the least reading is still unchecked (item 14 above).
+12. **Everything draft 19 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section M.5. It is summed up in section 8.4.
+13. **Nothing was tested against draft 20.** The second C session's verifier was built from draft 19. The next step is the encoding and vectors, not a test of this text alone.
