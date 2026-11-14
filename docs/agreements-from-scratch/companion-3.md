@@ -1,4 +1,4 @@
-# Agreements, from scratch: companion (written for draft 8, kept up to draft 17)
+# Agreements, from scratch: companion (written for draft 8, kept up to draft 18)
 
 13 November 2026. A record of work by Claude: how the research is used in `draft-8.md`. Not a decision, and not part of the grammar. Nothing here is read by a verifier.
 
@@ -19,6 +19,8 @@
 *Changed for draft 16, only where its changes touch this file (`history.md`, Part I): rows #41 and #43 in section 2, and the heading. A contest is an act of the grammar, made against an offer or a vow (rule 11.8). A fork is resolved by an update that continues one tip, and "join" is no longer a term (rule 12). Of a condition the grammar reads only whether it has triggered or not, as its cMIP answers (rule 10.7): where rows #31 and #48 speak of a condition, and #48 of rights "no longer in force", read that. No rule or task number changes (rule 12 gains clauses 12.7 and 12.8), so everything else reads the same against `draft-16.md`. Each rule's reasoning is now in `reasons-16.md`.*
 
 *Changed for draft 17, only where its one change touches this file (`history.md`, Part J): rows #28, #31, #47 and #48 in section 2, one sentence added at the end of section 1, and the heading. The condition a version names is its update condition: given the version in force and a proposed update, its cMIP answers valid or not valid (rule 4.11, new). Nothing triggers, and the note above for draft 16 on rule 10.7 no longer holds: rule 10.7 says only what is left. The rule of a power for replacement says who may sign (rule 5.2). No rule or task number changes (rule 4 gains clause 4.11), so everything else reads the same against `draft-17.md`. Each rule's reasoning is now in `reasons-17.md`.*
+
+*Changed for draft 18, only where its changes touch this file (`history.md`, Part K): rows #2, #11 and #47 in section 2, this note, and the heading. From draft 18 a task is a socket: a field of an act where one cMIP plugs in and answers one question. The table below keeps draft 8's task numbers, as it always has. They are no longer `draft-18.md`'s: there, K1 to K7 are the seven sockets. Read against `draft-18.md`, the numbers below land so: K1 (Body) is K1, the socket `body`; K4 (Rule) is a rule, which sits in the socket `in_force` (K2), in a power (K3) or in `condition` (K4), or is a module of another socket's cMIP; K8 (Control) is K6, the socket `control`; K11 (Kind) is K7, a Statement's `kind`; K12 (Spot) is K5, each role's spot; K2 (Identity), K3 (Assurance), K5 (Witness), K7 (Tally), K9 (Delivery) and K10 (Judge) are modules a cMIP may use (`draft-18.md`, section 5.3); K6 (Place) is the place, which is no cMIP; K13 (Standing) is a cMIP a reader chooses, named by no act. Where a row says "the power's K4 rule", read the rule in that power's socket (K3). The same work baked again by someone else is shown beside each bake and never picked (rule 14.5, new). Where Terms name no update condition, an update is valid when everyone who signed the original signs it (rules 4.8 and 4.11). No grammar rule is added or removed, so every "rule" number below still reads the same against `draft-18.md`.*
 
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
@@ -49,7 +51,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | # | Task | Where it lands in draft 8 |
 |---|---|---|
 | 1 | Fix | Terms `body`; rule 2 |
-| 2 | Identify | K2; "whoever does X": a spot (rule 10), K12; kind fits rests on K2; who baked a work: its envelope (rule 14.1) |
+| 2 | Identify | K2; "whoever does X": a spot (rule 10), K12; kind fits rests on K2; who baked a work: its envelope (rule 14.1); who else baked the same work: shown beside each bake, never picked (rule 14.5) |
 | 3 | Able | K3; cost |
 | 4 | Align | rule 3; K1; K10 decides late |
 | 5 | Free | K3; cost |
@@ -58,7 +60,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 8 | Order | Order layer; rule 7; order from what acts cite (rule 13.3) |
 | 9 | Keep | property (durable) |
 | 10 | Check | property (verifiable) |
-| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14) |
+| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14); the same work baked again by someone else is made legible, not forbidden: ranking is a client's, judging a cMIP's or an arbiter's, and the baker may contest (rule 14.5) |
 | 12 | Sum | K4; rule 7; from a pool: P6 |
 | 13 | Transfer | Statement of a K11 kind under a power; rule 7; K8 if value moves; to a work: its receiver, an identity or an agreement (rules 1.3, 1.4), for a split its own deal with its service (the service's cMIP, K8); the one who receives, as a spot of kind received (rule 10); a baker's rights: along the work's own sequence (rule 14.2) |
 | 14 | Admit | power; rule 5; a newcomer foreseen: a spot (rule 10) |
@@ -94,7 +96,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 44 | Final | the power's K4 rule |
 | 45 | Enforce | from posted value: K8; otherwise cost; what a proven liar loses in standing: K13 |
 | 46 | Complete | Statement of a K11 kind |
-| 47 | Amend | a new version, with the signatures the last one requires (rules 4.8, 5.2), and, where the last one names an update condition, one that condition answers valid (rule 4.11) |
+| 47 | Amend | a new version, with the signatures the last one requires (rules 4.8, 5.2), and, where the last one names an update condition, one that condition answers valid (rule 4.11); where it names none, the default: valid when everyone who signed the original signs it (rules 4.8, 4.11) |
 | 48 | End | nothing ends: an agreement only gets a new version, whose conditions say what becomes of the work and its shares (rule 4.9); an offer stops taking new identities, by a version or by what the version in force states, as its spot's cMIP reads them (rule 10.5); rights stop applying only through an update that the update condition answers valid, and nothing stops by itself (rules 4.11, 10.6, 10.7); a delegation is ended by its delegator (rule 5.5) |
 | 49 | Leave | Transfer of a part, or a new version whose conditions divide (rule 4.9) |
 
