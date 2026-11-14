@@ -21,6 +21,8 @@
 - **Part M**: draft 20. One table for its changes, the table of the second C session's questions with the reading taken for each and where it now stands, Part B and the seams with the report block, where the ledger's lines and the brief say more than the three exchanges it was written from, draft 19's lists of open items, unchanged, and where each change landed. From draft 20, `draft-20.md` holds the rules and `reasons-20.md` the plain words and reasoning; `draft-19.md` and `reasons-19.md` stay in the repository.
 - **Part N**: draft 21. One table for its changes, where the ledger's lines and the brief say more than the four exchanges it was written from, where each change landed, and draft 20's lists of open items, unchanged. From draft 21, `draft-21.md` holds the rules and `reasons-21.md` the plain words and reasoning; `draft-20.md` and `reasons-20.md` stay in the repository.
 - **Part O**: draft 22. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 21's lists of open items, unchanged. From draft 22, `draft-22.md` holds the rules and `reasons-22.md` the plain words and reasoning; `draft-21.md` and `reasons-21.md` stay in the repository.
+- **Part P**: draft 23. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 22's lists of open items, unchanged. From draft 23, `draft-23.md` holds the rules and `reasons-23.md` the plain words and reasoning; `draft-22.md` and `reasons-22.md` stay in the repository.
+- **Part Q**: draft 24. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 23's lists of open items, unchanged. From draft 24, `draft-24.md` holds the rules and `reasons-24.md` the plain words and reasoning; `draft-23.md` and `reasons-23.md` stay in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -2243,3 +2245,213 @@ Each item is where a change touches something the four exchanges do not cover. E
 11. **The report block** (`report-block-3.md`): not changed, and no fourth proposal (section 8.1).
 12. **Everything draft 20 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section N.4. It is summed up in section 8.4.
 13. **Nothing was tested against draft 21.** The next step is the encoding and vectors.
+
+# Part P. Draft 23
+
+**Read for draft 23, and nothing else:** `docs/agreements-from-scratch/draft-22.md`, `reasons-22.md`, this file and `companion-3.md` (branch `claude/agreements-draft-22-la1p81`, pull request 177); and `docs/decisions.md` (branch `claude/lead-records-2`). Of this file, its head and Part O were read. Not opened: the old Agreements MIR, `docs/findings/`, the research texts, the report block's proposals and the lower layers' texts. Draft 23 is draft 22 with one change, and housekeeping, and nothing else. One exchange of the ledger is brought in, read as a whole, with all its lines: **"The envelope states its owner"**, with **"The baker's rights after a sale"** read for what it replaces. It answers draft 22's section 8.3, items 3 and 4.
+
+**The principles for every choice**, in the words of Nobody, allegedly: "this one supports and specifies the language for creating solutions", "We need to think more in « tasks » and output. We need to think like MOR.", and "Building blocks over solutions." And: "My words matter less than our words within that conversation do."
+
+## P.1 The change, and where it comes from
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **The envelope states its owner** (draft 22's 8.3, item 3: a succession within one agreement's own versions is not said, so a later version that drops the baker is invalid). The MOR lead leaned that the rights can travel through an agreement's own versions as well. He: "This is what I think… the chain in question is the one (or should be) of the envelope, not the one of the baker. The envelope tracks its baker and if that is transferred the envelope is updated with a new ID for those rights". The MOR lead read it as: the envelope has its own chain, starting with the bake; a transfer is a new act in that chain, signed by the current holder and naming the new one; Agreements reads the current holder from it; the succession and the rights cMIP passing rights in a body go; a double sale is a fork in the envelope's chain; that chain is the layer below's. He: "Yes. I think that is the cleanest approach and flips ownership to the thing being owned stating it" | G14.1: the envelope's chain, the transfer, the holder of the moment and the current holder, named and not defined; the current holder is an answer about what is latest, qualified. G14.2: Terms that name an envelope count only if its current holder is one of their parties, bound by them, as draft 22 reads "bound"; (a) and (b) are gone, and with (b) the succession; a double sale is a fork in the envelope's chain, read as that layer reads forks. G14.3: "Without the holder, nothing"; (a) to (c) read on the envelope's chain; G14's lie and protects lines. G14.5: one phrase. Section 2: **Chain**, **Succession** (no longer a term), **Bake** (the envelope's chain), **invalid** and the line between invalid and not shown. Section 3.1: `relies_on` no longer read by G14. K1's row. A row in section 5.2. P18. One cost in section 7. Section 8.1: what the envelope's layer must provide. |
+| 2 | **The baker's rights after a sale**, for what is replaced | Its rights cMIP in the body's socket, which passed the baker's rights, goes. Its reading of "bound by them" (any way G5.1 allows, an update condition included) stays, as the brief asks ("as draft 22 reads 'bound'"). |
+| 3 | **Kept as draft 22 has it** (the MOR lead's settlement, from draft 21's section 8.3) | Terms where the holder's place is not yet shown count for nothing until it is shown (G14.3(b)); draft 23's section 8.3, item 1. |
+| 4 | The brief's, as housekeeping | The rules are in `draft-23.md`; the plain words and reasoning in `reasons-23.md`, which is `reasons-22.md` changed only in its head, one sentence of the four words kept apart, and one passage under G14, marked "(draft 23)"; this part is added here; `companion-3.md` is changed in its heading, one note and rows #11 and #13 of section 2 and the row "Assignee" of section 3; section 9, item 8 and item 10; section 10, items 12, 13 and 18. `report-block-3.md` is not touched, so no fourth proposal is written. `draft-22.md` and `reasons-22.md` stay in the repository. |
+
+**In one line, what changed:** the holder of the baker's rights is read from the envelope's own chain, not from agreements, and Terms for an envelope count only with its current holder as a party, bound by them.
+
+Draft 22 had fourteen grammar rules and eight tasks; so has draft 23. No task, field or answer word is added or removed. G14.2's clauses (a) and (b) are merged into one; the defined term "succession" is withdrawn; "the envelope's chain", "transfer", "holder" and "current holder" are added, as words of the layer below, named and not defined. K1 produces one thing less.
+
+## P.2 Where the ledger's arrived-at line, and the brief, say more than the exchange
+
+The arrived-at line is the MOR lead's, marked "to check". Each item is something the line, or the brief, says that the exchange, read as a whole, does not itself say, with what draft 23 does.
+
+1. **"ownership of a baked work is stated by the work's own envelope, not by agreements".** His words are "flips ownership to the thing being owned stating it", in an exchange about the baker's rights. Read as the baker's rights only: shares are still read from a work's Terms (draft 23's 8.2, item 7).
+2. **"each transfer of the baker's rights, each signed by the holder of the moment and naming the next".** His words: "if that is transferred the envelope is updated with a new ID for those rights". The MOR lead's reading, which his "Yes" answers, says "signed by the current holder and naming the new one". Taken. Whether the "ID" may be an agreement's root is not said (draft 23's 8.2, item 8; 8.1).
+3. **"G14 reads the current holder from that chain: Terms for the envelope count only if that holder is a party, bound by them."** The MOR lead's reading, answered "Yes", says "Terms count if that holder is a party"; "bound by them" is the line's and the brief's ("as draft 22 reads 'bound'"). Taken. Of which moment "current" is said is in neither the exchange nor the line (draft 23's 8.2, item 1).
+4. **"The succession through agreements (G14.2(b)) and the passing of rights in a body go."** In the MOR lead's reading, answered "Yes". Taken; what is left of each is said in draft 23's 8.2 ("What is left of what goes").
+5. **"a double sale is a fork in the envelope's chain"**: in the MOR lead's reading, answered "Yes". The brief adds "read as that layer reads forks". Taken; that a verifier picks no branch itself, and answers not shown where that layer gives no holder, is Claude's (draft 23's 8.2, item 3).
+6. **"The envelope's chain is the lower layer's to define; Agreements names what it needs of it."** Taken: section 8.1. The five needs are the brief's list; their wording is Claude's. His "(or should be)" is read as: the layer below does not give it yet (draft 23's 8.2, item 9).
+7. **The brief's "say what is left of each, and of P18".** Done in draft 23's 8.2 and in P18.
+8. **What the exchange did not foresee.** That "invalid" for a thief's Terms (G14.3(a)) now rests on the envelope's chain as held, and so no longer sits on section 2's line between invalid and not shown. The brief says to leave such a thing as draft 22 has it and list it: draft 23 keeps "invalid", and names the conflict as a flaw for Nobody, allegedly (draft 23's 8.2, item 2).
+
+## P.3 Where the change landed
+
+- **Head:** the file names, Part P, "What draft 23 is", "What draft 22 was", the block's third proposal standing.
+- **Section 2:** **Chain** (one sentence), **Succession** (no longer a term), **Bake** (the envelope's chain), **invalid** (its envelope case), the line between invalid and not shown (its envelope sentences).
+- **Section 3.1:** `relies_on`, "Read by" (G14 removed).
+- **G14.1** (the envelope's chain, new paragraph); **G14.2** (rewritten: one clause in place of (a) and (b); "bound by them" kept; a double sale, new paragraph); **G14.3** (heading, opening, (a) to (d), the closing paragraph); **G14.5** (one phrase); G14's lie and protects lines.
+- **Section 5:** K1's row; one row of section 5.2 rewritten (the baker sells her rights).
+- **Section 6:** P18, renamed "The baker's rights".
+- **Section 7:** "Ownership is as wide as its place" (two sentences).
+- **Section 8.1:** the bullet on the envelope, replaced by what the envelope's layer must provide. **Section 8.2:** rewritten; items 14 to 17 kept under their numbers. **Section 8.3:** rewritten: draft 22's open items on the baker, and what is left. **Section 8.4:** its opening; a list "From draft 22's list" added.
+- **Section 9:** items 8 and 10. **Section 10:** items 12, 13 and 18.
+- **`reasons-23.md`:** the head; one sentence of "Four words that are kept apart"; one passage under G14, marked "(draft 23)".
+- **`companion-3.md`:** the heading, one note, rows #11 and #13 of section 2, and the row "Assignee" of section 3.
+
+## P.4 Draft 22's lists of open items, unchanged, and what draft 23 does with them
+
+What follows the notes below is sections 8.2 and 8.3 of `draft-22.md`, moved and not edited. "This text" and "draft 22" there mean draft 22.
+
+What draft 23 does with them:
+
+- **8.3, item 3** (a succession within one agreement's own versions): answered by "The envelope states its owner": there is no succession; a later version counts where the current holder is a party, bound by it (G14.2).
+- **8.3, item 4** (the baker after a sale): answered by the same exchange: her Terms count only while she is the current holder; selling twice is a fork in the envelope's chain (G14.2, G14.3(b)).
+- **8.2, items 5, 8 and 9** (the rights cMIP's two sockets; "once sold, the true baker is no longer needed"; "wiring"): overtaken, since no cMIP passes the baker's rights.
+- **8.2, items 1 to 4, 6 and 7** (how "bound by them" is read): stand, read of the current holder.
+- **8.2, items 14 to 17** (a pending payment, money still owed then paid, pools, the modules): still open, kept in draft 23's section 8.2 under the same numbers.
+- **8.3, items 1, 2 and 5:** still open, kept in draft 23's section 8.3, items 1, 2 and 5.
+- **8.3, item 8** (nothing tested against draft 22): nothing was tested against draft 23 either.
+- Everything else there is still open.
+
+**Section 8.2 of `draft-22.md`: For Nobody, allegedly**
+
+Draft 22 is draft 21 with one change, and housekeeping (`history.md`, Part O). One exchange of the ledger is brought in, read as a whole: "The baker's rights after a sale". In plain words:
+
+- **The baker's rights after a sale.** Draft 21 read "bound by them", for the baker and for whoever holds her rights, as an assent in that party's own name. So once a baker had sold her rights, every later version of Terms that name her still needed her own assent, and every later version of the holder's Terms the holder's own, whatever the update condition they signed said. Now "bound by them" means bound in any way the grammar allows, an update condition the party signed into the original included. A rights cMIP, in the body's socket, passes the baker's rights; once they are passed, the true baker is no longer needed, and the core accepts an update without her where the holder of her rights is bound by it. In his words: "not wether the core can solve it, but wether a rightscMIP can handle it in a way where the core accepts the update without the baker if the rights were sold" (G14.2).
+
+**What the exchange answers, of draft 21's list.** Its 8.3, item 8 ("Bound by them", for the baker): answered (G14.2). Its 8.2, item 12, where it says that G14.2 asks an assent in the party's name: overtaken by the same answer. Draft 21's 8.2 and 8.3 are kept, unchanged, in `history.md`, section O.4; its items 14 to 17 are still open, and are kept below under their numbers, since other sections point to them.
+
+**What follows, and is Claude's.** Each is written in the text as what the exchange asks of a verifier, as precisely as a verifier needs. None is decided; each is for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+1. **"Bound in any way the grammar allows" is G5.1, all three ways** (G14.2). The MOR lead's words in the exchange are "bound in any way the grammar allows (an update condition the holder signed into the original included)". The ways G5.1 gives are an assent in one's own name (a), an assent made for one under a power or as an agreement's signature (b), and an update its condition answers valid (c). Draft 21's "an assent that counts in that party's name" already reached (a) and (b); what is new is (c).
+2. **The party must still be named** (G14.2(a), (b)). G5.1(c) binds a party by an update whether or not the update names it; G14.2 asks, as before, that the baker, or the holder, be one of the parties of the Terms. So a version made without the baker's assent counts where it still names her and the update condition she signed answers valid for it; it does not count by (a) where it drops her.
+3. **The Terms replaced are asked too** (G14.2). Where the baker or the holder is bound by a version only through the Terms it replaces (G5.1(c)), whether those Terms bound them rests on those Terms, which name the envelope too, so G14.3 is asked of them as of any. Read as G14.3 already reads "every answer that rests on them".
+4. **"Before and apart from G14.3"** (G14.2). Draft 21 read whether Terms are a version, and in whose name an assent counts, before G14.3's answer about those same Terms, so that the question does not wait on itself. Draft 22 reads the update condition's answer the same way, since "bound by them" now asks it.
+5. **The rights cMIP's two sockets** (section 5.2). His word is "a rightscMIP"; the brief places it in the body's socket (K1), where draft 21 already reads to whom Terms pass the baker's rights. That an update needs no act of the baker is the update condition's answer (K4), in the Terms the parties signed. Section 2 already lets one cMIP fill several sockets; a row in section 5.2 says so for this case. No socket, field or answer word is added.
+6. **The protects line** (G14). It now names whoever bought the baker's rights. A record of what the rule does, not a new rule.
+
+**Where the ledger's arrived-at line says more than the exchange.** The arrived-at line is the MOR lead's reading, marked "to check". Draft 22 follows the exchange where the line says more. The full list is in `history.md`, section O.2; the ones that touch what a rule says:
+
+7. **"by an update condition the party signed into the original included".** In the exchange, the MOR lead's words, which his "Agreed" answers, are "an update condition the holder signed into the original included", of the holder; the arrived-at line says "the party". Draft 22 reads it of the baker and of the holder alike, since G14.2 asks "bound by them" of both, in (a) and (b); the change for the baker herself is what the brief asks ("every place that reads 'bound by them' for the baker").
+8. **"once sold, the true baker is no longer needed".** His words are "the core accepts the update without the baker if the rights were sold". Draft 22 writes that the baker is needed in no later agreement of the succession, and that in an agreement that names her she need only be bound, which an update condition may answer without her. It does not write that a sale takes anything from her otherwise (section 8.3, item 4).
+9. **"wiring, the MOR lead's".** How a rights cMIP is built is not written here: no part for machines is given a shape (section 10, item 12), and no default is given for a rights cMIP.
+
+**What could not be decided from the text at all.** Kept from draft 21, unchanged, under its numbers.
+
+14. **A payment that is pending** (section 9, item 7). No answer word exists for it here. *To settle it:* the Money layer's encoding says whether a payment or a settlement has a pending state, as which act, and what it names; then a cMIP of K6, or the encoding of the answer words (section 10), says what a verifier shows while it lasts. The least reading until then is unchecked (G9).
+15. **Money shown as still owed, and later paid** (P20). *To settle it:* the encoding of a leg report's lines (K6's row) gives a "still owed" line something a later line can name (the report it was stated in, and the amount and to whom); then a cMIP of K6 says whether a later report's "passed on" line, naming it, closes it. Until then a "still owed" line is shown as stated and tied to nothing.
+16. **Pools** (P6). *To settle it:* a cMIP of K6 for the pool, with a rule as its module, says when it is divided and how a claim is counted; and the encoding of a leg report says how one line names several settlements, or one settlement covers many counts, and whether one report answers several calls (the block's open point 3). Until then one report line names one settlement.
+17. **The modules** (a judge, a tally, identity, assurance, delivery, standing; section 5.3). None is a socket. *To settle each:* a cMIP in a socket that names it as a module, and the encoding of what that cMIP is handed and gives back (section 10); for the judge, also where in the Terms it is named (G5.6(c)). Nothing in the grammar needs to change for any of them.
+
+**Section 8.3 of `draft-22.md`: Left as draft 21 has it**
+
+Each item is where the change touches something the exchange does not cover. Each is left as draft 21 has it, or says the least that lets the text be read, and says so.
+
+1. **Terms where the baker's place is not yet shown** (G14.3(b)). They count for nothing until it is shown, as draft 21 has it: the MOR lead's settlement, from draft 21's section 8.3 ("unchecked is not passed"). Draft 22 changes only what "shown" asks: an update condition's answer now shows the baker, or the holder, bound, where before only an assent did.
+2. **The new version's own `in_force`** (G4.1, G4.8). Whether a version that the update condition answers valid without the baker is in force is G4.1's, by that version's own `in_force`, as draft 21 has it. A version that names the baker as a signer and carries no `in_force` is in force, by G4.1's default, only with an assent in her name. A rights cMIP that means to do without her fills `in_force` too, or the version says otherwise. Whether a party is bound under G5.1(c) by a version that is valid and not in force is the question draft 19 left open (its 8.3, item 1), and is still open.
+3. **A succession within one agreement's own versions** (G14.2(b)). A succession is agreements, each naming in `relies_on` Terms of another agreement for the same envelope, as draft 21 has it. Where the words of one version pass the baker's rights to a party, and a later version of the same agreement drops the baker, that later version names no succession, and is invalid (G14.3(a); draft 21's 8.2, item 8). Whether a succession may run through one agreement's own versions is not said.
+4. **The baker after a sale** (G14.2(a)). G14.2(a) asks only that the baker be a party, bound. Whether Terms she makes after her rights have passed, with herself as a party, still meet (a) is not said; the same baker selling the same work twice is not seen, as section 7 has it ("Ownership is as wide as its place").
+5. **Who is bound by an update that does not name them** (G5.1(c)). Unchanged: G5.1(c) binds whoever is bound by the Terms replaced; G14.2 reads that binding only for a party the version names (section 8.2, item 2).
+6. **The report block** (`report-block-3.md`): not changed, and no fourth proposal (section 8.1).
+7. **Everything draft 21 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section O.4. It is summed up in section 8.4.
+8. **Nothing was tested against draft 22.** The next step is the encoding and vectors.
+
+# Part Q. Draft 24
+
+**Read for draft 24, and nothing else:** `docs/agreements-from-scratch/draft-23.md`, `reasons-23.md`, this file and `companion-3.md` (branch `claude/agreements-draft-23-dqhhax`, pull request 178), all written in the same session; and `docs/decisions.md` (branch `claude/lead-records-2`, pulled again). Draft 24 is draft 23 with one change, and housekeeping, and nothing else. One exchange of the ledger is brought in, read as a whole: **"The holder at the time"**. It answers draft 23's section 8.2, items 1 and 2.
+
+**The principles for every choice**, in the words of Nobody, allegedly: "this one supports and specifies the language for creating solutions", "We need to think more in « tasks » and output. We need to think like MOR.", and "Building blocks over solutions." And: "My words matter less than our words within that conversation do."
+
+## Q.1 The change, and where it comes from
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **The holder at the time** (draft 23's 8.2, items 1 and 2: read as "current", a sale makes every earlier agreement stop counting, and a thief's "invalid" could change with a later transfer). The MOR lead leaned, from "now is what an act cites": Terms name the envelope act they relied on, and the holder is read at that point; agreements made before a sale keep standing; the buyer holds the rights from then on; a thief's Terms stay invalid for good; where knots or anchoring show Terms cite an old point of the envelope's chain to dodge a later transfer, they do not count, as with a late rival. He: "Agreed" | Section 3.1: a new field, `envelope_at`, required exactly with `envelope`. G14.1: the holder at the time: the holder at the act cited, read from that act and those it follows, with no qualifier. G14.2: Terms count only if the holder at the act they cite is a party, bound by them, and they are not late; "After a sale"; "Late Terms" (knots and anchoring as G4.7 reads them; no new answer word); the double sale read at the act cited. G14.3: (a) to (c) read at the act cited; `envelope_at` naming another envelope's act is invalid; a thief's Terms invalid for good. G14.5: one phrase. G14's lie and protects lines. Section 2: **Bake** (the holder at an act), **invalid**, the line between invalid and not shown (the conflict closed). Section 5.2: one row. P18. Section 7: "Ownership is as wide as its place". Section 8.1: needs (4) and (5). Section 10: items 13 and 18; item 19 new. |
+| 2 | **Kept as draft 23 has it** (the MOR lead's settlement, which the brief asks kept) | A fork in the envelope's chain, where that layer gives no holder, is answered not shown (G14.2, G14.3(b)); draft 24's 8.3, item 3. |
+| 3 | The brief's, as housekeeping | The rules are in `draft-24.md`; the plain words and reasoning in `reasons-24.md`, which is `reasons-23.md` changed only in its head and one passage under G14, marked "(draft 24)"; this part is added here; `companion-3.md` is changed in its heading, one note and row #11. `report-block-3.md` is not touched, so no fourth proposal is written. `draft-23.md` and `reasons-23.md` stay in the repository. |
+
+**In one line, what changed:** the holder of the baker's rights is read at the act of the envelope's chain the Terms cite, not as the chain stands now.
+
+Draft 23 had fourteen grammar rules and eight tasks; so has draft 24. One field is added (`envelope_at`). No task or answer word is added or removed. "Holder at an act" is added as a defined phrase; "current holder" is no longer read.
+
+## Q.2 Where the ledger's arrived-at line, and the brief, say more than the exchange
+
+The arrived-at line is the MOR lead's, marked "to check". The exchange is the MOR lead's lean, answered "Agreed". Each item is something the line, or the brief, says that the exchange does not itself say, with what draft 24 does.
+
+1. **"made after a later transfer than the act they cite".** The lean says "cite an old point of the envelope's chain to dodge a later transfer". The grammar reads acts, not intent; the line's wording is the lean without "to dodge". Followed (draft 24's 8.2, item 8).
+2. **The buyer.** "the buyer holds the rights from then on" is in the lean and the brief, not in the line. Taken (G14.2).
+3. **"so 'invalid' stays an act that never counted".** The line's and the brief's; the lean says "stay invalid for good". Taken, and section 2's line is kept as it is (draft 24's 8.2, item 10).
+4. **The brief's "Say in section 3 which field names that act".** The exchange names no field. The field `envelope_at`, its being required exactly with `envelope`, and its name are Claude's (draft 24's 8.2, item 1).
+5. **The brief's "as with a late rival (G4.7)".** The lean says "as with a late rival". Read as: the knots and anchoring of G4.7 show it, and the answer is G4.7's, with no new word. Where nothing shows it, a late rival is a fork; here the Terms count by the act they cite (draft 24's 8.2, items 3 to 5).
+6. **The brief's "payments under them keep their receiver".** Not in the lean or the line; it follows from Terms that keep counting (G1.4). Written as what follows.
+7. **The brief's "Keep as draft 23 has it (the MOR lead's settlement)".** Kept (draft 24's 8.3, item 3); labelled the MOR lead's, not a decision of Nobody, allegedly.
+
+## Q.3 Where the change landed
+
+- **Head:** the file names, Part Q, "What draft 24 is", "What draft 23 was", the block's third proposal standing.
+- **Section 2:** **Bake** (the holder at an act, in place of the current holder), **invalid** (its envelope cases), the line between invalid and not shown (its envelope sentences).
+- **Section 3.1:** a row for `envelope_at`.
+- **G14.1** (the holder at the time, new paragraph; the qualifier sentence gone); **G14.2** (its first paragraph; "After a sale"; "bound by them" read at the act cited; "Late Terms", new; a double sale read at the act cited); **G14.3** (opening, (a) to (c), the closing paragraph); **G14.5** (one phrase); G14's lie and protects lines.
+- **Section 5.2:** one row (the baker sells her rights).
+- **Section 6:** P18.
+- **Section 7:** "Ownership is as wide as its place" (one sentence and a new one).
+- **Section 8.1:** the envelope's chain, needs (4) and (5). **Section 8.2:** rewritten; items 14 to 17 kept under their numbers. **Section 8.3:** rewritten. **Section 8.4:** its opening; a list "From draft 23's list" added.
+- **Section 9:** item 8. **Section 10:** items 13 and 18; item 19 new.
+- **`reasons-24.md`:** the head; one passage under G14, marked "(draft 24)".
+- **`companion-3.md`:** the heading, one note, and row #11.
+
+## Q.4 Draft 23's lists of open items, unchanged, and what draft 24 does with them
+
+What follows the notes below is sections 8.2 and 8.3 of `draft-23.md`, moved and not edited. "This text" and "draft 23" there mean draft 23.
+
+What draft 24 does with them:
+
+- **8.2, item 1** ("current", read as it stands): answered by "The holder at the time" (G14.1, G14.2).
+- **8.2, item 2** (invalid, read on the envelope's chain): answered by the same exchange: the act cited is fixed, and "invalid" sits on section 2's line again (G14.3(a)).
+- **8.2, item 3** (a fork in the envelope's chain): kept, the MOR lead's settlement (draft 24's 8.3, item 3).
+- **8.2, item 4** (the current holder as an answer about what is latest): overtaken.
+- **8.2, items 5 to 9:** stand.
+- **8.2, items 14 to 17:** still open, kept in draft 24's section 8.2 under the same numbers.
+- **8.3, items 1, 2 and 5 to 7:** still open, kept in draft 24's section 8.3.
+- **8.3, item 9** (nothing tested against draft 23): nothing was tested against draft 24 either.
+- Everything else there is still open.
+
+**Section 8.2 of `draft-23.md`: For Nobody, allegedly**
+
+Draft 23 is draft 22 with one change, and housekeeping (`history.md`, Part P). One exchange of the ledger is brought in, read as a whole: "The envelope states its owner", with "The baker's rights after a sale" for what it replaces. In plain words:
+
+- **The envelope states its owner.** Draft 22 read who holds the baker's rights from agreements: a succession of them, each passing the rights in its words, read by a rights cMIP in the body's socket. Now the envelope says it. The envelope has its own chain, which is the layer below's: the bake names the baker, and each transfer of the baker's rights is an act of that chain, signed by the holder of the moment and naming the next. Terms that name the envelope count only if its current holder is one of their parties, bound by them, in any of the ways draft 22 reads "bound" (G5.1, an update condition included). A double sale is a fork in the envelope's chain, read as that layer reads forks. In his words: "the chain in question is the one (or should be) of the envelope, not the one of the baker. The envelope tracks its baker and if that is transferred the envelope is updated with a new ID for those rights", and "that is the cleanest approach and flips ownership to the thing being owned stating it" (G14.1, G14.2).
+
+**What is left of what goes.** Of the succession (draft 22's G14.2(b)): nothing; no agreement passes the baker's rights, and `relies_on` is no longer read by G14. Of the body's part for the baker's rights (K1): nothing; the body task still reads words, shares and delegations, and nothing it reads passes those rights. Of the rights cMIP of "The baker's rights after a sale": its passing of the rights goes to the envelope's chain; what stays is the rest of that exchange, as draft 22 wrote it: "bound by them" in any way G5.1 allows, so that an update condition the parties signed (K4) may answer valid for a version without the baker. Of P18: what in an agreement passes the rights is answered (nothing does); the rest is still open (section 6).
+
+**What the exchange answers, of draft 22's list.** Its 8.3, item 3 (a succession within one agreement's own versions) and item 4 (the baker after a sale): answered (section 8.3, below). Its 8.2, items 5, 8 and 9 (the rights cMIP's two sockets; "once sold, the true baker is no longer needed"; "wiring, the MOR lead's"): overtaken, since no cMIP passes the baker's rights. Its 8.2, items 1 to 4, 6 and 7 (how "bound by them" is read): stand, now read of the current holder. Draft 22's 8.2 and 8.3 are kept, unchanged, in `history.md`, section P.4; its items 14 to 17 are still open, and are kept below under their numbers, since other sections point to them.
+
+**What follows, and is Claude's.** Each is written in the text as what the exchange asks of a verifier, as precisely as a verifier needs. None is decided; each is for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+1. **"Current", read as it stands** (G14.2, G14.3(b)). The brief and the arrived-at line say "the current holder", and the exchange does not say of which moment. Read as it stands, Terms made with the baker before she transferred her rights, which do not name the new holder, count for nothing once the transfer is held (not shown), and every answer that rests on them goes with them: a payment that named such a version has no receiver shown (G1.4), although G13 lets an act be read by the version it named. So a sale of the baker's rights would take with it every agreement for the work that does not name the buyer, until those agreements are updated to name the buyer. Whether "current" should instead be read at the moment of the act that names the Terms (the holder when the payer paid, or when the Terms came into force) is not in the exchange, and is the first question this change puts to him. It bears on the wish: a click made before a sale should still reach the people it was meant for.
+2. **Invalid, read on the envelope's chain** (G14.3(a); section 2). Plainly: this is a flaw the change exposes in the text. Draft 22's Terms that name neither the baker nor a succession were invalid because nothing anyone could later do would change what those Terms name. Under draft 23, whether a party of the Terms is named in the envelope's chain depends on the chain as the verifier holds it: a transfer it does not hold, or one made later, could name a thief's own party, and two verifiers that hold the chain at different times would answer differently. By section 2's own line, that answer is **not shown**, not **invalid**. Draft 23 keeps "invalid" for this case, as "A thief's Terms" has it ("the agreement should be made invalid"), and does not resolve the two: keep invalid, tied to something the act itself shows (the exchanges give nothing for it), or read such Terms as not shown, which count for nothing until shown, as G14.3(b) already reads. Either is a decision for him.
+3. **A fork in the envelope's chain** (G14.2). "Read as that layer reads forks" is read as: who is the current holder, while the fork stands and after, is that layer's answer; a verifier shows the fork with it and does not choose a branch itself, as it never does (G4.7, G12, G14.5(b)); where that layer gives no holder, no party is shown to be the holder, and the answer is not shown.
+4. **The current holder is an answer about what is latest** (G14.1). So it is qualified, as every such answer is: by what that layer's answer stands on, or as shown, as G13.4 asks. What it stands on is listed for that layer (section 8.1, item (4)).
+5. **"Chain", said of the envelope** (section 2). This text kept "chain" for one agreement's versions only. His word, and the ledger's, for the envelope's acts is "chain"; draft 23 keeps it, as a word of the layer below, named and not defined, so that it is never mistaken for an agreement's chain. "Transfer", "holder of the moment" and "current holder" are the arrived-at line's and Claude's words, for the MOR lead to change.
+6. **Who must be named, and bound** (G14.2). Only the current holder. A version may still name the baker, or an earlier holder, among its parties; G14 then asks nothing of them. Whether G4.1's default still waits on her assent is another rule's (section 8.3, item 2).
+
+**Where the ledger's arrived-at line says more than the exchange.** The arrived-at line is the MOR lead's reading, marked "to check". Draft 23 follows the exchange where the line says more. The full list is in `history.md`, section P.2; the ones that touch what a rule says:
+
+7. **"ownership of a baked work is stated by the work's own envelope".** His words are "flips ownership to the thing being owned stating it", said of the baker's rights. Draft 23 reads "ownership" as the baker's rights only: what a work's Terms say of shares is still read from those Terms (section 2, **Shares**).
+8. **"naming the new one".** His words are "the envelope is updated with a new ID for those rights"; the MOR lead's reading, which his "Yes" answers, is "naming the new one". Taken: a transfer names the next holder. Whether that "ID" may be an agreement's root is not said (section 8.1).
+9. **"that chain is the layer below's".** His words are "the one (or should be) of the envelope". His "(or should be)" is read as: the layer below does not give it yet. Draft 23 names it and lists it for the rewrite of that layer (section 8.1), and defines none of it.
+
+**What could not be decided from the text at all.** Kept from draft 22, unchanged, under its numbers.
+
+14. **A payment that is pending** (section 9, item 7). No answer word exists for it here. *To settle it:* the Money layer's encoding says whether a payment or a settlement has a pending state, as which act, and what it names; then a cMIP of K6, or the encoding of the answer words (section 10), says what a verifier shows while it lasts. The least reading until then is unchecked (G9).
+15. **Money shown as still owed, and later paid** (P20). *To settle it:* the encoding of a leg report's lines (K6's row) gives a "still owed" line something a later line can name (the report it was stated in, and the amount and to whom); then a cMIP of K6 says whether a later report's "passed on" line, naming it, closes it. Until then a "still owed" line is shown as stated and tied to nothing.
+16. **Pools** (P6). *To settle it:* a cMIP of K6 for the pool, with a rule as its module, says when it is divided and how a claim is counted; and the encoding of a leg report says how one line names several settlements, or one settlement covers many counts, and whether one report answers several calls (the block's open point 3). Until then one report line names one settlement.
+17. **The modules** (a judge, a tally, identity, assurance, delivery, standing; section 5.3). None is a socket. *To settle each:* a cMIP in a socket that names it as a module, and the encoding of what that cMIP is handed and gives back (section 10); for the judge, also where in the Terms it is named (G5.6(c)). Nothing in the grammar needs to change for any of them.
+
+**Section 8.3 of `draft-23.md`: Draft 22's open items on the baker, and what is left as draft 22 has it**
+
+Each item is where the change touches something. Items 3 and 4 are answered by the exchange; the others are left as draft 22 has it, or say the least that lets the text be read, and say so.
+
+1. **Terms where the holder's place is not yet shown** (G14.3(b); draft 22's 8.3, item 1). They count for nothing until it is shown, as draft 22 has it: the MOR lead's settlement, from draft 21's section 8.3 ("unchecked is not passed"). What "shown" asks now reaches the current holder, as the envelope's chain gives it, instead of the baker or a succession.
+2. **The new version's own `in_force`** (G4.1, G4.8; draft 22's item 2). Still open, as draft 22 has it. A version that names the baker as a signer and carries no `in_force` is in force, by G4.1's default, only with an assent in her name, even after she has transferred her rights. Whether a party is bound under G5.1(c) by a version that is valid and not in force is still open (draft 19's 8.3, item 1).
+3. **A succession within one agreement's own versions** (draft 22's item 3). *Answered:* there is no succession. A later version of the same agreement that drops the baker counts where the current holder is one of its parties and bound by it (G14.2); one that drops her while she still holds the rights, and names no one the envelope's chain names, is invalid (G14.3(a); with item 2 of section 8.2).
+4. **Terms the baker makes after a sale** (draft 22's item 4). *Answered:* Terms count only with the current holder, so Terms she makes after a transfer has named another count for nothing while the new holder holds them (G14.3(b)). Selling the same rights twice is two transfers: a fork in the envelope's chain, now seen, as that layer reads forks (G14.2; section 7, "Ownership is as wide as its place").
+5. **Who is bound by an update that does not name them** (G5.1(c); draft 22's item 5). Unchanged: G14.2 reads that binding only for a party the version names, now the current holder.
+6. **What the exchange does not cover, left as draft 22 has it, and listed in P18:** one envelope with several bakers; Terms that sell a baked work's bytes without naming its envelope; whether a transfer, or the sale it carries out, calls for reports; how Terms of a sale stand beside the transfer (whether either names the other); whether a holder may be an agreement. And a baker's contest against Terms that name her own envelope without her (draft 21's 8.3, item 10): still not said.
+7. **The report block** (`report-block-3.md`): not changed, and no fourth proposal (section 8.1).
+8. **Everything draft 22 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section P.4. It is summed up in section 8.4.
+9. **Nothing was tested against draft 23.** The next step is the encoding and vectors.
