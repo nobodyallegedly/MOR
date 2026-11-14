@@ -255,6 +255,8 @@ The research is `docs/strangers-2026-11/`.
 
 **Setting aside what an agent made** (draft 20, section 8.2 item 11, A15: may an agent withdraw, by counter signature, an assent it made for a party). The MOR lead leaned yes, within the limits handed to the agent. He: "Anything made under a grant can be labeled void by the grantee, if someone relied on it the act still shows, but it is not the tip anymore" Asked whether he meant the grantor: "Yes. I did mean the grantor, sorry."
 - *Arrived at (to check), pending his answer on scope:* the grantor may set aside an act made under the grant; where someone relied on it, it still shows, and it is no longer a tip. Whether this reaches acts already complete (all parties signed) is not yet answered.
+- The MOR lead raised the scope: after an agreement is complete, a counterparty relied on the agent's signature; leaning the grantor may set aside only until complete, and after that only revoke the grant. He: "It’s never set aside, it’s always update. Whoever agreed to what was signed by the agent is still covered, the same way as any updates of terms."
+- *Arrived at (to check), replacing the lines above:* nothing an agent made is set aside. The grantor acts by an update, as with any update of Terms; whoever agreed to what the agent signed is still covered by the version they agreed to, as anyone is under any update. The MOR lead's "until complete" lean is withdrawn. Whether the grantor may also withdraw, by counter signature, an assent the agent made before an agreement is complete (A15) follows the same reading: the grantor's act is an update of what was made in its name.
 
 ## Not carried into this stint unless he says so
 
