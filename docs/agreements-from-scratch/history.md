@@ -17,6 +17,7 @@
 - **Part I**: draft 16. One table for its changes, every word that changed, where the ledger's lines and the brief say more than the three exchanges it was written from, where each change landed, and draft 15's lists of open items, unchanged. From draft 16, `draft-16.md` holds the rules and `reasons-16.md` the plain words and reasoning; `draft-15.md` and `reasons-15.md` stay in the repository.
 - **Part J**: draft 17. One table for its one change, every word that changed, where the ledger's lines and the brief say more than the one exchange it was written from, where the change landed, and draft 16's lists of open items, unchanged. From draft 17, `draft-17.md` holds the rules and `reasons-17.md` the plain words and reasoning; `draft-16.md` and `reasons-16.md` stay in the repository.
 - **Part K**: draft 18. One table for its seven changes, where each task number and word went, where the ledger's lines and the brief say more than the four exchanges it was written from, where each change landed, the table of the C session's questions with the reading taken for each, and draft 17's lists of open items, unchanged. From draft 18, `draft-18.md` holds the rules and `reasons-18.md` the reasons; `draft-17.md` and `reasons-17.md` stay in the repository.
+- **Part L**: draft 19. One table for its three changes, every number and word that changed, where the ledger's lines and the brief say more than the two exchanges it was written from, where each change landed, and draft 18's lists of open items, unchanged. From draft 19, `draft-19.md` holds the rules and `reasons-19.md` the plain words and reasoning; `draft-18.md` and `reasons-18.md` stay in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -1599,3 +1600,169 @@ Each item is where the change touches something the exchange does not cover. Eac
 8. **Changing the condition.** A new version may name another update condition, or none, if the condition before it answers that update valid (G4.11). Whether a condition may forbid its own change for good is that cMIP's; the grammar says nothing of it.
 9. **Everything draft 16 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section J.5: the items about "triggered" are answered or gone. It is summed up in section 8.4.
 10. **Nothing was tested.** No test was run against draft 17.
+
+---
+
+# Part L. Draft 19
+
+**Read for draft 19, and nothing else:** `docs/agreements-from-scratch/draft-18.md`, `reasons-18.md`, this file and `companion-3.md` (branch `claude/agreements-draft-18-e2x9yo`, pull request 173); and `docs/decisions.md` (branch `claude/lead-records-2`). Of this file, only its head and Part K were read; of `companion-3.md`, its notes and the rows named below. The report block proposal, the seams, the C session's repository, the research texts and the lower layers' texts were not opened. Draft 19 is draft 18 with three changes, and nothing else. Two exchanges of the ledger are brought in, each read as a whole: **"Seven sockets, and data"** and **"Constitution, executive and judicial"**.
+
+**The test for every choice**, in the words of Nobody, allegedly: "We need to think more in « tasks » and output. We need to think like MOR."
+
+## L.1 The changes, and where each comes from
+
+| | Where it comes from | What changed (Claude's reading) |
+|---|---|---|
+| 1 | **Constitution, executive and judicial**, its first half. Draft 18's section 8.2, item 7: a power for replacement with no update condition named, which the default read strictly would refuse. The MOR lead put an example (three owners, "any two of us can sign an update", no update condition) and leaned that the power wins. He: "Not sure I follow"; "But the terms state that they did? I am confused". The MOR lead: the confusion is the draft's, from keeping "who may sign" apart from the update condition. He: "The update condition would be dictated by the 2 out of 3 signature cMIP, no? I am not sure why it could be simply done with what we had." | An update is governed only by the update condition. The cMIP in `condition` (K4) answers valid or not valid for a proposed update, who must sign it included; empty, the default is everyone who signed the original. The power for replacement (kind `replaces`) is removed: from `powers` (section 3.1), from K3, from G4.8, G4.11, G5.2 and G12.4. A party is bound by an update that the update condition of Terms binding it answers valid (G5.1(c), new). The condition is asked of a resolving update (G4.11(g)). |
+| 2 | **Constitution, executive and judicial**, its second half. He: "I think this difference recovers the Constitutional aspect of the old collectives. Update equals constitution, and the judicial, power means the executional." Asked where the judicial sits (the MOR lead's guess: the contest, the judge module, the power to resolve a fork): "Yes, so changes to the judicial need an update, powers cannot touch it, no?" | G5.6, new, the one place that says it: the update condition is the constitution; powers are the executive; the judicial (the contest, a judge named in the Terms, a power to resolve a fork) is set in the Terms and changes only by an update; no power can change it. A power to resolve is of kind `resolves` only (G12.4). A judge is named in the Terms (section 5.3). A judge's decision still binds only through a power. |
+| 3 | **Seven sockets, and data.** He: "Only 7 tasks? For the whole of agreements?" The MOR lead: two acts, seven fields where a cMIP plugs in; the earlier kinds of computation are modules; one gap: the data cMIP for a path beyond one leg has no socket. He: "Wow… very lean. data is needed by so many processes , so yes I think a task is needed there." | One socket is added: K8, the field `data` in Terms, where a data cMIP is named. Its one question, what it accepts and what it produces are in section 5; G11.4(e) and G11.6(a) read it. |
+| 4 | The brief's, as housekeeping. | The rules are in `draft-19.md`; the plain words and reasoning in `reasons-19.md`, which is `reasons-18.md` changed only where these changes touch it; this part is added here; `companion-3.md` is changed in its heading, one note, one sentence and rows #21, #28, #30, #43 and #47. `draft-18.md` and `reasons-18.md` stay in the repository. |
+
+Draft 18 had fourteen grammar rules and seven tasks. Draft 19 has fourteen grammar rules and eight tasks. No grammar rule is added or removed. Clauses: G4.8 is rewritten, with (g) new; G4.11's opening and its (a), (c), (d), (e), (g) and (i) are changed; G5.1 gains (c); G5.2 is rewritten; G5.5 gains two sentences; G5.6 is new; G11.4(e) and G11.6(a) and (b) are changed; G12.1, G12.3 and G12.4 are changed; G14.5(d) gains three words. One field is added: `data`. None is removed; the kind `replaces` is removed from the field `powers`. Definitions added: constitution, executive, judicial (one entry); data cMIP. Definitions changed: task (eight), report, never ended, power, condition, valid. Answers: none added or removed. Parameters touched: P15, P21. Costs: two added ("A judge is as hard to change as the Terms"; "Bound by an update one did not sign"); three reworded.
+
+**Two slips of draft 18 mended.** The heading of section 5 of `draft-18.md` ("## 5. Tasks handed to cMIPs", as `draft-17.md` has it) and the heading of the last section of `reasons-18.md` were lost when those files were written. `draft-19.md` has the first back; `reasons-19.md` heads its last section "The tasks".
+
+## L.2 Every number and word that changed
+
+| Draft 18 | Draft 19 | Why |
+|---|---|---|
+| K1 to K7, seven tasks | K1 to K8, eight tasks; K1 to K7 keep their numbers | "so yes I think a task is needed there" |
+| no field for a data cMIP; "how Terms name one is not said" | the field `data`, a socket (K8) | the same |
+| `powers`: a kind of Statement, `replaces`, or `resolves` | `powers`: a kind of Statement, or `resolves` | "The update condition would be dictated by the 2 out of 3 signature cMIP, no?" |
+| "a power for replacement", "the rule of a power for replacement says who may sign an update" | gone; an entry of kind `replaces` is left unread | the same |
+| G4.8: "only if two things hold: … the signatures those Terms require … and the update condition answers valid" | "only if the update condition of the original answers valid for it" | the same |
+| G4.11(d): "The condition answers about the update itself, and never about who may sign it" | "Who must sign is part of the cMIP's answer" | the same |
+| "valid … never about who may sign it" (section 2) | "the whole answer about the update, who must sign it included" | the same |
+| G4.11(g): "The condition is not asked of a resolving update" | it is asked, as of any update | who must sign an update is now the condition's answer |
+| G12.4: a power to resolve a fork of Terms "is a power for replacement … which its rule may limit to resolving updates" | "an entry of `powers` of kind `resolves`, and of no other kind" | "changes to the judicial need an update, powers cannot touch it, no?" |
+| a judge "they name" | a judge "they name in their Terms" | the brief: "a judge named in the Terms" |
+| "an agreement that names no power to change itself" (cost) | "an agreement that names no update condition" | change 1 |
+| "(section 8.2)" and "(section 8.3)" where they pointed at items of earlier drafts' lists | "(section 8.4)" | sections 8.2 and 8.3 are rewritten for each draft |
+
+New words: **constitution**, **judicial** (his); **executive** (the ledger's heading and the brief's; his word is "executional"); `data`, **data cMIP** as a defined term (Claude's; the field name is the MOR lead's to change).
+
+## L.3 Where the ledger's arrived-at lines, and the brief, say more than the exchanges
+
+The arrived-at lines are the MOR lead's, marked "to check". Each item is something a line, or the brief, says that the exchange, read as a whole, does not itself say, with what draft 19 does. Item numbers in brackets are draft 19's section 8.2.
+
+**"Constitution, executive and judicial".**
+
+1. **"an update is governed only by the update condition"**. "Only" is the MOR lead's. His words are a question: "The update condition would be dictated by the 2 out of 3 signature cMIP, no?" Draft 19 writes "only", as the brief asks, and leaves the new version's own `in_force` as draft 18 has it (item 17; section 8.3, item 1).
+2. **"a cMIP in that socket (for instance two signatures out of three) answers valid or not valid"**. His example. That who must sign is part of the answer is the brief's "including who must sign it" (item 19).
+3. **"empty, the default is everyone who signed the original"**. From the earlier exchange, "The default update condition"; not said again in this one.
+4. **"The power for replacement goes; powers remain for every other act (acting for someone, a Statement of a kind)"**. The MOR lead's. He did not speak of which powers remain (item 18). Draft 19 keeps the power to resolve too, which the same line names under the judicial.
+5. **"The update condition is the constitution; powers are the executive"**. His words: "Update equals constitution, and the judicial, power means the executional". The sentence can be read as putting the judicial with the update. The MOR lead then asked where the judicial sits, and he answered "Yes". Both readings give the same rule (item 20).
+6. **"the judicial (the contest, the judge, the power to resolve a fork)"**. The MOR lead's guess; his word to it: "Yes" (item 21).
+7. **"is set in the Terms"**. The MOR lead's and the brief's. His words say how the judicial changes, and end on "no?" (item 22). For the contest, which the grammar gives and no Terms create, draft 19 reads it narrowly: the Terms set whom a contest reaches (item 7).
+8. **"no power can touch it"**. His: "powers cannot touch it". Draft 19 reads "touch" as "change", and writes that using what the Terms set (a judge's decision that binds through a power; a resolving update signed under a power to resolve; a contest made for someone) is not changing it (item 9). The exchange does not draw that line.
+9. **"I think this difference recovers the Constitutional aspect of the old collectives."** His, and not in the arrived-at line. Draft 19 writes nothing about collectives for it (item 24).
+10. **"I am not sure why it could be simply done with what we had."** Quoted as the ledger has it. Read as "could not"; a possible typo, for the MOR lead to run by him (item 15).
+
+**"Seven sockets, and data".**
+
+11. **"the seven sockets stand"**. The MOR lead's. His words: "Wow… very lean." (item 25).
+12. **"A data task is added: a socket in Terms where a data cMIP is named, for a path beyond one leg that the people whose data it carries agreed to with their signature"**. The MOR lead's. His words: "data is needed by so many processes , so yes I think a task is needed there." "So many processes" may be wider than a path beyond one leg; draft 19 adds the socket for that path and nothing wider (item 26).
+
+**The brief.**
+
+13. **"including who must sign it"**. The brief's (item 19).
+14. **"a power of kind `replaces`"**, and **"remove it from K3, G4.8, G5.2 and wherever else it is read"**. The brief's. "Wherever else" was: the `powers` row, the definition of a power, G4.11(d), (e) and (i), G12.3, G12.4, K3's row, section 5.2, P15 and two costs.
+15. **"a judge named in the Terms"**. The brief's; the exchange says "the judge module" (item 23).
+16. **"A judge's decision still binds only through a power, as draft 18 has it."** The brief's. Kept (G5.6(e)).
+17. **"K8"**, **"its one question, what it accepts and what it produces"**, **"the least field name"**. The brief's form. The question, and the name `data`, are Claude's (items 11 and 16).
+
+## L.4 Where each change landed
+
+- **Head:** the file names, Part L, "What draft 19 is", K1 to K8.
+- **Section 2:** task (eight), report, never ended, power, constitution / executive / judicial (new), condition, data cMIP (new), valid, "the line between invalid and not shown".
+- **Section 3.1:** the rows `powers` and `condition`; the row `data` (new).
+- **G4.8** (rewritten; (g) new); **G4.11** (opening, (a), (c), (d), (e), (g), (i)); G4's "Protects". **G5.1** ((c) new); **G5.2** (rewritten); **G5.5** (two sentences); **G5.6** (new); G5's lie. **G11.4(e)**; **G11.6(a)** and **(b)**. **G12.1**, **G12.3**, **G12.4**. **G14.5(d)**.
+- **Section 5:** the heading, restored; K3's and K4's rows; K8's row (new); the list of defaults. **5.1:** the row on the update condition; the paragraph on seeing beyond one leg. **5.2:** two rows added (two of three; changing who judges), four reworded. **5.3:** the sentence on the count; the judge's row; the line on a data cMIP removed.
+- **Section 6:** P15, P21.
+- **Section 7:** two costs added; "A fork of Terms holds the agreement where it was", "No default way out" and "One leg, and no further" reworded.
+- **Section 8.1:** the last sentences of "Seeing beyond one leg". **Section 8.2:** rewritten. **Section 8.3:** rewritten: what is left as draft 18 has it. **Section 8.4:** a list "From draft 18's list" added; three lines touched.
+- **Section 9:** items 3, 12 and 15.
+- **`reasons-19.md`:** the head; the opening (two sentences, and one new paragraph); G4 (four sentences of the plain words, and a new passage); G5 (the plain words, one sentence of the reasoning, and four new passages); G11 (one sentence of the plain words, and a new passage); G12 (one sentence of the plain words, and a new passage); the last section (its heading, and a new passage). Each is marked "(draft 19)".
+- **`companion-3.md`:** the heading, one note, one sentence at the end of section 1, and rows #21, #28, #30, #43 and #47.
+
+## L.5 Draft 18's lists of open items, unchanged, and what draft 19 does with them
+
+What follows the notes below is sections 8.2 and 8.3 of `draft-18.md`, moved and not edited. "This text" and "draft 18" there mean draft 18.
+
+What draft 19 does with them:
+
+- **8.2, item 7** (the default, and a power for replacement): answered by the exchange "Constitution, executive and judicial". There is no power for replacement; "any two of us" is an update condition's cMIP (G4.8, G4.11, G5.2).
+- **8.2, item 1** (seven sockets): his words since: "Wow… very lean." An eighth is added (K8).
+- **8.2, item 15** (words): unchanged; `data` is added to Claude's.
+- **8.3, item 1** (a power for replacement with no update condition named): answered, as above.
+- **8.3, item 3** (a socket for a data cMIP): answered: `data`, K8. A verifier no longer answers unchecked for whether Terms name one (G11.4(e)).
+- **8.3, item 8** (a resolving update of Terms, and the next version): still open. Who signs a resolving update of Terms is now the update condition's answer (G4.11(g)).
+- **8.3, item 16** (nothing was tested): still so. No test was run against draft 19.
+- Everything else there is still open.
+
+**Section 8.2 of `draft-18.md`: For Nobody, allegedly**
+
+Draft 18 is draft 17 with seven changes (`history.md`, Part K). Four exchanges are brought in, each read as a whole: "The update condition", "The default update condition", "A task is a socket" and "The same work, baked again". In plain words:
+
+- **A task is a socket.** Every field of an act where a cMIP plugs in is a task, and asks one question. There are seven (section 5). What earlier drafts called tasks and were really kinds of computation (a rule, a witness, a judge) are now modules a cMIP may use (section 5.3).
+- **The same work, baked again.** A verifier shows, beside a bake, that others baked the same work too, and never picks between them (G14.5).
+- **The default update condition.** Where Terms name no update condition, an update is valid when everyone who signed the original signs it (G4.8, G4.11(e)). The core takes the update condition's output and has no notion of overruling or locking (G4.11(i)).
+- **The seams' wiring,** five things in the MOR lead's technical wording (below).
+- **The C session's questions.** A stranger built a verifier from draft 17 alone and had to choose a reading in 37 places. Each of the 24 that change an answer now has its answer in the text (`history.md`, section K.5).
+
+**The seams' wiring: what changed, and why, one line each.** These five are the MOR lead's technical wording, not the words of Nobody, allegedly.
+
+- **X3, the tie** (G11.4(b)). *Changed:* two halves are tied by the act both name, and, where the layer that holds value records one payment as two acts, by that layer's answer to "the same payment". *Why:* in Money the payer and the receiver sign two different acts, so "the same act" alone would tie nothing.
+- **X4, the greater amount** (G11.4(c)). *Changed:* what Money counts toward a debt and what a reader of reports is shown are said to be two questions; this text shows both halves, chooses neither, and says that Money's counting is Money's. *Why:* Money counts the greater of two amounts, and the report block chooses neither; both stand once they are seen to answer different questions.
+- **X5, the place** (G7.1; section 8.1). *Changed:* G7 reads a place as the layer that orders acts gives it, and section 8.1 lists what that layer must provide. *Why:* no current lower text gives a place, so the need is written down for the later rewrite.
+- **X6, "disputed" and "valid"** (section 2). *Changed:* each has one meaning in this text, and section 2 says how it differs from the core's word of the same spelling. *Why:* one spelling with two conditions tells a reader two different things.
+- **X7, the report** (section 3.2; section 8.1). *Changed:* the report is one act type, defined once in the shared language, which this text uses. *Why:* a report must be the same act in every layer, so it cannot be defined once per layer, or as a kind of Statement here.
+
+**Choices this draft had to make.** Each is Claude's reading, for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+1. **Seven sockets.** The fields of draft 17 that name a cMIP are six: `body`, `in_force`, each entry of `powers`, `condition`, each role, and a Statement's `kind`. The seventh is new (item 2). His words do not give a list; this one is read off the fields.
+2. **A new field, `control`.** Draft 17 said Terms hold the Control task "where they name a cMIP that answers it", and no field named one; the C session had to look in `relies_on` (its Q12). If a task is a socket, that task needs a field. `control` is the least Claude found; its name is Claude's.
+3. **What is left of the other six "tasks".** Rule, Identity, Assurance, Witness, Tally, Delivery and Judge are listed as modules (section 5.3), from his "multiple modules where needed". The exchange does not say what a module is. Standing has no socket: no act names it. The place and the clock are named by an identifier and are no cMIPs in this text, so `place` and `clock` are not tasks.
+4. **No socket for a dividing rule.** Draft 17 spoke of a rule that Terms name for dividing, and had no field for it. Shares are now read from the body (K1) and divided by whichever cMIP needs them (section 2). Whether dividing should be a socket of its own is not said.
+5. **"the original".** Read as the version an update would replace, not the root of the agreement. "Everyone who signed" it is read as: each party in whose name an assent to it counts, and each party bound by it through a power (G4.8(a), from the C session's Q7).
+6. **Nobody signed the original.** Where Terms came into force under an `in_force` rule that asked for no one's assent, "everyone who signed the original" is no one, and any Terms act in force by its own `in_force` replaces them. The C session called that odd, and it is. It is written as the words give it (G4.8(a)) and listed here.
+7. **The default, and a power for replacement.** His words: "Everyone who signed the original is the default condition yes". Where Terms give a power under which fewer than all may replace them and name no update condition, draft 17 lets an update so signed replace them. Read strictly, the default would refuse it, and such a power would do nothing without a named condition. Draft 18 leaves it as draft 17 has it: those the power's rule accepts sign for everyone the power binds (G4.11(e)). Whether he means the stricter reading is for him.
+8. **"Locked".** The exchange ends on the MOR lead's summary (a lock is an update condition whose cMIP always answers not valid; no "locked" value) and on his "We need to think more in « tasks » and output. We need to think like MOR." Before it he had said "Dangerous path… locked is best." Draft 18 follows the end of the exchange: no "locked" value, and a verifier never says of itself that an agreement is locked (G4.11(i)).
+9. **Which baker may contest.** The arrived-at line says "the original baker may contest". No act shows which baker is the original, so G14.5(e) lets any baker contest Terms for another bake of the same work, as that baker's word.
+10. **"Carry the same work".** Left to the core: this text does not say how two bakes are known to hold the same bytes (section 8.1).
+11. **A contest against any version.** The C session read a contest made against any version alike, whether or not its Terms name a party by role (its Q19). His words are "I contest an offer", and "or I contest a vow". Draft 18 takes the C session's reading because no answer turns on it, and shows beside the contest whether the version names a role (G11.8). If a contest may be made only against an offer or a vow, this is to change.
+12. **Delegations are read from the body.** No field says that Terms are a delegation (the C session's Q3). Draft 18 takes its reading: the body's cMIP says so. *What it costs:* a verifier that cannot read the body of Terms that carry powers answers unchecked, where draft 17 seemed to answer not shown (G5.5).
+13. **Numbers not fixed.** The C session's verifier follows eight levels of powers and receivers, 256 versions, and six rounds of reading. Draft 18 writes the answer (unchecked, beyond where a verifier stops) and not the numbers (G9.2; P2, P8).
+14. **One place where the C session's reading is not taken as built.** Its Q18 compared an act's position with the position of the replacing Terms act, and called that a simplification. Draft 18 writes the position at which the replacing Terms came into force (G5.4).
+15. **Words.** "Socket" and "modules" are his. "Knot" is his (G13.3, G14.5). "The original" is his. `control`, "module" in the singular as a defined term, and "rejected" are Claude's.
+
+**Where the ledger's arrived-at lines, and the brief, say more than the exchanges.** The arrived-at lines are the MOR lead's readings, marked "to check". Draft 18 follows the exchange where a line says more. The full list is in `history.md` (section K.3); the ones that change what a rule says:
+
+16. **"a place in an act where a cMIP plugs in and answers one question"**. The MOR lead's. His words: "task has always been the socket in my mind." That it answers one question is from the MOR lead's answer to his "Is it truly the same task if it appears in a different field?"
+17. **"Draft 17's K1 to K13, kinds of computation, are rebuilt as the list of sockets"**. The MOR lead's and the brief's. His words name no list.
+18. **"the core shows that bakes carry the same work and never picks between them"**. The MOR lead's lean. He asked "Why never pick?", and to the reasons given said: "Ok, but a client can chose to rank based on knots even if anchoring is absent". Draft 18 reads "Ok" as taking the lean for the core, and writes the client's ranking as his.
+19. **"a cMIP or an arbiter may judge; the original baker may contest"**. The MOR lead's, in his lean and his reasons. He did not speak to either.
+20. **"Draft 17 already reads this way and needs no change for it."** The MOR lead's. Draft 17's G4.11(e) said that with no condition named "no question is asked". Draft 18 writes the default in his words (items 5 to 7).
+21. **"Every field of an act that names a cMIP is a task"**, and **"a role is the spot task's input, not a task of its own"**. The brief's.
+22. **"an assent to a tip counts for whether that tip was signed, and for nothing else"**. The brief gives this reading as his. His words, in "A fork, from MOR's side": "two acts got signed by all parties that needed to sign their update." The second half is the brief's statement of what follows.
+
+**Section 8.3 of `draft-18.md`: Left as draft 17 has it**
+
+Each item is where a change touches something the exchanges and the MOR lead's wording do not cover. Each is left as draft 17 has it, or says the least that lets the text be read, and says so.
+
+1. **A power for replacement with no update condition named** (G4.11(e)): as draft 17 (section 8.2, item 7).
+2. **A socket for a dividing rule**: none (section 8.2, item 4). The division is computed by a module of whichever cMIP needs it.
+3. **A socket for a data cMIP** (G11.6(a)): none. How Terms name one is still not said, so a verifier answers unchecked for whether signers agreed to a path beyond a leg (G11.4(e)).
+4. **Standing, the place and the clock**: not sockets (section 5.3). Whether a clock is a module under another layer's cMIP is that layer's.
+5. **The task of paying, in a payment** (G11.7): this text still says a payment holds a task; which field of a payment is its socket is Money's (section 8.1).
+6. **The Control task with its socket empty** (G11.2): still held where one party receives for the others, as draft 17 read it.
+7. **A power narrowed by changing its rule** (G5.5): not read as narrowing; only a removed entry of `powers` is.
+8. **A resolving update of Terms, and the next version.** For one signer's line, the next act may name the resolving update or the last act of the continued branch (G12.3, from the C session's Q10). For Terms, which of the two a next version names in `replaces` is not said; left as draft 17.
+9. **What passes the baker's rights** (G14.2(b); P18): still no act of the grammar. A verifier that cannot read it from the earlier agreement's cMIPs answers unchecked.
+10. **Several bakers of one envelope**, and Terms that sell bytes and name no envelope (P18): as draft 17.
+11. **A settlement that the layer that holds value answers "pending"**: not said. The least reading is unchecked (G9).
+12. **The core's names.** The seams found that the core says "identity" where this text says signer, "bake" where it says envelope, "unknown" where it says unchecked, and has no Order layer. Draft 18 changes none of these words but for what X5 and X6 ask; they are listed in section 9.
+13. **The report block** (`report-block-2.md`) is not changed by this draft. The three places where it and this text do not read alike are still in section 8.1.
+14. **Part B of the C session's questions** (its Q25 to Q37). Fixed where cheap: Q25 (G2.2), Q26 (section 3), Q27 (`powers`), Q28 (the table of section 5), Q29 (G4.1), Q30 (G10.6, K5), Q31 (G12.1), Q33 (G11.4(e)), Q35 (G11.4(b)), Q36 (G8.2). Listed, not fixed: Q32, which lines of one report belong to which payment (pools, P6); Q34, the block's "two sides who both signed" (section 8.1); Q37, the plain words a tool prints, which are not answers of this text.
+15. **Everything draft 17 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section K.6. It is summed up in section 8.4.
+16. **Nothing was tested.** No test was run against draft 18. The C session's verifier was built from draft 17.
