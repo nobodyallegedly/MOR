@@ -1,4 +1,4 @@
-# Agreements, from scratch: companion (written for draft 8, kept up to draft 20)
+# Agreements, from scratch: companion (written for draft 8, kept up to draft 21)
 
 13 November 2026. A record of work by Claude: how the research is used in `draft-8.md`. Not a decision, and not part of the grammar. Nothing here is read by a verifier.
 
@@ -25,6 +25,8 @@
 *Changed for draft 19, only where its three changes touch this file (`history.md`, Part L): rows #21, #28, #30, #43 and #47 in section 2, one sentence added at the end of section 1, this note, and the heading. An update is governed only by the update condition: its cMIP answers valid or not valid, who must sign included, and with none named the default is everyone who signed the original (rules 4.8, 4.11). There is no power for replacement: where a row or an earlier note says "a power for replacement", "the signatures the last one requires" or "who may sign" of an update, read the update condition (rule 5.2). The update condition, the powers and the judicial (the contest, a judge named in the Terms, a power to resolve a fork) are kept apart, and no power can change the judicial (rule 5.6, new). `draft-19.md` has an eighth socket, K8, the field `data`, where Terms name a data cMIP; it is not one of draft 8's task numbers, which the table below keeps, and where a row says "task K8" it still means draft 8's Control, which is K6 there. No grammar rule is added or removed, so every "rule" number below still reads the same against `draft-19.md`. Each rule's reasoning is now in `reasons-19.md`.*
 
 *Changed for draft 20, only where its changes touch this file (`history.md`, Part M): this note, and the heading. Draft 20 answers in its text the second C session's questions on draft 19 and closes its seams with the report block; it adds no grammar rule, task, field or answer word, and changes how no research task lands, so every row below reads the same against `draft-20.md`. Each rule's reasoning is now in `reasons-20.md`.*
+
+*Changed for draft 21, only where its changes touch this file (`history.md`, Part N): this note, the heading, and rows #11, #15, #27 and #47 in section 2. An update that the knots or an anchoring show came after the version it names was replaced replaces nothing (rule 4.7). Nothing an agent made is set aside: the one it acted for changes it only by an update (rule 5.7, new). A buyer signs the offer's Terms, and paying is what they require (rule 11.7). Terms that point to an envelope without the baker, or the holder of her rights, as a party are invalid, and count for nothing (rule 14.3). No grammar rule or task is added or removed, so every other row reads the same against `draft-21.md`. Each rule's reasoning is now in `reasons-21.md`.*
 
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
@@ -64,11 +66,11 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 8 | Order | Order layer; rule 7; order from what acts cite (rule 13.3) |
 | 9 | Keep | property (durable) |
 | 10 | Check | property (verifiable) |
-| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14); the same work baked again by someone else is made legible, not forbidden: ranking is a client's, judging a cMIP's or an arbiter's, and the baker may contest (rule 14.5) |
+| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14); Terms that point to an envelope without either as a party are invalid, and count for nothing, their receiver included (rule 14.3); the same work baked again by someone else is made legible, not forbidden: ranking is a client's, judging a cMIP's or an arbiter's, and the baker may contest (rule 14.5) |
 | 12 | Sum | K4; rule 7; from a pool: P6 |
 | 13 | Transfer | Statement of a K11 kind under a power; rule 7; K8 if value moves; to a work: its receiver, an identity or an agreement (rules 1.3, 1.4), for a split its own deal with its service (the service's cMIP, K8); the one who receives, as a spot of kind received (rule 10); a baker's rights: along the work's own sequence (rule 14.2) |
 | 14 | Admit | power; rule 5; a newcomer foreseen: a spot (rule 10) |
-| 15 | Bind | newcomer's assent; rule 5; filling a spot binds only by own assent (rule 10.3) |
+| 15 | Bind | newcomer's assent; rule 5; filling a spot binds only by own assent (rule 10.3); a buyer: an assent to the offer's Terms, which require the payment (rule 11.7) |
 | 16 | Due | date: K4, with time per the clock the agreement names (rule 7.4; P11, P16); position: K4 over place positions; event: K5 |
 | 17 | Perform | K9 (receiver), K8 (controller) or K5; rule 8; being seen: a spot whose cMIP names the witness (rule 10, K12) |
 | 18 | Inspect | K5; rule 8 |
@@ -80,7 +82,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 24 | Secure | guarantor: assent; pledge: K8 |
 | 25 | Separate | K8; rule 8; cost; in a leg report, what was kept is stated apart from what is still owed, and a doer's own part apart from both (task K8) |
 | 26 | Divide | K4 computes, K8 pays; what is owed to a work goes to its receiver, and where that is an agreement it is the next leg, which makes a series of splits possible (rule 1.4); a leg may call for reports of what was received and passed on, and to whom (rule 11; the report is the shared language's); a receiver who holds for others has the next obligation, within their own agreement, and the same exchange of reports happens there (rule 11.5); where a work is paid, the division, the version divided by, the fee and late payments: the service's cMIP (K8); from a pool: P6 |
-| 27 | Authorise | a delegation, as Terms; rule 5, and 5.5 for who ends it |
+| 27 | Authorise | a delegation, as Terms; rule 5, and 5.5 for who ends it; what an agent made is never set aside, only updated (rule 5.7) |
 | 28 | Scope | the power's K4 rule, for acts made under the Terms; what an update may change, and who must sign it: the update condition (rule 4.11); no power changes the judicial (rule 5.6) |
 | 29 | Name | `for` and `under`; rule 5; an act made for an agreement: `for` names it, and the act is its signature (rule 1.2); one act for many: P12 |
 | 30 | Decide | the power's K4 rule, for acts made under the Terms; a decision to change the Terms is an update, answered by the update condition (rules 4.11, 5.6) |
@@ -100,7 +102,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 44 | Final | the power's K4 rule |
 | 45 | Enforce | from posted value: K8; otherwise cost; what a proven liar loses in standing: K13 |
 | 46 | Complete | Statement of a K11 kind |
-| 47 | Amend | a new version that the last one's update condition answers valid, who must sign it included (rules 4.8, 4.11); where it names none, the default: valid when everyone who signed the original signs it; no power makes an update (rule 5.2) |
+| 47 | Amend | a new version that the last one's update condition answers valid, who must sign it included (rules 4.8, 4.11); where it names none, the default: valid when everyone who signed the original signs it; no power makes an update (rule 5.2); an update of a version that the knots or an anchoring show was already replaced replaces nothing (rule 4.7) |
 | 48 | End | nothing ends: an agreement only gets a new version, whose conditions say what becomes of the work and its shares (rule 4.9); an offer stops taking new identities, by a version or by what the version in force states, as its spot's cMIP reads them (rule 10.5); rights stop applying only through an update that the update condition answers valid, and nothing stops by itself (rules 4.11, 10.6, 10.7); a delegation is ended by its delegator (rule 5.5) |
 | 49 | Leave | Transfer of a part, or a new version whose conditions divide (rule 4.9) |
 
