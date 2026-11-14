@@ -39,6 +39,7 @@ import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
 import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
+import { AgreementsRefusal, NEW_SPECS, build, isNewSpec, postcheck, precheck, screen, type Held, type NewAct } from './agreements.ts';
 
 export type { Kind, RunnerRequest };
 export { KIND_NAME, KINDS, ALWAYS_ASKS };
@@ -316,6 +317,8 @@ export function requestPrint(r: RunnerRequest): string {
       r.binding,
       r.sequence,
       // Draft 5: draft 3's collective appended is gone (the collective is in `objects`).
+      // The new Agreements acts: the acts held and the words given change what the panel shows, so they are part of the request (appended only where given).
+      ...(r.held?.length || r.termsWords !== undefined ? [r.held?.map((h) => sha256(h.act)) ?? [], r.termsWords ?? null] : []),
     ]),
   );
 }
@@ -732,6 +735,8 @@ export class Runner {
     if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was signed.');
     const outright = refusedOutright(req);
     if (outright) throw new RunnerRefusal(400, outright);
+    // The new Agreements acts: checked before anything is signed with the identity's key, refused with the rule the checker names (`agreements.ts`).
+    const agreed = isNewSpec(req.spec) ? agreementsScreen(req) : [];
     await this.keyCheck(h);
     if (req.binding !== h.binding) throw new RunnerRefusal(409, 'The request names the identity’s key before its last change: the app reads the identity again and starts new lines. Nothing was signed.');
     this.sweep();
@@ -753,7 +758,7 @@ export class Runner {
     const kind = kindOf(req);
     // Draft 5 (5.5): an act for a collective always asks, whatever its kind; the panel says for which.
     const forC = await this.collectivesNamed(req, h);
-    const words = [...wordsOf(req, p.name), ...forC.flatMap((c) => [forWords(c, h), FOR_COLLECTIVE_SAY])];
+    const words = [...agreed, ...wordsOf(req, p.name), ...forC.flatMap((c) => [forWords(c, h), FOR_COLLECTIVE_SAY])];
     if (!forC.length && !ALWAYS_ASKS.includes(kind) && p.yes.includes(kind)) return { signed: wire(this.sign(h, p, req, kind, words, { standing: true })) };
     const w: Waiting = { fp, app: p.id, identity: req.identity, kind, words, req, for: forC, at: this.now(), nonce: null, wake: [] };
     this.waiting.set(fp, w);
@@ -850,6 +855,14 @@ export class Runner {
       refs: req.refs,
       acks: req.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
+    // The new Agreements acts: the identity's own act checked again before it leaves; otherwise refused, nothing given out or listed.
+    if (isNewSpec(req.spec)) {
+      try {
+        postcheck(made.act, made.key, req.held);
+      } catch (e) {
+        throw new RunnerRefusal(409, e instanceof Error ? e.message : String(e));
+      }
+    }
     const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}), ...(o.for ? { for: o.for } : {}), ...(o.lane ? { lane: true } : {}) };
     if (!req.public && req.line !== 'apart') entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
     f.log.push(entry);
@@ -1183,9 +1196,12 @@ export function readRequest(v: unknown): RunnerRequest {
   const list = (x: unknown, what: string): string[] | undefined => (x === undefined || x === null ? undefined : Array.isArray(x) ? x.map((y) => h64(y, what)) : (() => { throw new RunnerRefusal(400, `The request’s ${what} is not a list. Nothing was signed.`); })());
   const line = str(o.line, 'line');
   if (line !== 'public' && line !== 'private' && line !== 'apart') throw new RunnerRefusal(400, 'The request names no line: public, private or apart. Nothing was signed.');
-  const type = o.type;
+  // The new Agreements acts, by their fields (`agreements: { act, input }`): Kišib builds the payload with the binding's builder; the spec and type are the act's.
+  const ag = readAgreements(o);
+  const type = ag ? NEW_SPECS[ag.act].type : o.type;
   if (typeof type !== 'number' || !Number.isInteger(type) || type < 0) throw new RunnerRefusal(400, 'The request’s type is not a number. Nothing was signed.');
-  const payload = Uint8Array.from(Buffer.from(str(o.payload, 'payload'), 'base64'));
+  const payload = ag ? ag.payload : Uint8Array.from(Buffer.from(str(o.payload, 'payload'), 'base64'));
+  const held = readHeld(o.held);
   const pair = (x: unknown): [string, string] => (Array.isArray(x) && x.length === 2 ? [h64(x[0], 'objects'), h64(x[1], 'objects')] : (() => { throw new RunnerRefusal(400, 'The request’s objects are not pairs. Nothing was signed.'); })());
   const refs = o.refs === undefined || o.refs === null ? undefined : Array.isArray(o.refs) ? o.refs.map((r) => (typeof r === 'string' ? h64(r, 'refs') : pair(r))) : undefined;
   return {
@@ -1193,9 +1209,11 @@ export function readRequest(v: unknown): RunnerRequest {
     binding: h64(o.binding, 'binding'),
     line,
     sequence: list(o.sequence, 'sequence') ?? [],
-    spec: h64(o.spec, 'specification'),
+    spec: ag ? NEW_SPECS[ag.act].spec : h64(o.spec, 'specification'),
     type,
     payload,
+    ...(held ? { held } : {}),
+    ...(typeof o.termsWords === 'string' ? { termsWords: o.termsWords } : {}),
     public: o.public === true,
     ...(list(o.to, 'to') ? { to: list(o.to, 'to') } : {}),
     ...(Array.isArray(o.objects) ? { objects: o.objects.map(pair) } : {}),
@@ -1204,7 +1222,55 @@ export function readRequest(v: unknown): RunnerRequest {
   };
 }
 
+/**
+ * A request for one of the new Agreements acts by its fields (`agreements:
+ * { act: "terms" | "statement" | "report", input }`, the input as the
+ * binding's builder takes it, a socket's `params` and a Statement's
+ * `content` in hex): its payload built by the binding, or refused with the
+ * rule the builder names. A spec, type or payload beside it must be the
+ * act's own.
+ */
+function readAgreements(o: Record<string, unknown>): { act: NewAct; payload: Uint8Array } | null {
+  if (o.agreements === undefined) return null;
+  const g = (o.agreements ?? {}) as Record<string, unknown>;
+  const act = g.act as NewAct;
+  let payload: Uint8Array;
+  try {
+    payload = build(act, g.input);
+  } catch (e) {
+    throw new RunnerRefusal(400, e instanceof Error ? e.message : String(e));
+  }
+  if ((o.spec !== undefined && o.spec !== NEW_SPECS[act].spec) || (o.type !== undefined && o.type !== NEW_SPECS[act].type)) throw new RunnerRefusal(400, `The request names a spec or type that is not a ${act}’s. Nothing was signed.`);
+  if (o.payload !== undefined && Buffer.compare(Buffer.from(String(o.payload), 'base64'), Buffer.from(payload)) !== 0) throw new RunnerRefusal(400, 'The request carries a payload other than the one its fields build. Nothing was signed.');
+  return { act, payload };
+}
+
+/** The acts handed with a request for the checker and the screen (`[{ act, key? }]`, base64): at most 64. */
+function readHeld(v: unknown): Held[] | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (!Array.isArray(v) || v.length > 64) throw new RunnerRefusal(400, 'The request’s held acts are not a list of at most 64. Nothing was signed.');
+  return v.map((x) => {
+    const h = (x ?? {}) as Record<string, unknown>;
+    if (typeof h.act !== 'string' || (h.key !== undefined && h.key !== null && typeof h.key !== 'string')) throw new RunnerRefusal(400, 'Each held act is { act, key? }, in base64. Nothing was signed.');
+    const key = typeof h.key === 'string' ? Uint8Array.from(Buffer.from(h.key, 'base64')) : null;
+    if (key && key.length !== 32) throw new RunnerRefusal(400, 'A held act’s content key is 32 bytes. Nothing was signed.');
+    return { act: Uint8Array.from(Buffer.from(h.act, 'base64')), ...(key ? { key } : {}) };
+  });
+}
+
+/** The words of the panel for a new Agreements act: checked first, refused with the rule the checker names unless it passes. */
+function agreementsScreen(req: RunnerRequest): string[] {
+  try {
+    const answer = precheck(req, req.held ?? []);
+    return screen(req, answer, req.held ?? [], req.termsWords);
+  } catch (e) {
+    if (e instanceof AgreementsRefusal) throw new RunnerRefusal(400, e.message);
+    throw e;
+  }
+}
+
 /** A request as an app writes it (3.1), for JSON. */
-export function writeRequest(r: SignRequest): Record<string, unknown> {
-  return { ...r, payload: base64(r.payload) };
+export function writeRequest(r: RunnerRequest): Record<string, unknown> {
+  const { held, ...rest } = r;
+  return { ...rest, payload: base64(r.payload), ...(held ? { held: held.map((h) => ({ act: base64(h.act), ...(h.key ? { key: base64(h.key) } : {}) })) } : {}) };
 }

@@ -11,6 +11,7 @@ import { openProgram, stopProgram } from '../../desk/src/launch.ts';
 import { serve } from './server.ts';
 import { BUILT, WEB_FILES } from './web/released.ts';
 import { version } from './version.ts';
+import { agreementsCli, endInput, terminalIo } from './agreements-cli.ts';
 
 const HELP = `mor-kishib: Kišib, the one place where a chain key is used, from paper, and then forgotten.
 TEST IDENTITIES ONLY, until MOR is frozen. It writes no word or key to its folder: the folder
@@ -23,6 +24,9 @@ holds only which browsers are paired with it.
   check URL [--built DIR]        Compare Kišib's web client as a server serves it
                                  (https://kishib.dubsar.org/) with the release in
                                  built/, byte for byte: SAME, or each file that differs.
+  agreements …                   The new Agreements acts (draft 24, encoding 1; the
+                                 report, a proposal): build, check, and sign with an
+                                 identity's signing key. "agreements" alone says how.
 
 The folder defaults to ~/mor-kishib, the port to 8474.
 The page is at http://127.0.0.1:PORT/ on this machine only.`;
@@ -84,6 +88,12 @@ async function main() {
         for (const d of differ) console.log(`DIFFERS  ${d}`);
         process.exitCode = 1;
       } else console.log(`SAME: ${url} serves the release (${WEB_FILES.join(', ')})`);
+      break;
+    }
+    case 'agreements': {
+      // The new Agreements acts, from the command line (agreements-cli.ts): nothing written to Kišib's folder.
+      process.exitCode = await agreementsCli(rest, terminalIo());
+      endInput();
       break;
     }
     default:
