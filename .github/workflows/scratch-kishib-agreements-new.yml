@@ -1,0 +1,43 @@
+# Scratch, never merged: builds the core library's WebAssembly binding
+# (clients/genesis/wasm, crate mor-wasm, with the new Agreements acts of
+# encoding 1) and Kišib's web release from this branch's code, with the
+# release workflows' pinned tools, and pushes both back to this branch, so
+# that a session without the wasm32 target can run Kišib's tests on them.
+name: scratch kishib agreements new
+on:
+  push:
+    branches: [claude/kishib-agreements-new-scratch]
+permissions:
+  contents: write
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, 'built on GitHub')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        env:
+          TZ: UTC
+        run: |
+          cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+          for p in dub desk kishib; do (cd ../$p && npm ci --no-audit --no-fund); done
+          cd ../kishib && npm run release && npm run test:build
+      - name: Push the built folders to this scratch branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f clients/genesis/wasm clients/kishib/built
+          git commit -m "Scratch: the binding and Kišib's release built on GitHub from ${GITHUB_SHA::7}" || echo unchanged
+          git push origin HEAD:claude/kishib-agreements-new-scratch
