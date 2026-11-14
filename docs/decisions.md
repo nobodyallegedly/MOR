@@ -260,6 +260,7 @@ The research is `docs/strangers-2026-11/`.
 
 **The buyer signs the offer** (draft 20, section 8.2 item 12, A26: draft 20 reads that a buyer signs a payment and no Terms, so has no path beyond the leg). The MOR lead leaned that a buyer who wants to see further signs up to a data path. He: "A buyer signs terms of an agreement with unknown party, that requires the buyer to pay, as a consequence."
 - *Arrived at (to check):* draft 20's premise is wrong: a buyer signs Terms, those of an offer (an agreement whose participant was unknown when it was signed), and paying is what those Terms require of the buyer. So the buyer is a signer like any other, and a path beyond the leg for the buyer is whatever the offer's own Terms (their data socket) name, which the buyer agreed to by signing.
+- He added: "Exactly, it’s simply that his hash was unknown when the agreement was drafted and signed by its maker."
 
 ## Not carried into this stint unless he says so
 
