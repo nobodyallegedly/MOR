@@ -37,6 +37,7 @@ use wasm_bindgen::prelude::*;
 
 type R<T> = Result<T, JsError>;
 
+mod agreements_new_js;
 mod money_js;
 mod publication_js;
 mod tip_js;

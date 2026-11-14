@@ -1,0 +1,11 @@
+[package]
+name = "agreements-check"
+version = "0.1.0"
+description = "Reads acts of the new Agreements encoding (docs/agreements-from-scratch/encoding-1.md) and says whether their shape, fields and signature pass, and which rule each one fails."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mor-core = { path = "../../core" }
+hex = "0.4"
+serde_json = "1"
