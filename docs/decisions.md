@@ -250,6 +250,7 @@ The research is `docs/strangers-2026-11/`.
 
 **A late rival** (draft 20, pull request 175, section 8.2 item 10, A6: an update to a version already replaced, under that old version's update condition, makes a fork and stops every version since). The MOR lead's example: v2 made the update condition stricter; two of three later sign an update to v1, whose condition was two of three. The MOR lead: the bytes alone cannot tell late from simultaneous; leaning that where an order shows the update came after its version was replaced, it replaces nothing and makes no fork; where none shows, a fork as now. He: "Only the knots or anchoring can"
 - *Arrived at (to check):* only knots (what acts cite) or anchoring can show that an update came after the version it names was replaced. Where they show it, the update replaces nothing and is no tip of a fork. Where they do not, it is a fork, as draft 20 has it.
+- He added: "For the previous one, the likelihood that they interacted with enough acts to set an order is pretty high"
 
 ## Not carried into this stint unless he says so
 
