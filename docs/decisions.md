@@ -4,7 +4,7 @@
 
 *How his words are read: as one train of thought, later answers refining earlier ones; never one isolated sentence given more weight than the exchange gives it ("Be mindful of taking isolated sentences out of context and give them too much weight", 12 November).*
 
-*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I), "Don*t" (Don't), "everything else’s" (everything else), "could be simply done" (couldn't be simply done), "labeled void by the grantee" (the grantor); and confirmed "referees" as referrers.*
+*Typos in his quotes are corrected only with him: on 12 November he corrected "decoifying" (defined), "pints" (points), "spit" (spot), "ment" (meant), "tat" (that), "it!s" (it's), "PERSONALY" (personally), "the the cMIP" (the cMIP), "cruelly" (really), "they'd were" (they were); on 13 November "chose" (choose), "services uses" (service uses), "wether" (whether), "Lasped" (lapsed); "don.t" (don't), "watever" (whatever), "techincally" (technically), "am o" (am I), "Don*t" (Don't), "everything else’s" (everything else), "could be simply done" (couldn't be simply done), "labeled void by the grantee" (the grantor), "should be made valid" (invalid); and confirmed "referees" as referrers.*
 
 ## Current wish
 
@@ -261,6 +261,9 @@ The research is `docs/strangers-2026-11/`.
 **The buyer signs the offer** (draft 20, section 8.2 item 12, A26: draft 20 reads that a buyer signs a payment and no Terms, so has no path beyond the leg). The MOR lead leaned that a buyer who wants to see further signs up to a data path. He: "A buyer signs terms of an agreement with unknown party, that requires the buyer to pay, as a consequence."
 - *Arrived at (to check):* draft 20's premise is wrong: a buyer signs Terms, those of an offer (an agreement whose participant was unknown when it was signed), and paying is what those Terms require of the buyer. So the buyer is a signer like any other, and a path beyond the leg for the buyer is whatever the offer's own Terms (their data socket) name, which the buyer agreed to by signing.
 - He added: "Exactly, it’s simply that his hash was unknown when the agreement was drafted and signed by its maker."
+
+**A thief's Terms** (draft 20, section 8.2 item 13, A2: Terms for a baked work that name neither its baker nor a succession are still read by other rules, and fail only for the work). The MOR lead leaned to keep that reading. He: "Yes. We cannot stop the attempt. But his signature is not on the original envelope so the agreement should be made valid, the owner of the bake rights have to be a party of the agreement that rules the envelope." Asked whether "valid" meant "invalid", and whether the whole agreement then counts for nothing, receiver included: "Invalid yes, sorry."
+- *Arrived at (to check):* the attempt cannot be stopped, and it stays visible as signed acts. But Terms that rule a baked envelope count only if whoever holds the baker's rights is a party of them; otherwise the agreement is invalid: it never counts, for anything, its receiver included. Draft 20's narrower reading (failing only for the work) is not taken.
 
 ## Not carried into this stint unless he says so
 
