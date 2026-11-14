@@ -1,4 +1,4 @@
-# Agreements, from scratch: companion (written for draft 8, kept up to draft 21)
+# Agreements, from scratch: companion (written for draft 8, kept up to draft 22)
 
 13 November 2026. A record of work by Claude: how the research is used in `draft-8.md`. Not a decision, and not part of the grammar. Nothing here is read by a verifier.
 
@@ -27,6 +27,8 @@
 *Changed for draft 20, only where its changes touch this file (`history.md`, Part M): this note, and the heading. Draft 20 answers in its text the second C session's questions on draft 19 and closes its seams with the report block; it adds no grammar rule, task, field or answer word, and changes how no research task lands, so every row below reads the same against `draft-20.md`. Each rule's reasoning is now in `reasons-20.md`.*
 
 *Changed for draft 21, only where its changes touch this file (`history.md`, Part N): this note, the heading, and rows #11, #15, #27 and #47 in section 2. An update that the knots or an anchoring show came after the version it names was replaced replaces nothing (rule 4.7). Nothing an agent made is set aside: the one it acted for changes it only by an update (rule 5.7, new). A buyer signs the offer's Terms, and paying is what they require (rule 11.7). Terms that point to an envelope without the baker, or the holder of her rights, as a party are invalid, and count for nothing (rule 14.3). No grammar rule or task is added or removed, so every other row reads the same against `draft-21.md`. Each rule's reasoning is now in `reasons-21.md`.*
+
+*Changed for draft 22, only where its one change touches this file (`history.md`, Part O): this note, the heading, and row #11 in section 2. The baker, or whoever holds her rights, is bound by Terms in any way rule 5.1 allows, an update condition they signed included; so once a rights cMIP in the body's socket has passed her rights, an update counts without her where the holder is bound by it (rule 14.2). No grammar rule or task is added or removed, so every other row reads the same against `draft-22.md`. Each rule's reasoning is now in `reasons-22.md`.*
 
 **The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR".
 
@@ -66,7 +68,7 @@ One landing per task, in draft 8. `companion-2.md` had two columns (draft 1's la
 | 8 | Order | Order layer; rule 7; order from what acts cite (rule 13.3) |
 | 9 | Keep | property (durable) |
 | 10 | Check | property (verifiable) |
-| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14); Terms that point to an envelope without either as a party are invalid, and count for nothing, their receiver included (rule 14.3); the same work baked again by someone else is made legible, not forbidden: ranking is a client's, judging a cMIP's or an arbiter's, and the baker may contest (rule 14.5) |
+| 11 | Title | K4 over acts per place; rule 7; a spot of kind holding (rule 10); for a baked work: the baker, or a sequence from the baker (rule 14); Terms that point to an envelope without either as a party are invalid, and count for nothing, their receiver included (rule 14.3); the baker, or the holder of her rights, is bound by them in any way rule 5.1 allows, so once her rights are passed an update counts without her (rule 14.2); the same work baked again by someone else is made legible, not forbidden: ranking is a client's, judging a cMIP's or an arbiter's, and the baker may contest (rule 14.5) |
 | 12 | Sum | K4; rule 7; from a pool: P6 |
 | 13 | Transfer | Statement of a K11 kind under a power; rule 7; K8 if value moves; to a work: its receiver, an identity or an agreement (rules 1.3, 1.4), for a split its own deal with its service (the service's cMIP, K8); the one who receives, as a spot of kind received (rule 10); a baker's rights: along the work's own sequence (rule 14.2) |
 | 14 | Admit | power; rule 5; a newcomer foreseen: a spot (rule 10) |
