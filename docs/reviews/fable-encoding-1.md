@@ -128,7 +128,7 @@ For the Dubsar Suite lead's briefing, in the order I expect them.
 
 *Written after sections 1 to 4. The report's questions are cited by its numbers.*
 
-**As the report leans (12):**
+**As the report leans (13):**
 
 - **1, an unknown field is rejected.** Yes. And draft 24's section 3 and G2.2 should then stop saying "left unread" of a field, as the report itself suggests (my section 2, row 1).
 - **3, `continues` naming no entry of `resolves` is rejected.** Yes.
