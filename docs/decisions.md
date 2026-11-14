@@ -264,6 +264,8 @@ The research is `docs/strangers-2026-11/`.
 
 **A thief's Terms** (draft 20, section 8.2 item 13, A2: Terms for a baked work that name neither its baker nor a succession are still read by other rules, and fail only for the work). The MOR lead leaned to keep that reading. He: "Yes. We cannot stop the attempt. But his signature is not on the original envelope so the agreement should be made valid, the owner of the bake rights have to be a party of the agreement that rules the envelope." Asked whether "valid" meant "invalid", and whether the whole agreement then counts for nothing, receiver included: "Invalid yes, sorry."
 - *Arrived at (to check):* the attempt cannot be stopped, and it stays visible as signed acts. But Terms that rule a baked envelope count only if whoever holds the baker's rights is a party of them; otherwise the agreement is invalid: it never counts, for anything, its receiver included. Draft 20's narrower reading (failing only for the work) is not taken.
+- He then: "I don*t think it’s anything new. An agreement that points to an envelope already needs the baker (or the holder of the bakers rights) to be valid"
+- *Arrived at (to check), replacing the line above:* nothing new is decided. The baker rule already says it: an agreement that points to an envelope is valid only with the baker, or the holder of the baker's rights, as a party. Draft 20's narrower reading misread that rule; the grammar is to say it plainly.
 
 ## Not carried into this stint unless he says so
 
