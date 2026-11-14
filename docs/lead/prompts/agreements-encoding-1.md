@@ -1,6 +1,6 @@
 **Current wish** (Nobody, allegedly, `docs/decisions.md` on branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR". And: "Building blocks over solutions."
 
-The encoding of the new Agreements acts, in the MOR repository (`nobodyallegedly/MOR`): their bytes in a spec text, implemented in the core library, a checker, and vectors. Start a branch `claude/agreements-encoding-1` from `claude/agreements-draft-22` (draft 22's pull request).
+The encoding of the new Agreements acts, in the MOR repository (`nobodyallegedly/MOR`): their bytes in a spec text, implemented in the core library, a checker, and vectors. Start a branch `claude/agreements-encoding-1` from `claude/agreements-draft-22-la1p81` (pull request 177).
 
 **In plain words.** Agreements has been rewritten from scratch as a grammar (`docs/agreements-from-scratch/draft-22.md`). It says what its acts carry, not their bytes. Nobody, allegedly, decided ("The encoding first" in `docs/decisions.md`): "Maybe that should be properly defined first? We have the wording but not the actual code?", and "I think it’s best to do this properly first." This session defines the bytes, so that a test identity can write and sign the new acts and anyone can check them. It does not build the grammar's answers (in force, fork, unchecked): that is a later step.
 
