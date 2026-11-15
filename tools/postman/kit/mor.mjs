@@ -11,8 +11,11 @@ import { MAX_SATS } from './lib/format.mjs';
 
 const HELP = `MOR round two, the players' kit (offline; test identities only)
 
-Identities (keys stay in keys/NAME.json, in this folder):
-  identity new NAME --home OPERATOR@HINT [--home ...] [--scheme 2|3]
+Identities (keys stay in keys/NAME.json, in this folder; keys/ holds identity files only):
+  identity new NAME --home HOME [--home ...] [--scheme 2|3]
+                                (HOME: a home's name from relays.md, read from its /info answer;
+                                 the first time, the kit writes the /info letter and asks you to run again.
+                                 Or OPERATOR@ADDRESS, written out)
   identity show NAME            identity list
   identity rotate NAME [--home OPERATOR@HINT ...]
   identity evidence NAME LETTER ...   (keep the identity records answered to GET /identity/ID and /identity/OPERATOR:
@@ -26,16 +29,22 @@ Acts (kept in acts/ID.mor; a private act's content key in acts/ID.key):
 
 Sealing (private acts reach their recipients only sealed to their published encryption keys):
   identity enckey NAME          (a new encryption key; then: publish NAME --to HOME acts/ID.mor)
-  seal NAME ACTFILE --to ID,ID --via RELAY   (refused for a recipient whose key you do not hold:
-                                fetch its record first, letter --to HOME --get /identity/ID)
+  seal NAME ACTFILE --to ID,ID --via RELAY   (where a recipient's key is not held yet, the kit writes the
+                                letters asking for its record and seals on your next try, after a pass)
   open NAME (--letter LETTER | FILE)   (a sealed container, or a feed page from GET /feed?to=YOUR-ID)
 
 The new Agreements acts (draft 25, encoding 2; the report block, proposal 4):
   agreements specs
+  agreements words FILE         (the fingerprint of the words a Terms body names)
   agreements build terms|statement|report FIELDS.json
   agreements sign NAME terms|statement|report FIELDS.json [--held FILE[:KEYHEX] ...] [--private --to ID,ID]
+                                (FIELDS.json: kit/AGREEMENTS-FIELDS.md, one worked example per act)
   agreements check FILE[:KEYHEX]...
-  agreements ask ASK [ARG ...] --acts FILE[:KEYHEX] ...   (agreements questions: lists the asks)
+  agreements ask ASK [ARG ...] --acts FILE[:KEYHEX] [FILE ...]   (agreements ask, alone: lists the asks)
+
+cMIPs:
+  spec hash FILE --creator ID [--kind N]   (the spec hash, as the core library computes it:
+                                tagged_hash("MOR/spec", {0: kind, 1: creator, 9: text}); kind 0 by default)
 
 Letters for the postman (written to out/; answers in in/):
   letter --to RELAY --get PATH
@@ -66,8 +75,17 @@ function parse(argv) {
     if (a.startsWith('--')) {
       const k = a.slice(2);
       const flags = ['private', 'chain', 'verbose', 'save', 'empty', 'json'];
+      const many = ['acts', 'held'];
       if (flags.includes(k)) opt[k] = true;
-      else {
+      else if (many.includes(k)) {
+        // every value up to the next flag: --acts A B C
+        let n = 0;
+        while (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
+          (opt[k] ??= []).push(argv[++i]);
+          n++;
+        }
+        if (!n) throw new Error(`--${k} needs at least one file`);
+      } else {
         const v = argv[++i];
         if (v === undefined) throw new Error(`--${k} needs a value`);
         (opt[k] ??= []).push(v);
@@ -95,14 +113,26 @@ function uint(s, what) {
   return Number(s);
 }
 
-function homesOf(opt) {
-  return (opt.home ?? []).map((h) => {
+/** Homes as given: a home's name (resolved from a held /info answer), or OPERATOR@ADDRESS. `asked` lists the /info letters written for names not yet resolved. */
+function homesOf(opt, kit) {
+  const asked = [];
+  const homes = (opt.home ?? []).map((h) => {
     const at = h.indexOf('@');
+    if (at < 0 && !isHash(h)) {
+      const r = kit.homeByName(h);
+      if (r.ask) {
+        asked.push(`${h}: ${r.ask}`);
+        return null;
+      }
+      return { ...r.home, name: h };
+    }
     const op = at < 0 ? h : h.slice(0, at);
     const hint = at < 0 ? '' : h.slice(at + 1);
-    if (!isHash(op)) throw new Error(`--home is OPERATOR@HINT, the operator being the home's operator identity (64 hexadecimal characters, from its /info): "${h}"`);
+    if (!isHash(op)) throw new Error(`--home is a home's name from relays.md, or OPERATOR@ADDRESS: "${h}"`);
     return { operator: op, hint };
   });
+  if (asked.length) throw new Error(`the kit does not hold these homes' /info yet, so it wrote the letters asking for them (${asked.join('; ')}). After the postman's next pass, run the same command again. Nothing was made`);
+  return homes;
 }
 
 /** An act file, with its content key: FILE or FILE:KEYHEX, or FILE with FILE's .key beside it. */
@@ -132,13 +162,15 @@ function main(argv) {
   const { pos, opt } = parse(argv);
   const [cmd, sub, ...rest] = pos;
   const kit = new Kit(folderOf(), process.env.MOR_TRAY);
+  kitRef = kit;
+  kit.names(); // warns of anything in keys/ that is not an identity file
   const relaysSaid = () => kit.relaysNote() ?? 'The hosts have not written from-the-hosts/relays.md yet: ask them for the relay names.';
   if (!cmd || cmd === 'help') return say(`${HELP}\nRelay names, as the hosts announce them:\n${relaysSaid()}`);
   if (cmd === 'relays') return say(relaysSaid());
 
   if (cmd === 'identity') {
     if (sub === 'new') {
-      const f = kit.newIdentity(rest[0], homesOf(opt), { scheme: Number(one(opt, 'scheme') ?? 2) });
+      const f = kit.newIdentity(rest[0], homesOf(opt, kit), { scheme: Number(one(opt, 'scheme') ?? 2) });
       return say({ made: rest[0], identity: f.identity, genesis: `acts/${f.identity}.mor`, keys: `keys/${rest[0]}.json`, next: `publish its genesis to its homes: node kit/mor.mjs publish ${rest[0]} --to HOME --chain` });
     }
     if (sub === 'show') {
@@ -161,7 +193,7 @@ function main(argv) {
       return say({ kept: kit.evidence(name, bodies), for: name, note: 'bank orders now carry these acts, so the bank can follow the chain' });
     }
     if (sub === 'rotate') {
-      const homes = opt.home ? homesOf(opt) : undefined;
+      const homes = opt.home ? homesOf(opt, kit) : undefined;
       const r = kit.rotate(rest[0], { homes });
       return say({ rotated: rest[0], rotation: r.id, file: `acts/${r.id}.mor`, next: `send it to every home (node kit/mor.mjs publish ${rest[0]} --to HOME acts/${r.id}.mor); then ask each home for /identity/${kit.load(rest[0]).identity} and /identity/OPERATOR and keep the answers (identity evidence ${rest[0]} LETTER ...) before the next bank order` });
     }
@@ -172,7 +204,15 @@ function main(argv) {
     const to = list(opt, 'to');
     const via = one(opt, 'via');
     if (opt.private && via && !to?.length) throw new Error('a private post sealed --via a relay names its recipients with --to');
-    if (opt.private && via) kit.recipientKeys(to); // refused before signing if a recipient has no key
+    if (opt.private && via) {
+      const missing = kit.missingKeys(to);
+      if (missing.length) {
+        const r = kit.askRecords(name, missing, via);
+        return say({ notYet: `nothing was signed: the kit does not hold the encryption key of ${missing.join(', ')}. It wrote letters asking ${r.at.join(', ')} for their records. After the postman's next pass, run the same command again: it will sign and seal then. If a record shows no encryption key, that identity has to publish one first (identity enckey)`, letters: r.letters });
+      }
+      const no = kit.refusesSealed(via);
+      if (no) throw new Error(`${via} answered ${no} to a sealed container before: it does not take sealed containers (POST /sealed). Use --via a relay or home that does. Nothing was signed`);
+    }
     const made = kit.post(name, words.join(' '), { isPublic: !opt.private, to, refs: list(opt, 'refs') });
     const out = { signed: made.id, file: `acts/${made.id}.mor`, ...(opt.private ? { key: hex(made.key) } : {}) };
     if (opt.private && via) {
@@ -187,6 +227,11 @@ function main(argv) {
     const to = list(opt, 'to');
     if (!name || !file || !to?.length) throw new Error('seal NAME ACTFILE --to ID,ID --via RELAY');
     const h = heldOf(file);
+    const missing = kit.missingKeys(to);
+    if (missing.length) {
+      const r = kit.askRecords(name, missing, one(opt, 'via'));
+      return say({ notYet: `nothing was sealed: the kit does not hold the encryption key of ${missing.join(', ')}. It wrote letters asking ${r.at.join(', ') || 'nobody (give --via RELAY)'} for their records. After the postman's next pass, run the same command again`, letters: r.letters });
+    }
     const s = kit.seal(h.act, to, one(opt, 'via'), h.key ?? null);
     return say({ sealed: s.file.slice(kit.folder.length + 1), letter: s.letter?.name ?? 'none: give --via RELAY to send it', to: s.to });
   }
@@ -223,6 +268,7 @@ function main(argv) {
 
   if (cmd === 'agreements') {
     if (sub === 'specs') return say(Kit.agreementsSpecs());
+    if (sub === 'words') return say({ words: mor.workHash(new Uint8Array(readFileSync(rest[0]))), of: rest[0], note: 'the fingerprint a Terms body names in "words": the file’s bytes, exactly' });
     if (sub === 'build') return say(hex(Kit.agreementsBuild(rest[0], JSON.parse(readFileSync(rest[1], 'utf8')))));
     if (sub === 'check') {
       const held = rest.map(heldOf);
@@ -238,7 +284,7 @@ function main(argv) {
         process.exitCode = 1;
         return;
       }
-      return say({ signed: r.signed.id, file: `acts/${r.signed.id}.mor`, check: r.check, note: 'A pass means only that the bytes are well formed and signed; the grammar’s answers are agreements ask.' });
+      return say({ signed: r.signed.id, file: `acts/${r.signed.id}.mor`, check: r.check, note: 'A pass means only that the bytes are well formed and signed; the grammar’s answers are agreements ask.', ...(r.assent ? { notInForceYet: r.assent.says, signYourAssent: r.assent.command } : {}) });
     }
     if (sub === 'questions') return say(JSON.parse(mor.agreementsNewQuestions()));
     if (sub === 'ask' && !rest.length) return say({ asks: JSON.parse(mor.agreementsNewQuestions()), usage: 'agreements ask ASK [ARG ...] --acts FILE[:KEYHEX] ...' });
@@ -247,6 +293,19 @@ function main(argv) {
       const acts = (opt.acts ?? []).map(heldOf).map((h) => ({ bytes: h.act, ...(h.key ? { key: h.key } : {}) }));
       return say(JSON.parse(mor.agreementsNewAsk({ acts, ask, args })));
     }
+  }
+
+  if (cmd === 'spec' && sub === 'hash') {
+    const file = rest[0];
+    const creator = one(opt, 'creator');
+    if (!file || !isHash(creator)) throw new Error('spec hash FILE --creator ID (the creator: an identity hash)');
+    const raw = readFileSync(file, 'utf8');
+    const text = raw.endsWith('\r\n') ? raw.slice(0, -2) : raw.endsWith('\n') ? raw.slice(0, -1) : raw; // at most one final line break, as Development rule 26 reads a file
+    mor.checkText(text);
+    const kind = uint(one(opt, 'kind'), '--kind') ?? 0;
+    const content = mor.cborEncode(new Map([[0, kind], [1, unhex(creator)], [9, text]]));
+    const d = mor.decodeSpec(content);
+    return say({ hash: d.hash, kind: d.kind, creator: d.creator, textBytes: Buffer.byteLength(text), computed: 'by the core library (decodeSpec): tagged_hash("MOR/spec", {0: kind, 1: creator, 9: text}), the file read as Development rule 26 reads it (at most one final line break removed)' });
   }
 
   if (cmd === 'letter') {
@@ -320,9 +379,12 @@ function main(argv) {
   throw new Error(`unknown command "${cmd}": node kit/mor.mjs help`);
 }
 
+let kitRef = null;
 try {
   main(process.argv.slice(2));
 } catch (e) {
   console.error(`mor: ${errorText(e)}`);
   process.exitCode = 1;
+} finally {
+  for (const w of kitRef?.warnings ?? []) console.error(`mor: note: ${w}`);
 }

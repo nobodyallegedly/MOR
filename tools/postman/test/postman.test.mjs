@@ -5,7 +5,8 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { BANK, SPECS, b64, hex, mor, sha256, unb64, unhex } from '../kit/lib/core.mjs';
 import { Kit } from '../kit/lib/kit.mjs';
@@ -511,12 +512,11 @@ test('sealing: an encryption key published, a private post sealed to it through 
   // Ampersand cannot seal to hop before it holds hop's record: refused, plainly, nothing signed.
   const lines = A.load('amp').lines.private.length;
   const cli = (...x) => execFileSync(process.execPath, [kitCli, ...x], { env: { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  assert.throws(() => cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1'), /has no published encryption key in what you hold.*--get \/identity\//s);
+  assert.match(JSON.parse(cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1')).notYet, /nothing was signed: the kit does not hold the encryption key/);
   assert.equal(A.load('amp').lines.private.length, lines, 'nothing signed when it cannot be sealed');
-  // It asks the home for hop's record, then seals.
-  const rec = A.relayLetter('home-1', 'GET', `/identity/${h.identity}`);
+  // The kit wrote the letter asking the home for hop's record; after the pass, it seals.
   await w.pm.pass();
-  assert.equal(A.answer(rec.name).status, 200);
+  assert.ok(A.answers().some((n) => n.includes('-record-') && A.answer(n).status === 200));
   const out = JSON.parse(cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1'));
   assert.ok(out.letter && out.sealed.startsWith('sealed/'));
   await w.pm.pass();
@@ -613,4 +613,137 @@ test('postman kit --send --update replaces the kit’s own files and nothing els
   fs.symlinkSync(join(T, 'keys'), join(T, 'kit'));
   assert.match(run('--send', '--update'), /refused: .*symbolic link/);
   assert.deepEqual(fs.readdirSync(join(T, 'keys')), ['amp.json']);
+});
+
+// ------------------------------------------------- after window two
+
+test('agreements ask takes several files after one --acts; FIELDS examples sign; the author is offered the assent that counts', () => {
+  const w = round(['counterparty'], relays());
+  const k = w.kits.counterparty;
+  const me = k.newIdentity('cp', [home.home]).identity;
+  const T = k.agreementsSign('cp', 'terms', { parties: [{ signer: me }], authors: [0], body: { words: mor.workHash(new TextEncoder().encode('A test loaf.')), cmip: '04'.repeat(32), params: 'f6' }, previous: null });
+  assert.ok(T.assent, 'the author who is a party is told the Terms are not in force');
+  assert.match(T.assent.says, /not in force yet.*G4\.1/s);
+  const offered = JSON.parse(fs.readFileSync(join(w.root, 'counterparty', 'acts', `${T.signed.id}.assent.json`), 'utf8'));
+  assert.equal(offered.previous, T.signed.id, 'an author’s assent names the Terms in previous (section 3.2)');
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'counterparty') };
+  const cli = (...x) => execFileSync(process.execPath, [kitCli, ...x], { env, cwd: join(w.root, 'counterparty'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const cmd = T.assent.command.replace(/^node kit\/mor\.mjs /, '').split(' ');
+  const A = JSON.parse(cli(...cmd));
+  assert.equal(A.check.verdict, 'pass');
+  const tf = `acts/${T.signed.id}.mor`;
+  const af = `acts/${A.signed}.mor`;
+  const both = JSON.parse(cli('agreements', 'ask', 'in_force', T.signed.id, '--acts', tf, af));
+  assert.equal(both[0].word, 'shown', 'both files read: in force');
+  const one = JSON.parse(cli('agreements', 'ask', 'in_force', T.signed.id, '--acts', tf));
+  assert.equal(one[0].word, 'not shown');
+  // The FIELDS shapes: a counter signature after the assent; a report; previous: [] refused.
+  const C = k.agreementsSign('cp', 'statement', { agreement: T.signed.id, terms: T.signed.id, kind: 'counter_signature', previous: A.signed }, { held: [{ act: T.signed.act }, { act: new Uint8Array(fs.readFileSync(join(w.root, 'counterparty', af))) }] });
+  assert.equal(C.check.verdict, 'pass');
+  const R = k.agreementsSign('cp', 'report', { call: { act: '0b'.repeat(32) }, lines: [{ line: 'received', amount: { unit: '0c'.repeat(32), value: 5 }, by: '0d'.repeat(32) }] });
+  assert.equal(R.check.verdict, 'pass');
+  assert.throws(() => k.agreementsSign('cp', 'statement', { agreement: T.signed.id, terms: T.signed.id, kind: 'assent', previous: [] }), /expected a string/);
+  assert.ok(fs.readFileSync(new URL('../kit/AGREEMENTS-FIELDS.md', import.meta.url), 'utf8').includes('"previous": "TERMS-ID"'));
+});
+
+test('a stray file in keys/ is skipped with a warning, and a window-one encryption-key file is taken in', () => {
+  const w = round(['pointer'], relays());
+  const k = w.kits.pointer;
+  k.newIdentity('pt', [home.home]);
+  // A hand-made encryption key of window one: its act signed by the identity, its secret in a file of its own.
+  const secret = mor.newEncryptionSecret();
+  const made = k.sign('pt', { spec: SPECS.envelopes, type: 4, payload: mor.encryptionKeyPayload(1, undefined, mor.xwingPublic(secret)) });
+  fs.writeFileSync(join(w.root, 'pointer', 'keys', 'pt-encryption.json'), JSON.stringify({ secret: hex(secret), note: 'window one' }));
+  fs.writeFileSync(join(w.root, 'pointer', 'keys', 'notes.json'), '{"x": 1}');
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'pointer') };
+  const r = spawnKit(env, 'identity', 'list');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^pt [0-9a-f]{64}\n?$/);
+  assert.match(r.stderr, /pt-encryption\.json is not an identity file: its encryption key \(version 1, act [0-9a-f]{64}\) was taken into keys\/pt\.json/);
+  assert.match(r.stderr, /notes\.json is not an identity file and was skipped \(keys\/ holds identity files only/);
+  assert.equal(k.load('pt').encryption[0].act, made.id);
+  // seal and open work beside the stray files (no "f.chain is not iterable").
+  const self = k.load('pt').identity;
+  assert.throws(() => k.seal(k.post('pt', 'public').act, [self], null), /not addressed to .*Nothing was sealed/s);
+  const mine = k.post('pt', 'to myself', { isPublic: false, to: [self] });
+  const s = k.seal(mine.act, [self], null, mine.key);
+  assert.equal(k.open('pt', s.sealed)[0].opened, true);
+});
+
+function spawnKit(env, ...a) {
+  return spawnSync(process.execPath, [kitCli, ...a], { env, encoding: 'utf8' });
+}
+
+test('identity show reads the held evidence: a rotation with its home’s receipt is not pending', async () => {
+  const w = round(['public-under-30'], relays());
+  const k = w.kits['public-under-30'];
+  const f = k.newIdentity('u', [home.home]);
+  k.publish('home-1', k.chainActs('u'));
+  await w.pm.pass();
+  const rot = k.rotate('u');
+  k.publish('home-1', [rot.rotation]);
+  await w.pm.pass();
+  assert.equal(k.resolve('u').stop, 'pending');
+  k.relayLetter('home-1', 'GET', `/identity/${f.identity}`);
+  k.relayLetter('home-1', 'GET', `/identity/${home.operator}`);
+  await w.pm.pass();
+  const r = k.resolve('u');
+  assert.equal(r.stop, 'end', 'the records answered in in/ are read');
+  assert.equal(r.links.length, 2);
+});
+
+test('sealing to someone whose key is not held writes the letters for their record and seals on the next try; a relay that refused /sealed is refused', async () => {
+  const w = round(['prosumers', 'plain-words'], relays());
+  const P = w.kits.prosumers;
+  const Q = w.kits['plain-words'];
+  P.newIdentity('p', [home.home]);
+  const q = Q.newIdentity('q', [home.home]);
+  const ek = Q.encryptionKey('q');
+  Q.publish('home-1', [...Q.chainActs('q'), ek.act]);
+  await w.pm.pass();
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'prosumers') };
+  const first = JSON.parse(spawnKit(env, 'post', 'p', 'hello', '--private', '--to', q.identity, '--via', 'home-1').stdout);
+  assert.match(first.notYet, /nothing was signed.*run the same command again/s);
+  assert.equal(first.letters.length, 1);
+  assert.equal(P.load('p').lines.private.length, 0);
+  await w.pm.pass();
+  const second = JSON.parse(spawnKit(env, 'post', 'p', 'hello', '--private', '--to', q.identity, '--via', 'home-1').stdout);
+  assert.ok(second.letter, JSON.stringify(second));
+  // A relay that answered 404 to a sealed container is refused from then on.
+  const n = P.relayLetter('echo', 'POST', '/sealed', new Uint8Array([1]));
+  await w.pm.pass();
+  const f = join(w.root, 'prosumers', 'in', `${n.name}.answer.json`);
+  const a = JSON.parse(fs.readFileSync(f, 'utf8'));
+  fs.unlinkSync(f);
+  fs.writeFileSync(f, JSON.stringify({ ...a, status: 404 }));
+  const r = spawnKit(env, 'post', 'p', 'again', '--private', '--to', q.identity, '--via', 'echo');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /echo answered 404 to a sealed container before: it does not take sealed containers/);
+});
+
+test('identity new --home NAME reads the home from its /info answer, writing the letter first when it is not held', async () => {
+  const w = round(['stall'], relays());
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'stall') };
+  const r1 = spawnKit(env, 'identity', 'new', 's', '--home', 'home-1');
+  assert.equal(r1.status, 1);
+  assert.match(r1.stderr, /wrote the letters asking for them.*run the same command again/s);
+  await w.pm.pass();
+  const r2 = spawnKit(env, 'identity', 'new', 's', '--home', 'home-1');
+  assert.equal(r2.status, 0, r2.stderr);
+  const f = w.kits.stall.load('s');
+  assert.deepEqual(f.homes, [{ operator: home.operator, hint: home.base, name: 'home-1' }]);
+  assert.equal(mor.actId(unb64(f.chain[0])), f.identity);
+  assert.equal(w.kits.stall.resolve('s').stop, 'end');
+});
+
+test('spec hash: the core library’s own, for a cMIP with its creator', () => {
+  const w = round(['dublaw'], relays());
+  const file = join(w.root, 'dublaw', 'cmip.md');
+  fs.writeFileSync(file, 'A test cMIP.\n');
+  const creator = '01'.repeat(32);
+  const out = JSON.parse(spawnKit({ ...process.env, MOR_FOLDER: join(w.root, 'dublaw') }, 'spec', 'hash', file, '--creator', creator).stdout);
+  const t = createHash('sha256').update('MOR/spec').digest();
+  const want = createHash('sha256').update(t).update(t).update(mor.cborEncode(new Map([[0, 0], [1, unhex(creator)], [9, 'A test cMIP.']]))).digest('hex');
+  assert.equal(out.hash, want);
+  assert.equal(out.creator, creator);
 });

@@ -46,6 +46,22 @@ Built from the players' reports, as the suite lead listed them:
 - **No temporary folder.** Nothing in the kit or the postman writes outside the player's folder or the postman's own; a test reads the sources to keep it so, and the tray guide says never to use `/tmp`.
 - `postman kit --send --update` replaces the kit's files only.
 
+## After window two (third edition, 15 November, night)
+
+Built from window two's reports, as the suite lead listed them:
+- `--acts A B C` and `--held A B` take every file up to the next flag.
+- Anything in `keys/` that is not an identity file is skipped with a note. A window-one encryption-key file is taken into its identity when its secret's public half matches an encryption-key act in `acts/` signed by that identity; the file is left where it is.
+- `identity show` reads the identity's evidence and the `/identity` records held in `in/`.
+- **Sealing to someone whose key is not held** no longer fails. The kit writes the record letters (to the relay named and to the signer's own homes known by name), signs nothing, and says to run again after the next pass.
+- Sealing is refused for an act not addressed to its recipients (they could not open it).
+- Sealing is refused at a relay that has already refused a sealed container (404, 405, 501). The tray guide says that the hosts' reference relays and homes take sealed containers and other relays may not. *The kit cannot know before a first refusal:* the first container sent to such a place is lost.
+- `kit/AGREEMENTS-FIELDS.md`: one worked example per act. Each shape is signed and checked in the tests. `previous` is one id or `null`, never `[]`.
+- **The author's assent:** when the signer of Terms is one of their parties, the kit says plainly that the Terms are not in force (G4.1) and writes the assent's fields, with the one command that signs it.
+- `identity new --home NAME` reads the operator and address from a held `/info` answer at that name, writing the letter first.
+- `spec hash FILE --creator ID`: the hash comes from the core library's own `decodeSpec`, over `{0: kind, 1: creator, 9: text}` (kind 0 unless `--kind`), the file read as Development rule 26 reads it.
+
+**A finding while building (for the suite lead, and for Kišib).** Draft 25, section 3.2: "an author who signed the Terms names them in the `previous` of their assent". An author's assent with `previous: null` passes the checker (the bytes are well formed), but it forks the author's own line with the Terms act: the grammar verifier then answers *not shown* for in force (G4.1). With `previous` naming the Terms, it answers *shown*. The kit now offers the assent with `previous` set. Kišib's own test (`clients/kishib/test/agreements-new.test.ts`, the assent after Terms) signs an author's assent with `previous: null`, and its screen does not warn of it. Kišib should look at this. This may be part of what the five windows met.
+
 ## State
 
 A draft pull request against `claude/agreements-verifier-2`, not to be merged. CI: in the pull request.

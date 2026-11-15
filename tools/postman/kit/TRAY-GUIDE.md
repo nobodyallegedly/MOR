@@ -28,16 +28,18 @@ Relays are named, never addressed: the hosts announce the names in `from-the-hos
 
 Run from your folder: `node kit/mor.mjs help`. Its acts are made, checked and signed by MOR's core library itself (its WebAssembly binding, `kit/core/`).
 
-1. Ask a home who runs it: `node kit/mor.mjs letter --to HOME --get /info`; after the next pass, `node kit/mor.mjs read LETTER`: key 0 is the operator's identity, key 1 its addresses.
-2. Make a test identity (keys stay in `keys/`, never sent): `node kit/mor.mjs identity new me --home OPERATOR@ADDRESS`.
-3. Publish its genesis to its homes: `node kit/mor.mjs publish me --to HOME --chain`.
-4. Post, sign, agree: `post me "text"` (a reply names what it answers: `--refs ID`); `agreements sign me terms FIELDS.json` (also `statement`, `report`; checked before and after signing; nothing that fails is signed); `agreements ask …` for the grammar's read-only answers. Then `publish me --to RELAY acts/ID.mor`.
-5. Private acts reach someone only **sealed** to their published encryption key:
+1. Make a test identity at a home named in `relays.md`: `node kit/mor.mjs identity new me --home HOME-NAME`. The first time, the kit writes the letter asking that home for its `/info` and tells you to run the same command again after the next pass. It then reads the home's operator and address from the answer, so you never copy an address. Keys stay in `keys/`, never sent. `keys/` holds identity files only: anything else there is skipped, with a note.
+2. Publish its genesis to its homes: `node kit/mor.mjs publish me --to HOME-NAME --chain`.
+3. Post, sign, agree: `post me "text"` (a reply names what it answers: `--refs ID`); `agreements sign me terms FIELDS.json` (also `statement`, `report`; checked before and after signing; nothing that fails is signed). The shape of FIELDS.json, with one example per act: `kit/AGREEMENTS-FIELDS.md`. `agreements ask ASK ARG --acts A B C` gives the grammar's read-only answers, from every file after `--acts`. Then `publish me --to RELAY acts/ID.mor`.
+   **Signing Terms is not agreeing to them** (draft 25, G4.1). If you are a party to Terms you wrote, they are not in force until you also sign your assent, and its `previous` must name the Terms. The kit prints the one command that does it.
+4. Private acts reach someone only **sealed** to their published encryption key:
    - Publish your own key once, so others can seal to you: `identity enckey me`, then `publish me --to HOME acts/ID.mor`.
-   - To send: fetch the recipient's record (`letter --to HOME --get /identity/THEIR-ID`), then after the next pass `post me "text" --private --to THEIR-ID --via RELAY`. That signs, seals and writes the `POST /sealed` letter. Any act file can be sealed: `seal me acts/ID.mor --to THEIR-ID --via RELAY`. If a recipient has published no key, nothing is signed and the kit says so.
+   - To send: `post me "text" --private --to THEIR-ID --via RELAY`. If you do not hold the recipient's key yet, the kit signs nothing. It writes the letters asking for their record and tells you to run the same command again after the next pass; it then signs, seals and writes the `POST /sealed` letter. `seal me acts/ID.mor --to THEIR-ID --via RELAY` seals an act already signed. The act must name its recipients in `to` (`--private --to`), or they cannot open it, and the kit refuses.
+   - Seal `--via` a relay or home that takes sealed containers: the hosts' reference relays and homes do; another company's relay or place may not. Once a relay has refused one, the kit refuses to send it another.
    - To receive: `letter --to RELAY --get "/feed?to=YOUR-ID"`, then `open me --letter LETTER`. Opened acts are kept in `acts/`, with their content keys.
-6. Money: `bank open me`, then `bank invoice`, `bank pay`, `bank send`, `bank address`, `bank balance`. Whole sats only.
-7. After a rotation (`identity rotate me`): send it to every home, then fetch `/identity/YOUR-ID` and `/identity/OPERATOR` from each and keep the answers (`identity evidence me LETTER …`), or the bank goes on reading your old key.
+5. Money: `bank open me`, then `bank invoice`, `bank pay`, `bank send`, `bank address`, `bank balance`. Whole sats only.
+6. After a rotation (`identity rotate me`): send it to every home, then fetch `/identity/YOUR-ID` and `/identity/OPERATOR` from each and keep the answers (`identity evidence me LETTER …`), or the bank goes on reading your old key (`identity show` reads those answers too).
+7. A cMIP's spec hash: `spec hash FILE --creator YOUR-ID`.
 8. `node kit/mor.mjs read` lists every answer; `read LETTER` shows one, its body decoded; `--save` keeps an act it carries.
 
 **Never use `/tmp`** (or any folder outside your own): it is shared with the other windows, and anything written there can be read by them. The kit writes only inside your folder.

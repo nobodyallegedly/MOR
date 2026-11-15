@@ -24,6 +24,7 @@ export function folderOf(env = process.env) {
 export class Kit {
   constructor(folder, tray = basename(folder)) {
     this.folder = folder;
+    this.warnings = [];
     this.tray = tray;
     if (!NAME.test(tray)) throw new Error(`the tray's name "${tray}" is not a tray name: set MOR_TRAY`);
   }
@@ -47,8 +48,10 @@ export class Kit {
 
   load(name) {
     const f = this.keyFile(name);
-    if (!existsSync(f)) throw new Error(`no identity named "${name}" in keys/ (make one with: identity new ${name} --home OPERATOR@HINT)`);
-    return JSON.parse(readFileSync(f, 'utf8'));
+    if (!existsSync(f)) throw new Error(`no identity named "${name}" in keys/ (make one with: identity new ${name} --home HOME)`);
+    const j = JSON.parse(readFileSync(f, 'utf8'));
+    if (!isIdentityFile(j)) throw new Error(`keys/${name}.json is not an identity file this kit wrote (keys/ holds identity files only)`);
+    return j;
   }
 
   save(name, id) {
@@ -63,12 +66,105 @@ export class Kit {
     }
   }
 
+  /**
+   * The identities in keys/: every file there that is an identity file this
+   * kit wrote. Anything else is skipped, with a warning (`this.warnings`);
+   * a stray encryption-key file from window one is taken in where its
+   * secret's public half matches an encryption-key act in acts/ signed by
+   * one of these identities (the file itself is left where it is).
+   */
   names() {
     if (!existsSync(this.path('keys'))) return [];
-    return readdirSync(this.path('keys'))
-      .filter((f) => f.endsWith('.json'))
-      .map((f) => f.slice(0, -5))
-      .sort();
+    const ids = [];
+    const strays = [];
+    for (const f of readdirSync(this.path('keys')).sort()) {
+      if (!f.endsWith('.json')) continue;
+      const n = f.slice(0, -5);
+      let j = null;
+      try {
+        j = JSON.parse(readFileSync(this.path('keys', f), 'utf8'));
+      } catch {
+        // not JSON
+      }
+      if (NAME.test(n) && isIdentityFile(j)) ids.push(n);
+      else strays.push({ file: f, json: j });
+    }
+    for (const st of strays) this.adoptStray(st, ids);
+    return ids;
+  }
+
+  adoptStray({ file, json }, ids) {
+    const secrets = [];
+    const walk = (x) => {
+      if (typeof x === 'string' && /^[0-9a-f]{64}$/.test(x)) secrets.push(x);
+      else if (Array.isArray(x)) x.forEach(walk);
+      else if (x && typeof x === 'object') Object.values(x).forEach(walk);
+    };
+    walk(json);
+    const encActs = [];
+    if (existsSync(this.path('acts'))) {
+      for (const a of readdirSync(this.path('acts'))) {
+        if (!a.endsWith('.mor')) continue;
+        try {
+          const bytes = new Uint8Array(readFileSync(this.path('acts', a)));
+          const d = mor.describeAct(bytes);
+          if (d.spec === SPECS.envelopes && d.type === 4) encActs.push({ d, m: mor.cborDecode(d.payload) });
+        } catch {
+          // not an act
+        }
+      }
+    }
+    for (const sec of secrets) {
+      let pub;
+      try {
+        pub = hex(mor.xwingPublic(unhex(sec)));
+      } catch {
+        continue;
+      }
+      const hit = encActs.find((e) => e.m.get(2)?.[1] && hex(e.m.get(2)[1]) === pub);
+      if (!hit) continue;
+      const owner = ids.find((n) => this.load(n).identity === hit.d.signer);
+      if (!owner) continue;
+      const f = this.load(owner);
+      f.encryption ??= [];
+      if (!f.encryption.some((e) => e.act === hit.d.id)) {
+        f.encryption.push({ version: hit.m.get(0), act: hit.d.id, secret: sec });
+        f.encryption.sort((a, b) => a.version - b.version);
+        this.save(owner, f);
+        this.warnings.push(`keys/${file} is not an identity file: its encryption key (version ${hit.m.get(0)}, act ${hit.d.id}) was taken into keys/${owner}.json; the file was left as it is`);
+      }
+      return;
+    }
+    this.warnings.push(`keys/${file} is not an identity file and was skipped (keys/ holds identity files only, NAME.json, as the kit writes them)`);
+  }
+
+  /**
+   * A home named as the hosts name it (from-the-hosts/relays.md): its
+   * operator and first address read from a held answer to GET /info at that
+   * name. Where none is held, the letter asking for it is written, and the
+   * caller says to run again after the next pass.
+   */
+  homeByName(relay) {
+    for (const n of this.answers().reverse()) {
+      let a;
+      try {
+        a = this.answer(n);
+      } catch {
+        continue;
+      }
+      if (a.to !== relay || a.path !== '/info' || a.status !== 200 || !a.bytes) continue;
+      try {
+        const m = mor.cborDecode(a.bytes);
+        const op = m.get(0);
+        const bases = m.get(1);
+        const operator = typeof op === 'string' ? op : op instanceof Uint8Array ? hex(op) : null;
+        if (isHash(operator) && Array.isArray(bases) && typeof bases[0] === 'string') return { home: { operator, hint: bases[0] }, name: relay };
+      } catch {
+        // not a relay's /info
+      }
+      throw new Error(`the answer to ${n} (GET /info at ${relay}) names no operator: ${relay} is a relay, not a home, or not one the kit can read`);
+    }
+    return { ask: this.relayLetter(relay, 'GET', '/info', null, { name: Kit.letterName('info') }).name };
   }
 
   /**
@@ -81,7 +177,7 @@ export class Kit {
     if (!homes.length) throw new Error('a genesis names at least one home (--home OPERATOR@HINT): ask a home for its /info through the postman');
     const signing = mor.newSigningSecret();
     const chainKey = mor.newTestChainKey(scheme);
-    const genesis = mor.makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: chainKey.scheme, chainKeyCommit: chainKey.commit, homes, rule });
+    const genesis = mor.makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: chainKey.scheme, chainKeyCommit: chainKey.commit, homes: homes.map(({ operator, hint }) => ({ operator, hint })), rule });
     const id = mor.actId(genesis);
     const f = {
       label: TEST_LABEL,
@@ -90,7 +186,7 @@ export class Kit {
       signingSecret: hex(signing),
       chainKey: { scheme: chainKey.scheme, seeds: hex(chainKey.seeds) },
       chain: [b64(genesis)],
-      homes,
+      homes: homes.map(({ operator, hint, name: n }) => ({ operator, hint, ...(n ? { name: n } : {}) })),
       rule,
       lines: { public: [], private: [], bank: [] },
       bankN: 0,
@@ -124,7 +220,7 @@ export class Kit {
       nextChainKeyScheme: next.scheme,
       nextChainKeyCommit: next.commit,
       kept,
-      homes,
+      homes: homes?.map(({ operator, hint }) => ({ operator, hint })),
       rule: undefined,
     });
     const rid = mor.actId(rotation);
@@ -179,7 +275,15 @@ export class Kit {
   resolve(name) {
     const f = this.load(name);
     const v = new mor.Verifier(SPECS.identity);
-    for (const a of f.chain) v.add(unb64(a));
+    const add = (a) => {
+      try {
+        v.add(a);
+      } catch {
+        // not an act
+      }
+    };
+    for (const a of [...f.chain, ...(f.evidence ?? [])]) add(unb64(a));
+    for (const a of this.heldRecords()) add(a);
     return v.resolve(f.identity);
   }
 
@@ -275,6 +379,46 @@ export class Kit {
    * library's verifier from the identity records held in in/ (and this
    * folder's own identities). Refused, plainly, for a recipient with none.
    */
+  /** The recipients whose encryption key is not held: [] when every one is. */
+  missingKeys(ids) {
+    return ids.filter((id) => {
+      try {
+        this.recipientKeys([id]);
+        return false;
+      } catch (e) {
+        if (/no published encryption key/.test(errorText(e))) return true;
+        throw e;
+      }
+    });
+  }
+
+  /**
+   * Letters asking for the records of identities whose keys are missing:
+   * to the relay named, and to this identity's own homes where it knows
+   * them by name. The seal then runs on the next try, after a pass.
+   */
+  askRecords(name, ids, via) {
+    const f = this.load(name);
+    const at = [...new Set([via, ...(f.homes ?? []).map((h) => h.name).filter(Boolean)].filter(Boolean))];
+    const letters = [];
+    for (const id of ids) for (const r of at) letters.push(this.relayLetter(r, 'GET', `/identity/${id}`, null, { name: Kit.letterName('record') }).name);
+    return { at, letters };
+  }
+
+  /** A relay that answered a sealed container with a refusal before (404, 405 or 501): it does not take them. */
+  refusesSealed(relay) {
+    for (const n of this.answers().reverse()) {
+      let a;
+      try {
+        a = this.answer(n);
+      } catch {
+        continue;
+      }
+      if (a.to === relay && a.method === 'POST' && a.path === '/sealed' && a.outcome === 'answered') return [404, 405, 501].includes(a.status) ? a.status : null;
+    }
+    return null;
+  }
+
   recipientKeys(ids) {
     const v = new mor.Verifier(SPECS.identity, SPECS.money, SPECS.agreements, SPECS.envelopes, SPECS.text);
     const add = (a) => {
@@ -311,6 +455,18 @@ export class Kit {
    * container to a relay: POST /sealed, the relay's CBOR map {0: bytes}.
    */
   seal(act, recipients, relay, key = null) {
+    const no = relay ? this.refusesSealed(relay) : null;
+    if (no) throw new Error(`${relay} answered ${no} to a sealed container before: it does not take sealed containers (POST /sealed). Seal --via a relay or home that does; the hosts' reference relays and homes do`);
+    let d;
+    try {
+      d = mor.describeAct(act);
+    } catch (e) {
+      throw new Error(`that file is not an act (${errorText(e)}): nothing was sealed`);
+    }
+    const addressed = d.to ?? [];
+    const outside = recipients.filter((r) => !addressed.includes(r));
+    if (outside.length)
+      throw new Error(`the act is not addressed to ${outside.join(', ')}: a recipient opens a sealed act only if the act itself names them in "to" (sign it with --private --to ${recipients.join(',')}). Nothing was sealed`);
     const keys = this.recipientKeys(recipients);
     const sealed = mor.seal({ act, ...(key ? { key } : {}), recipients: keys.map((k) => ({ id: k.id, key: k.key })) });
     const file = join(this.dir('sealed'), `${sha256(sealed)}.sealed`);
@@ -417,7 +573,20 @@ export class Kit {
     if (pre.verdict !== 'pass') return { signed: null, check: pre, stage: 'before signing' };
     const made = this.sign(name, { spec, type, payload, isPublic, to });
     const post = Kit.agreementsCheck(made.act, isPublic ? null : made.key, held);
-    return { signed: made, check: post, stage: 'signed' };
+    const out = { signed: made, check: post, stage: 'signed' };
+    // Draft 25, G4.1: stating Terms is not agreeing to them. Where the signer is a party, its own assent is still owed.
+    if (act === 'terms' && !fields.replaces && (fields.parties ?? []).some((p) => p?.signer === f.identity)) {
+      // The author's assent names the Terms in `previous` (draft 25, section 3.2): the Terms act is the signer's previous act in this agreement. With `previous: null` it would fork the signer's own line (G6.2) and not be counted.
+      const assent = { agreement: made.id, terms: made.id, kind: 'assent', previous: made.id };
+      const file = join(this.dir('acts'), `${made.id}.assent.json`);
+      writeFileSync(file, JSON.stringify(assent, null, 2) + '\n');
+      out.assent = {
+        says: 'These Terms are not in force yet, and they do not bind you: under Agreements draft 25 (G4.1), signing Terms states them; it is not an assent. By default they come into force once every party named as a signer has signed an assent naming them, you included. Your assent is ready to sign (its `previous` names these Terms, as draft 25 asks of an author, section 3.2):',
+        command: `node kit/mor.mjs agreements sign ${name} statement acts/${made.id}.assent.json --held acts/${made.id}.mor`,
+        fields: `acts/${made.id}.assent.json`,
+      };
+    }
+    return out;
   }
 
   // --------------------------------------------------------------- letters
@@ -515,6 +684,11 @@ export class Kit {
     if (body && a.bodySha256 && sha256(body) !== a.bodySha256) a.warning = 'the answer body does not match the fingerprint the postman wrote';
     return { ...a, bytes: body };
   }
+}
+
+/** An identity file as this kit writes it. */
+export function isIdentityFile(j) {
+  return !!j && typeof j === 'object' && isHash(j.identity) && Array.isArray(j.chain) && j.lines && typeof j.lines === 'object' && typeof j.signingSecret === 'string';
 }
 
 /**
