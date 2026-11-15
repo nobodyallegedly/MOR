@@ -10,7 +10,7 @@ The new acts had bytes, a checker and vectors (pull request 179). The checker sa
 
 The verifier never computes what a cMIP is for: every socket (K1 to K8) is a plug-in. With the cMIP held, its answer is used; with none, the answer is **unchecked**. For tests, small **stub cMIPs** plug into each socket and answer from a table. The layers draft 24 leans on and that do not exist yet (a place, a clock, the envelope's chain and its holder, Money's payments and settlements) each sit behind one small interface, with a test stand-in.
 
-117 cases, built from real signed acts, test the answers; they are written to a vector file that a second builder can replay from the file alone. An independent Python check judges a share of them again from draft 24's text (section 4).
+117 cases, built from real signed acts, test the answers; they are written to a vector file that a second builder can replay from the file alone. An independent Python check, written without the Rust code, judges 112 of them again from draft 24's text and agrees on all; it found one wrong rule name, now corrected (section 4).
 
 Nothing of the old Agreements was opened or reused. `draft-24.md`, `encoding-1.md` and `report-block-3.md` did not change (their plain SHA-256 are still `bb2514fa…20fd`, `f9996741…0349` and `467c23f5…cb22`). The encoding's checker answers exactly as before: its two vector files come out byte for byte the same. The only lines touched outside the new submodule are `pub mod grammar;` and a `Hash` derive on `Who`, in `core/src/agreements_new/mod.rs`.
 
@@ -114,7 +114,13 @@ Each is a place where draft 24 is silent or unclear, with the sentence, the read
 
 ## 4. The independent check
 
-`core/vectors/agreements_new_grammar_check.py`, run by `core/vectors/check.py`, written by a separate reader from draft 24 and encoding-1 only, without the Rust verifier. RESULTS_PENDING
+`core/vectors/agreements_new_grammar_check.py`, run by `core/vectors/check.py`, written by a separate reader (a subagent) from draft 24 and encoding-1 only, without reading the Rust verifier, its cases or its answers' plain words. It decodes the acts again from their bytes (sharing only the existing independent Python code for the act format and the encoding), takes the sockets' outputs from the stubs' answers each case records, and reads the grammar itself.
+
+**What it judges: 112 of the 117 cases**, and agrees on every one: the word, the rule, the qualifier and whether disputed, and who where it derives it. In force by the default and by `in_force`; updates by the default and by a condition (valid, not valid, not shown); forks of Terms, what stays in force, tips, resolving updates (by the default and under a power), tips set aside, a resolving update with no fork, rival resolving updates; late updates by knots, per place, and unchecked; counter signatures; a signer's line (fork, resolution, unchecked before, invalid); the order from citing; places and anchorings; an agreement's signature; bound; the receiver in every case; whether Terms hold the Control task; legs, silence, data; the buyer's leg; contests; whether a spot takes new identities; the baker in every case; what is left unread; acts invalid.
+
+**What it cannot judge, and why (5):** fillings and their proofs (G10.2) and a filling's rights (G10.6), which it would have to read from the K5 stub's own parameters; the walk before paying (G11.4(e)), whose list of answers' order it could not pin down from the text; the delegation ended by the delegator alone (G5.5), since the K1 stub's recorded answer does not name the delegator; and the act made under a power after its Terms were replaced (G5.4), which rests on that same delegation. It does not compare `who` for legs and for an agreement's signature, where the verifier's choice of whom to name is not settled by draft 24.
+
+**What it found.** One disagreement, and the verifier was wrong: for Terms whose completing assent rests on Terms not held, the verifier answered unchecked naming G4.8 (Replacing), though no update is involved; the reader named G4.6, as the verifier already did for the same kind of answer in another case. The verifier now names G4.6 where no version is established, and G4.8 only past one (G4.8(e)). Its two readings of choice are stated in its file: for a late update by knots, the original's signers are read from every act held, and F's assents from the acts the late update names; and which answers carry a qualifier.
 
 ## 5. The stand-ins
 

@@ -83,7 +83,10 @@ impl<'a> Verifier<'a> {
             };
         }
         if let End::Unchecked { why, .. } = &chain.end {
-            return Answer::new(Word::Unchecked, "G4.8", format!("which Terms are in force is unchecked: {why}"));
+            // No version established: whether the first Terms act is in force
+            // is unchecked (G4.6); past one, an update could not be read (G4.8(e)).
+            let rule = if chain.line.is_empty() { "G4.6" } else { "G4.8" };
+            return Answer::new(Word::Unchecked, rule, format!("which Terms are in force is unchecked: {why}"));
         }
         Answer::new(Word::NotShown, "G4.6", "not in force: not shown as a version of the agreement that counted").q(q)
     }

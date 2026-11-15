@@ -1697,7 +1697,7 @@ fn misc_cases(out: &mut Vec<Case>) {
         "G9.1",
         "it MUST answer **unchecked** for every answer that depends on it.",
         Question::InForce(root),
-        want(Word::Unchecked, "G4.8"),
+        want(Word::Unchecked, "G4.6"),
     ));
 }
 

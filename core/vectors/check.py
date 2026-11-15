@@ -872,6 +872,12 @@ def main():
     n += k
     judged += k
 
+    # The grammar verifier's answers (agreements-new/grammar.json), judged again from draft 24.
+    import agreements_new_grammar_check
+    k = agreements_new_grammar_check.main()
+    n += k
+    judged += k
+
     print(f"all {n} vectors agree ({judged} verdict vectors judged here)")
 
 

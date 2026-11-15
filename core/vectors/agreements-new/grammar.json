@@ -10616,7 +10616,7 @@
         "disputed": false,
         "pick": 0,
         "qualifier": "none",
-        "rule": "G4.8",
+        "rule": "G4.6",
         "who": null,
         "word": "unchecked"
       },
@@ -10626,7 +10626,7 @@
           "cmip": null,
           "disputed": false,
           "qualifier": "none",
-          "rule": "G4.8",
+          "rule": "G4.6",
           "said": [],
           "says": "which Terms are in force is unchecked: the Terms its `under` names (5464a705f3df) are not held (G9)",
           "who": null,
