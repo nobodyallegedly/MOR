@@ -1,5 +1,5 @@
 //! The checks the bytes alone allow, for one act or for the acts a verifier
-//! holds (`encoding-1.md`, "What the checker answers").
+//! holds (`encoding-2.md`, "What the checker answers").
 //!
 //! In plain words: given an act's bytes (and its content key, if it is
 //! private), say whether it is an act of this encoding; whether its shape,
@@ -10,22 +10,22 @@
 //! Invalid beats unknown: a signature scheme this library does not implement
 //! makes the act **unknown** only where nothing else fails.
 
-use super::{report::Report, statement::Statement, terms::Terms, Finding, Rejected, SPEC_DRAFT_24, SPEC_REPORT_BLOCK_3};
+use super::{report::Report, statement::Statement, terms::Terms, Finding, Rejected, SPEC_DRAFT_25, SPEC_REPORT_BLOCK_4};
 use crate::act::{Act, ActError, Inside};
 use crate::hash::Hash;
 use crate::lock::ContentKey;
 use crate::sig;
 
-/// The checker's answer (encoding-1, E23 and "What the checker answers").
+/// The checker's answer (encoding-2, E23 and "What the checker answers").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Verdict {
     /// Shape, fields and signature pass, and the act shows no invalid case by
     /// itself. The grammar's answers are not given here.
     Pass,
-    /// Draft 24's **rejected**: no Agreements act (the core's "invalid as an
+    /// Draft 25's **rejected**: no Agreements act (the core's "invalid as an
     /// act": outside its specification's format, or its act format refused).
     Rejected,
-    /// Draft 24's **invalid**: an act of this encoding whose bytes show, by
+    /// Draft 25's **invalid**: an act of this encoding whose bytes show, by
     /// themselves or among the acts held, that it cannot count.
     Invalid,
     /// A signature scheme this library does not implement (Identity,
@@ -78,8 +78,8 @@ pub struct Answer {
     pub signer: Option<Hash>,
     /// What it is, where its payload decoded.
     pub act: Option<Decoded>,
-    /// The rule failed first: an E rule of encoding-1, an Envelopes or
-    /// Identity rule, or a grammar rule of draft 24. `None` for a pass.
+    /// The rule failed first: an E rule of encoding-2, an Envelopes or
+    /// Identity rule, or a grammar rule of draft 25. `None` for a pass.
     pub rule: Option<String>,
     /// In plain words.
     pub says: String,
@@ -143,13 +143,13 @@ pub fn check(bytes: &[u8], key: Option<&ContentKey>) -> Answer {
         Err(e) => return Answer::stop(Verdict::Rejected, id, signer, envelopes_rule(&e), format!("the act does not open as the act format asks: {e}")),
     };
     let which = match (inside.spec, inside.type_) {
-        (s, super::types::TERMS) if s == SPEC_DRAFT_24 => 0,
-        (s, super::types::STATEMENT) if s == SPEC_DRAFT_24 => 1,
-        (s, super::types::REPORT) if s == SPEC_REPORT_BLOCK_3 => 2,
-        (s, t) if s == SPEC_DRAFT_24 => {
-            return Answer::stop(Verdict::Rejected, id, signer, "E2", format!("draft 24's specification defines types 0 (Terms) and 1 (Statement), not {t}"))
+        (s, super::types::TERMS) if s == SPEC_DRAFT_25 => 0,
+        (s, super::types::STATEMENT) if s == SPEC_DRAFT_25 => 1,
+        (s, super::types::REPORT) if s == SPEC_REPORT_BLOCK_4 => 2,
+        (s, t) if s == SPEC_DRAFT_25 => {
+            return Answer::stop(Verdict::Rejected, id, signer, "E2", format!("draft 25's specification defines types 0 (Terms) and 1 (Statement), not {t}"))
         }
-        (s, t) if s == SPEC_REPORT_BLOCK_3 => {
+        (s, t) if s == SPEC_REPORT_BLOCK_4 => {
             return Answer::stop(Verdict::Rejected, id, signer, "E2", format!("the report block's proposal defines type 0 (report), not {t}"))
         }
         _ => {
@@ -158,7 +158,7 @@ pub fn check(bytes: &[u8], key: Option<&ContentKey>) -> Answer {
                 id,
                 signer,
                 "E2",
-                "the act names another specification than draft 24's or the report block's: not an act of this encoding",
+                "the act names another specification than draft 25's or the report block's: not an act of this encoding",
             )
         }
     };
@@ -248,7 +248,7 @@ pub fn check_held(acts: &[(&[u8], Option<&ContentKey>)]) -> Vec<Answer> {
             None => a.notes.push(Finding::new("G6.1", "previous names an act this verifier does not hold: the act counts, and its signer's line is unchecked before it (G6.1)")),
             Some((.., true)) => a.notes.push(Finding::new(
                 "G6.1",
-                "previous names a private act held without its key: what it is cannot be read, so the signer's line before this act is unchecked (G6.1, G9)",
+                "previous names a private act held without its key: what it is cannot be read, so the act counts, the signer's line before it is unchecked, and it is not invalid (G6.1, G9)",
             )),
             Some((_, s, ag, is_agreement_act, _)) => {
                 let why = if !is_agreement_act {

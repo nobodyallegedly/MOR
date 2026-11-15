@@ -1,5 +1,5 @@
 //! `agreements-check`: read the bytes of acts of the new Agreements encoding
-//! (`docs/agreements-from-scratch/encoding-1.md`) and say, in plain words,
+//! (`docs/agreements-from-scratch/encoding-2.md`) and say, in plain words,
 //! whether each one's shape, fields and signature pass, and if not, which
 //! rule it fails.
 //!
@@ -21,7 +21,7 @@ use std::io::Read;
 fn usage() -> ! {
     eprintln!("usage: agreements-check [--hex] [--json] [--key HEX]... FILE...");
     eprintln!("  Reads acts of the new Agreements encoding and says whether their shape,");
-    eprintln!("  fields and signature pass, naming the rule of encoding-1.md or draft 24");
+    eprintln!("  fields and signature pass, naming the rule of encoding-2.md or draft 25");
     eprintln!("  each one fails. Several files are read as acts held together (G6.1).");
     std::process::exit(2)
 }

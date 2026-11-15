@@ -1,19 +1,19 @@
-//! Terms (type 0 under draft 24's spec hash): draft 24, section 3.1;
-//! `encoding-1.md`, "Terms".
+//! Terms (type 0 under draft 25's spec hash): draft 25, section 3.1;
+//! `encoding-2.md`, "Terms".
 //!
 //! ```cddl
 //! terms = {
 //!   ? 0 => hash,             ; replaces: the Terms act this one replaces
 //!   ? 1 => hash,             ; agreement: the root; exactly when 0 is present
-//!   ? 2 => [+ party],        ; parties, in the writer's order; required unless 17 and 18
-//!   ? 3 => [+ uint],         ; authors: indexes into parties; required unless 17 and 18
-//!   ? 4 => body,             ; body: [words, socket]; required unless 17 and 18
+//!   ? 2 => [+ party],        ; parties, in the writer's order; required, but never in a resolving update
+//!   ? 3 => [+ uint],         ; authors: indexes into parties; the same
+//!   ? 4 => body,             ; body: [words, socket]; the same
 //!   ? 5 => [+ any],          ; relies_on: fingerprints; an entry that is not one is left unread
 //!   ? 6 => socket,           ; in_force (K2); absent: G4.1's default
 //!   ? 7 => [+ power],        ; powers: [kind, rule], each rule a socket (K3)
 //!   ? 8 => hash,             ; place, by identifier
 //!   ? 9 => hash,             ; clock, by identifier
-//!   ? 10 => uint / hash,     ; receiver: a party's index, or another agreement's root
+//!   ? 10 => receiver,        ; [0, a party's index] / [2, an agreement's root]
 //!   ? 11 => hash,            ; envelope: the bake's act id
 //!   ? 12 => hash,            ; envelope_at: the act of the envelope's chain cited; exactly when 11 is present
 //!   ? 13 => socket,          ; condition (K4); absent: G4.11(e)'s default
@@ -29,6 +29,8 @@
 //! body = [ words: any, socket ]
 //! power = [ kind: 0 / 1 / 2 / 3 / 4 / hash, rule: socket ]
 //! call = [ task: 1..8, from: 0 / 1 / 2 ]
+//! receiver = [0, uint] / [2, hash]
+//! ; a resolving update (17 and 18) carries 0, 1, 17, 18, 19 and may carry 5; nothing else
 //! ```
 
 use super::{
@@ -49,7 +51,7 @@ pub enum Party {
     Agreement(Hash),
 }
 
-/// A role (E10). Each field is kept as written: draft 24 reads a role that
+/// A role (E10). Each field is kept as written: draft 25 reads a role that
 /// lacks its kind, its `what` or its cMIP, or holds a kind or `what` that is
 /// not one it allows, as invalid (G10.1), not as rejected.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -219,8 +221,9 @@ pub struct Power {
     pub rule: Socket,
 }
 
-/// The receiver (E12): one of these Terms' parties, by its index in
-/// `parties`, or another agreement, by its root.
+/// The receiver (E12): one of these Terms' parties named as a signer or a
+/// role, by its index in `parties`, `[0, index]`; or an agreement, party or
+/// not, by its root, `[2, root]`. The two are told apart by their first item.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Receiver {
     Party(u64),
@@ -270,7 +273,7 @@ pub struct Terms {
     pub previous: Option<Hash>,
 }
 
-/// The payload keys (encoding-1, "Terms").
+/// The payload keys (encoding-2, "Terms").
 pub mod key {
     pub const REPLACES: u64 = 0;
     pub const AGREEMENT: u64 = 1;
@@ -298,7 +301,7 @@ pub mod key {
 
 impl Terms {
     /// Whether this act is written as a resolving update: `resolves` and
-    /// `continues` both present (E19; draft 24, G12.3).
+    /// `continues` both present (E19; draft 25, G12.3).
     pub fn is_resolving(&self) -> bool {
         self.resolves.is_some() && self.continues.is_some()
     }
@@ -352,8 +355,8 @@ impl Terms {
                 &mut m,
                 RECEIVER,
                 match r {
-                    Receiver::Party(i) => Value::Uint(*i),
-                    Receiver::Agreement(h) => hv(h),
+                    Receiver::Party(i) => Value::Array(vec![Value::Uint(0), Value::Uint(*i)]),
+                    Receiver::Agreement(h) => Value::Array(vec![Value::Uint(2), hv(h)]),
                 },
             );
         }
@@ -429,10 +432,16 @@ impl Terms {
             })
             .transpose()?;
         let receiver = g(RECEIVER)
-            .map(|v| match v {
-                Value::Uint(i) => Ok(Receiver::Party(*i)),
-                Value::Bytes(b) if b.len() == 32 => Ok(Receiver::Agreement(b.as_slice().try_into().unwrap())),
-                _ => rej("E12", "the receiver is a party's index in parties (an unsigned integer) or another agreement's root (a fingerprint)"),
+            .map(|v| {
+                let says = "the receiver is [0, index] (one of these Terms' parties named as a signer or a role, by its index in parties) or [2, root] (an agreement, by its root)";
+                match v {
+                    Value::Array(a) if a.len() == 2 => match (&a[0], &a[1]) {
+                        (Value::Uint(0), Value::Uint(i)) => Ok(Receiver::Party(*i)),
+                        (Value::Uint(2), Value::Bytes(b)) if b.len() == 32 => Ok(Receiver::Agreement(b.as_slice().try_into().unwrap())),
+                        _ => rej("E12", says),
+                    },
+                    _ => rej("E12", says),
+                }
             })
             .transpose()?;
         let calls = g(CALLS)
@@ -469,7 +478,7 @@ impl Terms {
         let (resolves, continues) = resolves_of(g(RESOLVES), g(CONTINUES), "E19")?;
         let previous = match g(PREVIOUS) {
             Some(v) => previous_of(v)?,
-            None => return rej("E19", "previous is required in every Terms act (draft 24, section 3.1): [] for none"),
+            None => return rej("E19", "previous is required in every Terms act (draft 25, section 3.1): [] for none"),
         };
         let t = Terms {
             replaces: hash(REPLACES, "replaces")?,
@@ -494,16 +503,34 @@ impl Terms {
             previous,
         };
         if t.replaces.is_some() != t.agreement.is_some() {
-            return rej("E19", "agreement is written exactly when replaces is (draft 24, section 3.1)");
+            return rej("E19", "agreement is written exactly when replaces is (draft 25, section 3.1)");
         }
         if t.envelope.is_some() != t.envelope_at.is_some() {
-            return rej("E19", "envelope_at is written exactly when envelope is (draft 24, section 3.1: an act with one and not the other is rejected)");
+            return rej("E19", "envelope_at is written exactly when envelope is (draft 25, section 3.1: an act with one and not the other is rejected)");
         }
-        if !t.is_resolving() {
+        if t.is_resolving() {
+            // A resolving update carries replaces, agreement, resolves,
+            // continues and previous, may carry relies_on, and nothing else
+            // (draft 25, section 3.2, "What a resolving update carries").
+            if t.replaces.is_none() {
+                return rej("E19", "a Terms act written as a resolving update (resolves and continues) names in replaces the shared act it updates, and its agreement (draft 25, section 3.2)");
+            }
+            if let Some((k, _)) = m.iter().find(|(k, _)| ![REPLACES, AGREEMENT, RELIES_ON, RESOLVES, CONTINUES, PREVIOUS].contains(k)) {
+                return rej(
+                    "E19",
+                    format!("a Terms act written as a resolving update carries replaces, agreement, resolves, continues, previous and, if anything was relied on, relies_on; nothing else, so field {k} makes it rejected (draft 25, section 3.2: a resolving update carries no words of its own)"),
+                );
+            }
+        } else {
             for (present, name) in [(t.parties.is_some(), "parties"), (t.authors.is_some(), "authors"), (t.body.is_some(), "body")] {
                 if !present {
-                    return rej("E19", format!("{name} is required in Terms, except in a resolving update, written with resolves and continues (draft 24, section 3.1)"));
+                    return rej("E19", format!("{name} is required in Terms, except in a resolving update, written with resolves and continues (draft 25, section 3.1)"));
                 }
+            }
+        }
+        if let (Some(Receiver::Party(i)), Some(parties)) = (t.receiver, &t.parties) {
+            if let Some(Party::Agreement(_)) = parties.get(i as usize) {
+                return rej("E12", format!("the receiver, [0, {i}], names a party named as an agreement: an agreement is named as receiver by its root, [2, root] (draft 25, G1.3)"));
             }
         }
         Ok(t)
@@ -516,12 +543,12 @@ impl Terms {
         let mut notes = Vec::new();
         let socket = |s: &Socket, what: &str, bad: &mut Vec<Finding>| {
             if s.cmip.fp().is_none() {
-                bad.push(Finding::new("G2.1", format!("the cMIP in {what} is not named by fingerprint, so these Terms are invalid (G2.1, G2.2)")));
+                bad.push(Finding::new("G2.1", format!("the cMIP in {what} is not named by fingerprint, so these Terms are invalid (G2.1)")));
             }
         };
         if let Some(b) = &self.body {
             if b.words.fp().is_none() {
-                bad.push(Finding::new("G2.1", "the body's words are not named by fingerprint, so these Terms are invalid (G2.1, G2.2)"));
+                bad.push(Finding::new("G2.1", "the body's words are not named by fingerprint, so these Terms are invalid (G2.1)"));
             }
             socket(&b.socket, "the body's socket", &mut bad);
         }
@@ -586,10 +613,10 @@ impl Terms {
             }
         }
         if let Some(Receiver::Party(i)) = self.receiver {
-            if !matches!(parties.get(i as usize), Some(Party::Signer(_) | Party::Role(_))) {
+            if parties.get(i as usize).is_none() {
                 notes.push(Finding::new(
                     "G1.4",
-                    format!("the receiver, party {i}, is not one of these Terms' parties named as a signer or a role: by them no one receives, and G1.4 answers not shown"),
+                    format!("the receiver, party {i}, is beyond the parties (there are {}): by these Terms no one receives, and G1.4 answers not shown", parties.len()),
                 ));
             }
         }
@@ -645,11 +672,20 @@ mod tests {
         assert_eq!(t.to_payload().unwrap_err().rule, "E19");
         t.resolves = Some(vec![[8; 32]]);
         assert_eq!(t.to_payload().unwrap_err().rule, "E19");
+        // Written as a resolving update, Terms carry no parties, authors or body.
         t.resolves = Some(vec![[7; 32], [8; 32]]);
-        assert!(t.to_payload().is_ok());
-        // A resolving update needs no parties, authors or body.
+        assert_eq!(t.to_payload().unwrap_err().rule, "E19");
+        // A resolving update carries no parties, authors or body, and names replaces.
         let r = Terms { resolves: Some(vec![[7; 32], [8; 32]]), continues: Some([7; 32]), ..Default::default() };
+        assert_eq!(r.to_payload().unwrap_err().rule, "E19");
+        let r = Terms { replaces: Some([6; 32]), agreement: Some([6; 32]), ..r };
         assert!(r.to_payload().is_ok());
+        let with_body = Terms { body: root().body, ..r.clone() };
+        assert_eq!(with_body.to_payload().unwrap_err().rule, "E19");
+        let with_force = Terms { in_force: Some(s(1)), ..r.clone() };
+        assert_eq!(with_force.to_payload().unwrap_err().rule, "E19");
+        let with_relied = Terms { relies_on: Some(vec![Named::Fp([5; 32])]), ..r };
+        assert!(with_relied.to_payload().is_ok());
         // resolves alone does not excuse them.
         let r = Terms { resolves: Some(vec![[7; 32]]), ..Default::default() };
         assert_eq!(r.to_payload().unwrap_err().rule, "E19");
@@ -668,5 +704,22 @@ mod tests {
         let mut t = root();
         t.body = Some(Body { words: Named::Not(Value::Text("https://example.org".into())), socket: s(3) });
         assert_eq!(t.grammar().0[0].rule, "G2.1");
+    }
+
+    #[test]
+    fn the_receiver() {
+        let mut t = root();
+        t.parties.as_mut().unwrap().push(Party::Agreement([9; 32]));
+        t.receiver = Some(Receiver::Party(0));
+        assert!(t.to_payload().is_ok());
+        t.receiver = Some(Receiver::Agreement([9; 32]));
+        assert!(t.to_payload().is_ok());
+        t.receiver = Some(Receiver::Party(1));
+        assert_eq!(t.to_payload().unwrap_err().rule, "E12");
+        t.receiver = Some(Receiver::Party(7));
+        assert_eq!(t.grammar().1[0].rule, "G1.4");
+        let mut p = root().payload_unchecked();
+        p.push((Value::Uint(key::RECEIVER), Value::Uint(0)));
+        assert_eq!(Terms::from_payload(&p).unwrap_err().rule, "E12");
     }
 }

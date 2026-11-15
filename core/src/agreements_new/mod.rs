@@ -1,12 +1,12 @@
-//! The new Agreements acts, as bytes (`docs/agreements-from-scratch/encoding-1.md`).
+//! The new Agreements acts, as bytes (`docs/agreements-from-scratch/encoding-2.md`).
 //!
 //! In plain words: Agreements has been written again from scratch as a
-//! grammar (`docs/agreements-from-scratch/draft-24.md`), which says what its
+//! grammar (`docs/agreements-from-scratch/draft-25.md`), which says what its
 //! acts carry and not their bytes. This module gives them bytes, in the act
 //! format already in force (Envelopes, Part three): a **Terms** act and a
-//! **Statement** are everyday acts under draft 24's own spec hash, types 0
+//! **Statement** are everyday acts under draft 25's own spec hash, types 0
 //! and 1; a **report**, the shared language's block, is an everyday act under
-//! the spec hash of the block's third proposal, type 0, and is a proposal
+//! the spec hash of the block's fourth proposal, type 0, and is a proposal
 //! like the block itself. Each payload is a closed map with small integer
 //! keys, decoded strictly: anything the encoding does not give is refused.
 //!
@@ -19,8 +19,8 @@
 //! - applies the checks the bytes alone allow ([`check`]): the act format's
 //!   own (deterministic CBOR, lock, commitment, canonical text, the
 //!   signature), the shape and the required fields of each payload
-//!   (**rejected**, draft 24's word for an act that never reaches the grammar
-//!   rules), and every case of **invalid** that draft 24 says an act shows by
+//!   (**rejected**, draft 25's word for an act that never reaches the grammar
+//!   rules), and every case of **invalid** that draft 25 says an act shows by
 //!   itself (G2.1, G3.1, G4.2, G10.1), with G6.1 among the acts a verifier
 //!   holds;
 //! - builds each act ready to sign: a payload, which the existing everyday
@@ -44,26 +44,26 @@ pub use report::{Amount, CallRef, Line, Report};
 pub use statement::{Kind, Statement};
 pub use terms::{Body, Call, CallFrom, Party, Power, PowerKind, Receiver, Role, RoleKind, Terms};
 
-/// Draft 24's spec hash: `tagged_hash("MOR/spec", {0: 4, 9: text})`, the
-/// text being `draft-24.md` with its final line break removed, as the core
+/// Draft 25's spec hash: `tagged_hash("MOR/spec", {0: 4, 9: text})`, the
+/// text being `draft-25.md` with its final line break removed, as the core
 /// computes a MIR's hash from its file (Development rule 26,
 /// [`crate::development::Spec::mir_file_hash`]). Terms and Statements are
 /// written under it. A test recomputes it from the file.
-pub const SPEC_DRAFT_24: Hash = hex32("af5e41f9476deff36fb97397815b96293288d190f2fcf9e24d636465eefc0439");
+pub const SPEC_DRAFT_25: Hash = hex32("dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c");
 
-/// The spec hash of the report block's third proposal
-/// (`docs/lead/proposals/report-block-3.md`), computed the same way. A
-/// report is written under it: a proposal, as the block is (encoding-1,
+/// The spec hash of the report block's fourth proposal
+/// (`docs/lead/proposals/report-block-4.md`), computed the same way. A
+/// report is written under it: a proposal, as the block is (encoding-2,
 /// E2). A test recomputes it from the file.
-pub const SPEC_REPORT_BLOCK_3: Hash = hex32("99a3b2d6711c0541128e93c2d893b19f3eede2b9f24b9cdf40cc37d65a9a6d78");
+pub const SPEC_REPORT_BLOCK_4: Hash = hex32("7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854");
 
-/// The type numbers (encoding-1, E2).
+/// The type numbers (encoding-2, E2).
 pub mod types {
-    /// Terms, under [`super::SPEC_DRAFT_24`].
+    /// Terms, under [`super::SPEC_DRAFT_25`].
     pub const TERMS: u64 = 0;
-    /// Statement, under [`super::SPEC_DRAFT_24`].
+    /// Statement, under [`super::SPEC_DRAFT_25`].
     pub const STATEMENT: u64 = 1;
-    /// Report, under [`super::SPEC_REPORT_BLOCK_3`] (a proposal).
+    /// Report, under [`super::SPEC_REPORT_BLOCK_4`] (a proposal).
     pub const REPORT: u64 = 0;
 }
 
@@ -88,9 +88,9 @@ const fn nib(c: u8) -> u8 {
 
 // ---------------------------------------------------------------- answers
 
-/// An act refused before the grammar rules: draft 24's **rejected** (section
+/// An act refused before the grammar rules: draft 25's **rejected** (section
 /// 2, "Not an Agreements act"), which the core calls an act outside its
-/// specification's format. `rule` names the rule of `encoding-1.md` (E1 to
+/// specification's format. `rule` names the rule of `encoding-2.md` (E1 to
 /// E23) or of the act format (an Envelopes rule) it fails.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rejected {
@@ -129,10 +129,10 @@ pub(crate) fn rej<T>(rule: &'static str, says: impl Into<String>) -> R<T> {
 
 // ---------------------------------------------------------------- the kinds of value
 
-/// A value draft 24 says is named by fingerprint, in a place where one that
+/// A value draft 25 says is named by fingerprint, in a place where one that
 /// is not reaches the grammar rules instead of being rejected: a body's
 /// words, a cMIP in a socket of Terms, an entry of `relies_on`, a role's
-/// `what` (draft 24, section 3: "with three exceptions").
+/// `what` (draft 25, section 3: "with three exceptions").
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Named {
     /// A fingerprint: a 32-byte byte string (E5).
@@ -338,8 +338,8 @@ pub(crate) fn resolves_of(resolves: Option<&Value>, continues: Option<&Value>, r
     let c = continues.map(|v| hash_of(v, "E5", "continues")).transpose()?;
     if let Some(c) = &c {
         match &r {
-            None => return rej(rule, "continues is written only beside resolves (draft 24, section 3: an act that names continues and no resolves is rejected)"),
-            Some(r) if !r.contains(c) => return rej(rule, "continues names one of the entries of resolves (draft 24, section 3: \"one of the fingerprints in resolves\")"),
+            None => return rej(rule, "continues is written only beside resolves (draft 25, section 3: an act that names continues and no resolves is rejected)"),
+            Some(r) if !r.contains(c) => return rej(rule, "continues names one of the entries of resolves (draft 25, section 3: one whose continues is not one of them is rejected)"),
             _ => {}
         }
     }
@@ -361,8 +361,8 @@ mod tests {
 
     #[test]
     fn spec_hashes_are_the_files() {
-        assert_eq!(Spec::mir_file_hash(&file("docs/agreements-from-scratch/draft-24.md")).unwrap(), SPEC_DRAFT_24);
-        assert_eq!(Spec::mir_file_hash(&file("docs/lead/proposals/report-block-3.md")).unwrap(), SPEC_REPORT_BLOCK_3);
+        assert_eq!(Spec::mir_file_hash(&file("docs/agreements-from-scratch/draft-25.md")).unwrap(), SPEC_DRAFT_25);
+        assert_eq!(Spec::mir_file_hash(&file("docs/lead/proposals/report-block-4.md")).unwrap(), SPEC_REPORT_BLOCK_4);
     }
 
     #[test]

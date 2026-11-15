@@ -1,4 +1,4 @@
-//! The new Agreements acts for the clients (`docs/agreements-from-scratch/encoding-1.md`):
+//! The new Agreements acts for the clients (`docs/agreements-from-scratch/encoding-2.md`):
 //! the spec hashes and types, a payload for each act, and the checker.
 //!
 //! A test identity writes an act in two calls: one of the payload builders
@@ -101,9 +101,9 @@ pub(crate) struct PowerIn {
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub(crate) enum ReceiverIn {
-    /// A party's index in `parties`.
+    /// A party's index in `parties` (a signer or a role), written `[0, index]`.
     Party(u64),
-    /// Another agreement's root.
+    /// An agreement's root, party or not, written `[2, root]`.
     Agreement(String),
 }
 
@@ -252,7 +252,7 @@ fn who(w: &WhoIn) -> R<Who> {
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub(crate) enum KindIn {
-    /// "assent", "counter_signature" or "contest".
+    /// "assent", "counter_signature", "contest" or "resolve".
     Word(String),
     /// A kind a cMIP defines (K7).
     Defined(SocketIn),
@@ -283,7 +283,8 @@ pub(crate) fn statement_of(s: &StatementIn) -> R<Statement> {
             "assent" => Kind::Assent,
             "counter_signature" => Kind::CounterSignature,
             "contest" => Kind::Contest,
-            _ => return Err(err("a Statement's kind is assent, counter_signature, contest, or a K7 socket { cmip, params }")),
+            "resolve" => Kind::Resolve,
+            _ => return Err(err("a Statement's kind is assent, counter_signature, contest, resolve, or a K7 socket { cmip, params }")),
         },
         KindIn::Defined(k) => Kind::Defined { cmip: unhex(&k.cmip)?, params: cbor_value(&k.params)? },
     };
@@ -385,34 +386,34 @@ struct Specs {
     report: SpecType,
 }
 
-/// The spec hash and type number of each new act (encoding-1, E2): Terms
-/// and Statement under draft 24's spec hash; the report, a proposal, under
-/// the report block's third proposal's.
+/// The spec hash and type number of each new act (encoding-2, E2): Terms
+/// and Statement under draft 25's spec hash; the report, a proposal, under
+/// the report block's fourth proposal's.
 #[wasm_bindgen(js_name = agreementsNewSpecs)]
 pub fn agreements_new_specs() -> R<JsValue> {
     let st = |s: &Hash, t| SpecType { spec: hx(s), type_: t };
     to_js(&Specs {
-        terms: st(&an::SPEC_DRAFT_24, an::types::TERMS),
-        statement: st(&an::SPEC_DRAFT_24, an::types::STATEMENT),
-        report: st(&an::SPEC_REPORT_BLOCK_3, an::types::REPORT),
+        terms: st(&an::SPEC_DRAFT_25, an::types::TERMS),
+        statement: st(&an::SPEC_DRAFT_25, an::types::STATEMENT),
+        report: st(&an::SPEC_REPORT_BLOCK_4, an::types::REPORT),
     })
 }
 
-/// A Terms act's payload, as CBOR, for `makeEveryday` (encoding-1, "Terms").
+/// A Terms act's payload, as CBOR, for `makeEveryday` (encoding-2, "Terms").
 #[wasm_bindgen(js_name = agreementsNewTermsPayload)]
 pub fn agreements_new_terms_payload(input: JsValue) -> R<Vec<u8>> {
     let t: TermsIn = super::from_js(input)?;
     Ok(payload_bytes(terms_of(&t)?.to_payload().map_err(reject)?))
 }
 
-/// A Statement's payload, as CBOR (encoding-1, "Statement").
+/// A Statement's payload, as CBOR (encoding-2, "Statement").
 #[wasm_bindgen(js_name = agreementsNewStatementPayload)]
 pub fn agreements_new_statement_payload(input: JsValue) -> R<Vec<u8>> {
     let s: StatementIn = super::from_js(input)?;
     Ok(payload_bytes(statement_of(&s)?.to_payload().map_err(reject)?))
 }
 
-/// A report's payload, as CBOR (encoding-1, "The report": a proposal).
+/// A report's payload, as CBOR (encoding-2, "The report": a proposal).
 #[wasm_bindgen(js_name = agreementsNewReportPayload)]
 pub fn agreements_new_report_payload(input: JsValue) -> R<Vec<u8>> {
     let r: ReportIn = super::from_js(input)?;
@@ -458,7 +459,7 @@ fn key32(k: Option<Vec<u8>>) -> R<Option<[u8; 32]>> {
 /// The checker, for one act's bytes (and its content key if private):
 /// `{ verdict, act, id, signer, rule, says, invalid, notes }`, the verdict
 /// one of "pass", "rejected", "invalid", "unknown", "cannot open", "not this
-/// encoding" (encoding-1, "What the checker answers").
+/// encoding" (encoding-2, "What the checker answers").
 #[wasm_bindgen(js_name = agreementsNewCheck)]
 pub fn agreements_new_check(act: &[u8], key: Option<Vec<u8>>) -> R<JsValue> {
     let k = key32(key)?;
@@ -534,5 +535,18 @@ mod tests {
         // A builder refuses what would be rejected, naming the rule.
         let bad = TermsIn { replaces: Some(h(1)), ..Default::default() };
         assert_eq!(terms_of(&bad).unwrap().to_payload().unwrap_err().rule, "E19");
+        // A resolve in a signer's line: its own kind, with resolves and continues.
+        let mut tips = vec![h(14), h(15)];
+        tips.sort();
+        let r = StatementIn {
+            kind: KindIn::Word("resolve".into()),
+            content: None,
+            settlement: None,
+            previous: Some(h(16)),
+            resolves: Some(tips.clone()),
+            continues: Some(tips[0].clone()),
+            ..st
+        };
+        assert!(statement_of(&r).unwrap().to_payload().is_ok());
     }
 }
