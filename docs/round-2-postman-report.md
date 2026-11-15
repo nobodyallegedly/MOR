@@ -77,6 +77,29 @@ Not verifiable from here: whether Ampersand's and DubPay's keys were answered 20
 - `agreements words` names its hash exactly (`tagged_hash("MOR/work", bytes)`) and offers `--sha256`, choosing neither: draft 25, section 9, item 5, open.
 - `post --file FILE` posts the file's exact bytes. **Finding:** a final line break is not canonical text (Text rule 10), so a text act can never carry the bytes of a words file that ends with one. The kit refuses such a file plainly, `agreements words` reports it (`postable: false`), and the guide tells the player to remove the break. It does not quietly remove it.
 
+## After window three, second pass (fifth edition, 16 November, night)
+
+**The keys, reproduced at three homes** (the reference relay, `tests`: "encryption keys and rotations at three homes, in each order"). Identity made at home-1; a key; a rotation adding home-2 and home-3; the key published again or not; and the reverse order (rotation first, key under it, sent before the rotation reached a home).
+- Every key a home answered 200 for is in that home's `/identity` record. No case of "accepted but missing" was found on the reference relay.
+- A key signed under a rotation, sent to a home that serves the identity but lacks the rotation: **409**, not kept, missing from the record. Sent again after the rotation: 200, in the record.
+- A key sent to a home the rotation adds, before the rotation: **200**. That home does not yet serve the identity, so it does not check the binding (cMIP, "Publishing an act", 1, as written); it keeps the act and serves it once the rotation arrives. A player who sees 200 there and 409 at the old home could fairly report "accepted".
+- A key signed under the genesis, then a rotation adding homes: the new homes' records have **no key** until it is sent to them. The old kit's next step did not say to. This matches "absent from the record" for a key that was accepted somewhere else.
+- **Why Counterparty read "unknown".** A rotation counts only from the receipts of the homes the identity had *before* it. A home the rotation added carries only its own receipt in its record. A reader holding only that record, even with every operator's record, cannot count the rotation. So a key signed under it is "unknown". The kit asked for operators' records only. It now also asks for the recipient's record at each of its homes it can name.
+
+What happened to Ampersand's f355512a… and DubPay's 09b6b898… cannot be settled from here. Their trays' answers to those letters (200 or 409, at which home) will say. The steps above are the likely causes, all on the players' and the kit's side.
+
+**For the MOR lead, a finding, not a fault:** an identity record at a home a rotation added does not carry the receipts that make the rotation count (those of the homes before it), nor the operators' chains that check them. Every reader therefore needs two to three more requests, at the right homes, before anything signed under a rotation counts. The cMIP could have a home serve the receipts it holds for the identity from other homes (the rotation's quorum), as part 10 ("carried") does for inclusion proofs. Nothing in `relay/` was changed.
+
+**Changed in the kit:**
+- `identity rotate` writes the letters to every home before and after the rotation: chain acts, then every encryption key held, then the record asks. Its next step names the exact `identity evidence` command. Homes the kit cannot name are listed, to be sent by hand.
+- `identity enckey --to HOME` was broken by the whole-id check (it read `--to` as identity ids). Fixed. Homes given as OPERATOR@ADDRESS are named from held `/info` answers.
+- Sealing reads every encryption-key act in every held record. Where a newer version than the one that counts is held, the kit asks for the missing records (the recipient's record at each named home, each operator's record), never asking twice for one still waiting. When nothing more can be asked, it seals to the newest key that counts and says so (`newerKeyNotCounting`), never silently.
+- The tray guide says plainly what a player must do after a rotation, and why.
+- `--refs` with a short id: the message now says "refs need full 64-character act ids" and where to copy them from.
+- `post --file`: its note no longer claims a final line break is kept (such a file is refused, Text rule 10).
+
+**Funding of DAO members.** A tray in both `companies` and `public` was already credited the company sum once (its first account) and each `addresses.md` line once, across runs. But within one run, an identity listed twice in `addresses.md`, or a tray named twice in `public`, was credited twice. **Fixed:** an identity is credited once, from its first line; the second is skipped and said. The company's own identity, if listed in `addresses.md`, gets both the company sum and its line: they are two credits, as configured. Tested, with a dry run first.
+
 ## State
 
 A draft pull request against `claude/agreements-verifier-2`, not to be merged. CI: in the pull request.

@@ -168,6 +168,49 @@ export class Kit {
   }
 
   /**
+   * The name a home goes by in relays.md: the one it was given by, or the
+   * relay whose held /info answer names its operator. `null` where the kit
+   * cannot tell (a home given as OPERATOR@ADDRESS whose /info is not held).
+   */
+  homeName(h) {
+    if (h?.name) return h.name;
+    for (const n of this.answers().reverse()) {
+      try {
+        const a = this.answer(n);
+        if (a.path !== '/info' || a.status !== 200 || !a.bytes) continue;
+        const op = mor.cborDecode(a.bytes).get(0);
+        if ((typeof op === 'string' ? op : op instanceof Uint8Array ? hex(op) : null) === h?.operator) return a.to;
+      } catch {
+        // not a relay's /info
+      }
+    }
+    return null;
+  }
+
+  /** Letters to RELAY asking for PATH, answered or still waiting in out/: not asked again. */
+  asked(relay, path) {
+    for (const n of this.answers()) {
+      try {
+        const a = this.answer(n);
+        if (a.to === relay && a.method === 'GET' && a.path === path && a.outcome === 'answered') return true;
+      } catch {
+        // unreadable answer
+      }
+    }
+    if (!existsSync(this.path('out'))) return false;
+    for (const f of readdirSync(this.path('out'))) {
+      if (!f.endsWith(LETTER_SUFFIX)) continue;
+      try {
+        const e = JSON.parse(readFileSync(this.path('out', f), 'utf8'));
+        if (e.to === relay && e.method === 'GET' && e.path === path) return true;
+      } catch {
+        // half written
+      }
+    }
+    return false;
+  }
+
+  /**
    * A new test identity: a genesis signed by a fresh signing key, committing
    * a fresh chain key, naming the homes given (each `{ operator, hint }`: a
    * home's operator identity, from its /info, and how to reach it).
@@ -203,6 +246,7 @@ export class Kit {
    */
   rotate(name, { homes, scheme } = {}) {
     const f = this.load(name);
+    const before = f.homes ?? [];
     const newSigning = mor.newSigningSecret();
     const next = mor.newTestChainKey(scheme ?? f.chainKey.scheme);
     const chain = f.chain.map(unb64);
@@ -231,7 +275,38 @@ export class Kit {
     if (homes) f.homes = homes;
     this.save(name, f);
     this.saveAct(rotation);
-    return { id: rid, rotation };
+    return { id: rid, rotation, before };
+  }
+
+  /**
+   * After a rotation, the letters that make it count and keep the
+   * identity's encryption keys in its record everywhere: to every home in
+   * force before it (they sign the receipts that make it count) and every
+   * home it names, the chain acts first, then each encryption-key act this
+   * identity signed (a home it adds holds none yet), then the asks for its
+   * record and its operator's record there (the evidence the bank and
+   * readers need). Homes the kit cannot name are returned, to be sent by hand.
+   */
+  rotationLetters(name, before) {
+    const f = this.load(name);
+    const homes = [...new Map([...before, ...f.homes].map((h) => [h.operator, h])).values()];
+    const keys = (f.encryption ?? []).map((e) => join(this.folder, 'acts', `${e.act}.mor`)).filter((p) => existsSync(p)).map((p) => new Uint8Array(readFileSync(p)));
+    const letters = [];
+    const sentTo = [];
+    const unnamed = [];
+    for (const h of homes) {
+      const r = this.homeName(h);
+      if (!r) {
+        unnamed.push(h.operator);
+        continue;
+      }
+      sentTo.push(r);
+      letters.push(...this.publish(r, [...this.chainActs(name), ...keys]).map((l) => l.name));
+      const records = [];
+      for (const id of [f.identity, h.operator]) records.push(this.relayLetter(r, 'GET', `/identity/${id}`, null, { name: Kit.letterName('record') }).name);
+      letters.push(...records);
+    }
+    return { letters, sentTo, unnamed, keys: keys.length };
   }
 
   chainActs(name) {
@@ -391,11 +466,10 @@ export class Kit {
    * folder's own identities). Refused, plainly, for a recipient with none.
    */
   /** The recipients whose encryption key is not held: [] when every one is. */
-  missingKeys(ids) {
+  missingKeys(ids, { newer = true } = {}) {
     return ids.filter((id) => {
       try {
-        this.recipientKeys([id]);
-        return false;
+        return newer && this.recipientKeys([id])[0].newer.length > 0;
       } catch (e) {
         if (/no published encryption key/.test(errorText(e))) return true;
         throw e;
@@ -410,21 +484,34 @@ export class Kit {
    */
   askRecords(name, ids, via) {
     const f = this.load(name);
-    const at = [...new Set([via, ...(f.homes ?? []).map((h) => h.name).filter(Boolean)].filter(Boolean))];
+    const at = [...new Set([via, ...(f.homes ?? []).map((h) => this.homeName(h)).filter(Boolean)].filter(Boolean))];
     const letters = [];
     const why = [];
     const held = new Set(this.recordsHeld());
+    const ask = (relay, x) => {
+      const path = `/identity/${x}`;
+      if (this.asked(relay, path)) return false;
+      letters.push(this.relayLetter(relay, 'GET', path, null, { name: Kit.letterName('record') }).name);
+      return true;
+    };
     for (const id of ids) {
-      // A record of the recipient already held, and still no key that counts: an encryption key signed under a
-      // rotation counts only once the rotation does, and a rotation counts only from its homes' receipts, which a
-      // reader checks against each home operator's own chain: ask for those operators' records too.
-      const want = held.has(id) ? this.operatorsOf(id).filter((op) => !held.has(op)) : [id];
-      if (held.has(id) && !want.length) {
-        why.push(`${id}: its record is held and shows no encryption key that counts (none published at that home, or one refused there because it arrived before the rotation it is signed under)`);
+      if (!held.has(id)) {
+        for (const r of at) ask(r, id);
         continue;
       }
-      if (held.has(id)) why.push(`${id}: its record is held, but its chain counts only with its homes' operators' records (${want.join(', ')}), asked for now`);
-      for (const x of want) for (const r of at) letters.push(this.relayLetter(r, 'GET', `/identity/${x}`, null, { name: Kit.letterName('record') }).name);
+      // A record of the recipient already held, and still no key that counts (or a newer one that does not count
+      // yet): an encryption key signed under a rotation counts only once the rotation does, and a rotation counts only
+      // from the receipts of the homes in force before it, which a reader checks against each home operator's own
+      // chain. One home's record carries its own receipts only. So: the recipient's record at each of its homes the
+      // kit can name, and each home operator's record.
+      const asked = [];
+      for (const op of this.operatorsOf(id)) {
+        const r = this.homeName({ operator: op });
+        if (r && ask(r, id)) asked.push(`its record at ${r}`);
+        for (const x of r ? [r] : at) if (!held.has(op) && ask(x, op)) asked.push(`the record of its home operator ${op} at ${x}`);
+      }
+      if (asked.length) why.push(`${id}: its record is held, but a key signed under a rotation counts only with the receipts of the homes it had before, and with those homes' operators' records: asked for now (${asked.join('; ')})`);
+      else why.push(`${id}: every record the kit can ask for is held or asked for already, and no key counts beyond what is shown (none published at those homes, a key refused there because it arrived before the rotation it is signed under, or a rotation without its homes' receipts)`);
     }
     return { at, letters, why };
   }
@@ -485,7 +572,15 @@ export class Kit {
         // not an act
       }
     };
-    for (const a of this.heldRecords()) add(a);
+    const keyActs = new Map();
+    for (const a of this.heldRecords()) {
+      add(a);
+      try {
+        keyActs.set(mor.actId(a), a);
+      } catch {
+        // not an act
+      }
+    }
     for (const n of this.names()) {
       const f = this.load(n);
       for (const c of [...f.chain, ...(f.evidence ?? [])]) add(unb64(c));
@@ -500,9 +595,25 @@ export class Kit {
         );
       }
       if (l.contested) throw new Error(`${id}'s encryption-key chain is contested in what you hold: nothing was sealed`);
-      const key = mor.cborDecode(l.payload).get(2);
+      const p = mor.cborDecode(l.payload);
+      const key = p.get(2);
       if (!Array.isArray(key) || !(key[1] instanceof Uint8Array)) throw new Error(`${id}'s encryption key is not one this kit can seal to (X-Wing)`);
-      return { id, key: key[1], act: l.act };
+      const version = Number(p.get(0));
+      // Every encryption-key act of the recipient held, from every record: one with a higher version that does not
+      // count (yet) is said, never sealed to, and never silently passed over.
+      const newer = [];
+      for (const [kid, a] of keyActs) {
+        if (kid === l.act) continue;
+        try {
+          const d = mor.describeAct(a);
+          if (d.signer !== id || d.spec !== SPECS.envelopes || d.type !== 4) continue;
+          const kv = Number(mor.cborDecode(d.payload).get(0));
+          if (kv > version) newer.push({ act: kid, version: kv, status: v.status(kid) });
+        } catch {
+          // not one
+        }
+      }
+      return { id, key: key[1], act: l.act, version, newer };
     });
   }
 
@@ -529,7 +640,7 @@ export class Kit {
     const file = join(this.dir('sealed'), `${sha256(sealed)}.sealed`);
     writeFileSync(file, sealed);
     const letter = relay ? this.relayLetter(relay, 'POST', '/sealed', mor.cborEncode(new Map([[0, sealed]])), { name: Kit.letterName('sealed') }) : null;
-    return { sealed, file, letter, to: keys.map((k) => ({ id: k.id, encryptionKey: k.act })) };
+    return { sealed, file, letter, to: keys.map((k) => ({ id: k.id, encryptionKey: k.act, version: k.version, ...(k.newer.length ? { newer: k.newer } : {}) })) };
   }
 
   /**

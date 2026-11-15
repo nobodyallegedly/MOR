@@ -17,7 +17,9 @@ Identities (keys stay in keys/NAME.json, in this folder; keys/ holds identity fi
                                  the first time, the kit writes the /info letter and asks you to run again.
                                  Or OPERATOR@ADDRESS, written out)
   identity show NAME            identity list
-  identity rotate NAME [--home OPERATOR@HINT ...]
+  identity rotate NAME [--home HOME-NAME|OPERATOR@HINT ...]
+                                       (writes the letters to every home it had and names: chain acts first,
+                                        then its encryption keys, then the asks for the records evidence keeps)
   identity evidence NAME LETTER ...   (keep the identity records answered to GET /identity/ID and /identity/OPERATOR:
                                        after a rotation, the bank follows it only from its homes' receipts)
 
@@ -106,9 +108,16 @@ const list = (opt, k) => {
   const v = opt[k].flatMap((x) => x.split(',')).filter(Boolean);
   if (['refs', 'to', 'acks'].includes(k)) {
     const bad = v.filter((x) => !isHash(x));
-    if (bad.length) throw new Error(`--${k} takes act or identity ids written whole, 64 lowercase hexadecimal characters each; not: ${bad.join(', ')}${bad.some((x) => /^[0-9a-f]+$/.test(x) && x.length < 64) ? ' (a short id is not enough: the kit does not guess which act it means)' : ''}. Nothing was signed`);
+    if (bad.length) throw new Error(`--${k} takes act or identity ids written whole, 64 lowercase hexadecimal characters each; not: ${bad.join(', ')}${bad.some((x) => /^[0-9a-f]+$/.test(x) && x.length < 64) ? ` (a short id is not enough: refs need full 64-character act ids, and the kit does not guess which act a short one means; copy them whole from the act: its file name in acts/, or "node kit/mor.mjs read LETTER")` : ''}. Nothing was signed`);
   }
   return v;
+};
+/** Where a recipient has a newer encryption key that does not count for this reader, said plainly beside the seal. */
+const newerNote = (to) => {
+  const n = to.filter((t) => t.newer?.length);
+  return n.length
+    ? { newerKeyNotCounting: n.map((t) => `${t.id}: sealed to its key version ${t.version} (${t.encryptionKey}), the newest that counts in what you hold. It also published ${t.newer.map((x) => `version ${x.version} (${x.act}, ${x.status})`).join(', ')}, which does not count for you: signed under a rotation whose homes' receipts are not in the records held, and the kit has asked for every record it can. The recipient can still open this if it kept the older key's secret; tell it to send its rotation to the homes it had before`) }
+    : {};
 };
 const say = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
@@ -194,9 +203,17 @@ function main(argv) {
     if (sub === 'list') return say(kit.names().map((n) => `${n} ${kit.load(n).identity}`).join('\n') || 'no identities yet');
     if (sub === 'enckey') {
       const e = kit.encryptionKey(rest[0]);
-      const to = list(opt, 'to') ?? kit.load(rest[0]).homes.map((h) => h.name).filter(Boolean);
+      const homes = kit.load(rest[0]).homes;
+      const to = opt.to ? opt.to.flatMap((x) => x.split(',')).filter(Boolean) : homes.map((h) => kit.homeName(h)).filter(Boolean);
+      const unnamed = opt.to ? [] : homes.filter((h) => !kit.homeName(h)).map((h) => h.operator);
       const letters = to.length ? kit.publishKey(rest[0], e.act, to) : [];
-      return say({ encryptionKey: e.id, version: e.version, file: `acts/${e.id}.mor`, ...(letters.length ? { letters, sentTo: to, note: 'to each home: the identity’s chain acts first, then the key, so that no home refuses it' } : { next: `publish it to every home, the chain first: node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/${e.id}.mor` }) });
+      return say({
+        encryptionKey: e.id,
+        version: e.version,
+        file: `acts/${e.id}.mor`,
+        ...(letters.length ? { letters, sentTo: to, note: 'to each home: the identity’s chain acts first, then the key, so that no home refuses it. Read the answers after the next pass: 200 is kept; 409 means that home lacked a chain act' } : {}),
+        ...(unnamed.length || !letters.length ? { next: `the kit cannot name ${unnamed.length ? `the homes of operators ${unnamed.join(', ')}` : 'any of your homes'}: publish it to each by its name in relays.md, the chain first: node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/${e.id}.mor` } : {}),
+      });
     }
     if (sub === 'evidence') {
       const [name, ...letters] = rest;
@@ -210,7 +227,18 @@ function main(argv) {
     if (sub === 'rotate') {
       const homes = opt.home ? homesOf(opt, kit) : undefined;
       const r = kit.rotate(rest[0], { homes });
-      return say({ rotated: rest[0], rotation: r.id, file: `acts/${r.id}.mor`, next: `send it to every home (node kit/mor.mjs publish ${rest[0]} --to HOME acts/${r.id}.mor); then ask each home for /identity/${kit.load(rest[0]).identity} and /identity/OPERATOR and keep the answers (identity evidence ${rest[0]} LETTER ...) before the next bank order` });
+      const l = kit.rotationLetters(rest[0], r.before);
+      const recordLetters = l.letters.filter((n) => n.includes('-record-'));
+      return say({
+        rotated: rest[0],
+        rotation: r.id,
+        file: `acts/${r.id}.mor`,
+        letters: l.letters,
+        sentTo: l.sentTo,
+        note: `to every home it had before and every home it names: the chain acts first (the rotation last of them), then your ${l.keys} encryption-key act(s), so each home's record carries them, then the asks for your record and the home operator's record there`,
+        next: `after the next pass: node kit/mor.mjs identity evidence ${rest[0]} ${recordLetters.join(' ')} (the bank follows the rotation only from these receipts). Encryption keys signed before the rotation still count; a new one (identity enckey ${rest[0]}) counts for readers only once they hold these receipts`,
+        ...(l.unnamed.length ? { byHand: `the kit cannot name the homes of operators ${l.unnamed.join(', ')} (no /info answer held): send them the chain and your keys by hand, node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/KEY.mor` } : {}),
+      });
     }
   }
 
@@ -234,8 +262,8 @@ function main(argv) {
     if (opt.private && via && !to?.length) throw new Error('a private post sealed --via a relay names its recipients with --to');
     if (opt.private && via) {
       const missing = kit.missingKeys(to);
-      if (missing.length) {
-        const r = kit.askRecords(name, missing, via);
+      const r = missing.length ? kit.askRecords(name, missing, via) : null;
+      if (r && (r.letters.length || kit.missingKeys(to, { newer: false }).length)) {
         return say({ notYet: `nothing was signed: the kit does not hold an encryption key that counts for ${missing.join(', ')}. ${r.letters.length ? `It wrote letters asking ${r.at.join(', ')} for the records it needs. After the postman's next pass, run the same command again: it will sign and seal then.` : 'Nothing more can be asked for.'} If no record shows an encryption key, that identity has to publish one (identity enckey)`, ...(r.why.length ? { why: r.why } : {}), letters: r.letters });
       }
       const no = kit.refusesSealed(via);
@@ -243,10 +271,10 @@ function main(argv) {
     }
     const made = kit.post(name, words.join(' '), { isPublic: !opt.private, to, refs: list(opt, 'refs') });
     const out = { signed: made.id, file: `acts/${made.id}.mor`, ...(opt.private ? { key: hex(made.key) } : {}) };
-    if (opt.file) out.words = { workHash: mor.workHash(new TextEncoder().encode(words[0])), note: 'the text is the file’s bytes exactly, final line break included: agreements words gives the same fingerprint for the file' };
+    if (opt.file) out.words = { workHash: mor.workHash(new TextEncoder().encode(words[0])), note: 'the text is the file’s bytes exactly (the kit refuses a file that is not canonical text, so nothing was changed): agreements words FILE gives this same work hash for the file' };
     if (opt.private && via) {
       const s = kit.seal(made.act, to, via, made.key);
-      Object.assign(out, { sealed: s.file.slice(kit.folder.length + 1), letter: s.letter.name, to: s.to });
+      Object.assign(out, { sealed: s.file.slice(kit.folder.length + 1), letter: s.letter.name, to: s.to }, newerNote(s.to));
     } else if (opt.private) out.next = `sealed to nobody yet: node kit/mor.mjs seal ${name} acts/${made.id}.mor --to ${to?.join(',') ?? 'ID'} --via RELAY`;
     return say(out);
   }
@@ -257,12 +285,12 @@ function main(argv) {
     if (!name || !file || !to?.length) throw new Error('seal NAME ACTFILE --to ID,ID --via RELAY');
     const h = heldOf(file);
     const missing = kit.missingKeys(to);
-    if (missing.length) {
-      const r = kit.askRecords(name, missing, one(opt, 'via'));
+    const r = missing.length ? kit.askRecords(name, missing, one(opt, 'via')) : null;
+    if (r && (r.letters.length || kit.missingKeys(to, { newer: false }).length)) {
       return say({ notYet: `nothing was sealed: the kit does not hold an encryption key that counts for ${missing.join(', ')}. ${r.letters.length ? `It wrote letters asking ${r.at.join(', ') || 'nobody (give --via RELAY)'} for the records it needs. After the postman's next pass, run the same command again` : 'Nothing more can be asked for'}`, ...(r.why.length ? { why: r.why } : {}), letters: r.letters });
     }
     const s = kit.seal(h.act, to, one(opt, 'via'), h.key ?? null);
-    return say({ sealed: s.file.slice(kit.folder.length + 1), letter: s.letter?.name ?? 'none: give --via RELAY to send it', to: s.to });
+    return say({ sealed: s.file.slice(kit.folder.length + 1), letter: s.letter?.name ?? 'none: give --via RELAY to send it', to: s.to, ...newerNote(s.to) });
   }
 
   if (cmd === 'open') {

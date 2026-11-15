@@ -358,14 +358,20 @@ export class Bank {
   fund({ send = false, readTop }) {
     const plan = [];
     const opened = (tray) => Object.values(this.state.accounts).filter((a) => a.tray === tray).sort((a, b) => a.seq - b.seq);
-    for (const tray of this.config.companies) {
+    // A tray may be both a company and a public window (a DAO's members): it gets the company sum once, and each
+    // line of its addresses.md once. A tray named twice in a list, or an identity listed twice, is credited once.
+    const planned = new Set();
+    for (const tray of new Set(this.config.companies)) {
       const key = `company:${tray}`;
       if (this.state.funded[key]) continue;
       const first = opened(tray)[0];
       if (!first) plan.push({ tray, wait: 'no account is open in this tray yet' });
-      else plan.push({ tray, key, identity: first.identity, amount: this.funding.companySats });
+      else {
+        plan.push({ tray, key, identity: first.identity, amount: this.funding.companySats });
+        planned.add(key);
+      }
     }
-    for (const tray of this.config.public) {
+    for (const tray of new Set(this.config.public)) {
       let text;
       try {
         text = Buffer.from(readTop(tray, this.funding.publicFile)).toString('utf8');
@@ -380,20 +386,27 @@ export class Bank {
         }
         const key = `public:${tray}:${line.identity}`;
         if (this.state.funded[key]) continue;
+        if (planned.has(key)) {
+          plan.push({ tray, identity: line.identity, skip: `listed again in ${this.funding.publicFile}: an identity is credited once, from its first line` });
+          continue;
+        }
         const a = this.state.accounts[line.identity];
         if (!a) plan.push({ tray, identity: line.identity, wait: 'its account is not open yet' });
         else if (a.tray !== tray) plan.push({ tray, identity: line.identity, skip: `its account is kept for the tray "${a.tray}"` });
-        else plan.push({ tray, key, identity: line.identity, amount: line.sats });
+        else {
+          plan.push({ tray, key, identity: line.identity, amount: line.sats });
+          planned.add(key);
+        }
       }
     }
     if (send) {
       for (const p of plan) {
-        if (!p.key) continue;
+        if (!p.key || this.state.funded[p.key]) continue;
         const a = this.state.accounts[p.identity];
         a.balance += p.amount;
         this.state.funded[p.key] = { amount: p.amount, at: now() };
-        this.journal({ kind: 'fund', identity: p.identity, tray: p.tray, amount: p.amount, balance: a.balance });
-        this.notices.push({ tray: p.tray, kind: 'funded', json: { identity: p.identity, funded: p.amount, account: this.view(a) }, body: null });
+        this.journal({ kind: 'fund', identity: p.identity, tray: p.tray, amount: p.amount, balance: a.balance, as: p.key.split(':')[0] });
+        this.notices.push({ tray: p.tray, kind: 'funded', json: { identity: p.identity, funded: p.amount, as: p.key.startsWith('company:') ? 'the company sum' : `its line in ${this.funding.publicFile}`, account: this.view(a) }, body: null });
         p.done = true;
       }
       this.save();

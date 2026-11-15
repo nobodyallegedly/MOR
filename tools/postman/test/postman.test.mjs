@@ -773,7 +773,7 @@ test('an encryption key signed under a rotation: published chain first, read fro
   await w.pm.pass();
   const t2 = send();
   assert.match(t2.notYet, /nothing was signed/);
-  assert.match(t2.why[0], /its chain counts only with its homes' operators' records/);
+  assert.match(t2.why[0], /counts only with the receipts of the homes it had before, and with those homes' operators' records/);
   assert.ok(t2.why[0].includes(home.operator));
   await w.pm.pass();
   const t3 = send();
@@ -817,4 +817,177 @@ test('post --refs with a short id says why; post --file posts the file’s exact
   const sh = JSON.parse(spawnKit(env, 'agreements', 'words', file, '--sha256').stdout);
   assert.equal(sh.sha256, sha256(fs.readFileSync(file)));
   assert.notEqual(sh.sha256, wh.workHash);
+});
+
+/** The record of an identity at a home, straight from the home: its encryption-key acts' ids. */
+async function recordKeys(base, id) {
+  const r = await fetch(`${base}/identity/${id}`);
+  assert.equal(r.status, 200, `${base}/identity/${id}`);
+  return (mor.cborDecode(new Uint8Array(await r.arrayBuffer())).get(4) ?? []).map((a) => mor.actId(a));
+}
+
+test('encryption keys and rotations at three homes, in each order: every accepted key is in each record; identity rotate and enckey send the chain first; a newer key not counting yet is asked for, then sealed to', async () => {
+  const h2 = await startHome();
+  const h3 = await startHome();
+  try {
+    const rel = { ...relays(), 'home-2': h2.base, 'home-3': h3.base };
+    const bases = { 'home-1': home.base, 'home-2': h2.base, 'home-3': h3.base };
+    const w = round(['ampersand', 'counterparty'], rel);
+    const A = w.kits.ampersand;
+    const C = w.kits.counterparty;
+    const envA = { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') };
+    const envC = { ...process.env, MOR_FOLDER: join(w.root, 'counterparty') };
+    const cli = (env, ...a) => {
+      const r = spawnKit(env, ...a);
+      assert.equal(r.status, 0, r.stderr);
+      return JSON.parse(r.stdout);
+    };
+    const statuses = (k, letters) => letters.map((l) => k.answer(l).status);
+    for (const n of Object.keys(bases)) A.relayLetter(n, 'GET', '/info');
+    const a = A.newIdentity('amp', [{ ...home.home, name: 'home-1' }]);
+    C.newIdentity('cp', [{ ...home.home, name: 'home-1' }]);
+    A.publish('home-1', A.chainActs('amp'));
+    await w.pm.pass();
+
+    // Order 1: a key under the genesis, then a rotation adding two homes. identity rotate sends the chain and the key to all three.
+    const k1 = cli(envA, 'identity', 'enckey', 'amp');
+    assert.deepEqual(k1.sentTo, ['home-1']);
+    await w.pm.pass();
+    assert.ok(statuses(A, k1.letters).every((s) => s === 200));
+    const rot = cli(envA, 'identity', 'rotate', 'amp', '--home', 'home-1', '--home', 'home-2', '--home', 'home-3');
+    assert.deepEqual(rot.sentTo, ['home-1', 'home-2', 'home-3']);
+    await w.pm.pass();
+    assert.ok(statuses(A, rot.letters).every((s) => s === 200), JSON.stringify(statuses(A, rot.letters)));
+    for (const b of Object.values(bases)) assert.deepEqual(await recordKeys(b, a.identity), [k1.encryptionKey], `${b}: the key under the genesis, carried to the new homes`);
+    // The evidence the rotation's next step names is read from those answers.
+    const ev = rot.next.match(/identity evidence amp (.*?) \(/)[1].split(' ');
+    assert.equal(ev.length, 6);
+    assert.ok(cli(envA, 'identity', 'evidence', 'amp', ...ev).kept > 0);
+
+    // Counterparty seals: the key under the genesis counts after the rotation.
+    const send = () => cli(envC, 'post', 'cp', 'for ampersand', '--private', '--to', a.identity, '--via', 'home-1');
+    assert.match(send().notYet, /nothing was signed/);
+    await w.pm.pass();
+    const s1 = send();
+    assert.deepEqual(s1.to.map((x) => x.encryptionKey), [k1.encryptionKey], JSON.stringify(s1));
+
+    // Order 2: a key signed under the rotation, sent to a home before the rotation reached it: that home refuses it (409) and its record lacks it.
+    const w2 = round(['pointer'], rel);
+    const P = w2.kits.pointer;
+    const envP = { ...process.env, MOR_FOLDER: join(w2.root, 'pointer') };
+    const p = P.newIdentity('pt', [{ ...home.home, name: 'home-1' }]);
+    P.publish('home-1', P.chainActs('pt'));
+    await w2.pm.pass();
+    P.rotate('pt');
+    const early = P.encryptionKey('pt');
+    const [bare] = P.publish('home-1', [early.act]);
+    await w2.pm.pass();
+    assert.equal(P.answer(bare.name).status, 409, 'a key ahead of its rotation is refused, not kept');
+    assert.deepEqual(await recordKeys(home.base, p.identity), []);
+    // identity enckey sends the chain first: the rotation, then the key; kept.
+    const k2 = cli(envP, 'identity', 'enckey', 'pt', '--to', 'home-1');
+    await w2.pm.pass();
+    assert.ok(statuses(P, k2.letters).every((s) => s === 200));
+    assert.deepEqual(await recordKeys(home.base, p.identity), [k2.encryptionKey]);
+
+    // Order 3: ampersand publishes a newer key under its rotation, at home-2 only. Counterparty holding home-2's record and the
+    // operators' records still lacks home-1's receipt for the rotation: the newer key does not count for it, and is said, not passed over.
+    const v2 = A.encryptionKey('amp');
+    A.publish('home-2', [v2.act]);
+    await w.pm.pass();
+    const w3 = round(['hop'], rel);
+    const Hk = w3.kits.hop;
+    const envH = { ...process.env, MOR_FOLDER: join(w3.root, 'hop') };
+    Hk.newIdentity('h', [{ ...h2.home, name: 'home-2' }]);
+    for (const n of Object.keys(bases)) Hk.relayLetter(n, 'GET', '/info');
+    Hk.relayLetter('home-2', 'GET', `/identity/${a.identity}`);
+    for (const [n, op] of [['home-1', home.operator], ['home-2', h2.operator], ['home-3', h3.operator]]) Hk.relayLetter(n, 'GET', `/identity/${op}`);
+    await w3.pm.pass();
+    const r0 = Hk.recipientKeys([a.identity])[0];
+    assert.equal(r0.act, k1.encryptionKey, 'the newest key that counts for this reader');
+    assert.deepEqual(r0.newer.map((x) => [x.act, x.version]), [[v2.id, 2]]);
+    const t1 = cli(envH, 'post', 'h', 'for ampersand', '--private', '--to', a.identity, '--via', 'home-2');
+    assert.match(t1.notYet, /nothing was signed/);
+    assert.match(t1.why[0], /its record at home-1/, JSON.stringify(t1));
+    await w3.pm.pass();
+    // home-1's record carries its receipt for the rotation: the rotation counts, so v2 (held from home-2's record) counts.
+    const t2 = cli(envH, 'post', 'h', 'for ampersand', '--private', '--to', a.identity, '--via', 'home-2');
+    assert.deepEqual(t2.to.map((x) => x.encryptionKey), [v2.id], JSON.stringify(t2));
+    assert.equal(t2.newerKeyNotCounting, undefined);
+
+    // Where every record has been asked for and a newer key still does not count, the kit seals to the one that does and says so.
+    const w4 = round(['keep'], rel);
+    const K = w4.kits.keep;
+    const envK = { ...process.env, MOR_FOLDER: join(w4.root, 'keep') };
+    const q = K.newIdentity('q', [{ ...home.home, name: 'home-1' }]);
+    K.publish('home-1', K.chainActs('q'));
+    const q1 = K.encryptionKey('q');
+    K.publish('home-1', [q1.act]);
+    await w4.pm.pass();
+    // A rotation adding home-3, sent there only (home-1, its home before, never sees it: no receipt that counts), and a key under it.
+    K.rotate('q', { homes: [{ ...home.home, name: 'home-1' }, { ...h3.home, name: 'home-3' }] });
+    const q2 = K.encryptionKey('q');
+    K.publish('home-3', [...K.chainActs('q'), q1.act, q2.act]);
+    await w4.pm.pass();
+    const w5 = round(['stall'], rel);
+    const S = w5.kits.stall;
+    const envS = { ...process.env, MOR_FOLDER: join(w5.root, 'stall') };
+    S.newIdentity('s', [{ ...home.home, name: 'home-1' }]);
+    for (const n of Object.keys(bases)) S.relayLetter(n, 'GET', '/info');
+    S.relayLetter('home-3', 'GET', `/identity/${q.identity}`);
+    await w5.pm.pass();
+    let last;
+    for (let i = 0; i < 4; i++) {
+      last = cli(envS, 'post', 's', 'for keep', '--private', '--to', q.identity, '--via', 'home-1');
+      if (!last.notYet) break;
+      await w5.pm.pass();
+    }
+    assert.ok(last.letter, JSON.stringify(last));
+    assert.deepEqual(last.to.map((x) => x.encryptionKey), [q1.id]);
+    assert.ok(last.newerKeyNotCounting, JSON.stringify(last));
+    assert.match(last.newerKeyNotCounting[0], new RegExp(`version 2 \\(${q2.id}`));
+  } finally {
+    await h2.stop();
+    await h3.stop();
+  }
+});
+
+test('funding: a tray that is both a company and a public window gets the company sum once and each addresses.md line once', async () => {
+  const w = round(['ampersand', 'backlot', 'hop'], relays(), { companies: ['ampersand', 'backlot', 'hop'], public: ['ampersand', 'backlot', 'ampersand'] });
+  const A = w.kits.ampersand;
+  const B = w.kits.backlot;
+  const dao = A.newIdentity('dao', [home.home]);
+  const m1 = A.newIdentity('m1', [home.home]);
+  const m2 = A.newIdentity('m2', [home.home]);
+  const b = B.newIdentity('b', [home.home]);
+  const bm = B.newIdentity('bm', [home.home]);
+  w.kits.hop.newIdentity('hp', [home.home]);
+  for (const [k, n] of [[A, 'dao'], [A, 'm1'], [A, 'm2'], [B, 'b'], [B, 'bm'], [w.kits.hop, 'hp']]) k.bankOrder(n, 'open');
+  await w.pm.pass();
+  fs.writeFileSync(join(w.root, 'ampersand', 'addresses.md'), `# identity, budget\n${m1.identity}, 1000\n${m2.identity}, 2000\n${m1.identity}, 9999\n${dao.identity}, 300\n`);
+  fs.writeFileSync(join(w.root, 'backlot', 'addresses.md'), `${bm.identity}, 400\n`);
+  const readTop = (tray, file) => fs.readFileSync(join(w.root, tray, file));
+  const dry = w.pm.bank.fund({ send: false, readTop });
+  assert.equal(dry.filter((p) => p.done).length, 0, 'a dry run moves nothing');
+  const plan = w.pm.bank.fund({ send: true, readTop });
+  const done = plan.filter((p) => p.done).map((p) => [p.tray, p.identity, p.amount]);
+  assert.deepEqual(done, [
+    ['ampersand', dao.identity, 2_000_000],
+    ['backlot', b.identity, 2_000_000],
+    ['hop', w.kits.hop.load('hp').identity, 2_000_000],
+    ['ampersand', m1.identity, 1000],
+    ['ampersand', m2.identity, 2000],
+    ['ampersand', dao.identity, 300],
+    ['backlot', bm.identity, 400],
+  ]);
+  assert.ok(plan.some((p) => p.identity === m1.identity && /listed again/.test(p.skip ?? '')), 'a second line for the same identity is not credited');
+  const bal = (id) => w.pm.bank.state.accounts[id].balance;
+  assert.equal(bal(dao.identity), 2_000_300);
+  assert.equal(bal(m1.identity), 1000);
+  assert.equal(bal(m2.identity), 2000);
+  assert.equal(bal(b.identity), 2_000_000);
+  assert.equal(bal(bm.identity), 400);
+  assert.equal(w.pm.bank.fund({ send: true, readTop }).filter((p) => p.done).length, 0, 'never twice');
+  const j = fs.readFileSync(join(w.cfg.postmanDir, 'bank', 'journal.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  assert.equal(j.filter((e) => e.kind === 'fund').length, 7);
 });
