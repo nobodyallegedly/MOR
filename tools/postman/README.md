@@ -23,7 +23,7 @@ node tools/postman/postman.mjs run   --config ~/Documents/mor-round-2/_hosts/pos
 
 **The relays' names:** in the hosts' configuration (`hosts.json`, copied from `hosts.example.json` and kept with the hosts, never in the repository), `"relays"` maps a name to the relay's local address, for example `"dubsar-home-1": "http://127.0.0.1:…"`. Players name relays only by these names; they never see an address or a port. Tell the players the names.
 
-**Other commands** (each with `--config`): `once` (one pass); `fund` (shows the starting money it would credit; `fund --send` credits it: 2,000,000 sats to each company tray's first account opened, and to each public identity the budget its tray's `addresses.md` lists, once each); `bank` (every account, the total, and what the nodes hold); `kit` (shows, and with `--send` copies, the players' kit into each tray as `kit/`, and the tray guide into `from-the-hosts/tray-guide.md`, wherever there is none).
+**Other commands** (each with `--config`): `once` (one pass); `fund` (shows the starting money it would credit; `fund --send` credits it: 2,000,000 sats to each company tray's first account opened, and to each public identity the budget its tray's `addresses.md` lists, once each); `bank` (every account, the total, and what the nodes hold); `kit` (shows, and with `--send` copies, the players' kit into each tray as `kit/`, and the tray guide into `from-the-hosts/tray-guide.md`, wherever there is none; with `--send --update`, replaces the kit's own files and the tray guide in every tray, and touches nothing else of the player's: not `keys/`, not `acts/`, not a file the player added inside `kit/`; a `kit/` that is a link is refused). The relay names players see come from `from-the-hosts/relays.md`, which the hosts write.
 
 **Replaces `_hosts/fund.sh`.** fund.sh sent on-chain coins to addresses players wrote; with the bank, players hold no wallet, so those coins could not be spent. `postman fund` credits the bank accounts instead. If fund.sh already ran, its coins sit at the players' own addresses, outside the bank, and should not be counted again. `_hosts/mine.sh` stays as it is: the postman mines nothing.
 
@@ -50,7 +50,7 @@ node tools/postman/postman.mjs run   --config ~/Documents/mor-round-2/_hosts/pos
 
 **The paths a letter may name:** `/info`, `/acts…`, `/sealed…`, `/media…`, `/feed…`, `/commitment`, `/identity/…`, `/log/…`, `/proofs`: the reference relay's API (`relay/src/http.rs`). `/manage` is never allowed. `/probe` is off unless the hosts list it in `"paths"`: a probe makes a relay contact addresses a player chooses, which on one machine means its local ports (see the report). A feed that waits (`wait=` other than 0) is refused, since letters are carried one at a time.
 
-**The bank:** `kit/BANK-ORDERS.md`. Chain letters (`"to": "chain"`): read-only btcctl questions (`getblockcount`, `getblockhash`, `getblockheader`, `getblock`, `getrawtransaction`).
+**The bank:** `kit/BANK-ORDERS.md`. Chain letters (`"to": "chain"`): read-only btcctl questions (`getblockcount`, `getblockhash`, `getblockheader`, `getblock`, `getrawtransaction`). A chain answer carries the exit status and the answer only. The tool's error output names the hosts' machine, so it goes only to the hosts' log. In a bank answer, a node's error message is kept, with every path and address of the hosts' machine replaced.
 
 ## Tests
 

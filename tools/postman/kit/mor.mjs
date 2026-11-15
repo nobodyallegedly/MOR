@@ -19,9 +19,16 @@ Identities (keys stay in keys/NAME.json, in this folder):
                                        after a rotation, the bank follows it only from its homes' receipts)
 
 Acts (kept in acts/ID.mor; a private act's content key in acts/ID.key):
-  post NAME TEXT [--private --to ID,ID]
+  post NAME TEXT [--refs ID,ID] [--private --to ID,ID --via RELAY]
+                                (--refs: the acts it answers; --private --to … --via RELAY also seals it to them)
   sign NAME --spec HEX --type N (--payload-hex HEX | --payload-file FILE) [--private --to ID,ID] [--refs ID,ID] [--acks ID,ID]
   check FILE... [--key HEX]     (the core library's verdict on acts held together)
+
+Sealing (private acts reach their recipients only sealed to their published encryption keys):
+  identity enckey NAME          (a new encryption key; then: publish NAME --to HOME acts/ID.mor)
+  seal NAME ACTFILE --to ID,ID --via RELAY   (refused for a recipient whose key you do not hold:
+                                fetch its record first, letter --to HOME --get /identity/ID)
+  open NAME (--letter LETTER | FILE)   (a sealed container, or a feed page from GET /feed?to=YOUR-ID)
 
 The new Agreements acts (draft 25, encoding 2; the report block, proposal 4):
   agreements specs
@@ -45,6 +52,10 @@ The hosts' bank (orders signed by your identity's own key; whole sats only):
 Answers:
   read                  (every answer in in/, one line each)
   read LETTER [--save]  (one answer, its body described; --save keeps an act it carries in acts/)
+
+  relays                (the relay names the hosts announce, from from-the-hosts/relays.md)
+
+Everything stays in this folder. Never use /tmp: it is shared with other windows.
 `;
 
 function parse(argv) {
@@ -120,8 +131,10 @@ function bytesOf(opt) {
 function main(argv) {
   const { pos, opt } = parse(argv);
   const [cmd, sub, ...rest] = pos;
-  if (!cmd || cmd === 'help') return say(HELP);
   const kit = new Kit(folderOf(), process.env.MOR_TRAY);
+  const relaysSaid = () => kit.relaysNote() ?? 'The hosts have not written from-the-hosts/relays.md yet: ask them for the relay names.';
+  if (!cmd || cmd === 'help') return say(`${HELP}\nRelay names, as the hosts announce them:\n${relaysSaid()}`);
+  if (cmd === 'relays') return say(relaysSaid());
 
   if (cmd === 'identity') {
     if (sub === 'new') {
@@ -134,6 +147,10 @@ function main(argv) {
       return say({ name: rest[0], identity: f.identity, binding: f.binding, chain: r.links.map((l) => l.act), stop: r.stop, homes: f.homes, lines: Object.fromEntries(Object.entries(f.lines).map(([k, l]) => [k, l.length])), bankOrders: f.bankN ?? 0 });
     }
     if (sub === 'list') return say(kit.names().map((n) => `${n} ${kit.load(n).identity}`).join('\n') || 'no identities yet');
+    if (sub === 'enckey') {
+      const e = kit.encryptionKey(rest[0]);
+      return say({ encryptionKey: e.id, version: e.version, file: `acts/${e.id}.mor`, next: `publish it to every home: node kit/mor.mjs publish ${rest[0]} --to HOME acts/${e.id}.mor` });
+    }
     if (sub === 'evidence') {
       const [name, ...letters] = rest;
       const bodies = letters.map((l) => {
@@ -152,8 +169,38 @@ function main(argv) {
 
   if (cmd === 'post') {
     const [name, ...words] = [sub, ...rest];
-    const made = kit.post(name, words.join(' '), { isPublic: !opt.private, to: list(opt, 'to') });
-    return say({ signed: made.id, file: `acts/${made.id}.mor`, ...(opt.private ? { key: hex(made.key) } : {}) });
+    const to = list(opt, 'to');
+    const via = one(opt, 'via');
+    if (opt.private && via && !to?.length) throw new Error('a private post sealed --via a relay names its recipients with --to');
+    if (opt.private && via) kit.recipientKeys(to); // refused before signing if a recipient has no key
+    const made = kit.post(name, words.join(' '), { isPublic: !opt.private, to, refs: list(opt, 'refs') });
+    const out = { signed: made.id, file: `acts/${made.id}.mor`, ...(opt.private ? { key: hex(made.key) } : {}) };
+    if (opt.private && via) {
+      const s = kit.seal(made.act, to, via, made.key);
+      Object.assign(out, { sealed: s.file.slice(kit.folder.length + 1), letter: s.letter.name, to: s.to });
+    } else if (opt.private) out.next = `sealed to nobody yet: node kit/mor.mjs seal ${name} acts/${made.id}.mor --to ${to?.join(',') ?? 'ID'} --via RELAY`;
+    return say(out);
+  }
+
+  if (cmd === 'seal') {
+    const [name, file] = [sub, ...rest];
+    const to = list(opt, 'to');
+    if (!name || !file || !to?.length) throw new Error('seal NAME ACTFILE --to ID,ID --via RELAY');
+    const h = heldOf(file);
+    const s = kit.seal(h.act, to, one(opt, 'via'), h.key ?? null);
+    return say({ sealed: s.file.slice(kit.folder.length + 1), letter: s.letter?.name ?? 'none: give --via RELAY to send it', to: s.to });
+  }
+
+  if (cmd === 'open') {
+    const name = sub;
+    let bytes;
+    if (opt.letter) {
+      const a = kit.answer(one(opt, 'letter'));
+      if (!a.bytes) throw new Error('that answer carries no body');
+      bytes = a.bytes;
+    } else if (rest[0]) bytes = new Uint8Array(readFileSync(rest[0]));
+    else throw new Error('open NAME --letter LETTER, or open NAME FILE');
+    return say(kit.open(name, bytes));
   }
 
   if (cmd === 'sign') {
@@ -194,6 +241,7 @@ function main(argv) {
       return say({ signed: r.signed.id, file: `acts/${r.signed.id}.mor`, check: r.check, note: 'A pass means only that the bytes are well formed and signed; the grammar’s answers are agreements ask.' });
     }
     if (sub === 'questions') return say(JSON.parse(mor.agreementsNewQuestions()));
+    if (sub === 'ask' && !rest.length) return say({ asks: JSON.parse(mor.agreementsNewQuestions()), usage: 'agreements ask ASK [ARG ...] --acts FILE[:KEYHEX] ...' });
     if (sub === 'ask') {
       const [ask, ...args] = rest;
       const acts = (opt.acts ?? []).map(heldOf).map((h) => ({ bytes: h.act, ...(h.key ? { key: h.key } : {}) }));

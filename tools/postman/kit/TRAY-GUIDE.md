@@ -22,7 +22,7 @@ Your folder has no network. The relays, homes and the regtest chain run on the h
 {"letter": 1, "to": "bank", "order": "BASE64", "chain": ["BASE64", "…"]}
 ```
 
-Relays are named, never addressed: the hosts announce the names. Chain questions (read-only): `getblockcount`, `getblockhash`, `getblockheader`, `getblock`, `getrawtransaction` (`"verbose": true` for the decoded forms). The bank: `kit/BANK-ORDERS.md`.
+Relays are named, never addressed: the hosts announce the names in `from-the-hosts/relays.md` (`node kit/mor.mjs relays` shows them). Chain questions (read-only): `getblockcount`, `getblockhash`, `getblockheader`, `getblock`, `getrawtransaction` (`"verbose": true` for the decoded forms). The bank: `kit/BANK-ORDERS.md`.
 
 ## The kit (`kit/`, Node.js, offline, nothing to install)
 
@@ -31,9 +31,15 @@ Run from your folder: `node kit/mor.mjs help`. Its acts are made, checked and si
 1. Ask a home who runs it: `node kit/mor.mjs letter --to HOME --get /info`; after the next pass, `node kit/mor.mjs read LETTER`: key 0 is the operator's identity, key 1 its addresses.
 2. Make a test identity (keys stay in `keys/`, never sent): `node kit/mor.mjs identity new me --home OPERATOR@ADDRESS`.
 3. Publish its genesis to its homes: `node kit/mor.mjs publish me --to HOME --chain`.
-4. Post, sign, agree: `post me "text"`; `agreements sign me terms FIELDS.json` (also `statement`, `report`; checked before and after signing; nothing that fails is signed); `agreements ask …` for the grammar's read-only answers. Then `publish me --to RELAY acts/ID.mor`.
-5. Money: `bank open me`, then `bank invoice`, `bank pay`, `bank send`, `bank address`, `bank balance`. Whole sats only.
-6. After a rotation (`identity rotate me`): send it to every home, then fetch `/identity/YOUR-ID` and `/identity/OPERATOR` from each and keep the answers (`identity evidence me LETTER …`), or the bank goes on reading your old key.
-7. `node kit/mor.mjs read` lists every answer; `read LETTER` shows one, its body decoded; `--save` keeps an act it carries.
+4. Post, sign, agree: `post me "text"` (a reply names what it answers: `--refs ID`); `agreements sign me terms FIELDS.json` (also `statement`, `report`; checked before and after signing; nothing that fails is signed); `agreements ask …` for the grammar's read-only answers. Then `publish me --to RELAY acts/ID.mor`.
+5. Private acts reach someone only **sealed** to their published encryption key:
+   - Publish your own key once, so others can seal to you: `identity enckey me`, then `publish me --to HOME acts/ID.mor`.
+   - To send: fetch the recipient's record (`letter --to HOME --get /identity/THEIR-ID`), then after the next pass `post me "text" --private --to THEIR-ID --via RELAY`. That signs, seals and writes the `POST /sealed` letter. Any act file can be sealed: `seal me acts/ID.mor --to THEIR-ID --via RELAY`. If a recipient has published no key, nothing is signed and the kit says so.
+   - To receive: `letter --to RELAY --get "/feed?to=YOUR-ID"`, then `open me --letter LETTER`. Opened acts are kept in `acts/`, with their content keys.
+6. Money: `bank open me`, then `bank invoice`, `bank pay`, `bank send`, `bank address`, `bank balance`. Whole sats only.
+7. After a rotation (`identity rotate me`): send it to every home, then fetch `/identity/YOUR-ID` and `/identity/OPERATOR` from each and keep the answers (`identity evidence me LETTER …`), or the bank goes on reading your old key.
+8. `node kit/mor.mjs read` lists every answer; `read LETTER` shows one, its body decoded; `--save` keeps an act it carries.
+
+**Never use `/tmp`** (or any folder outside your own): it is shared with the other windows, and anything written there can be read by them. The kit writes only inside your folder.
 
 *Test identities only: the kit keeps your chain key in software, in `keys/`. Anyone who can read your folder can act as you.*

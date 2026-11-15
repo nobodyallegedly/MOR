@@ -492,3 +492,125 @@ test('the kit’s binding is the one built from this branch (CI builds it again 
   void hex;
   void unb64;
 });
+
+// ------------------------------------------------- after window one (the players' reports)
+
+test('sealing: an encryption key published, a private post sealed to it through POST /sealed, opened by its recipient from the feed', async () => {
+  const w = round(['ampersand', 'hop'], relays());
+  const A = w.kits.ampersand;
+  const H = w.kits.hop;
+  const a = A.newIdentity('amp', [home.home]);
+  const h = H.newIdentity('hopper', [home.home]);
+  // Hop publishes its genesis and an encryption key (version 1) to its home.
+  const ek = H.encryptionKey('hopper');
+  assert.equal(ek.version, 1);
+  assert.equal(mor.cborDecode(mor.describeAct(ek.act).payload).get(0), 1, 'the first encryption key is version 1');
+  H.publish('home-1', [...H.chainActs('hopper'), ek.act]);
+  A.publish('home-1', A.chainActs('amp'));
+  await w.pm.pass();
+  // Ampersand cannot seal to hop before it holds hop's record: refused, plainly, nothing signed.
+  const lines = A.load('amp').lines.private.length;
+  const cli = (...x) => execFileSync(process.execPath, [kitCli, ...x], { env: { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  assert.throws(() => cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1'), /has no published encryption key in what you hold.*--get \/identity\//s);
+  assert.equal(A.load('amp').lines.private.length, lines, 'nothing signed when it cannot be sealed');
+  // It asks the home for hop's record, then seals.
+  const rec = A.relayLetter('home-1', 'GET', `/identity/${h.identity}`);
+  await w.pm.pass();
+  assert.equal(A.answer(rec.name).status, 200);
+  const out = JSON.parse(cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1'));
+  assert.ok(out.letter && out.sealed.startsWith('sealed/'));
+  await w.pm.pass();
+  const sent = A.answer(out.letter);
+  assert.equal(sent.status, 200, JSON.stringify({ ...sent, bytes: undefined, body: sent.bytes && mor.cborDecode(sent.bytes) }));
+  // Hop fetches what is addressed to it and opens it.
+  const feed = H.relayLetter('home-1', 'GET', `/feed?to=${h.identity}`);
+  await w.pm.pass();
+  const opened = H.open('hopper', H.answer(feed.name).bytes);
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0].opened, true);
+  assert.equal(opened[0].act, out.signed);
+  assert.equal(opened[0].described.signer, a.identity);
+  assert.ok(fs.existsSync(join(w.root, 'hop', 'acts', `${out.signed}.key`)), 'the content key kept beside the act');
+  // The sealed file itself opens too; and someone else's container does not open for ampersand.
+  const file = join(w.root, 'ampersand', out.sealed);
+  assert.equal(H.open('hopper', new Uint8Array(fs.readFileSync(file)))[0].opened, true);
+  A.encryptionKey('amp');
+  assert.equal(A.open('amp', new Uint8Array(fs.readFileSync(file)))[0].opened, false);
+});
+
+test('post --refs names the act it answers; sign refuses non-canonical text; agreements ask with no ask lists them', () => {
+  const w = round(['ampersand'], relays());
+  const k = w.kits.ampersand;
+  k.newIdentity('amp', [home.home]);
+  const first = k.post('amp', 'a question');
+  const reply = k.post('amp', 'an answer', { refs: [first.id] });
+  assert.deepEqual(mor.describeAct(reply.act).refs, [first.id]);
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') };
+  const cli = (...x) => execFileSync(process.execPath, [kitCli, ...x], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const r2 = JSON.parse(cli('post', 'amp', 'another', '--refs', `${first.id},${reply.id}`));
+  assert.deepEqual(mor.describeAct(fs.readFileSync(join(w.root, 'ampersand', r2.file))).refs, [first.id, reply.id]);
+  const decomposed = 'café'; // not NFC
+  const payload = hex(mor.cborEncode(new Map([[0, decomposed]])));
+  const before = k.load('amp').lines.public.length;
+  assert.throws(() => cli('sign', 'amp', '--spec', SPECS.text, '--type', '0', '--payload-hex', payload), /not canonical.*nothing was signed/s);
+  assert.throws(() => k.post('amp', 'bell\u0007'), /not canonical/);
+  assert.equal(k.load('amp').lines.public.length, before);
+  const asks = JSON.parse(cli('agreements', 'ask'));
+  assert.ok(asks.asks.some((a) => a.ask === 'in_force'));
+});
+
+test('a chain answer never carries the tool’s error output; a bank answer names no path or port of the hosts’ machine', async () => {
+  const w = round(['hop'], relays());
+  const k = w.kits.hop;
+  w.wallet.chain = async (ask) => ({ argv: ['btcctl', ask], code: 1, stdout: new Uint8Array(), stderr: 'open /Users/host/.btcctl/btcctl.conf: no such file or directory\n' });
+  const l = k.chainLetter('getblockcount');
+  await w.pm.pass();
+  const text = fs.readFileSync(join(w.root, 'hop', 'in', `${l.name}.answer.json`), 'utf8');
+  assert.ok(!text.includes('/Users') && !text.includes('btcctl.conf'), text);
+  assert.equal(k.answer(l.name).outcome, 'failed');
+  assert.ok(readLog(w.cfg).some((e) => e.event === 'chain stderr (hosts only)' && /btcctl\.conf/.test(e.stderr)), 'kept in the hosts’ log');
+  const { scrub } = await import('../lib/bank.mjs');
+  assert.equal(scrub('dial tcp 127.0.0.1:10009: refused; open /Users/h/mor-regtest/alice/tls.cert'), 'dial tcp [an address on the hosts’ machine]: refused; open [a path on the hosts’ machine]');
+});
+
+test('the hosts’ relay names, from from-the-hosts/relays.md, in the kit’s help; the kit and the postman never use /tmp', () => {
+  const w = round(['keep'], relays());
+  fs.mkdirSync(join(w.root, 'keep', 'from-the-hosts'));
+  fs.writeFileSync(join(w.root, 'keep', 'from-the-hosts', 'relays.md'), '- dubsar-home-1: a home\n- dubsar-relay-1: a relay\n');
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'keep') };
+  assert.match(execFileSync(process.execPath, [kitCli, 'help'], { env, encoding: 'utf8' }), /dubsar-home-1: a home/);
+  assert.match(execFileSync(process.execPath, [kitCli, 'relays'], { env, encoding: 'utf8' }), /dubsar-relay-1/);
+  const src = (d) => fs.readdirSync(d, { recursive: true }).filter((f) => f.endsWith('.mjs') && !f.startsWith('test')).map((f) => fs.readFileSync(join(d, f), 'utf8'));
+  const here = fileURLToPath(new URL('..', import.meta.url));
+  for (const s of src(here)) assert.ok(!/tmpdir|['"`]\/tmp/.test(s), 'no temporary folder outside the player’s own');
+});
+
+test('postman kit --send --update replaces the kit’s own files and nothing else of the player’s', () => {
+  const w = round(['ampersand'], relays());
+  const T = join(w.root, 'ampersand');
+  fs.mkdirSync(join(T, 'from-the-hosts'));
+  const cfgFile = join(w.cfg.postmanDir, 'hosts.json');
+  fs.mkdirSync(w.cfg.postmanDir, { recursive: true });
+  fs.writeFileSync(cfgFile, JSON.stringify({ root: w.root, trays: ['ampersand'], relays: relays(), postmanDir: w.cfg.postmanDir }));
+  const pm = fileURLToPath(new URL('../postman.mjs', import.meta.url));
+  const run = (...x) => execFileSync(process.execPath, [pm, 'kit', '--config', cfgFile, ...x], { encoding: 'utf8' });
+  assert.match(run('--send'), /kit copied/);
+  w.kits.ampersand.newIdentity('amp', [home.home]);
+  const keys = fs.readFileSync(join(T, 'keys', 'amp.json'));
+  fs.writeFileSync(join(T, 'kit', 'my-notes.txt'), 'mine');
+  fs.writeFileSync(join(T, 'kit', 'mor.mjs'), '// an old kit');
+  fs.writeFileSync(join(T, 'from-the-hosts', 'tray-guide.md'), 'old guide');
+  assert.match(run('--send'), /left as it is/);
+  assert.equal(fs.readFileSync(join(T, 'kit', 'mor.mjs'), 'utf8'), '// an old kit');
+  assert.match(run('--send', '--update'), /kit updated/);
+  assert.equal(fs.readFileSync(join(T, 'kit', 'mor.mjs'), 'utf8'), fs.readFileSync(kitCli, 'utf8'));
+  assert.equal(fs.readFileSync(join(T, 'kit', 'my-notes.txt'), 'utf8'), 'mine', 'a file of the player’s in kit/ stays');
+  assert.deepEqual(fs.readFileSync(join(T, 'keys', 'amp.json')), keys, 'keys untouched');
+  assert.ok(fs.readdirSync(join(T, 'acts')).length > 0, 'acts untouched');
+  assert.match(fs.readFileSync(join(T, 'from-the-hosts', 'tray-guide.md'), 'utf8'), /The tray guide/);
+  // A kit/ that is a link is refused, never followed.
+  fs.renameSync(join(T, 'kit'), join(T, 'kit-real'));
+  fs.symlinkSync(join(T, 'keys'), join(T, 'kit'));
+  assert.match(run('--send', '--update'), /refused: .*symbolic link/);
+  assert.deepEqual(fs.readdirSync(join(T, 'keys')), ['amp.json']);
+});

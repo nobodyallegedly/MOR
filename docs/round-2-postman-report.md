@@ -36,6 +36,16 @@ Option (a) of the brief, simplified where it could be. A ledger of accounts, one
 3. Whether `/probe` is allowed (point 6).
 4. Whether fund.sh has already run; if so, which coins count.
 
+## After window one (second edition, 15 November, evening)
+
+Built from the players' reports, as the suite lead listed them:
+- **Sealing.** `identity enckey` makes an encryption key: version 1 first, each later one naming the one before, the secret kept in `keys/`. `post --private --to … --via RELAY` and `seal` seal an act to each recipient's published key, using the binding's `seal()` and the key's own version history as the core library's verifier reads it from the `/identity` records held. They write a `POST /sealed` letter in the relay's `{0: bytes}` form. A recipient with no key held is refused with the next step to take, before anything is signed. `open` opens a container or a `/feed?to=` page with every secret the identity holds. It was tested end to end through the reference home.
+- `post --refs`. `sign` and `post` now refuse non-canonical text, as the Agreements builders do. `agreements ask` with no ask lists the asks.
+- **Chain answers carry no error output** (it named a path on the hosts' machine): it goes to the hosts' log only. Bank answers keep a node's message with paths and addresses replaced.
+- `relays` and `help` show `from-the-hosts/relays.md`.
+- **No temporary folder.** Nothing in the kit or the postman writes outside the player's folder or the postman's own; a test reads the sources to keep it so, and the tray guide says never to use `/tmp`.
+- `postman kit --send --update` replaces the kit's files only.
+
 ## State
 
 A draft pull request against `claude/agreements-verifier-2`, not to be merged. CI: in the pull request.

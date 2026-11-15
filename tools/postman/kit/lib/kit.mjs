@@ -198,6 +198,7 @@ export class Kit {
    * acts) or `bank` (its orders to the hosts' bank, never published).
    */
   sign(name, { spec, type, payload, isPublic = true, to, refs, acks, objects, line }) {
+    checkPayloadText(payload);
     const f = this.load(name);
     const l = line ?? (isPublic ? 'public' : 'private');
     if (!f.lines[l]) f.lines[l] = [];
@@ -221,8 +222,151 @@ export class Kit {
     return made;
   }
 
-  post(name, text, { isPublic = true, to } = {}) {
-    return this.sign(name, { spec: SPECS.text, type: 0, payload: textPayload(text), isPublic, to });
+  post(name, text, { isPublic = true, to, refs } = {}) {
+    return this.sign(name, { spec: SPECS.text, type: 0, payload: textPayload(text), isPublic, to, refs });
+  }
+
+  // ------------------------------------------------------------- sealing
+
+  /**
+   * A new encryption key (Envelopes type 4): an X-Wing key pair, its public
+   * half in a public act, version 1 for the first and one more for each
+   * after, naming the one before; its secret half kept in keys/. Publish
+   * the act to the identity's homes so others can seal to it.
+   */
+  encryptionKey(name) {
+    const f = this.load(name);
+    const last = (f.encryption ?? []).at(-1);
+    const version = (last?.version ?? 0) + 1;
+    const secret = mor.newEncryptionSecret();
+    const payload = mor.encryptionKeyPayload(version, last?.act ?? undefined, mor.xwingPublic(secret));
+    const made = this.sign(name, { spec: SPECS.envelopes, type: 4, payload, isPublic: true });
+    const f2 = this.load(name);
+    (f2.encryption ??= []).push({ version, act: made.id, secret: hex(secret) });
+    this.save(name, f2);
+    return { ...made, version };
+  }
+
+  /** Every act in the identity records (GET /identity/ID) answered in in/: chains, receipts, encryption keys. */
+  heldRecords() {
+    const acts = [];
+    for (const n of this.answers()) {
+      let a;
+      try {
+        a = this.answer(n);
+      } catch {
+        continue;
+      }
+      if (a.outcome !== 'answered' || a.status !== 200 || !/^\/identity\/[0-9a-f]{64}$/.test(a.path ?? '') || !a.bytes) continue;
+      let rec;
+      try {
+        rec = mor.cborDecode(a.bytes);
+      } catch {
+        continue;
+      }
+      if (!(rec instanceof Map)) continue;
+      for (const part of [1, 2, 4, 8, 10]) for (const x of rec.get(part) ?? []) if (x instanceof Uint8Array) acts.push(x);
+    }
+    return acts;
+  }
+
+  /**
+   * The encryption key that counts for each recipient, read by the core
+   * library's verifier from the identity records held in in/ (and this
+   * folder's own identities). Refused, plainly, for a recipient with none.
+   */
+  recipientKeys(ids) {
+    const v = new mor.Verifier(SPECS.identity, SPECS.money, SPECS.agreements, SPECS.envelopes, SPECS.text);
+    const add = (a) => {
+      try {
+        v.add(a);
+      } catch {
+        // not an act
+      }
+    };
+    for (const a of this.heldRecords()) add(a);
+    for (const n of this.names()) {
+      const f = this.load(n);
+      for (const c of [...f.chain, ...(f.evidence ?? [])]) add(unb64(c));
+      for (const e of f.encryption ?? []) if (existsSync(join(this.folder, 'acts', `${e.act}.mor`))) add(new Uint8Array(readFileSync(join(this.folder, 'acts', `${e.act}.mor`))));
+    }
+    return ids.map((id) => {
+      if (!isHash(id)) throw new Error(`a recipient is an identity hash, 64 hexadecimal characters: "${id}" is not`);
+      const l = v.latest(id, SPECS.envelopes, 4);
+      if (!l?.act || !l.payload) {
+        throw new Error(
+          `${id} has no published encryption key in what you hold, so nothing can be sealed to it. Ask one of its homes for its record (node kit/mor.mjs letter --to HOME --get /identity/${id}), read the answer after the next pass, and seal again. If the record shows no encryption key, that identity has to publish one first (identity enckey).`,
+        );
+      }
+      if (l.contested) throw new Error(`${id}'s encryption-key chain is contested in what you hold: nothing was sealed`);
+      const key = mor.cborDecode(l.payload).get(2);
+      if (!Array.isArray(key) || !(key[1] instanceof Uint8Array)) throw new Error(`${id}'s encryption key is not one this kit can seal to (X-Wing)`);
+      return { id, key: key[1], act: l.act };
+    });
+  }
+
+  /**
+   * Seal an act (with its content key, if private) to each recipient's
+   * published encryption key, and write the letter that sends the sealed
+   * container to a relay: POST /sealed, the relay's CBOR map {0: bytes}.
+   */
+  seal(act, recipients, relay, key = null) {
+    const keys = this.recipientKeys(recipients);
+    const sealed = mor.seal({ act, ...(key ? { key } : {}), recipients: keys.map((k) => ({ id: k.id, key: k.key })) });
+    const file = join(this.dir('sealed'), `${sha256(sealed)}.sealed`);
+    writeFileSync(file, sealed);
+    const letter = relay ? this.relayLetter(relay, 'POST', '/sealed', mor.cborEncode(new Map([[0, sealed]])), { name: Kit.letterName('sealed') }) : null;
+    return { sealed, file, letter, to: keys.map((k) => ({ id: k.id, encryptionKey: k.act })) };
+  }
+
+  /**
+   * Open what is sealed to one of this folder's identities: a sealed
+   * container, or a feed page (GET /feed?to=ID), each container in it tried
+   * with every encryption secret the identity holds, newest first. What
+   * opens is kept in acts/ (a private act's content key beside it).
+   */
+  open(name, bytes) {
+    const f = this.load(name);
+    const secrets = [...(f.encryption ?? [])].reverse().map((e) => unhex(e.secret));
+    if (!secrets.length) throw new Error(`${name} has no encryption key: nothing can be sealed to it (identity enckey ${name}, then publish it)`);
+    let items = [bytes];
+    try {
+      const m = mor.cborDecode(bytes);
+      if (m instanceof Map && Array.isArray(m.get(0)) && m.has(1)) items = m.get(0).filter((i) => i[1] === 1).map((i) => i[2]);
+      else if (m instanceof Map && m.get(0) instanceof Uint8Array && m.size === 1) items = [m.get(0)];
+    } catch {
+      // not CBOR around it: the container itself
+    }
+    const out = [];
+    for (const it of items) {
+      let opened = null;
+      let why = '';
+      for (const s of secrets) {
+        try {
+          opened = mor.openSealed(it, f.identity, s);
+          break;
+        } catch (e) {
+          why = errorText(e);
+        }
+      }
+      if (!opened) {
+        out.push({ opened: false, why });
+        continue;
+      }
+      const id = this.saveAct(opened.act, opened.key ?? null);
+      out.push({ opened: true, act: id, file: `acts/${id}.mor`, ...(opened.key ? { key: hex(opened.key) } : {}), described: plain(opened.described) });
+    }
+    return out;
+  }
+
+  /** The relay names the hosts announce (from-the-hosts/relays.md), as written. */
+  relaysNote() {
+    const p = join(this.folder, 'from-the-hosts', 'relays.md');
+    try {
+      return lstatSync(p).isFile() ? readFileSync(p, 'utf8') : null;
+    } catch {
+      return null;
+    }
   }
 
   // ---------------------------------------------------------- the new Agreements acts
@@ -371,6 +515,30 @@ export class Kit {
     if (body && a.bodySha256 && sha256(body) !== a.bodySha256) a.warning = 'the answer body does not match the fingerprint the postman wrote';
     return { ...a, bytes: body };
   }
+}
+
+/**
+ * Every text in a payload must be canonical (the Text MIR), as the
+ * Agreements builders already require: refused before anything is signed.
+ */
+export function checkPayloadText(payload) {
+  let v;
+  try {
+    v = mor.cborDecode(payload);
+  } catch (e) {
+    throw new Error(`the payload is not deterministic CBOR (${errorText(e)}): nothing was signed`);
+  }
+  const walk = (x) => {
+    if (typeof x === 'string') {
+      try {
+        mor.checkText(x);
+      } catch (e) {
+        throw new Error(`the payload holds text that is not canonical (${errorText(e)}): nothing was signed. Write it in NFC, without control characters`);
+      }
+    } else if (Array.isArray(x)) x.forEach(walk);
+    else if (x instanceof Map) for (const [k, y] of x) (walk(k), walk(y));
+  };
+  walk(v);
 }
 
 /** Describe bytes as the core library reads them: an act, or CBOR, or neither. */

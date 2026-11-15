@@ -18,6 +18,8 @@ const HELP = `The postman of round two (hosts only). Every command takes --confi
   fund     the starting money it would credit (nothing moves); with --send, credit it
   bank     every account, the bank's total, and what the nodes hold
   kit      copy the players' kit and the tray guide into every tray that has none (with --send; without, only says where)
+           with --update too: replace the kit's own files in every tray's kit/ (and from-the-hosts/tray-guide.md),
+           never touching keys/, acts/, or any other file of the player's, in kit/ or elsewhere
 `;
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +28,7 @@ function args(argv) {
   const o = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--send') o.send = true;
+    else if (argv[i] === '--update') o.update = true;
     else if (argv[i] === '--config') o.config = argv[++i];
     else o._.push(argv[i]);
   }
@@ -106,18 +109,23 @@ async function main() {
       const tray = new Tray(cfg.root, t);
       tray.open();
       const dest = join(tray.dir, 'kit');
-      if (fs.existsSync(dest) || isLink(dest)) {
-        console.log(`${t}: has a kit/ already, left as it is`);
+      const has = fs.existsSync(dest) || isLink(dest);
+      if (has && !o.update) {
+        console.log(`${t}: has a kit/ already, left as it is (--update replaces its files)`);
         continue;
       }
       if (!o.send) {
-        console.log(`${t}: would copy the kit to ${dest}`);
+        console.log(`${t}: would ${has ? 'replace the kit’s files in' : 'copy the kit to'} ${dest}`);
         continue;
       }
-      copyTree(src, dest);
-      const fh = join(tray.dir, 'from-the-hosts');
-      if (fs.existsSync(fh) && !isLink(fh) && fs.lstatSync(fh).isDirectory() && !fs.existsSync(join(fh, 'tray-guide.md'))) fs.copyFileSync(join(here, 'kit', 'TRAY-GUIDE.md'), join(fh, 'tray-guide.md'), fs.constants.COPYFILE_EXCL);
-      console.log(`${t}: kit copied`);
+      try {
+        const n = placeTree(src, dest);
+        const fh = join(tray.dir, 'from-the-hosts');
+        if (fs.existsSync(fh) && !isLink(fh) && fs.lstatSync(fh).isDirectory()) placeFile(join(here, 'kit', 'TRAY-GUIDE.md'), join(fh, 'tray-guide.md'), o.update);
+        console.log(`${t}: kit ${has ? 'updated' : 'copied'} (${n} files)`);
+      } catch (e) {
+        console.log(`${t}: refused: ${e.message}`);
+      }
     }
     return;
   }
@@ -164,15 +172,38 @@ function isLink(p) {
   }
 }
 
-function copyTree(src, dest) {
-  fs.mkdirSync(dest);
+/**
+ * Put the kit's files at `dest`: folders made where missing (a link or a
+ * file where a folder should be is refused), each of the kit's own files
+ * replaced (a link in its place is removed, never followed). Nothing else
+ * in `dest` is touched.
+ */
+function placeTree(src, dest) {
+  if (isLink(dest)) throw new Error(`${dest} is a symbolic link: not followed, not replaced`);
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest);
+  else if (!fs.lstatSync(dest).isDirectory()) throw new Error(`${dest} is not a folder`);
+  let n = 0;
   for (const e of fs.readdirSync(src, { withFileTypes: true })) {
     if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
     const s = join(src, e.name);
     const d = join(dest, e.name);
-    if (e.isDirectory()) copyTree(s, d);
-    else if (e.isFile()) fs.copyFileSync(s, d, fs.constants.COPYFILE_EXCL);
+    if (e.isDirectory()) n += placeTree(s, d);
+    else if (e.isFile()) {
+      placeFile(s, d, true);
+      n++;
+    }
   }
+  return n;
+}
+
+function placeFile(s, d, replace) {
+  if (fs.existsSync(d) || isLink(d)) {
+    if (!replace) return;
+    const st = fs.lstatSync(d);
+    if (st.isDirectory()) throw new Error(`${d} is a folder where the kit has a file`);
+    fs.unlinkSync(d);
+  }
+  fs.copyFileSync(s, d, fs.constants.COPYFILE_EXCL);
 }
 
 main().catch((e) => {

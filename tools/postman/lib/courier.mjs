@@ -218,7 +218,9 @@ export class Postman {
     const head = { to: 'chain', ask: env.ask, ...(env.arg !== undefined ? { arg: env.arg } : {}) };
     if (!this.wallet) return { json: { outcome: 'refused', ...head, reason: 'the hosts have not connected the chain to this postman' }, body: null };
     const w = await this.wallet.chain(env.ask, env.arg, env.verbose);
-    return { json: { outcome: w.code === 0 ? 'answered' : 'failed', ...head, command: w.argv, exit: w.code, ...(w.stderr ? { stderr: w.stderr } : {}) }, body: w.stdout };
+    // The tool's own error output names the hosts' machine: it stays in the hosts' log, never in a tray.
+    if (w.stderr) this.log({ event: 'chain stderr (hosts only)', ask: env.ask, stderr: w.stderr });
+    return { json: { outcome: w.code === 0 ? 'answered' : 'failed', ...head, command: w.argv, exit: w.code, ...(w.code !== 0 ? { reason: 'the chain did not answer this question' } : {}) }, body: w.code === 0 ? w.stdout : null };
   }
 
   async toBank(tray, env) {

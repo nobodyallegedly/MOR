@@ -420,7 +420,15 @@ export class Bank {
 
 /** The wallet's answer as the answer's JSON names it; its bytes go verbatim in the answer's body. */
 function wallet(w) {
-  return { command: w.argv, exit: w.code, ...(w.stderr ? { stderr: w.stderr } : {}), stdoutBytes: w.stdout?.length ?? 0 };
+  return { command: w.argv, exit: w.code, ...(w.stderr ? { stderr: scrub(w.stderr) } : {}), stdoutBytes: w.stdout?.length ?? 0 };
+}
+
+/** A node's error message, with anything naming the hosts' machine (a path, an address and port) taken out. */
+export function scrub(text) {
+  return text
+    .replace(/(?:~|\/(?:Users|home|private|var|tmp|opt|root|Volumes)\b)[^\s'"]*/g, '[a path on the hosts’ machine]')
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b|\blocalhost(?::\d+)?\b/g, '[an address on the hosts’ machine]')
+    .slice(0, 2000);
 }
 
 /** lnd writes a payment hash in hex in some answers and base64 in others: always hex here. */
