@@ -20,6 +20,7 @@ import { MESSAGES_SPECS, SPEC as MONEY_SPECS } from '../../damgar/src/specs.ts';
 import { TYPES as MONEY_TYPES, readDraft, readLaneRequest } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, say as sayAmount } from '../../damgar/src/units.ts';
 import { GRANT_LIMITS_SPEC } from '../../grants/src/limits.ts';
+import { isNewSpec, type Held } from './agreements.ts';
 
 /**
  * A request as the runner reads it (3.1): an everyday act of the identity,
@@ -28,7 +29,16 @@ import { GRANT_LIMITS_SPEC } from '../../grants/src/limits.ts';
  * Draft 6 (round 10): draft 3's member line and `as` are no longer read at
  * all; a request naming them is refused as any malformed request is.
  */
-export type RunnerRequest = SignRequest;
+export type RunnerRequest = SignRequest & {
+  /**
+   * The new Agreements acts (`agreements.ts`): the acts held before this one
+   * (its `previous`, the Terms an assent agrees to), for the checker and for
+   * the screen; never signed, never kept.
+   */
+  held?: Held[];
+  /** The Terms' words, where the app gives them: shown only where they match the fingerprint the Terms name. */
+  termsWords?: string;
+};
 
 /** The kinds of act (section 5.1). */
 export type Kind = 'posts' | 'messages' | 'names' | 'contacts' | 'money' | 'agreements' | 'keys' | 'other';
@@ -94,6 +104,8 @@ export function kindOf(r: RunnerRequest): Kind {
   if (r.spec === PEOPLE_SPEC || r.spec === PEOPLE_SPEC_1) return 'contacts';
   if (MONEY.has(r.spec)) return 'money';
   if (r.spec === MIRS.agreements) return 'agreements';
+  // The new Agreements acts (Terms, Statement, and the report, a proposal): agreements, always asking.
+  if (isNewSpec(r.spec)) return 'agreements';
   return 'other';
 }
 
@@ -171,6 +183,8 @@ export function wordsOf(r: RunnerRequest, app: string): string[] {
     } catch {
       out.push('A money message Kišib cannot read in full.');
     }
+  } else if (isNewSpec(r.spec)) {
+    // Said by the runner from the checker and the fields as written (`agreements.ts`, `screen`), before these lines.
   } else if (kind === 'money' || kind === 'agreements' || kind === 'keys' || kind === 'other') {
     const layer = r.spec === MIRS.agreements ? 'the Agreements MIR' : r.spec === MIRS.money ? 'the Money MIR' : r.spec === SPECS.identity ? 'the Identity MIR' : r.spec === SPECS.envelopes ? 'the Envelopes MIR' : `the specification ${r.spec}`;
     out.push(`An act of ${layer}, type ${r.type}, ${r.payload.length} bytes: Kišib does not read it in plain words.`);
