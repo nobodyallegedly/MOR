@@ -1,6 +1,6 @@
 # agreements-check
 
-Reads acts of the new Agreements encoding (`docs/agreements-from-scratch/encoding-1.md`) and says, in plain words, whether each one's shape, fields and signature pass, and if not, which rule of encoding-1 or of draft 24 it fails.
+Reads acts of the new Agreements encoding (`docs/agreements-from-scratch/encoding-2.md`) and says, in plain words, whether each one's shape, fields and signature pass, and if not, which rule of encoding-2 or of draft 25 it fails.
 
 ```sh
 cargo run -p agreements-check -- [--hex] [--json] [--key HEX]... FILE...

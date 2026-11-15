@@ -23,6 +23,7 @@
 - **Part O**: draft 22. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 21's lists of open items, unchanged. From draft 22, `draft-22.md` holds the rules and `reasons-22.md` the plain words and reasoning; `draft-21.md` and `reasons-21.md` stay in the repository.
 - **Part P**: draft 23. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 22's lists of open items, unchanged. From draft 23, `draft-23.md` holds the rules and `reasons-23.md` the plain words and reasoning; `draft-22.md` and `reasons-22.md` stay in the repository.
 - **Part Q**: draft 24. One table for its change, where the ledger's line and the brief say more than the exchange it was written from, where the change landed, and draft 23's lists of open items, unchanged. From draft 24, `draft-24.md` holds the rules and `reasons-24.md` the plain words and reasoning; `draft-23.md` and `reasons-23.md` stay in the repository.
+- **Part R**: draft 25. One table for its changes, each the MOR lead's as technical wording, with where each comes from and where it landed. Draft 25 adds nothing to the lists of open items: its sections 8.2 and 8.3 are draft 24's. From draft 25, `draft-25.md` holds the rules and `reasons-25.md` the plain words and reasoning; `draft-24.md` and `reasons-24.md` stay in the repository.
 
 **How to read Parts A and B.** They are draft 9's words, moved and not edited. "This draft" and "this text" there mean draft 9. Section numbers 0 to 8 there are draft 9's sections; sections 9.1 to 9.15 are Part B of this file. Rule and clause numbers there are draft 9's: Part C says which of them draft 10 changed (rule 11 is another rule in draft 10; rules 1.6 to 1.9, 10.7 and 10.9 are gone; draft 9's rule 10.8 is draft 10's rule 10.7). "Payment chain", "the baker's chain" and "arbiter" there are draft 9's words; draft 10 says "sequence", and has no arbiter. The notes inside each rule that say which draft added which clause, and the draft-by-draft reasoning under each rule, are not moved here: they stay where they are, in `draft-9.md`, which remains in the repository as the full record.
 
@@ -2455,3 +2456,34 @@ Each item is where the change touches something. Items 3 and 4 are answered by t
 7. **The report block** (`report-block-3.md`): not changed, and no fourth proposal (section 8.1).
 8. **Everything draft 22 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section P.4. It is summed up in section 8.4.
 9. **Nothing was tested against draft 23.** The next step is the encoding and vectors.
+
+# Part R. Draft 25
+
+**Read for draft 25:** `docs/agreements-from-scratch/draft-24.md`, `reasons-24.md`, `encoding-1.md` and `encoding-1-report.md` (branch `claude/agreements-encoding-1-nwgiyk`, pull request 179); Fable's review of the first encoding, `docs/reviews/fable-encoding-1.md` (branch `claude/fable-encoding-1`); and `docs/lead/proposals/report-block-3.md`. Draft 25 is draft 24 cleaned up before the players' round, so that the players are briefed on a text and bytes where two honest writers cannot write the same act two ways. Nobody, allegedly, chose to clean up first (the ledger's exchange "Clean up first", `docs/decisions.md`, branch `claude/lead-records-2`): "How many sessions to clean it up first? We can always provide new hashes."
+
+**Who decided what.** Every change below is the MOR lead's, as technical wording, given in the brief for this step; none changes anything Nobody, allegedly, decided (`docs/decisions.md`). Each answers a question of `encoding-1-report.md` ("question 1" and so on) or a point of Fable's review. No change was found to touch a rule he decided.
+
+## R.1 The changes, where each comes from, and where it landed
+
+| | Where it comes from | What changed, and where |
+|---|---|---|
+| 1 | Question 1: an unknown field | Rejected, never left unread. Section 3 (opening paragraph), section 2 ("Not an Agreements act"), G2.2 (which now lists what is still left unread: an entry of `relies_on` not a fingerprint, a power of kind `replaces`, a call in Terms that do not hold its task, a `what` on a future spot), section 10, item 2 |
+| 2 | Question 2 (Fable: "otherwise", reject); question 14 | A Terms act written as a resolving update carries `replaces`, `agreement`, `resolves`, `continues` and `previous`, and may carry `relies_on`; anything else, `parties`, `authors` and `body` included, makes it rejected. Section 3.2 ("What a resolving update carries"), the three rows of section 3.1, section 2, G12.3 (one phrase). *Keeping `relies_on` is the writing's: it is a naming (G13.2), not words, and a resolving update made under a power may rely on acts* |
+| 3 | Question 15 | A resolving update in one signer's line, written as a Statement, is of a kind of its own, `resolve`, carrying `resolves` and `continues`, no `content`, and nothing that makes it also an assent, a counter signature or a contest; no Statement of another kind carries `resolves` or `continues` (so, for Statements, "resolves and no continues" can no longer be written). A power of kind `resolves` is for that kind. Section 2 (**Statement**), section 3.1 (`powers`), section 3.2 (`kind`, `resolves`, `continues`, the paragraphs below the table), G12.4 |
+| 4 | Question 16 | Where a call made by default, a confirmation, a tie or a buyer's contest names a payment, it names its settlement, the act both sides can see, never the payment. G11.7, G11.8, section 8.1, section 10, item 10; the head. The report block is published again as `docs/lead/proposals/report-block-4.md`, with only R2's sentence and its plain words changed, marked [4], the MOR lead's |
+| 5 | Question 5; Fable, section 1, item 1 | The receiver: a party by its position among the parties, an agreement (party or not) by its root, the two told apart in the bytes; a position that names a party named as an agreement is rejected. G1.3, section 3.1 (`receiver`) |
+| 6 | Question 4 | Two powers of one kind: any one of their rules saying yes is enough. G1.2, G5.1(b), section 3.1 (`powers`) |
+| 7 | Question 8 | `previous` naming a held act that cannot be opened: unchecked, not invalid. G6.1 |
+| 8 | Fable, section 1, "Where the text reads two ways" | The cases of invalid in one order, the code's (section 2, **invalid**); one fault under two rules answered under one ("One fault, one rule", section 3) |
+| 9 | Question 12 | The spec hash said aloud: of the file as published on its branch; acts under it stay this text's; a later draft is a new specification. The head |
+| 10 | Questions 3, 6, 7, 9, 10, 11, 13, 17, 18, as the report leans and Fable agrees | 3: section 3.1 (`continues`). 6: section 3.1 (`powers`). 7: section 3.2 (`relies_on`). 9: G6.1. 11: section 3.1 (`envelope_at`). 17: section 3 ("Each field holds one kind of value"). 18: section 3.1 (`parties`). 10 and 13 are the bytes' alone, and are written in `encoding-2.md` (E6, E2), where a builder meets them |
+| 11 | Fable, section 3 (an author's assent with `previous` `[]`) | Read against G6.1: the vectors' author assent forked the signer's own line (the Terms act is the author's first act in the agreement). The rule stands; the vectors are fixed (encoding 2), and section 3.2 says it ("An author's first act") |
+| 12 | Housekeeping | `draft-25.md`, `reasons-25.md` (`reasons-24.md` with its head changed and six passages marked "(draft 25)"), this part. Section 8.2 opens with a note that draft 25 adds nothing to it; 8.3, item 6, points to the fourth proposal. `draft-24.md`, `reasons-24.md`, `encoding-1.md` and `report-block-3.md` stay as they are |
+
+**In one line, what changed:** nothing a verifier answers about a well-written act; the ways to write one act twice, and the sentences that read two ways, are gone.
+
+Draft 24 had fourteen grammar rules and eight tasks; so has draft 25. One kind of Statement is added (`resolve`). No field, task or answer word is added or removed.
+
+## R.2 Draft 24's lists of open items
+
+Draft 25 adds nothing to them, and answers none of them: its sections 8.2 and 8.3 are draft 24's, as they stand, but for 8.3, item 6 (the report block, now published again as `report-block-4.md`). Section 8.4 is unchanged.

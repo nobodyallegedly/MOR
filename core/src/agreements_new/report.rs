@@ -1,6 +1,6 @@
-//! The report (type 0 under the spec hash of the report block's third
-//! proposal): a **proposal**, as the block is (`docs/lead/proposals/report-block-3.md`,
-//! the MOR lead's; `encoding-1.md`, "The report").
+//! The report (type 0 under the spec hash of the report block's fourth
+//! proposal): a **proposal**, as the block is (`docs/lead/proposals/report-block-4.md`,
+//! the MOR lead's; `encoding-2.md`, "The report").
 //!
 //! ```cddl
 //! report = {
@@ -26,7 +26,8 @@ use crate::hash::Hash;
 /// The call a report answers (E21): the act that holds it, by fingerprint;
 /// and, where the call is written in Terms (`calls`), the task it is
 /// attached to. A call made by default (a payment's, G11.7) has no bytes:
-/// the report names the payment, or its settlement, and no task.
+/// the report names the act that stands for it, the payment's settlement
+/// (never the payment itself), and no task.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CallRef {
     pub act: Hash,

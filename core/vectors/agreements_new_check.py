@@ -1,9 +1,11 @@
 """An independent check of the new Agreements vectors (core/vectors/agreements-new/).
 
-Written from docs/agreements-from-scratch/encoding-1.md, not from the Rust
+Written from docs/agreements-from-scratch/encoding-2.md, not from the Rust
 code: its own reading of every payload rule (E4 to E22), of the cases of
-invalid draft 24 says an act shows (G2.1, G3.1, G4.2, G10.1, G6.1), and of
-the notes (G1.4, G2.2, G5.2, G10.4, G12.3). It shares with check.py only the
+invalid draft 25 says an act shows (G2.1, G3.1, G4.2, G10.1, G6.1), and of
+the notes (G1.4, G2.2, G5.2, G10.4, G12.3). It also rebuilds every test
+identity's sequence (prev, position, running summary: Envelopes, "Sequences")
+from the acts of both files, and checks that every act fits its place. It shares with check.py only the
 act format's parts written there from the MIRs (strict CBOR, the lock,
 canonical text, the signatures), so it judges each case's verdict, rule and
 notes again, and must agree.
@@ -175,8 +177,11 @@ def terms(p):
     for k in (8, 9):
         if k in f:
             fp(f[k], "E6")
-    if 10 in f and not (is_uint(f[10]) or is_fp(f[10])):
-        rej("E12")
+    if 10 in f:
+        rv = f[10]
+        if not (isinstance(rv, list) and not is_map(rv) and len(rv) == 2 and is_uint(rv[0])
+                and ((rv[0] == 0 and is_uint(rv[1])) or (rv[0] == 2 and is_fp(rv[1])))):
+            rej("E12")
     for k in (11, 12):
         if k in f:
             fp(f[k])
@@ -195,10 +200,17 @@ def terms(p):
         rej("E19")
     if (11 in f) != (12 in f):
         rej("E19")
-    if not (r is not None and cont is not None):
+    if r is not None and cont is not None:
+        # A resolving update: replaces, agreement, resolves, continues,
+        # previous, and relies_on if anything was relied on; nothing else.
+        if 0 not in f or any(k not in (0, 1, 5, 17, 18, 19) for k in f):
+            rej("E19")
+    else:
         for k in (2, 3, 4):
             if k not in f:
                 rej("E19")
+    if 10 in f and f[10][0] == 0 and parties is not None and f[10][1] < len(parties) and parties[f[10][1]][0] == 2:
+        rej("E12")
 
     # What the bytes show by themselves.
     def cmip(s):
@@ -242,10 +254,8 @@ def terms(p):
     for x in f.get(5, []):
         if not is_fp(x):
             notes.append("G2.2")
-    if is_uint(f.get(10)):
-        i = f[10]
-        if not (i < len(parties) and parties[i][0] in (0, 1)):
-            notes.append("G1.4")
+    if 10 in f and f[10][0] == 0 and f[10][1] >= len(parties):
+        notes.append("G1.4")
     if r is not None and cont is None:
         notes.append("G12.3")
     return bad, notes, f
@@ -261,12 +271,12 @@ def statement(p):
     fp(f[0])
     fp(f[1])
     kind = f[2]
-    if not ((is_uint(kind) and kind <= 2) or (isinstance(kind, list) and not is_map(kind) and len(kind) == 2)):
+    if not ((is_uint(kind) and kind <= 3) or (isinstance(kind, list) and not is_map(kind) and len(kind) == 2)):
         rej("E15")
     if isinstance(kind, list) and not is_fp(kind[0]):
         rej("E15")
     previous(f.get(6), "E20")
-    if 3 in f and kind in (0, 1) and not isinstance(kind, list):
+    if 3 in f and kind in (0, 1, 3) and not isinstance(kind, list):
         rej("E20")
     if 4 in f:
         who(f[4])
@@ -285,9 +295,12 @@ def statement(p):
     if 9 in f:
         fp(f[9])
     r, cont = resolves(f, 10, 11, "E20")
+    is_resolve = kind == 3 and not isinstance(kind, list)
+    if is_resolve and (r is None or cont is None):
+        rej("E20")
+    if not is_resolve and (r is not None or cont is not None):
+        rej("E20")
     notes = ["G2.2" for x in f.get(8, []) if not is_fp(x)]
-    if r is not None and cont is None:
-        notes.append("G12.3")
     return [], notes, f
 
 
@@ -374,11 +387,11 @@ def judge(b, key):
     if not c.all_text_canonical(inside):
         return ("rejected", "Envelopes rule 5", [], None)
     spec, type_ = inside.get(0), inside.get(1)
-    if spec == D24:
+    if spec == D25:
         if type_ not in (0, 1):
             return ("rejected", "E2", [], None)
         which = (terms, statement)[type_]
-    elif spec == RB3:
+    elif spec == RB4:
         if type_ != 0:
             return ("rejected", "E2", [], None)
         which = report
@@ -451,17 +464,82 @@ def judge_held(acts):
     return verdict, rule, notes
 
 
-D24 = RB3 = None
+D25 = RB4 = None
+
+
+# ------------------------------------------------------------ the sequences
+
+def sequences(all_acts):
+    """Rebuild each test identity's sequence from every act of both files and
+    check that each act fits its place: prev names the act before it (none
+    for the first), its position counts from 1, and its running summary is
+    the summary over every act before it (Envelopes, "Sequences"; the
+    Merkle mountain range of check.py's mmr_root). Acts that test the act
+    format's own sequence fields (no prev, or two) and changed copies of an
+    act are in no sequence; a private act held without its key, or one whose
+    inside does not open, takes its place from the act after it."""
+    seen, by_signer, unread = set(), {}, {}
+    for b, key in all_acts:
+        try:
+            a = c.decode(b)
+        except c.Reject:
+            continue
+        if not (isinstance(a, list) and len(a) == 3 and is_map(a[0])):
+            continue
+        outside = a[0]
+        signer = outside.get(0)
+        act_id = c.act_id(outside)
+        if signer is None or act_id in seen:
+            continue
+        seen.add(act_id)
+        inside = None
+        k = outside.get(5) or key
+        try:
+            if k is not None and c.sha256(a[1]) == outside.get(3):
+                plain = c.unlock(a[1], k, outside.get(4))
+                if c.tagged_hash("MOR/inside", plain) == outside.get(2):
+                    inside = c.decode(plain)
+        except Exception:
+            inside = None
+        if inside is None:
+            unread.setdefault(signer, set()).add(act_id)
+            continue
+        prev = inside.get(2)
+        if prev is None or len(prev) > 1:
+            continue
+        by_signer.setdefault(signer, {})
+        pos = inside.get(5)
+        assert pos not in by_signer[signer], ("two acts at one position", signer.hex(), pos)
+        by_signer[signer][pos] = (act_id, prev, inside.get(6))
+    n = 0
+    for signer, acts in by_signer.items():
+        top = max(acts)
+        ids = [None] * (top + 1)
+        for pos, (act_id, _, _) in acts.items():
+            ids[pos] = act_id
+        for pos in range(top, 1, -1):
+            if ids[pos - 1] is None:
+                # An act that cannot be read takes its place from the act after it.
+                named = acts[pos][1][0] if pos in acts and acts[pos][1] else None
+                assert named in unread.get(signer, set()), ("a gap in the sequence", signer.hex(), pos - 1)
+                ids[pos - 1] = named
+        for pos, (act_id, prev, summary) in acts.items():
+            assert prev == ([ids[pos - 1]] if pos > 1 else []), ("prev", signer.hex(), pos)
+            assert summary == c.mmr_root(ids[1:pos]), ("running summary", signer.hex(), pos)
+            n += 1
+    return n
 
 
 def main():
-    global D24, RB3
+    global D25, RB4
     n = 0
+    all_acts = []
     for name in ("valid.json", "invalid.json"):
         with open(os.path.join(HERE, "agreements-new", name), encoding="utf-8") as fh:
             d = json.load(fh)
-        D24, RB3 = bytes.fromhex(d["spec"]["draft_24"]), bytes.fromhex(d["spec"]["report_block_3"])
+        D25, RB4 = bytes.fromhex(d["spec"]["draft_25"]), bytes.fromhex(d["spec"]["report_block_4"])
         for case in d["cases"]:
+            all_acts += [(bytes.fromhex(a["bytes"]), bytes.fromhex(a["key"]) if a["key"] else None) for a in case["acts"]]
             acts = [(bytes.fromhex(a["bytes"]), bytes.fromhex(a["key"]) if a["key"] else None) for a in case["acts"]]
             if len(acts) == 1:
                 v, r, notes, _ = judge(*acts[0])
@@ -472,7 +550,9 @@ def main():
             n += 1
     # The spec hashes are the files' (Development rule 26, as the core computes a MIR's).
     root = os.path.join(HERE, "..", "..")
-    for rel, h in (("docs/agreements-from-scratch/draft-24.md", D24), ("docs/lead/proposals/report-block-3.md", RB3)):
+    assert sequences(all_acts) > 100
+    n += 1
+    for rel, h in (("docs/agreements-from-scratch/draft-25.md", D25), ("docs/lead/proposals/report-block-4.md", RB4)):
         with open(os.path.join(root, rel), encoding="utf-8", newline="") as fh:
             t = c.frozen_text(fh.read())
         assert c.text_rule(t) is None and c.tagged_hash("MOR/spec", c.encode({0: 4, 9: t})) == h, rel

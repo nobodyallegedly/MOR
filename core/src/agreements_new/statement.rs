@@ -1,22 +1,22 @@
-//! Statement (type 1 under draft 24's spec hash): draft 24, section 3.2;
-//! `encoding-1.md`, "Statement".
+//! Statement (type 1 under draft 25's spec hash): draft 25, section 3.2;
+//! `encoding-2.md`, "Statement".
 //!
 //! ```cddl
 //! statement = {
 //!   0 => hash,               ; agreement: the root
 //!   1 => hash,               ; terms: the Terms act it is made within
-//!   2 => kind,               ; 0 assent, 1 counter_signature, 2 contest, or a K7 socket
-//!   ? 3 => any,              ; content: as the kind requires; never on 0 or 1
+//!   2 => kind,               ; 0 assent, 1 counter_signature, 2 contest, 3 resolve, or a K7 socket
+//!   ? 3 => any,              ; content: as the kind requires; never on 0, 1 or 3
 //!   ? 4 => who,              ; for: exactly when 5 is present
 //!   ? 5 => hash,             ; under: exactly when 4 is present
 //!   6 => [] / [hash],        ; previous
 //!   ? 7 => [+ hash],         ; answers
 //!   ? 8 => [+ any],          ; relies_on: an entry that is not a fingerprint is left unread
 //!   ? 9 => hash,             ; settlement: the Money act it is tied to
-//!   ? 10 => [+ hash],        ; resolves
-//!   ? 11 => hash,            ; continues: one of 10; only beside 10
+//!   ? 10 => [+ hash],        ; resolves: exactly on kind 3
+//!   ? 11 => hash,            ; continues: one of 10; exactly on kind 3
 //! }
-//! kind = 0 / 1 / 2 / [ cmip: hash, params: any ]
+//! kind = 0 / 1 / 2 / 3 / [ cmip: hash, params: any ]
 //! who = [0, hash] / [2, hash]
 //! ```
 
@@ -33,6 +33,9 @@ pub enum Kind {
     Assent,
     CounterSignature,
     Contest,
+    /// A resolving update in the signer's own line, and nothing more
+    /// (draft 25, section 3.2; G12.3, G12.4).
+    Resolve,
     /// A kind defined by a cMIP (task K7): its spec hash, with its parameters.
     Defined { cmip: Hash, params: Value },
 }
@@ -43,6 +46,7 @@ impl Kind {
             Kind::Assent => Value::Uint(0),
             Kind::CounterSignature => Value::Uint(1),
             Kind::Contest => Value::Uint(2),
+            Kind::Resolve => Value::Uint(3),
             Kind::Defined { cmip, params } => Value::Array(vec![hv(cmip), params.clone()]),
         }
     }
@@ -52,11 +56,12 @@ impl Kind {
             Value::Uint(0) => Kind::Assent,
             Value::Uint(1) => Kind::CounterSignature,
             Value::Uint(2) => Kind::Contest,
+            Value::Uint(3) => Kind::Resolve,
             Value::Array(a) if a.len() == 2 => match &a[0] {
                 Value::Bytes(b) if b.len() == 32 => Kind::Defined { cmip: b.as_slice().try_into().unwrap(), params: a[1].clone() },
                 _ => return rej("E15", "a kind defined by a cMIP names it by fingerprint: [spec hash, params]"),
             },
-            _ => return rej("E15", "a Statement's kind is 0 (assent), 1 (counter_signature), 2 (contest), or a K7 socket [spec hash, params]"),
+            _ => return rej("E15", "a Statement's kind is 0 (assent), 1 (counter_signature), 2 (contest), 3 (resolve), or a K7 socket [spec hash, params]"),
         })
     }
 
@@ -87,7 +92,7 @@ pub struct Statement {
     pub continues: Option<Hash>,
 }
 
-/// The payload keys (encoding-1, "Statement").
+/// The payload keys (encoding-2, "Statement").
 pub mod key {
     pub const AGREEMENT: u64 = 0;
     pub const TERMS: u64 = 1;
@@ -105,7 +110,7 @@ pub mod key {
 }
 
 /// The keys whose values two acts must share, byte for byte, to be one
-/// signing of an agreement (G1.2; encoding-1, E24): all but `previous`,
+/// signing of an agreement (G1.2; encoding-2, E24): all but `previous`,
 /// `answers` and `relies_on`.
 pub const ONE_SIGNING: [u64; 9] = [
     key::AGREEMENT,
@@ -185,19 +190,19 @@ impl Statement {
         use key::*;
         let m = closed(payload, COUNT, "a Statement's payload")?;
         let g = |k| get(&m, k);
-        let req = |k, name: &str| g(k).ok_or_else(|| super::Rejected { rule: "E20", says: format!("{name} is required in every Statement (draft 24, section 3.2)") });
+        let req = |k, name: &str| g(k).ok_or_else(|| super::Rejected { rule: "E20", says: format!("{name} is required in every Statement (draft 25, section 3.2)") });
         let agreement = hash_of(req(AGREEMENT, "agreement")?, "E5", "agreement")?;
         let terms = hash_of(req(TERMS, "terms")?, "E5", "terms")?;
         let kind = Kind::from_value(req(KIND, "kind")?)?;
         let previous = previous_of(req(PREVIOUS, "previous")?)?;
         let content = g(CONTENT).cloned();
-        if content.is_some() && matches!(kind, Kind::Assent | Kind::CounterSignature) {
-            return rej("E20", "an assent's content, and a counter signature's, are empty: the field is left out (draft 24, section 3.2)");
+        if content.is_some() && matches!(kind, Kind::Assent | Kind::CounterSignature | Kind::Resolve) {
+            return rej("E20", "an assent's content, a counter signature's and a resolve's are empty: the field is left out (draft 25, section 3.2)");
         }
         let for_ = g(FOR).map(|v| Who::from_value(v, "for")).transpose()?;
         let under = g(UNDER).map(|v| hash_of(v, "E5", "under")).transpose()?;
         if for_.is_some() != under.is_some() {
-            return rej("E20", "for and under are written together, or neither (draft 24, section 3.2)");
+            return rej("E20", "for and under are written together, or neither (draft 25, section 3.2)");
         }
         let answers = g(ANSWERS)
             .map(|v| {
@@ -216,11 +221,17 @@ impl Statement {
             .transpose()?;
         let settlement = g(SETTLEMENT).map(|v| hash_of(v, "E5", "settlement")).transpose()?;
         let (resolves, continues) = resolves_of(g(RESOLVES), g(CONTINUES), "E20")?;
+        if kind == Kind::Resolve && (resolves.is_none() || continues.is_none()) {
+            return rej("E20", "a Statement of kind resolve carries resolves and continues: every tip of the fork, and the one that continues (draft 25, section 3.2)");
+        }
+        if kind != Kind::Resolve && (resolves.is_some() || continues.is_some()) {
+            return rej("E20", "only a Statement of kind resolve carries resolves and continues: a resolving update is not also an assent, a counter signature, a contest or another kind (draft 25, section 3.2)");
+        }
         Ok(Statement { agreement, terms, kind, content, for_, under, previous, answers, relies_on, settlement, resolves, continues })
     }
 
     /// What the bytes of a Statement show by themselves: no case of invalid
-    /// that draft 24 lists is one a Statement shows alone (G6.1 needs the
+    /// that draft 25 lists is one a Statement shows alone (G6.1 needs the
     /// acts held: [`super::check_held`]); the notes.
     pub fn grammar(&self) -> (Vec<Finding>, Vec<Finding>) {
         let mut notes = Vec::new();
@@ -228,9 +239,6 @@ impl Statement {
             if r.fp().is_none() {
                 notes.push(Finding::new("G2.2", "an entry of relies_on is not a fingerprint: it is not read (section 3, G2.2)"));
             }
-        }
-        if self.resolves.is_some() && self.continues.is_none() {
-            notes.push(Finding::new("G12.3", "this Statement names resolves and no continues: it resolves nothing, and is read as an act like any other (G12.3)"));
         }
         (Vec::new(), notes)
     }
@@ -265,6 +273,18 @@ mod tests {
         k.kind = Kind::Contest;
         k.content = Some(Value::Text("not delivered".into()));
         assert!(k.to_payload().is_ok());
+        // The resolve: a kind of its own, carrying resolves and continues.
+        let mut r = Statement::new([1; 32], [2; 32], Kind::Resolve, Some([3; 32]));
+        assert_eq!(r.to_payload().unwrap_err().rule, "E20");
+        r.resolves = Some(vec![[4; 32], [5; 32]]);
+        assert_eq!(r.to_payload().unwrap_err().rule, "E20");
+        r.continues = Some([5; 32]);
+        assert!(r.to_payload().is_ok());
+        let mut a = r.clone();
+        a.kind = Kind::Assent;
+        assert_eq!(a.to_payload().unwrap_err().rule, "E20");
+        r.content = Some(Value::Null);
+        assert_eq!(r.to_payload().unwrap_err().rule, "E20");
     }
 
     #[test]
