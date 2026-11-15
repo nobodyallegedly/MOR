@@ -1,0 +1,14 @@
+The core library's WebAssembly binding (crate mor-wasm), for the players' kit, run in Node.js with no network.
+Built on GitHub, not by hand: scratch branch claude/kishib-agreements-new-scratch (never merged), commit e69f770b,
+from 66fdc5a, whose core/, wasm/, cmips/ and Cargo.lock are those of claude/agreements-verifier-2 at 45034874 and f1a13feb.
+The same file is clients/kishib/built/mor_wasm_bg.wasm on claude/agreements-verifier-2 (merge f1a13feb).
+CI builds it again (clients/genesis: npm run wasm) and compares byte for byte (step "tools/postman").
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+Rebuild: cd clients/genesis && npm run wasm, then copy clients/genesis/wasm/{mor_wasm.js,mor_wasm_bg.wasm,mor_wasm.d.ts} here.
+
+SHA-256:
+b6742603aa963ea71085dea14c72f276e2c2d5039e606694586e2850ffaab36a  mor_wasm.js
+ef178a13fbc947899674a322adbaf0758ebe4fd373eee2dc934b4f528ff64356  mor_wasm_bg.wasm
+63be1a5dd399ccca326e1077df1fefd5113ea6912ff6e2c2e97524754f3bbcf5  mor_wasm.d.ts

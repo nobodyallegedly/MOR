@@ -150,6 +150,11 @@ jobs:
           npm test 2>&1 | tee ../../test-output.txt; status=${PIPESTATUS[0]}
           grep -E 'not ok|Command failed|error\[|error:|stderr|differ|!=|wasm' ../../test-output.txt | grep -v '^ *at \|checkExecSync\|genericNode' | head -10 | while IFS= read -r l; do echo "::error::$l"; done
           exit $status
+      - name: tools/postman
+        # The round-two postman and players' kit (no dependencies): a real home on a local port, a stand-in wallet. Its kit's committed binding must equal the one built above.
+        timeout-minutes: 20
+        if: success() || failure()
+        run: cmp tools/postman/kit/core/mor_wasm_bg.wasm clients/genesis/wasm/mor_wasm_bg.wasm && cmp tools/postman/kit/core/mor_wasm.js clients/genesis/wasm/mor_wasm.js && cd tools/postman && npm test
       - name: modules/jpeg
         # Each app its own limit: one that hangs fails alone, the steps after it still run (suite round 8, F407).
         timeout-minutes: 20
@@ -260,6 +265,11 @@ jobs:
         timeout-minutes: 30
         if: success() || failure()
         run: for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar site longform connector reader reports ummia split-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/desk && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/round-3.test.ts
+      - name: tools/postman on regtest
+        # The bank's real lncli and btcctl calls: an invoice paid between two accounts, an on-chain send confirmed and credited.
+        timeout-minutes: 15
+        if: success() || failure()
+        run: cd tools/postman && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" LNCLI="$RUNNER_TEMP/$LND/lncli" BTCCTL="$RUNNER_TEMP/$BTCD/btcctl" node --test test/regtest.test.mjs
       - name: Stop the network
         if: always()
         run: BTCD_DIR="$RUNNER_TEMP/$BTCD" LND_DIR="$RUNNER_TEMP/$LND" modules/lightning/regtest/down.sh "$RUNNER_TEMP/regtest" || true
