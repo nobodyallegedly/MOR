@@ -28,7 +28,7 @@ Draft 25 has three answers for an act that does not hold, and this text keeps th
 
 - **rejected**: draft 25's word (section 2, "Not an Agreements act") for bytes that never reach the grammar rules. The core calls this an act **invalid** as an act: outside its specification's format (MICS, "Common conventions"), or refused by the act format. A checker names the rule.
 - **invalid**: draft 25's word for an act that is an act of this encoding and shows, by itself, that it cannot count (section 2, "invalid"). A checker names the grammar rule.
-- **left unread**: a value draft 25 says is not read and changes nothing (G2.2 lists them all: an entry of `relies_on` that is not a fingerprint; a power of kind `replaces`, G5.2; a call in Terms that do not hold its task, G11.2; a `what` on a role of kind future, G10.4). A checker gives a note.
+- **left unread**: a value draft 25 says is not read and changes nothing (G2.2 lists them all: an entry of `relies_on` that is not a fingerprint; a power of kind `replaces`, G5.2; a call in Terms that do not hold its task, G11.2; a `what` on a role of kind future, G10.4). A checker gives a note for each of these its bytes show: all but the call, since whether Terms hold a call's task needs their body's cMIP, the grammar verifier's (E16).
 
 ## 2. The act
 
@@ -68,7 +68,7 @@ Draft 25, section 3: "Each field holds one kind of value". Each kind is written 
 | an act: a Terms act, a Statement, a report; a version; the root | its act id, `tagged_hash("MOR/act", outside)` | the act's encoded outside, which commits to its locked inside; the signature is not part of it (Envelopes, "How it fits together") |
 | the root of an agreement | the act id of its first Terms act | as any act |
 | a cMIP (in a socket, a K7 kind, a power's K7 kind) | its spec hash, `tagged_hash("MOR/spec", content)` | its specification's encoded content, as Development gives it for its kind (E2's map is that content for a MIR's text) |
-| the body's words | the work hash, `tagged_hash("MOR/work", words)` **[lead]** | the words' bytes as they are; for text, its canonical text as UTF-8 |
+| the body's words | the work hash, `tagged_hash("MOR/work", words)` **[lead]** | the words' bytes themselves, as they are, not wrapped in CBOR; for text, its canonical text as UTF-8 |
 | an envelope (`envelope`) | the bake's act id (the core's bake is draft 25's envelope: section 9, item 8) | as any act |
 | the act of the envelope's chain cited (`envelope_at`) | that act's id: the bake's, where the Terms cite the bake (then `envelope` and `envelope_at` are equal, draft 25, section 3.1); a transfer's otherwise | as any act |
 | a settlement (`settlement`; a line's `by`; a report's call made by default) | the act id of the Money act that is the settlement (a receipt or a claim), the act both sides can see; never the payment's own id, where the two are different acts (draft 25, G11.7, G11.8) | as any act |
@@ -114,7 +114,7 @@ role = {
 }
 ```
 
-A role that is not a map is rejected; so is a key other than 0, 1 and 2 (E4), and a spot that is not a socket (E7). The three fields are optional in the bytes because draft 25 reads their lack as **invalid**, not as rejected (G10.1): a role with no kind, or a kind that is not an unsigned integer from 0 to 4, is read as lacking it; a role of any kind but 4 with no `what`, or a `what` that is not a fingerprint, is read as lacking it; a role with no spot socket lacks its cMIP; each makes the Terms invalid (G10.1). A spot whose `cmip` is not a fingerprint makes them invalid (G2.1). A `what` on a role of kind 4 is left unread (G10.4). **[lead]**: the words of section 10, item 1 (done, received, holding, fits, future) are written as numbers, as the act format writes its kinds.
+A role whose kind is lacking or not one of the five is not of kind 4: its `what` is read as for any other kind, so a role with a bad kind and no `what` shows G10.1 twice. A role that is not a map is rejected; so is a key other than 0, 1 and 2 (E4), and a spot that is not a socket (E7). The three fields are optional in the bytes because draft 25 reads their lack as **invalid**, not as rejected (G10.1): a role with no kind, or a kind that is not an unsigned integer from 0 to 4, is read as lacking it; a role of any kind but 4 with no `what`, or a `what` that is not a fingerprint, is read as lacking it; a role with no spot socket lacks its cMIP; each makes the Terms invalid (G10.1). A spot whose `cmip` is not a fingerprint makes them invalid (G2.1). A `what` on a role of kind 4 is left unread (G10.4). **[lead]**: the words of section 10, item 1 (done, received, holding, fits, future) are written as numbers, as the act format writes its kinds.
 
 **How a role is named** (section 10, item 4): by its position in `parties` (E13, E12). A role carries no label. **[lead]**
 
@@ -133,7 +133,7 @@ receiver = [0, position: uint]   ; one of these Terms' parties named as a signer
          / [2, root: hash]       ; an agreement, by its root, whether or not it is one of the parties
 ```
 
-Anything else is rejected: a bare number or a bare hash (encoding 1's forms), `[0, h]` with `h` a hash (a signer is named by its position, never by its identity hash), and any other first item. A position that names a party named as an agreement is **rejected** (draft 25, G1.3): an agreement is named as receiver by its root, `[2, root]`. A position beyond the list is read: draft 25 answers that no one receives by these Terms, **not shown** (G1.4); the checker gives it as a note. **[lead]**: the first items 0 and 2 are E11's, "a party of ours" and "an agreement".
+Anything else is rejected, under E12: a bare number or a bare hash (encoding 1's forms), `[0, h]` with `h` a hash (a signer is named by its position, never by its identity hash), and any other first item. A position that names a party named as an agreement is **rejected**, the checker naming E12 (draft 25, G1.3, gives the reason; a rejected act never reaches the grammar rules): an agreement is named as receiver by its root, `[2, root]`. A position beyond the list is read: draft 25 answers that no one receives by these Terms, **not shown** (G1.4); the checker gives it as a note. **[lead]**: the first items 0 and 2 are E11's, "a party of ours" and "an agreement".
 
 **E13. Authors** are positions in `parties`:
 
@@ -174,12 +174,12 @@ Anything else is rejected, a call carrying anything more included (a closed form
 previous = [] / [hash]   ; [] for none: the signer's first act in this agreement
 ```
 
-Anything else is rejected. It is always written, in Terms and in Statements (draft 25: "`previous` | yes"). It names the signer's act before this one **within the same agreement** (G6.1), whatever kind it is. **The author's first act** (draft 25, section 3.2): the first Terms act is its signer's first act within its agreement, so that signer's assent to it, and any next act of theirs there, names it, or the act after it, in `previous`; never `[]`. A party with no act in the agreement yet writes `[]`.
+Anything else is rejected. It is always written, in Terms and in Statements (draft 25: "`previous` | yes"). It names the signer's act before this one **within the same agreement** (G6.1), whatever kind it is, but for a resolving update: a resolve, and a Terms act written as a resolving update, name **the shared act** both tips follow (G12.3), not either tip. **The author's first act** (draft 25, section 3.2): the first Terms act is its signer's first act within its agreement, so that signer's assent to it, and any next act of theirs there, names it, or the act after it, in `previous`; never `[]`. A party with no act in the agreement yet writes `[]`.
 
 **E18. Lists.**
 
 - **No empty list.** A list field holds one or more entries. A list with nothing in it is left out: absent means none (no power, no call, nothing relied on). An empty list is rejected. The one exception is `previous` (E17), which writes "none" as `[]`, as `prev` does.
-- **Sets are sorted.** `authors`, `relies_on`, `powers`, `calls`, `answers`, `resolves`, and a report's `relies_on`, are sets: their entries are in the bytewise order of their deterministic encodings, as a map's keys are, and each entry appears once. An entry out of order, or twice, is rejected. Order carries no meaning in them. **[lead]**
+- **Sets are sorted.** `authors`, `relies_on`, `powers`, `calls`, `answers`, `resolves`, and a report's `relies_on`, are sets: their entries are in the bytewise lexicographic order of their deterministic encodings (byte by byte, a shorter encoding first where it is a prefix of a longer one), and each entry appears once. An entry out of order, or twice, is rejected. Order carries no meaning in them. **[lead]**
 - **Two lists keep the writer's order**, because positions in them are named: `parties` (by `authors` and `receiver`) and a report's `lines` (by a later line's `closes`). The same party twice in `parties` (the same bytes) is rejected: a spot that several fill is **one role, filled more than once** (draft 25, section 3.1; G10.2), not two identical roles. A signer named directly and the same signer able to fill a role are two different entries.
 - **Named in two fields.** An act named in `relies_on` that another field of the same act also names is read once, as one naming, and is not rejected (draft 25, section 3.2); the same holds for a report (E21).
 

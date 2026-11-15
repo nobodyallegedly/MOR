@@ -45,9 +45,9 @@ Each spec hash is computed as the core computes a MIR's from its file (Developme
 
 | File | Spec hash, as the core computes one | Plain SHA-256 of the file's bytes |
 | --- | --- | --- |
-| `docs/agreements-from-scratch/draft-25.md` | `dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c` | `SHA_DRAFT_25` |
-| `docs/agreements-from-scratch/encoding-2.md` | `SPEC_ENCODING_2` | `SHA_ENCODING_2` |
-| `docs/lead/proposals/report-block-4.md` | `7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854` | `SHA_REPORT_BLOCK_4` |
+| `docs/agreements-from-scratch/draft-25.md` | `dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c` | `883ddbb293b926e6a4126df49bd295351e9a9f9d634413995ea0f09de44ee09c` |
+| `docs/agreements-from-scratch/encoding-2.md` | `e7c5f88596c72d9440e441a4d3c67132f46254dacd6e9416e8e941180e002270` (not an act spec hash: given for comparison) | `9fe274468aa84c3e1449e58967b244b3994809f29e5458898747af3c42331c16` |
+| `docs/lead/proposals/report-block-4.md` | `7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854` | `c25aafcd313defebc6a7439f366c7255fb3da1b028e90658d9ad41f4fade1c73` |
 
 ## What was written
 
@@ -80,7 +80,28 @@ Each is the MOR lead's, as technical wording, and is marked [lead] in `encoding-
 
 ## What a stranger's reading found
 
-STRANGER
+A subagent was given only `draft-25.md` and `encoding-2.md`. It wrote the payloads of eight acts: the first Terms act, an author's assent, a party's first assent, a fork in one signer's line and its resolve, a resolving update of Terms, a confirmation, a receiver that is also a party, and a buyer's contest. It also judged thirteen faulty acts, and said where it could not tell what bytes to write. It was sure of every byte of the required fields, and reached the checker's answer and rule unambiguously for ten of the thirteen faulty acts.
+
+**Fixed in `encoding-2.md`.** Each fix says what the code already does; draft 25 and its spec hash are unchanged.
+
+- **A resolve's `previous`.** E17 read alone ("the signer's act before this one") would name a tip. A resolving update names the shared act, as G12.3 says (E17).
+- **Which rule a refused receiver names.** E12, with G1.3 giving the reason (E12).
+- **"A checker gives a note" for every value left unread.** It gives one for all but a call in Terms that do not hold its task, which is the grammar verifier's to see (section 1).
+- **A role whose kind cannot be read.** It is not of kind future, so its `what` is required as for any other kind (E10).
+- **The work hash.** It is taken over the words' bytes themselves, not wrapped in CBOR (E5).
+- **The order of a set.** It is the bytewise lexicographic order of the entries' encodings (E18).
+
+**Left as they are, knowingly** (the MOR lead's to take up; none blocks writing an act):
+
+- `parties` keeps the writer's order, so listing the same parties in another order is a different act (E18, by design: positions name parties).
+- `relies_on` may repeat what another field names, and so may a report's. Such an act is read once and not refused (draft 25, section 3.2), so one meaning has more than one byte form. Forbidding repeats, or always requiring them, would be a new rule.
+- A report naming Terms may leave out the task (E21).
+- Which Terms act a resolve's `terms` names, where the forked line spans several versions, is not said.
+- A Terms act has no `for`/`under`, so another signer, under a power, cannot write a Terms act that resolves a fork of one signer's line of Terms acts. A resolve, a Statement, can.
+- For the grammar verifier, not the bytes:
+  - G11.2's "(another agreement, or none)", now that a receiver that is also a party is named by its root.
+  - G4.1's default read literally for a resolving update of Terms, which names no party.
+- Two faults that are both rejections: which one is named is not fixed (section 9 says so).
 
 ## For the Dubsar Suite lead's briefing: what a player will trip on first
 
