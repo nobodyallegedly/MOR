@@ -1,7 +1,7 @@
 // The new Agreements acts in Kišib: Terms and Statement (Agreements written
-// from scratch, `docs/agreements-from-scratch/draft-24.md`, in the bytes of
-// `encoding-1.md`), and the report (the report block's third proposal,
-// `docs/lead/proposals/report-block-3.md`, a proposal), each built from the
+// from scratch, `docs/agreements-from-scratch/draft-25.md`, in the bytes of
+// `encoding-2.md`), and the report (the report block's fourth proposal,
+// `docs/lead/proposals/report-block-4.md`, a proposal), each built from the
 // binding's builders, checked by the binding's checker before anything is
 // signed with an identity's key, and said on the screen as written.
 //
@@ -16,8 +16,8 @@
 // The client conformance rule (decided by Nobody, allegedly, 11 November:
 // before a signature that binds a person to terms, the client shows what its
 // terms-reading cMIP produces from them, names that cMIP, and shows what the
-// person can always do). No terms-reading cMIP for draft 24 exists: Kišib
-// says so, shows the Terms' fields as written, and shows what draft 24 itself
+// person can always do). No terms-reading cMIP for draft 25 exists: Kišib
+// says so, shows the Terms' fields as written, and shows what draft 25 itself
 // says a person can do whatever Terms say, by its rule numbers, and what it
 // does not give (`ALWAYS_SAY`). The suite lead's lean, not decided.
 //
@@ -25,6 +25,7 @@
 
 import { randomBytes } from 'node:crypto';
 import {
+  agreementsNewAsk,
   agreementsNewCheck,
   agreementsNewCheckHeld,
   agreementsNewReportPayload,
@@ -44,7 +45,7 @@ import {
 export type NewAct = 'terms' | 'statement' | 'report';
 export const NEW_ACTS: readonly NewAct[] = ['terms', 'statement', 'report'];
 
-/** Their spec hashes and types (encoding 1, E2), from the binding. */
+/** Their spec hashes and types (encoding 2, E2), from the binding. Acts under encoding 1's are "not this encoding". */
 export const NEW_SPECS = agreementsNewSpecs() as Record<NewAct, { spec: string; type: number }>;
 
 /** The act a spec hash and type name, or null (a type the encoding does not give: the checker rejects it, E2). */
@@ -56,7 +57,7 @@ export function newActOf(spec: string, type: number): NewAct | null {
 /** A spec hash of the new acts, whatever the type: every act under it is checked before it is signed. */
 export const isNewSpec = (spec: string): boolean => NEW_ACTS.some((a) => NEW_SPECS[a].spec === spec);
 
-/** The checker's answer (encoding 1, section 9). */
+/** The checker's answer (encoding 2, section 9). */
 export interface Answer {
   verdict: 'pass' | 'rejected' | 'invalid' | 'unknown' | 'cannot open' | 'not this encoding';
   act: string | null;
@@ -76,26 +77,27 @@ export interface Held {
 
 /** Said beside every verdict: what a pass is, and what it is not. */
 export const PASS_MEANS_SAY =
-  'A pass means only that the bytes are well formed and signed. It gives none of the grammar’s answers: whether Terms are in force, whether two acts are a fork, who receives, whether an act is late, or the baker’s rights. No verifier of those exists yet.';
+  'A pass means only that the bytes are well formed and signed. It gives none of the grammar’s answers: whether Terms are in force, whether two acts are a fork, who receives, whether an act is late, or the baker’s rights. Those are the grammar verifier’s, which rests for now on stub cMIPs and stand-in layers: provisional.';
 
 /** Said before a signature that binds a person to Terms: no reader exists (the suite lead's lean, not decided). */
-export const NO_READER_SAY = 'No terms-reading cMIP for Agreements draft 24 exists yet: this is the text as written, not a reading of it';
+export const NO_READER_SAY = 'No terms-reading cMIP for Agreements draft 25 exists yet: this is the text as written, not a reading of it';
 
 /**
- * What draft 24 itself says a person can do whatever Terms say, by rule,
- * and what it does not give. Draft 24 has no list of what a person can
+ * What draft 25 itself says a person can do whatever Terms say, by rule,
+ * and what it does not give. Draft 25 has no list of what a person can
  * always do (the earlier Agreements' rule 98, the way out, has no
  * counterpart in it): these are the grammar rules that hold whatever Terms
- * say, each with its limit, and the one thing it plainly does not give.
+ * say, each with its limit, and the one thing it plainly does not give,
+ * which its own stated cost says ("No default way out", section 7).
  */
 export const ALWAYS_SAY: readonly string[] = [
-  'What you can always do: Agreements draft 24 has no list of it. These are its grammar rules that hold whatever these Terms say:',
+  'What you can always do: Agreements draft 25 has no list of it. These are its grammar rules that hold whatever these Terms say:',
   'You are bound by an act only if you signed it in your own name; or it was made for you under a power in Terms you are bound by, and that power’s rule says yes; or it is an update that the update condition of Terms you are bound by answers valid (G5.1). An act with no “for” and no “under” is made in its signer’s name only (G5.3).',
   'An assent binds you only while the Terms it names are in force (G4.3).',
   'Until the Terms are in force, you can cancel your assent with a counter signature (G4.10). Once they are in force, a counter signature changes nothing.',
   'Against an offer or a vow (Terms that name a party by role), you can make a contest: it reaches their signers and stands on the record; it moves no money (G11.8; section 7).',
   'A delegator can end a delegation at any time, by default: only where its Terms name no update condition and state no condition on ending it (G5.5).',
-  'What draft 24 does not give you: a way to leave Terms once they are in force. An agreement never ends (G4.9); by default an update needs everyone who signed the original (G4.11(e)); a party can leave alone only where the Terms’ update condition answers valid for that (section 5.2, task K4), and Kišib reads no update condition.',
+  'What draft 25 does not give you: a way to leave Terms once they are in force. An agreement never ends (G4.9); by default an update needs everyone who signed the original (G4.11(e)); a party can leave alone only where the Terms’ update condition answers valid for that (section 5.2, task K4), and Kišib reads no update condition. Draft 25 says so itself: “No default way out” (section 7).',
 ];
 
 /** A refusal: the rule named and what it says. Nothing was signed. */
@@ -120,7 +122,7 @@ function ruleOf(e: unknown): { rule: string | null; says: string } {
 /**
  * The input as JSON gives it, for the binding's builder: a socket's
  * `params` and a Statement's `content`, CBOR bytes, are written in hex in
- * JSON; everything else is as the builder takes it (encoding 1; the
+ * JSON; everything else is as the builder takes it (encoding 2; the
  * binding's `agreements_new_js.rs`).
  */
 function forBuilder(v: unknown, key = ''): unknown {
@@ -184,6 +186,18 @@ export interface Draft {
  * unless it passes.
  */
 export function precheck(d: Draft, held: Held[] = []): Answer {
+  return precheckDraft(d, held).answer;
+}
+
+/** The draft signed by a throwaway key, never given out: its bytes, content key and id. */
+export interface Drafted {
+  act: Uint8Array;
+  key: Uint8Array;
+  id: string;
+}
+
+/** `precheck`, with the draft it checked, for the grammar's read-only answers (`grammarLines`). */
+export function precheckDraft(d: Draft, held: Held[] = []): { answer: Answer; draft: Drafted } {
   const throwaway = new Uint8Array(randomBytes(32));
   let made: { act: Uint8Array; id: string; key: Uint8Array };
   try {
@@ -195,7 +209,50 @@ export function precheck(d: Draft, held: Held[] = []): Answer {
   }
   const a = check(made.act, made.key, held);
   if (a.verdict !== 'pass') throw new AgreementsRefusal(a.rule, a.says, `Kišib checked this act before signing, and it does not pass: ${verdictLine(a)}. Kišib signs only what passes. Nothing was signed.`);
-  return a;
+  return { answer: a, draft: made };
+}
+
+/** One answer of the grammar verifier (the binding's `agreementsNewAsk`). */
+export interface GrammarAnswer {
+  word: string;
+  rule: string | null;
+  qualifier: string;
+  disputed: boolean;
+  cmip: string | null;
+  says: string;
+}
+
+/** Said above the grammar's answers: what they rest on, and that they are provisional. */
+export const GRAMMAR_SAY =
+  'Read by the grammar verifier (read-only), from the acts Kišib was handed and this act as signed by the throwaway key, as they would stand once you sign. Its sockets are answered by stub cMIPs for tests only (any other cMIP gives unchecked, G9), and places, the envelope’s chain and Money are stand-ins: every answer here is provisional.';
+
+/** The read-only grammar's answers that matter to the signer, each with its word, rule and qualifier; none where the act is not one that binds. */
+export function grammarLines(d: { spec: string; type: number; payload: Uint8Array; identity: string }, draft: Drafted, held: Held[] = []): string[] {
+  const act = newActOf(d.spec, d.type);
+  const m = payloadMap(d.payload) ?? new Map<number, unknown>();
+  const me = `signer:${d.identity}`;
+  const asks: [string, string, string[]][] = [];
+  if (act === 'terms' && !(m.has(17) && m.has(18))) {
+    asks.push(['Whether these Terms are in force once you sign them', 'in_force', [draft.id]]);
+    asks.push(['Whether you are bound by them once you sign', 'bound', [me, draft.id]]);
+  } else if (act === 'statement' && m.get(2) === 0 && isHash(m.get(1))) {
+    const terms = hex(m.get(1) as Uint8Array);
+    asks.push(['Whether the Terms you assent to are in force once you sign', 'in_force', [terms]]);
+    asks.push(['Whether you are bound by them once you sign', 'bound', [me, terms]]);
+  } else if (act === 'statement' && m.get(2) === 3) {
+    asks.push(['What this resolve resolves', 'resolution', [draft.id]]);
+  } else return [];
+  const acts = [...held.map((h) => ({ bytes: h.act, ...(h.key ? { key: h.key } : {}) })), { bytes: draft.act, key: draft.key }];
+  const out = [GRAMMAR_SAY];
+  for (const [what, ask, args] of asks) {
+    try {
+      const answers = JSON.parse(agreementsNewAsk({ acts, ask, args })) as GrammarAnswer[];
+      for (const a of answers) out.push(`${what} (${ask}): ${a.word.toUpperCase()}${a.rule ? `, ${a.rule}` : ''}, ${a.qualifier === 'none' ? 'no qualifier' : a.qualifier}${a.disputed ? ', disputed' : ''}${a.cmip ? `, by the cMIP ${a.cmip}` : ''}: ${a.says}.`);
+    } catch (e) {
+      out.push(`${what} (${ask}): the grammar verifier could not answer (${errorText(e)}).`);
+    }
+  }
+  return out;
 }
 
 /** The identity's own act, checked again before it leaves Kišib: refused unless it passes. */
@@ -212,7 +269,7 @@ const STATEMENT_FIELDS = ['agreement', 'terms', 'kind', 'content', 'for', 'under
 const REPORT_FIELDS = ['call', 'relies_on', 'lines'];
 const ROLE_KINDS = ['done', 'received', 'holding', 'fits', 'future'];
 const POWER_KINDS = ['assent', 'counter_signature', 'contest', 'resolves', 'replaces'];
-const STATEMENT_KINDS = ['assent', 'counter signature', 'contest'];
+const STATEMENT_KINDS = ['assent', 'counter signature', 'contest', 'resolve'];
 const FROM = ['the doer', 'the receiving side', 'both'];
 const LINE_KINDS = ['received', 'passed on', 'own part', 'kept', 'still owed'];
 
@@ -238,7 +295,7 @@ function party(p: unknown, i: number): string {
   if (p[0] === 1 && p[1] instanceof Map) {
     const r = p[1] as Map<number, unknown>;
     const k = r.get(0);
-    const kind = typeof k === 'number' && ROLE_KINDS[k] ? ROLE_KINDS[k] : `${diag(k)} (no kind draft 24 gives)`;
+    const kind = typeof k === 'number' && ROLE_KINDS[k] ? ROLE_KINDS[k] : `${diag(k)} (no kind draft 25 gives)`;
     return `${i}. a role of kind ${kind}${r.has(1) ? `, its what ${diag(r.get(1))}` : ''}, filled as ${socket(r.get(2))} says`;
   }
   return `${i}. ${diag(p)}`;
@@ -248,7 +305,7 @@ const who = (w: unknown) => (Array.isArray(w) && w[0] === 0 ? `the signer ${diag
 const hashes = (v: unknown) => (Array.isArray(v) ? v.map(diag).join(', ') : diag(v));
 const previous = (v: unknown) => (Array.isArray(v) && v.length === 0 ? 'none: the signer’s first act in this agreement' : Array.isArray(v) ? hashes(v) : diag(v));
 
-/** The Terms' fields as written, one line each, and the defaults draft 24 gives where one is left out. */
+/** The Terms' fields as written, one line each, and the defaults draft 25 gives where one is left out. */
 export function termsFields(m: Map<number, unknown>, words?: string): string[] {
   const out: string[] = [];
   const parties = Array.isArray(m.get(2)) ? (m.get(2) as unknown[]) : [];
@@ -279,7 +336,8 @@ export function termsFields(m: Map<number, unknown>, words?: string): string[] {
         out.push(`powers: ${Array.isArray(v) ? v.map((p) => (Array.isArray(p) ? `${typeof p[0] === 'number' ? (POWER_KINDS[p[0]] ?? diag(p[0])) : `the kind ${diag(p[0])} a cMIP defines`}, under ${socket(p[1])}` : diag(p))).join('; ') : diag(v)}`);
         break;
       case 10:
-        out.push(`receiver: ${typeof v === 'number' ? `party ${v}` : `the agreement with the root ${diag(v)}`}`);
+        // Encoding 2, E12: [0, position] for one of these Terms' parties, [2, root] for an agreement.
+        out.push(`receiver: ${Array.isArray(v) && v[0] === 0 ? `party ${diag(v[1])}` : Array.isArray(v) && v[0] === 2 ? `the agreement with the root ${diag(v[1])}` : diag(v)}`);
         break;
       case 15:
         out.push(`calls: ${Array.isArray(v) ? v.map((c) => (Array.isArray(c) ? `task K${diag(c[0])}, a report from ${FROM[Number(c[1])] ?? diag(c[1])}` : diag(c))).join('; ') : diag(v)}`);
@@ -291,9 +349,10 @@ export function termsFields(m: Map<number, unknown>, words?: string): string[] {
         out.push(`${name}: ${Array.isArray(v) ? hashes(v) : diag(v)}`);
     }
   }
-  // The defaults draft 24 gives where a field is left out (its words, not a reading).
-  if (!m.has(6)) out.push('in_force: not written. Draft 24’s default: in force once there is an assent in the name of every party named as a signer (G4.1).');
-  if (!m.has(13)) out.push('condition: not written. Draft 24’s default: an update is valid when everyone who signed the original signs it (G4.11(e)).');
+  // The defaults draft 25 gives where a field is left out (its words, not a reading); not for a resolving update, which carries none of them.
+  if (m.has(17) && m.has(18)) return out;
+  if (!m.has(6)) out.push('in_force: not written. Draft 25’s default: in force once there is an assent in the name of every party named as a signer (G4.1).');
+  if (!m.has(13)) out.push('condition: not written. Draft 25’s default: an update is valid when everyone who signed the original signs it (G4.11(e)).');
   if (!m.has(7)) out.push('powers: none written: no act made in another’s name under these Terms binds that other (G5.1(b)).');
   return out;
 }
@@ -356,22 +415,27 @@ const payloadMap = (p: Uint8Array): Map<number, unknown> | null => {
  * checker's verdict and the rule it names, what a pass does not mean; and,
  * where the act binds a person to Terms (a Terms act, an assent, a kind a
  * cMIP defines), that no terms-reading cMIP exists, the Terms' fields as
- * written, and what draft 24 says a person can do whatever Terms say.
+ * written, and what draft 25 says a person can do whatever Terms say.
  * `words`: the Terms' words, where an app or the person gave them, shown
  * only where they match the fingerprint the Terms name.
  */
-export function screen(d: { spec: string; type: number; payload: Uint8Array }, answer: Answer, held: Held[] = [], words?: string): string[] {
+export function screen(d: { spec: string; type: number; payload: Uint8Array; identity?: string }, answer: Answer, held: Held[] = [], words?: string, draft?: Drafted): string[] {
   const act = newActOf(d.spec, d.type);
   const m = payloadMap(d.payload) ?? new Map<number, unknown>();
   const out: string[] = [];
-  if (act === 'terms') out.push(`A Terms act of Agreements draft 24 (encoding 1; spec ${d.spec}, type ${d.type}): stating Terms, and signing them as their writer.`);
-  if (act === 'statement') out.push(`A Statement of Agreements draft 24 (encoding 1; spec ${d.spec}, type ${d.type}).`);
-  if (act === 'report') out.push(`A report (spec ${d.spec}, type ${d.type}): a proposal of the report block (proposal 3), not yet written into any spec text.`);
+  const resolving = act === 'terms' && m.has(17) && m.has(18);
+  if (act === 'terms') out.push(resolving ? `A resolving update of Terms, Agreements draft 25 (encoding 2; spec ${d.spec}, type ${d.type}): it resolves a fork of these Terms, carrying no words of its own (G12.3).` : `A Terms act of Agreements draft 25 (encoding 2; spec ${d.spec}, type ${d.type}): stating Terms, and signing them as their writer.`);
+  if (act === 'statement') out.push(`A Statement of Agreements draft 25 (encoding 2; spec ${d.spec}, type ${d.type}).`);
+  if (act === 'report') out.push(`A report (spec ${d.spec}, type ${d.type}): a proposal of the report block (proposal 4), not yet written into any spec text.`);
   out.push(`Checked before signing, as signed by a throwaway key, never this identity’s: ${verdictLine(answer)}.`);
   out.push(PASS_MEANS_SAY);
   const kind = m.get(2);
-  const binds = act === 'terms' || (act === 'statement' && (kind === 0 || Array.isArray(kind)));
-  if (act === 'terms') {
+  const binds = act === 'terms' || (act === 'statement' && (kind === 0 || kind === 3 || Array.isArray(kind)));
+  if (resolving) {
+    out.push(`${NO_READER_SAY}:`);
+    out.push(...termsFields(m, words));
+    out.push('Which tip continues is yours to sign; that the update resolves the fork is the grammar’s, from the acts held, and the update condition of the Terms both tips replace says who must sign it (G12.3, G4.11(g)).');
+  } else if (act === 'terms') {
     out.push(`${NO_READER_SAY}:`);
     out.push(...termsFields(m, words));
   } else if (act === 'statement') {
@@ -387,9 +451,11 @@ export function screen(d: { spec: string; type: number; payload: Uint8Array }, a
       } else {
         out.push(`An assent to the Terms ${hex(named)}. ${NO_READER_SAY}, and Kišib does not hold these Terms${t ? ' as an act that passes the checker' : ''}: it cannot show them. Signing binds you to Terms not shown here. Ask the app to hand Kišib those Terms, or decline.`);
       }
-    } else if (Array.isArray(kind)) out.push(`${NO_READER_SAY}. A kind a cMIP defines may bind you; Kišib cannot tell. Its fields as written:`);
+    } else if (kind === 3) out.push('A resolve: a resolving update in your own line. Of the fork of your acts in this agreement, the tip it names in “continues” goes on, the others are set aside (G12.3). The tip that continues counts as your act; Kišib does not read what it binds you to. Its fields as written:');
+    else if (Array.isArray(kind)) out.push(`${NO_READER_SAY}. A kind a cMIP defines may bind you; Kišib cannot tell. Its fields as written:`);
     out.push(...statementFields(m));
   } else if (act === 'report') out.push(...reportFields(m));
+  if (binds && draft && d.identity) out.push(...grammarLines({ ...d, identity: d.identity }, draft, held));
   if (binds) out.push(...ALWAYS_SAY);
   return out;
 }

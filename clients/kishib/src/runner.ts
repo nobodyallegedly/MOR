@@ -39,7 +39,7 @@ import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
 import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
-import { AgreementsRefusal, NEW_SPECS, build, isNewSpec, postcheck, precheck, screen, type Held, type NewAct } from './agreements.ts';
+import { AgreementsRefusal, NEW_SPECS, build, isNewSpec, postcheck, precheckDraft, screen, type Held, type NewAct } from './agreements.ts';
 
 export type { Kind, RunnerRequest };
 export { KIND_NAME, KINDS, ALWAYS_ASKS };
@@ -1261,8 +1261,8 @@ function readHeld(v: unknown): Held[] | undefined {
 /** The words of the panel for a new Agreements act: checked first, refused with the rule the checker names unless it passes. */
 function agreementsScreen(req: RunnerRequest): string[] {
   try {
-    const answer = precheck(req, req.held ?? []);
-    return screen(req, answer, req.held ?? [], req.termsWords);
+    const { answer, draft } = precheckDraft(req, req.held ?? []);
+    return screen(req, answer, req.held ?? [], req.termsWords, draft);
   } catch (e) {
     if (e instanceof AgreementsRefusal) throw new RunnerRefusal(400, e.message);
     throw e;

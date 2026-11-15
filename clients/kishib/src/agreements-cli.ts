@@ -10,7 +10,7 @@
 // anything is signed with that key, the act is checked (signed with a
 // throwaway key), and the screen says the verdict, what it does not mean,
 // and, for an act that binds the signer to Terms, the Terms as written and
-// what draft 24 says the person can do whatever Terms say. Then it asks,
+// what draft 25 says the person can do whatever Terms say. Then it asks,
 // with nothing preselected: type "sign" to sign it; anything else declines.
 // The act is written to standard output (or `--out`), in hex, with its
 // content key where it is private; Kišib sends it nowhere.
@@ -25,9 +25,9 @@ import { fromCarried } from '../../../modules/carry/src/string.ts';
 import { Refused as WordsRefused } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import type { Via } from '../../genesis/src/transport.ts';
-import { AgreementsRefusal, NEW_ACTS, NEW_SPECS, PASS_MEANS_SAY, build, check, postcheck, precheck, screen, verdictLine, type Held, type NewAct } from './agreements.ts';
+import { AgreementsRefusal, NEW_ACTS, NEW_SPECS, PASS_MEANS_SAY, build, check, postcheck, precheckDraft, screen, verdictLine, type Held, type NewAct } from './agreements.ts';
 
-export const AGREEMENTS_HELP = `mor-kishib agreements: the new Agreements acts (draft 24, encoding 1; the report, a proposal).
+export const AGREEMENTS_HELP = `mor-kishib agreements: the new Agreements acts (draft 25, encoding 2; the report, a proposal).
 TEST IDENTITIES ONLY, until MOR is frozen. A pass means only that the bytes are well formed and signed.
 
   agreements specs                         The spec hash and type of each act.
@@ -150,8 +150,8 @@ async function sign(rest: string[], o: Record<string, string[]>, flags: Set<stri
       ...(list(o.to).length ? { to: list(o.to).map(readId) } : {}),
     };
     if (!d.public && !d.to?.length) d.to = [id];
-    const answer = precheck(d, held);
-    for (const l of screen(d, answer, held, words)) io.out(l);
+    const { answer, draft } = precheckDraft(d, held);
+    for (const l of screen(d, answer, held, words, draft)) io.out(l);
     io.out(d.sequence.length ? `On the line you named, at position ${d.sequence.length + 1}.` : 'On a line of its own (position 1): no app continues it. Kišib sends it nowhere: it is written out, for you to send.');
     const yes = await io.line('Type “sign” to sign it with this identity’s key; anything else declines: ', false);
     if ((yes ?? '').trim() !== 'sign') {

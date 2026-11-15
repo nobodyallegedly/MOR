@@ -24,7 +24,7 @@ holds only which browsers are paired with it.
   check URL [--built DIR]        Compare Kišib's web client as a server serves it
                                  (https://kishib.dubsar.org/) with the release in
                                  built/, byte for byte: SAME, or each file that differs.
-  agreements …                   The new Agreements acts (draft 24, encoding 1; the
+  agreements …                   The new Agreements acts (draft 25, encoding 2; the
                                  report, a proposal): build, check, and sign with an
                                  identity's signing key. "agreements" alone says how.
 

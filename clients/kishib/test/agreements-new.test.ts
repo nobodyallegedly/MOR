@@ -1,5 +1,5 @@
 // The new Agreements acts in Kišib (Agreements written from scratch, draft
-// 24, in the bytes of encoding 1; the report, the report block's third
+// 25, in the bytes of encoding 2; the report, the report block's fourth
 // proposal): Terms, a Statement and a report, each written from the
 // binding's builders, checked before the identity's key signs anything,
 // shown as written, and signed with the identity's own key, through the
@@ -14,8 +14,8 @@
 //   rule it names; and, wherever what fails is something an app hands Kišib
 //   (its spec, type, payload, objects, acks, the acts held), Kišib asked to
 //   sign it refuses, naming that rule, nothing signed, nothing waiting.
-// - Before a Terms act or an assent: no terms-reading cMIP for draft 24
-//   exists, said; the Terms' fields as written; what draft 24 says a person
+// - Before a Terms act or an assent: no terms-reading cMIP for draft 25
+//   exists, said; the Terms' fields as written; what draft 25 says a person
 //   can do whatever Terms say, by rule; and what a pass does not mean.
 //
 // TEST IDENTITIES ONLY.
@@ -32,7 +32,7 @@ import { dub, everything, kishib, refused, runnerOn, start, stopAll, type Relay 
 import type { RunnerView } from '../src/runner.ts';
 import { panel } from '../src/page/panel.ts';
 import type { RunnerRequest } from '../src/runner-read.ts';
-import { ALWAYS_SAY, NEW_SPECS, NO_READER_SAY, PASS_MEANS_SAY, check, isNewSpec, opened, type Held } from '../src/agreements.ts';
+import { ALWAYS_SAY, GRAMMAR_SAY, NEW_SPECS, NO_READER_SAY, PASS_MEANS_SAY, check, isNewSpec, newActOf, opened, type Held } from '../src/agreements.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const vectors = (f: string) => JSON.parse(readFileSync(join(here, '../../core/vectors/agreements-new', f), 'utf8')) as { cases: Case[] };
@@ -114,6 +114,16 @@ function remap(v: unknown, ids: Map<string, string>): unknown {
   return v;
 }
 
+/** The sets of each payload (encoding 2, E18), by key: sorted again once their ids were replaced, as a writer would write them. */
+const SETS: Record<'terms' | 'statement' | 'report', number[]> = { terms: [3, 5, 7, 15, 17], statement: [7, 8, 10], report: [1] };
+function sortedSets(spec: string, type: number, m: unknown): unknown {
+  const act = newActOf(spec, type);
+  if (!act || !(m instanceof Map)) return m;
+  const order = (a: unknown, b: unknown) => Buffer.compare(Buffer.from(cborEncode(a)), Buffer.from(cborEncode(b)));
+  for (const k of SETS[act]) if (Array.isArray(m.get(k))) m.set(k, [...(m.get(k) as unknown[])].sort(order));
+  return m;
+}
+
 /**
  * A vector's acts, signed again through Kišib's runner as the identity it
  * holds, standing for the case's signer (the signer of its last act): each
@@ -136,7 +146,8 @@ async function again(c: Case): Promise<{ last: RunnerRequest | null; held: Held[
     const inside = key ? (opened(bytes, key) as unknown as { objects?: [string, string][]; acks?: string[] }) : d;
     let payload = o.payload;
     try {
-      payload = cborEncode(remap(cborDecode(o.payload), ids));
+      // Re-sorted only where an id was replaced: an invalid vector's own disorder (E18) is kept as it is.
+      payload = ids.size ? cborEncode(sortedSets(o.spec, o.type, remap(cborDecode(o.payload), ids))) : cborEncode(cborDecode(o.payload));
     } catch {
       // a payload that is no CBOR value: as it is
     }
@@ -165,7 +176,7 @@ async function again(c: Case): Promise<{ last: RunnerRequest | null; held: Held[
 
 test('every valid vector: its payload, signed through Kišib’s runner with the identity’s own key, passes the checker, with the vector’s notes', async () => {
   const { cases } = vectors('valid.json');
-  assert.equal(cases.length, 34);
+  assert.equal(cases.length, 44);
   for (const c of cases) {
     const { last, held } = await again(c);
     assert.ok(last, `${c.name}: readable`);
@@ -181,7 +192,7 @@ test('every valid vector: its payload, signed through Kišib’s runner with the
     assert.ok(made.words.includes(PASS_MEANS_SAY), `${c.name}: what a pass does not mean`);
   }
   const v = await world.k.c.ask<RunnerView>('runner state');
-  assert.ok(v.signed.filter((s) => s.kind === 'agreements').length >= 34, 'each listed in Signed');
+  assert.ok(v.signed.filter((s) => s.kind === 'agreements').length >= 44, "each listed in Signed");
 });
 
 /** Where what fails is in the bytes alone, not in anything an app hands Kišib: checked, never re-made. */
@@ -189,7 +200,7 @@ const ACT_LEVEL = new Set(['Envelopes rule 1', 'Envelopes rule 3', 'Envelopes ru
 
 test('every invalid vector: Kišib’s check gives its verdict and rule; asked to sign what an app can hand it, Kišib refuses, naming that rule, nothing signed or waiting', async () => {
   const { cases } = vectors('invalid.json');
-  assert.equal(cases.length, 99);
+  assert.equal(cases.length, 116);
   let made = 0;
   let heldSigned = 0;
   const notMade: string[] = [];
@@ -220,7 +231,7 @@ test('every invalid vector: Kišib’s check gives its verdict and rule; asked t
   // The held acts of the G6.1 cases were signed (they pass); nothing of the refused ones.
   assert.equal(v.signed.length - signedBefore, heldSigned, 'only the earlier acts the G6.1 cases hold were signed');
   assert.deepEqual(v.waiting, [], 'nothing waiting');
-  assert.equal(made, 99 - notMade.length);
+  assert.equal(made, cases.length - notMade.length);
   assert.ok(made >= 80, `refused by the runner: ${made}; checked only: ${notMade.join('; ')}`);
   // Checked only, never re-made (twelve): the bytes are no deterministic CBOR or not the act's shape (Envelopes rule 1, two), the lock or the commitment changed (rule 3, two),
   // a private act with no key (rule 10), another specification, an outside naming no signer, a signature that does not verify or of a scheme not implemented (E1, three), prev absent or of two (rule 13, two).
@@ -266,9 +277,14 @@ test('through the runner’s door, by their fields: Terms, an assent to them and
   assert.equal((describeAct(T.act) as { spec: string }).spec, NEW_SPECS.terms.spec);
   for (const said of [`${NO_READER_SAY}:`, `The words, as given to Kišib, matching that fingerprint: “${WORDS}”`, PASS_MEANS_SAY, ...ALWAYS_SAY]) assert.ok(T.words.includes(said), `said before Terms: ${said}`);
   assert.ok(T.words.some((w) => w.startsWith(`parties: 0. a signer, ${a.id}; 1. a signer, ${h(2)}`)), 'the parties as written');
-  assert.ok(T.words.some((w) => /in_force: not written\. Draft 24’s default.*\(G4\.1\)/.test(w)), 'the default draft 24 gives, said as its own');
+  assert.ok(T.words.some((w) => /in_force: not written\. Draft 25’s default.*\(G4\.1\)/.test(w)), 'the default draft 25 gives, said as its own');
   for (const rule of ['G5.1', 'G5.3', 'G4.3', 'G4.10', 'G11.8', 'G5.5', 'G4.9', 'G4.11(e)']) assert.ok(T.words.join(' ').includes(`(${rule}`) || T.words.join(' ').includes(` ${rule}`), `cites ${rule}`);
-  assert.ok(T.html.includes('No terms-reading cMIP for Agreements draft 24 exists yet: this is the text as written, not a reading of it'), 'in the panel too');
+  // The read-only grammar's answers that matter to the signer, each with its word, rule and qualifier, said to be provisional.
+  assert.ok(T.words.includes(GRAMMAR_SAY), 'the grammar’s answers, said provisional');
+  assert.ok(T.words.some((w) => /^Whether these Terms are in force once you sign them \(in_force\): NOT SHOWN, G4\.1, as shown: /.test(w)), 'in force: not by signing them alone');
+  assert.ok(T.words.some((w) => /^Whether you are bound by them once you sign \(bound\): NOT SHOWN, G5\.1, /.test(w)), 'bound: not shown');
+  assert.ok(T.words.indexOf(GRAMMAR_SAY) < T.words.indexOf(ALWAYS_SAY[0]), 'before what you can always do');
+  assert.ok(T.html.includes('No terms-reading cMIP for Agreements draft 25 exists yet: this is the text as written, not a reading of it'), 'in the panel too');
   assert.ok(!T.html.includes('Always yes for'), 'no standing yes in the panel');
   // An assent to them, private, the Terms handed to Kišib: the Terms shown as written.
   const assent = { agreement: T.id, terms: T.id, kind: 'assent', previous: null };
@@ -279,6 +295,20 @@ test('through the runner’s door, by their fields: Terms, an assent to them and
   assert.ok(S.words.includes(`An assent: you agree to the Terms ${T.id}. ${NO_READER_SAY}:`), 'the Terms it agrees to, shown');
   assert.ok(S.words.some((w) => w.startsWith('parties: 0. a signer')), 'their fields as written');
   for (const said of ALWAYS_SAY) assert.ok(S.words.includes(said));
+  assert.ok(S.words.some((w) => w.startsWith('Whether the Terms you assent to are in force once you sign (in_force): ')), 'the grammar asked of the Terms assented to');
+  // A resolve (encoding 2, kind 3): a resolving update in the signer's own line, by its fields.
+  const tips = [h(14), h(15)].sort();
+  const rv = await ask({ ...base('public'), agreements: { act: 'statement', input: { agreement: T.id, terms: T.id, kind: 'resolve', previous: T.id, resolves: tips, continues: tips[0] } }, held: [{ act: Buffer.from(T.act).toString('base64') }] });
+  assert.equal(rv.status, 200, JSON.stringify(rv.body));
+  const RV = await signed(rv, 'public');
+  assert.equal(check(RV.act).verdict, 'pass');
+  assert.ok(RV.words.some((w) => w.startsWith('A resolve: a resolving update in your own line.')), 'a resolve, said');
+  assert.ok(RV.words.includes('kind: resolve'));
+  assert.ok(RV.words.some((w) => w.startsWith('What this resolve resolves (resolution): ')), 'the grammar asked what it resolves');
+  // A resolve with content is refused by the builder (E20).
+  const rc = await ask({ ...base('public'), agreements: { act: 'statement', input: { agreement: T.id, terms: T.id, kind: 'resolve', content: 'f6', previous: T.id, resolves: tips, continues: tips[0] } } });
+  assert.equal(rc.status, 400);
+  assert.match(String(rc.body.error), /E20/);
   // An assent whose Terms Kišib is not given: said plainly that it cannot show them.
   const s2 = await ask({ ...base('public'), agreements: { act: 'statement', input: { ...assent, terms: h(7), agreement: h(7) } } });
   const req2 = (s2.body.asks as { request: string }).request;
@@ -291,7 +321,7 @@ test('through the runner’s door, by their fields: Terms, an assent to them and
   const R = await signed(r1, 'public');
   assert.equal(check(R.act).verdict, 'pass');
   assert.equal((describeAct(R.act) as { spec: string }).spec, NEW_SPECS.report.spec);
-  assert.ok(R.words.some((w) => w.includes('a proposal of the report block (proposal 3), not yet written into any spec text')));
+  assert.ok(R.words.some((w) => w.includes('a proposal of the report block (proposal 4), not yet written into any spec text')));
   assert.ok(R.words.includes(`line 0: received, 5 of the unit ${h(12)}, by ${h(13)}`));
   // Refused by the builder, naming the rule (E19: Terms with no previous).
   const bad = await ask({ ...base('public'), agreements: { act: 'terms', input: { ...terms, previous: undefined, replaces: h(1) } } });
@@ -331,7 +361,7 @@ test('through the command line: Terms written, checked, shown as written and sig
   const args = ['sign', 'terms', join(dir, 'terms.json'), '--id', a.id, '--home', H[0], '--words', join(dir, 'words.txt')];
   const yes = await cli(args, `${words}\nsign\n`);
   assert.equal(yes.code, 0, yes.err + yes.out);
-  for (const said of [`${NO_READER_SAY}:`, `The words, as given to Kišib, matching that fingerprint: “${WORDS}”`, PASS_MEANS_SAY, ...ALWAYS_SAY]) assert.ok(yes.out.includes(said), `said: ${said}`);
+  for (const said of [`${NO_READER_SAY}:`, `The words, as given to Kišib, matching that fingerprint: “${WORDS}”`, PASS_MEANS_SAY, GRAMMAR_SAY, ...ALWAYS_SAY]) assert.ok(yes.out.includes(said), `said: ${said}`);
   assert.ok(!yes.out.includes(words) && !yes.err.includes(words), 'the words never written out');
   const act = unhex(/^act ([0-9a-f]+)$/m.exec(yes.out)![1]);
   assert.equal(check(act).verdict, 'pass');
@@ -361,7 +391,7 @@ test('through the command line: Terms written, checked, shown as written and sig
   assert.equal(g31.code, 1);
   assert.match(g31.err, /does not pass: INVALID, G3\.1: .*Nothing was signed\./);
   // Every invalid vector, checked by the command line: its verdict, its rule, and never signed.
-  for (const c of vectors('invalid.json').cases.slice(0, 99)) {
+  for (const c of vectors("invalid.json").cases) {
     const files = c.acts.map((x, i) => {
       const f = join(dir, `v${i}.hex`);
       writeFileSync(f, x.bytes);
