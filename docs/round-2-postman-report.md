@@ -62,6 +62,21 @@ Built from window two's reports, as the suite lead listed them:
 
 **A finding while building (for the suite lead, and for Kišib).** Draft 25, section 3.2: "an author who signed the Terms names them in the `previous` of their assent". An author's assent with `previous: null` passes the checker (the bytes are well formed), but it forks the author's own line with the Terms act: the grammar verifier then answers *not shown* for in force (G4.1). With `previous` naming the Terms, it answers *shown*. The kit now offers the assent with `previous` set. Kišib's own test (`clients/kishib/test/agreements-new.test.ts`, the assent after Terms) signs an author's assent with `previous: null`, and its screen does not warn of it. Kišib should look at this. This may be part of what the five windows met.
 
+## After window three (fourth edition, 16 November, night)
+
+**Encryption keys missing from records: what was found.** It was reproduced on the reference home, step by step (genesis, rotation, key; in each order).
+1. **The record serves every encryption-key act the home holds for the identity** (`relay/src/node.rs`, `identity_record`: every public act of the Envelopes spec, type 4, signed by the identity, in arrival order). No case was found where an accepted key was left out.
+2. **A key signed under a rotation that has not yet reached the home is refused**: 409, error 3, "send the chain first". It is not stored, so it is not in the record. This is the relay doing what the transport cMIP asks. Players who publish their key before (or without) the rotation at a given home get exactly this. The kit's `publish` sent only what it was given. **Fixed in the kit:** `identity enckey` now writes the letters to each home in the right order: the chain acts first, then the key.
+3. **A key signed under a rotation counts for a reader only once the rotation does.** A rotation counts only from its homes' receipts, and a reader checks those receipts against each home operator's own chain. That chain is not in the identity's record: it comes from `GET /identity/OPERATOR`. A reader holding only the identity's record sees the rotation pending and the key "unknown" (Counterparty's report, exactly). **Fixed in the kit:** when a recipient's record is held and no key counts, the kit asks for the records of that identity's homes' operators, says why, and seals on the next try.
+4. **The kit ignored a record fetched with a query** (`/identity/ID?parts=…`). Worse, the postman refused such a letter, since commas were not allowed in a query. Both are fixed. This may explain "found by some senders and not others".
+
+Not verifiable from here: whether Ampersand's and DubPay's keys were answered 200 or 409 at each home. Their trays' `in/` answers to those letters will say. An "accepted" key that is still missing would be new; I found no such case. For the MOR lead, an observation, not a bug: the identity record carries the receipts but not the chain of the operator who signed them. Every reader therefore needs a second request before a rotated identity's encryption key, routes or anything signed under the rotation counts. The cMIP could serve the operator's chain acts in the record (part 10, "carried", already does this for inclusion proofs).
+
+**Also fixed:**
+- `--refs`, `--to` and `--acks` refuse an id that is not written whole, and say so ("a short id is not enough").
+- `agreements words` names its hash exactly (`tagged_hash("MOR/work", bytes)`) and offers `--sha256`, choosing neither: draft 25, section 9, item 5, open.
+- `post --file FILE` posts the file's exact bytes. **Finding:** a final line break is not canonical text (Text rule 10), so a text act can never carry the bytes of a words file that ends with one. The kit refuses such a file plainly, `agreements words` reports it (`postable: false`), and the guide tells the player to remove the break. It does not quietly remove it.
+
 ## State
 
 A draft pull request against `claude/agreements-verifier-2`, not to be merged. CI: in the pull request.

@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { Kit, describe, folderOf } from './lib/kit.mjs';
-import { BANK, SPECS, b64, errorText, hex, isHash, mor, plain, unb64, unhex } from './lib/core.mjs';
+import { BANK, SPECS, b64, errorText, hex, isHash, mor, plain, sha256, unb64, unhex } from './lib/core.mjs';
 import { MAX_SATS } from './lib/format.mjs';
 
 const HELP = `MOR round two, the players' kit (offline; test identities only)
@@ -22,20 +22,25 @@ Identities (keys stay in keys/NAME.json, in this folder; keys/ holds identity fi
                                        after a rotation, the bank follows it only from its homes' receipts)
 
 Acts (kept in acts/ID.mor; a private act's content key in acts/ID.key):
-  post NAME TEXT [--refs ID,ID] [--private --to ID,ID --via RELAY]
+  post NAME (TEXT | --file FILE) [--refs ID,ID] [--private --to ID,ID --via RELAY]
+                                (--file: the file's exact bytes as the text, as agreements words hashes them; refused where the
+                                 file is not canonical text: Text rule 10 allows no final line break)
                                 (--refs: the acts it answers; --private --to … --via RELAY also seals it to them)
   sign NAME --spec HEX --type N (--payload-hex HEX | --payload-file FILE) [--private --to ID,ID] [--refs ID,ID] [--acks ID,ID]
   check FILE... [--key HEX]     (the core library's verdict on acts held together)
 
 Sealing (private acts reach their recipients only sealed to their published encryption keys):
-  identity enckey NAME          (a new encryption key; then: publish NAME --to HOME acts/ID.mor)
+  identity enckey NAME [--to HOME,HOME]   (a new encryption key, with the letters that publish it to each home,
+                                its chain acts first; homes named by relays.md name by default.
+                                After any rotation: publish the rotation to every home, then the key again)
   seal NAME ACTFILE --to ID,ID --via RELAY   (where a recipient's key is not held yet, the kit writes the
                                 letters asking for its record and seals on your next try, after a pass)
   open NAME (--letter LETTER | FILE)   (a sealed container, or a feed page from GET /feed?to=YOUR-ID)
 
 The new Agreements acts (draft 25, encoding 2; the report block, proposal 4):
   agreements specs
-  agreements words FILE         (the fingerprint of the words a Terms body names)
+  agreements words FILE [--sha256]   (a fingerprint of the words: MOR's work hash, tagged_hash("MOR/work", bytes),
+                                or with --sha256 the plain SHA-256; which one "words" holds is open, draft 25 section 9 item 5)
   agreements build terms|statement|report FIELDS.json
   agreements sign NAME terms|statement|report FIELDS.json [--held FILE[:KEYHEX] ...] [--private --to ID,ID]
                                 (FIELDS.json: kit/AGREEMENTS-FIELDS.md, one worked example per act)
@@ -74,7 +79,7 @@ function parse(argv) {
     const a = argv[i];
     if (a.startsWith('--')) {
       const k = a.slice(2);
-      const flags = ['private', 'chain', 'verbose', 'save', 'empty', 'json'];
+      const flags = ['private', 'chain', 'verbose', 'save', 'empty', 'json', 'sha256'];
       const many = ['acts', 'held'];
       if (flags.includes(k)) opt[k] = true;
       else if (many.includes(k)) {
@@ -96,7 +101,15 @@ function parse(argv) {
 }
 
 const one = (opt, k) => (opt[k] ? opt[k][opt[k].length - 1] : undefined);
-const list = (opt, k) => (opt[k] ? opt[k].flatMap((v) => v.split(',')).filter(Boolean) : undefined);
+const list = (opt, k) => {
+  if (!opt[k]) return undefined;
+  const v = opt[k].flatMap((x) => x.split(',')).filter(Boolean);
+  if (['refs', 'to', 'acks'].includes(k)) {
+    const bad = v.filter((x) => !isHash(x));
+    if (bad.length) throw new Error(`--${k} takes act or identity ids written whole, 64 lowercase hexadecimal characters each; not: ${bad.join(', ')}${bad.some((x) => /^[0-9a-f]+$/.test(x) && x.length < 64) ? ' (a short id is not enough: the kit does not guess which act it means)' : ''}. Nothing was signed`);
+  }
+  return v;
+};
 const say = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
 function sats(s, what = 'amount') {
@@ -181,7 +194,9 @@ function main(argv) {
     if (sub === 'list') return say(kit.names().map((n) => `${n} ${kit.load(n).identity}`).join('\n') || 'no identities yet');
     if (sub === 'enckey') {
       const e = kit.encryptionKey(rest[0]);
-      return say({ encryptionKey: e.id, version: e.version, file: `acts/${e.id}.mor`, next: `publish it to every home: node kit/mor.mjs publish ${rest[0]} --to HOME acts/${e.id}.mor` });
+      const to = list(opt, 'to') ?? kit.load(rest[0]).homes.map((h) => h.name).filter(Boolean);
+      const letters = to.length ? kit.publishKey(rest[0], e.act, to) : [];
+      return say({ encryptionKey: e.id, version: e.version, file: `acts/${e.id}.mor`, ...(letters.length ? { letters, sentTo: to, note: 'to each home: the identity’s chain acts first, then the key, so that no home refuses it' } : { next: `publish it to every home, the chain first: node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/${e.id}.mor` }) });
     }
     if (sub === 'evidence') {
       const [name, ...letters] = rest;
@@ -200,7 +215,20 @@ function main(argv) {
   }
 
   if (cmd === 'post') {
-    const [name, ...words] = [sub, ...rest];
+    const [name, ...wordsGiven] = [sub, ...rest];
+    let words = wordsGiven;
+    if (opt.file) {
+      if (wordsGiven.length) throw new Error('post NAME --file FILE takes its text from the file only');
+      const bytes = readFileSync(one(opt, 'file'));
+      let text;
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        mor.checkText(text);
+      } catch (e) {
+        throw new Error(`${one(opt, 'file')} cannot be posted byte for byte: a text act carries canonical text only (${errorText(e)}). Fix the file itself (for a final line break: remove it), so that the words you hash and the words you post are the same bytes. Nothing was signed`);
+      }
+      words = [text];
+    }
     const to = list(opt, 'to');
     const via = one(opt, 'via');
     if (opt.private && via && !to?.length) throw new Error('a private post sealed --via a relay names its recipients with --to');
@@ -208,13 +236,14 @@ function main(argv) {
       const missing = kit.missingKeys(to);
       if (missing.length) {
         const r = kit.askRecords(name, missing, via);
-        return say({ notYet: `nothing was signed: the kit does not hold the encryption key of ${missing.join(', ')}. It wrote letters asking ${r.at.join(', ')} for their records. After the postman's next pass, run the same command again: it will sign and seal then. If a record shows no encryption key, that identity has to publish one first (identity enckey)`, letters: r.letters });
+        return say({ notYet: `nothing was signed: the kit does not hold an encryption key that counts for ${missing.join(', ')}. ${r.letters.length ? `It wrote letters asking ${r.at.join(', ')} for the records it needs. After the postman's next pass, run the same command again: it will sign and seal then.` : 'Nothing more can be asked for.'} If no record shows an encryption key, that identity has to publish one (identity enckey)`, ...(r.why.length ? { why: r.why } : {}), letters: r.letters });
       }
       const no = kit.refusesSealed(via);
       if (no) throw new Error(`${via} answered ${no} to a sealed container before: it does not take sealed containers (POST /sealed). Use --via a relay or home that does. Nothing was signed`);
     }
     const made = kit.post(name, words.join(' '), { isPublic: !opt.private, to, refs: list(opt, 'refs') });
     const out = { signed: made.id, file: `acts/${made.id}.mor`, ...(opt.private ? { key: hex(made.key) } : {}) };
+    if (opt.file) out.words = { workHash: mor.workHash(new TextEncoder().encode(words[0])), note: 'the text is the file’s bytes exactly, final line break included: agreements words gives the same fingerprint for the file' };
     if (opt.private && via) {
       const s = kit.seal(made.act, to, via, made.key);
       Object.assign(out, { sealed: s.file.slice(kit.folder.length + 1), letter: s.letter.name, to: s.to });
@@ -230,7 +259,7 @@ function main(argv) {
     const missing = kit.missingKeys(to);
     if (missing.length) {
       const r = kit.askRecords(name, missing, one(opt, 'via'));
-      return say({ notYet: `nothing was sealed: the kit does not hold the encryption key of ${missing.join(', ')}. It wrote letters asking ${r.at.join(', ') || 'nobody (give --via RELAY)'} for their records. After the postman's next pass, run the same command again`, letters: r.letters });
+      return say({ notYet: `nothing was sealed: the kit does not hold an encryption key that counts for ${missing.join(', ')}. ${r.letters.length ? `It wrote letters asking ${r.at.join(', ') || 'nobody (give --via RELAY)'} for the records it needs. After the postman's next pass, run the same command again` : 'Nothing more can be asked for'}`, ...(r.why.length ? { why: r.why } : {}), letters: r.letters });
     }
     const s = kit.seal(h.act, to, one(opt, 'via'), h.key ?? null);
     return say({ sealed: s.file.slice(kit.folder.length + 1), letter: s.letter?.name ?? 'none: give --via RELAY to send it', to: s.to });
@@ -268,7 +297,17 @@ function main(argv) {
 
   if (cmd === 'agreements') {
     if (sub === 'specs') return say(Kit.agreementsSpecs());
-    if (sub === 'words') return say({ words: mor.workHash(new Uint8Array(readFileSync(rest[0]))), of: rest[0], note: 'the fingerprint a Terms body names in "words": the file’s bytes, exactly' });
+    if (sub === 'words') {
+      const bytes = new Uint8Array(readFileSync(rest[0]));
+      let postable = { asText: true };
+      try {
+        mor.checkText(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+      } catch (e) {
+        postable = { asText: false, why: `${errorText(e)}: a text act cannot carry these exact bytes, so no post can match this fingerprint. To publish the words as a post, fix the file (for a final line break: remove it) and hash it again` };
+      }
+      if (opt.sha256) return say({ sha256: sha256(bytes), of: rest[0], bytes: bytes.length, postable, hash: 'SHA-256 of the file’s exact bytes, untagged', note: 'which fingerprint a Terms body’s "words" holds is open in draft 25 (section 9, item 5): agree it with the other parties' });
+      return say({ workHash: mor.workHash(bytes), of: rest[0], bytes: bytes.length, postable, hash: 'tagged_hash("MOR/work", the file’s exact bytes): SHA-256(SHA-256("MOR/work") ‖ SHA-256("MOR/work") ‖ bytes), MOR’s work hash (Envelopes, "Media"); --sha256 gives the plain SHA-256', note: 'which fingerprint a Terms body’s "words" holds is open in draft 25 (section 9, item 5): agree it with the other parties' });
+    }
     if (sub === 'build') return say(hex(Kit.agreementsBuild(rest[0], JSON.parse(readFileSync(rest[1], 'utf8')))));
     if (sub === 'check') {
       const held = rest.map(heldOf);

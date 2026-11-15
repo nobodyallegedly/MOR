@@ -338,6 +338,17 @@ export class Kit {
    * after, naming the one before; its secret half kept in keys/. Publish
    * the act to the identity's homes so others can seal to it.
    */
+  /**
+   * The letters that put an encryption key at the identity's homes in the
+   * order a home needs: its chain acts first (a home refuses an act signed
+   * under a rotation it does not hold yet), then the key.
+   */
+  publishKey(name, keyAct, homes) {
+    const out = [];
+    for (const h of homes) out.push(...this.publish(h, [...this.chainActs(name), keyAct]).map((l) => l.name));
+    return out;
+  }
+
   encryptionKey(name) {
     const f = this.load(name);
     const last = (f.encryption ?? []).at(-1);
@@ -361,7 +372,7 @@ export class Kit {
       } catch {
         continue;
       }
-      if (a.outcome !== 'answered' || a.status !== 200 || !/^\/identity\/[0-9a-f]{64}$/.test(a.path ?? '') || !a.bytes) continue;
+      if (a.outcome !== 'answered' || a.status !== 200 || !/^\/identity\/[0-9a-f]{64}(\?.*)?$/.test(a.path ?? '') || !a.bytes) continue;
       let rec;
       try {
         rec = mor.cborDecode(a.bytes);
@@ -401,8 +412,54 @@ export class Kit {
     const f = this.load(name);
     const at = [...new Set([via, ...(f.homes ?? []).map((h) => h.name).filter(Boolean)].filter(Boolean))];
     const letters = [];
-    for (const id of ids) for (const r of at) letters.push(this.relayLetter(r, 'GET', `/identity/${id}`, null, { name: Kit.letterName('record') }).name);
-    return { at, letters };
+    const why = [];
+    const held = new Set(this.recordsHeld());
+    for (const id of ids) {
+      // A record of the recipient already held, and still no key that counts: an encryption key signed under a
+      // rotation counts only once the rotation does, and a rotation counts only from its homes' receipts, which a
+      // reader checks against each home operator's own chain: ask for those operators' records too.
+      const want = held.has(id) ? this.operatorsOf(id).filter((op) => !held.has(op)) : [id];
+      if (held.has(id) && !want.length) {
+        why.push(`${id}: its record is held and shows no encryption key that counts (none published at that home, or one refused there because it arrived before the rotation it is signed under)`);
+        continue;
+      }
+      if (held.has(id)) why.push(`${id}: its record is held, but its chain counts only with its homes' operators' records (${want.join(', ')}), asked for now`);
+      for (const x of want) for (const r of at) letters.push(this.relayLetter(r, 'GET', `/identity/${x}`, null, { name: Kit.letterName('record') }).name);
+    }
+    return { at, letters, why };
+  }
+
+  /** The identities whose /identity records are held in in/. */
+  recordsHeld() {
+    const out = [];
+    for (const n of this.answers()) {
+      try {
+        const a = this.answer(n);
+        const m = /^\/identity\/([0-9a-f]{64})(\?.*)?$/.exec(a.path ?? '');
+        if (m && a.status === 200) out.push(m[1]);
+      } catch {
+        // unreadable answer
+      }
+    }
+    return out;
+  }
+
+  /** The operators of the homes an identity's chain names, at every position, as the records held show it. */
+  operatorsOf(id) {
+    const v = new mor.Verifier(SPECS.identity);
+    for (const a of this.heldRecords()) {
+      try {
+        v.add(a);
+      } catch {
+        // not an act
+      }
+    }
+    const r = v.resolve(id);
+    const ops = new Set();
+    for (const h of [...(r.homes ?? []), ...(r.homesAt ?? []).flat()]) if (h?.operator) ops.add(h.operator);
+    // A rotation's receipts come from the homes in force before it (Money rule 15's home rule): those are read here.
+    ops.delete(id);
+    return [...ops];
   }
 
   /** A relay that answered a sealed container with a refusal before (404, 405 or 501): it does not take them. */

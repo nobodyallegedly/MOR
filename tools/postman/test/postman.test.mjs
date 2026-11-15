@@ -512,7 +512,7 @@ test('sealing: an encryption key published, a private post sealed to it through 
   // Ampersand cannot seal to hop before it holds hop's record: refused, plainly, nothing signed.
   const lines = A.load('amp').lines.private.length;
   const cli = (...x) => execFileSync(process.execPath, [kitCli, ...x], { env: { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  assert.match(JSON.parse(cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1')).notYet, /nothing was signed: the kit does not hold the encryption key/);
+  assert.match(JSON.parse(cli('post', 'amp', 'for hop only', '--private', '--to', h.identity, '--via', 'home-1')).notYet, /nothing was signed: the kit does not hold an encryption key that counts/);
   assert.equal(A.load('amp').lines.private.length, lines, 'nothing signed when it cannot be sealed');
   // The kit wrote the letter asking the home for hop's record; after the pass, it seals.
   await w.pm.pass();
@@ -746,4 +746,75 @@ test('spec hash: the core library’s own, for a cMIP with its creator', () => {
   const want = createHash('sha256').update(t).update(t).update(mor.cborEncode(new Map([[0, 0], [1, unhex(creator)], [9, 'A test cMIP.']]))).digest('hex');
   assert.equal(out.hash, want);
   assert.equal(out.creator, creator);
+});
+
+// ------------------------------------------------- after window three
+
+test('an encryption key signed under a rotation: published chain first, read from the record with the home operator’s record, sealed to on the third try', async () => {
+  const w = round(['ampersand', 'counterparty'], relays());
+  const A = w.kits.ampersand;
+  const C = w.kits.counterparty;
+  const a = A.newIdentity('amp', [{ ...home.home, name: 'home-1' }]);
+  C.newIdentity('cp', [home.home]);
+  A.publish('home-1', A.chainActs('amp'));
+  await w.pm.pass();
+  A.rotate('amp');
+  // The rotation is not sent first: identity enckey sends the chain acts, then the key, to each home by name.
+  const envA = { ...process.env, MOR_FOLDER: join(w.root, 'ampersand') };
+  const ek = JSON.parse(spawnKit(envA, 'identity', 'enckey', 'amp').stdout);
+  assert.deepEqual(ek.sentTo, ['home-1']);
+  await w.pm.pass();
+  for (const l of ek.letters) assert.equal(A.answer(l).status, 200, `${l}: no refusal for a key ahead of its rotation`);
+  // Counterparty seals to ampersand: the record first, then (the key being signed under the rotation) the home operator's record.
+  const envC = { ...process.env, MOR_FOLDER: join(w.root, 'counterparty') };
+  const send = () => JSON.parse(spawnKit(envC, 'post', 'cp', 'for ampersand', '--private', '--to', a.identity, '--via', 'home-1').stdout);
+  const t1 = send();
+  assert.match(t1.notYet, /nothing was signed/);
+  await w.pm.pass();
+  const t2 = send();
+  assert.match(t2.notYet, /nothing was signed/);
+  assert.match(t2.why[0], /its chain counts only with its homes' operators' records/);
+  assert.ok(t2.why[0].includes(home.operator));
+  await w.pm.pass();
+  const t3 = send();
+  assert.ok(t3.letter, JSON.stringify(t3));
+  assert.deepEqual(t3.to.map((x) => x.encryptionKey), [ek.encryptionKey]);
+  // A record fetched with a query (?parts=…) is read too.
+  const w2 = round(['hop'], relays());
+  const H = w2.kits.hop;
+  H.newIdentity('h', [home.home]);
+  H.relayLetter('home-1', 'GET', `/identity/${a.identity}?parts=1,2,4`);
+  H.relayLetter('home-1', 'GET', `/identity/${home.operator}`);
+  await w2.pm.pass();
+  assert.equal(H.recipientKeys([a.identity])[0].act, ek.encryptionKey);
+});
+
+test('post --refs with a short id says why; post --file posts the file’s exact bytes; agreements words names its hash, and --sha256', () => {
+  const w = round(['hop'], relays());
+  const k = w.kits.hop;
+  k.newIdentity('h', [home.home]);
+  const env = { ...process.env, MOR_FOLDER: join(w.root, 'hop') };
+  const r = spawnKit(env, 'post', 'h', 'a reply', '--refs', 'bd8efc72');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /--refs takes act or identity ids written whole.*not: bd8efc72.*short id is not enough.*Nothing was signed/s);
+  const file = join(w.root, 'hop', 'words.txt');
+  fs.writeFileSync(file, 'Each of us gives the other a test loaf.\n');
+  // A final line break is not canonical text (Text rule 10): the file cannot be posted as it is, and words says so.
+  const refused = spawnKit(env, 'post', 'h', '--file', file);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /cannot be posted byte for byte.*Text rule 10.*remove it/s);
+  const w0 = JSON.parse(spawnKit(env, 'agreements', 'words', file).stdout);
+  assert.equal(w0.postable.asText, false);
+  fs.writeFileSync(file, 'Each of us gives the other a test loaf.\nSecond line, no final break.');
+  const p = JSON.parse(spawnKit(env, 'post', 'h', '--file', file).stdout);
+  const posted = mor.cborDecode(mor.describeAct(fs.readFileSync(join(w.root, 'hop', p.file))).payload).get(0);
+  assert.equal(posted, fs.readFileSync(file, 'utf8'), 'the file’s bytes exactly');
+  const wh = JSON.parse(spawnKit(env, 'agreements', 'words', file).stdout);
+  assert.equal(wh.postable.asText, true);
+  assert.equal(wh.workHash, p.words.workHash);
+  assert.match(wh.hash, /tagged_hash\("MOR\/work"/);
+  assert.match(wh.note, /section 9, item 5/);
+  const sh = JSON.parse(spawnKit(env, 'agreements', 'words', file, '--sha256').stdout);
+  assert.equal(sh.sha256, sha256(fs.readFileSync(file)));
+  assert.notEqual(sh.sha256, wh.workHash);
 });

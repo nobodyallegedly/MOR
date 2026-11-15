@@ -22,7 +22,7 @@ export const ANSWER_BODY_SUFFIX = '.answer.body';
 /** The relay API's first path segments a letter may name (the reference relay, `relay/src/http.rs`). `probe` is the hosts' choice: off unless their configuration lists it. */
 export const RELAY_PATHS = ['info', 'acts', 'sealed', 'media', 'feed', 'commitment', 'identity', 'log', 'proofs'];
 /** A path: segments of letters, digits, ".", "_" and "-"; an optional query of the same and "=" and "&". No "..", no "//". */
-export const PATH = /^(\/[A-Za-z0-9_.-]+)+(\?[A-Za-z0-9_.=&-]*)?$/;
+export const PATH = /^(\/[A-Za-z0-9_.-]+)+(\?[A-Za-z0-9_.=&,-]*)?$/;
 export const CONTENT_TYPES = ['application/cbor', 'application/octet-stream'];
 export const RANGE = /^bytes=\d{1,15}-\d{0,15}$/;
 

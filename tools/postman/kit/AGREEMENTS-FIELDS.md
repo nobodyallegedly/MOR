@@ -7,7 +7,11 @@
 - `previous` is one act id, or `null`. Never `[]`: an empty list is refused ("invalid type … expected a string").
 - `params` and `content` are CBOR bytes written in hex (`"f6"` is CBOR null).
 - A field the builder does not know is refused.
-- `node kit/mor.mjs agreements words WORDS.txt` gives the fingerprint for `body.words`, computed from the file's exact bytes.
+- **`body.words` is a fingerprint of the words, and which hash it is has not been settled.** Draft 25 leaves it open (section 9, item 5). The kit makes both explicit and chooses neither:
+  - `node kit/mor.mjs agreements words WORDS.txt` gives MOR's work hash, `tagged_hash("MOR/work", bytes)` = SHA-256(SHA-256("MOR/work") ‖ SHA-256("MOR/work") ‖ bytes). This is what Envelopes uses for media.
+  - `--sha256` gives the plain SHA-256 of the same bytes.
+  The parties must use the same one; say which in the words themselves or beside the Terms.
+- The bytes are the file's, exactly. If you also publish the words as a post (`post me --file WORDS.txt`), the file must be canonical text: Text rule 10 allows no final line break. `agreements words` says whether a file can be posted (`postable`).
 
 **`previous`, plainly:** your own previous act in this agreement.
 - The first act you sign in it: `null`.
