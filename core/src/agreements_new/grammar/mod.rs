@@ -38,6 +38,7 @@ mod legs;
 mod line;
 mod order;
 mod receiver;
+pub mod questions;
 pub mod recording;
 pub mod scenario;
 pub mod cases;

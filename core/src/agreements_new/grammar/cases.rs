@@ -157,54 +157,9 @@ impl Case {
         if let Some(l) = self.limits {
             v = v.with_limits(l);
         }
-        let one = |a: Answer| vec![a];
-        let answers = match &self.question {
-            Question::Act(a) => one(v.act(a)),
-            Question::Whole(a) => one(v.whole(a)),
-            Question::InForce(a) => one(v.in_force(a)),
-            Question::LastVersion(a) => one(v.last_version(a)),
-            Question::Update(a) => one(v.update(a)),
-            Question::Assent(a) => one(v.assent(a)),
-            Question::CounterSignature(a) => one(v.counter_signature(a)),
-            Question::Bound(p, a) => one(v.bound(*p, a)),
-            Question::Signature(a) => one(v.signature_of(a)),
-            Question::Line(s, a) => one(v.line(s, a)),
-            Question::Resolution(a) => one(v.resolution(a)),
-            Question::Order(a, b) => one(v.order(a, b)),
-            Question::Receiver(r, x) => {
-                let a = v.receiver(r, x.as_ref());
-                let mut out = vec![a.clone()];
-                out.extend(a.with);
-                out
-            }
-            Question::ReceiverForPayment(p) => one(v.receiver_for_payment(p)),
-            Question::Fillings(r, i) => {
-                let a = v.fillings(r, *i);
-                let mut out = vec![a.clone()];
-                out.extend(a.with);
-                out
-            }
-            Question::TakesNew(r, i) => one(v.takes_new(r, *i)),
-            Question::Rights(x, s) => one(v.rights(x, s)),
-            Question::HoldsControl(t) => one(v.holds_control(t)),
-            Question::Leg(t) => v.leg(t),
-            Question::Silence(t) => one(v.silence(t)),
-            Question::Data(r, x) => one(v.data(r, *x)),
-            Question::BuyerLeg(p) => one(v.buyer_leg(p)),
-            Question::BeforePaying(r) => v.before_paying(r),
-            Question::Contest(c) => {
-                let a = v.contest(c);
-                let mut out = vec![a.clone()];
-                out.extend(a.with);
-                out
-            }
-            Question::Baker(t) => {
-                let a = v.baker(t);
-                let mut out = vec![a.clone()];
-                out.extend(a.with);
-                out
-            }
-        };
+        let (name, args) = self.question.describe();
+        let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let answers = v.ask_named(name, &args).expect("a question the verifier knows");
         let asked = log.borrow().clone();
         (answers, asked)
     }
