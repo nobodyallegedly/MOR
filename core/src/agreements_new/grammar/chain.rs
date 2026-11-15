@@ -328,14 +328,19 @@ impl<'a> Verifier<'a> {
                 return c;
             }
         }
-        if let Some(g) = self.baker_gate(root) {
-            c.end = match g {
-                Tri::No(w) => End::NotInForce(Word::Invalid, "G14.3", w),
-                Tri::Unchecked(w) => End::Unchecked { at: *root, why: w },
-                Tri::NotShown(w) => End::NotInForce(Word::NotShown, "G14.3", w),
-                Tri::Yes => unreachable!(),
-            };
-            return c;
+        if self.held.terms(root).is_some_and(|t| t.envelope.is_some()) {
+            let b = self.baker(root);
+            match b.word {
+                Word::Shown => {}
+                Word::Unchecked => {
+                    c.end = End::Unchecked { at: *root, why: b.says };
+                    return c;
+                }
+                w => {
+                    c.end = End::NotInForce(w, b.rule, b.says);
+                    return c;
+                }
+            }
         }
         match self.in_force_raw(root, &scope) {
             Tri::Yes => {}
@@ -531,7 +536,10 @@ impl<'a> Verifier<'a> {
         }
         let _ = settled_resolvers;
         let tips = self.not_late(&ups, cur, &scope, q, c, &mut unchecked);
-        for (l, a) in &answers {
+        let mut keys: Vec<&Hash> = answers.keys().collect();
+        keys.sort();
+        for l in keys {
+            let a = &answers[l];
             if !ups.contains(l) {
                 let outcome = if a.word == Word::Unchecked { Outcome::Unchecked } else { Outcome::Nothing };
                 c.steps.push(Step { act: *l, original: *cur, outcome, answer: a.clone() });

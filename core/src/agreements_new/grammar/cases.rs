@@ -171,7 +171,12 @@ impl Case {
             Question::Line(s, a) => one(v.line(s, a)),
             Question::Resolution(a) => one(v.resolution(a)),
             Question::Order(a, b) => one(v.order(a, b)),
-            Question::Receiver(r, x) => one(v.receiver(r, x.as_ref())),
+            Question::Receiver(r, x) => {
+                let a = v.receiver(r, x.as_ref());
+                let mut out = vec![a.clone()];
+                out.extend(a.with);
+                out
+            }
             Question::ReceiverForPayment(p) => one(v.receiver_for_payment(p)),
             Question::Fillings(r, i) => {
                 let a = v.fillings(r, *i);
@@ -574,7 +579,7 @@ impl WhoNone for Want {
 /// naming enough of the other to be late.
 fn fork_base(s: &mut S, a: &Tid, b: &Tid, place: Option<Hash>) -> (Hash, Hash, Hash, Vec<Hash>) {
     let t = |p: Vec<Party>| Terms { place, ..base(p) };
-    let root = s.root("fork/root", a, t(signers(&[a, b])));
+    let root = s.root("fork/root", a, Terms { receiver: Some(Receiver::Party(0)), ..t(signers(&[a, b])) });
     let r1 = s.assent("fork/A's assent to root", a, root, root);
     let r2 = s.assent("fork/B's assent to root", b, root, root);
     let v2a = s.version("fork/v2a", a, root, root, t(signers(&[a, b])));
@@ -616,10 +621,17 @@ fn fork_cases(out: &mut Vec<Case>) {
         "G1.4",
         "while a fork of its Terms stands, the receiver is the one named by the Terms both branches replace, and the verifier MUST show the fork with that answer and MUST NOT choose a branch (G4.7).",
         Question::Receiver(root, None),
-        want(Word::NotShown, "G1.4").q("as shown"),
+        want(Word::Shown, "G1.4").q("as shown").who(Who::Signer(a.id)),
     );
-    f.want = want(Word::NotShown, "G1.4");
+    f.want.pick = 0;
     out.push(f);
+    out.push(s.case(
+        "the receiver while a fork stands is shown with the fork",
+        "G4.7",
+        "It MUST show the fork with each such answer, per place or as shown.",
+        Question::Receiver(root, None),
+        want(Word::Fork, "G4.7").q("as shown").pick(1),
+    ));
     // Resolved by a resolving update signed by everyone who signed the shared version.
     let mut s2 = s.clone();
     let r = s2.version("fork/resolving update", &a, root, root, Terms { resolves: Some(vec![v2a, v2b]), continues: Some(v2a), ..Default::default() });
@@ -739,13 +751,17 @@ fn fork_cases(out: &mut Vec<Case>) {
         want(Word::Shown, "G4.6").q("as shown"),
     ));
     // Lateness that cannot be checked: the rival names an act not held.
-    let mut s = S::default();
-    let (root, _v2a, _v2b, _) = fork_base(&mut s, &a, &b, None);
-    let mut s4 = s.clone();
+    let mut s4 = S::default();
+    let root = s4.root("late?/root", &a, base(signers(&[&a, &b])));
+    s4.assent("late?/A's assent to root", &a, root, root);
+    s4.assent("late?/B's assent to root", &b, root, root);
     let lacking = fixed("an act this verifier does not hold");
     let v2c = s4.version("late?/v2c (names an act not held)", &a, root, root, Terms { relies_on: rel(vec![lacking]), ..base(signers(&[&a, &b])) });
     s4.assent("late?/A's assent to v2c", &a, root, v2c);
+    let v2a = s4.version("late?/v2a", &a, root, root, base(signers(&[&a, &b])));
+    s4.assent("late?/A's assent to v2a", &a, root, v2a);
     s4.assent("late?/B's assent to v2c", &b, root, v2c);
+    s4.assent("late?/B's assent to v2a", &b, root, v2a);
     out.push(s4.case(
         "an update that names an act the verifier does not hold, which might show it late: which Terms are in force is unchecked",
         "G4.7",
@@ -1166,11 +1182,12 @@ fn receiver_cases(out: &mut Vec<Case>) {
     );
     c.limits = Some(Limits { receivers: 1, ..Limits::default() });
     out.push(c);
+    let w2 = s.root("receiver/W2, no receiver", &a, base(signers(&[&a, &b])));
     out.push(s.case(
         "a version that names no receiver: no one receives, not shown",
         "G1.4",
         "If a version read names no receiver ... no one receives, and the answer is **not shown**.",
-        Question::Receiver(w, Some(s.labels.iter().find(|(_, l)| l.as_str() == "receiver/A's assent to W").map(|_| w).unwrap())).with_receiver_none(&s, a.clone(), b.clone()),
+        Question::Receiver(w2, Some(w2)),
         want(Word::NotShown, "G1.4"),
     ));
     // A loop.
@@ -1190,20 +1207,6 @@ fn receiver_cases(out: &mut Vec<Case>) {
         Question::Receiver(y2, None),
         want(Word::NotShown, "G1.4"),
     ));
-}
-
-trait WithNone {
-    fn with_receiver_none(self, s: &S, a: Tid, b: Tid) -> Question;
-}
-impl WithNone for Question {
-    fn with_receiver_none(self, _s: &S, _a: Tid, _b: Tid) -> Question {
-        // A version with no receiver: the root of the agreement W2 below.
-        let (a, b) = (tid("A"), tid("B"));
-        let mut s = S::default();
-        let w2 = s.root("receiver/W2, no receiver", &a, base(signers(&[&a, &b])));
-        let _ = b;
-        Question::Receiver(w2, Some(w2))
-    }
 }
 
 fn spot_cases(out: &mut Vec<Case>) {
@@ -1739,7 +1742,7 @@ fn misc_cases(out: &mut Vec<Case>) {
         "G9.1",
         "it MUST answer **unchecked** for every answer that depends on it.",
         Question::InForce(root),
-        want(Word::Unchecked, "G4.6"),
+        want(Word::Unchecked, "G4.8"),
     ));
 }
 

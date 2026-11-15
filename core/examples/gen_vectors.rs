@@ -19,6 +19,8 @@ mod common;
 mod verdicts;
 #[path = "support/agreements_new.rs"]
 mod agreements_new;
+#[path = "support/agreements_new_grammar.rs"]
+mod agreements_new_grammar;
 
 fn hx(b: &[u8]) -> String {
     hex::encode(b)
@@ -615,6 +617,7 @@ fn main() {
     write(&dir, "signatures.json", &signatures());
     write(&dir, "verdicts.json", &verdict_vectors());
     agreements_new::write(&dir);
+    agreements_new_grammar::write(&dir);
 }
 
 /// The verdict vectors (`support/verdicts.rs`): complete acts, in one pool
