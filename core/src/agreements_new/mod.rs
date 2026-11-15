@@ -35,6 +35,7 @@ use crate::hash::Hash;
 use std::fmt;
 
 pub mod check;
+pub mod grammar;
 pub mod report;
 pub mod statement;
 pub mod terms;
@@ -194,7 +195,7 @@ impl Socket {
 
 /// In whose name an act is made, or to whom a line of a report goes: a
 /// signer, `[0, identity]`, or an agreement, `[2, root]` (E11).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Who {
     Signer(Hash),
     Agreement(Hash),
