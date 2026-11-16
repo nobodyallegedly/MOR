@@ -752,6 +752,29 @@ export class Kit {
     return mor.agreementsNewSpecs();
   }
 
+  /**
+   * Every field name the binding's builders read (wasm/src/agreements_new_js.rs), in its spelling.
+   * The binding itself skips a name it does not know, so a misspelt field (`in_force` for `inForce`)
+   * would be dropped without a word: the kit refuses it here, before anything is built (round two,
+   * Longhouse, day two). A known name in the wrong place is not caught here; the check before signing is.
+   */
+  static agreementsFieldNames(fields) {
+    const known = new Set(['act', 'agreement', 'amount', 'answers', 'authors', 'body', 'by', 'call', 'calls', 'clock', 'closes', 'cmip', 'condition', 'content', 'continues', 'control', 'data', 'envelope', 'envelopeAt', 'for', 'from', 'inForce', 'key', 'kind', 'line', 'lines', 'params', 'parties', 'place', 'powers', 'previous', 'receiver', 'reliesOn', 'replaces', 'resolves', 'role', 'rule', 'settlement', 'signer', 'spot', 'task', 'terms', 'to', 'under', 'unit', 'value', 'what', 'words']);
+    const walk = (v, path) => {
+      if (Array.isArray(v)) return v.forEach((x, n) => walk(x, `${path}[${n}]`));
+      if (!v || typeof v !== 'object') return;
+      for (const [k, x] of Object.entries(v)) {
+        if (!known.has(k)) {
+          const camel = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+          const hint = known.has(camel) ? ` (the builder spells it "${camel}")` : '';
+          throw new Error(`the field "${path ? path + '.' : ''}${k}" is not one the builder knows${hint}: nothing was built or signed. See AGREEMENTS-FIELDS.md.`);
+        }
+        walk(x, path ? `${path}.${k}` : k);
+      }
+    };
+    walk(fields, '');
+  }
+
   /** A payload from its fields (encoding 2), by the binding's builders; `params` and `content` in hex. */
   static agreementsBuild(act, fields) {
     const conv = (v, key = '') => {
@@ -760,6 +783,7 @@ export class Kit {
       if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, conv(x, k)]));
       return v;
     };
+    Kit.agreementsFieldNames(fields);
     const i = conv(fields);
     if (act === 'terms') return mor.agreementsNewTermsPayload(i);
     if (act === 'statement') return mor.agreementsNewStatementPayload(i);

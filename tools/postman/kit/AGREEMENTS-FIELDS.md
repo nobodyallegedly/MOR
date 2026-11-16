@@ -6,7 +6,7 @@
 - Hashes are 64 lowercase hexadecimal characters.
 - `previous` is one act id, or `null`. Never `[]`: an empty list is refused ("invalid type … expected a string").
 - `params` and `content` are CBOR bytes written in hex (`"f6"` is CBOR null).
-- A field the builder does not know is refused.
+- A field the builder does not know is refused by the kit, by name, before anything is built: field names are camelCase (`inForce`, `reliesOn`), and a snake_case one gets the builder's spelling in the error. (Before the update of day two, window two, such a field was dropped without a word: found by Longhouse.) A known name in the wrong place is caught by the check before signing, not here.
 - **`body.words` is a fingerprint of the words, and which hash it is has not been settled.** Draft 25 leaves it open (section 9, item 5). The kit makes both explicit and chooses neither:
   - `node kit/mor.mjs agreements words WORDS.txt` gives MOR's work hash, `tagged_hash("MOR/work", bytes)` = SHA-256(SHA-256("MOR/work") ‖ SHA-256("MOR/work") ‖ bytes). This is what Envelopes uses for media.
   - `--sha256` gives the plain SHA-256 of the same bytes.
