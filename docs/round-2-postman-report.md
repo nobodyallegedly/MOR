@@ -100,6 +100,16 @@ What happened to Ampersand's f355512a… and DubPay's 09b6b898… cannot be sett
 
 **Funding of DAO members.** A tray in both `companies` and `public` was already credited the company sum once (its first account) and each `addresses.md` line once, across runs. But within one run, an identity listed twice in `addresses.md`, or a tray named twice in `public`, was credited twice. **Fixed:** an identity is credited once, from its first line; the second is skipped and said. The company's own identity, if listed in `addresses.md`, gets both the company sum and its line: they are two credits, as configured. Tested, with a dry run first.
 
+## One key, everywhere (sixth edition, 16 November, for the 13:15 window)
+
+DubPay's report: each `identity enckey NAME --to HOME` made a **new** key. Players ended with several versions, each at different homes, and sealing between them failed: a sender reads the newest key that counts in the records it holds, and the recipient's homes disagreed. **Changed:**
+- `identity enckey NAME [--to HOME]` publishes the identity's **newest existing** key act again, chain acts first. With `--to`, only to those homes; without it, to every home the identity names.
+- A key is made only when the identity has none, or with `--new`. A new key goes to **every** home the identity names (plus any `--to`) in that one command.
+- `identity keys NAME` lists the identity's encryption-key acts, oldest first, with the newest marked. For each, it shows which homes answered 200 to it (matched by the bytes sent), which refused it and with what status (dropped once accepted later), and which homes' `/identity` records, as last fetched, show it.
+- The tray guide says: keep one key, at every home.
+
+A player who already holds several keys repairs it with `identity enckey NAME`, with no `--to`: the newest key then goes to every home.
+
 ## State
 
 A draft pull request against `claude/agreements-verifier-2`, not to be merged. CI: in the pull request.

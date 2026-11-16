@@ -437,6 +437,59 @@ export class Kit {
     return { ...made, version };
   }
 
+  /** The identity's newest encryption key, as kept here: its act's bytes, id and version; null where it has none. */
+  newestKey(name) {
+    const last = (this.load(name).encryption ?? []).at(-1);
+    if (!last) return null;
+    const file = join(this.folder, 'acts', `${last.act}.mor`);
+    if (!existsSync(file)) throw new Error(`the newest encryption key of ${name} (version ${last.version}, ${last.act}) is not in acts/: put its act file back (acts/${last.act}.mor), or make a new one with --new`);
+    return { id: last.act, version: last.version, act: new Uint8Array(readFileSync(file)) };
+  }
+
+  /**
+   * The identity's encryption-key acts, oldest first, the newest marked,
+   * and where each is known to be, from the answers held in in/: the homes
+   * that answered 200 to it (POST /acts, matched by the bytes sent), those
+   * that refused it, and those whose /identity record shows it.
+   */
+  keys(name) {
+    const f = this.load(name);
+    const all = f.encryption ?? [];
+    const out = all.map((e) => {
+      const file = join(this.folder, 'acts', `${e.act}.mor`);
+      const bytes = existsSync(file) ? new Uint8Array(readFileSync(file)) : null;
+      return { version: e.version, act: e.act, newest: e === all.at(-1), sha: bytes ? sha256(bytes) : null, file: bytes ? `acts/${e.act}.mor` : 'missing from acts/', accepted: new Set(), refused: new Map(), inRecord: new Set() };
+    });
+    const bySha = new Map(out.filter((k) => k.sha).map((k) => [k.sha, k]));
+    const byId = new Map(out.map((k) => [k.act, k]));
+    for (const n of this.answers()) {
+      let a;
+      try {
+        a = this.answer(n);
+      } catch {
+        continue;
+      }
+      if (a.outcome !== 'answered') continue;
+      if (a.method === 'POST' && a.path === '/acts' && bySha.has(a.sentBodySha256)) {
+        const k = bySha.get(a.sentBodySha256);
+        if (a.status === 200) k.accepted.add(a.to);
+        else k.refused.set(a.to, a.status);
+      }
+      const m = /^\/identity\/([0-9a-f]{64})(\?.*)?$/.exec(a.path ?? '');
+      if (m && m[1] === f.identity && a.status === 200 && a.bytes) {
+        try {
+          for (const x of mor.cborDecode(a.bytes).get(4) ?? []) byId.get(mor.actId(x))?.inRecord.add(a.to);
+        } catch {
+          // not a record
+        }
+      }
+    }
+    return out.map(({ sha, accepted, refused, inRecord, ...k }) => {
+      for (const r of accepted) refused.delete(r);
+      return { ...k, acceptedAt: [...accepted].sort(), ...(refused.size ? { refusedAt: Object.fromEntries(refused) } : {}), inRecordAt: [...inRecord].sort() };
+    });
+  }
+
   /** Every act in the identity records (GET /identity/ID) answered in in/: chains, receipts, encryption keys. */
   heldRecords() {
     const acts = [];

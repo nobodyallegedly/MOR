@@ -991,3 +991,70 @@ test('funding: a tray that is both a company and a public window gets the compan
   const j = fs.readFileSync(join(w.cfg.postmanDir, 'bank', 'journal.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
   assert.equal(j.filter((e) => e.kind === 'fund').length, 7);
 });
+
+test('identity enckey keeps one key: --to publishes the newest existing key, a key is made only when none exists or with --new, and a new key goes to every home; identity keys says where each is', async () => {
+  const h2 = await startHome();
+  try {
+    const rel = { ...relays(), 'home-2': h2.base };
+    const w = round(['dubpay'], rel);
+    const D = w.kits.dubpay;
+    const env = { ...process.env, MOR_FOLDER: join(w.root, 'dubpay') };
+    const cli = (...a) => {
+      const r = spawnKit(env, ...a);
+      assert.equal(r.status, 0, r.stderr);
+      return JSON.parse(r.stdout);
+    };
+    const d = D.newIdentity('dp', [{ ...home.home, name: 'home-1' }, { ...h2.home, name: 'home-2' }]);
+    // The first key: made, and sent to both homes in one command, even when --to names one.
+    const k1 = cli('identity', 'enckey', 'dp', '--to', 'home-1');
+    assert.match(k1.made, /first key/);
+    assert.deepEqual(k1.sentTo, ['home-1', 'home-2']);
+    await w.pm.pass();
+    // Again, with --to: the same key, to that home only; no new key.
+    const again = cli('identity', 'enckey', 'dp', '--to', 'home-2');
+    assert.equal(again.encryptionKey, k1.encryptionKey);
+    assert.equal(again.version, 1);
+    assert.deepEqual(again.sentTo, ['home-2']);
+    assert.match(again.made, /^nothing/);
+    assert.equal(D.load('dp').encryption.length, 1);
+    await w.pm.pass();
+    // A key refused at a home (sent ahead of a rotation that home lacks) is shown as refused there.
+    D.rotate('dp');
+    const k2 = cli('identity', 'enckey', 'dp', '--new');
+    assert.equal(k2.version, 2);
+    assert.deepEqual(k2.sentTo, ['home-1', 'home-2'], 'a new key goes to every home');
+    D.publish('home-1', [new Uint8Array(fs.readFileSync(join(w.root, 'dubpay', k1.file)))]);
+    await w.pm.pass();
+    for (const n of ['home-1', 'home-2']) D.relayLetter(n, 'GET', `/identity/${d.identity}`);
+    await w.pm.pass();
+    const keys = cli('identity', 'keys', 'dp').keys;
+    assert.deepEqual(keys.map((k) => [k.version, k.newest]), [[1, false], [2, true]]);
+    assert.deepEqual(keys[0].acceptedAt, ['home-1', 'home-2']);
+    assert.deepEqual(keys[1].acceptedAt, ['home-1', 'home-2']);
+    assert.deepEqual(keys[1].inRecordAt, ['home-1', 'home-2']);
+    assert.deepEqual(keys[0].inRecordAt, ['home-1', 'home-2']);
+    // A key sent alone to a home that lacks the rotation it is signed under: refused, and said.
+    const w2 = round(['dubweb'], rel);
+    const E = w2.kits.dubweb;
+    const env2 = { ...process.env, MOR_FOLDER: join(w2.root, 'dubweb') };
+    E.newIdentity('e', [{ ...home.home, name: 'home-1' }]);
+    E.publish('home-1', E.chainActs('e'));
+    await w2.pm.pass();
+    E.rotate('e');
+    const ek = E.encryptionKey('e');
+    E.publish('home-1', [ek.act]);
+    await w2.pm.pass();
+    const r = JSON.parse(spawnKit(env2, 'identity', 'keys', 'e').stdout).keys;
+    assert.deepEqual(r[0].refusedAt, { 'home-1': 409 });
+    assert.deepEqual(r[0].acceptedAt, []);
+    // Published again, chain first: accepted, and no longer listed as refused.
+    JSON.parse(spawnKit(env2, 'identity', 'enckey', 'e').stdout);
+    await w2.pm.pass();
+    const r2 = JSON.parse(spawnKit(env2, 'identity', 'keys', 'e').stdout).keys;
+    assert.equal(r2.length, 1);
+    assert.deepEqual(r2[0].acceptedAt, ['home-1']);
+    assert.equal(r2[0].refusedAt, undefined);
+  } finally {
+    await h2.stop();
+  }
+});

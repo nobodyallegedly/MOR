@@ -32,9 +32,10 @@ Acts (kept in acts/ID.mor; a private act's content key in acts/ID.key):
   check FILE... [--key HEX]     (the core library's verdict on acts held together)
 
 Sealing (private acts reach their recipients only sealed to their published encryption keys):
-  identity enckey NAME [--to HOME,HOME]   (a new encryption key, with the letters that publish it to each home,
-                                its chain acts first; homes named by relays.md name by default.
-                                After any rotation: publish the rotation to every home, then the key again)
+  identity enckey NAME [--to HOME,HOME] [--new]   (publishes your newest encryption key, chain acts first, to each home:
+                                to every home you name by default, or to --to. A key is made only when you have none,
+                                or with --new; a new key goes to every home you name, in this one command)
+  identity keys NAME            (your encryption keys, the newest marked, and which homes are known to hold each)
   seal NAME ACTFILE --to ID,ID --via RELAY   (where a recipient's key is not held yet, the kit writes the
                                 letters asking for its record and seals on your next try, after a pass)
   open NAME (--letter LETTER | FILE)   (a sealed container, or a feed page from GET /feed?to=YOUR-ID)
@@ -81,7 +82,7 @@ function parse(argv) {
     const a = argv[i];
     if (a.startsWith('--')) {
       const k = a.slice(2);
-      const flags = ['private', 'chain', 'verbose', 'save', 'empty', 'json', 'sha256'];
+      const flags = ['private', 'chain', 'verbose', 'save', 'empty', 'json', 'sha256', 'new'];
       const many = ['acts', 'held'];
       if (flags.includes(k)) opt[k] = true;
       else if (many.includes(k)) {
@@ -202,18 +203,31 @@ function main(argv) {
     }
     if (sub === 'list') return say(kit.names().map((n) => `${n} ${kit.load(n).identity}`).join('\n') || 'no identities yet');
     if (sub === 'enckey') {
-      const e = kit.encryptionKey(rest[0]);
-      const homes = kit.load(rest[0]).homes;
-      const to = opt.to ? opt.to.flatMap((x) => x.split(',')).filter(Boolean) : homes.map((h) => kit.homeName(h)).filter(Boolean);
-      const unnamed = opt.to ? [] : homes.filter((h) => !kit.homeName(h)).map((h) => h.operator);
-      const letters = to.length ? kit.publishKey(rest[0], e.act, to) : [];
+      const name = rest[0];
+      const homes = kit.load(name).homes;
+      const all = homes.map((h) => kit.homeName(h)).filter(Boolean);
+      const unnamed = homes.filter((h) => !kit.homeName(h)).map((h) => h.operator);
+      const asked = opt.to ? opt.to.flatMap((x) => x.split(',')).filter(Boolean) : [];
+      // One key, everywhere: the newest existing key is published again; a key is made only when there is none, or with --new,
+      // and a new key goes to every home the identity names (and any --to) in this one command.
+      let e = opt.new ? null : kit.newestKey(name);
+      const made = !e;
+      if (made) e = { ...kit.encryptionKey(name) };
+      const to = made ? [...new Set([...all, ...asked])] : asked.length ? asked : all;
+      const letters = to.length ? kit.publishKey(name, e.act, to) : [];
       return say({
         encryptionKey: e.id,
         version: e.version,
         file: `acts/${e.id}.mor`,
-        ...(letters.length ? { letters, sentTo: to, note: 'to each home: the identity’s chain acts first, then the key, so that no home refuses it. Read the answers after the next pass: 200 is kept; 409 means that home lacked a chain act' } : {}),
-        ...(unnamed.length || !letters.length ? { next: `the kit cannot name ${unnamed.length ? `the homes of operators ${unnamed.join(', ')}` : 'any of your homes'}: publish it to each by its name in relays.md, the chain first: node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/${e.id}.mor` } : {}),
+        ...(made ? { made: opt.new ? 'a new key (--new): it replaces the one before for anyone sealing to you; it goes to every home you name' : 'your first key: it goes to every home you name' } : { made: 'nothing: this is your newest existing key, published again (--new makes another; one key at every home is what lets others seal to you)' }),
+        ...(letters.length ? { letters, sentTo: to, note: 'to each home: the identity’s chain acts first, then the key, so that no home refuses it. After the next pass, identity keys ' + name + ' shows where each key is' } : {}),
+        ...(unnamed.length || !letters.length ? { next: `the kit cannot name ${unnamed.length ? `the homes of operators ${unnamed.join(', ')}` : 'any of your homes'}: publish it to each by its name in relays.md, the chain first: node kit/mor.mjs publish ${name} --to HOME --chain acts/${e.id}.mor` } : {}),
       });
+    }
+    if (sub === 'keys') {
+      const k = kit.keys(rest[0]);
+      if (!k.length) return say(`${rest[0]} has no encryption key yet: node kit/mor.mjs identity enckey ${rest[0]}`);
+      return say({ keys: k, note: 'acceptedAt: homes that answered 200 to the key; refusedAt: homes that refused it (and have not accepted it since); inRecordAt: homes whose /identity record, as last fetched, shows it. Others seal to the newest key that counts for them: put the newest at every home (identity enckey NAME)' });
     }
     if (sub === 'evidence') {
       const [name, ...letters] = rest;
@@ -236,7 +250,7 @@ function main(argv) {
         letters: l.letters,
         sentTo: l.sentTo,
         note: `to every home it had before and every home it names: the chain acts first (the rotation last of them), then your ${l.keys} encryption-key act(s), so each home's record carries them, then the asks for your record and the home operator's record there`,
-        next: `after the next pass: node kit/mor.mjs identity evidence ${rest[0]} ${recordLetters.join(' ')} (the bank follows the rotation only from these receipts). Encryption keys signed before the rotation still count; a new one (identity enckey ${rest[0]}) counts for readers only once they hold these receipts`,
+        next: `after the next pass: node kit/mor.mjs identity evidence ${rest[0]} ${recordLetters.join(' ')} (the bank follows the rotation only from these receipts). Encryption keys signed before the rotation still count; a new one (identity enckey ${rest[0]} --new) counts for readers only once they hold these receipts`,
         ...(l.unnamed.length ? { byHand: `the kit cannot name the homes of operators ${l.unnamed.join(', ')} (no /info answer held): send them the chain and your keys by hand, node kit/mor.mjs publish ${rest[0]} --to HOME --chain acts/KEY.mor` } : {}),
       });
     }
