@@ -500,11 +500,26 @@ export class Kit {
       } catch {
         continue;
       }
-      if (a.outcome !== 'answered' || a.status !== 200 || !/^\/identity\/[0-9a-f]{64}(\?.*)?$/.test(a.path ?? '') || !a.bytes) continue;
+      if (a.outcome !== 'answered' || a.status !== 200 || !a.bytes) continue;
+      const isRecord = /^\/identity\/[0-9a-f]{64}(\?.*)?$/.test(a.path ?? '');
+      const isLine = /^\/feed\?signer=[0-9a-f]{64}(&.*)?$/.test(a.path ?? '');
+      if (!isRecord && !isLine) continue;
       let rec;
       try {
         rec = mor.cborDecode(a.bytes);
       } catch {
+        continue;
+      }
+      if (isLine) {
+        // A signer's public acts (GET /feed?signer=ID): the line a rotation's kept ancestry is rebuilt from. An act
+        // signed under the binding a rotation replaced (an encryption key published before it) counts only where its
+        // line, up to the kept tip, is held (Identity rules 33 to 35, F298); one home's record does not carry it.
+        const walk = (x) => {
+          if (x instanceof Uint8Array) acts.push(x);
+          else if (Array.isArray(x)) x.forEach(walk);
+          else if (x instanceof Map) for (const y of x.values()) walk(y);
+        };
+        walk(rec);
         continue;
       }
       if (!(rec instanceof Map)) continue;
@@ -558,6 +573,16 @@ export class Kit {
       // chain. One home's record carries its own receipts only. So: the recipient's record at each of its homes the
       // kit can name, and each home operator's record.
       const asked = [];
+      // The signer's public line, at each home the kit can name: an encryption key signed before a rotation counts
+      // only once the line up to the rotation's kept tip is held (Identity rules 33 to 35), and the record does not
+      // carry it (round two, day two: The Back Row's key).
+      for (const op of this.operatorsOf(id)) {
+        const r = this.homeName({ operator: op });
+        if (r && !this.asked(r, `/feed?signer=${id}`)) {
+          letters.push(this.relayLetter(r, 'GET', `/feed?signer=${id}`, null, { name: Kit.letterName('line') }).name);
+          asked.push(`its public line at ${r}`);
+        }
+      }
       for (const op of this.operatorsOf(id)) {
         const r = this.homeName({ operator: op });
         if (r && ask(r, id)) asked.push(`its record at ${r}`);
