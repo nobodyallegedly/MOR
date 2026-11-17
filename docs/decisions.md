@@ -297,6 +297,9 @@ The research is `docs/strangers-2026-11/`.
 **Waves** (17 November). He set the windows going before the reset, then: "We'll always work in waves, they start from you, trickle to team, and then back to you to prepare the next one."
 - *Arrived at (to check):* work runs in waves. Each starts with the MOR lead's assignments, goes to the windows and their sessions, and comes back to the MOR lead, who prepares the next wave from what returned.
 
+**One player is Fable** (17 November). He: "When we will look at the findings of the simulation take everything from Odile Ferrant aka Tally aka the lurker as from Fable"
+- *Arrived at (to check):* in the simulation's findings, everything from the player Odile Ferrant (also Tally, also "the lurker") is read as coming from Fable, not from the model the other players run on. The research window, itself Fable, is to tag it so.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
