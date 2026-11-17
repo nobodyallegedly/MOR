@@ -347,6 +347,9 @@ The research is `docs/strangers-2026-11/`.
 **An evidence and accounting layer** (17 November). Asked for "an interesting definition of MOR" a window gave at its end, the MOR lead fetched the close of `docs/strangers-2026-11/agreement-grammar.md` (the stranger window that worked out what agreeing requires without being told of MOR): "The record becomes an evidence and accounting layer: it proves who owes what and who lied, and it moves nothing. Its only force is what a proven liar stands to lose." He quoted it back, then: "An evidence and accounting layer…. That bit has to complement the opening definition of MOR"
 - *Arrived at (to check):* the stranger's sentence complements the opening definition of MOR (today the MICS's "The test": "MOR is the law where bytes can prove it, and keeps the record where they cannot"), to be placed when the MICS is rewritten.
 
+**The Dubsar agents coordinate on MOR** (17 November). He: "Worth noting, the three Dubsar agents DubPay, DubLaw and DubWeb use MOR to coordinate during the waves."
+- *Arrived at (to check):* noted, not a decision: the Dubsar Suite lead's three agents (DubPay, DubLaw, DubWeb) coordinate with each other on MOR during the waves.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
