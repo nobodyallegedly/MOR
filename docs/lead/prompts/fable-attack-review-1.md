@@ -16,7 +16,7 @@ Nobody, allegedly's words, quoted from the ledger (`docs/decisions.md`, branch `
 10. **Only rules in the hashed text.** "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested."
 11. **Vouchers** (his first project, not the core): "Yes, each voucher becomes currency, only those who need redeeming them redeem. Voucher then disappears." "The voucher is spent. The promise of something was fulfilled" And: "the eggs from coop and the eggs from storby could end up being priced differently by the market…" "That's the rating agencies being dictated by a market"
 
-**Still the budget rule:** "Once that is over, we.ll focus the rest of the budget on reviewing, no redrafts, no recode." The rewrite is not decided: "Before redrafting any layer I want to really look at the findings in details, find the right questions and then find one last way for me to zoom out before deciding on the rewrite." So wave 2 reads, maps and attacks; it writes no rule and changes no code.
+**Still the budget rule:** "Once that is over, we.ll focus the rest of the budget on reviewing, no redrafts, no recode." The rewrite is not decided: "Before redrafting any layer I want to really look at the findings in details, find the right questions and then find one last way for me to zoom out before deciding on the rewrite." So this review reads and attacks; it writes no rule and changes no code.
 
 ## Read, and only these
 
