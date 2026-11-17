@@ -366,6 +366,9 @@ The research is `docs/strangers-2026-11/`.
 - Then he: "Yes, it.s still true under the right cMIPs. Agreements is not to be used bare. It's to build on top of."
 - *Arrived at (to check):* the right of exit still holds, through the cMIPs an agreement chooses (an exit is something Terms can carry, in the update condition's socket or another); the grammar bare has none. Agreements is not meant to be used bare; it is built on.
 
+**What the core is for** (17 November, the evening review of wave 2; Fable's attack review, question 2). The MOR lead leaned that whoever a version names as receiver stays answerable for what is paid under it, after a newer version replaces her. He: "Those sentences are why agreement was not right… not because the ideas were wrong, but because it forces the protocol into a corner instead of doing what we meant. ID and text are universal, development is definition, the rest is to build on top of."
+- *Arrived at (to check):* the receiver's duty after an update is not a core rule; it is for the cMIPs Terms choose. Rules that settle how people should behave in a deal corner the protocol, however right the idea. Identity and Text are universal; Development is definition; the rest is built on top of.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
