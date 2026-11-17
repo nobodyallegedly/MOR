@@ -339,6 +339,8 @@ The research is `docs/strangers-2026-11/`.
 
 **A companion for Agreements** (17 November). He: "Agreements has become quite abstract. It will need a good companion that explains why it is structured as such and how we got that that shape."
 - *Arrived at (to check):* Agreements gets a companion document explaining why it is shaped as it is and how it got there. With "Only rules in the hashed text", the reasons and the history go there.
+- Then he: "The how we got there needs to build around the research we ran on agreeing. « What is the minimum two people have to write »"
+- *Arrived at (to check):* the companion's story of how Agreements got its shape is built around the research on how people agree, with his question as its spine: what is the minimum two people have to write.
 
 ## Not carried into this stint unless he says so
 
