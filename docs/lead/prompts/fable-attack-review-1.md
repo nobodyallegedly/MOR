@@ -1,6 +1,6 @@
 An adversarial review of eleven decisions made today on MOR's new Agreements, in the MOR repository (`nobodyallegedly/MOR`). Read only: change no text, code or vectors, and decide nothing. Your job is to break the decisions before anything is written from them.
 
-## Today's decisions (all four assignments of wave 2 read this)
+## Today's decisions
 
 Nobody, allegedly's words, quoted from the ledger (`docs/decisions.md`, branch `claude/lead-records-2`). Read each entry whole there, under its heading; each closes with an "Arrived at (to check)" line, which is the MOR lead's reading. Where that line says more than his words, his words win.
 
