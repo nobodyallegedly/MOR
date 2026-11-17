@@ -363,6 +363,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* "A way out by default" is replaced. There is no default way out of an agreement. Leaving is an update, a new version in the agreement's chain without the leaver, and it passes by the update condition like any other: by default, with the others' signatures; otherwise under whatever exit conditions the Terms set when she joined. The MOR lead's reconciliation (leaving MOR is always possible; a lock shown plainly before signing) is his lean, not yet agreed.
 - Asked whether Terms with no exit conditions are shown plainly before signing, he: "No, what I mean is written agreements have always been about not being able to escape the agreement. That is why humans have started writing in the first place… so right of exit? No, not from an agreement."
 - *Arrived at (to check):* right of exit does not apply to an agreement; being unable to escape it is what writing it down is for. The MOR lead's lean of a plain warning before signing is withdrawn. Open: the cornerstone's own wording ("anyone can leave anything and take what is theirs"), which no longer holds for agreements as written.
+- Then he: "Yes, it.s still true under the right cMIPs. Agreements is not to be used bare. It's to build on top of."
+- *Arrived at (to check):* the right of exit still holds, through the cMIPs an agreement chooses (an exit is something Terms can carry, in the update condition's socket or another); the grammar bare has none. Agreements is not meant to be used bare; it is built on.
 
 ## Not carried into this stint unless he says so
 
