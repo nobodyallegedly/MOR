@@ -417,7 +417,257 @@ Three helpers read batches of nine with the same files; every claim below was ch
 
 ---
 
+## Part 3. What the evening's decisions change (17 November, evening)
+
+Written by Claude, a session under the codemeister of MOR, for Nobody, allegedly, and the MOR lead. A record of work: it sets out questions and decides nothing. No text, code or vector was changed for it.
+
+**The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "Once that is over, we.ll focus the rest of the budget on reviewing, no redrafts, no recode."
+
+**What this part does.** On the evening of 17 November, after the review of wave 2, Nobody, allegedly, and the MOR lead arrived at six more things; five of them (numbered 1 to 5 in wave 3's assignment, `docs/lead/assignments/2026-11-17-wave-3-common.md`, branch `claude/lead-records-2`) can touch what a verifier answers. For each, this part asks the same five things as Part 1. To keep the two sets of numbers apart, the afternoon's decisions are named here as Part 1 names them (*Part 1's decision 4*), and tonight's as *tonight's 1* to *tonight's 5*. Case numbers are positions in `grammar.json`'s `cases`, from 0, as in Part 1.
+
+**The grounds.** As in Parts 1 and 2, every claim carries one: **Run** (a command, and the case), **Read** (a file and its lines, or a rule), **Inferred** (this session's reasoning, with what would confirm it). What verifier 2 answers today is Run: `cargo test -p mor-core --locked` passes (570 tests, none failed), `cargo run -q -p mor-core --example gen_vectors --locked` writes the vectors again and `git diff --exit-code core/vectors` shows nothing moved, and `core/vectors/agreements_new_grammar_check.py` prints "grammar.json: 115 of 120 cases judged again, and agree" (the five it does not judge include 58 and 59, which this part names). What *would* change cannot be run, since no code changes.
+
+**A note on the files.** The assignment points to `fork.rs`; there is no such file (Run: `ls core/src/agreements_new/grammar/`). Forks of Terms are read in `chain.rs` (`walk`, `step_from`, `not_late`, `late_against`, `resolves`); forks in one signer's line in `line.rs` (`stopped`).
+
+### Tonight, in one table
+
+| Tonight's | Flips, under the session's leans | Flips under other readings | Go | New cases |
+|---|---|---|---|---|
+| 1. The holder at the act cited | none | none | none | 1 |
+| 2. Bound, not named | none | none | none | 3 |
+| 3. A race changes nothing | 36, 101, 102 (37's words change, not its word) | 37 (to shown, or to unchecked); 31 (to shown) | none | 4 |
+| 4. No default way out | 58 | none | none | 1 |
+| 5. What the core is for | a list only (10 checks) | | | |
+
+The counts against Part 1's, with what is counted twice, are at the end of this part.
+
+---
+
+### Tonight's 1. The holder at the act cited
+
+**In plain words.** Terms about a baked work must have, among their parties, whoever held the baker's rights at the act of the envelope's chain those Terms cite (the bake, or a sale), not whoever holds them now. Verifier 2 already reads it so. Nothing flips. What changes is in Part 1: a reading under which two cases flipped is gone.
+
+1. **His words:** "It's wording, agreed." (to the MOR lead's lean "that the rule moves as decided and reads the holder at the act the Terms cite, never the current one.")
+   **Arrived at (to check):** "the baker's rule moves to Envelopes and reads the holder of the baker's rights at the envelope act the Terms cite, as "The holder at the time" has it. "Current" was the MOR lead's wording, withdrawn."
+   Where it says more than his words: nothing that changes an answer. "moves to Envelopes" repeats the afternoon's "Where three rules live", which this exchange did not reopen.
+
+2. **A story.** Ana bakes a song. Ana and Carla sign Terms T that cite the bake. Later Ana sells the baker's rights to Ben. Dana holds the acts and asks whether T count.
+   - Today Dana is shown: T **count**; Ana held the rights at the bake and is a party, bound by T (case 101, Run). Terms Ben and Carla sign citing the sale need Ben (103, Run); Terms Ana signs alone citing the sale are **invalid** (104, Run).
+   - Under the decision Dana would be shown the same. Under the withdrawn "current holder", T would not count, since Ben is no party.
+
+3. **Cases and vectors.**
+   - Flip: none. Read: `baker.rs`, `baker_inner`, line 59, asks the chain for the holder at `x`, the Terms' `envelope_at` (`chain.at(e, x)`); `layers.rs`, `TableChain::at`, walks back from that act to the bake. No function reads the chain as it stands now. Run: the answers of 99, 101, 103, 110, 112 and 113 all say "the holder of the baker's rights at the act the Terms cite" or "the holder at the act cited".
+   - Go: none beyond Part 1's decision 8 (the seven baker cases that move with the rule).
+   - **What it changes in Part 1, decision 8.** Part 1 counted 101 and 102 as flipping under "current holder" (Part 1, decision 8, points 3 and 5, and the summary table's "101, 102 under one reading"). That reading is withdrawn tonight: Part 1's lean ("the holder at the act cited") is now what was arrived at. The move to Envelopes stands; what Envelopes must give is the holder **at an act**, which is what verifier 2's stand-in already asks of that layer (`layers.rs`, `EnvelopeChain::at`, "The holder at an act of the envelope's chain (G14.1)"). Part 1's seam case (8a) stays as written. Cases 101 and 102 come back under tonight's 3, for another reason.
+   - The code: `baker.rs`, `baker_inner`, `late_terms`; `layers.rs`, `EnvelopeChain::at` and `transfers_after`. Read.
+
+4. **New cases:**
+   - (1a) Two sales in a line (Ana to Ben, then Ben to Carla), and Terms citing the first sale, with Ben as a party: they count (draft 25, G14.2: "Terms that cite that transfer, or a later act of the chain, need that holder"). No vector has two transfers one after the other: the one chain with two transfers is the double sale, both following the bake (Read: `cases.rs`, `baker_cases`, `s3`).
+
+5. **Where it can be read two ways.** None found that changes a verifier's answer. Each Terms act reads the holder at its own `envelope_at`, an update included (Read: `chain.rs`, `is_update` calls `baker_gate` on the update itself, line 171).
+
+### Tonight's 2. Bound, not named
+
+**In plain words.** It is not enough for the Terms to list the holder of the baker's rights. Her own signature must stand behind them: her assent to these Terms, or her assent to an earlier version whose update condition let these through. Verifier 2 mostly asks exactly that: Terms that list the holder, who never signed, count for nothing (case 110). But reading its code, one path seems to let a holder count as bound when she signed an earlier version that was never really replaced; and it counts two things the arrived-at line does not name: an agent's assent made for her, and a chain of several updates.
+
+1. **His words:** "How does that differ truly in the implementation of it", then "Bound, absolutely bound".
+   The MOR lead's answer between them: "named, the verifier looks for the holder's identity among the parties; bound, it looks for the holder's own signature behind the Terms, either her counted assent to them or her assent to an earlier version whose update condition answered valid; it matters because Terms can come into force without every named party signing".
+   **Arrived at (to check):** "Terms that rely on the baker's rights count only if the holder at the act cited is bound by them: her own signature stands behind the Terms, either her assent to them or her assent to an earlier version whose update condition let them through. Being named is not enough."
+   Where it differs from what it settles: draft 25's "Bound by them" (G14.2) names more ways than the line: "by an assent made for it under a power, or as an agreement's signature (G5.1(b), G1.2)", and "an update condition the party signed into the original, or was bound by there, included". The line names only her own assent, to these Terms or to an earlier version. Whether those other ways still count is point 5. The line also does not repeat draft 25's "the Terms are, or have been, a version".
+
+2. **A story.** Ana bakes a song. Terms T name Ana and Carla and cite the bake; Carla assents, Ana does not.
+   - Today Dana is shown: T **not shown**, "they count for nothing until it is" (case 110, Run).
+   - Under the decision: the same.
+
+   **A second story, where verifier 2 may accept less** (Inferred). Ana and Carla both sign Terms T0 (no update condition, no envelope). Carla alone writes T1, replacing T0, naming Ana and Carla, with an update condition under which any one of the original's signers is enough, and no envelope. T1 never replaces T0: by default T0 needs Ana's signature too. Carla then writes T2, replacing T1, naming Ana and Carla and Ana's envelope, citing the bake, with an `in_force` rule asking for Carla's assent alone. Only Carla signs T2.
+   - Today Dana would be shown, asking the baker's question of T2: **shown**, Ana "one of their parties, bound by them". Read: `baker.rs`, `bound_raw`, lines 141 to 163, asks `signed_by` of T1; `force.rs`, `signed_by`, lines 502 to 519, counts Ana as having signed T1 because she signed T0 and T1 "still names" her, without asking whether T1 ever replaced T0; T1 names no envelope, so `baker_gate` on it passes (line 152); T1's condition answers valid for T2, and T2 is in force by its own rule (line 153).
+   - Under the decision: **not shown**. Ana's signature stands behind T0 only, and T0's update condition never let T1 through.
+   - What would confirm it: a case with these acts. Which Terms are in force would still be T0, since the walk never reaches T1 (Read: `chain.rs`, `walk`); only the baker's answer about T2 is touched.
+
+3. **Cases and vectors.**
+   - Flip: none. Case 110 already answers not shown for a holder named and unsigned (Run). In 99, 101, 103, 112 and 113, the holder signs in her own name (Run: their acts include "baker/K's assent", "baker/N's assent", "baker/L's assent").
+   - Go: none.
+   - No vector has an assent made for the holder under a power, or a holder bound through an update (Run: no act in cases 99 to 113 is made "for" anyone; Read: `cases.rs`, `baker_cases`).
+   - **What it changes in Part 2.** OI-148 and OI-151 were marked "reopened by 1" (the afternoon's "Three lines cut back"). Tonight's 2 settles their main half: being a party is not enough. Verifier 2's answers there are already the decision's: 110 stays not shown, and OI-148's V2, which names Ben but which Ben never signs, stays not shown (Read: `baker.rs`, `bound_raw`). What stays open in OI-151: an assent made for the holder under a power, and the Terms replaced asked "before and apart from G14.3".
+   - The code: `baker.rs`, `baker_inner` (lines 77 to 82, named or a role; lines 108 to 116, bound), `bound_raw` (lines 141 to 163); `force.rs`, `counted` (from line 218), `name_of` (line 53), `signed_by` (from line 473). Read.
+
+4. **New cases:**
+   - (2a) The second story above: an earlier version that never replaced the one the holder signed.
+   - (2b) The holder's assent made for her by an agent, under a power she gave (G5.1(b)).
+   - (2c) The holder signed V1; V2 replaced V1 by V1's update condition, without her; V3 replaced V2 by V2's condition, without her. Is she bound by V3?
+
+5. **Where it can be read two ways.**
+   - **An agent's assent.** The words: "her own signature stands behind the Terms". (i) Only an assent she signed herself; (ii) also one made for her under a power she gave, as draft 25's "Bound by them" says. Verifier 2 reads (ii): `counted` counts an assent in her name whoever signed it (`force.rs`, `name_of`). A verifier's answer changes: under (i), Terms her agent signed for her count for nothing. **The session's lean:** (ii); the power is her own signature, given earlier. A question.
+   - **More than one step.** The words: "her assent to an earlier version whose update condition let them through". (i) Any earlier version she assented to, every step after it let through by the condition before it; (ii) only the version she assented to, whose own condition let these Terms through. Verifier 2 reads (i), and without checking each step (story 2). Under (ii), V3 in (2c) counts for nothing. **The session's lean:** (i), as G5.1(c) chains and draft 25 says "or was bound by there"; each step checked.
+
+### Tonight's 3. A race changes nothing
+
+**In plain words.** Sometimes two acts decide something together and nothing shows which came first: neither names the other, and no place or other anchoring orders them. Tonight's answer: whatever was being attempted does not take effect, and things stay as they were. Verifier 2 already does this for two rival updates of the same Terms (a fork: both stop, the old Terms stay). It does not in four places: a withdrawal racing the Terms' completion ("not shown", 36 and 37); a withdrawal of unclear order that is simply left out when counting who must sign an update (A6), so the update goes through; two withdrawals of one assent, where it picks one by its hash (A12); and Terms about a baked work racing a sale of the rights, which count (101 and 102).
+
+1. **His words**, in order: "Let.s truly think of people here for a minute. I'm having problems understanding who is trying to save what since she removed the assent (dunno why' but I don't like this word…)"; "But, was there a moment when all three had signed, before she assented? The problem is that there is, in this scenario, no way to figure it out. Correct?"; "How can nothing put them in order, that is what I struggle with, their both interactions with the same act from the same id, only an anchor can settle it?"; "So, it is narrower. Let.s explore it now…"; "It gets worse when you imagine this happening on an update of a long relationship…"; and the answer: "Yes, these timing issues when no anchoring is involved should always force whatever was being done not to work".
+   The MOR lead's three ways, before it: "(a) unchecked, (b) a fixed tie-break, (c) a fork, where both tips stop and the last version everyone shared stays in force; leaned (c)". And: "under (c) the relationship carries on under the last shared version and only the change waits; under (a) everything citing the update hangs".
+   **Arrived at (to check):** "where the order of acts that decide something cannot be told (no knot, no place, no anchoring), what was being done does not work: the change does not take effect, and the last version everyone shared stays in force, as with rival tips. Those who want the change settle it by a new act. This refines "Unclear means unchecked" for races."
+   Where it says more than his words:
+   - His words say what fails ("whatever was being done"), not what stays. "the last version everyone shared stays in force" is the MOR lead's option (c), which his "Yes" answered.
+   - "(no knot, no place, no anchoring)": his words say "no anchoring". A knot (one act naming another) is not an anchoring in draft 25 (G13.4: "Whether anything is later than an act, and what time it was, are never shown by citing."), but it does order two acts (G13.3). Reading it in is the MOR lead's, and it changes nothing in the vectors (every case ordered by knots stays: 29, 30, 32 to 35, 105, 106).
+   - "Those who want the change settle it by a new act" is the MOR lead's.
+   - "This refines "Unclear means unchecked" for races" places it against Part 1's decision 4; his words do not mention it. That is the first question in point 5.
+   - The wave's assignment glosses "does not work" as "the change is not shown as taking effect, and the last shared version stays."
+
+2. **A story** (A6, as Part 1 tells it). Terms O name Ana, Ben and Carla; their `in_force` rule asks for any two of the three; there is no place and no update condition. All three assent. Carla then signs a counter signature naming only her own assent; nothing shows whether it came before or after O came into force. Ana and Ben then sign an update U that takes Carla's share.
+   - Today Dana is shown: O in force, and U **valid by default** (Inferred, as in Part 1: `force.rs`, `signed_by`, line 481, counts only the assents that surely count, so Carla is not among "everyone who signed the original"). Carla is bound by U without signing it.
+   - Under tonight's decision, every reading gives the same result: U **does not work**. It replaces nothing, and O stays in force. Either Carla's withdrawal is what fails, so her assent counts and U lacks her signature; or U is what was being done, and it fails.
+   - Under Part 1's decision 4, as Part 1 leaned: U **unchecked**. Same outcome for Carla, different word for Dana (point 5, first question).
+
+   **Three shorter stories.**
+   - *Ana and Ben* (cases 36, 37). Terms T name Ana and Ben; both must assent. Ana assents, then withdraws; Ben assents; neither act names the other. Today Dana is shown: whether T are in force, **not shown**; the withdrawal, **not shown** ("citing gives no order between the counter signature and the Terms coming into force (G4.10)", Run). Under the decision: either T never came into force, or Ana's withdrawal failed and T are in force (point 5, second question).
+   - *Ana's two withdrawals* (A12). Ana assents to T (Ana, Ben). Ana withdraws in her own name; Carla, holding Ana's power to withdraw for her, also withdraws for her; neither withdrawal names the other. Today verifier 2 reads the one whose id sorts first, with or without a place (Read: `force.rs`, `first_counter_signature`, lines 347 to 376: `found.sort()`, and no place read). That is a fixed tie-break, the MOR lead's way (b), which was not taken. Under the decision: where T name a place, the place orders the two (an anchoring is involved); where nothing orders them, whatever was being done does not work.
+   - *Ana's sale* (cases 101, 102). Ana bakes; Ana and Carla sign Terms T citing the bake; Ana sells the rights to Ben; nothing shows whether T came before the sale or after. Today Dana is shown: T **count**, and are in force (Run). If this is a race, under the decision T **do not work**: not shown, and nothing is in force (point 5, third question).
+
+3. **Cases and vectors.**
+   - **Would flip, by reading (point 5):**
+     - 36, "a counter signature and a completing assent, neither naming the other: whether the Terms are in force is not shown": **not shown** to **shown** (it cancels), if the Terms' coming into force is what fails; unchanged in its word, with "it changes nothing" for its reason, if the withdrawal fails.
+     - 37, "with the counter signature's order not shown, in force is not shown": stays **not shown** in its word if the coming into force fails, its words becoming "not in force"; **shown** if the withdrawal fails; **unchecked** under Part 1's decision 4.
+     - 101, "after a sale, Terms made with the holder of the moment keep counting", and 102, "after a sale, Terms with the holder of the moment stay in force": **shown** to **not shown**, if Terms racing a sale are a race.
+     - 110's words, not its word: its Terms also race the sale in its acts; under the same reading they would be not shown for the race before the question of being bound is reached (Read: `baker.rs`, `baker_inner` reads lateness, lines 95 to 105, before being bound, lines 108 to 116).
+   - **Already "does not work" today** (no flip): the forks of Terms, 17 to 21, 26 and 27 (both tips stop and the shared version stays in force, G4.7, G12.2, G12.7; Read: `chain.rs`, `step_from`, `Next::Fork`, and `walk`, line 386); the forks in a signer's line, 38 to 40 (both tips stop; Read: `line.rs`, `stopped`); 59, "an act made under a power after the Terms that gave it were replaced: not bound", where the agent's act and the delegation's end have no order and the act binds no one ("citing gives no order between the act and the replacing Terms coming into force (G5.4, G13.3)", Run; Read: `force.rs`, `before_in_force`, line 211); and 111, the double sale, where that layer gives no holder (not shown, Run). Of these, the independent Python check does not judge 59 (Run).
+   - **Not a race: the order is shown** (no flip): by knots, 29, 30, 32 to 35, 105, 106; by a place, 65 (Run).
+   - **A missing act, not a race:** 31, "an update that names an act the verifier does not hold, which might show it late: which Terms are in force is unchecked" (point 5, fifth question).
+   - Go: none.
+   - The code each answer comes from: `force.rs`, `counter_cancels` (lines 400 to 438; "not shown" at line 437), `in_force_raw` (lines 302 to 330; line 325), `counted` (line 262: an assent of unclear order goes to `maybe`), `signed_by` (line 481: only the sure ones), `update_raw` (lines 547 to 597), `first_counter_signature` (lines 347 to 376), `before_in_force` (lines 182 to 212); `baker.rs`, `late_terms` (lines 168 to 236: no order shown, so "not late", line 235); `chain.rs`, `step_from` and `not_late` (forks). Read.
+
+   **What an anchoring changes, where the text names one.** Draft 25 names three: the place the Terms name (G4.6, G7.2), the clock they name (G7.4), and, where they name neither, the anchoring the reader accepts (G13.4). Where there is one, the order is told, and tonight's decision does not apply.
+   - Verifier 2 reads the place for a withdrawal against the Terms' coming into force (`force.rs`, `counter_cancels`, lines 414 to 427: G4.10, "With a place, the positions it gives settle it"), for two rival updates (`chain.rs`, `late_against`; case 65), for an act under a power (`before_in_force`, line 187; G5.4) and for Terms against a sale (`baker.rs`, `late_terms`, place and clock; G14.2(b)). Read.
+   - It does not read it to choose between two withdrawals of one assent (A12, above). Under the decision, where a place is named, it would.
+   - A3 (two rival updates under a place, signed in parallel): with a place, an anchoring is involved, so tonight's decision does not reach it, and A3's question in `verifier-2-readings-in-human.md` stays as it was. Without a place, two rival updates are a fork already (17).
+
+4. **New cases** no vector covers:
+   - (3a) A6 itself, with an `in_force` rule that does not need Carla. This is Part 1's (4a); counted once, under Part 1.
+   - (3b) A12 with no place: two withdrawals of one assent, one made under a power, neither following the other.
+   - (3c) A12 with a place that orders them: today verifier 2 picks by hash.
+   - (3d) Terms citing the bake, and a sale, with a place that orders them: before the sale, they count; after it, late. No baker case has a place (Run: only cases 60, 61, 63, 64 and 65 carry places).
+   - (3e) A race with no place named, under an anchoring the reader accepts (G13.4): case 64 has a reader's anchoring and no race (Run).
+
+5. **Where it can be read two ways.**
+   - **First: tonight's words against "Unclear means unchecked" (Part 1's decision 4).** Tonight's line: "the change does not take effect, and the last version everyone shared stays in force". Part 1's decision 4, as arrived at: "Where it is unclear whether someone's assent counts, every answer that depends on it is unchecked; an update is not shown as replacing the old Terms until that person's position is clear." For A6, and for 36 and 37, these give two different words for the same acts.
+     - (i) For a race, the word is the one for things that do not work: the update replaces nothing (**not shown**), and the old Terms are **shown** in force. **Unchecked** stays for what is unclear for another reason: a private act that cannot be read (A9), a missing act (31), a cMIP not held.
+     - (ii) **Unchecked** stays the word for a race too, and "does not work" says only what a reader may act on.
+     - A verifier's answer changes: yes. On A6, U is not shown under (i) and unchecked under (ii); on 37, see the next question.
+     - **The session's lean:** (i), since the line says it "refines" Part 1's decision 4 "for races", and "stays in force" is an answer, which unchecked is not. Part 1's lean for 37 (to unchecked) would then not hold for 37. A question for Nobody, allegedly, and the MOR lead.
+   - **Second: in a withdrawal's race, what is "whatever was being done"?** (Cases 36, 37, and A12 without a place.)
+     - (i) The Terms' coming into force. It does not happen: the Terms are not in force, and the withdrawal stands. 36 goes to shown; 37 stays not shown, as "not in force".
+     - (ii) The withdrawal. It fails: the assent counts, and the Terms are in force. 37 goes to shown; 36 stays not shown, as "changes nothing".
+     - **The session's lean:** (i). Before the Terms came into force, no version of them was shared, so the last shared state is no Terms in force; and draft 25 lets a withdrawal work "until those Terms are in force" (G4.10). Against it: tonight's 4 reads an agreement as something one cannot leave, which could favour (ii). A question.
+   - **Third: are Terms racing a sale a race?** (Cases 101, 102, 110.) Draft 25, G14.2: "Where neither the knots nor an anchoring show it, the Terms are not late, and are read by the holder at X, however late they may in fact be." That is the opposite of what G4.7 says of two rival updates in the same position ("Where neither the knots nor an anchoring show it, L and F are a fork").
+     - (i) It is a race: the question is whether the Terms were made before the sale, and nothing anchors it, so the Terms do not work. 101 and 102 go to not shown.
+     - (ii) It is not: the holder is fixed by the act the Terms cite, "all fixed by fingerprint, so it is not an answer about what is latest" (G14.1), and lateness is a separate rule that counts only what is shown.
+     - Under (i), what draft 25 says G14.2 "Protects" changes, for Terms no anchoring orders: "whoever agreed with the holder of the moment, and every payer under those Terms, whom a later sale does not undo".
+     - **The session's lean:** (i), on his "always"; it is a large change to G14.2, and his words were said of an update, not of a sale. A question.
+   - **Fourth: does a reader's own anchoring count, when he says "when no anchoring is involved"?** (i) Yes: G13.4 stands, and where the Terms name no place, each reader who accepts an anchoring gets an order, per that anchoring; (ii) only a place or clock the Terms name. A verifier's answer changes for a reader with an anchoring, on bytes no vector holds (3e). **The session's lean:** (i), since G13.4 is untouched.
+   - **Fifth: is a missing act a timing issue?** Case 31: an update names an act the verifier does not hold, which might show it late. (i) No: the order may exist, in the act not held; that is "unclear", and stays **unchecked** (G4.7(c), G9). (ii) Yes: no anchoring is involved, so the change does not work, and the shared version is **shown** in force. **The session's lean:** (i).
+
+### Tonight's 4. No default way out
+
+**In plain words.** The afternoon gave every signer a way out by default (Part 1's decision 3). Tonight it is withdrawn: leaving an agreement is an update, a new version without the leaver, signed as the update condition says; by default, with the others' signatures. Draft 25 never had an act for leaving, and verifier 2 never wrote one, so the afternoon's decision had no vector and no flip; its six new cases go. One rule of draft 25 already gives a way out by default, though: a delegator may end a delegation alone (G5.5, case 58).
+
+1. **His words**, in order: "Leaving an agreement should leave a clear identifiable evidence, yes"; "Leaving an agreement forces the agreement to be redrafted anyway. It's a new agreement, updated from the previous one and in its chain, but it is its own new act"; "That's the trap… and an agreement is a trap. My question is, under what conditions did she join the agreement? None for exits will be your answer. So, leaving the agreement needs the agreement of the other parties. That's what an agreement is for truly. So, no, there is no standard way out of an agreement that is the purpose of an agreement."; "I know… I too can change my mind. An agreement is there so that you cannot leave it. That's why it exists"; "No, what I mean is written agreements have always been about not being able to escape the agreement. That is why humans have started writing in the first place… so right of exit? No, not from an agreement."; "Yes, it.s still true under the right cMIPs. Agreements is not to be used bare. It's to build on top of."
+   **Arrived at (to check):** ""A way out by default" is replaced. There is no default way out of an agreement. Leaving is an update, a new version in the agreement's chain without the leaver, and it passes by the update condition like any other: by default, with the others' signatures; otherwise under whatever exit conditions the Terms set when she joined." Then: "right of exit does not apply to an agreement; being unable to escape it is what writing it down is for." Then: "the right of exit still holds, through the cMIPs an agreement chooses (an exit is something Terms can carry, in the update condition's socket or another); the grammar bare has none. Agreements is not meant to be used bare; it is built on."
+   Where it says more than his words:
+   - "by default, with the others' signatures" reads his "needs the agreement of the other parties". Draft 25's default asks "everyone who signed the original" (G4.8(a)), which includes the leaver. Under the default, the leaver signs her own leaving too. The line and the default may differ there; no vector shows it.
+   - "in the update condition's socket or another" is the MOR lead's; his words say "under the right cMIPs".
+
+2. **A story.** Terms T name Ana, Ben and Carla, and are in force. Carla wants out.
+   - Today Dana is shown: a withdrawal Carla signs now "changes nothing" (case 34, Run). A new version without Carla, signed by Ana and Ben alone, is **not shown** as replacing T, because Carla signed T (as case 7, Run). Signed by all three, it is **valid** (as case 8, Run).
+   - Under the afternoon's decision, Dana would have been shown: Carla left by default.
+   - Under tonight's decision, the same as today.
+
+   **A second story** (case 58). Ana gives Gil a power to act for her: a delegation D, signed by both. Ana alone signs D2, which removes the power.
+   - Today Dana is shown: D2 **valid**, and it replaces D (Run). Draft 25, G5.5: "By default the delegator can end it at any time".
+   - Under tonight's decision, if a delegation is an agreement like any other: D2 **not shown** as replacing D, since Gil signed D (point 5).
+
+3. **Cases and vectors.**
+   - What the afternoon's decision would have changed (Part 1, decision 3): no flip under Part 1's lean; 34 under one reading; six new cases, (3a) to (3f).
+   - **Any vector written for it: none.** Run: a search for "way out", "leave", "leaving", "exit" and "resign" over `core/src/agreements_new/`, `core/vectors/agreements-new/` and `core/examples/` finds no case or vector for a leaving act in verifier 2's files; the matches there are words such as "leaves unread". The freeze suite's scenario 9, "The way out, walked" (`core/examples/support/scenario9.rs`, last changed 7 November, commit `ee31c66`), walks exits under the earlier Agreements text, which verifier 2 does not read, and was written before the afternoon's decision.
+   - Without it: no flip, no case goes, and the six new cases go. 34's other reading goes with them.
+   - Would flip under tonight's decision: 58, "a delegation ended by the delegator alone: a version that removes the power, with the delegator's part alone, is valid by default": **valid** to **not shown**, if G5.5's default goes (point 5). The independent Python check does not judge 58 (Run).
+   - The code: `force.rs`, `update_raw` (lines 547 to 597), `delegation_end` (from line 616), `signed_by` (lines 502 to 519: a party a version took out is not asked again). Read.
+   - **What it changes in Part 2.** OI-009 ("Decision 3 lowers the stakes, since one could leave later"), OI-046 ("Decision 3 gives a way out that makes forking unneeded as an exit") and OI-070 ("Decision 3 raises the same question after Terms are in force: may an agent leave for the party?") each leaned on the afternoon's way out. Without it, OI-046 weighs more: in verifier 2, a signer who forks their own line after the Terms are in force takes those Terms out of force (Part 2, OI-046), which is then the one way to leave alone. Draft 25 forbids it: "Terms that were in force before a fork was made stay in force" (G12.2).
+
+4. **New cases:**
+   - (4a) A version without Carla, signed by all three; then a later update. Carla is no longer asked (G4.8(a): "a party that a version took out is not asked by a later update"). No vector has a party taken out and a later update (Read: `cases.rs`).
+
+5. **Where it can be read two ways.**
+   - **Does "no standard way out" reach a delegation?** His words: "there is no standard way out of an agreement". Draft 25, G5.5: "By default the delegator can end it at any time".
+     - (i) Yes: a delegation is Terms like any other, and G5.5's default goes; the delegator ends it as the update condition says, by default with the agent's signature. 58 flips.
+     - (ii) No: ending a delegation takes back a power one gave, not a promise to others; G5.5 stays.
+     - A verifier's answer changes: yes, 58.
+     - **The session's lean:** (i), since G5.5's default is a way out in the grammar bare, which tonight's line says has none. It is a real question: G5.5 may rest on an earlier exchange of his that this session did not read.
+
+### Tonight's 5. What the core is for: a list
+
+**In plain words.** Tonight's line: "Rules that settle how people should behave in a deal corner the protocol, however right the idea." Below are verifier 2's checks that read as settling how people behave in a deal, rather than what can be written and checked. A list only: the scribe and Fable are sorting the rules.
+
+His words: "Those sentences are why agreement was not right… not because the ideas were wrong, but because it forces the protocol into a corner instead of doing what we meant. ID and text are universal, development is definition, the rest is to build on top of." (said of the MOR lead's lean that a receiver stays answerable after an update).
+**Arrived at (to check):** "the receiver's duty after an update is not a core rule; it is for the cMIPs Terms choose. Rules that settle how people should behave in a deal corner the protocol, however right the idea. Identity and Text are universal; Development is definition; the rest is built on top of."
+Where it says more than his words: "Rules that settle how people should behave in a deal" widens "Those sentences", said of one lean, to every rule of that kind.
+
+The receiver's duty after an update, the exchange's own example, is not in verifier 2 (Read: no function keeps a receiver answerable after a newer version; `receiver.rs` reads the receiver from the version an act names, G1.4, G13.1).
+
+| # | The check (file, function) | Draft 25's rule | Why it reads as behaviour |
+|---|---|---|---|
+| 1 | `legs.rs`, `holds_control` | G11.2: "so that this party holds for the others and passing on to them is its obligation under those Terms" | It puts a duty to pass money on onto a receiver the Terms never gave one. |
+| 2 | `force.rs`, `delegation_end` | G5.5: "By default the delegator can end it at any time" | It decides who may walk away from a delegation without the other. |
+| 3 | `force.rs`, `counter_cancels` | G4.10: "One made for Terms that are in force changes nothing" | It decides until when a person may change their mind. |
+| 4 | `force.rs`, `in_force_given` and `update_raw` (the defaults) | G4.1 (every party named as a signer) and G4.8(a), G4.11 ("everyone who signed the original") | It decides, where Terms say nothing, whose yes a deal needs. |
+| 5 | `force.rs`, `before_in_force`, through `power` | G5.4: an act under a power binds "if it was made before the Terms that replace those were in force, and not bound if it was made after" | It decides when an agent's authority ends. |
+| 6 | `spots.rs`, `rights` | G10.6: "No later version changes the rights of a filling already earned unless:" | It protects buyers against later versions by the maker. |
+| 7 | `receiver.rs`, `receiver_for_payment`; `spots.rs` (fillings in a branch set aside) | G12.5: "What others relied on stands." | It decides who bears the loss when a fork is resolved against what a payer read. |
+| 8 | `legs.rs`, `data` and `data_yes` | G11.6: one leg by default; a report goes beyond its leg only where every data cMIP asked says yes | It sets a default on who may read whose payments. |
+| 9 | `legs.rs`, `contest` | G11.8: a contest "reaches the signers that version names, and no one else" (case 95's name) | It decides whom a complaint is addressed to. |
+| 10 | `baker.rs`, `baker_inner` and `late_terms` | G14.2: "Terms made with the holder of the moment keep counting after a later transfer: it takes nothing from them" | It decides what a sale of the rights does to deals made before it. |
+
+Ten checks. Read, each in the file and function named. Whether any of them is "definition" rather than behaviour is the sorting this list leaves to others.
+
+---
+
+### What tonight changes in Parts 1 and 2
+
+Parts 1 and 2 are not edited. Where tonight's decisions change what they say:
+
+- **Part 1, "The summary" and "The count, for the six together".** The counts are set out again below.
+- **Part 1, decision 3 (A way out by default).** Withdrawn by tonight's 4. Its six new cases (3a to 3f) go, and so does its reading of 34. What it says of the act in bytes no longer applies.
+- **Part 1, decision 4 (Unclear means unchecked).** For races, tonight's 3 gives different words. Its flip of 37 (not shown to unchecked) holds only under the second reading of tonight's first question; under the session's lean, 37 keeps the word not shown, as "not in force". Its A6 story ends in U not shown and O in force, not in U unchecked. Its A9 story, (4b), (4c) and (4d) are not races, and stand as written. Its (4a) is tonight's (3a).
+- **Part 1, decision 8 (Where three rules live).** Point 5's "Which holder" is answered by tonight's 1, as Part 1 leaned. The flips of 101 and 102 under "current holder" go; 101 and 102 appear again under tonight's 3, for a race.
+- **Part 2.** OI-147: which holder is settled by tonight's 1. OI-148 and OI-151: their "being a party is enough" half is settled by tonight's 2 (no), and verifier 2 already answers so. OI-009, OI-046, OI-070: their notes on "Decision 3" leaned on a way out that is withdrawn (tonight's 4); OI-046 weighs more without it.
+
+### The counts, beside Part 1's
+
+Under the session's leans:
+
+| | Part 1 (afternoon) | Tonight | The two together, as they stand now |
+|---|---|---|---|
+| Vectors that would flip | 1: 37 | 4: 36, 58, 101, 102 | 4: 36, 58, 101, 102 (37's flip does not hold under tonight's lean; 37's words change) |
+| Vectors that would go | 16 | none | 16, as Part 1 |
+| New cases | 20 | 9 | 23: Part 1's 20 less its decision 3's six, plus tonight's nine |
+
+Under the other readings:
+- **Flips:** from Part 1's "up to 10 more", 34 goes (tonight's 4), and 101 and 102 leave decision 8 (tonight's 1). That leaves 36 (Part 1's decision 4), and 38, 39, 40, 41 and 43 (Part 1's decision 6). That is six, not seven: Part 1's list names nine cases, though its summary says ten (Read: Part 1, "The count, for the six together"). Tonight adds 37 (to shown, or to unchecked) and 31 (to shown): eight in all. Under tonight's other readings, 36, 58, 101 and 102 keep today's answers.
+- **Go:** unchanged; 45, 46 and 47 under Part 1's reading (i) of decision 6.
+
+**Which of Part 1's counts tonight changes:** its flips (37 no longer under the leans; 34, 101 and 102 no longer under other readings) and its new cases (six fewer). Its vectors that would go are unchanged.
+
+**Counted twice, or under two decisions:**
+- 36 and 37: under Part 1's decision 4 and tonight's 3; counted once here, under tonight's 3.
+- 101 and 102: under Part 1's decision 8 (a reading now withdrawn) and tonight's 3; counted once, under tonight's 3.
+- 110: under Part 2 (OI-151), tonight's 2 (no flip) and tonight's 3 (its words); not counted as a flip.
+- (3a) is Part 1's (4a), counted once, under Part 1.
+- 58: under tonight's 4, and on tonight's 5's list (item 2); counted once.
+
+---
+
 ## What this sheet does not settle
+
+*17 November, evening:* Part 3 sets out what tonight's five decisions change in Parts 1 and 2, and names each section it changes; Parts 1 and 2 are left as written.
 
 Nothing. Every reading above is a question; every lean is this session's.
 
