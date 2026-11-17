@@ -2,7 +2,19 @@
 
 *A living file: what exists today, not how it came to be. Updated by the project lead at every merge. Every session reads it first. The history is in `docs/roadmap-v1.md`; the reasons are in `docs/findings/`. If this file and the code disagree, the code's own README wins, and this file is corrected.*
 
-*Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
+*Last updated: 17 November 2026, by the scribe, because this file stopped at 11 November while the Agreements rewrite moved on, on branches not merged: entries from 12 to 17 November, the texts on main, the windows and pull requests 162 to 184 added. A record of what exists; nothing in it is decided here. (The line before this one read "19 October 2026", though entries to 11 November had been added.)*
+
+**17 November 2026:** **where the work stands: the rewrite's Agreements is not merged, and the work is review only.** Agreements draft 25 is not merged. `spec/` on main still holds the old Agreements, `spec/MIR-agreements-draft-24.md` (the old draft 24), the text of 8 November written before the rewrite; nothing in `spec/` has changed on main since 8 November. Draft 25 and encoding 2 are on pull request 183; verifier 2 is on pull request 184; both are open, neither is merged. (The rewrite numbers its own drafts from 1, in `docs/agreements-from-scratch/` on those branches: its own draft 24, pull request 178, is not the old draft 24 in `spec/`; "draft 24" in the entries of 11 November and earlier is the old one.) The work is review only until Nobody, allegedly, decides the rewrite. His words, 16 November: "Once that is over, we.ll focus the rest of the budget on reviewing, no redrafts, no recode." and "Before redrafting any layer I want to really look at the findings in details, find the right questions and then find one last way for me to zoom out before deciding on the rewrite." Today the MOR lead proposed five pieces before the budget resets (Wednesday 18 November, 2 pm), none writing texts or code: research sorting the open items; Fable reading draft 25, encoding 2 and verifier 2 together; the scribe listing where everything still points at the old Agreements; research on prior art for the voucher exchange; the records push. Nobody, allegedly: "Yes please." The records push is on main (`5d73191b`): the ledger's rule in `CLAUDE.md` now speaks of exchanges, and step 17's checklist holds the release site's two points. The MOR lead's assignments of today (`docs/lead/assignments/2026-11-17-*.md`, branch `claude/lead-records-2`): to the scribe, where everything still points at the old Agreements, and this file brought up to date; to the codemeister, verifier 2's 13 readings, in human; to research, the open items sorted so the simulation's data has a frame to land in, and prior art for the voucher exchange.
+
+**16 November 2026:** on the budget, Nobody, allegedly: "The simulation will eat most of next weeks token budget as well. Wednesday and Thursday are reserved and that will eat more than half of it. Once that is over, we.ll focus the rest of the budget on reviewing, no redrafts, no recode." Later: "More than doubled our weekly budget. We'll be to do more next week. Wednesday and Thursday are still reserved for the simulation, but we'll have more tokens left after that than first anticipated"; and, to the MOR lead's suggestion of the records push and merges first, then the lower layers' rewrite: "Before redrafting any layer I want to really look at the findings in details, find the right questions and then find one last way for me to zoom out before deciding on the rewrite." The release site goes to the Dubsar Suite lead: "They will build the website once we're ready to freeze" (the brief: `docs/lead/prompts/dubsar-brief-release-site.md`, branch `claude/lead-records-2`). **The windows:** he asked for the work to be segmented into windows, at most three under the MOR lead; to the six clusters the MOR lead found in the prompts since 21 October, he: "1. The scribe, for specs and for supporting documents (case studies, research paper,…) 2. is a translator, the specialist that speaks two languages. We speak text to him, so its speciality is code, the codemeister. 6 is what we do you and me, but we seek counsel. Usually outside the project on a need by need basis. Two windows might be enough. One that speaks human, one that speaks code. Research could be the third. Especially with all the data the simulation will leave behind" (the windows as defined: below, "The windows"). The voucher exchange, his first project built on MOR and not a core matter: "So, a silly voucher exchange true task is to be the pricing mechanism." and "What is being built? A moneyless commodity exchange."
+
+**15 November 2026:** **draft 25 and encoding 2, the clean-up before the players' round, and the two verifiers** (none merged). After Fable's review of encoding 1 (pull request 181, opened 14 November) found places where two honest writers would write one act two ways; the MOR lead leaned to start the players' round first. Nobody, allegedly: "How many sessions to clean it up first? We can always provide new hashes."; asked to write it: "Write it please." Pull request 183 holds draft 25 and encoding 2, with 44 valid and 116 invalid vectors. Pull request 182 holds verifier 1, the grammar's answers with vectors. Pull request 184 holds verifier 2, the grammar verifier on draft 25 and encoding 2, built on pull request 183: its 120 vector cases made again from real encoding-2 acts; of verifier 1's 22 questions, draft 25 settles one and part of another; three new questions; thirteen open questions that change an answer. Kišib writing, checking and signing the new acts (pull request 180, titled "do not merge") was merged on 15 November into verifier 2's branch, `claude/agreements-verifier-2`, not into main; it now travels in pull request 184. Pull request 185, "Round two: the postman, the hosts' bank and the players' kit (draft, not to merge)", is open on verifier 2's branch. On the simulation, Nobody, allegedly, in the exchange on draft 20: "We’ll have data after the simulation, 1000 extra identities will be deployed, pros, prosumers and consumers. We’ll get a better idea of what knots can do…"
+
+**14 November 2026:** **Agreements from scratch, the rewrite's drafts 18 to 24, and encoding 1** (pull requests 173 to 179, none merged). What moved between them, in his words from the exchanges: a task is a socket (draft 18, after seams 1, pull request 172): "Yes, task has always been the socket in my mind. One cMIP per socket, multiple modules where needed, possibly multiple sockets in one cMIP."; seven sockets, and one more for data: "Wow… very lean. data is needed by so many processes , so yes I think a task is needed there."; the update condition alone governs an update (draft 19): "Update equals constitution, and the judicial, power means the executional." and "With agreement as a party, the founding agreement is its constitution. We simply had not realized it yet"; the second C session's questions (`MOR-CBOX` pull request 4) answered in the text (draft 20); the baker's rights (drafts 21 and 22); ownership stated by the work's envelope (draft 23): "Yes. I think that is the cleanest approach and flips ownership to the thing being owned stating it"; the holder of the baker's rights read at the envelope act the Terms cite (the rewrite's draft 24; "Agreed"). The byte encoding before the players: "Yes, my choice. I think it’s best to do this properly first." Encoding 1 (pull request 179): the new acts' bytes, a checker and vectors. Kišib on the new acts opened (pull request 180); Fable's review of encoding 1 (pull request 181).
+
+**13 November 2026:** **Agreements from scratch, drafts 8 to 17** (pull requests 160 to 162, 164 to 167, 169 to 171, none merged), with the click sketch on draft 10 (pull request 163), Fable's review of draft 14 (pull request 168) and seams 1 (pull request 172). What moved, in his words from the exchanges: a principle, "Building blocks over solutions."; "chain" kept for one act's versions, "sequence" for agreements linked to one another; the report, a block for all of MOR: "Excellent question, turned into an MOR rule that extends to all tasks, a task may or may not request a report, if it does it states where it expect it." (said in the Dubsar Suite lead's window, relayed); then "Leg by leg only." and "Data needs to move along paths that people agree, with signature."; an agreement named as a party signs ("Also, if you keep that quote a collective becomes nearly impossible to build.", of "an agreement as a party never signs"); the contest stays an act: "Contest is MOR act though." and "Making greed legible does not work without contest, it makes it core."; what this grammar is for: "What the previous version of agreement focused on solving issues… this one supports and specifies the language for creating solutions"; the default update condition: "Everyone who signed the original is the default condition yes". The word "void" is retired: a right or a filling is in force, or no longer in force by its own condition (the MOR lead's wording).
+
+**12 November 2026:** **Agreements from scratch, drafts 2 to 7** (pull requests 152, 153, 155 to 157, 159, none merged; draft 1 is pull request 147), with two shower cMIP tests (pull requests 151, 154) and case study 22, the voucher market (pull request 158). The ledger, `docs/decisions.md` on branch `claude/lead-records-2`, is reshaped to record exchanges: "My words matter less than our words within that conversation do." On draft 1: "It’s not ruling… it's setting up grammar for people to decide how to agree on rules." The test of the grammar: "can I with a single click reward all the people that contributed to the service or good via MOR". What moved between the drafts: four spots, each earned by a proof whose test a cMIP defines ("Looks elegant and powerful. To be tested…"); Terms stop only when Terms replacing them are in force ("Yes, less likely to bloat and overdefine."); one shape for forks; "An agreement never ends, it can resolve."; the payment chain through the work's agreement with its split service; and "The key concept is « agreement as a party » then it’s what you build with it that changes". On case study 22: "first we settle what we already had, keep working on that direction and then test this later".
 
 **11 November 2026, afternoon:** the rewrite's preparation is done (records only, no code). Fable's task list for the new text (`docs/reviews/fable-task-list-2.md`): nineteen tasks, the small ones numbered before the freeze, absence outcome and a share rule among them; guarantees placed part by part. The marking pass (`docs/agreements-marking/`, F443) gives every inventory row and vector its part, its fate and the decision it rests on; its open choices are decided in F441: absence choices belong to the seat and travel with the stake; a collective must refuse "never" for its counted voices; the succession plan and the chain of judgment are forms of the absence outcome's "moves"; a judge failing without vanishing passes the matter on; "paid less" is not computed (a change to the plan needs the holder); a member is removed only by the constitution's rule, keeping its stake; the negotiation record leaves the core. Working rule: the core decides only where a rule sits and who must have signed it, never what a cMIP will. Next: a contradiction check of F441, then the rewrite in two sessions (shared with the deal's part; the collective's part).
 
@@ -54,13 +66,56 @@
 
 **Where we stopped (19 October 2026, 89% of the weekly budget):** the apps phase is complete and merged; the servers are on main. During the break, Nobody, allegedly, runs the human tests walkthrough (`docs/human-tests-walkthrough.md`, human test 15 in `docs/round-3-report.md`), after a Mac session brings the apps up to main; his notes become H findings. Building resumes Wednesday 21 October, 13:00 UTC (Nobody, allegedly: "we go over my notes and build what's needed, then the verifier in c then fable again"): first his walkthrough notes and the fixes they call for, then the freeze-ready drafts session (its list under "Open, in order": F359 (F352 (D), decided), one meaning per word, F295, keepers redefined F358, the cMIPs branded F356, the payment cMIP's vault transfer F355 (c), MICS and suite naming the current drafts, conformance vectors, the regtest quirks kit). Then the C verifier, Fable's review on a Thursday, fixes, the freeze.
 
+## The windows (since 16 November 2026)
+
+Under the MOR lead (Machine, allegedly), from their definitions in `docs/lead/prompts/windows/` (branch `claude/lead-records-2`):
+- **The scribe**, the window that speaks human: the specifications in `spec/` and the Agreements drafts, and the supporting documents (case studies, the paper, the companions), written only from the ledger and the MOR lead's technical wording.
+- **The codemeister**, the window that speaks code: the encodings, the core library (`core/`, `wasm/`), the conformance vectors, and CI kept green.
+- **Research**: reads large amounts of material and reports patterns, counts and clusters with their evidence, judging no rule; its first material is the simulation's data.
+
+Beside them, the Dubsar Suite lead's three windows: **DubPay**, **DubWeb** and **DubLaw** (named in the MOR lead's assignment of 17 November; their definitions are not in this repository).
+
+## Pull requests 162 to 184
+
+States read from GitHub on 17 November 2026. None is merged into main.
+
+| # | Title | Branch | State |
+| --- | --- | --- | --- |
+| 162 | Agreements from scratch: draft 10 (a clean text; history moved out) | `claude/agreements-draft-10` | open |
+| 163 | The click on Agreements draft 10: a sketch and what it showed | `claude/click-sketch` | open |
+| 164 | Agreements from scratch, draft 11: the report as a block of the shared language | `claude/agreements-draft-11` | open |
+| 165 | Agreements from scratch, draft 12: an agreement as a party signs; every leg the same exchange; one leg | `claude/agreements-draft-12` | open |
+| 166 | Agreements from scratch, draft 13: the buyer's seat; the contest, leg by leg; an outvoted member; three wiring fixes | `claude/agreements-draft-13-69eha3` | open |
+| 167 | Agreements from scratch, draft 14: leg by leg only; reports are data | `claude/agreements-draft-14-0z0ah5` | open |
+| 168 | Review: Agreements from scratch, draft 14 | `claude/fable-agreements-draft-14` | open |
+| 169 | Agreements from scratch: draft 15, the rules alone | `claude/agreements-draft-15-uauhua` | open |
+| 170 | Agreements from scratch: draft 16, the contest, the condition, forks | `claude/agreements-draft-16` | open |
+| 171 | Agreements from scratch: draft 17, the update condition | `claude/agreements-draft-17-hp0j90` | open |
+| 172 | Agreements from scratch: seams 1, what the new text leans on | `claude/agreements-seams-1` | open |
+| 173 | Agreements from scratch: draft 18, tasks as sockets (a draft, no merge) | `claude/agreements-draft-18-e2x9yo` | open |
+| 174 | Agreements from scratch: draft 19, the update condition alone governs an update | `claude/agreements-draft-19` | open |
+| 175 | Agreements from scratch, draft 20: the second C session's questions answered in the text | `claude/agreements-draft-20` | open |
+| 176 | Agreements from scratch, draft 21: four exchanges answer draft 20's 8.2, items 10 to 13 | `claude/agreements-draft-21-hngk34` | open |
+| 177 | Agreements from scratch, draft 22: "bound by them" in G14.2 reaches an update condition | `claude/agreements-draft-22-la1p81` | open |
+| 178 | Agreements from scratch, drafts 23 and 24: the envelope states its owner; the holder at the time | `claude/agreements-draft-23-dqhhax` | open |
+| 179 | Agreements from scratch, encoding 1: the new acts' bytes, checker and vectors | `claude/agreements-encoding-1-nwgiyk` | open |
+| 180 | Kišib: the new Agreements acts (draft 25, encoding 2) written, checked and signed (do not merge) | `claude/kishib-agreements-new` | merged on 15 November into `claude/agreements-verifier-2` (pull request 184's branch), not into main |
+| 181 | Review: the Agreements encoding, first edition, with fresh eyes | `claude/fable-encoding-1` | open |
+| 182 | Agreements from scratch, verifier 1: the grammar's answers, with vectors | `claude/agreements-verifier-1-6r7ai9` | open |
+| 183 | Agreements from scratch: draft 25 and encoding 2, the clean-up before the players' round | `claude/agreements-clean-1-hahuwn` | open |
+| 184 | Agreements from scratch, verifier 2: the grammar verifier on draft 25 and encoding 2 | `claude/agreements-verifier-2` | open |
+
 ## Where we are
+
+*This section describes October 2026 and has not been brought up to date.*
 
 The human tests (one sheet since 18 October: `docs/human-tests-v2.md`, gathering every test's steps; earlier `docs/human-tests-v1.md`, findings in `docs/human-tests-v1-findings.md`, H1 to H12) found that the apps needed a look from a user's point of view. Decided by Nobody, allegedly: clean the apps first, then finish the tests on the cleaned apps. Dub and Edubba are done; the site and Kišib are next.
 
 The order to the freeze: the human tests; a session on the site's structure and look; the freeze-ready drafts, corrected by the findings; the step 17 rehearsal on the frozen texts; the freeze.
 
 ## The apps a person uses
+
+*This section describes October 2026 and has not been brought up to date.*
 
 | App | Where | What it does today | What it does not do |
 | --- | --- | --- | --- |
@@ -84,7 +139,11 @@ genesis (identities, routes, keys, rotation, key delivery, look-up), barebone (p
 
 ## The texts, current drafts
 
-Core (`spec/`): **MICS v29**, **freeze test suite v29**, Identity **14** (F349, the forms written for people), Text **10** (F334, F343), Envelopes **10**, Money **10** (F350, F358: a collective's payee pointer signed by its Money area), Agreements **16** (F351, F353: a holder's member key), Development **10**. Not yet freeze-ready; MICS and suite do not yet name Text 9.
+Core (`spec/` on main, the latest file of each text, as of 17 November 2026): **MICS v37** (`02-MOR-MICS-v37.md`), **freeze test suite v37** (`03-MOR-freeze-test-suite-v37.md`), Identity **16**, Text **11**, Envelopes **12**, Money **14**, Agreements **24**, Development **12** (`MIR-<layer>-draft-<n>.md`); unchanged since 8 November. Earlier drafts, and the older `MIP-` and `02-MOR-core-` names, are kept beside them (`spec/README.md`).
+
+**The Agreements in `spec/` is the old one** (the old draft 24, from before the rewrite; not the rewrite's own draft 24); the rewrite's draft 25 is on pull request 183, not merged.
+
+*The cMIPs, Modules and approvals below describe October 2026 and have not been brought up to date.*
 
 cMIPs (`cmips/`): **accepted 1** (F340), **agent memory 1**, anchoring 5, conversion 3, **corrections 2** (F344, F347), **grant limits 1** (F345), live media 1, long form 1, **long-form corrections 1** (F348), **money messages 4** (F352, F357: requests to a split service), naming 1, nudge 3, payment 3, people 2, **relay transport 5** (F346), release manifest 4, split 3, website 11.
 
@@ -94,9 +153,13 @@ Awaiting Nobody, allegedly's approval: Text 9 and 10; the cMIPs new since 17 Oct
 
 ## The servers (no addresses here: those are in the private project note)
 
+*This section describes October 2026 and has not been brought up to date.*
+
 Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; home2 also by onion), the gateway serving dubsar.org (https only, no onion: decided 16 October), the reader, a timestamp clock, and five web clients for testing only: dub, kishib, damgar, ummia and **edubba** (new) .dubsar.org. **All on main 4799e9a6 since 19 October** (round 3 merged): the homes run the relay of that commit (grants on receipts and claims F350, a grant to oneself F351, a member's own key); checked live, an act under a grant stored and one with the wrong key refused; the reader ships Identity 14, Money 10, Agreements 16 and opens `#mact1…` links and hexadecimal ones; every web client checks SAME with its icon; the gateway serves the new display client, verified on a phone screen. Site version and clock unchanged (836bc0bd…). Noted: the first server's disk at 72%, old rollback copies to prune some day.
 
 ## Open, in order
+
+*This section describes October 2026 and has not been brought up to date.*
 
 *Decided by Nobody, allegedly, 17 October 2026: "All human tests wait for the break, build until then." Build Kišib, Damgar and Ummia (and the agents and site sessions if tokens allow) until the weekly token limit stops the work; the human tests (9, 10's end, 11, free play, and recruiting a few non-developers) are run during the pause.*
 
