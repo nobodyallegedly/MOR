@@ -399,6 +399,34 @@ export class Bank {
         }
       }
     }
+    // Rewards from the hosts (round two, day three): lines "identity, label, sats" in the hosts tray's rewards
+    // file; each identity is credited once per label, into its own account, wherever it was opened.
+    if (this.funding.rewardsFile && this.funding.rewardsTray) {
+      let text = null;
+      try {
+        text = Buffer.from(readTop(this.funding.rewardsTray, this.funding.rewardsFile)).toString('utf8');
+      } catch {
+        // no rewards file: nothing to credit
+      }
+      for (const raw of (text ?? '').split('\n')) {
+        const line = raw.replace(/#.*/, '').trim();
+        if (!line) continue;
+        const f = line.split(',').map((x) => x.trim());
+        const [identity, label, sats] = f;
+        if (f.length !== 3 || !/^[0-9a-f]{64}$/.test(identity) || !/^[a-z0-9-]{1,40}$/.test(label) || !/^\d+$/.test(sats) || Number(sats) < 1) {
+          plan.push({ tray: this.funding.rewardsTray, skip: 'a reward line is "identity, label, sats"', line: raw });
+          continue;
+        }
+        const key = `reward:${label}:${identity}`;
+        if (this.state.funded[key] || planned.has(key)) continue;
+        const a = this.state.accounts[identity];
+        if (!a) plan.push({ tray: this.funding.rewardsTray, identity, wait: 'its account is not open yet' });
+        else {
+          plan.push({ tray: a.tray, key, identity, amount: Number(sats), reward: label });
+          planned.add(key);
+        }
+      }
+    }
     if (send) {
       for (const p of plan) {
         if (!p.key || this.state.funded[p.key]) continue;
@@ -406,7 +434,7 @@ export class Bank {
         a.balance += p.amount;
         this.state.funded[p.key] = { amount: p.amount, at: now() };
         this.journal({ kind: 'fund', identity: p.identity, tray: p.tray, amount: p.amount, balance: a.balance, as: p.key.split(':')[0] });
-        this.notices.push({ tray: p.tray, kind: 'funded', json: { identity: p.identity, funded: p.amount, as: p.key.startsWith('company:') ? 'the company sum' : `its line in ${this.funding.publicFile}`, account: this.view(a) }, body: null });
+        this.notices.push({ tray: p.tray, kind: 'funded', json: { identity: p.identity, funded: p.amount, as: p.key.startsWith('company:') ? 'the company sum' : p.reward ? `a reward from the hosts (${p.reward})` : `its line in ${this.funding.publicFile}`, account: this.view(a) }, body: null });
         p.done = true;
       }
       this.save();
