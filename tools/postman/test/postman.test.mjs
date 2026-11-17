@@ -41,7 +41,7 @@ test('a player makes an identity offline, signs a post and a Terms act, drops le
   const terms = k.agreementsSign('amp', 'terms', { parties: [{ signer: id.identity }, { signer: '02'.repeat(32) }], authors: [0], body: { words: mor.workHash(new TextEncoder().encode('Each of us gives the other a test loaf; nothing real is owed.')), cmip: '04'.repeat(32), params: 'f6' }, previous: null });
   assert.equal(terms.check.verdict, 'pass', JSON.stringify(terms.check));
   assert.equal(mor.describeAct(terms.signed.act).spec, Kit.agreementsSpecs().terms.spec);
-  const assent = k.agreementsSign('amp', 'statement', { agreement: terms.signed.id, terms: terms.signed.id, kind: 'assent', previous: null }, { held: [{ act: terms.signed.act }] });
+  const assent = k.agreementsSign('amp', 'statement', { agreement: terms.signed.id, terms: terms.signed.id, kind: 'assent', previous: terms.signed.id }, { held: [{ act: terms.signed.act }] });
   assert.equal(assent.check.verdict, 'pass', JSON.stringify(assent.check));
   // A draft that fails the check is never signed.
   const before = k.load('amp').lines.public.length;

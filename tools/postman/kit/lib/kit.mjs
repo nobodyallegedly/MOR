@@ -871,7 +871,9 @@ export class Kit {
     if (!mine.length) return;
     mine.sort((x, y) => (x.position ?? 0) - (y.position ?? 0));
     const latest = mine[mine.length - 1];
-    const prev = fields.previous ?? null;
+    let prev = fields.previous ?? null;
+    if (prev && typeof prev === 'object' && typeof prev.id === 'string') prev = prev.id;
+    if (prev !== null && typeof prev !== 'string') return; // the builder says what is wrong with it
     if (prev !== latest.id) {
       throw new Error(`this Statement would fork your own line in agreement ${fields.agreement}: your latest act there that this folder holds is ${latest.id}, and "previous" names ${prev ?? 'none'}. Draft 25 (G6.1, G6.2): each of your acts within an agreement names your previous one there, or your acts in it stop counting. Set "previous": "${latest.id}" in the fields file. Nothing was signed. (To fork on purpose, add "fork": true.)`);
     }
