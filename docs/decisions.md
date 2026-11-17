@@ -294,6 +294,9 @@ The research is `docs/strangers-2026-11/`.
 **Before the reset** (17 November). He: "We really have a lot of tokens to use before Wednesday 2pm reset. Anything that can be done before the simulation ends?" The MOR lead proposed five pieces, none writing texts or code: research sorting the open items; Fable reading draft 25, encoding 2 and verifier 2 together; the scribe listing where everything still points at the old Agreements; research on prior art for the voucher exchange; the records push. He: "Yes please."
 - *Arrived at (to check):* all five run before the reset. The records push is done (main, 5d73191b): the ledger rule in CLAUDE.md now says exchanges; step 17's checklist holds the release site's two points.
 
+**Waves** (17 November). He set the windows going before the reset, then: "We'll always work in waves, they start from you, trickle to team, and then back to you to prepare the next one."
+- *Arrived at (to check):* work runs in waves. Each starts with the MOR lead's assignments, goes to the windows and their sessions, and comes back to the MOR lead, who prepares the next wave from what returned.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
