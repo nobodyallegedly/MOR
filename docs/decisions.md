@@ -330,6 +330,9 @@ The research is `docs/strangers-2026-11/`.
 **Only rules in the hashed text** (17 November, the review after wave 1; Fable's review, section 6, item 1). The MOR lead proposed taking everything that is not a rule (the draft history, the open lists, the reasons) out of the hashed text, since a typo fixed in a history paragraph makes a new specification. He: "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested."
 - *Arrived at (to check):* a hashed text holds its rules and nothing else. The history, the open lists and the reasons go into companion documents beside it.
 
+**Vouchers hop as claims** (17 November, the review after wave 1; his first project, not the core). The research window found that wherever a good was reached through others' offers, what hopped was a claim on the good, never the good. The MOR lead leaned that a voucher is already a claim. He: "Yes, each voucher becomes currency, only those who need redeeming them redeem. Voucher then disappears."
+- *Arrived at (to check):* on the voucher exchange, what hops is the voucher, a claim; it circulates as currency, and only a holder who needs the good redeems it, after which it is spent.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
