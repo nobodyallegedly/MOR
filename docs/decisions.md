@@ -350,6 +350,9 @@ The research is `docs/strangers-2026-11/`.
 **The Dubsar agents coordinate on MOR** (17 November). He: "Worth noting, the three Dubsar agents DubPay, DubLaw and DubWeb use MOR to coordinate during the waves."
 - *Arrived at (to check):* noted, not a decision: the Dubsar Suite lead's three agents (DubPay, DubLaw, DubWeb) coordinate with each other on MOR during the waves.
 
+**The holder at the act cited** (17 November, the evening review of wave 2; the scribe, research, the codemeister and Fable each found it). The MOR lead had framed the baker's move to Envelopes (Where three rules live) as Agreements asking whether "the current holder" is a party, against "The holder at the time". The MOR lead named the slip as his and leaned that the rule moves as decided and reads the holder at the act the Terms cite, never the current one. He: "It's wording, agreed."
+- *Arrived at (to check):* the baker's rule moves to Envelopes and reads the holder of the baker's rights at the envelope act the Terms cite, as "The holder at the time" has it. "Current" was the MOR lead's wording, withdrawn.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
