@@ -341,6 +341,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* Agreements gets a companion document explaining why it is shaped as it is and how it got there. With "Only rules in the hashed text", the reasons and the history go there.
 - Then he: "The how we got there needs to build around the research we ran on agreeing. « What is the minimum two people have to write »"
 - *Arrived at (to check):* the companion's story of how Agreements got its shape is built around the research on how people agree, with his question as its spine: what is the minimum two people have to write.
+- Then he: "It's also a good place to state that what the review found was MOR other layers and the sockets."
+- *Arrived at (to check):* the companion states that what the review of how people agree found turned out to be MOR's other layers and the sockets.
 
 ## Not carried into this stint unless he says so
 
