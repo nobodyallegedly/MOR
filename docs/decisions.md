@@ -337,6 +337,9 @@ The research is `docs/strangers-2026-11/`.
 **The issuer is priced too** (17 November; his first project, not the core). He: "One thing worth noting… the eggs from coop and the eggs from storby could end up being priced differently by the market…" The MOR lead: a voucher is a claim on one issuer's good, so the market prices the good and the issuer's promise together; the discount between two vouchers for one good is the issuer's reputation, read from signed trades (as banknote reporters once printed discounts between banks' notes); proposed adding it to the research question for the next wave. He: "Yes, please. That's the rating agencies being dictated by a market"
 - *Arrived at (to check):* for the next research wave: vouchers for the same good from different issuers may trade at different prices; the difference rates the issuer, set by the market rather than by an agency.
 
+**A companion for Agreements** (17 November). He: "Agreements has become quite abstract. It will need a good companion that explains why it is structured as such and how we got that that shape."
+- *Arrived at (to check):* Agreements gets a companion document explaining why it is shaped as it is and how it got there. With "Only rules in the hashed text", the reasons and the history go there.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
