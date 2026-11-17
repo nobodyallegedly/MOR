@@ -369,6 +369,9 @@ The research is `docs/strangers-2026-11/`.
 **What the core is for** (17 November, the evening review of wave 2; Fable's attack review, question 2). The MOR lead leaned that whoever a version names as receiver stays answerable for what is paid under it, after a newer version replaces her. He: "Those sentences are why agreement was not right… not because the ideas were wrong, but because it forces the protocol into a corner instead of doing what we meant. ID and text are universal, development is definition, the rest is to build on top of."
 - *Arrived at (to check):* the receiver's duty after an update is not a core rule; it is for the cMIPs Terms choose. Rules that settle how people should behave in a deal corner the protocol, however right the idea. Identity and Text are universal; Development is definition; the rest is built on top of.
 
+**Between a protocol and a language** (17 November, after the evening review). He: "I tried to keep most of my ideologies away, but many had slipped in. Also, when we started I didn't fully grasp initially what Mor could be and where its power was… takes time to wrap the head around it. It's between a protocol and a language almost in some parts" Then: "It comes from my limitations and wide ambitions. « yes, technically it is a media protocol, but… »"
+- *Arrived at (to check):* not a decision: how he describes MOR now, for the companion and the paper.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
