@@ -191,10 +191,25 @@ function main(argv) {
   if (!cmd || cmd === 'help') return say(`${HELP}\nRelay names, as the hosts announce them:\n${relaysSaid()}`);
   if (cmd === 'relays') return say(relaysSaid());
 
+  // Round two, day three: an identity whose homes are run by two operators needed both receipts to rotate, so one
+  // closing home would have locked it (Tally, found by reading Keep's warning). A rotation needs receipts from more
+  // than half of the operators of the homes it leaves; the kit says so when that leaves no room for one loss.
+  const homesWarning = (f) => {
+    const ops = new Set((f.homes ?? []).map((h) => h.operator));
+    const n = ops.size;
+    if (n >= 3 && n % 2 === 1) return {};
+    const need = Math.floor(n / 2) + 1;
+    return {
+      warning: n <= 1
+        ? 'this identity has one home: if that home closes or stops answering, nobody can find you and you cannot rotate away. Three homes of three operators survive the loss of one.'
+        : `this identity's homes have ${n} operators: a rotation away needs receipts from ${need} of them, so if ${n - need + 1} stop${n - need + 1 === 1 ? 's' : ''} answering you cannot rotate normally. Three homes of three operators survive the loss of one.`,
+    };
+  };
+
   if (cmd === 'identity') {
     if (sub === 'new') {
       const f = kit.newIdentity(rest[0], homesOf(opt, kit), { scheme: Number(one(opt, 'scheme') ?? 2) });
-      return say({ made: rest[0], identity: f.identity, genesis: `acts/${f.identity}.mor`, keys: `keys/${rest[0]}.json`, next: `publish its genesis to its homes: node kit/mor.mjs publish ${rest[0]} --to HOME --chain` });
+      return say({ ...homesWarning(f), made: rest[0], identity: f.identity, genesis: `acts/${f.identity}.mor`, keys: `keys/${rest[0]}.json`, next: `publish its genesis to its homes: node kit/mor.mjs publish ${rest[0]} --to HOME --chain` });
     }
     if (sub === 'show') {
       const f = kit.load(rest[0]);
@@ -244,6 +259,7 @@ function main(argv) {
       const l = kit.rotationLetters(rest[0], r.before);
       const recordLetters = l.letters.filter((n) => n.includes('-record-'));
       return say({
+        ...homesWarning(kit.load(rest[0])),
         rotated: rest[0],
         rotation: r.id,
         file: `acts/${r.id}.mor`,

@@ -829,12 +829,61 @@ export class Kit {
    * acts held; only if it passes is the identity's own act signed, and that
    * is checked again before it is kept. Nothing that fails is signed.
    */
+  /**
+   * Draft 25, G6.1 and G6.2: every act a signer makes within one agreement names, in `previous`, that signer's
+   * previous act within it; two acts that name the same previous one (or none) fork the signer's line there, and
+   * the signer's acts in that agreement stop counting. In round two, seven sets of Terms never came into force
+   * because their author's own assent named no previous act. The kit refuses such a Statement before signing,
+   * from the acts held in acts/; `"previous"` set to the latest act it names is the fix. `"fork": true` in the
+   * fields file signs anyway (it is then a fork, on purpose).
+   */
+  agreementsLineGuard(me, fields) {
+    if (fields.fork === true) {
+      delete fields.fork;
+      return;
+    }
+    const dir = this.dir('acts');
+    if (!existsSync(dir)) return;
+    const specs = Kit.agreementsSpecs();
+    const mine = [];
+    for (const file of readdirSync(dir)) {
+      if (!file.endsWith('.mor')) continue;
+      let d;
+      try {
+        d = mor.describeAct(new Uint8Array(readFileSync(join(dir, file))));
+      } catch {
+        continue;
+      }
+      if (d.signer !== me || !d.public) continue;
+      let inAgreement = false;
+      if (d.spec === specs.terms?.spec && d.id === fields.agreement) inAgreement = true;
+      else if (d.spec === specs.statement?.spec && d.payload) {
+        try {
+          const m = mor.cborDecode(Uint8Array.from(Buffer.from(d.payload, 'hex')));
+          const a = m instanceof Map ? m.get(0) : null;
+          if (a instanceof Uint8Array && hex(a) === fields.agreement) inAgreement = true;
+        } catch {
+          // not a statement this kit can read
+        }
+      }
+      if (inAgreement) mine.push(d);
+    }
+    if (!mine.length) return;
+    mine.sort((x, y) => (x.position ?? 0) - (y.position ?? 0));
+    const latest = mine[mine.length - 1];
+    const prev = fields.previous ?? null;
+    if (prev !== latest.id) {
+      throw new Error(`this Statement would fork your own line in agreement ${fields.agreement}: your latest act there that this folder holds is ${latest.id}, and "previous" names ${prev ?? 'none'}. Draft 25 (G6.1, G6.2): each of your acts within an agreement names your previous one there, or your acts in it stop counting. Set "previous": "${latest.id}" in the fields file. Nothing was signed. (To fork on purpose, add "fork": true.)`);
+    }
+  }
+
   agreementsSign(name, act, fields, { held = [], isPublic = true, to } = {}) {
     const specs = Kit.agreementsSpecs();
     const { spec, type } = specs[act] ?? {};
     if (!spec) throw new Error('the new Agreements acts are terms, statement and report');
-    const payload = Kit.agreementsBuild(act, fields);
     const f = this.load(name);
+    if (act === 'statement' && isHash(fields.agreement ?? '')) this.agreementsLineGuard(f.identity, fields);
+    const payload = Kit.agreementsBuild(act, fields);
     const l = isPublic ? 'public' : 'private';
     const throwaway = randomBytes(32);
     const draft = mor.makeEveryday({ signingSecret: throwaway, signer: f.identity, binding: f.binding, spec, type, payload, sequence: f.lines[l], public: isPublic, to });
