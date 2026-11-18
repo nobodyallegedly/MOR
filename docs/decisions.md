@@ -442,6 +442,7 @@ The research is `docs/strangers-2026-11/`.
 
 **The unproven liar is for cMIPs** (18 November; the research window's prior art, pull request 204). Asked what has made a lie costly where it could not be proven, the research found three ways (others stop dealing; something handed over in advance; a rule that makes the lie pointless), that lasting arrangements gave outsiders something to see rather than an accusation to believe, that who chose and paid a witness best predicted its lie, and that a cheap new name undid reputation wherever one was available. He: "I read all of this and I don't see anything the core can do. Most of these solutions are things I.d build with cMIPs"
 - *Arrived at (to check):* nothing is added to the core. Witnesses, stakes, reputation and rules that make a lie pointless are built with cMIPs. The core's part is what it already gives: who said what, in sequence, under a lasting name, including who chose and paid a witness, which are acts like any other.
+- Then he: "MOR doesn't have a « trust in humans » solution, but it has the grammar to build them." (A line for the companion.)
 
 ## Not carried into this stint unless he says so
 
