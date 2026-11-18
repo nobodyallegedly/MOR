@@ -385,6 +385,9 @@ The research is `docs/strangers-2026-11/`.
 **A power given binds its giver** (18 November, the morning review of wave 3; research, question 3: draft 25 knows three ways to be bound, one of them an assent made for her under a power). The MOR lead asked whether Terms signed for the holder of the baker's rights by someone holding a power she gave count as her being bound, leaning yes: she signed the Terms that gave the power, its rule said yes to the act, and a thief has no such chain. He: "If you grant powers via a cMIP you take on the responsibilities"
 - *Arrived at (to check):* yes. Whoever grants a power through a cMIP is bound by what is done under it, as if by her own signature; Terms signed for the holder under a power she gave count as her being bound.
 
+**Earned rights leave the grammar** (18 November, the morning review of wave 3; Fable's sort and the scribe's both placed G10.6 as cannot tell). The MOR lead set out Dana earning a spot offered at 10% and the maker updating the offer to 5%; G10.6 keeps Dana's 10%, overriding the update condition she accepted; (a) keep G10.6, (b) drop it, her protection being the update condition she could read before filling; leaned (b). He: "Agreed"
+- *Arrived at (to check):* (b). G10.6 goes. Whoever fills a spot is bound by the Terms' update condition like any signer; a condition that needs fillers' signatures protects them, and that is a choice of the Terms, read before filling.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
