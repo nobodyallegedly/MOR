@@ -1,6 +1,33 @@
 # Draft 26 of Agreements: a brief
 
-*Work in progress: stage 3 of 4 is in this file. "On one page" is written last and will stand here.*
+## On one page
+
+*What he could check in five minutes. It is this session's reading of the ledger, for review. Nothing here is decided, and no rule is worded.*
+
+**Draft 25 of Agreements has 124 rules (99.8 kB of rule text).** Since it was written, 35 ledger entries are about its rules. Set against the draft, what stands at the end does this:
+
+- **55 rules stay** as they are.
+- **24 change** in what they say. No new wording exists yet.
+- **4 go**: the delegator's default way out (2 rules) and earned rights (2 rules).
+- **26 move** to another text: 13 to the MICS, the shared language (how any reader must answer; how reports are read), 13 to Envelopes (the baker).
+- **15 can be read two ways**: 9 between staying and leaving, 6 between staying and changing.
+
+**New, with no rule in draft 25 today (12):** in force once pinned; knots made structural; a dissolution read from the fields; two acts to leave; a new act is a new agreement; nothing about me without my signature; one rule for every race; no release by a fork or a key; order is sequence, not time; a key change continues the signer's line; the buyer of the baker's rights carries the risk; what Agreements still asks of Envelopes.
+
+**The size.** Counting draft 25's present words only, **85 to 94 of the 124 rules would be left, 68.4 kB to 74.1 kB** of 99.8 kB. The range is the 9 rules that can be read as staying or leaving. The words that the 24 changes and the 12 new things would add are not written, so they are not counted.
+
+**What only he can answer: 31 questions**, ordered by how many rules each would move out of Agreements. The 8 that would move rules:
+
+1. Taking back a signature: the language's, or a cMIP's (a module an agreement chooses)? (2 rules)
+2. Is the signer's own line of acts the layer below's, or Agreements' own? (2)
+3. Where do the duties of client software live? (2)
+4. That a payer has paid as the version they read says, and whom a buyer's contest reaches: grammar, or cMIPs? (parts of 2)
+5. The buyer's leg: Agreements, or Money and the MICS? (1)
+6. After a fork, does an outsider's payment keep its receiver? (1)
+7. "Before paying": written with the Terms, or with the reports? (1)
+8. What a rule in a socket may be handed: Agreements, or Development? (1)
+
+If these went against Agreements, 6 more rules would leave: 79 rules, 58.7 kB. The other 23 questions move no rule: 16 would change what rules say (the first: a better word for "assent", which is in 31 rules), and 7 touch no rule. Three earlier questions were taken out as answered since. All are listed further down in this file.
 
 ## What this file is
 
@@ -314,6 +341,49 @@ Taken from three sources: section 8 of Fable's third attack ("the attack"), the 
 
 **In the ledger itself, and in none of the three sources** (not counted above): the three points "Knots, made structural where needed" leaves open; from "Three lines cut back", whether agreements play any part in stating ownership; and the two-way readings 1, 5, 6, 7 and 21 below, which arose after the three sources were written or outside what they asked.
 
+## The size (stage 4)
+
+**How it was measured.** A script (Python) reads draft 25 as it stands on branch `claude/agreements-clean-1-hahuwn`, from the line `## 4. Grammar rules` to the line before `## 5.`, and gives every line to a rule: a line that begins `- G<n>.<m>` starts a numbered clause; an indented line that begins `- (a)`, `- (b)` and so on starts a lettered sub-clause; any other indented line (an unlettered bullet, a paragraph) is added to the numbered clause above it. Bytes are UTF-8, each line with its line break. Headings, the opening lines and the "Lie exposed" and "Protects" lines belong to no rule. It finds 72 numbered clauses and 52 lettered sub-clauses, 124 rules, 99 787 bytes of rules: the same count and the same total as both maps. One kilobyte (kB) is 1 000 bytes. The eight tasks are a table in section 5 and are not in these figures.
+
+**What was taken out.** What goes and what moves. For the 24 rules that change and the 12 new things, nothing was added and nothing taken away, since no wording exists. So every figure below is of draft 25's present words, and says only how much of them would be left.
+
+| | rules | bytes of rules | share |
+|---|---|---|---|
+| draft 25 | 124 | 99 787 (99.8 kB) | 100% |
+| go | 4 | 5 183 | 5% |
+| move to the MICS, by "How a reader answers goes to the MICS" | 7 | 2 527 | 3% |
+| move to the MICS, by "Where three rules live" | 6 | 6 354 | 6% |
+| move to Envelopes | 13 | 11 641 | 12% |
+| **left, if every two-way reading keeps its rule** | **94** | **74 082 (74.1 kB)** | **74%** |
+| the nine rules a two-way reading would take out | 9 | 5 689 | 6% |
+| **left, if every two-way reading takes its rule out** | **85** | **68 393 (68.4 kB)** | **69%** |
+
+Of what is left on the higher figure: 55 rules stay (37 683 B), 24 change (24 909 B), 6 stay or change (5 801 B), and the nine are 5 689 B.
+
+**Each two-way reading that changes the size:**
+
+| rule | bytes |
+|---|---|
+| G4.8(g) | 356 |
+| G6.1 | 1 202 |
+| G6.2 | 426 |
+| G10.6(a) | 99 |
+| G11.3 | 1 101 |
+| G11.4(e) | 1 019 |
+| G11.5 | 911 |
+| G11.6(c) | 273 |
+| G14.5(e) | 302 |
+
+G4.8(g) is reading 15; G6.1 and G6.2, reading 4; G10.6(a), reading 11; G11.3, G11.4(e), G11.5 and G11.6(c), reading 14; G14.5(e), reading 17.
+
+**And his open questions.** Five of them would take out rules that are counted as left above: question 1 (G4.10, G5.7(c)), question 3 (G12.8), question 5 (G11.7), question 6 (G12.5) and question 8 (G1.5): 6 rules, 9 727 bytes. Questions 2 and 7 are already among the nine. If all of them, and every two-way reading, took their rules out, 79 rules and 58 666 bytes (58.7 kB, 59%) would be left. Question 4 would take parts of rules, which were not measured.
+
+**Four things these figures do not show.**
+- Draft 26 is not written, so its true size is not known. The 24 changes and the 12 new things would add words; how many, nobody can say yet.
+- Parts of rules leave too, and were not measured: all of G7.2 and G7.4 but one sentence each; the sentences of history in eight rules; and whatever the general test takes from G3.2, G11.2 and others.
+- These figures are larger than the comparison's "72 rules, 51.9 kB", and for a reason: that figure counts only what both maps call grammar. This one keeps every rule that no standing entry takes out, the maps' reasoning set aside.
+- Section 4 also holds 6 298 bytes that are no rule (headings, "Lie exposed", "Protects"), by the maps' measure; "Only rules in the hashed text" bears on those, and they are in none of the figures.
+
 ## His words against the lines (stage 3)
 
 Only entries that stand, and only where the "Arrived at" line says more than his words, or other than them. Both are quoted; the last column says what the line adds. His words are the last thing he says in the exchange unless the cell says otherwise; each exchange is whole in the ledger. Where the two differ, his words win. 22 rows.
@@ -618,3 +688,22 @@ Others found:
 - "Nothing about me without my signature" is followed by "Firing an employee", which answers the question at its end.
 - "Order is sequence" is followed by "Knots, made structural where needed".
 - Outside draft 25's rules: "What Money is" is followed by "We track debt"; "Only rules in the hashed text" by "A companion for Agreements".
+
+## Before the pull request: what a fresh reader stumbled on
+
+"On one page" went, alone, to a subagent that had seen neither the ledger nor the assignment. Asked "what would draft 26 hold, what is new, and what must he still answer?", it answered all three: 85 to 94 of the 124 rules left, with 55 unchanged, 24 changed and not yet worded, 4 gone and 26 moved (13 to the MICS, 13 to Envelopes); twelve new things; and 31 questions. It checked the sums and found that they hold. It was "fairly sure" of the first answer, "sure" of the list of twelve and of the count of questions, and less sure what the items mean.
+
+**It stumbled on, and the page was changed:**
+
+- "As few as 79 rules" could not be derived from the page. The page now says which questions take out how many rules.
+- "Draft 26 would keep 85 to 94 rules", when 24 of them change. The page now says the figure counts draft 25's present words only.
+- The order of the questions: ones that change 6 rules stood below ones that move 1. The page now says the order is by rules moved out, and lists the eight that move rules.
+- "Given below", "they are listed": where? The page now says further down in this file.
+- "The 8 tasks", with nothing to say what a task is; and the breakdown of the ledger's entries into standing, refined and replaced. Both were taken off the page; they are in the table's counts and in the record.
+- Length: it judged the page well over a phone screen and a half. The list of questions was cut from 13 to 8, and lines were shortened.
+
+**What could not be fixed:**
+
+- The page is still longer than a phone screen and a half, by this session's own count (about 480 words). The twelve new things are named and not explained, and 23 of the 31 questions are counted on the page and not listed there: one line for each would not fit. They are one line each in "Open, and only he can answer".
+- Words the page leans on and does not define: the ledger, Terms, pinned, a knot, the baker, a socket, a fork, the buyer's leg, the contest, the MICS, Money, Envelopes, Development. They are draft 25's and the ledger's own words, and this brief writes no definitions.
+- The fresh reader was given the first version of the page. The changed page was not put to a second fresh reader.
