@@ -7,17 +7,24 @@ To the research window, from the MOR lead (Machine, allegedly), relayed by Nobod
 - The measure since the start of the stint: "can I with a single click reward all the people that contributed to the service or good via MOR"
 - On his first project: "Yes, each voucher becomes currency, only those who need redeeming them redeem. Voucher then disappears." "The voucher is spent. The promise of something was fulfilled"
 
-**In my wording (the MOR lead's):** finance is a use, built on top, never a layer. The question for Money is not what it should say, but what the smallest record of payments must give so that agreements can build finance from it.
+- Then, setting the question: "The question is: what does finance do with money? And when it does it how does it interact with money itself?"
+
+**In my wording (the MOR lead's):** finance is a use, built on top, never a layer. Money, in his words, is two statements. The question is where finance, whatever it does, actually touches those two, and whether it ever needs to touch money in any other way.
 
 ## The question
 
-**What is the minimum a record must say about payments for finance to be built on top of it?**
+**What does finance do with money? And when it does, how does it interact with money itself?**
 
 Work it two ways, and keep them apart.
 
-**1. From first principles, without reading MOR's Money.** Take these and, for each, name what it needs a record of payments to say (who asked whom to pay what, for what; who says it was paid; what links the two; what else), and what it needs only from an agreement:
-a loan and its repayment; an instalment plan; a subscription; a split among several receivers (the shower's click); a payment passed on down a chain of receivers; an escrow; a refund; a deposit; a wage; a dividend; a membership fee; an invoice paid in parts; a bond or a stake posted in advance; a voucher issued, passed on and redeemed; mutual credit between members; an insurance pool; a donation.
-Then: the smallest set of statements that covers all of them. Is it two ("pay this, please" and "this has been paid"), or more? What has no answer in either?
+**1. From first principles, without reading MOR's Money.** Take these: a loan and its repayment; an instalment plan; a subscription; a split among several receivers (the shower's click); a payment passed on down a chain of receivers; an escrow; a refund; a deposit; a wage; a dividend; a membership fee; an invoice paid in parts; a bond or a stake posted in advance; a voucher issued, passed on and redeemed; mutual credit between members; an insurance pool; a donation.
+
+For each:
+- **What it does with money**, in plain words: asks for it, holds it, promises it, delays it, splits it, pools it, passes it on, returns it, converts it, counts it.
+- **The moments it touches money itself**: each point where a payment is asked for, made, or recorded as made. Name each moment, who acts, and what is said.
+- **What it does without touching money at all**: what is only a promise, a rule or an account between people, and so belongs to an agreement.
+
+Then: across all of them, the smallest set of ways finance touches money. Is it two ("pay this, please" and "this has been paid"), or more? Is anything finance does with money left that neither statement, nor an agreement, can say?
 
 **2. From prior art.** How existing systems split the request from the record, and what else they found they had to carry. At least: double-entry bookkeeping (Pacioli) and what it records that a payment record does not; the REA accounting model (McCarthy: resources, events, agents); ISO 20022's split between payment initiation, clearing and account reporting (the pain, pacs and camt messages); invoices and receipts in law and practice; Lightning's invoices (BOLT 11 and BOLT 12) and their proof of payment; open-banking payment initiation; mutual-credit systems (WIR, Sardex) and how they record a debt that is also money. For each: its smallest units, what it left to agreements or to people, where it was overbuilt, and where it was missing something it later had to add.
 
