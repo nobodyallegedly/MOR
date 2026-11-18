@@ -454,6 +454,8 @@ The research is `docs/strangers-2026-11/`.
 
 **We track debt** (19 November, after midnight; the research window's map of what touches money, pull request 205, and its addendum, `claude/MOR-research-addendum-2026-11-19.md` in the project). Research asked whether "this has been paid" says a debt ended, that something moved, or only that someone said so. The MOR lead leaned the last, with a name attached: who says it decides what it is worth (from the payee it ends the debt; from a rail it proves a move; from the payer alone it is a claim), the grades of finality being the rail's and the cMIPs'. He: "We don't move money, we track debt"
 - *Arrived at (to check):* MOR does not move money; it tracks debt. "This has been paid" says that a debt ended, as said by a named signer. Movement is the rail's.
+- Then he: "The money layer is all about debt tracking and management"
+- *Arrived at (to check):* the Money layer is about tracking and managing debt. Open, for the Money review: which of "management" is the layer's own grammar and which is built on top under "Built on top, as a test".
 
 ## Not carried into this stint unless he says so
 
