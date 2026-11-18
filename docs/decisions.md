@@ -452,6 +452,9 @@ The research is `docs/strangers-2026-11/`.
 - Then he: "I think the task will be to verify that money has all the sockets needed to let agreements build Finance"
 - *Arrived at (to check):* the Money task is a check, not a design: that Money gives Agreements every socket needed to build finance, as a use, on top.
 
+**We track debt** (19 November, after midnight; the research window's map of what touches money, pull request 205, and its addendum, `claude/MOR-research-addendum-2026-11-19.md` in the project). Research asked whether "this has been paid" says a debt ended, that something moved, or only that someone said so. The MOR lead leaned the last, with a name attached: who says it decides what it is worth (from the payee it ends the debt; from a rail it proves a move; from the payer alone it is a claim), the grades of finality being the rail's and the cMIPs'. He: "We don't move money, we track debt"
+- *Arrived at (to check):* MOR does not move money; it tracks debt. "This has been paid" says that a debt ended, as said by a named signer. Movement is the rail's.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
