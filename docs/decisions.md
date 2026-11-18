@@ -431,6 +431,8 @@ The research is `docs/strangers-2026-11/`.
 
 **What a dissolution is** (18 November; Fable's third attack, pull request 203, section 2.1: "the dissolution is words, and the grammar does not read words"). He: "Let's talk about dissolution being only words… of course it isn't. What is being dissolved?" The MOR lead: what a version holds in its fields (the parties, the powers, the spots and the receiver, the body, the update condition); leaned that a dissolution is the version in which the parties, powers, spots and receiver are gone and the update condition answers "not valid" to every update, read from fields with no word of the body; Fable had assumed a sentence in the body, and the MOR lead had repeated it. He: "The parties remain, they sign the dissolution. The powers are gone, no more action is possible. What it offers is gone, there is no more offer. What it says, previous agreement not in force anymore as agreed by all parties. Cannot be updated."
 - *Arrived at (to check):* a dissolution is a version that a verifier reads from its fields: the parties remain and sign it; it has no powers, so no more action is possible; it has no offer; its body says the previous agreement is no longer in force, as agreed by all parties; and it cannot be updated. The MOR lead's "no parties" is withdrawn. Open: whether a dissolution always takes every party's signature, or whatever the update condition asks.
+- Asked, he: "The update condition decides, as dictated by the cMIP that governs it. My line was a loose example"
+- *Arrived at (to check):* a dissolution passes by the update condition, as its cMIP dictates, like any other update; "as agreed by all parties" was an example, not a rule.
 
 ## Not carried into this stint unless he says so
 
