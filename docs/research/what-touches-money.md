@@ -66,6 +66,8 @@ That is eleven kinds of moment (line 8 holds two). Almost everything else people
 
 One thing runs under several of these (inferred, 65 to 80): the frame's two sentences are both about money in motion. Most of what does not fit is about money, or a debt, at rest.
 
+**What the prior art did to this** (and a warning): none of the prior art could be opened, so Part 2 is written from memory and search snippets and is marked so throughout. It changed nothing in the map. It pressed hardest on four points: that "paid" comes in grades, and can be undone for weeks after it is said; that much everyday traffic is words about requests (received, refused, please undo), which are neither of the two sentences and touch no money; that a named literature holds earmarks and gifts to be far more than "nothing"; and that both sentences are spoken in a unit, which the map takes for granted.
+
 ## The map, family by family
 
 **This map is my own description of practice**, written from what I know of how each use works, before reading any prior art for this session (Part 1 was committed on its own first). Nothing in it is sourced. Each use is one ordinary case told once; real practice varies, and nine uses are marked "less sure of the workings".
@@ -951,7 +953,103 @@ So the click is one request, then between one and many statements that money mov
 
 ## The prior art
 
-Not yet read. Part 1 above (the map, the ways of touching money, what only looks like it, the surprises, whether the frame held, the single click) was written and committed before any prior art was opened for this session. The prior art, what it changed, and where the sources disagree follow in a second commit.
+**Read this first: no source was opened.** The session's network refused every host that carries these texts. The reader tool could reach no host at all; direct downloads were refused by the session's permission check; and the one primary host I did reach, the ISO 20022 site, answered "forbidden". Four reading sessions I sent out (models, like me) met the same wall and reported back from search-result snippets and from what they knew. I used no mirror of any site that refused. So **every source below is marked (B)**: cited from what I and those sessions know, checked where noted against a search snippet, and never against the text. Section numbers, time limits and counts in this part are unverified. A (B) comparison can show where the map will be pressed; it cannot show that a source says what I remember it saying.
+
+Each entry: what the source's own list holds that the map lacks; what the map holds that it lacks. All "sourced (B)" unless marked inferred.
+
+### 1. The functions of money, and their critics
+
+- **Jevons** (four functions: medium of exchange, common measure of value, standard for deferred payment, store of value). *It has, the map lacks:* the measure and the standard as things money does. The map files pricing and counting under "does not touch money", and the hoard under "no moment". Jevons would call three of his four functions absent from a list of moments, because they are not moments. *The map has, it lacks:* every moment except the plain move; asking, ordering, permitting, setting aside, cancelling and time running out are not functions of money at all for him.
+- **Knapp** (money as a creature of law; the unit defined by the state; what counts is what public pay offices accept). *It has, the map lacks:* who declares the unit; the state as a payee unlike others; acceptance as the test of what is money. *The map has, it lacks:* almost all the moments; Make and Unmake appear only as the state issuing and taking back.
+- **Innes** (a sale is goods against credit; payment is a debt cancelled against a credit; coins are tokens of debt). *It has, the map lacks:* an abstract unit before any payment; the worth of the issuer as what gives a credit its value. *The map has, it lacks:* the move itself. For Innes nothing moves: debts are made, passed on and cancelled, so the map's Make, Unmake and Cancel against are nearly his whole list, and the 61 uses with a move dissolve into them. (Inferred from memory of the two articles; 60 to 80.)
+- **Ingham** (money is a relation of credit and debt, named in a money of account, with a means of final settlement). *It has, the map lacks:* the money of account as the first thing; final settlement as distinct from payment; the power of whoever issues. *The map has, it lacks:* the transaction-level moments.
+- **Mehrling** (a hierarchy: each level is a promise to pay the level above; what is money and what is credit depends on where one stands). *It has, the map lacks:* levels. The map's Move does not say *in what*; "paid" at one level is "promised" at the next up. This is surprise 10 of the map, stated as a system. *The map has, it lacks:* Ask, Permit, Set aside, the two sayings. It does have Time runs out (the day a promise must be met) and Make and Unmake (balance sheets growing and shrinking). (Inferred; 55 to 75.)
+
+### 2. Zelizer, Polanyi, Bohannan, Guyer
+
+- **Zelizer** (earmarking; many monies inside modern money; three kinds of payment: compensation, entitlement, gift). *It has, the map lacks:* earmarking as something that changes the money, not a note written beside it; and the question *as what* a sum is paid. The same move is a wage, a share or a gift, and people quarrel over which far more than over whether it moved. The map calls envelopes and budgets "nothing touched" (surprise 6); she would call that the mistake her work exists to correct. *The map has, it lacks:* any mechanics of settlement.
+- **Polanyi** (money uses instituted separately: payment, standard, hoarding, exchange; special-purpose against all-purpose money; payment as discharge of an obligation, with fines, tribute and bridewealth as first examples). *It has, the map lacks:* obligations that no payee ever asked for, standing in custom or law; the standard as a use. The map met these (21 uses move with no request) but has no name for where the duty comes from. *The map has, it lacks:* the request side altogether.
+- **Bohannan** (ranked spheres of exchange; conveyance within a sphere, conversion between them, the second morally marked). *It has, the map lacks:* a conversion that is not the map's 7.1. Changing one money for another at a booth is two moves and a rate; Bohannan's conversion carries honour or shame and some conversions are refused outright. The map has no place for "this wealth may not ask for that". *The map has, it lacks:* nearly all the moments.
+- **Guyer** (conversions as ordinary and skilled; gain made where scales and ranks meet; equivalence not the aim). *It has, the map lacks:* several units and scales in one deal; exchanges meant to stay open. The map's "counts it" and its rates are, for her, where the action is. *The map has, it lacks:* a fixed list of moments at all; she resists closed lists.
+
+### 3. Mauss, Graeber and his critics
+
+- **Mauss** (three obligations: to give, to receive, to return; the "pure gift" as a late idea). *It has, the map lacks:* receiving and refusing as acts; an obligation with no date, no amount and no enforcer. The map's 5.2 says a gift has "no claim before it and no claim after". Mauss says no gift is like that. **Disputed** between Mauss and my map, and inside the literature (Mauss against Malinowski on the pure gift). *The map has, it lacks:* dated, counted moments.
+- **Graeber** (credit before coin; "human economies" in which payments acknowledge a debt that cannot be paid; three moral grounds: sharing without accounts, exchange, hierarchy). *It has, the map lacks:* payments that do not settle anything and are not meant to (the map's 5.7 notes this in passing); relations in which keeping an account is itself the offence; cancellation of debts as a great public act, where the map's 7.11 has "no moment". *The map has, it lacks:* operational detail.
+- **His critics.** Beggs (Jacobin, 2012): where money came from does not say how it works now, and a credit is still a promise to pay *something*. Selgin (2016): the barter story was a claim about strangers, which Graeber grants. **Disputed**, and not settled here. Beggs's point bears on the frame: both of its sentences leave out the thing asked for.
+
+### 4. ISO 20022 purpose codes
+
+**Not counted.** I was asked to count the codes and the categories and could not: the registration authority's site refused. What I have instead (sourced (B), snippets only): a Bank of England consultation of 2020 to 2021 gives 298 purpose codes and 33 category purpose codes; an undated BIS Nexus page gives "300+" and 44. The sets grow by quarterly change requests, so the two figures are probably two dates. Neither is my count.
+
+From memory, the purpose-code list is sorted under about two dozen headings. I recall these, and may have some wrong (inferred from memory; that the set of headings is right to within three, 50 to 70): bank debt; card settlement; cash management; collateral; commercial; commodities; consumer; dividends; e-commerce; finance; general; government; insurance; investment; listed derivatives; medical; OTC derivatives; salary and benefits; securities lending; tax; trailer fee; transport; utilities.
+
+Against the map's families (inferred; 45 to 65):
+
+| The list's heading | Falls in the map's family |
+|---|---|
+| Commercial, consumer, e-commerce, transport, medical, salary and benefits | 2, trade and work |
+| Utilities | 2, and 6.4 (the metered service) |
+| Finance, bank debt, insurance, dividends, investment | 1, finance |
+| Tax, government | 4, law and collective life |
+| General (as I recall it holds charity, gifts, alimony and the like) | 5 in part, 4 in part |
+| Card settlement, cash management, collateral, commodities, listed and OTC derivatives, securities lending, trailer fee | **none** |
+
+- *It has, the map lacks:* a whole family. Payments between financial firms for trades in securities and derivatives, collateral and margin, and a firm moving its own money between its own accounts. The map has no use in which the payer and the receiver are the same owner at two keepers.
+- *The map has, it lacks:* family 3 (media and attention) has at most a few codes (royalties, subscriptions, licence fees, as I recall) and no heading; family 6 (machines) has none, because a purpose code says why, never who or what acted; and nothing in the list is a moment. It is a list of reasons riding on a move: the map's "statement with something added", with the addition standardised.
+
+### 5. Central banks and payment networks
+
+- **The BIS committee's glossary.** *It has, the map lacks:* **clearing** as a stage before settlement; **finality** as a legally defined moment separate from the move; **provisional** transfers that can still be revoked; **unwinding**, where moves already said are deleted and everyone's debts recomputed; two moves tied so that each happens only if the other does (delivery against payment, payment against payment); **novation**, where netting replaces old debts with one new debt, not the same as cancelling. *The map has, it lacks:* Say it did not move, and Time runs out as an event.
+- **Its payment statistics.** They sort by instrument (credit transfer, direct debit, card by function, e-money, cheque, cash withdrawal and deposit), not by moment. *It has, the map lacks:* cash taken out and put in, counted as transactions (same owner, new keeper or new form); who starts a payment and by what device. *The map has, it lacks:* everything but Order and Move; it counts completed payments only.
+- **A card network's transaction types.** *It has, the map lacks:* **presentment** (the claim put in after approval and before the money, which the map's 7.8 files under Ask); a hold that is enlarged, partly released, or lapses by itself after some days; a ruling by the network on who bears a dispute; a hold placed on money that has already moved, while a dispute runs. *The map has, it lacks:* Make and Unmake; netting, which a shop never sees.
+- **A direct-debit scheme's steps.** *It has, the map lacks:* the map's one "back" is here at least five things, split by who starts it and whether the banks have settled: reject, refusal, return, refund, reversal; plus two that are only words, revocation and request for cancellation. Also **pre-notification**, an announcement that a collection is coming, which is neither an ask nor an order; and a payer's unconditional right to have the money back for some weeks, so that a move stays open to being undone long after it is said. *The map has, it lacks:* Set aside; Make and Unmake.
+- **Real-time gross settlement against deferred net settlement.** *It has, the map lacks:* **waiting** (a payment accepted and not yet settled, in a queue); the need to have funds or credit in place before a move; liquidity set aside by the payer for a purpose and for no payee. *The map has, it lacks:* Ask, Permit, Make and Unmake.
+- **ISO 20022 message kinds** (as I recall them): a request to pay; a status report on a request; a request to recall a payment and the answer to it; the return itself; inquiries; and account notifications. *It has, the map lacks:* **statements about requests** ("received", "pending", "rejected"), **requests to undo**, and **answers to requests**. None is a request that money move or a statement that it moved, and all are everyday traffic.
+
+The same words mean different things across these sources (**disputed** in usage, not in substance): a "reversal" releases a hold in cards and sends money back in direct debit; a "refund" is the merchant's choice in cards and the payer's right in direct debit; "settlement" is the discharge of a debt in the glossary and the payout to a shop in card practice.
+
+### 6. Accounting
+
+- **Cash against accrual.** Cash accounting records only moves. Accrual records the claim when it arises, which is usually when the work is done or the goods handed over, not when anyone asks. *It has, the map lacks:* "cash equivalents", short claims counted as cash; and entries with no moment at all behind them: revaluing, releasing a prepayment into income, writing off.
+- **A receivable.** A right to be paid for which only time must pass; set apart from a right still waiting on something else. It leaves the books by payment, by set-off, by write-off or by forgiveness. *Against the map:* a write-off is the creditor's own judgement that he will not be paid; the debtor still owes. The map has no such thing; it is not Time runs out. And accounting treats forgiveness, and a deposit forfeited in the holder's hands, as events with an entry, where the map says nothing happened to money (which is also true).
+- **A provision.** A debt of uncertain date or amount, recorded if payment is probable, noted if only possible, passed over if remote. *It has, the map lacks:* claims that exist in degrees.
+- **A voucher** is a liability when sold and income when redeemed, which matches Make and Unmake; the vouchers never redeemed ("breakage") are taken to income by estimate. *The map lacks:* a promise used as money that dies unused; it falls between Unmake and Time runs out.
+- **Holds and mandates.** As far as I know neither a card authorisation nor a mandate makes any entry in anyone's books. *The map has, accounting lacks:* Permit and Set aside. Restricted cash is shown in a note, not as an event.
+- **Reconciliation.** The routine of comparing one's own "I paid" with the bank's "it moved", with standing names for the gap (cheques outstanding, deposits in transit). *It has, the map lacks:* "in transit" as a state, and the practice itself: two statements about one move, made by two parties, that are expected to disagree for a while.
+
+In one line (inferred; 60 to 75): the map is a map of messages and deeds; accounting is a map of positions. Each is blind where the other sees.
+
+## What the prior art changed
+
+**In the map: nothing.** No use, no moment and no mark in the table was changed after Part 1, so the counts stand as first computed. I held back on purpose: nothing was opened, and I did not think it right to redraw a map on the strength of sources I could only remember. What changed is in my reading, and every change is listed here.
+
+1. **Finality.** Part 1 noticed it under "a reversal" as one sentence. The payment taxonomies make it the centre: "paid" has grades (said, settled, final, past the last day on which it can be undone). I now think this is the largest thing the map's Say it moved leaves out. (Inferred; 65 to 80.)
+2. **"Back" is not one moment.** The map's Move back and Taken cover what the direct-debit scheme splits five ways. The map's two would need two questions added to tell them apart: who started it, and had the money already moved.
+3. **Words about words.** Part 1 has one moment of this kind, Say it did not move. The message standards have a family: status of a request, refusal of a request, request to undo, answer, announcement, inquiry. I did not look for these and should have. They do not touch money; they are neither of the frame's two sentences; and they are most of the traffic.
+4. **My confidence that Make and Unmake are a third kind moved from 40 to 60 down to 30 to 50.** Innes, Ingham, Mehrling and voucher accounting all tell them as a debt made, passed and cancelled, which is the frame's second sentence about a promise rather than a new kind. That is one side of a live dispute, and it is the side I could not read.
+5. **My confidence that earmarks and gifts are "nothing" fell.** Surprise 6 (a budget touches nothing) and use 5.2 (a gift has no claim before or after) are the two places where a named literature says the map is wrong in kind, not in detail. I leave them as written and mark both **disputed**.
+6. **A missing family.** Dealings between financial firms, and one owner's money moving between two keepers. Not added to the map, because I could add it only from the same memory that failed to include it.
+7. **The unit.** Five of the sources put the unit of account before any payment. The map has it only as "counts it" and as the rate in 7.1. Both of the frame's sentences are spoken *in* a unit; the map never says so.
+
+## Where the sources disagree
+
+**Is money first a thing that moves, or first an account of who owes whom?** Not settled here.
+
+- **A thing that moves:** Jevons; Bohannan's objects in ranked circuits; Beggs and Selgin, who hold that analysis needs a medium even if history began with credit; cash-basis accounting; the payment statistics, which count transfers.
+- **An account of who owes whom:** Innes, Ingham, Polanyi (obligation and discharge before exchange), Mauss, Graeber; accrual accounting and double entry, in which cash at the bank is itself a debt owed by the bank.
+- **It depends where you stand:** Mehrling (each level's money is the next level's promise); Knapp (a token, made valid by law).
+- **Neither:** Zelizer (a marker of a relation), Guyer (a way of valuing, done in the act).
+
+What each side would make of the frame (all inferred, from sources not opened; 45 to 65):
+
+- **The thing side** would say the frame describes papers about money and leaves out money: a request and a statement both presuppose something that is asked for and handed over. The map's 61 uses with a move are that something.
+- **The account side** would say the frame is nearly right and too modest: "pay this please" is a debt stated and "this has been paid" is a debt cancelled, and there is nothing else. It would add what the frame leaves out: the unit in which both are spoken, and whose promise is good.
+- **The hierarchy view** would say "paid" is never said without "in what": paid in a bank's promise, paid in the state's, paid in gold. The same statement is final at one level and only a promise at the next.
+- **Zelizer** would say a third sentence is missing: *as what* it was paid. **Mauss and Graeber** would say that for gifts and for payments that bind people together the request is never spoken and "paid" is never final, so the frame fits commerce and not these.
+- **Accounting** would take the second sentence (a ledger line and a bank statement are both "this has been paid") and point out that the first is never recorded: books record the debt, which arises from the work done, not from the asking.
+
+Other disagreements met on the way, none settled: Graeber against Selgin on what the barter claim ever was; Graeber against Beggs on whether origins matter; Bohannan against Guyer on whether the spheres were closed; Polanyi and Bohannan against Zelizer on whether special-purpose money belongs to other societies or to all of them; Mauss against the map's bare gift.
 
 ## What this cannot tell
 
@@ -960,9 +1058,46 @@ Not yet read. Part 1 above (the map, the ways of touching money, what only looks
 - The list of uses is a list of names. Uses with no name in English, or none I know, are missing.
 - The eleven kinds are a reading. The table is counted; the choice of columns is not.
 - "Touches money itself" is the hardest phrase in the question and the map does not define it better than the three things do. Where money is itself someone's promise (1.3, 1.8, 1.9), the line between a move and a change in a claim depends on which promise one chooses to call money.
+- **Part 2 rests on no opened source.** Every comparison with the prior art is from memory and snippets. The ISO 20022 codes were not counted. Anything in Part 2 may be wrong about what a source says, and it should be redone with access before anyone leans on it.
 - Uses with no money in them at all (barter, labour exchanged for labour, a favour) are outside the map.
 - **What I saw of MOR's Money, against the instruction to see none.** The ledger entry "What Money is" contains, between his two quoted sentences, the MOR lead's summary of the outline of Money draft 9: a sorting of its contents into what is likely grammar, what is now in Agreements, what is built on top and what belongs to another layer, with a handful of topic names. I read that passage once while reading the entry for his words, before I could stop. I opened no draft of Money, no code, no test and no other summary, and did not open Agreements draft 25. The map's moments and names were chosen from the uses, but I cannot show that the passage left no trace.
 
 ## The sources
 
-None yet: Part 1 uses no source but the ledger and the assignment named above.
+**His words:** `docs/decisions.md` and `docs/lead/assignments/2026-11-18-research-what-touches-money.md`, both on branch `claude/lead-records-2`, read on 18 November 2026.
+
+**Marks.** (A, full text), (A, abstract), (A, excerpt): opened and read to that extent. (B): not opened; cited from what I know. "(B, snippet)" adds that a search engine's summary of the page was seen. **Every source below is (B).** The links are where the text is said to be; I have not seen what is at them.
+
+Functions of money and critics
+- W. S. Jevons, *Money and the Mechanism of Exchange*, 1875, ch. III. https://www.econlib.org/library/YPDBooks/Jevons/jvnMME.html (B, snippet)
+- G. F. Knapp, *The State Theory of Money*, 1905; abridged English edition 1924. https://historyofeconomicthought.mcmaster.ca/knapp/StateTheoryMoney.pdf (B, snippet)
+- A. Mitchell Innes, "What is Money?", *Banking Law Journal*, 1913; "The Credit Theory of Money", 1914. No link reached. (B, snippet)
+- G. Ingham, *The Nature of Money*, 2004; "Money is a Social Relation", *Review of Social Economy* 54(4), 1996. (B, snippet)
+- P. Mehrling, "The Inherent Hierarchy of Money", 2012. No link reached. (B, snippet)
+
+Sociology and anthropology
+- V. Zelizer, "The Social Meaning of Money: 'Special Monies'", *American Journal of Sociology* 95(2), 1989, https://www.jstor.org/stable/2780903 ; *The Social Meaning of Money*, 1994; "Payments and Social Ties", *Sociological Forum* 11(3), 1996. (B, snippet)
+- K. Polanyi, "The Semantics of Money-Uses", 1957, reprinted in G. Dalton (ed.), *Primitive, Archaic and Modern Economies*, 1968. (B, snippet)
+- P. Bohannan, "Some Principles of Exchange and Investment among the Tiv", *American Anthropologist* 57(1), 1955; "The Impact of Money on an African Subsistence Economy", *Journal of Economic History* 19(4), 1959. (B, snippet)
+- J. Guyer, *Marginal Gains: Monetary Transactions in Atlantic Africa*, 2004. (B, snippet)
+- M. Mauss, *Essai sur le don*, 1925; *The Gift*, English editions 1954 and 2016. https://haubooks.org/the-gift/ (B, snippet)
+- D. Graeber, *Debt: The First 5,000 Years*, 2011. (B, snippet)
+- M. Beggs, "Debt: The First 500 Pages", *Jacobin*, 2012. https://jacobin.com/2012/08/debt-the-first-500-pages (B, snippet)
+- G. Selgin, "The Myth of the Myth of Barter", Cato Institute, 2016. https://www.cato.org/blog/myth-myth-barter (B, snippet)
+
+Payment taxonomies
+- ISO 20022 Registration Authority, External Code Sets (ExternalPurpose1Code, ExternalCategoryPurpose1Code). https://www.iso20022.org/catalogue-messages/additional-content-messages/external-code-sets (B; the site answered "forbidden")
+- Bank of England, consultation on a draft UK purpose code list, 2020 to 2021 (the figures 298 and 33). (B, snippet)
+- BIS Innovation Hub, Nexus documentation, "Purpose Codes" (the figures "300+" and 44). (B, snippet)
+- CPMI, "Glossary of payments and market infrastructure terminology". https://www.bis.org/cpmi/publ/d00b.htm (B, snippet)
+- CPMI, "Methodology of the statistics on payments and financial market infrastructures in the CPMI countries", Papers No 168, 2017. https://www.bis.org/cpmi/publ/d168.pdf (B, snippet)
+- CPSS, "Real-Time Gross Settlement Systems", Publications No 22, 1997. https://www.bis.org/cpmi/publ/d22.pdf (B, snippet)
+- Stripe, documentation on authorisations, refunds and disputes. https://docs.stripe.com/disputes/how-disputes-work (B, snippet; a processor's account, not a network's rules; no card network rulebook was reached)
+- European Payments Council, "SEPA Direct Debit Core Scheme Rulebook", EPC016-06. https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-direct-debit (B, snippet)
+
+Accounting
+- IASB, Conceptual Framework for Financial Reporting, 2018; IAS 7; IAS 32; IAS 37; IFRS 9; IFRS 15. https://www.ifrs.org/issued-standards/list-of-standards/ (B, snippet)
+- OpenStax, *Principles of Accounting*, vol. 1, 2019, section 8.6 on bank reconciliation. https://openstax.org/ (B, snippet)
+- Grant Thornton, "IFRS Viewpoint: Accounting for client money", 2018. (B, snippet)
+
+**Hosts that refused.** By the session's network rules (the name would not resolve, or the proxy refused): www.iso20022.org, docs.bis.org, www.bis.org, www.ifrs.org, openstax.org, www.gutenberg.org, www.econlib.org, en.wikisource.org, archive.org, www.community-exchange.org, sites.bu.edu, storre.stir.ac.uk, www.econstor.eu, is.muni.cz, www.jstor.org, institucional.ufrrj.br, laviedesidees.fr, ics.uci.edu, jacobin.com, www.cato.org, theanarchistlibrary.org, docs.stripe.com, docs.adyen.com, www.europeanpaymentscouncil.eu, www.ecb.europa.eu, ideas.repec.org. By the site itself, after the network allowed it: www.iso20022.org (403). No mirror was used; a package that republishes the ISO code sets turned up in search and was left alone for that reason. Fifteen of these hosts were added to the session's allowed list during the work; the reader tool still could not reach them, and further direct downloads were refused by the session's permission check, so the second try at each central source did not happen.
