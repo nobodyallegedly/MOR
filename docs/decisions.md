@@ -380,6 +380,7 @@ The research is `docs/strangers-2026-11/`.
 
 **Leaving is an update** (18 November, the morning review of wave 3; research, question 2). On what leaving is, as an act, after "No default way out" ("It's a new agreement, updated from the previous one and in its chain, but it is its own new act"), the MOR lead set out three readings: (a) a new version of the same agreement, an ordinary update without the leaver; (b) a new agreement that follows the old one; (c) a new kind of act for leaving; and leaned (a). He: "An editor would say « when in doubt, leave it out »"
 - *Arrived at (to check):* (a), nothing added. Leaving is an ordinary update, a new version in the agreement's chain without the leaver, passed by the update condition or the exit conditions the Terms chose. The grammar has no act or word of its own for leaving.
+- Then he: "B is impossible. C is not needed"
 
 ## Not carried into this stint unless he says so
 
