@@ -417,6 +417,9 @@ The research is `docs/strangers-2026-11/`.
 - Then, to the MOR lead's "an agreement can now end, which draft 25 said never happens", he: "Wait… an agreement can always end, it is not a feature, it is an update to the agreement that states the dissolution of it"
 - *Arrived at (to check), corrected:* the end is no new act and no change to G4.9. It is an ordinary update whose version states the agreement's dissolution, passed by the update condition like any other. "Against draft 25's G4.9" was the MOR lead's reading, withdrawn; nothing is open in the bytes for it beyond how the new agreement points back.
 
+**How a reader answers goes to the MICS** (18 November, the review of wave 4; the scribe's comparison of the two sorts, question 1: G7.3, G8.1 to G8.4, G9.1, G9.2, which Fable's sort sends to the MICS and the scribe's kept in Agreements). The MOR lead leaned the MICS: they are how MOR tells the truth about anything it reads, the shared language by the admission test, as with the report block. He: "The MICS, I assume they are overarching rules"
+- *Arrived at (to check):* the rules on how any reader must answer ("say who said it", "unchecked is not passed", how an answer is qualified) move to the MICS, for every layer. His "I assume they are overarching rules" is a condition: the scribe checks, when the MICS is rewritten, that each of the seven holds outside Agreements, and brings back any that does not.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
