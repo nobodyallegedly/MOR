@@ -394,6 +394,9 @@ The research is `docs/strangers-2026-11/`.
 **Built on top, as a test** (18 November, the morning review of wave 3; research, question 6: "What the core is for" was said of one lean, about a receiver). The MOR lead asked whether it is a general test, any rule that settles how people should behave in a deal belonging to cMIPs, leaning yes, as he had ruled on the receiver, the delegation and earned rights. He: "Yes, agreement is now closer to language than protocol. It.s all about what is built on top."
 - *Arrived at (to check):* yes, a general test for Agreements: a rule that settles how people should behave in a deal belongs to the cMIPs built on top, not to the grammar.
 
+**Seeing and being told** (18 November, the morning review of wave 3; research, question 5). The MOR lead leaned a split: "must be told" is behaviour, for cMIPs; "who may see" is the data socket's (K8, "Data needs to move along paths that people agree, with signature."), the grammar keeping the socket and the cMIP in it deciding who sees. He: "Sounds good"
+- *Arrived at (to check):* a duty to tell is built on top, in cMIPs; who may see is decided by the cMIP in the data socket. The grammar holds only the socket.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
