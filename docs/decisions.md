@@ -446,6 +446,7 @@ The research is `docs/strangers-2026-11/`.
 
 **What Money is** (18 November, late). He: "Now the question is… was money overdefined?" The MOR lead, from Money draft 9's outline only (80 KB, written before the Agreements rewrite, the report block and the "built on top" test): likely grammar, where a payment goes (the payee pointer) and proof that a payment happened (receipts and claims, possibly the report block applied to money); now in Agreements, debts and buying; built on top, refunds, referrals, fees and attention, routes across rails; another layer, the theft rule (Identity); so Money may shrink to a name you can pay and a signed record that a payment happened; proposed a blind double sort of Money after the break. He: "Makes sense, money truly is two things « pay this pls » « this has been paid » it carries no money it simply accounts it and links it"
 - *Arrived at (to check):* the direction, not yet a rule: Money is two things, a request to pay and a record that it was paid. It carries no money; it accounts for it and links it. For after the break: a blind double sort of Money draft 9, as was done for Agreements.
+- *Correction (19 November, the MOR lead's):* the outline read was Money draft 9, of 18 October, picked by a file listing that sorted "draft-9" after "draft-14". The latest on main is draft 14 ("freeze-ready, for Nobody, allegedly, to approve"), with the same parts and one more act, the price tag (type 5). The reading above stands on draft 14's outline; the double sort, and any comparison, read draft 14. Found by the research window.
 
 **The order after the break** (18 November, late). He: "Envelopes is probably fine as redefined. Development too. Let's wait for the findings… finish agreements, then turn our attention to money"
 - *Arrived at (to check):* first the simulation's findings; then Agreements is finished; then Money. Envelopes (as redefined, with the baker's rule moving in) and Development are probably fine, in his words, and are not reopened unless something shows otherwise.
@@ -456,6 +457,9 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* MOR does not move money; it tracks debt. "This has been paid" says that a debt ended, as said by a named signer. Movement is the rail's.
 - Then he: "The money layer is all about debt tracking and management"
 - *Arrived at (to check):* the Money layer is about tracking and managing debt. Open, for the Money review: which of "management" is the layer's own grammar and which is built on top under "Built on top, as a test".
+
+**The map first** (18 November, late; recorded on 19 November, the research window having found it missing). Asked what finance does with money, he: "The question is: what does finance do with money? And when it does it how does it interact with money itself?" Then: "Yes, we'll get to the record, but first let's look at what touches money and my question might be too narrow"
+- *Arrived at (to check):* first a map of everything that touches money, finance and beyond; what a record must say comes after, from the map.
 
 ## Not carried into this stint unless he says so
 
