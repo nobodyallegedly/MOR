@@ -1,6 +1,6 @@
 # Draft 26 of Agreements: a brief
 
-*Work in progress: stage 1 of 4 is in this file. "On one page" is written last and will stand here.*
+*Work in progress: stage 2 of 4 is in this file. "On one page" is written last and will stand here.*
 
 ## What this file is
 
@@ -34,6 +34,178 @@ On the order of work: "Let's wait for the findings… "finish agreements, then t
 **A cMIP** is a module that an agreement chooses, by naming it in one of its fields (a socket). **Terms** are the act that states what is agreed. **The gate that goes** is short, in the table, for one thing: draft 25 lets an update replace the old Terms only when the old Terms' update condition answers valid *and* the new version has the signatures its own `in_force` rule asks; "The two gates" keeps the first check alone.
 
 **The branch.** The assignment named the branch `claude/draft-26-brief`. The harness added a suffix: the work is on `claude/draft-26-brief-ucdzo3`, made from `main`.
+
+## Rule by rule (stage 2)
+
+One row for each of draft 25's 124 rules: the 72 numbered clauses, G1.1 to G14.5, and the 52 lettered sub-clauses written as list lines of their own. The count was checked by script (the script is described under "The size"). Only entries that stand at the end are used. His words are quoted beside each row that an entry reaches; "by the line only" marks a row, or a part of one, that rests on the MOR lead's "Arrived at" line where his words do not reach it. For "Where three rules live" his words in the row are the first of three; the whole exchange is in the record at the end of this file.
+
+**The counts.** 55 stay, 24 change, 4 go, 26 move, and 15 can be read two ways (9 of them between staying and leaving, 6 between staying and changing). Of the 55 that stay, 48 are reached by no standing entry, and 7 are named and kept or confirmed by one.
+
+| rule | what becomes of it | by which entry | his words, quoted |
+|---|---|---|---|
+| G1.1 | stays as it is | | |
+| G1.2 | **CHANGES.** An agreement signs under a power its own Terms give. A power to act for someone now counts only where that person's own signature is on the version that gives it; how far that reaches inside a group that signs as one is open (the attack's question 4). The words "a named delegate" stand in it twice; whether they are the grammar term that goes is a reading. | "Nothing about me without my signature"; "Delegation is a leftover" for the word, by the line only | "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?" "I think it's best. It's a leftover of the old ways" |
+| G1.3 | stays as it is | | |
+| G1.4 | **STAYS.** "The receiver" is among what Agreements keeps, by the line only. | "Where three rules live", by the line only | "Agreed for the first, not sure I get the second, expand on third too" |
+| G1.5 | stays as it is | | |
+| G2.1 | stays as it is | | |
+| G2.2 | stays as it is | | |
+| G3.1 | stays as it is | | |
+| G3.2 | stays as it is | | |
+| G4.1 | **CHANGES.** Having every needed signature is no longer enough. Terms are in force only once the order of those signatures is pinned: a named place shows it, or each signer whose signature was needed has acted after the completion. Until then they are "not yet in force". | "In force once pinned" | "Agreed. Let them get stuck and cook it clean" |
+| G4.2 | stays as it is | | |
+| G4.3 | stays as it is | | |
+| G4.4 | stays as it is | | |
+| G4.5 | **CHANGES.** Terms stop once the update condition answers valid for the update that replaces them. Today the rule waits until the replacing Terms are themselves in force. | "The two gates" | "A, agreed" |
+| G4.6 | **STAYS or CHANGES.** Its paragraph "Which place" is place detail written outside G7: it leaves with "the rest of G7", or it stays (two-way reading 2). | "The place is a pointer" | "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G4.7 | **CHANGES.** Today two rival updates are a fork only if each also has the assents its own `in_force` asks; the update condition alone now decides whether an update replaces. Whether rival tips keep the answer "fork" beside a race's "not shown" is the MOR lead's to word. | "The two gates"; "What a race stops" for the answer word, by the line only | "A, agreed" "Agreed, Carla is the monkey wrench that gets it all stuck" |
+| G4.7(a) | **CHANGES.** It tells a late update by asking whether the earlier one was "valid and in force"; the second half is the gate that goes. | "The two gates" | "A, agreed" |
+| G4.7(b) | **CHANGES.** The same "valid and in force". Its per place and per clock detail is place detail (two-way readings 2 and 3). Whether knots still count where a place is named is open (research's question 2). | "The two gates"; "The place is a pointer" | "A, agreed" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G4.7(c) | stays as it is | | |
+| G4.7(d) | stays as it is | | |
+| G4.7(e) | stays as it is | | |
+| G4.8 | **CHANGES.** Its last sentence hands "whether the replacing Terms are themselves in force" to the new version's own rule; the update condition alone now decides whether it replaces. | "The two gates" | "A, agreed" |
+| G4.8(a) | **CHANGES.** Its last sentence lets Terms that nobody signed be replaced by a version "in force by its own `in_force`": the gate that goes. Its sentence "a party that a version took out is not asked by a later update" meets the two acts of leaving (two-way reading 7). | "The two gates"; "Leaving takes two acts" | "A, agreed" "Yes, because her signature was the problem for other updates in the future, no? So, the mechanism of leaving forces two acts to be created instead of one, thus solving her signature problem" |
+| G4.8(b) | stays as it is | | |
+| G4.8(c) | stays as it is | | |
+| G4.8(d) | **STAYS or CHANGES.** Which place, and which clock, judge a replacement: place detail written outside G7 (two-way readings 2 and 3). | "The place is a pointer" | "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G4.8(e) | stays as it is | | |
+| G4.8(f) | **GOES.** It only points to G5.5, which goes. The entry names G5.5 and not this clause: by a reading. | "Delegation is a leftover" | "I think it's best. It's a leftover of the old ways" |
+| G4.8(g) | **STAYS or MOVES (to a companion).** It tells what changed since draft 18; both maps say it holds no rule of its own. Read as history, it leaves the hashed text; read as the default said again, it stays (two-way reading 15). | "Only rules in the hashed text" | "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested." |
+| G4.9 | **CHANGES.** Its first sentence follows G4.5. Beyond that, the entry pulls two ways inside itself: his words are that "an agreement can always end", by an update that states its dissolution, which a verifier reads from the fields; the MOR lead's corrected line says "no change to G4.9", and G4.9 forbids a verifier to answer that an agreement has ended (two-way reading 5). | "The two gates"; "Leaving takes two acts"; "What a dissolution is" | "A, agreed" "Wait… an agreement can always end, it is not a feature, it is an update to the agreement that states the dissolution of it" "The parties remain, they sign the dissolution. The powers are gone, no more action is possible. What it offers is gone, there is no more offer. What it says, previous agreement not in force anymore as agreed by all parties. Cannot be updated." |
+| G4.10 | **CHANGES.** In a race between the last signature and a signature taken back, the coming into force fails and the state before both stays. And no signature is taken back after the pinning; today the rule says after the Terms are in force. What becomes of its long paragraph on order, by place or by citing, is not worded. Where the rule lives, in the grammar or in a cMIP, is open (the comparison's question 2). | "What a race stops"; "In force once pinned" | "Agreed, Carla is the monkey wrench that gets it all stuck" "Agreed. Let them get stuck and cook it clean" |
+| G4.11 | stays as it is | | |
+| G4.11(a) | stays as it is | | |
+| G4.11(b) | stays as it is | | |
+| G4.11(c) | stays as it is | | |
+| G4.11(d) | stays as it is | | |
+| G4.11(e) | **CHANGES.** Its last sentence sends a delegation to G5.5, which goes. What "the original" means in it is open (research's question 7). | "Delegation is a leftover" | "I think it's best. It's a leftover of the old ways" |
+| G4.11(f) | stays as it is | | |
+| G4.11(g) | stays as it is | | |
+| G4.11(h) | stays as it is | | |
+| G4.11(i) | **STAYS or CHANGES.** It forbids a verifier to answer that an agreement "can never be updated"; of a dissolution his words are "Cannot be updated." (two-way reading 5). It names G10.6, which goes. | "What a dissolution is" | "The parties remain, they sign the dissolution. The powers are gone, no more action is possible. What it offers is gone, there is no more offer. What it says, previous agreement not in force anymore as agreed by all parties. Cannot be updated." |
+| G5.1 | stays as it is | | |
+| G5.1(a) | stays as it is | | |
+| G5.1(b) | **CHANGES.** An act made for someone under a power binds her only where her own signature is on the version that gives the power. Today it is enough that she is bound by those Terms in any way, an update she did not sign included. | "Nothing about me without my signature"; "A power given binds its giver" stands beside it | "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?" "If you grant powers via a cMIP you take on the responsibilities" |
+| G5.1(c) | **STAYS**, by the lines of two entries. By the letter of his words in a third it would be reached (two-way reading 8). | "The two gates"; "Nothing about me without my signature" | "A, agreed" "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?" |
+| G5.2 | stays as it is | | |
+| G5.3 | stays as it is | | |
+| G5.4 | **CHANGES.** It asks when the replacing Terms were "valid and in force": the second half is the gate that goes. Its order by a place's positions is place detail (two-way reading 2). In a race between an agent's act and the end of its power, which of the two fails is open (the attack's question 8). | "The two gates"; "The place is a pointer"; "What a race stops" | "A, agreed" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" "Agreed, Carla is the monkey wrench that gets it all stuck" |
+| G5.5 | **GOES.** The clause that defines a delegation and gives the delegator a default way to end it. Acting for someone is Terms with a power; when the power ends is for the power's own rule to answer. | "Delegation is a leftover" | "How does the person give the power away? To assume that there is no way out is to assume a very specific shape for the cMIp" "I think it's best. It's a leftover of the old ways" |
+| G5.6 | stays as it is | | |
+| G5.6(a) | stays as it is | | |
+| G5.6(b) | stays as it is | | |
+| G5.6(c) | stays as it is | | |
+| G5.6(d) | stays as it is | | |
+| G5.6(e) | stays as it is | | |
+| G5.6(f) | **STAYS or CHANGES.** Two standing entries reach it and pull apart. One: whoever grants a power takes on what is done under it, so an agent's assent is her signing. The other: nothing about her is accepted without her signature. Whether an agent may sign, for her, a version that gives him more power over her is open (the attack's question 5; two-way reading 9). | "A power given binds its giver"; "Nothing about me without my signature" | "If you grant powers via a cMIP you take on the responsibilities" "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?" |
+| G5.7 | **CHANGES.** Its sentence "a filling's rights change only as G10.6 says" rests on a rule that goes. It names "the delegator of a delegation", a term that goes by the line only. | "Earned rights leave the grammar"; "Delegation is a leftover" | "Agreed" "I think it's best. It's a leftover of the old ways" |
+| G5.7(a) | **CHANGES.** Today the one who gave a power ends it by a new version of the Terms that give it, as G5.5 says. When a power ends is now for the power's own rule to answer; and a power to act for a group ends by the group's own rules. | "Delegation is a leftover"; "Firing an employee" | "How does the person give the power away? To assume that there is no way out is to assume a very specific shape for the cMIp" "I think it's best. It's a leftover of the old ways" "True, it is now a set of agreements, no a collective having its rules, so each agreement is separate, one is the collective, one is the employment" |
+| G5.7(b) | stays as it is | | |
+| G5.7(c) | **CHANGES**, with G4.10: a signature is taken back only before the pinning. Where it lives is open with G4.10. | "In force once pinned" | "Agreed. Let them get stuck and cook it clean" |
+| G6.1 | **STAYS or MOVES (to the layer below: Identity and the act format).** The signer's line is the lower layer's. Whether G6's line, "within the same agreement", is that line or a line of Agreements' own is open (the comparison's question 3; two-way reading 4). | "Two threads, two owners" | "It does" |
+| G6.2 | **STAYS or MOVES (to the layer below)**, with G6.1. | "Two threads, two owners" | "It does" |
+| G7.1 | **CHANGES.** The field stays. What it points to is now said: a relay. Today a place is "read as the layer that orders acts gives it". | "The place is a pointer" | "It's just a pointer to a relay then. Why the need for more grammar?" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G7.2 | **CHANGES.** One sentence stays: where the Terms name a place, every reader takes what is latest from it. The rest (a place that contradicts itself, which answers count per place) leaves the grammar, for the relay or a cMIP. | "The place is a pointer" | "It's just a pointer to a relay then. Why the need for more grammar?" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G7.3 | **MOVES (to the MICS)**, with the six rules of G8 and G9 beside it. His "I assume" is a condition: each is checked to hold outside Agreements. | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G7.4 | **CHANGES.** Its first sentence is the one rule that stays. The clock is in the MOR lead's list of what leaves (two-way reading 3). | "The place is a pointer" | "It's just a pointer to a relay then. Why the need for more grammar?" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G8.1 | **MOVES (to the MICS).** | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G8.2 | **MOVES (to the MICS).** | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G8.3 | **MOVES (to the MICS).** | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G8.4 | **MOVES (to the MICS).** It speaks of spots and legs, which are Agreements' own: his condition applies. | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G8.5 | stays as it is | | |
+| G9.1 | **MOVES (to the MICS).** | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G9.2 | **MOVES (to the MICS).** It also speaks of counter signatures and of forks, which are Agreements' own: his condition applies. | "How a reader answers goes to the MICS" | "The MICS, I assume they are overarching rules" |
+| G10.1 | stays as it is | | |
+| G10.2 | stays as it is | | |
+| G10.3 | stays as it is | | |
+| G10.4 | stays as it is | | |
+| G10.5 | **CHANGES.** Its sentence that a filling "keeps the rights of the version it was earned under (G10.6)" rests on a rule that goes. | "Earned rights leave the grammar" | "Agreed" |
+| G10.6 | **GOES.** Whoever fills a spot is bound by the Terms' update condition like any signer. | "Earned rights leave the grammar" | "Agreed" |
+| G10.6(a) | **GOES or STAYS.** An exception to a rule that goes; the entry does not name it. One map keeps it, as G5.1(a) said again (two-way reading 11). | "Earned rights leave the grammar" | "Agreed" |
+| G10.6(b) | **GOES**, with the rule it is an exception to. The entry does not name it: by a reading. | "Earned rights leave the grammar" | "Agreed" |
+| G10.7 | **CHANGES.** Twice it rests on G10.6, which goes. Its opening tells what is left of an earlier draft's field, which is history. | "Earned rights leave the grammar"; "Only rules in the hashed text" | "Agreed" "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested." |
+| G11.1 | stays as it is | | |
+| G11.2 | **STAYS.** "The call in Terms" is among what Agreements keeps, by the line only. Both maps read one part of it as behaviour (the duty it reads from an empty `control` socket); no entry names it. | "Where three rules live", by the line only | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.3 | **STAYS or MOVES (to the MICS, the lines of a leg report to a `control` cMIP).** The exchange names G11.4; both maps read this rule as leaving with the report block (two-way reading 14). | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4 | **MOVES (to the MICS)**, with the report block. | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4(a) | **MOVES (to the MICS).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4(b) | **MOVES (to the MICS).** The tie between two records of one payment is Money's, in the rule's own words. | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4(c) | **MOVES (to the MICS).** What counts toward a debt is Money's, in the rule's own words. | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4(d) | **MOVES (to the MICS).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.4(e) | **STAYS or MOVES (to the MICS).** The MOR lead's framing gives all of "reading across legs (G11.4)" to the report block; this clause answers from signed Terms alone, and the line's list of reading rules does not hold it (the comparison's question 7; two-way reading 14). | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.5 | **STAYS or MOVES (to the MICS, a part to a `control` cMIP).** No entry names it; both maps read it as leaving (two-way reading 14). | "Where three rules live"; "Built on top, as a test" | "Agreed for the first, not sure I get the second, expand on third too" "Yes, agreement is now closer to language than protocol. It.s all about what is built on top." |
+| G11.6 | **MOVES (to the MICS).** By the line only, and by the rule's own words: "That is the report block's, for every layer of MOR". | "Where three rules live", by the line only | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.6(a) | **STAYS.** "The consent to data beyond one leg" is kept, and the grammar holds the socket: both by the line only. | "Where three rules live"; "Seeing and being told": both by the line only | "Agreed for the first, not sure I get the second, expand on third too" "Sounds good" |
+| G11.6(b) | **STAYS or CHANGES.** Read one way it is the socket and stays whole; read the other, "only the socket" is narrower than the guarantee it also gives (two-way reading 12). | "Seeing and being told", by the line only | "Sounds good" |
+| G11.6(c) | **STAYS or MOVES (to the MICS).** Its first sentence is the block's "in every layer"; its second is how people agree to a further path. No entry names it (two-way reading 14). | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G11.7 | **STAYS.** "The buyer's leg" is among what Agreements keeps, by the line only. Open: whether it goes to Money and the MICS, and whether the call it reads into every payment is a duty to tell (the comparison's question 5; two-way reading 13). It names G10.6, which goes. | "Where three rules live", by the line only; "Seeing and being told" | "Agreed for the first, not sure I get the second, expand on third too" "Sounds good" |
+| G11.8 | **STAYS.** "The contest" is among what Agreements keeps, by the line only. | "Where three rules live", by the line only | "Agreed for the first, not sure I get the second, expand on third too" |
+| G12.1 | **CHANGES.** It names "a version that ends or narrows a delegation, as G5.5 says", which goes; and, among those who must sign an update, "those whose assent G4.1 asks for", the gate that goes. Its half on a signer's own line follows G6 (two-way reading 4). | "Delegation is a leftover"; "The two gates" | "I think it's best. It's a leftover of the old ways" "A, agreed" |
+| G12.2 | **STAYS**, confirmed: a signer's own fork does not take Terms out of force. | "No release by a fork or a key" | "Confirmed" |
+| G12.3 | stays as it is | | |
+| G12.4 | stays as it is | | |
+| G12.5 | **CHANGES.** Its sentence on a filling earned in a branch set aside rests on G10.6, which goes. Whether an outsider's payment keeps that branch's receiver is open (the comparison's question 6). | "Earned rights leave the grammar" | "Agreed" |
+| G12.6 | stays as it is | | |
+| G12.7 | stays as it is | | |
+| G12.8 | stays as it is | | |
+| G13.1 | stays as it is | | |
+| G13.2 | stays as it is | | |
+| G13.3 | **CHANGES.** It asks "valid and in force" of a replacing version: the second half is the gate that goes. Its reading of "after Terms came into force", from citing, is what a pin rests on. Its last sentence, per place, is place detail (two-way reading 2). | "The two gates"; "In force once pinned"; "The place is a pointer" | "A, agreed" "Agreed. Let them get stuck and cook it clean" "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" |
+| G13.4 | **STAYS or CHANGES.** Its sentence on the place is the one rule kept. Its clock, and "what time it was", are in question (two-way readings 2 and 3). | "The place is a pointer"; "Order is sequence" | "Yes, agreed. My point was: this is simpler than what we are discussing.agreed" "Order is not time, it's sequence. Humans use time, and time codes, but it is truly sequence, sequence established through steps linked as a whole. Proving something did not happen matters only when there are accusations." |
+| G14.1 | **MOVES (to Envelopes).** It reads the holder at the act the Terms cite, as it does today. Where the fields `envelope` and `envelope_at` then live is not said. | "Where three rules live"; "The holder at the act cited" | "Agreed for the first, not sure I get the second, expand on third too" "It's wording, agreed." |
+| G14.2 | **MOVES (to Envelopes), and changes there.** "Bound by them" stands; of its three ways to be bound, the way through a power now asks for her own signature on the version that gives the power. Its "Late Terms" stands as written: a sale is not a race. Whether the holder must also be named among the parties is open (research's question 3). | "Where three rules live"; "The holder at the act cited"; "Bound, not named"; "A power given binds its giver"; "Nothing about me without my signature"; "A sale is not a race" | "Agreed for the first, not sure I get the second, expand on third too" "It's wording, agreed." "Bound, absolutely bound" "If you grant powers via a cMIP you take on the responsibilities" "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?" "Agreed" |
+| G14.3 | **MOVES (to Envelopes).** | "Where three rules live"; "The holder at the act cited" | "Agreed for the first, not sure I get the second, expand on third too" "It's wording, agreed." |
+| G14.3(a) | **MOVES (to Envelopes).** Whether a thief's Terms are "an act that never counted" was reopened and is answered by no entry (research's question 5). | "Where three rules live"; "The holder at the act cited"; "Three lines cut back" | "Agreed for the first, not sure I get the second, expand on third too" "It's wording, agreed." "Agreed." |
+| G14.3(b) | **MOVES (to Envelopes).** It reads "bound by them" as G14.2 does. | "Where three rules live"; "Bound, not named" | "Agreed for the first, not sure I get the second, expand on third too" "Bound, absolutely bound" |
+| G14.3(c) | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.3(d) | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.4 | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5 | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5(a) | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5(b) | **MOVES (to Envelopes).** | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5(c) | **MOVES (to Envelopes, or to wherever a client's duties live).** The maps differ on the home; it leaves Agreements in both. | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5(d) | **MOVES (to Envelopes with the baker's rule, or to a cMIP).** Both maps read it as built on top; it leaves Agreements either way. | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| G14.5(e) | **MOVES (to Envelopes) or STAYS.** It sits under the baker's rule; what it gives is a use of the contest, which stays (two-way reading 17). | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+
+### The eight tasks of section 5 (K1 to K8)
+
+The same way. A task is a socket: a field where a cMIP plugs in.
+
+| task | what becomes of it | by which entry | his words, quoted |
+|---|---|---|---|
+| K1 | **CHANGES.** What it produces "for a delegation" goes with G5.5. | "Delegation is a leftover" | "I think it's best. It's a leftover of the old ways" |
+| K2 | **STAYS.** The pinning is a step after its yes; whether that touches this row is not worded. | "In force once pinned" | "Agreed. Let them get stuck and cook it clean" |
+| K3 | **STAYS** as a socket. By the line only, when a power ends is for this socket's cMIP to answer. Whether the row's words change is the MOR lead's. | "Delegation is a leftover", by the line only | "How does the person give the power away? To assume that there is no way out is to assume a very specific shape for the cMIp" "I think it's best. It's a leftover of the old ways" |
+| K4 | **CHANGES.** What it accepts "where a filling is asked about" (G10.6) goes. Leaving, an exit the Terms chose and a dissolution all pass by this socket. | "Earned rights leave the grammar"; "No default way out"; "What a dissolution is" | "Agreed" "Yes, it.s still true under the right cMIPs. Agreements is not to be used bare. It's to build on top of." "The update condition decides, as dictated by the cMIP that governs it. My line was a loose example" |
+| K5 | **CHANGES.** It produces "the version it was earned under (G10.6)"; G10.6 goes. | "Earned rights leave the grammar" | "Agreed" |
+| K6 | **STAYS or CHANGES.** The socket stays. What its row says a leg report carries follows G11.3 (two-way reading 14). | "Where three rules live" | "Agreed for the first, not sure I get the second, expand on third too" |
+| K7 | **STAYS** as it is. |  |  |
+| K8 | **STAYS**, confirmed: who may see is decided by the cMIP in this socket. It names G11.4(d) and G11.4(e). | "Seeing and being told", by the line only | "Sounds good" |
+
+### The table, counted
+
+| | rules | which |
+|---|---|---|
+| **stay** | 55 | every rule not named in the rows below |
+| **change** | 24 | G1.2, G4.1, G4.5, G4.7, G4.7(a), G4.7(b), G4.8, G4.8(a), G4.9, G4.10, G4.11(e), G5.1(b), G5.4, G5.7, G5.7(a), G5.7(c), G7.1, G7.2, G7.4, G10.5, G10.7, G12.1, G12.5, G13.3 |
+| **go** | 4 | G4.8(f), G5.5, G10.6, G10.6(b) |
+| **move** | 26 | to the MICS, 13: G7.3, G8.1, G8.2, G8.3, G8.4, G9.1, G9.2 (by "How a reader answers goes to the MICS") and G11.4, G11.4(a), G11.4(b), G11.4(c), G11.4(d), G11.6 (by "Where three rules live"); to Envelopes, 13: all of G14 but G14.5(e) |
+| **two readings, between staying and leaving** | 9 | G4.8(g), G6.1, G6.2, G10.6(a), G11.3, G11.4(e), G11.5, G11.6(c), G14.5(e) |
+| **two readings, between staying and changing** | 6 | G4.6, G4.8(d), G4.11(i), G5.6(f), G11.6(b), G13.4 |
+| all | 124 | |
+
+Tasks: K1, K4 and K5 change; K2, K3, K7 and K8 stay; K6 can be read two ways. No task goes or moves.
+
+**Rows that rest on the line only**, in whole or in part (12): G1.2, G1.4, G4.7, G5.7, G11.2, G11.6, G11.6(a), G11.6(b), G11.7, G11.8, K3, K8. Research's first question (what becomes of the extra, where a line says more than his words) bears on each.
+
+**Rows this session placed by a reading**, where the entry names another rule or none: G4.8(f) and G10.6(b) (each goes with the rule it hangs on); the ten rules listed as carrying "the gate that goes" (the entry names no rule; the list is this session's reading of draft 25, and the scribe's sort lists five of them); G5.7, G10.5, G10.7 and G12.5 (each rests on G10.6); G13.3 under "In force once pinned"; all of G14 as "the baker's rule".
+
+**Rules that stay or change, and name by number a rule that goes or moves** (32, by script): G1.2, G1.4, G4.6, G4.7(b), G4.7(c), G4.8(a), G4.8(e), G4.10, G4.11(c), G4.11(e), G4.11(f), G4.11(h), G4.11(i), G5.7, G5.7(a), G6.1, G7.2, G7.4, G8.5, G10.2, G10.5, G10.7, G11.2, G11.3, G11.6(a), G11.7, G11.8, G12.1, G12.4, G12.5, G13.4, G14.5(e). Each would need its citation mended; none is counted as a change for that alone.
+
+**Rules the general test may reach, named by no entry.** "Built on top, as a test" gives the test (in the MOR lead's line: a rule that settles how people should behave in a deal belongs to the cMIPs). His words name no rule. Both maps, by their own reasoning, read these as behaviour in whole or in part: G3.2 (who bears unclear words), G11.2 (the duty read from an empty `control` socket), G11.3 and G11.5 (who passes on and reports). As one of two readings, or as a flag, one map or the other adds G1.4 ("gives or owes"), G4.10 with G5.7(c), G11.7, G11.8 (the buyer's contest) and G12.5. This table moves none of them on the maps' reasoning alone: G3.2 is under "stays as it is", and the others are where an entry or a reading puts them.
+
+**Outside the 124, and not sorted here.** Section 2's definitions and section 3's fields are not rules, and this brief gives them no rows. A standing entry reaches at least these: the definitions of Delegation, Never ended, Rights, Apply, Place, Clock, Anchoring, Counter signature, In force, Bake and envelope, Report and Leg report, and the verifier's Answers; and the fields `envelope`, `envelope_at`, `clock`, `place` and `calls`. The word "assent" is in 31 of the 124 rules (by script); the ledger records that he does not like the word.
 
 ## The record behind it: what stands (stage 1)
 
