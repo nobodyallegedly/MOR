@@ -434,6 +434,9 @@ The research is `docs/strangers-2026-11/`.
 - Asked, he: "The update condition decides, as dictated by the cMIP that governs it. My line was a loose example"
 - *Arrived at (to check):* a dissolution passes by the update condition, as its cMIP dictates, like any other update; "as agreed by all parties" was an example, not a rule.
 
+**The reach of a click is a cMIP's** (18 November; Fable's third attack, pull request 203, "one click is a signature"). The MOR lead had ranked the reach of a click highest among what knots leave unsolved, after the dissolution proved to need nothing new. He: "Well, I don't mind these proofs to ourselves that the work we did upstream is more elegant than we think. The reach of a click is a cMIP business. Dubsar built it for the simulation, and other teams attacked it. Dubsar builds it as a test that the core sustains my favorite economic model, never forces it"
+- *Arrived at (to check):* what a click can give is for cMIPs, not the core. The Dubsar Suite built one for the simulation and other teams attacked it; the Dubsar Suite builds it as a test that the core sustains his favourite economic model and never forces it.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
