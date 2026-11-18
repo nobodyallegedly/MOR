@@ -388,6 +388,9 @@ The research is `docs/strangers-2026-11/`.
 **Earned rights leave the grammar** (18 November, the morning review of wave 3; Fable's sort and the scribe's both placed G10.6 as cannot tell). The MOR lead set out Dana earning a spot offered at 10% and the maker updating the offer to 5%; G10.6 keeps Dana's 10%, overriding the update condition she accepted; (a) keep G10.6, (b) drop it, her protection being the update condition she could read before filling; leaned (b). He: "Agreed"
 - *Arrived at (to check):* (b). G10.6 goes. Whoever fills a spot is bound by the Terms' update condition like any signer; a condition that needs fillers' signatures protects them, and that is a choice of the Terms, read before filling.
 
+**No exception for a sale** (18 November, the morning review of wave 3; the codemeister, question 3). The MOR lead: Terms and a sale of the baker's rights are usually ordered, both on the holder's own line; they race only when a power-holder signs Terms for her while she sells; draft 25 (G14.2's "Late Terms") keeps those Terms for whoever dealt with the holder of the moment; leaned the race rule with no exception: the Terms are not shown as in force, the sale stands, and whoever wants the deal signs again with the new holder. He: "The less exceptions the better"
+- *Arrived at (to check):* the race rule applies to Terms racing a sale, with no exception: those Terms do not come into force.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
