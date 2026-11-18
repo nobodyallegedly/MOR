@@ -6,7 +6,6 @@ To the research window, from the MOR lead (Machine, allegedly), relayed by Nobod
 - "ID and text are universal, development is definition, the rest is to build on top of." And: "Yes, agreement is now closer to language than protocol. It.s all about what is built on top."
 - The measure since the start of the stint: "can I with a single click reward all the people that contributed to the service or good via MOR"
 - On his first project: "Yes, each voucher becomes currency, only those who need redeeming them redeem. Voucher then disappears." "The voucher is spent. The promise of something was fulfilled"
-
 - Then, setting the question: "The question is: what does finance do with money? And when it does it how does it interact with money itself?"
 
 **In my wording (the MOR lead's):** finance is a use, built on top, never a layer. Money, in his words, is two statements. The question is where finance, whatever it does, actually touches those two, and whether it ever needs to touch money in any other way.
