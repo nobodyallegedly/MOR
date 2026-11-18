@@ -391,6 +391,9 @@ The research is `docs/strangers-2026-11/`.
 **No exception for a sale** (18 November, the morning review of wave 3; the codemeister, question 3). The MOR lead: Terms and a sale of the baker's rights are usually ordered, both on the holder's own line; they race only when a power-holder signs Terms for her while she sells; draft 25 (G14.2's "Late Terms") keeps those Terms for whoever dealt with the holder of the moment; leaned the race rule with no exception: the Terms are not shown as in force, the sale stands, and whoever wants the deal signs again with the new holder. He: "The less exceptions the better"
 - *Arrived at (to check):* the race rule applies to Terms racing a sale, with no exception: those Terms do not come into force.
 
+**Built on top, as a test** (18 November, the morning review of wave 3; research, question 6: "What the core is for" was said of one lean, about a receiver). The MOR lead asked whether it is a general test, any rule that settles how people should behave in a deal belonging to cMIPs, leaning yes, as he had ruled on the receiver, the delegation and earned rights. He: "Yes, agreement is now closer to language than protocol. It.s all about what is built on top."
+- *Arrived at (to check):* yes, a general test for Agreements: a rule that settles how people should behave in a deal belongs to the cMIPs built on top, not to the grammar.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
