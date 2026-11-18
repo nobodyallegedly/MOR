@@ -420,6 +420,9 @@ The research is `docs/strangers-2026-11/`.
 **How a reader answers goes to the MICS** (18 November, the review of wave 4; the scribe's comparison of the two sorts, question 1: G7.3, G8.1 to G8.4, G9.1, G9.2, which Fable's sort sends to the MICS and the scribe's kept in Agreements). The MOR lead leaned the MICS: they are how MOR tells the truth about anything it reads, the shared language by the admission test, as with the report block. He: "The MICS, I assume they are overarching rules"
 - *Arrived at (to check):* the rules on how any reader must answer ("say who said it", "unchecked is not passed", how an answer is qualified) move to the MICS, for every layer. His "I assume they are overarching rules" is a condition: the scribe checks, when the MICS is rewritten, that each of the seven holds outside Agreements, and brings back any that does not.
 
+**The simulation grows cMIPs** (18 November). He: "I'm using the simulation to have various teams develop cMIPs. We should have various ways of doing the same thing to explore later with Dubsar"
+- *Arrived at (to check):* noted, not a decision: the simulation's teams develop cMIPs, several ways of doing the same thing, to explore later with the Dubsar Suite lead.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
