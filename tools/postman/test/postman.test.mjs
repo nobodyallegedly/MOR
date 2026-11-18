@@ -646,6 +646,26 @@ test('agreements ask takes several files after one --acts; FIELDS examples sign;
   assert.ok(fs.readFileSync(new URL('../kit/AGREEMENTS-FIELDS.md', import.meta.url), 'utf8').includes('"previous": "TERMS-ID"'));
 });
 
+test('after an author signs an update of Terms, the line guard counts it as the author’s latest act in that agreement', () => {
+  const w = round(['dublaw'], relays());
+  const k = w.kits.dublaw;
+  const me = k.newIdentity('dl', [home.home]).identity;
+  const body = (t) => ({ words: mor.workHash(new TextEncoder().encode(t)), cmip: '04'.repeat(32), params: 'f6' });
+  const T = k.agreementsSign('dl', 'terms', { parties: [{ signer: me }], authors: [0], body: body('A test loaf.'), previous: null });
+  const held = [{ act: T.signed.act }];
+  const A = k.agreementsSign('dl', 'statement', { agreement: T.signed.id, terms: T.signed.id, kind: 'assent', previous: T.signed.id }, { held });
+  assert.equal(A.check.verdict, 'pass');
+  held.push({ act: A.signed.act });
+  const U = k.agreementsSign('dl', 'terms', { replaces: T.signed.id, agreement: T.signed.id, parties: [{ signer: me }], authors: [0], body: body('A test loaf, version 2.'), previous: A.signed.id }, { held });
+  assert.equal(U.check.verdict, 'pass');
+  held.push({ act: U.signed.act });
+  // Naming the assent, not the update, would fork the author's own line: refused, nothing signed.
+  assert.throws(() => k.agreementsSign('dl', 'statement', { agreement: T.signed.id, terms: U.signed.id, kind: 'assent', previous: A.signed.id }, { held }), /would fork your own line/);
+  // Naming the update passes, with no "fork": true.
+  const A2 = k.agreementsSign('dl', 'statement', { agreement: T.signed.id, terms: U.signed.id, kind: 'assent', previous: U.signed.id }, { held });
+  assert.equal(A2.check.verdict, 'pass');
+});
+
 test('a stray file in keys/ is skipped with a warning, and a window-one encryption-key file is taken in', () => {
   const w = round(['pointer'], relays());
   const k = w.kits.pointer;

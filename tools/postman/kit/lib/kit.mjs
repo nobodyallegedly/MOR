@@ -857,7 +857,16 @@ export class Kit {
       if (d.signer !== me || !d.public) continue;
       let inAgreement = false;
       if (d.spec === specs.terms?.spec && d.id === fields.agreement) inAgreement = true;
-      else if (d.spec === specs.statement?.spec && d.payload) {
+      else if (d.spec === specs.terms?.spec && d.payload) {
+        // An update of Terms (key 0, `replaces`) names its agreement's root at key 1 (encoding 2): signed by this signer, it is their act within that agreement (G6.1), and their next act there names it.
+        try {
+          const m = mor.cborDecode(Uint8Array.from(Buffer.from(d.payload, 'hex')));
+          const a = m instanceof Map ? m.get(1) : null;
+          if (a instanceof Uint8Array && hex(a) === fields.agreement) inAgreement = true;
+        } catch {
+          // not Terms this kit can read
+        }
+      } else if (d.spec === specs.statement?.spec && d.payload) {
         try {
           const m = mor.cborDecode(Uint8Array.from(Buffer.from(d.payload, 'hex')));
           const a = m instanceof Map ? m.get(0) : null;
