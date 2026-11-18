@@ -382,6 +382,9 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* (a), nothing added. Leaving is an ordinary update, a new version in the agreement's chain without the leaver, passed by the update condition or the exit conditions the Terms chose. The grammar has no act or word of its own for leaving.
 - Then he: "B is impossible. C is not needed"
 
+**A power given binds its giver** (18 November, the morning review of wave 3; research, question 3: draft 25 knows three ways to be bound, one of them an assent made for her under a power). The MOR lead asked whether Terms signed for the holder of the baker's rights by someone holding a power she gave count as her being bound, leaning yes: she signed the Terms that gave the power, its rule said yes to the act, and a thief has no such chain. He: "If you grant powers via a cMIP you take on the responsibilities"
+- *Arrived at (to check):* yes. Whoever grants a power through a cMIP is bound by what is done under it, as if by her own signature; Terms signed for the holder under a power she gave count as her being bound.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
