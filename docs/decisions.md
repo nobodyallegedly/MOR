@@ -449,6 +449,8 @@ The research is `docs/strangers-2026-11/`.
 
 **The order after the break** (18 November, late). He: "Envelopes is probably fine as redefined. Development too. Let's wait for the findings… finish agreements, then turn our attention to money"
 - *Arrived at (to check):* first the simulation's findings; then Agreements is finished; then Money. Envelopes (as redefined, with the baker's rule moving in) and Development are probably fine, in his words, and are not reopened unless something shows otherwise.
+- Then he: "I think the task will be to verify that money has all the sockets needed to let agreements build Finance"
+- *Arrived at (to check):* the Money task is a check, not a design: that Money gives Agreements every socket needed to build finance, as a use, on top.
 
 ## Not carried into this stint unless he says so
 
