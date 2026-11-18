@@ -1,0 +1,11 @@
+{
+  "name": "mor-postman",
+  "private": true,
+  "type": "module",
+  "description": "The postman and the players' kit for MOR's round-two simulation. No dependencies.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/fields.test.mjs test/guards.test.mjs test/postman.test.mjs",
+    "test:regtest": "node --test test/regtest.test.mjs"
+  }
+}

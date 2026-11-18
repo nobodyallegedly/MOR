@@ -1,0 +1,27 @@
+{
+  "root": "~/Documents/mor-round-2",
+  "postmanDir": "~/Documents/mor-round-2/_hosts/postman",
+  "trays": ["ampersand", "backlot", "keep", "longhouse", "pointer", "hop", "plain-words", "counterparty", "the-back-row", "postmark", "until", "stall", "turnstile", "steward-and-co", "dubpay", "dublaw", "dubweb", "public-creators", "public-prosumers", "public-under-30", "public-30-49", "public-50-plus"],
+  "companies": ["ampersand", "backlot", "keep", "longhouse", "pointer", "hop", "plain-words", "counterparty", "the-back-row", "postmark", "until", "stall", "turnstile", "steward-and-co", "dubpay", "dublaw", "dubweb"],
+  "public": ["public-creators", "public-prosumers", "public-under-30", "public-30-49", "public-50-plus"],
+  "relays": {
+    "dubsar-home-1": "http://127.0.0.1:PORT",
+    "dubsar-relay-1": "http://127.0.0.1:PORT"
+  },
+  "everySeconds": 5,
+  "limits": { "envelopeBytes": 1048576, "bodyBytes": 16777216, "answerBytes": 67108864, "perTrayPerPass": 50, "timeoutSeconds": 20, "settleSeconds": 1 },
+  "funding": { "companySats": 2000000, "publicFile": "addresses.md" },
+  "bank": { "defaultFeeLimit": 10, "onchainFeeReserve": 5000, "defaultFeerate": 1, "confirmations": 1, "invoiceExpiry": 604800 },
+  "wallet": {
+    "kind": "lncli",
+    "lncli": "~/mor-regtest-tools/lnd-darwin-arm64-v0.18.5-beta/lncli",
+    "btcctl": "~/mor-regtest-tools/btcd-darwin-arm64-v0.24.2/btcctl",
+    "regtest": "~/mor-regtest",
+    "nodes": { "alice": "127.0.0.1:ALICE-GRPC-PORT", "bob": "127.0.0.1:BOB-GRPC-PORT", "carol": "127.0.0.1:CAROL-GRPC-PORT" },
+    "btcd": "127.0.0.1:BTCD-RPC-PORT",
+    "rpcuser": "u",
+    "rpcpass": "p",
+    "payFrom": "alice",
+    "invoiceOn": ["bob", "carol"]
+  }
+}
