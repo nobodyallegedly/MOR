@@ -489,6 +489,8 @@ The research is `docs/strangers-2026-11/`.
 - *Arrived at (to check):* a debt ends in one of two ways, and the Ended says which: settled (it was met) or cancelled (it was let go). Open: where a debt ended against another debt in a circle falls; the MOR lead leaned "settled", since it was met by the other debt.
 - Asked, he: "It's point 3"
 - *Arrived at (to check):* the circle is the third point already listed, a debt ended against another debt, which he had called "cancelled by debt in the circle". The MOR lead's "settled" lean is withdrawn in favour of his word.
+- Then he: "Settled, cancelled or met"
+- *Arrived at (to check):* a debt ends in one of three ways, and the Ended says which: settled (it was paid, on a rail or off it), cancelled (it was let go, nothing given), or met (by another debt, as in the merchants' circle).
 
 ## Not carried into this stint unless he says so
 
