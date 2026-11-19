@@ -498,6 +498,9 @@ The research is `docs/strangers-2026-11/`.
 **The ideas that left the core live on as cMIPs** (19 November, morning). He: "We will use Dubsar to draft cMIPs that keep the ideas alive and presentable."
 - *Arrived at (to check):* the ideas moved out of the core this week are drafted by the Dubsar Suite as cMIPs, so they stay alive and can be shown.
 
+**What defines Money** (19 November, midday). He: "In summary, debt is created by the creditor and accepted by the debtor, or is there another path? Then it is ended by the terminator, which can be a settlement agent, a cancellation or a meeting of debts." The MOR lead: the debtor's signature is never optional; three paths to create a debt (the creditor asks and the debtor accepts; the debtor declares it alone; an agreement the debtor signed creates it); three ways to end one, by the one who loses the claim or what proves it (settlement, proven by a rail; cancellation, by the creditor's signature; meeting, by an agreement between those whose claims end). He: "That defines money"
+- *Arrived at (to check):* this defines Money. A debt is created with the debtor's signature: on the creditor's request, by the debtor alone, or through an agreement the debtor signed. A debt is ended by settlement proven by a rail, by cancellation signed by the creditor, or by a meeting of debts agreed by those whose claims end.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
