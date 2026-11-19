@@ -2,7 +2,7 @@
 
 These are the current drafts of the core, the **MICS** (MOR Inscribed Core Spec): its own document, the map; the six **MIRs** (MOR Inscribed Rules), each a set of rules giving a layer by layer look at it; and the freeze test suite. They are drafts, not frozen: their spec hashes will change at freeze.
 
-## The freeze-ready drafts, for Nobody, allegedly, to approve
+## LATEST: the freeze-ready drafts, for Nobody, allegedly, to approve
 
 These eight texts are the freeze-ready drafts (`docs/freeze-ready-drafts-report.md`): the six MIRs, the MICS document and the freeze test suite, each standing on its own for a reader holding only the eight. No history, no finding numbers, no review labels, no pointers outside the eight; every rule cited by its MIR's name and current number; "Open before freeze" empty, every point still open put as a question in the report. Why each rule exists: `docs/freeze-provenance.md`. One meaning per word: `docs/freeze-ready-glossary.md`. Until approved, the drafts below stand as recorded.
 
