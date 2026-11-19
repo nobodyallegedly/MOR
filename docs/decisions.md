@@ -477,6 +477,8 @@ The research is `docs/strangers-2026-11/`.
 
 **Double spending is stopped where it is settled** (19 November, after midnight). He: "MOR still can't do it without currency, but, in some trades, economy can move on MOT without the need of settling every single transaction." (The MOR lead read "MOT" as MOR; to check.) Then: "Problem… double spend becomes a much bigger problem to solve. Maybe the hill is better left alone…" The MOR lead: a double pass is a fork on the passer's own line, a signed confession; a debt can state its owner as the envelope does ("The envelope states its owner"), so only the current owner passes it again; for large debts Terms can name a place. He: "True, so it's the Deb settlement confirmer that provides the safety, and that happens outside of MOR" Then: "What I meant is… let.s use a bank that is simple… a person trying to redeem a debt twice gets stopped by the bank, not by MOR"
 - *Arrived at (to check):* the hill stands. A second attempt to redeem one debt is stopped by whoever settles it (a bank, an issuer), outside MOR, not by MOR. MOR records the debt's trail of owners and makes a double pass a provable lie; the stopping is the settler's.
+- Then he: "We can see forks inside MOR, but the true settlement safety is brought by the rail + cMIP + module combo"
+- *Arrived at (to check):* MOR shows forks; the safety of a settlement comes from the rail, the cMIP and the module together, chosen by those who settle.
 
 ## Not carried into this stint unless he says so
 
