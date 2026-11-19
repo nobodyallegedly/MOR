@@ -76,9 +76,13 @@ Four things are kept apart throughout. **A debt**: who owes whom, how much, in w
 - Both of his sentences have to be read wider than their words to carry the map. "Pay this pls" must also cover "I owe you", said by the debtor with no request, and a debt announced with no request to act. "This has been paid" must also cover a debt forgiven, set against another, or lapsed, where nothing was paid. Whether that is still his frame is his to say.
 - Three places strain the three statements without breaking them, in my reading: a payment where nothing was owed (a gift, a tip, a donation; and so, possibly, the single click when it is a reward and not a price); money fenced where it lies; and time running out, which in a record of sequence nobody says.
 
-**What Money draft 14 has beyond the smallest set, and what it lacks.** This paragraph is filled in by the second commit, after Part 5. Nothing above it was changed then.
+**What Money draft 14 has beyond the smallest set, and what it lacks.** Written in the second commit, after Part 5; nothing above it was changed then.
 
-(Not yet written.)
+- **What it has of the set.** Two of the three statements, by other names (traced). Owed is its obligation, signed by the debtor. Ended is three acts: the receipt (the one who received says so), the payment claim (the one who paid says so) and the creditor's release (over without being paid). Of the 76 acts, fields and rules I listed, 31 map to these two (counted).
+- **What it has beyond the set** (counted from the same list; the columns are inferred). 19 lines about the movement itself: where a payment goes and how it is proven on a rail. 10 that are managing by Part 4's test, most of them about a stolen key and who bears the loss. 7 that the draft itself hands to Agreements. 5 for the price tag, an offer to anyone. 3 that are another layer's, and 1 that says what Money does not see.
+- **What it lacks** (traced to the draft's text; I did not read Agreements). No act hands a debt to a new creditor, and a debt cannot be owed to "whoever holds this". The one who is owed has no act to say "this is owed". A creditor's word that a debt was paid off any rail is the same act as letting it go. Nothing names two debts set against each other.
+- **One thing it does that Parts 1 to 4 did not see coming** (traced, rules 8 to 11): a payment counts on neither party's word. It counts on a proof from the rail that anyone can check, and the two signed records are evidence beside it.
+- **Since draft 9** (counted from the second table of Part 5): of 43 rules and acts, 19 are unchanged in substance, 19 changed, 4 are gone and 1 is new, the price tag.
 
 ## Part 1. The eleven moments, as things that happen to a debt
 
@@ -608,7 +612,228 @@ Reported, not resolved.
 
 ## Part 5. The comparison with Money draft 14
 
-Not yet written. Parts 1 to 4 above were committed first, before any draft of Money was opened. This part, and "What reading Money changed", are added by the second commit.
+Written after Parts 1 to 4 were committed. I read `spec/MIR-money-draft-14.md` on main whole, then `spec/MIR-money-draft-9.md`, and searched drafts 10 to 13 for single phrases to see when a rule changed. I did not read Agreements, so where draft 14 hands something to Agreements I say only that it does.
+
+Nothing here says what any draft should keep, drop or change.
+
+### Each act, field and rule of draft 14, against the smallest set
+
+One line each: the 29 rules, the six act types and two declarations, the 37 fields of the six act formats, and the two tasks. The mapping is inferred from the draft's own text (60 to 80 that another reader would put nine lines in ten in the same column); the words in quotation marks are the draft's. "Neither" is nearly always about the movement itself, where it goes or how it is proven, which Part 1 called the rail's.
+
+| Draft 14 | What it is | Maps to | Why, or what part of the draft says so |
+|---|---|---|---|
+| Rule 1 | The pointer that counts (latest of an unforked chain) | neither | About the movement: where a payment goes. |
+| Rule 2 | The flow and the vault change with different keys | another layer's | Identity: which key may change which declaration. |
+| Rule 3 | Vault limits, per unit, fail closed | managing | Who is protected from a thief, and at what cost; "the owner has chosen no protection" is a choice two owners make differently. |
+| Rule 4 | The payee decides which rails it accepts | neither | About the movement: which rail's proof counts. It is Part 3's "a holder the creditor accepted". |
+| Rule 5 | Undeliverable payments | Owed | The debt stays open. How long, and whether it is redirected, the rule gives to Agreements. |
+| Rule 6 | The owner is informed | managing | Warnings and notices; marked client conformance. |
+| Rule 7 | One format on every rail, signed by the parties | Ended | Who signs: the receiver signs the receipt, the payer the claim. Grant keys and collectives are "judged by Agreements". |
+| Rule 8 | Checked by the rail Module's rule | neither | About the movement: its proof, checked by anyone. |
+| Rule 9 | A trusted party, named | neither | About the movement: a holder's word in place of a proof. |
+| Rule 10 | Valid only when the answer is valid | neither | About the movement: its proof. |
+| Rule 11 | Double entry | Ended | What "paid" means said by the payer and said by the receiver, and which counts where they differ. The part that picks a winner is managing by Part 4's test. |
+| Rule 12 | One payment, one count | neither | About the movement: which records are one payment. |
+| Rule 13 | A receiver is public; its flows are its choice | managing | Who may see. |
+| Rule 14 | A sender is never required | Ended | What an ending need not name: the payer. With rule 11 this is the payment where nothing was owed. |
+| Rule 15 | Discharge, and an obligation's states | Ended | Paid, in one or several parts that add up. "Past its terms", "closed by clone" and "redirected" the rule gives to Agreements. |
+| Rule 16 | The creditor's release | Ended | Over without being paid, on the creditor's signature alone. |
+| Rule 17 | Which pointer a debt is paid to | managing | Which payments count toward a debt when a pointer may be a thief's: who bears a loss. Its last part treats money owed back as a debt the other way (Owed). |
+| Rule 18 | The price tag, and a purchase under a publication | Agreements' | Dependencies: "whether a payment is a purchase is Agreements' to judge". The tag itself is the line "Act type 5" below. |
+| Rule 19 | Retired (a refund owed stays open until claimed) | Owed | A debt the other way that stays open. Whether it lapses the rule gives to Agreements. |
+| Rule 20 | Referrals, and evidence of a rail Module's use | Agreements' | "Evidence for a role share (Agreements)". |
+| Rule 21 | Payouts net of fees | managing | Who bears a fee. It also says when a payout "counts as discharged" (Ended). |
+| Rule 22 | No fees for specifications | managing | Who is paid for what. |
+| Rule 23 | Attention | neither | Says what Money does not see. |
+| Rule 24 | A valid route | Ended | Each hop's ending names the hop before it: the link to an earlier statement. Who the buyer is through a route is Agreements' ("A contest of a purchase"). |
+| Rule 25 | Only conversion hops forward | Agreements' | "At the rate its agreement defines": the rate between two units. |
+| Rule 26 | Disclosure along the route | managing | Who must be told. |
+| Rule 27 | A hop that forwarded nothing | Owed | What a holder took in and did not pass on "stays an open obligation of that hop". |
+| Rule 28 | Failure named | Owed | Money owed back hop by hop, each a debt. "What follows ... is Agreements' business." |
+| Rule 29 | Good faith (theft of the signing key) | managing | Who bears a loss, and until when. It leans on Identity (rotation, homes) and on Envelopes (anchoring). |
+| Act type 0 | Payee pointer | neither | About the movement: where to pay. |
+| Declaration | The vault | managing | Protection chosen by the owner. Declared in Identity's slot. |
+| Declaration | The clock | managing | A reference for which came first, used only for theft. Declared in Identity's slot. |
+| Act type 1 | Obligation | Owed | Signed by the debtor. "A creditor's statement of what it is owed is a claim, never an obligation." |
+| Act type 2 | Settlement receipt | Ended | Said by the one who received. |
+| Act type 3 | Payment claim | Ended | Said by the one who paid. |
+| Act type 4 | Creditor's release | Ended | Said by the creditor; nothing paid. |
+| Act type 5 | Price tag | neither | An offer to anyone: in Part 1's terms an ask where nothing is owed yet, which Part 1 gave to an agreement. The draft keeps it in Money. |
+| Obligation 0 | debtor, the signer | Owed |  |
+| Obligation 1 | creditor, an identity | Owed | One named identity; not "whoever holds this". |
+| Obligation 2 | amount (unit, value) | Owed |  |
+| Obligation 3 | the creditor's payee-pointer act (informative) | neither | About the movement. |
+| Obligation 4 | the agreement or publication it arises from (optional) | Owed | What the debt rests on. |
+| Receipt 0 | rail Module | neither | About the movement. |
+| Receipt 1 | the rail's proof | neither | About the movement. |
+| Receipt 2 | payer (optional) | Ended | Absent: nothing is owed back. |
+| Receipt 3 | payee | Ended |  |
+| Receipt 4 | amount received | Ended | In the hop's unit. |
+| Receipt 5 | fulfils: the act this hop follows | Ended | The debt it ends, or what the debt rests on (an agreement, a publication, a tag), or only where it was paid (a pointer). |
+| Receipt 6 | the previous hop's receipt | Ended | The link to an earlier statement. |
+| Receipt 7 | forward (next payee, amount, agreement) | Owed | The holder's own debt to the next payee, signed by the holder. |
+| Receipt 8 | batch | neither | About the movement: one proof for several payouts. |
+| Receipt 9 | purchase (ownership agreement, version) | Agreements' | Rule 18. |
+| Claim 0 | rail Module | neither | About the movement. |
+| Claim 1 | the rail's proof | neither | About the movement. |
+| Claim 2 | the payee paid | Ended |  |
+| Claim 3 | amount | Ended |  |
+| Claim 4 | fulfils | Ended | As receipt field 5. |
+| Claim 5 | the receipt this claim disagrees with | Ended | The opposite statement naming the one it contests (Part 2, candidate 8), from the payer's side only. |
+| Claim 6 | referral | Agreements' | Rule 20. |
+| Claim 7 | where a refund owed is to be paid | neither | About the movement, for a debt the other way. |
+| Claim 9 | purchase (as information) | Agreements' | Rule 18. |
+| Claim 10 | the previous hop's receipt | Ended | The link. |
+| Release 0 | the obligation it ends | Ended |  |
+| Release 1 | what the creditor took instead (never checked) | Ended | "May name what ended it". |
+| Price tag 0 | the bake it prices | neither | An offer. |
+| Price tag 1 | the publication it prices | Agreements' | A publication is an Agreements act (type 6). |
+| Price tag 2 | version | neither | An offer. |
+| Price tag 3 | the version it replaces | neither | An offer. |
+| Price tag 4 | the price; absent, the tag is withdrawn | neither | An offer, and its withdrawal. |
+| Price tag 5 | payee | neither | About the movement: where to pay. |
+| Pointer 0 | payee | neither | About the movement. |
+| Pointer 1 | version | neither | About the movement. |
+| Pointer 2 | previous pointer | neither | About the movement. |
+| Pointer 3 | rails in order of preference | neither | About the movement. |
+| Task | Payment (a payment cMIP and its rail Modules) | another layer's | Built on top, in Development's format. |
+| Task | Conversion (a conversion cMIP) | another layer's | Built on top; the rate is the service's. |
+
+**Counted from the list** (76 lines):
+
+| Maps to | Lines | Of which rules (29) | Acts and declarations (8) | Fields (37) | Tasks (2) |
+|---|---|---|---|---|---|
+| Owed | 10 | 4 | 1 | 5 | 0 |
+| Ended | 21 | 6 | 3 | 12 | 0 |
+| Passed | 0 | 0 | 0 | 0 | 0 |
+| managing | 10 | 8 | 2 | 0 | 0 |
+| Agreements' | 7 | 3 | 0 | 4 | 0 |
+| another layer's | 3 | 1 | 0 | 0 | 2 |
+| neither | 25 | 7 | 2 | 16 | 0 |
+
+Of the 25 "neither", 19 are about the movement (where a payment goes, and its proof), 5 are the price tag as an offer, and 1 says what Money does not see (counted).
+
+So 31 of 76 lines map to two of the three statements, none to the third, and 19 are about the movement that "We don't move money" leaves to the rail (counted; the reading of the last clause is mine).
+
+**How the two statements sit in draft 14** (traced to the draft's rules; the comparison is inferred):
+
+- **Owed** is the obligation (type 1), "signed by the debtor". The draft says in so many words that a creditor's statement of what it is owed "is a claim, never an obligation". That is Part 3's line for Owed.
+- **Ended** is three acts. The receipt (type 2) is the one who received saying so. The payment claim (type 3) is the one who paid saying so. The creditor's release (type 4) is the creditor letting a debt go "without full payment". So draft 14 already splits the ending the way Part 2's "next smallest" set does: paid, and over without being paid.
+- **What makes a payment count** in draft 14 is not either party's signature. It is the rail's proof, which the receipt and the claim both carry and which anyone can check (rules 8 and 10); the two signed records are "evidence on equal footing" (rule 11). Part 3 has no such column.
+- The receipt with a **forward** (field 7) is one signed act that both ends a hop and states the holder's debt to the next payee. Part 1's rows marked "Ended + Owed" are that act.
+
+### What the smallest set needs that draft 14 does not have
+
+One line each (traced to the draft's text; "does not have" means I found no act, field or rule for it in Money draft 14, and I did not read Agreements).
+
+1. **Passed.** No act hands an obligation to a new creditor. An obligation names its creditor once, as "an identity". One of an obligation's seven states is "redirected", which the draft says depends on Agreements; what it does I did not read.
+2. **A debt owed to "whoever holds this".** The creditor field is one identity. The voucher of 1.9 has no form in Money draft 14.
+3. **Owed, said by the one who is owed.** There is no act for it. The draft's requests are the price tag, which is an offer to anyone, and the rail's own request for payment, which is outside the MIR. An obligation signed by its creditor is listed among the freeze scenarios as invalid in every client.
+4. **Ended by the creditor's word for something handed over off any rail** (coin, a loaf, work). Discharge is by valid routes on a rail. The only ending on the creditor's word alone is the release, whose own definition is "without full payment". So "paid, off the rails" and "let go" are one act.
+5. **Ended in part with nothing paid.** A release "ends the whole obligation"; the draft's way to forgive part is a new obligation for the rest and a release of the old one, which is a tied pair of the kind Part 2 describes.
+6. **Ended against another debt.** Nothing names set-off. Two releases that each list the other obligation in field 1 would say it, but that field is "a record only, never checked", and each release ends its obligation whole.
+7. **A debt said to be owed again** after its ending was answered. Only the debtor signs an obligation, so a creditor cannot say it. In draft 14 a debt's state is worked out from the proofs by any reader, not said by the creditor.
+8. **Which turn of an agreement an ending closes** (March's rent). Field 5 names one act. Whether an agreement's turns can be told apart there I cannot tell without Agreements.
+
+### What draft 14 has that no moment in the map uses
+
+One line each (inferred, from reading the draft against the 197 rows of the table; I found the thing named in none of them).
+
+1. Theft of a signing key, and all that answers it: the flow and the vault, per-unit limits that fail closed, the lock change, the clock, anchoring (rules 2, 3, 17 in part, 29). The map has no theft.
+2. A chain of versions for where to be paid, forks in it, and "the version that counts" (rules 1 and 17).
+3. What a reader concludes while a rail has not yet answered: "pending", "unknown", "judged both ways" (rules 8 and 12).
+4. One rail proof claimed for two purposes, and the rule that it counts for neither (rule 12).
+5. A request rail against a push rail, and what a rail's proof binds (rules 11 and 18).
+6. A payer who is never named, or names a fresh identity (rules 11 and 14). The map's givers are always known to the receiver.
+7. A referral that earns a share only when the payer signs it (rule 20).
+8. Versions of a publication and which one a payment bought; a bare upload against a publication; the re-uploader who collects (rule 18).
+9. A refund rail named by the payer, bounded by the payer's own vault limit (rule 17).
+10. How far a receiver's incoming flows are visible (rule 13).
+
+Things in the map that draft 14 touches only by handing them on: Time runs out ("past its terms", to Agreements); the fence and the holder in the middle outside a route (no rule; a conversion service is the one holder Money knows); the permit (grant keys, "judged by Agreements").
+
+### What is new or gone since draft 9
+
+For each rule or act. "Unchanged" means unchanged in substance: wording, cross-references and the removal of change marks are not counted. Where a phrase is said to come "from draft 10" or "from draft 11", I searched each draft for it and did not read those drafts whole.
+
+| Rule or act | Where | The change |
+|---|---|---|
+| Dependencies | both, changed | Draft 9: Money never depends on Agreements or Development, and a Money-only client cannot make a purchase. Draft 14: Money reads Development's specification format, and a Money-only wallet can pay a purchase, which is valid. |
+| Rule 1. The pointer that counts | both, unchanged |  |
+| Rule 2. Flow and vault, different keys | both, unchanged |  |
+| Rule 3. Vault limits, fail closed | both, unchanged |  |
+| Rule 4. The payee decides its rails | both, changed | Draft 14 adds that a refund paid to the payer's own refund rail meets the rule's first two conditions. In a collective the rails are chosen by "the holders of the area reaching Money" (draft 9: whoever holds its Money lane). |
+| Rule 5. Undeliverable payments | both, unchanged |  |
+| Rule 6. The owner is informed | both, unchanged | Only "standing offer" became "price tag, a publication". |
+| Rule 7. One format, signed by the parties | both, changed | Draft 9: a collective signs with its own key or a grant key, and a split service's grant key has rules of its own. Draft 14: a collective has no signing key, and each of its Money acts is signed by a member or grantee for it, judged by Agreements (a member's key for the pointer from draft 10; every Money act, and no key of the collective's own, from draft 11). Draft 9's claim signed for an anonymous payer's bare key is gone (from draft 11). |
+| Rule 8. Checked by the rail Module's rule | both, changed | Draft 14 adds what a record counts for while its answer is not yet valid ("judged both ways"; from draft 11), and that the answer states the amount the hop moved (draft 14 alone). |
+| Rule 9. A trusted party, named | both, unchanged |  |
+| Rule 10. Valid only when the answer is valid | both, unchanged |  |
+| Rule 11. Double entry | both, changed | Draft 14 adds the gift: a payment naming no payer counts as paid and is owed no refund; and that the payer is the one the payment's commitment names (from draft 11). |
+| Rule 12. One payment, one count | both, changed | Draft 14 adds what a verifier does while it cannot tell whether two records are one payment; says records of one payment for one purpose are never shares of it; and gives claims no batch (draft 9 let claims share a payment under one). |
+| Rule 13. A receiver is public | both, unchanged |  |
+| Rule 14. A sender is never required | both, changed | Draft 14: an absent payer is a gift, and an anonymous payer names a fresh identity. |
+| Rule 15. Discharge, and an obligation's states | both, changed | The states are the same seven. Draft 9's sentence on a refund owed to a bare key is gone. |
+| Rule 16. The creditor's release | both, unchanged |  |
+| Rule 17. Which pointer a debt is paid to | both, changed | The rule for debts is the same. For money owed back, draft 9 had a refund to a bare key with no vault and no limit; draft 14 owes it to the payer named, at its pointer or its refund rail, counted up to the payer's vault limit over every payment to that rail. |
+| Rule 18. Buying | both, changed | The largest change. Draft 9: "A purchase names the claim it pays under", an Agreements claim, with standing offers. Draft 14: the price is its own Money act, the price tag, and a payment naming a publication's tag is a purchase under it (from draft 11). |
+| Rule 19. Refunds | in draft 9 only | Draft 9: "Refunds to the committed key". Draft 14: retired; what is left says a refund is owed to the payer named, stays open until claimed, and has no lapse in the core. |
+| Rule 20. Referrals | both, changed | Draft 14 adds who the payer is for a purchase paid through a route: its first payer. |
+| Rule 21. Payouts net of fees | both, unchanged | "Plan" became "split". |
+| Rule 22. No fees for specifications | both, unchanged |  |
+| Rule 23. Attention | both, unchanged |  |
+| Rule 24. A valid route | both, changed | Draft 14 adds a forward carried in parts, and "the buyer through a route": the first payer, read from what their claim cites (from draft 11). |
+| Rule 25. Only conversion hops forward | both, changed | Draft 14 adds that the same unit on another rail is also a conversion. |
+| Rule 26. Disclosure along the route | both, unchanged |  |
+| Rule 27. A hop that forwarded nothing | both, changed | Draft 9: the whole forward stays owed when no next hop names it. Draft 14: what the next hop's records leave short stays owed. |
+| Rule 28. Failure named | both, changed | Draft 14 adds that a refund on a route's last hop is owed back hop by hop, each in its own unit (from draft 11). |
+| Rule 29. Good faith | both, unchanged | Small additions: which payments a lock change "affects"; why two anchoring services. |
+| Payee pointer (type 0) | both, changed | The format is the same. Draft 9 had a publication carry its price and pay the identity in its `for` field; draft 14 has no price there, sends money for a bare bake to its uploader, and has a Money-only wallet refuse to tip a bake naming a collective. |
+| The vault | both, unchanged |  |
+| The clock | both, unchanged |  |
+| Obligation (type 1) | both, unchanged | In field 4's comment "offer" became "publication". |
+| Settlement receipt (type 2) | both, changed | The payer may no longer be a bare key. A section "What a payment fulfils" opens the list of acts field 5 may name. The batch also covers forwards. Field 9 names the ownership agreement and its version (draft 9: the claim paid under). |
+| Payment claim (type 3) | both, changed | Key 8, the anonymous payer's key and signature, is reserved and unused. Key 9 is "as information". |
+| Creditor's release (type 4) | both, unchanged |  |
+| Price tag (type 5) | in draft 14 only | From draft 11. |
+| A price carried in a publication's media entry | in draft 9 only |  |
+| An anonymous payer's bare key (receipt field 2, claim key 8, rule 19) | in draft 9 only | In draft 14 an anonymous payer is a fresh identity. |
+| A standing offer as what a payment follows | in draft 9 only | The words are gone from draft 11 on. |
+| Tasks (payment, conversion) | both, unchanged |  |
+| Parameters | both, changed | Draft 9 listed the unit specification format as open; draft 14 says it is a specification of kind 2 in Development. |
+
+**Counted from this table** (43 lines): 19 in both and unchanged; 19 in both and changed; 4 in draft 9 only; 1 in draft 14 only.
+
+**The MOR lead's earlier reading, part by part.** The ledger entry "What Money is" holds the lead's reading of Money "from Money draft 9's outline only", and a correction of 19 November that the reading "stands on draft 14's outline", draft 14 having "the same parts and one more act, the price tag (type 5)". Read whole only now. For each part, whether it still describes draft 14 (traced to the two drafts; where the reading says where something belongs, I say only whether the thing is still there and in what form).
+
+| Part of the reading | Does it still describe draft 14? |
+|---|---|
+| "where a payment goes (the payee pointer)" | Yes. Rules 1 to 6 are the same six rules, five of them unchanged. The pointer's format is unchanged; what was said beside it about a publication's price is gone. |
+| "proof that a payment happened (receipts and claims...)" | Yes as a heading; the content grew. Rules 7 to 12 are the same six, four of them changed: who signs for a collective, what an unanswered record counts for, the gift, and claims losing the batch. |
+| "debts and buying" | **Debts:** yes, and little changed. The obligation, discharge, the seven states and the release are in draft 14 as in draft 9 (rule 16, types 1 and 4 unchanged). In this file's terms they are Owed and Ended. **Buying:** no longer as draft 9 had it. Draft 9's purchase named an Agreements claim and a Money-only client could not make one. Draft 14's price is a Money act, and a Money-only wallet can pay it; what is left to Agreements is the verdict whether the payment is a purchase. |
+| "refunds" | Not as a rule of its own. Draft 9's rule 19 is retired. In draft 14 a refund is "money owed back", a debt the other way, paid under rule 17 and, on a route, hop by hop under rule 28. |
+| "referrals" | Yes; rule 20 gained the route's first payer. |
+| "fees and attention" | Yes; rules 21 to 23 are unchanged. |
+| "routes across rails" | Yes as a heading; four of its five rules changed (parts of a forward, the buyer through a route, the shortfall, the refund back along the hops). |
+| "the theft rule" | Yes. Rule 29 is in Money in both drafts and unchanged in substance. It leans on Identity (rotations, homes) and on Envelopes (anchoring). |
+| The correction: "the same parts and one more act, the price tag" | The parts and their headings are the same (traced: among rules and acts, the two outlines differ only at rule 18, rule 19 and the price tag). Beyond the new act, three things are gone that the outline does not show: the anonymous payer's bare key, the standing offer as what a payment follows, and a publication carrying its own price. |
+
+The ledger's arrived-at line for that entry says Money is "a request to pay and a record that it was paid". His words are "« pay this pls » « this has been paid »" and that it "carries no money it simply accounts it and links it". The arrived-at line stays close to them; "request" and "record" are the lead's nouns for his two quoted phrases.
+
+## What reading Money changed
+
+I did not edit Parts 1 to 4. These are the changes I would make to them, each with its reason.
+
+1. **Part 3, the table: a fifth column, "nobody's word: a proof anyone can check".** I put a rail's proof under "a third party who holds or carries". Draft 14 keeps two things apart that I merged: a proof any reader can run (rule 8), and a named trusted party's signed confirmation (rule 9). Under the first, a payment counts on no one's say-so.
+2. **Part 3, the line "a statement counts by itself when signed by the party who loses by it": I would narrow it.** It matches draft 14 for Owed (only the debtor signs an obligation) and for the release (only the creditor). It does not match for a payment: there the payer's claim, with a valid proof, shows the money arrived when the payee has signed nothing. I would lower its range from 60 to 78 to 45 to 65 as a general line, and say it holds where there is no proof to check.
+3. **Part 2, the next smallest set: I would say that an existing draft already draws that line.** Draft 14's receipt and claim on one side and its release on the other are "paid" and "over without being paid". I wrote the four-set as something a reader might want; it is also something that had been built. I would also say what I missed: with that split, an ending on the creditor's word for something handed over off any rail falls on the "unpaid" side.
+4. **Part 1, "which moments are only a rail's business": I would stop writing it as either-or.** I wrote that the record holds the saying and the rail holds the deed, and listed "proof" first among what is lost. A statement can carry the rail's proof inside it, and then the record has heard the rail without the rail writing in it. Loss 1 would become "lost unless the statement carries the proof".
+5. **Part 2, candidate 8 (a dispute): I would raise it from 55 to 75 to 60 to 78.** Draft 14's claim has a field for "the receipt this claim disagrees with": the opposite statement naming the one it contests, as I described it, from the payer's side. I would add that I found nothing the same from the creditor's side.
+6. **Part 2, candidate 13 (a payment where nothing was owed): I would rewrite it.** I wrote that an Ended naming no debt is "a statement about a movement and not about a debt", as a strain. Draft 14 does exactly that for a tip: the receipt names where it was paid (a pointer, an upload, a publication) in the place where it would name a debt. I would say that the thing named in place of a debt is the payee's standing word about where to be paid, and I would note that draft 14's word "gift" means something else than mine: a payment that names no payer.
+7. **Part 2, a note on counting: statements are not acts.** Draft 14's receipt with a forward is one signed act that is both an Ended and the holder's Owed. My count of three is a count of things said about a debt, and one signed act can say two of them. I would say so where I define the candidate sets.
+8. **Part 1, the tags of Asks at a till: about five rows could move.** I tagged "3, please" (2.1), the shop's checkout price (3.1), the named licence fee (3.6), the seller's machine (6.1) and the pump (7.8) as Owed said by the creditor. Draft 14 has no debt there at all: a price is an offer to anyone, and the payment "fulfils" the offer. Read that way those five rows are asks where nothing is owed, and the moves that follow them close no debt. The counts would shift by that much: about five fewer openings and five fewer closings, and five more payments that name an offer and no debt. I would give both readings.
+9. **Part 4, the row "Time runs out": one sentence more.** I left "can't tell" on whether two readers can agree that a day has passed. Draft 14 answers one case of "which came first" between two parties' acts by a reference the payee names in advance and anchors that anyone can compare (rule 29). I would cite it as one existing way of saying an order that a sequence of one's own acts cannot, and leave the coding as it is.
+10. **Nothing in Parts 1 to 4 that I would withdraw.** The one finding that reading Money sharpens and does not move is the first line of "does not have" above: the three-statement set has a statement that draft 14 has no act for.
 
 ## What this cannot tell
 
@@ -618,6 +843,8 @@ Not yet written. Parts 1 to 4 above were committed first, before any draft of Mo
 - **How many statements there are depends on the test.** With the assignment's test (what a statement does to a debt) the answer is three. With a looser test it is two, and with fields allowed to carry anything it is one. The test is the assignment's, not a finding.
 - **The addendum was not read.** `claude/MOR-research-addendum-2026-11-19.md` is not in the repository on any branch I could fetch, and not on this machine. Every point marked "from the addendum" is from the digest in this session's prompt. I did not copy the addendum into this pull request, because I do not have it.
 - **Bookkeeping and law are from general knowledge.** No source was opened for double entry, the reversing entry, a receivable and a payable, accrual, a provision, a write-off, set-off, assignment or the taking-over of a debt. The law of handing on a debt differs from country to country; what is said here is the common shape as I know it.
+- **Part 5 reads one layer.** I read Money drafts 14 and 9 and no draft of Agreements, Identity, Envelopes or Development. Where draft 14 hands something on ("redirected", "past its terms", grant keys, whether a payment is a purchase), I report that it does and not what happens there. "Draft 14 does not have" therefore means "Money draft 14 does not have". For drafts 10 to 13 I searched for single phrases and did not read them whole.
+- **The columns of Part 5 are a reading.** One line of the draft often does two things; I gave each line one column and said the other in the note. The counts by column move with those choices.
 - **Whether a third party's word, a rail's proof or silence "counts"** is said here only as what each means when it stands alone. Which of them a deal accepts is managing, by the test in Part 4.
 - **What I saw of MOR's Money before the first commit**, against the instruction to see none:
   - This session's prompt names Money draft 14, says it is headed "Draft 14, freeze-ready", and lists the parts of the MOR lead's earlier reading (where a payment goes; proof that a payment happened; debts and buying; refunds, referrals, fees and attention, routes across rails; the theft rule). I read that list as part of the task.
@@ -634,6 +861,8 @@ Not yet written. Parts 1 to 4 above were committed first, before any draft of Mo
 **The map.** `docs/research/what-touches-money.md` on branch `claude/research-what-touches-money-2ytr4h`, read whole except the one line named above. Its Part 1 (the 63 uses, the table, the counts) is what Parts 1 to 4 here are built on. Its Part 2 (the prior art from memory) I treated as superseded by the digest, as asked.
 
 **The research window's addendum, 19 November.** Not read; used through the digest in this session's prompt, and cited as "from the addendum". The digest covers: the BIS payments glossary; Innes (1913, 1914); Mehrling (2012); Selgin (2016); the SEPA Direct Debit Core Rulebook 2025 v1.1; the ISO 20022 external code sets, 2Q2026 v3; Macaulay (1963). I opened none of these.
+
+**MOR's Money.** `spec/MIR-money-draft-14.md` and `spec/MIR-money-draft-9.md` on main, each read whole, after the first commit. `spec/MIR-money-draft-10.md` to `-13.md`: searched for phrases only, and the first line of each read.
 
 **Double-entry bookkeeping, set-off, assignment.** From general knowledge throughout.
 
