@@ -466,6 +466,8 @@ The research is `docs/strangers-2026-11/`.
 
 **A debt can be passed** (19 November, after midnight; the research window's "What a debt record says": three statements, Owed, Ended and Passed, each counting by itself when the party who loses by it signs; Money draft 14 has the first two and no act for the third). The MOR lead leaned that Passed belongs in Money: the third and last thing that can happen to a debt, small and universal (a voucher, a debt sold on, a guarantor stepping in); without it a voucher is faked as ended and owed again, showing a debt nobody paid as closed. He: "It's a slippery slope… yes it should be. So, we have debt creators, debt settlement confirmators and debt owner (I own someone else's debt)"
 - *Arrived at (to check):* Money can say that a debt is passed to a new creditor. Three roles: the one who creates a debt, the one who confirms it settled, and the one who owns a debt, which may be someone else's. He calls it a slippery slope; why is not yet said.
+- The MOR lead read the slope as debts bundled and sold on, legible in MOR since every pass is signed and every owner named back to the debt's creator. He: "Yes, but the voucher is an agreement. But that does not make the trio less true for Money if money is in fact a debt tracker and management layer."
+- *Arrived at (to check):* the voucher itself is an agreement, in Agreements. The trio (creating a debt, confirming it settled, owning it and passing it on) holds for Money in general, as a layer that tracks and manages debt; Money tracks the debt an agreement such as a voucher opens.
 
 ## Not carried into this stint unless he says so
 
