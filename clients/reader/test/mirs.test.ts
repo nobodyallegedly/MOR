@@ -57,7 +57,7 @@ test('one final line break is not part of the text; every other line is, a draft
   const plain = await recompute(read);
   const withBreak = await recompute(async (file) => (await read(file)) + '\n');
   assert.deepEqual(withBreak.map((r) => r.hash), plain.map((r) => r.hash));
-  const money = await read('MIR-money-draft-11.md');
+  const money = await read('archive/MIR-money-draft-11.md');
   assert.match(money, /^# MIR: Money\n\n\*Draft 11, /, 'the draft carries a status line');
   const reduced = money.replace(/^(# MIR: Money)\n\n\*[^\n]*\*\n/, '$1\n');
   assert.notEqual(apart(money), apart(reduced), 'the status line is hashed with the rest');

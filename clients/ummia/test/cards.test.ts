@@ -83,7 +83,7 @@ test('the eight texts: built-in titles, keyed by their test hashes; the MICS doc
   assert.equal(MICS_HASH, mics.hash);
   assert.equal(SUITE_HASH, suite.hash);
   assert.equal(BUILT_IN.length, 8);
-  for (const [hash, f] of [[MIRS.identity, 'MIR-identity-draft-15.md'], [MIRS.text, 'MIR-text-draft-11.md'], [MIRS.envelopes, 'MIR-envelopes-draft-11.md'], [MIRS.money, 'MIR-money-draft-11.md'], [MIRS.agreements, 'MIR-agreements-draft-17.md'], [MIRS.development, 'MIR-development-draft-11.md']] as const)
+  for (const [hash, f] of [[MIRS.identity, 'archive/MIR-identity-draft-15.md'], [MIRS.text, 'MIR-text-draft-11.md'], [MIRS.envelopes, 'archive/MIR-envelopes-draft-11.md'], [MIRS.money, 'archive/MIR-money-draft-11.md'], [MIRS.agreements, 'archive/MIR-agreements-draft-17.md'], [MIRS.development, 'archive/MIR-development-draft-11.md']] as const)
     assert.equal(BUILT_IN.find((b) => b.hash === hash)!.title, file(f, 4).heading);
   assert.equal(BUILT_IN.find((b) => b.hash === MICS_HASH)!.title, mics.heading);
   assert.equal(BUILT_IN.find((b) => b.hash === SUITE_HASH)!.title, suite.heading);
