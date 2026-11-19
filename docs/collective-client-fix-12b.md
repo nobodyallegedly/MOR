@@ -4,7 +4,7 @@
 
 ## The cause, in plain words
 
-One test in the collective client was written while the split plan's format was still open. It checked that terms carrying a split plan were refused with the words "not supported yet (format still open)". Step 12b decided that format and built it, so the core now reads a split plan; the test's made-up plan (an empty list, where Law's format asks for a map) is refused for a different reason, "not in the Law format: split plan". The core is right, and the spec agrees (`spec/MIP-law-draft-10.md`, `split-plan = { 0 => [+ share-rule], 1 => hash, ... }`). The test held on to the old rule: it was the test that had to change, not the core.
+One test in the collective client was written while the split plan's format was still open. It checked that terms carrying a split plan were refused with the words "not supported yet (format still open)". Step 12b decided that format and built it, so the core now reads a split plan; the test's made-up plan (an empty list, where Law's format asks for a map) is refused for a different reason, "not in the Law format: split plan". The core is right, and the spec agrees (`spec/archive/MIP-law-draft-10.md`, `split-plan = { 0 => [+ share-rule], 1 => hash, ... }`). The test held on to the old rule: it was the test that had to change, not the core.
 
 Reproduced: WebAssembly built (`cd clients/genesis && npm run wasm`), then `npm test` in `clients/collective`: 37 passed, 1 failed, `explain.test.ts`, "what this client does not implement cannot be signed; open formats are refused outright", with `The input did not match /not supported yet.*split plan/. Input: 'law/shape: not in the Law format: split plan'`.
 

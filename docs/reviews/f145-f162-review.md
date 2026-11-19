@@ -33,7 +33,7 @@ Each finding gives the exact sentence, its file, the smallest story, and a verdi
 ## 1. The vault is "held" by an act that cannot hold it. BREAKS (F160); CONFLICTS with rule 14a's "declares no vault"
 
 **Sentences.**
-- `spec/MIP-finance-draft-6.md`, rule 12a: "that vault being the one, with its limits, that the payee's own act for the payment holds, selected as rule 14 selects the pointer: the payee's signature act on the agreement, the offer, or the publication paid, walking through the payee's own acts only (rule 14a; F160)".
+- `spec/archive/MIP-finance-draft-6.md`, rule 12a: "that vault being the one, with its limits, that the payee's own act for the payment holds, selected as rule 14 selects the pointer: the payee's signature act on the agreement, the offer, or the publication paid, walking through the payee's own acts only (rule 14a; F160)".
 - Rule 14a: "The vault and limits that apply to a payment are those the payee's own act for it holds (rule 12a, F160): a payer is judged by what the payee showed, never by a limit the payee set afterwards. An identity that declares no vault has no vault rule: every payment goes to its flow".
 - Rule 14, the definition of "holds": "An act holds what is reachable through its citations (`prev`, `objects`, `acks`, `refs`, directly or through what they cite), never a hash merely written in its payload".
 
@@ -60,10 +60,10 @@ The decision's motive was a payment *already made* under the old limit (the fan'
 ## 2. A payee with two devices has two sequences; the walk follows one. BREAKS, common case (F157 with F145, F155)
 
 **Sentences.**
-- `spec/MIP-finance-draft-6.md`, rule 14: "The version that counts for an obligation is the latest of the payee's pointer chain held by an act of the payee's own: the payee's signature act on the agreement, or the offer the agreement accepts … for selecting the payee's pointer, the walk passes only through the payee's own acts, never through an act another identity signed".
+- `spec/archive/MIP-finance-draft-6.md`, rule 14: "The version that counts for an obligation is the latest of the payee's pointer chain held by an act of the payee's own: the payee's signature act on the agreement, or the offer the agreement accepts … for selecting the payee's pointer, the walk passes only through the payee's own acts, never through an act another identity signed".
 - F157's reason, in the findings log: "The payee's pointers are acts in the payee's own sequence, so the walk finds the latest one the payee had published when signing."
-- `spec/MIP-envelope-draft-7.md`, "Sequences": "Parallel devices keep separate sequences."
-- `spec/MIP-identity-draft-11.md`, rule 17: "Clients SHOULD track every sequence the owner has started, on any device".
+- `spec/archive/MIP-envelope-draft-7.md`, "Sequences": "Parallel devices keep separate sequences."
+- `spec/archive/MIP-identity-draft-11.md`, rule 17: "Clients SHOULD track every sequence the owner has started, on any device".
 
 **The flaw.** An identity does not have one sequence; it has one per device. The walk from a signature act passes through `prev` down that device's sequence, and through `objects`, `acks` and `refs` only into acts another identity signed, where F157 stops it. A payee pointer published from another device is in another sequence, and nothing in Envelope or Finance makes an individual's act cite the heads of its other devices (Law rule 35b does that for a collective's devices; nothing does it for a person). The pointer chain itself links its versions by payload key 2, which rule 14 says never counts.
 
@@ -82,7 +82,7 @@ Variant: Ana publishes v2 from the phone and signs from the laptop; the walk sel
 
 ## 3. The good-faith proviso excludes only the honest; the anchoring escape cannot be turned on by the owner. BREAKS (F146, F147, F154); the paper's claim 2 overstates
 
-**Sentences.** `spec/MIP-finance-draft-6.md`, rule 15:
+**Sentences.** `spec/archive/MIP-finance-draft-6.md`, rule 15:
 - "A payment that followed both the pointer and the vault published on the payee's chain counts as made, even if a rotation invalidates that pointer (F161), **provided the payer's claim does not hold that rotation in its history** (the payer had not seen it; F139)."
 - "A payer's several claims for one payment are read together: the payment counts as made if any of them meets this proviso (F147)."
 - "Where both the payer's claim and the rotation are anchored, the anchor order decides instead: the payment counts as made only if the claim is anchored before the rotation (F146)."
@@ -113,9 +113,9 @@ So the proviso and the anchor rule exclude exactly one kind of payer: an honest 
 ## 4. The tie hash is chosen by whoever signs the receipt. BREAKS (F150, F162 items 7 to 10)
 
 **Sentences.**
-- `spec/MIP-law-draft-10.md`, rule 15a: "holders with equal remainders are ordered by the hash of the receipt of the payment being divided together with the holder's identity (tagged_hash("MOR/law/leftover", [ receipt hash, holder ]), the array in deterministic CBOR, smallest first)".
+- `spec/archive/MIP-law-draft-10.md`, rule 15a: "holders with equal remainders are ordered by the hash of the receipt of the payment being divided together with the holder's identity (tagged_hash("MOR/law/leftover", [ receipt hash, holder ]), the array in deterministic CBOR, smallest first)".
 - Reasoning: "ties broken by the payment's hash cannot be chosen by anyone and even out over many payments."
-- `spec/MIP-envelope-draft-7.md`, inside key 10: "salt: random, so the inside commitment cannot be guessed". The act id is "tagged_hash("MOR/act", outside)", and the outside commits to the inside.
+- `spec/archive/MIP-envelope-draft-7.md`, inside key 10: "salt: random, so the inside commitment cannot be guessed". The act id is "tagged_hash("MOR/act", outside)", and the outside commits to the inside.
 
 **The flaw.** The receipt is signed by the receiver, in a split by the split service (Finance rule 1). Its act id depends on its inside, and the inside carries a 16-byte salt the signer chooses freely. The signer can compute the tie for each candidate salt before signing and sign the one that sends the unit where it wants. Nothing on a tie is deterministic from the signer's point of view; it is deterministic only for verifiers after the fact. The same holds for the fork act's signer (F162 item 10, "ties ordered by the hash of the fork act with each side") and for the payer's claim where "the claim's hash stands for the receipt's".
 
@@ -134,7 +134,7 @@ This is F140's attack ("every 1-unit payment goes to that member") with the atta
 
 ## 5. A declaration can still be kept and used later, with one accomplice. BREAKS (F148, F158); the effect of a late one is undefined
 
-**Sentence.** `spec/MIP-law-draft-10.md`, rule 51: "the declaration counts only once an acknowledgement of it by an identity other than the declaration's signer (or, for a threshold, its signers) and other than the declared party, another party or the keeper, is anchored within one further period after the declaration's own anchor (F158), with no act of the declared party on the agreement anchored between the two, so a declaration cannot be kept and used later (F148)".
+**Sentence.** `spec/archive/MIP-law-draft-10.md`, rule 51: "the declaration counts only once an acknowledgement of it by an identity other than the declaration's signer (or, for a threshold, its signers) and other than the declared party, another party or the keeper, is anchored within one further period after the declaration's own anchor (F158), with no act of the declared party on the agreement anchored between the two, so a declaration cannot be kept and used later (F148)".
 
 **The flaw.** An anchor proves that an act existed by a point; it proves nothing about who had seen it. The check looks only at the declared party's acts *between the two anchors*. After the acknowledgement's anchor, the declared party's acts count for nothing, and nothing requires either act to be published at any point. F158 removed self-acknowledgement; it did not remove acknowledgement by an accomplice.
 
@@ -154,7 +154,7 @@ In a collective, the same two members remove a third who went on holiday, at a t
 ## 6. A duo with a period clause needs a keeper. CONFLICTS with the working rule of F159 (F158)
 
 **Sentences.**
-- `spec/MIP-law-draft-10.md`, rule 50 italic: "Where no such identity exists (a two-party deal whose other party is the authority, with no keeper), a declaration under a period clause cannot count; a client MUST warn at signing that the clause needs a keeper or a third party to work, a stated cost (F158)."
+- `spec/archive/MIP-law-draft-10.md`, rule 50 italic: "Where no such identity exists (a two-party deal whose other party is the authority, with no keeper), a declaration under a period clause cannot count; a client MUST warn at signing that the clause needs a keeper or a third party to work, a stated cost (F158)."
 - Rule 36b: every collective's abandonment clause "MUST" cover every party with constitutional power; "a named authority does not cover itself".
 - Findings log, F159: "A common case would not get the 'argh just use the added stuff' reply. A stated cost, with an additional feature as the safer path, is acceptable for rare cases; a common case must work safely by default."
 
@@ -168,7 +168,7 @@ So the safe form of the one clause every collective must have works for a two-me
 
 ## 7. A format declares its own bound. BREAKS, small (F149)
 
-**Sentence.** `spec/MIP-text-draft-6.md`, "Text format": "It may change how text looks, but it may hide only its own markup: the characters its specification declares as markup, in the positions it declares them, and nothing else (F149, replacing F140's bound by Unicode category)". The reasoning: "the bound is the format's own declared markup, which a verifier checks against the format's specification, never a list of categories (F149)".
+**Sentence.** `spec/archive/MIP-text-draft-6.md`, "Text format": "It may change how text looks, but it may hide only its own markup: the characters its specification declares as markup, in the positions it declares them, and nothing else (F149, replacing F140's bound by Unicode category)". The reasoning: "the bound is the format's own declared markup, which a verifier checks against the format's specification, never a list of categories (F149)".
 
 **The flaw.** F140's bound was set by the protocol; F149's is set by the format's author. The reader's protection was supposed to hold against the publisher, who chooses the format ("A format that could hide letters could hide a clause from readers of an offer; bounding what it may hide keeps readers, not only signers, protected"). Now a publisher writes, or picks, a format whose declaration says what it wants hidden, and a conforming client that checks the rendering against the declaration finds nothing wrong.
 
@@ -185,7 +185,7 @@ Plain display remains the fallback, as before; the point of the bound was reader
 
 ## 8. A private link can be "unknown" and the spec gives no way for it to stop being unknown; rule 26 contradicts the new publication rule. UNCLEAR; CONFLICTS (F152, F159)
 
-**Sentences.** `spec/MIP-identity-draft-11.md`, "The envelope":
+**Sentences.** `spec/archive/MIP-identity-draft-11.md`, "The envelope":
 - "A private link act counts only if its sealed form is published at the homes its signer's chain names at the link act's binding (its place in that chain); a later move of homes does not void it (F152, F159)."
 - "What a verifier found at those homes is an input like its own attempts: where it decides anything binding, the answer is shown as unknown until it no longer rests on that verifier's fetch alone (F153, F159)".
 - Rule 26: "Copies of a private link MUST be encrypted separately, so that stored copies cannot be matched to each other. The owner MAY store a private link under only one identity, or delay the second copy."
@@ -203,7 +203,7 @@ Plain display remains the fallback, as before; the point of the bound was reader
 ## 9. A refund owed to an anonymous buyer cannot count under rule 14. CONFLICTS (F145 against rule 10a)
 
 **Sentences.**
-- `spec/MIP-finance-draft-6.md`, rule 14: "An obligation with no such act, such as one naming no agreement act (field 4 absent), counts only if paid to the vault, until the payee acknowledges it with an act of their own that holds a pointer".
+- `spec/archive/MIP-finance-draft-6.md`, rule 14: "An obligation with no such act, such as one naming no agreement act (field 4 absent), counts only if paid to the vault, until the payee acknowledges it with an act of their own that holds a pointer".
 - Rule 10a: "A refund owed on a payment whose payer is not named is owed to whoever signs with the bare key the payment committed to as its payer (receipt field 2): it is paid where a claim carrying that key's valid signature (key 8) says (key 7)."
 - Rule 7: "An obligation is discharged when valid routes ending at the creditor's payee pointer, each naming the obligation, sum to the owed amount."
 
@@ -215,7 +215,7 @@ Plain display remains the fallback, as before; the point of the bound was reader
 
 ## 10. Payer-side splits cannot compute the tie hash. UNCLEAR (F162 items 8 and 9)
 
-**Sentences.** `spec/MIP-law-draft-10.md`, rule 15a: "where a split is made from a payer's claim with no receipt, the claim's hash stands for the receipt's; a payer's wallet that divides before any receipt exists shows that a tied unit is decided by the receipt's hash, the uncertainty at most one unit per tie, which satisfies rule 4a (F162)". Law, "Payer-side splitting": "the payer's wallet, reading Law, pays each holder's own pointer by the stakes of the work's claim, one flow with the holders' identities as destinations".
+**Sentences.** `spec/archive/MIP-law-draft-10.md`, rule 15a: "where a split is made from a payer's claim with no receipt, the claim's hash stands for the receipt's; a payer's wallet that divides before any receipt exists shows that a tied unit is decided by the receipt's hash, the uncertainty at most one unit per tie, which satisfies rule 4a (F162)". Law, "Payer-side splitting": "the payer's wallet, reading Law, pays each holder's own pointer by the stakes of the work's claim, one flow with the holders' identities as destinations".
 
 **The flaw.** In a payer-side split there is no payment "being divided": the wallet makes one payment per holder, and each holder signs its own receipt afterwards. The receipt whose hash decides the tie does not exist when the wallet must decide how much to pay each holder, and once the receipts exist there are several, one per holder, none of them "the receipt of the payment being divided". "The claim's hash stands for the receipt's" does not help: the claim carries the rail proof (field 1) and the amount (field 3), which exist only after the payment the amount decides. The rule is circular for the payer and undefined for the verifier. "Shows that a tied unit is decided by the receipt's hash" shows the payer a rule that nothing can evaluate.
 
@@ -226,8 +226,8 @@ Plain display remains the fallback, as before; the point of the bound was reader
 ## 11. Which signature act, when a party has several; a wallet moved after signing never reaches the deal; rule 12a's reasoning still says the old rule. UNCLEAR; CONFLICTS (F155, F157)
 
 **Sentences.**
-- `spec/MIP-finance-draft-6.md`, rule 14: "the payee's signature act on the agreement".
-- `spec/MIP-law-draft-10.md`, rule 5 and the signature format: "Signatures naming one act are parallel consents to it, never a fork among themselves". Nothing forbids a party signing the same terms twice.
+- `spec/archive/MIP-finance-draft-6.md`, rule 14: "the payee's signature act on the agreement".
+- `spec/archive/MIP-law-draft-10.md`, rule 5 and the signature format: "Signatures naming one act are parallel consents to it, never a fork among themselves". Nothing forbids a party signing the same terms twice.
 - Rule 12a's italic: "A new rail Module therefore needs a new payee pointer (the signing key) or a new vault (the safety key), never a clone of an agreement."
 - The reasoning for F115: "Rail Modules change far more often than agreements; if terms named them, every upgrade would need a clone, every party signing in a deal."
 
@@ -241,7 +241,7 @@ Plain display remains the fallback, as before; the point of the bound was reader
 
 ## 12. On a rail that binds nothing, a payer relabels an old tip as a debt payment. BREAKS, rare, and the cost is not stated (F151)
 
-**Sentence.** `spec/MIP-finance-draft-6.md`, rule 10: "where the rail binds no payee or purpose, the payer's claim decides what the payment fulfils and the receiver's contrary receipt stays shown as a dispute on the receiver (F64, F151, replacing F141's 'neither counts')". Its italic: "the payer chose its purpose in paying; a receiver cannot rename it afterwards".
+**Sentence.** `spec/archive/MIP-finance-draft-6.md`, rule 10: "where the rail binds no payee or purpose, the payer's claim decides what the payment fulfils and the receiver's contrary receipt stays shown as a dispute on the receiver (F64, F151, replacing F141's 'neither counts')". Its italic: "the payer chose its purpose in paying; a receiver cannot rename it afterwards".
 
 **The flaw.** On a rail that binds nothing, nothing records what the payer "chose in paying". The claim can be written later: "A payer MAY publish one at any time" (rule 10). F141 gave the receiver a veto; F151 gives the payer a pen.
 
@@ -258,7 +258,7 @@ The case is rare, as F151 says: every rail under payment cMIP draft 2 binds both
 
 ## 13. An offer that is not the payee's. UNCLEAR (F145)
 
-**Sentence.** `spec/MIP-finance-draft-6.md`, rule 14: "the latest of the payee's pointer chain held by an act of the payee's own: the payee's signature act on the agreement, or the offer the agreement accepts".
+**Sentence.** `spec/archive/MIP-finance-draft-6.md`, rule 14: "the latest of the payee's pointer chain held by an act of the payee's own: the payee's signature act on the agreement, or the offer the agreement accepts".
 
 A standing offer is terms with one signer, and nothing makes the signer the payee: a buyer may publish a bounty ("I pay 100 for a remix") that a creator accepts. The offer is then the payer's act, and the payee's own act is their acceptance, which the sentence does not name. F145's reason assumed "an offer … is already the payee's". The build read it as "an offer is the payee's own act only when the payee signed it", which is the sensible reading, and the text should say it, and say what the payee's act is otherwise (their signature act accepting the offer, presumably).
 

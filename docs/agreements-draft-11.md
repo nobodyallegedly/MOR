@@ -16,9 +16,9 @@ How we know no rule moved: no code changed, so the code's 826 tests check the sa
 
 ## What changed, file by file
 
-- `spec/MIP-agreements-draft-11.md`: new.
-- `spec/02-MOR-core-v21.md`: two sentences that quote a changed sentence. The vow's contest now names the sale (F253). The refund rail is now bounded by the vault limit (F255).
-- `spec/03-MOR-freeze-test-suite-v21.md`: the same two sentences: line "Announcements" (component list) and scenario step "The debt rule" (QG2).
+- `spec/archive/MIP-agreements-draft-11.md`: new.
+- `spec/archive/02-MOR-core-v21.md`: two sentences that quote a changed sentence. The vow's contest now names the sale (F253). The refund rail is now bounded by the vault limit (F255).
+- `spec/archive/03-MOR-freeze-test-suite-v21.md`: the same two sentences: line "Announcements" (component list) and scenario step "The debt rule" (QG2).
 - `spec/README.md`: a line for draft 11.
 - Nothing else. No code, test or record was edited. Draft 10 stays the approved text until draft 11 is approved, and code, tests and records keep citing draft 10's numbers.
 

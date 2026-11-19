@@ -1,6 +1,6 @@
 # Hostile review of F133 to F144
 
-*6 October 2026. Written for Nobody, allegedly. This review reads the twelve decisions at the end of `docs/findings/MOR-findings-log-round-2.md` and their text in `spec/` (the diffs since commit 77e1088, plus 77e1088 itself, which carries F133's first sentence), against the rest of the core, the freeze test suite (`spec/03-MOR-freeze-test-suite-v21.md`) and the paper (`docs/paper/mor-paper-draft-2.md`, sections 5 and 6.2). Nothing in `spec/` or the code was changed.*
+*6 October 2026. Written for Nobody, allegedly. This review reads the twelve decisions at the end of `docs/findings/MOR-findings-log-round-2.md` and their text in `spec/` (the diffs since commit 77e1088, plus 77e1088 itself, which carries F133's first sentence), against the rest of the core, the freeze test suite (`spec/archive/03-MOR-freeze-test-suite-v21.md`) and the paper (`docs/paper/mor-paper-draft-2.md`, sections 5 and 6.2). Nothing in `spec/` or the code was changed.*
 
 ## In plain words first
 
@@ -33,7 +33,7 @@ Each finding gives the exact sentence, its file, and the smallest story. Finding
 ## 1. The terms' drafter and the payer choose the pointer; the theft window never closes. BREAKS (F133, F138, F139 together)
 
 **Sentences.**
-- `spec/MIP-finance-draft-6.md`, rule 14: "The version an obligation names MUST be one its agreement act holds in its history (cites, directly or through what it cites; F133), or, for an obligation naming no agreement act (field 4 absent), one the obligation act itself holds in its history; a Law client checks that (F66)."
+- `spec/archive/MIP-finance-draft-6.md`, rule 14: "The version an obligation names MUST be one its agreement act holds in its history (cites, directly or through what it cites; F133), or, for an obligation naming no agreement act (field 4 absent), one the obligation act itself holds in its history; a Law client checks that (F66)."
 - Rule 15 (F138): "For a payment under an agreement or offer with no obligation between, the pointer followed is the payee's pointer that the agreement act or the offer holds in its history (the latest of the payee's chain it holds; F138); rule 14 then applies to it as to an obligation's."
 - Rule 15 (F139): "A payment that followed both the published pointer and the published vault counts as made, even if a later rotation invalidates that pointer, **provided the payer's claim does not hold that rotation in its history** (the payer had not seen it; F139)."
 
@@ -75,7 +75,7 @@ The claim records what the payer had seen *when the claim was written*, not when
 
 ## 2. Anyone can rewrap an anonymous payer's claim and turn their good faith on or off. BREAKS (F135 with F139)
 
-**Sentences.** `spec/MIP-finance-draft-6.md`, claim format:
+**Sentences.** `spec/archive/MIP-finance-draft-6.md`, claim format:
 - "anonymous = [ key: signing-key, sig: bstr ] ; sig: by key, over tagged_hash("MOR/finance/anonymous-claim", [ field 0, field 1, field 2, field 3, field 4, field 5 or null, field 6 or null, field 7 or null, field 9 or null ]) (F135)"
 - "Its signer, the act's signer, may be any identity, a one-time identity where the payer wishes to stay unnamed; the payer is the key".
 
@@ -99,7 +99,7 @@ There is a related problem with acknowledgements. Freeze suite step 2.5c relies 
 
 ## 3. An absence declaration can be anchored now and used later; liveness acts nobody anchored protect no one. BREAKS (F136)
 
-**Sentence.** `spec/MIP-law-draft-10.md`, rule 51: "where the clause names a period of absence (key 2), that the party has no act anchored on the agreement's time reference within that period before the declaration's own anchored point; a declaration not anchored, or one the anchors cannot place, does not count".
+**Sentence.** `spec/archive/MIP-law-draft-10.md`, rule 51: "where the clause names a period of absence (key 2), that the party has no act anchored on the agreement's time reference within that period before the declaration's own anchored point; a declaration not anchored, or one the anchors cannot place, does not count".
 
 **Flaw (a): a declaration kept for later.** The check looks only at the period *before* the declaration's own anchor, and an anchor proves only that the act existed by that point. Nothing the party does after the anchor counts against the declaration.
 
@@ -129,7 +129,7 @@ In a collective the same declaration is registered at a later line, and the late
 
 ## 4. A debt outside its signer's powers still blocks every fork. BREAKS (F144)
 
-**Sentence.** `spec/MIP-law-draft-10.md`, Fork (type 19): "field 6 names every obligation of the original in that history, published or not, paid or not, save one that is never the collective's: one sealed neither to every member nor publicly, or one on none of its chains, citing no decision (rule 35a and 35b, F144), one signed with a grant key included (F128)".
+**Sentence.** `spec/archive/MIP-law-draft-10.md`, Fork (type 19): "field 6 names every obligation of the original in that history, published or not, paid or not, save one that is never the collective's: one sealed neither to every member nor publicly, or one on none of its chains, citing no decision (rule 35a and 35b, F144), one signed with a grant key included (F128)".
 
 **The flaw.** F144 decided the rule by its reason: "a fork hands out the debts that bind the collective". The text still lists *forms*, and it lists only two of them. Rule 35b says "An act within its signer's powers counts for the collective", so an obligation that is done and on the chain, but signed outside its signer's powers, binds no one. It is not on the list of exceptions, so it must be handed out. The same goes for a grant-key debt outside the grant's scope ("one signed with a grant key included"). This is exactly reading C's problem, moved to a case F144 did not name. The reference's `to_hand_out` (`core/src/law/view.rs`) checks seal, validity and line, not powers, and the F144 build note adds only "done on the collective's chain".
 
@@ -147,7 +147,7 @@ The fix in words: hand out what binds the collective (done, on its chain, and wi
 
 ## 5. A text format may hide decimal points, minus signs and vowel signs. BREAKS (F140 item 10)
 
-**Sentence.** `spec/MIP-text-draft-6.md`, Text format task: "it may hide only characters that are not letters or digits (general categories L and N of the pinned Unicode version; F140)".
+**Sentence.** `spec/archive/MIP-text-draft-6.md`, Text format task: "it may hide only characters that are not letters or digits (general categories L and N of the pinned Unicode version; F140)".
 
 **The flaw.** Pinning the bound to L and N makes everything else hideable:
 - M: combining marks, including the vowel signs that are part of words in Indic scripts.
@@ -168,7 +168,7 @@ The section's own reason, "A format that could hide letters could hide a clause 
 ## 6. Rounding leftovers can be moved by reordering holders, with no signature from those who lose. BREAKS (F140 item 4); the freeze suite disagrees (CONFLICTS)
 
 **Sentences.**
-- `spec/MIP-law-draft-10.md`, stakes: "leftovers to each stake's first holder (F140)".
+- `spec/archive/MIP-law-draft-10.md`, stakes: "leftovers to each stake's first holder (F140)".
 - Rule 15a: "Any leftover from dividing a stake goes to that stake's first holder (F140)."
 - Rule 21 likewise.
 
@@ -185,13 +185,13 @@ The section's own reason, "A format that could hide letters could hide a clause 
 
 Paper claim 6's bound is per split and still holds ("none above it by as many units as the stake has holders"). Claim 5 ("No stake or share moves without its holder's signature") holds in words, while money moves anyway.
 
-**CONFLICTS.** `spec/03-MOR-freeze-test-suite-v21.md` line 83 still says "leftovers to the first listed party", which is the rule F140 replaced. Paper section 5.2 says "every payout matching its stake to within one smallest unit", but under this rule the first holder can be above by up to one unit fewer than the number of holders.
+**CONFLICTS.** `spec/archive/03-MOR-freeze-test-suite-v21.md` line 83 still says "leftovers to the first listed party", which is the rule F140 replaced. Paper section 5.2 says "every payout matching its stake to within one smallest unit", but under this rule the first holder can be above by up to one unit fewer than the number of holders.
 
 ---
 
 ## 7. On a rail that binds no purpose, the receiver gets a veto. BREAKS where such a rail exists (F141)
 
-**Sentence.** `spec/MIP-finance-draft-6.md`, rule 10: "where the rail binds no payee or purpose, neither counts until the receiver resolves them (rule 8a), and the disagreement stays shown (F141)."
+**Sentence.** `spec/archive/MIP-finance-draft-6.md`, rule 10: "where the rail binds no payee or purpose, neither counts until the receiver resolves them (rule 8a), and the disagreement stays shown (F141)."
 
 **The flaw.** Before F141, "the greater amount counts as received until the receiver signs a receipt matching the proof", and "the claim alone shows the money arrived (F64)". Now, if the receiver signs a receipt naming any other purpose, the payer's payment counts for nothing until the receiver chooses to resolve it.
 
@@ -208,7 +208,7 @@ This also contradicts paper section 5.1 ("Where receipt and claim disagree, the 
 
 ## 8. A private link lets a thief show a forged "same person" proof to one victim only. BREAKS, small (F134); its termination brings back a "when" (UNCLEAR)
 
-**Sentence.** `spec/MIP-identity-draft-11.md`, "The envelope": "A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelope MIP defines, their key delivered only to whoever should see them (F7, F134)."
+**Sentence.** `spec/archive/MIP-identity-draft-11.md`, "The envelope": "A link's claim, confirmation and termination (types 6 to 8) may instead be private, encrypted as the Envelope MIP defines, their key delivered only to whoever should see them (F7, F134)."
 
 **Story.**
 1. A thief holds A's signing key.
@@ -231,7 +231,7 @@ I also tried kept ancestry through a private link in the middle of a sequence. I
 ## 9. F137's list of inputs no longer covers private Identity acts; the paper promises more than the text. CONFLICTS (F137 with F134; paper claim 1)
 
 **Sentences.**
-- `spec/MIP-identity-draft-11.md`, after rule 17: "These rules are part of validity and MUST give the same answer to every conforming verifier holding the same identity chain, acknowledgements, keeper records and inclusion proofs, and having made the same attempts to reach homes (rule 32a; F137). An answer that rests on the verifier's own failed attempts is marked as such; keepers, vault payments and agreements MUST NOT rely on it".
+- `spec/archive/MIP-identity-draft-11.md`, after rule 17: "These rules are part of validity and MUST give the same answer to every conforming verifier holding the same identity chain, acknowledgements, keeper records and inclusion proofs, and having made the same attempts to reach homes (rule 32a; F137). An answer that rests on the verifier's own failed attempts is marked as such; keepers, vault payments and agreements MUST NOT rely on it".
 - Paper claim 1: "nothing binding may rest on it".
 
 **F134 against F137.** Since F134, two verifiers can hold the same Identity acts while only one holds a link's content key. The promise does not name keys as an input, so it no longer covers private links. Add "and the same content keys" to the list.
@@ -273,7 +273,7 @@ None of the twelve changes adds a new unanchored "when" to a validity rule. F136
 
 ## 12. "Judged on its own history" does not hold for a closing. CONFLICTS (F143)
 
-**Sentence.** `spec/MIP-law-draft-10.md`, after the closing: "Whether a fork or closing is complete is judged on its own line and history, as if it were the ending that counts … *The answer does not depend on when a verifier is asked, nor on which ending it judged first.*"
+**Sentence.** `spec/archive/MIP-law-draft-10.md`, after the closing: "Whether a fork or closing is complete is judged on its own line and history, as if it were the ending that counts … *The answer does not depend on when a verifier is asked, nor on which ending it judged first.*"
 
 The closing's own conditions reach past its history:
 - "the collective holds nothing: no stake of a latest version of an agreement a verifier holds names it as a holder".
@@ -289,7 +289,7 @@ So a closing's completeness changes as later acts arrive, and the italic overcla
 
 ## 13. Rule 42 contradicts itself, and "an action" could be read to include a grant key's. UNCLEAR (F142)
 
-**Sentence.** `spec/MIP-law-draft-10.md`, rule 42: "An acknowledgement of a grant key's act counts as an adoption only when it is an act of the collective's own key that counts (rule 40), wherever it sits (C6): **done, sealed to every member and on the collective's chain (rule 35a). An Identity witness act (type 15), on neither chain, adopts nothing; the collective adopts by an action citing the act (F142).**"
+**Sentence.** `spec/archive/MIP-law-draft-10.md`, rule 42: "An acknowledgement of a grant key's act counts as an adoption only when it is an act of the collective's own key that counts (rule 40), wherever it sits (C6): **done, sealed to every member and on the collective's chain (rule 35a). An Identity witness act (type 15), on neither chain, adopts nothing; the collective adopts by an action citing the act (F142).**"
 
 - "wherever it sits" now contradicts "on the collective's chain"; C6's sense, that where the act is *stored* does not matter, should be said in those words.
 - "the collective adopts by an action citing the act" drops "of the collective's own key". Rule 40 says "no act signed with a grant key adopts anything", and a grantee's strand is "like a device of the collective" whose actions are on the chain.
@@ -306,7 +306,7 @@ Freeze scenario 3 step 5 ("The label adopts it by an act of its own key, acknowl
 
 **Sentence.** `cmips/cmip-payment-draft-2.md`, item 3: "whether it is a request rail or a push rail (F128, W4), declared in a field of the Module's specification that a client reads, never set by hand (F140)."
 
-The Production specification format (`spec/MIP-production-draft-6.md`, fields 0 to 10) has no such field; only field 9, the prose. Until the field is defined, two clients can read the prose differently. Under Finance rule 10c the purchase verdict on a push rail differs from that on a request rail, so one payment is a purchase for one verifier and owed back for the other. That breaks paper claim 1's "same verdicts". Mark the field "format open", as items 5 to 8 are.
+The Production specification format (`spec/archive/MIP-production-draft-6.md`, fields 0 to 10) has no such field; only field 9, the prose. Until the field is defined, two clients can read the prose differently. Under Finance rule 10c the purchase verdict on a push rail differs from that on a request rail, so one payment is a purchase for one verifier and owed back for the other. That breaks paper claim 1's "same verdicts". Mark the field "format open", as items 5 to 8 are.
 
 ---
 

@@ -22,20 +22,20 @@ The deal assessment tool follows: it no longer warns that an investor or a depar
 
 ### The texts
 
-**Agreements draft 12** (`spec/MIR-agreements-draft-12.md`). Draft 11 stays, approved. Draft 12 changes rule 48 (was 46) alone, and says so in its header ("Nothing else changes"):
+**Agreements draft 12** (`spec/archive/MIR-agreements-draft-12.md`). Draft 11 stays, approved. Draft 12 changes rule 48 (was 46) alone, and says so in its header ("Nothing else changes"):
 
 - where draft 11 had *"Open (core v22, Q7): whether the first paragraph's 'unless the agreement pre-authorised it' reaches this one."*, it now reads: **"The agreement's advance permission reaches a collective's departed holder's pay, and never a deal's non-party holder's** (new in draft 12, F273). The first paragraph's 'unless the agreement pre-authorised it', the abandonment clause among such permissions, reaches what a departed holder is paid, who signed the constitution as a member; it never reaches what a deal's holder who is no party is paid, who never signed the agreement." Then the reading, marked *"Reading, to confirm (`docs/f270-build.md`, Q1)"*, and the decision's words, *"A) agreed"*.
 - where draft 11 had *"Open (core v22, Q8): which changes of the split plan 'lower a stake's part'."*, it now reads: **"A stake is paid less by any change that lowers what it receives from a payment or can expect from the plan as written** (new in draft 12, F274): another share added or raised, a role share added, unfilled roles sent elsewhere, the rail fee moved onto receivers, the maximum fee raised or removed, the split cMIP or its parameters changed, as well as a fee added or raised. **What a cMIP pays cannot be read from the plan alone, so changing the split cMIP or its parameters counts.**" Then the decision's words, *"What money sees and money expects is what matters"*.
 - F270's "to build" marks are removed where this build does it: rule 28 (fees), rule 45 (the clone's list of signatures), rule 48, rule 68 (departed holders), and F270's freeze line. Each still reads "new in draft 11, F270".
 
-**The MICS v24** (`spec/02-MOR-MICS-v24.md`): version 23, approved, naming Agreements draft 12. Version 23's header moves to "Earlier versions", marked approved. The sentences changed:
+**The MICS v24** (`spec/archive/02-MOR-MICS-v24.md`): version 23, approved, naming Agreements draft 12. Version 23's header moves to "Earlier versions", marked approved. The sentences changed:
 
 1. The header: "Version 24 … naming Agreements draft 12, which writes in F273 and F274 … F270 is built with them … Agreements draft 12 …".
 2. "Changing an agreement": "… a deal's holder who is no party, a collective's departed holder (F270, to build). A deal's clone needs every party." now reads "… a deal's holder who is no party, a collective's departed holder (F270). **A stake is paid less by any change that lowers what it receives from a payment or can expect from the plan as written; a change of the split cMIP or its parameters counts, since what a cMIP pays cannot be read from the plan alone (F274). The agreement's advance permission reaches a collective's departed holder's pay, never a deal's non-party holder's (F273).** A deal's clone needs every party."
 3. "Departed holders": "Their stake never shrinks without their signature, nor is what it is paid lowered without it (F270), and is a share of all the collective's income." now reads "… nor is what it is paid lowered without it (F270), **save where an advance permission they signed as a member reaches it (F273)**, and is a share of all the collective's income."
 4. "Open before freeze": "To build first: F267's claim field and route reading, F268's declared field, F270's signatures. … Open, from the second pass (Q7, Q8): whether an agreement's pre-authorisation reaches F270, and which changes of the split plan lower a stake's part." now reads "To build first: F267's claim field and route reading, F268's declared field. … **The second pass's two questions are answered (F273, F274), written in Agreements draft 12 and built with F270's signatures (`docs/f270-build.md`); one reading taken building them, what advance permission the core can read, is to confirm (its Q1).**"
 
-**The freeze suite v24** (`spec/03-MOR-freeze-test-suite-v24.md`): version 23, approved, matching core v24 and Agreements draft 12. The sentences changed:
+**The freeze suite v24** (`spec/archive/03-MOR-freeze-test-suite-v24.md`): version 23, approved, matching core v24 and Agreements draft 12. The sentences changed:
 
 1. The header, saying what is tested where.
 2. The Agreements line on departed holders: "… nor what it is paid lowered without it, by the split plan's parts or a fee (F270, to build) *(scenario: to write)*;" now reads "… nor what it is paid lowered without it, **by any change that lowers what it receives or can expect from the plan as written, the split cMIP or its parameters included (F270, F274), save where an advance permission it signed as a member reaches its pay (F273) (3.7x, 3.7y)**;".
@@ -161,7 +161,7 @@ Until now the core could not pass a stake on at all: the text said "a stake pass
 
 ### The texts
 
-**Agreements draft 12** (`spec/MIR-agreements-draft-12.md`), each change marked:
+**Agreements draft 12** (`spec/archive/MIR-agreements-draft-12.md`), each change marked:
 
 - **Header:** a paragraph saying what this revision adds, that the first pass's reading of F273 and its Q1 are withdrawn, and that nothing else changes.
 - **Rule 48:**

@@ -32,11 +32,11 @@ Long rules are cut into short paragraphs and lists, and the longer ones open wit
 
 ## What changed, file by file
 
-- `spec/MIP-money-draft-7.md`: new.
-- `spec/02-MOR-core-v21.md`, one sentence quotes the changed sentence: the broken-collective paragraph's "the refund rail the payer's own claim names, up to the payer's vault limit and above it only at the vault". Its citation now reads "Money draft 7, rule 17, and Agreements draft 11, F255, built".
-- `spec/03-MOR-freeze-test-suite-v21.md`, one sentence quotes it: scenario step "The debt rule" (QG2), with the same citation.
+- `spec/archive/MIP-money-draft-7.md`: new.
+- `spec/archive/02-MOR-core-v21.md`, one sentence quotes the changed sentence: the broken-collective paragraph's "the refund rail the payer's own claim names, up to the payer's vault limit and above it only at the vault". Its citation now reads "Money draft 7, rule 17, and Agreements draft 11, F255, built".
+- `spec/archive/03-MOR-freeze-test-suite-v21.md`, one sentence quotes it: scenario step "The debt rule" (QG2), with the same citation.
 - `spec/README.md`: one line, draft 7, awaiting approval.
-- **Unchanged:** `spec/MIP-money-draft-6.md` stays as the approved text, and the reference that code comments, tests, records, Agreements draft 11, core v21 and the freeze suite cite by its numbers. The first commit changed no sentence core or the suite quotes. No code, test or record was edited.
+- **Unchanged:** `spec/archive/MIP-money-draft-6.md` stays as the approved text, and the reference that code comments, tests, records, Agreements draft 11, core v21 and the freeze suite cite by its numbers. The first commit changed no sentence core or the suite quotes. No code, test or record was edited.
 
 ## Old numbers to new
 

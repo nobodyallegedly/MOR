@@ -1,6 +1,6 @@
 # The constitution stays in the core: S7m's trim, judged
 
-*Fable, 4 November 2026. Input: pull request 121 (`claude/s7m-the-trim`): `docs/s7m-report.md` whole, its two readings and fourteen questions; `spec/MIR-agreements-draft-18.md`, rules 98 and 99 above all, with rule 47 and the four parts; `cmips/cmip-collective-control-draft-1.md`; `docs/reviews/fable-who-decides.md`; F420. Read, not run; a recommendation, nothing decided.*
+*Fable, 4 November 2026. Input: pull request 121 (`claude/s7m-the-trim`): `docs/s7m-report.md` whole, its two readings and fourteen questions; `spec/archive/MIR-agreements-draft-18.md`, rules 98 and 99 above all, with rule 47 and the four parts; `cmips/cmip-collective-control-draft-1.md`; `docs/reviews/fable-who-decides.md`; F420. Read, not run; a recommendation, nothing decided.*
 
 ## In plain words
 

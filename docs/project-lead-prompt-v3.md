@@ -108,8 +108,8 @@ Every build prompt says: read CLAUDE.md and the findings concerned; everything d
 
 | Document | Latest |
 | --- | --- |
-| Core | `spec/02-MOR-core-v21.md` (revised in place) |
-| Freeze test suite | `spec/03-MOR-freeze-test-suite-v21.md` |
+| Core | `spec/archive/02-MOR-core-v21.md` (revised in place) |
+| Freeze test suite | `spec/archive/03-MOR-freeze-test-suite-v21.md` |
 | MIPs | Identity 11, Envelopes 7, Text 6, Money 6, Agreements 10, Development 6 |
 | MOR in one page | `docs/07-MOR-in-one-page-v11.md` |
 | Case studies | `docs/case-studies/README.md` lists the latest |

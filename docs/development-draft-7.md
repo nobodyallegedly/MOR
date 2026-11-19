@@ -37,9 +37,9 @@ Each rule has a new number in reading order, with its old number beside it ("Rul
 
 ## What changed, file by file
 
-- `spec/MIP-development-draft-7.md`: new.
+- `spec/archive/MIP-development-draft-7.md`: new.
 - `spec/README.md`: one line, draft 7, awaiting approval.
-- **Unchanged:** `spec/MIP-development-draft-6.md` stays as the approved text, and the reference that code comments, tests, records and the other drafts cite by its numbers. `spec/02-MOR-core-v21.md` and `spec/03-MOR-freeze-test-suite-v21.md` are not edited (see below: no sentence of theirs quotes a sentence changed). No code, test or record was edited.
+- **Unchanged:** `spec/archive/MIP-development-draft-6.md` stays as the approved text, and the reference that code comments, tests, records and the other drafts cite by its numbers. `spec/archive/02-MOR-core-v21.md` and `spec/archive/03-MOR-freeze-test-suite-v21.md` are not edited (see below: no sentence of theirs quotes a sentence changed). No code, test or record was edited.
 
 ## Old numbers to new
 

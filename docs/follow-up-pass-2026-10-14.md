@@ -38,7 +38,7 @@ The tests that changed were each run alone first, and passed: `clients/reports` 
 
 **4. The listing counts xtype use.** For each xtype it lists (a specification defining act types and filling no task), it counts the **public acts of its types** found on the relays it reads, each checked through its signer's chain, in all and by type, most used first, in a part of its own, "Xtypes, by use", after the extensions; the same count is on the xtype's card and in the bar. **Private acts are not counted**, and the page says so: which specification a private act belongs to cannot be read from outside. Website cMIP draft 10 (`cmips/cmip-website-draft-10.md`; draft 9 stays) writes both changes into rule 13c.
 
-**5. F290 is written in.** Development draft 9 (`spec/MIR-development-draft-9.md`; draft 8 stays) adds one sentence to Part three, marked "new in draft 9 (F290)". The MICS v27 and the freeze suite v27 name it.
+**5. F290 is written in.** Development draft 9 (`spec/archive/MIR-development-draft-9.md`; draft 8 stays) adds one sentence to Part three, marked "new in draft 9 (F290)". The MICS v27 and the freeze suite v27 name it.
 
 ## Precisely
 
@@ -55,7 +55,7 @@ The tests that changed were each run alone first, and passed: `clients/reports` 
 | `clients/repo/src/release.ts`, `cli.ts` | Manifest field 6 (encoded sorted, decoded strictly: at least one, sorted, unique, 32 bytes each); `prepareRelease` and `publishRelease` take `implements`; `checkImplements`; `release --implements`; `verify` prints it. |
 | `clients/site/src/listing.ts`, `shell/listing-view.ts`, `shell/view.ts`, `shell/app.ts` | Every release publication read (not only those with references); its manifest's field 6 first, its references only without it; `Release.by`. `Listed.use` and `Listing.xtypes`: the public acts of each xtype's types, judged, counted by type. The view: "(its manifest names it among what it implements)" or "(its publication refers to it)"; the section "Xtypes, by use" with its note on private acts; "Use: …" on an xtype's card; the bar's count. |
 | `cmips/cmip-release-manifest-draft-3.md`, `cmips/cmip-website-draft-10.md`, `cmips/README.md` | Below. |
-| `spec/MIR-development-draft-9.md`, `spec/02-MOR-MICS-v27.md`, `spec/03-MOR-freeze-test-suite-v27.md`, `spec/README.md` | Below. |
+| `spec/archive/MIR-development-draft-9.md`, `spec/archive/02-MOR-MICS-v27.md`, `spec/archive/03-MOR-freeze-test-suite-v27.md`, `spec/README.md` | Below. |
 | `.github/workflows/test.yml` | A step for `clients/reports`, which GitHub did not run before (nor `clients/assess` and `clients/nudge`, left as they are). |
 
 The core library, `core/`, the relays, `clients/desk` and `clients/connector` are unchanged. The display client's released copy (`clients/site/built/`) and Dub's web release (`clients/dub/built/`) are not rebuilt: that is a release, after the merge.
@@ -87,7 +87,7 @@ The core library, `core/`, the relays, `clients/desk` and `clients/connector` ar
 
 ## The changed sentences
 
-**Development draft 9** (`spec/MIR-development-draft-9.md`). Part three, before:
+**Development draft 9** (`spec/archive/MIR-development-draft-9.md`). Part three, before:
 
 > A specification is a public act (Envelopes type 0, a publication) whose media is the specification's content, published and signed by its creator. The content is:
 
@@ -97,7 +97,7 @@ After:
 
 Added to the marks under "How to read this draft": "**New in draft 9 (F290):** a sentence draft 9 writes in, filling a silence of Part three." The draft 8 mark now reads "a name draft 8 writes in" (was "this draft"). And the draft's own note at the top.
 
-**The MICS v27** (`spec/02-MOR-MICS-v27.md`). The Development section, before:
+**The MICS v27** (`spec/archive/02-MOR-MICS-v27.md`). The Development section, before:
 
 > - **Specifications are named by the hash of their content,** wherever they are published. cMIPs and Modules name their creator inside, …
 
@@ -107,7 +107,7 @@ After:
 
 And the version note: version 27 naming Development draft 9; version 26's note moved to "Earlier versions", its opening now "Written for approval; version 27 names Development draft 9 beside it".
 
-**The freeze suite v27** (`spec/03-MOR-freeze-test-suite-v27.md`). The Development line, before:
+**The freeze suite v27** (`spec/archive/03-MOR-freeze-test-suite-v27.md`). The Development line, before:
 
 > - [ ] Specifications named by content hash; creator inside for cMIPs and Modules; MIRs without creator; a successor by another creator shown as such (8)
 

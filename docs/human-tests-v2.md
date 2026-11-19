@@ -327,7 +327,7 @@ Each test says what it tests, which app, the steps, and what to check. The numbe
 
 ### 3.1 The client conformance checklist
 
-*Some rules only the signer's own app can honour: no verifier can see them from the acts. The freeze test suite marks them "conformance" (`spec/03-MOR-freeze-test-suite-v28.md`). You check them by looking, during the tests above. For each: one line, "seen", "not seen", or "not clear".*
+*Some rules only the signer's own app can honour: no verifier can see them from the acts. The freeze test suite marks them "conformance" (`spec/archive/03-MOR-freeze-test-suite-v28.md`). You check them by looking, during the tests above. For each: one line, "seen", "not seen", or "not clear".*
 
 1. **What you sign is what you saw.** Every app shows the exact act in plain words before anything is signed, and nothing is signed until you press.
    Look at: Edubba's **Review the founding**, **Review the change**, **Review the release**, **Read the grant back**; Dub's Signing tab; Kišib's **Read it back**; Damgar's **To sign** and Settings' **Read it back**; Ummia's **Read it back**. (Tests 5 to 9.)

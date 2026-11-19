@@ -73,7 +73,7 @@ All five were answered on 19 October 2026: 1 to 4 in F358, in the findings log; 
     - the pointer is signed with a Money area holder's own key (the proposer's where they hold one), never the collective's own;
     - where the area needs more keys, its other holders are asked, each in their own app (Dub's Signing tab says where the pointer sends the money);
     - until enough have signed, a buyer's payment is refused before anything is signed.
-- **Money draft 10** (`spec/MIR-money-draft-10.md`, F358): rule 7 and the payee pointer's format. A collective's pointer may be signed with the member keys of its area reaching Money, judged as scoped by Agreements with that area's holders and threshold. The WebAssembly gains `agreementsPointer` and `agreementsChoose` (the core's `payee_pointer`). Damgar pays a collective through the pointer Agreements count (`collectivePointer`, `clients/grants/src/member.ts`). The reader ships draft 10.
+- **Money draft 10** (`spec/archive/MIR-money-draft-10.md`, F358): rule 7 and the payee pointer's format. A collective's pointer may be signed with the member keys of its area reaching Money, judged as scoped by Agreements with that area's holders and threshold. The WebAssembly gains `agreementsPointer` and `agreementsChoose` (the core's `payee_pointer`). Damgar pays a collective through the pointer Agreements count (`collectivePointer`, `clients/grants/src/member.ts`). The reader ships draft 10.
 - **Damgar** (money messages draft 4, F357):
   - It reads field 14 of the agreement an offer is made under (field 0), or of a collective payee's agreement in force.
   - It sends the invoice request to the service and accepts the service's answer.

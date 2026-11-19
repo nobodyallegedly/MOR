@@ -86,7 +86,7 @@ The safety key → **the chain key**; the everyday key → **the signing key**. 
 
 *F225's principle, as Nobody, allegedly, stated it:* "Money says how money moves, that it moved, or asks that it move; Agreements say what must follow." Below is each sentence where Money's text decides a consequence rather than carrying the payment. Each comes with a suggested wording that moves the obligation to Agreements and leaves its payment in Money. In several places Agreements already says the same thing, so Money's sentence is a second statement of an Agreements rule. In one place (rule 14's over-sale) Agreements even cites Money as the ground of its own obligation.
 
-**M1. Rule 7, "past its terms"** (`spec/MIP-money-draft-6.md`, rule 7).
+**M1. Rule 7, "past its terms"** (`spec/archive/MIP-money-draft-6.md`, rule 7).
 *Now:* "**Past its terms ends the obligation** (F219, …): a refund past the terms the buyer accepted by paying is closed there, the owners keep the money, and it blocks no closing (Agreements rule 32)."
 *Why it decides a consequence:* it says when a refund obligation ends, who keeps the money and what it does to a collective's closing. Each of those is a term of the agreement the buyer accepted. Agreements rule 32 already says all three (F219).
 *Suggested:* keep "past its terms" in the list of states and drop the sentence. In its place: "*Past its terms*: Agreements decide when an obligation's terms have passed and what follows (Agreements rule 32, F219); Money only shows the state." *Also noted, wording:* the sentence that follows ("The last three depend on Agreements") now reads after the F219 sentence, so "the last three" is hard to place. Without the F219 sentence it again points at past its terms, closed by clone and redirected.

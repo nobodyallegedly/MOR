@@ -131,7 +131,7 @@ Eight read-only passes, one per slice of the texts, read each rule and then the 
 
 Abbreviations inside the tables are defined at the top of each part.
 
-## Identity (`spec/MIP-identity-draft-11.md`)
+## Identity (`spec/archive/MIP-identity-draft-11.md`)
 
 ### Part 1: lines 1 to 390 (formats and verification procedures)
 
@@ -346,9 +346,9 @@ Counts: 67 items; CHECKED AND TESTED 39; CHECKED, NOT TESTED 4; NOT CHECKED 6; C
 | R38 | 481 | "an identity's home is known from its declaration, anyone can query the home, and the home serves the routes" | `node.rs` identity_record; core/src/envelope.rs Routes | th::finding_an_inbox_through_the_home; core/tests/envelope.rs::routes_decode_and_find_the_inbox | CHECKED AND TESTED | |
 | R39 | 482 | "the rotation voids the thief's routes act, and the sender re-delivers" | `chain.rs` judge (Void); wasm latest requires Valid | harness/src/gauntlet/steps.rs step7c_redirected_inbox (via harness/tests/gauntlet.rs) | CHECKED AND TESTED | |
 
-## Envelope (`spec/MIP-envelope-draft-7.md`)
+## Envelope (`spec/archive/MIP-envelope-draft-7.md`)
 
-Slice: `spec/MIP-envelope-draft-7.md` (all of it). Italic commentary skipped. Paths are relative to the repo root.
+Slice: `spec/archive/MIP-envelope-draft-7.md` (all of it). Italic commentary skipped. Paths are relative to the repo root.
 
 ### Gaps a verifier could check, ranked
 
@@ -430,9 +430,9 @@ Counts: 53 items; CHECKED AND TESTED 27; CHECKED, NOT TESTED 5; NOT CHECKED 12; 
 | §Withdrawal Past deals | 228 | "A payment arriving after the withdrawal creates no deal and an obligation to refund it (Law)." | none: `law/view.rs` `purchase` never looks at Envelope withdrawals | none | NOT CHECKED | Exploit: see ranked list. MEDIUM |
 | R16 / §For whom | 274, 208 | "A payment for a publication is owed to the identity in `for` if present, otherwise to the signer" | none: no code finds a publication's payee from field 8 or the signer, and no wallet pays publications | none | NOT CHECKED | Exploit: see ranked list. MEDIUM |
 
-## Text (`spec/MIP-text-draft-6.md`)
+## Text (`spec/archive/MIP-text-draft-6.md`)
 
-Slice: `spec/MIP-text-draft-6.md` (all of it). Italic commentary skipped.
+Slice: `spec/archive/MIP-text-draft-6.md` (all of it). Italic commentary skipped.
 
 ### Gaps a verifier could check, ranked
 
@@ -467,9 +467,9 @@ Counts: 17 items; CHECKED AND TESTED 9; CHECKED, NOT TESTED 0; NOT CHECKED 1; CL
 | R6 | 58 | "A client composing text SHOULD normalize it for the user: ... telling the user when it removed something visible" | `clients/longform/src/text.ts` `compose` (returns `changes`) | `clients/longform/test/format.test.ts` | CLIENT CONFORMANCE | TAB becomes four spaces. NFC uses the system tables, which is acceptable for composing. |
 | §Tasks: text format | 62 | A format "must accept every canonical text ... may hide only characters that are not letters or digits ... must never add text ... shows ... in the order of the bytes ... never ... invisible ... by styling" | `clients/longform/src/format.ts` (parser never fails; hides only MARKUP); `clients/longform/src/cli.ts` `check` | `clients/longform/test/format.test.ts` ("hidden characters are markup, never a letter or digit", order and no-addition tests) | CLIENT CONFORMANCE | Duty of a format cMIP and its renderer; no act shows it. Only the long-form format exists. |
 
-## Finance (`spec/MIP-finance-draft-6.md`)
+## Finance (`spec/archive/MIP-finance-draft-6.md`)
 
-Slice: `spec/MIP-finance-draft-6.md`, act formats, validity rules 1 to 20, Dependencies. Code read: `core/src/finance.rs`, `cmips/payment/src/lib.rs`, `core/src/law/view.rs` (where Finance acts are judged for Law), `modules/lightning`, `harness/tests/lightning_rail.rs`, `wasm/src/lib.rs`.
+Slice: `spec/archive/MIP-finance-draft-6.md`, act formats, validity rules 1 to 20, Dependencies. Code read: `core/src/finance.rs`, `cmips/payment/src/lib.rs`, `core/src/law/view.rs` (where Finance acts are judged for Law), `modules/lightning`, `harness/tests/lightning_rail.rs`, `wasm/src/lib.rs`.
 
 Two facts underlie many rows:
 - **The core verifier never checks Finance acts by itself.** `core/src/chain.rs` does not decode Finance payloads. `finance::Payload::decode` and `finance::check_signer` run only where a caller asks: the tests, the harness, and Law's view where it decodes a Finance act.
@@ -586,11 +586,11 @@ Counts: 71 items; CHECKED AND TESTED 38; CHECKED, NOT TESTED 4; NOT CHECKED 18; 
 | R19 | 222 | "A plain payment in Finance carries no fees for specifications beyond what the rail itself charges" | formats carry no fee field | finance.rs::shapes_are_strict | NOT CHECKED | Statement of scope. A plain payment's acts have nowhere to carry a fee, so there is nothing to check. |
 | R20 | 226 | "MOR only ever sees a payment and, in Law, its split" | none | none | NOT CHECKED | Statement of scope. Nothing to check. |
 
-## Law (`spec/MIP-law-draft-10.md`)
+## Law (`spec/archive/MIP-law-draft-10.md`)
 
 ### Part 1: lines 1 to 465 (definitions and act formats)
 
-Slice: `spec/MIP-law-draft-10.md` lines 1 to 465 (Definitions; Act formats: terms, signature, resignation, abandonment declaration, negotiation message, record, "Made before, made after" points 1 to 7, collectives in the identity chain, split plan and split, fork, closing, release, grant and revocation). Italic commentary skipped. The slice holds almost no capital MUST/SHOULD/MAY in normal text (the one capital SHOULD, line 333, is italic). Its obligations are written as "is invalid", "counts only", "must", "never" and "may", and each of those is a row below. Definitions that only restate a numbered rule from line 466 on (Done = rule 35a, Purchase = rule 32, pointer check = rule 18, role share = rule 22, Contest/Standing = rules 52 and later, Actions chain = rule 35b) are left to those slices.
+Slice: `spec/archive/MIP-law-draft-10.md` lines 1 to 465 (Definitions; Act formats: terms, signature, resignation, abandonment declaration, negotiation message, record, "Made before, made after" points 1 to 7, collectives in the identity chain, split plan and split, fork, closing, release, grant and revocation). Italic commentary skipped. The slice holds almost no capital MUST/SHOULD/MAY in normal text (the one capital SHOULD, line 333, is italic). Its obligations are written as "is invalid", "counts only", "must", "never" and "may", and each of those is a row below. Definitions that only restate a numbered rule from line 466 on (Done = rule 35a, Purchase = rule 32, pointer check = rule 18, role share = rule 22, Contest/Standing = rules 52 and later, Actions chain = rule 35b) are left to those slices.
 
 Abbreviations. Code: **F** = `core/src/law/formats.rs`, **V** = `core/src/law/view.rs` (`LawView`), **CC** = `clients/collective/src/actions.ts`. Tests: **T1** = `core/tests/law.rs`, **TC** = `core/tests/law_collective.rs`, **TD** = `core/tests/law_draft_10.rs`, **TI** = `core/tests/law_invariants.rs`, **HO** = `harness/ordering/tests/stories.rs` (a model of the ordering rules, not the core).
 
@@ -761,7 +761,7 @@ Counts: 144 items; CHECKED AND TESTED 111; CHECKED, NOT TESTED 15; NOT CHECKED 6
 
 ### Part 2: rules 1 to 34a (lines 466 to 535)
 
-Spec: `spec/MIP-law-draft-10.md`, lines 466 to 535. Code read: `core/src/law/formats.rs`, `core/src/law/view.rs`, `core/src/law/tiers.rs`, `core/src/finance.rs` (refunds), `core/src/chain.rs` (keeper input), `wasm/src/lib.rs`, `clients/collective/src/actions.ts`. Tests: `core/tests/law*.rs`. Rule 31 is italic throughout (commentary) and is left out.
+Spec: `spec/archive/MIP-law-draft-10.md`, lines 466 to 535. Code read: `core/src/law/formats.rs`, `core/src/law/view.rs`, `core/src/law/tiers.rs`, `core/src/finance.rs` (refunds), `core/src/chain.rs` (keeper input), `wasm/src/lib.rs`, `clients/collective/src/actions.ts`. Tests: `core/tests/law*.rs`. Rule 31 is italic throughout (commentary) and is left out.
 
 Background that decides many rows: Law line 85 and the terms CDDL say these formats are still open: keeper record (type 2), work claim (3), stake transfer (4), standing offer (6), delivery confirmation (7), contest (14), module fee terms (15); terms field 8 (split plan), 10 (concurrency rule), 17 (refund terms). The code refuses them (`Terms::decode` returns `Unsupported` for fields 8, 10, 17) and takes keeper records as a caller-stated list (`LawView::keeper_logs`, `Verifier::keeper_recorded`).
 
@@ -878,7 +878,7 @@ Counts: 81 items; CHECKED AND TESTED 42; CHECKED, NOT TESTED 3; NOT CHECKED 9; C
 
 ### Part 3: rules 35 to 57a and the rest (line 536 to the end)
 
-Scope: `spec/MIP-law-draft-10.md`, rules 35 to 57a (Grants and collectives, Tiers 44a to 44e, Changing agreements, Succession, Abandonment, Non-performance), the Tasks section, Open technical parameters, and the non-italic normative text of "Decided in this draft" and "Open in this draft". Italic commentary skipped. Read only; no file of the repository changed.
+Scope: `spec/archive/MIP-law-draft-10.md`, rules 35 to 57a (Grants and collectives, Tiers 44a to 44e, Changing agreements, Succession, Abandonment, Non-performance), the Tasks section, Open technical parameters, and the non-italic normative text of "Decided in this draft" and "Open in this draft". Italic commentary skipped. Read only; no file of the repository changed.
 
 Main code: `core/src/law/view.rs` (`LawView`: `agreement`, `clone_static`, `clone_at`, `base`, `record_eval_inner`, `voices`, `consent_judged`, `backing`, `declaration`, `authority_at`, `plan_static`, `plan_at`, `fork`, `closing`, `split`, `debt_release`, `negotiation`), `core/src/law/tiers.rs` (`changes`, `lies_in`, `powers_needed`), `core/src/law/formats.rs` (`Terms::check`, `check_grammar`, `check_areas`, `check_judges`, `Grant::decode`, `NegotiationMessage::decode`), `modules/airgap/src/shares.rs`. Tests: `core/tests/law.rs`, `core/tests/law_collective.rs` (written `lc::` below), `core/tests/law_invariants.rs` (`li::`), `core/tests/law_draft_10.rs` (`l10::`), `modules/airgap/tests/collective.rs`. `harness/ordering` is a model of the ordering rules, not the core; it is cited only where it backs a reading.
 
@@ -1056,7 +1056,7 @@ Counts: 140 items; CHECKED AND TESTED 102; CHECKED, NOT TESTED 5; NOT CHECKED 17
 | 139. §Open parameters | 732 | formats open for other act types and terms fields 8, 10, 17 (a verifier refuses) | formats.rs `Terms::decode` (Unsupported 8, 10, 17); view.rs (import) | lc::open_formats_are_refused_not_guessed; law.rs::terms_round_trip_and_decode_strictly | FORMAT OPEN | refused, not guessed |
 | 140. §Open in this draft | 907 | what B14's answer leaves open, "a verifier refuses rather than guesses" | view.rs `plan_open`, `plan_at` (Unsettled) | lc::what_b14_leaves_open_is_refused | CHECKED AND TESTED | |
 
-## Production (`spec/MIP-production-draft-6.md`)
+## Production (`spec/archive/MIP-production-draft-6.md`)
 
 Main finding first: **no code reads a specification.** No code encodes or decodes the `spec` map (fields 0 to 10). No code checks that content hashes to its spec hash, that a creator signed the publication, or what field 4 (dependencies), field 5 (implements), field 7 (fee terms) or field 8 (predecessor) say. There is no RV32IM machine.
 

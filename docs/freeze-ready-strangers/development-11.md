@@ -1,6 +1,6 @@
 # Stranger's reading: Development draft 11
 
-*A subagent read `spec/MIR-development-draft-11.md` with access only to the core texts (the suite as v29). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
+*A subagent read `spec/archive/MIR-development-draft-11.md` with access only to the core texts (the suite as v29). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
 
 ## 1. Rules it could not understand or check
 

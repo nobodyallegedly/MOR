@@ -78,7 +78,7 @@ These eight texts are the freeze-ready drafts (`docs/freeze-ready-drafts-report.
 
 Why each rule exists is recorded in `docs/findings/` (F1 to F52, then F53 to F328).
 
-The layers were renamed on 10 October 2026 (F212): Envelope became Envelopes, Finance became Money, Law became Agreements, Production became Development. The old file names (`MIP-envelope-draft-7.md`, `MIP-finance-draft-6.md`, `MIP-law-draft-10.md`, `MIP-production-draft-6.md`) hold a one-line pointer each, so links in older records still lead here; the approvals below keep the drafts' numbers.
+The layers were renamed on 10 October 2026 (F212): Envelope became Envelopes, Finance became Money, Law became Agreements, Production became Development. The old file names (`archive/MIP-envelope-draft-7.md`, `archive/MIP-finance-draft-6.md`, `archive/MIP-law-draft-10.md`, `archive/MIP-production-draft-6.md`) hold a one-line pointer each, so links in older records still lead here; the approvals below keep the drafts' numbers.
 
 The core's texts were renamed on 12 October 2026 (F269, `docs/mir-rename-pass.md`): one core text is a **MIR**, MOR Inscribed Rules (the Identity MIR, the Money MIR, rule 17); the six together are the **MICS**, MOR Inscribed Core Spec, and the core document is the MICS's own. The files moved from `MIP-…` to `MIR-…` and from `02-MOR-core-v…` to `02-MOR-MICS-v…`; each old name holds a one-line pointer, so links in older records still lead here. **cMIPs keep their name**, the community's proposals. **MIP** now means only a proposal toward MOR 2; MOR 1 has none. Records written before keep the word MIP, as they keep the old layer names.
 

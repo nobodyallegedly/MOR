@@ -6,7 +6,7 @@ MOR's core, the eight texts every act is written in, is about to freeze. Before 
 
 **Where to look, in this order:**
 1. `docs/state-of-mor.md`: what exists now, in a page.
-2. `spec/`: the eight texts. The MICS (`spec/02-MOR-MICS-v36.md`) is the map: start there. Then the six MIRs (Identity, Text, Envelopes, Money, Agreements, Development), and the freeze test suite (`spec/03-MOR-freeze-test-suite-v36.md`), which says what must work. `spec/README.md` names the current draft of each.
+2. `spec/`: the eight texts. The MICS (`spec/archive/02-MOR-MICS-v36.md`) is the map: start there. Then the six MIRs (Identity, Text, Envelopes, Money, Agreements, Development), and the freeze test suite (`spec/archive/03-MOR-freeze-test-suite-v36.md`), which says what must work. `spec/README.md` names the current draft of each.
 3. `cmips/cmip-collective-control-draft-6.md`: the default control model, which says how a collective decides its everyday acts. It is a cMIP, not core. The MOR Law Firm team keeps it, and anyone may write another one: Agreements rule 99 says what a control model must accept and produce.
 4. `core/`: the reference verifier in Rust, and `core/vectors/`, the test vectors. A verdict there is what the texts mean in code.
 5. `wasm/README.md`, the section "For the Dubsar Suite": the functions apps call, and what changed lately.

@@ -84,19 +84,19 @@ All in `clients/genesis/src/lookup.ts`, which the web reader, the barebone clien
 
 ### 7. The texts
 
-**Envelopes draft 9** (`spec/MIR-envelopes-draft-9.md`; draft 8 stays, approved): a new header; the mark "New in draft 9 (Fxxx)"; the definition of a reference; **rule 20**, two paragraphs added, the rule, the client conformance stated as such, and its reasoning in italic; the `ref` format and a note on telling the forms apart; a reasoning bullet; a freeze-scenario bullet. Rule 20 as it now reads, after draft 8's paragraph unchanged:
+**Envelopes draft 9** (`spec/archive/MIR-envelopes-draft-9.md`; draft 8 stays, approved): a new header; the mark "New in draft 9 (Fxxx)"; the definition of a reference; **rule 20**, two paragraphs added, the rule, the client conformance stated as such, and its reasoning in italic; the `ref` format and a note on telling the forms apart; a reasoning bullet; a freeze-scenario bullet. Rule 20 as it now reads, after draft 8's paragraph unchanged:
 
 > **A reference may name the act's signer** (new in draft 9, F272). A reference to an act MAY carry, beside the act id, the identity hash of the act's signer (Part three, `ref`). A reader uses it only to know where to look: the signer's identity, its homes, its routes, then the act. It is never a validity rule: a reference that names no signer never makes an act invalid, and an act whose reference names a wrong signer stays valid; a wrong signer shows when the reference is followed, since the act fetched shows its own signer. The signer of a genesis is the identity it makes, whose hash is the genesis's own id.
 >
 > *Client conformance* (new in draft 9, F272)*:* when the act referenced is public, the client that writes the reference MUST hold that act and MUST name its signer. When the act referenced is private, naming its signer is the writer's choice. Web references are unchanged.
 
-**The MICS document v23** (`spec/02-MOR-MICS-v23.md`). Sentences changed, quoted:
+**The MICS document v23** (`spec/archive/02-MOR-MICS-v23.md`). Sentences changed, quoted:
 
 1. The header, replaced; v22's header moved, verbatim, to "Earlier versions", marked approved. The renaming note (*"Renamed in place, 12 October 2026 (F269, …): the core's six texts are MIRs, the core as a whole the MICS, and this document the MICS's own; wording only, no rule changed."*) now reads: *"The core's six texts are MIRs and the core as a whole the MICS (F269, renamed in place in version 22, `docs/mir-rename-pass.md`)."*
 2. In "Acknowledgements and references", was: *"A reference says "look at this", pointing to an act or a web resource, optionally with the hash of what was there. A repost is a reference: it pays nobody by itself."* Now: *"A reference says "look at this", pointing to an act or a web resource, optionally with the hash of what was there. A reference to an act may name the act's signer beside its id (F272): a reader uses it only to know where to look, through the signer's identity, homes and routes; it never decides validity, a wrong one showing only when the reference is followed. Client conformance: a client referring to a public act holds it and names its signer; naming a private act's signer is the writer's choice, since it would expose the sender a sealed container hides. A repost is a reference: it pays nobody by itself."*
 3. In "Vows", was: *"…and later versions are signed again on its own chain (Envelopes draft 8)."* Now: *"…(Envelopes draft 9)."*
 
-**The freeze test suite v23** (`spec/03-MOR-freeze-test-suite-v23.md`). Sentences changed, quoted:
+**The freeze test suite v23** (`spec/archive/03-MOR-freeze-test-suite-v23.md`). Sentences changed, quoted:
 
 1. The header, replaced; v22's moved to "Earlier versions", marked approved; the renaming note as in the MICS.
 2. The Envelopes and Text line, was: *"Acknowledgements counting only alongside the act they name; references, including a web reference with a snapshot hash; a repost as a reference (2, 5)"*. Now: *"Acknowledgements counting only alongside the act they name; references, including a web reference with a snapshot hash; a repost as a reference; a reference naming its act's signer, followed by it to where the act is kept, a wrong signer failing only when followed and never making an act invalid, a client naming the signer of every public act it refers to (F272, client conformance) (2, 5)"*.
