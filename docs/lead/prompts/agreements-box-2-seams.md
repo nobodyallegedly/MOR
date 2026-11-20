@@ -1,0 +1,16 @@
+**Current wish** (Nobody, allegedly, `docs/decisions.md` on branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR". And: "Building blocks over solutions."
+
+What the new Agreements leans on, in the MOR repository (`nobodyallegedly/MOR`): the first step towards a full box. Start a branch `claude/agreements-seams-1` from `claude/agreements-draft-17-hp0j90` (pull request 171).
+
+**Where it stands.** Agreements was rewritten from scratch: `docs/agreements-from-scratch/draft-17.md`. A small box of it was sealed (`MOR-CBOX`, branch `agreements-box-1`) for a C session to build from alone; its questions will come later. Before a full box can be sealed, the text's section 8.1 ("What this text needs from the other layers, and does not have") must be answered, the report block must be written into the shared language, and the tasks must exist as data. Fable's review of draft 14 said the same (`docs/reviews/fable-agreements-draft-14.md`, section 7, branch `claude/fable-agreements-draft-14`).
+
+**Read:** `draft-17.md` (all of it, section 8.1 above all) and `docs/lead/proposals/report-block-2.md` (branch `claude/lead-records-2`); then, only to answer section 8.1, the current texts of the other layers in `spec/` on main, as `spec/README.md` names them: the MICS document, Identity, Text, Envelopes, Money and Development. **Do not open the old Agreements MIR, `docs/findings/`, `docs/agreements-inventory/` or `docs/agreements-marking/`**: nothing of the old Agreements is to be translated. Where a lower layer still speaks of the old Agreements, note it and do not follow it.
+
+**Please write**, in `docs/agreements-from-scratch/seams-1.md`:
+1. **Section 8.1, item by item.** For each need: already met (quote the sentence and name the text), met under another name (say which, and whether draft 17 should use that name), or missing. Where missing, the smallest addition that would meet it, as a proposal, and which text it belongs in.
+2. **The report block, written as a proposed section of the shared language** (the MICS document), in that text's own voice and shape, from `report-block-2.md`: no new content, and the seams draft 17 lists (its section 8.1) set out for Nobody, allegedly, not closed.
+3. **The tasks as data.** For each task K1 to K13: what it accepts and what it produces, as a data shape (CDDL, in the style the MICS already uses for acts, if it uses one), so that a stub can stand in for any cMIP. Where draft 17's words do not fix a shape, give the least one and list it.
+4. **Where the lower layers point at the old Agreements**: a list, by text and section, for the later rewrite of those layers. Change nothing in them.
+5. **What a full box needs after this**: in order, and how vectors could be generated from the texts once these exist.
+
+Decide nothing: every addition is a proposal, for the MOR lead and Nobody, allegedly. Do not change `spec/`, `draft-17.md`, `report-block-2.md`, code or vectors. Plain words first, then precisely. A pull request, no merge. Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
