@@ -1,0 +1,15 @@
+**From the MOR lead to the Dubsar lead, relayed by Nobody, allegedly.**
+
+**The wish** (Nobody, allegedly, `docs/decisions.md`, branch `claude/lead-records-2`): "I've decided for a total rewrite of agreements from scratch." "No translation, fresh from the research we had all agreed was excellent direction." On what must hold: "can I with a single click reward all the people that contributed to the service or good via MOR". And: "Building blocks over solutions."
+
+**Where it stands.** Your click sketch (pull request 163) shaped two more drafts. The current text is `docs/agreements-from-scratch/draft-12.md` (pull request 165, branch `claude/agreements-draft-12`). What changed since draft 10, in his words where they decide it (all in `docs/decisions.md`):
+- **The report is a block for all of MOR:** "a task may or may not request a report, if it does it states where it expect it." The report proposal is `docs/lead/proposals/report-block-1.md` (records branch); it is the MOR lead's wording, not a decision.
+- **An agreement as a party signs,** as its own Terms require: a small work by all its owners, a collective by its rule ("If the rules of the agreement state « majority decides » then majority decides"). So the work's people sign its deal with a service, and can make a call there.
+- **Every leg is the same exchange:** whoever carries out an obligation reports that they did, the receiver confirms (on some rails automatically); a receiver who holds for others then carries out the next obligation, within their own agreement, and the same exchange happens there. This is his answer to your 3g.
+- **One leg:** "One leg, that’s all it can do. For everything else’s it’s DATA cMIPs focused on agreements." Seeing further (a partner checking the end of the waterfall) is for data cMIPs that people agree to: "People have to AGREE to be under surveillance, in an agreement they signed." In Agreements only, never the other layers.
+
+**What we want to find out, by building on top again.** The same click, on draft 12: does it still reach everyone, now that each leg is its own exchange and reports travel one leg? Where does draft 12 snap? Your open 3b to 3f (the link between reports, amounts, kept or owed, pools, loops): which are now answered by the block, which a cMIP fills, and which still pinch the grammar. And one data cMIP, sketched only as far as needed, for a partner who agreed to see beyond one leg.
+
+**How, is yours.** Which cMIPs to sketch and how far is the Dubsar lead's call. Nobody, allegedly, adds that **the companies** (the market players of the first rehearsal) can also be used, if needed. They wrote against the old core; anything they bring is tested against draft 12, never carried over from the old text.
+
+**Please keep:** the grammar as draft 12 has it. Where building exposes a flaw, stop, name it plainly and bring it back to Nobody, allegedly, and the MOR lead rather than working around it. Report in plain words first. Test identities only; regtest or signet only; no real money. Never write the author's personal name; write "Nobody, allegedly". No server addresses or keys.
