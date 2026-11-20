@@ -16,7 +16,8 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
-*Moved below by the new wish of 20 November. What carries over into the new stint is his to say; the MOR lead has asked.*
+*Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
+*Arrived at (to check): everything below carries into the new stint as the ground the findings are weighed against. The order: first the findings and the problems; then the changes; then the review; then the verifications.*
 
 **Stint from 10 November 2026: Agreements written from scratch.**
 
