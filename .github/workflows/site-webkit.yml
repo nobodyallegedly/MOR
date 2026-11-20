@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   browsers:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright has no WebKit build for ubuntu-latest (26.04) yet
     timeout-minutes: 60
     env:
       MOR_CHROMIUM: /usr/bin/google-chrome
