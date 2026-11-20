@@ -596,6 +596,9 @@ The research is `docs/strangers-2026-11/`.
 **Automation and cross-pollination** (18 November, 14:02–14:04). He: "I asked all teams except DAO's, People and counterstrike if they had thought about automation. And encouraged everyone to see if other teams had built solutions that could be useful to them." Then: "It was to inject some narrow autonomy and encourage cross polenisation." On the windows moved to 10:45, 12:15, 13:45: "We'll have the windows closer together and make the deadline"; on the suite lead's contest ruling 1: "Agreed."; on ruling 2: "Use the rules to decide"
 - *Arrived at (to check):* teams were nudged to automate and to reuse each other's solutions, for some autonomy and cross-pollination. Contest rulings went by the rules as written.
 
+**Dubsar and MOR coordinate before each wave** (20 November, evening; after the round's handover). The MOR lead said it would weigh the core findings once the data lands and devise the next wave; he said Dubsar handles the cMIPs, and he looked at those the windows deemed essential and at the place. He: "We’ll coordinate between Dubsar and MOR prior to each wave."
+- *Arrived at (to check):* before each wave, the MOR lead and the Dubsar Suite lead agree what each side sends out, so the two sides' waves do not cross. Dubsar keeps the round's cMIPs and Modules; core findings come to the MOR lead.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
