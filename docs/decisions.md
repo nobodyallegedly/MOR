@@ -599,6 +599,9 @@ The research is `docs/strangers-2026-11/`.
 **Dubsar and MOR coordinate before each wave** (20 November, evening; after the round's handover). The MOR lead said it would weigh the core findings once the data lands and devise the next wave; he said Dubsar handles the cMIPs, and he looked at those the windows deemed essential and at the place. He: "We’ll coordinate between Dubsar and MOR prior to each wave."
 - *Arrived at (to check):* before each wave, the MOR lead and the Dubsar Suite lead agree what each side sends out, so the two sides' waves do not cross. Dubsar keeps the round's cMIPs and Modules; core findings come to the MOR lead.
 
+- Then, relayed by the Dubsar Suite lead as its wave one opened: "Wave starts and ends with exchange between leads."
+- *Arrived at (to check):* each wave opens and closes with an exchange between the MOR lead and the Dubsar Suite lead.
+
 ## Not carried into this stint unless he says so
 
 On 10 and 11 November the MOR lead put some forty questions to him, case by case, on the inventory of draft 24 (F441 and F443 in `docs/findings/MOR-findings-log-round-2.md`). Those questions were framed by a promise he never made ("no verdict moves", from Fable's plan, recorded by the MOR lead as his decision; corrected at the head of F441). His answers are quoted there; they are history, not this stint's direction, unless he brings one forward.
