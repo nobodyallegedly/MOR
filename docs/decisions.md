@@ -8,6 +8,16 @@
 
 ## Current wish
 
+**Stint from 20 November 2026: what the simulation taught.**
+
+> "Current wish: extract data, knowledge and understanding from the simulation run" (20 November, 22:53)
+
+The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_research/`), never in the repository; the handover is `claude/MOR-round-2-handover-to-lead.md` in the project.
+
+## The previous stint, 10 to 20 November: Agreements written from scratch
+
+*Moved below by the new wish of 20 November. What carries over into the new stint is his to say; the MOR lead has asked.*
+
 **Stint from 10 November 2026: Agreements written from scratch.**
 
 > "I've decided for a total rewrite of agreements from scratch." (10 November)
