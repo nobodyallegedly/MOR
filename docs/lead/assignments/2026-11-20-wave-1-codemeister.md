@@ -14,7 +14,7 @@ The four findings that would change what a verifier answers (from the handover; 
 
 For each, take the acts from the data (`feeds/`, `windows/*/acts/`) and run:
 - the round's kit (the version each window used, from its `kit/`), and the postman's code at 74739bb7 where it matters;
-- `tools/agreements-check`, and verifier 2 (pull request 184) against draft 25 and encoding 2.
+- `tools/agreements-check` (branch `claude/round-2-postman`), and verifier 2 (`verifier2/`, pull request 184) against draft 25 and encoding 2.
 
 Record, per act or set: the answer of each verifier, the rule it applied, and where they differ, the line of code and the line of text that differ. Name each difference as one of: the texts read two ways; the code mistranslates the text (cite your build list, pull request 194, if it is already there: T1 and the seven translation errors); the kit's own shortfall; or nothing differs and the readers counted by hand.
 
@@ -22,4 +22,4 @@ Also, as data for the map: how many acts of each type and kind the feeds hold, a
 
 ## What you return
 
-`docs/code/round-2-verifier-answers.md` (branch `claude/round-2-verifier-answers`, a pull request, no merge), with any scripts under `tools/round-2/` reading the data from a path given at run time, never copying it. No fix is made, and no code under `core/` or `tools/agreements-check` changes. Give your session prompts to Nobody, allegedly, whole, in code boxes, and say how many sessions. Report back to me short: per finding, whether the bytes give one answer or two, and your questions, one at a time.
+`docs/code/round-2-verifier-answers.md` (branch `claude/round-2-verifier-answers`, a pull request, no merge), with any scripts under `tools/round-2/` reading the data from a path given at run time, never copying it. No fix is made, and no code under `core/`, `verifier2/` or `tools/agreements-check` changes. Give your session prompts to Nobody, allegedly, whole, in code boxes, and say how many sessions. Report back to me short: per finding, whether the bytes give one answer or two, and your questions, one at a time.

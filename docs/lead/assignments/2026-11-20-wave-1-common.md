@@ -12,7 +12,7 @@
 
 **Where the round is:**
 - The handover: `claude/MOR-round-2-handover-to-lead.md` in the project, and `claude/MOR-round-2-cmips-indispensable.md`. The 25 final reports are under `market/*/final-report-round-2.md` and `claude/market-*-final-report-round-2.md` in the project.
-- The data: the round's research copy on Nobody, allegedly's Mac, `~/Documents/mor-round-2/_research/` (its README says what is where: `feeds/`, `windows/<name>/reports|acts|from-the-hosts`, `hosts/`, `postman/`), reached through the link to the Mac. To decode and check acts: the kit in any window's folder (`kit/`), or the repository's `tools/agreements-check`.
+- The data: the round's research copy on Nobody, allegedly's Mac, `~/Documents/mor-round-2/_research/` (its README says what is where: `feeds/`, `windows/<name>/reports|acts|from-the-hosts`, `hosts/`, `postman/`), reached through the link to the Mac. To decode and check acts: the kit in any window's folder (`kit/`), or `tools/agreements-check` on branch `claude/round-2-postman`.
 - The relays and homes still run on the Mac until the release wipe. How to reach them is in a file on the Mac that never goes into the project or the repository; ask the MOR lead before a session needs it.
 - The postman's code: branch `claude/round-2-postman`, commit 74739bb7.
 
