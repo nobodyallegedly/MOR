@@ -31,14 +31,14 @@ As F212 did: each file moved under its new name with its text unchanged (one com
 
 | Old name | New name |
 | --- | --- |
-| `spec/02-MOR-core-v22.md` | `spec/02-MOR-MICS-v22.md` |
-| `spec/02-MOR-core-v21.md` | `spec/02-MOR-MICS-v21.md` (superseded) |
-| `spec/MIP-identity-draft-12.md`, `-11` | `spec/MIR-identity-draft-12.md`, `-11` |
-| `spec/MIP-text-draft-7.md`, `-6` | `spec/MIR-text-draft-7.md`, `-6` |
-| `spec/MIP-envelopes-draft-8.md`, `-7` | `spec/MIR-envelopes-draft-8.md`, `-7` |
-| `spec/MIP-money-draft-7.md`, `-6` | `spec/MIR-money-draft-7.md`, `-6` |
-| `spec/MIP-agreements-draft-11.md`, `-10` | `spec/MIR-agreements-draft-11.md`, `-10` |
-| `spec/MIP-development-draft-7.md`, `-6` | `spec/MIR-development-draft-7.md`, `-6` |
+| `spec/archive/02-MOR-core-v22.md` | `spec/archive/02-MOR-MICS-v22.md` |
+| `spec/archive/02-MOR-core-v21.md` | `spec/archive/02-MOR-MICS-v21.md` (superseded) |
+| `spec/archive/MIP-identity-draft-12.md`, `-11` | `spec/archive/MIR-identity-draft-12.md`, `-11` |
+| `spec/archive/MIP-text-draft-7.md`, `-6` | `spec/archive/MIR-text-draft-7.md`, `-6` |
+| `spec/archive/MIP-envelopes-draft-8.md`, `-7` | `spec/archive/MIR-envelopes-draft-8.md`, `-7` |
+| `spec/archive/MIP-money-draft-7.md`, `-6` | `spec/archive/MIR-money-draft-7.md`, `-6` |
+| `spec/archive/MIP-agreements-draft-11.md`, `-10` | `spec/archive/MIR-agreements-draft-11.md`, `-10` |
+| `spec/archive/MIP-development-draft-7.md`, `-6` | `spec/archive/MIR-development-draft-7.md`, `-6` |
 
 The superseded texts (Identity 11, Envelopes 7, Text 6, Money 6, Agreements 10, Development 6, the core document v21, suite v21) moved with their text unchanged: they still say MIP inside, as approved. The suite's files have no MIP in their names and did not move. The four pointers F212 left (`MIP-envelope-draft-7.md`, `MIP-finance-draft-6.md`, `MIP-law-draft-10.md`, `MIP-production-draft-6.md`) now point straight to the MIR files, so no link takes two hops.
 

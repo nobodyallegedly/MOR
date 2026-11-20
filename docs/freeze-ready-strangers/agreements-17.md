@@ -1,6 +1,6 @@
 # Stranger's reading: Agreements draft 17
 
-*A subagent read `spec/MIR-agreements-draft-17.md` with access only to the core texts (the MICS and the suite as v29). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
+*A subagent read `spec/archive/MIR-agreements-draft-17.md` with access only to the core texts (the MICS and the suite as v29). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
 
 ## 1. Rules it could not understand or check
 

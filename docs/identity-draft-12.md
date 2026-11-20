@@ -33,13 +33,13 @@ The revision notes, the "revised in place" notes and the list "Choices introduce
 
 ## What changed, file by file
 
-- `spec/MIP-identity-draft-12.md`: new.
+- `spec/archive/MIP-identity-draft-12.md`: new.
 - `spec/README.md`: one line, draft 12, awaiting approval.
-- **Unchanged:** `spec/MIP-identity-draft-11.md` stays the approved text. It is also the reference that code comments, tests, records, core v21, freeze suite v21, Agreements draft 11 and Money draft 7 cite by its numbers (for example "Identity rules 15 to 17", "rule 8b", "rule 22a"). No code, test or record was edited. Core v21 and freeze suite v21 were not edited (the next section explains why nothing in them needs to change).
+- **Unchanged:** `spec/archive/MIP-identity-draft-11.md` stays the approved text. It is also the reference that code comments, tests, records, core v21, freeze suite v21, Agreements draft 11 and Money draft 7 cite by its numbers (for example "Identity rules 15 to 17", "rule 8b", "rule 22a"). No code, test or record was edited. Core v21 and freeze suite v21 were not edited (the next section explains why nothing in them needs to change).
 
 ## Core v21 and freeze suite v21: sentences that quote a changed sentence
 
-**None.** A script went through every quoted passage in `spec/02-MOR-core-v21.md` and `spec/03-MOR-freeze-test-suite-v21.md`. It checked whether each quote is draft 11 text, and whether that text is still in draft 12. Every Identity sentence they quote is still in draft 12 word for word:
+**None.** A script went through every quoted passage in `spec/archive/02-MOR-core-v21.md` and `spec/archive/03-MOR-freeze-test-suite-v21.md`. It checked whether each quote is draft 11 text, and whether that text is still in draft 12. Every Identity sentence they quote is still in draft 12 word for word:
 
 - "I received this act and rely on it" (core lines 95 and 434; suite line 57);
 - "I received this act" (core line 126);

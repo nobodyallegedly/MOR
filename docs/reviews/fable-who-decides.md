@@ -1,6 +1,6 @@
 # Who decides: the shape of Agreements before the freeze
 
-*Fable, 3 November 2026. Input: `spec/MIR-agreements-draft-17.md` whole (its rule list, its parts and formats), the MICS's layers, the freeze suite's scenarios, `docs/state-of-mor.md`'s line for 3 November, and the decisions since the redesign (F401, F402, F416). Read, not run; a judgment of shape, nothing decided. Word counts are the prompt's; the parts I classify are the text's own sections.*
+*Fable, 3 November 2026. Input: `spec/archive/MIR-agreements-draft-17.md` whole (its rule list, its parts and formats), the MICS's layers, the freeze suite's scenarios, `docs/state-of-mor.md`'s line for 3 November, and the decisions since the redesign (F401, F402, F416). Read, not run; a judgment of shape, nothing decided. Word counts are the prompt's; the parts I classify are the text's own sections.*
 
 ## In plain words
 

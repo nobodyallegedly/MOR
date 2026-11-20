@@ -1,6 +1,6 @@
 # Stranger's reading: Money draft 11
 
-*A subagent read `spec/MIR-money-draft-11.md` with access only to the core texts (Agreements as draft 16). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
+*A subagent read `spec/archive/MIR-money-draft-11.md` with access only to the core texts (Agreements as draft 16). Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]**.*
 
 ## 1. Rules it could not understand or check
 

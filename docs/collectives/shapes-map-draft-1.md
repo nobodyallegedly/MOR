@@ -544,8 +544,8 @@ Each names its area. The first decides whether the rest are light or heavy. Ever
 
 - `CLAUDE.md`, `docs/build-brief-v1.md`, `docs/roadmap-v1.md`.
 - `docs/findings/MOR-findings-log-round-2.md`: F306, with the author's condition and Fable's notes recorded under it; "Open, not decided: owners without a voice, and a Company cMIP"; F270, F273, F274, F279, F280, F282, F283, F284, F285; F103, F109, F127; the working rules (round 2's patterns, F59, F265).
-- `spec/MIR-agreements-draft-13.md`, whole: above all rules 6, 8, 10, 14, 15, 22, 45, 47, 48, 55, 58, 64 to 70, 81 to 93, the split plan and fees, the fork and the closing, the release, the terms format (fields 7, 22, 24).
-- `spec/MIR-money-draft-7.md`, where it pays stakes and holds debts (rules 15 to 18; the obligation and the creditor's release).
+- `spec/archive/MIR-agreements-draft-13.md`, whole: above all rules 6, 8, 10, 14, 15, 22, 45, 47, 48, 55, 58, 64 to 70, 81 to 93, the split plan and fees, the fork and the closing, the release, the terms format (fields 7, 22, 24).
+- `spec/archive/MIR-money-draft-7.md`, where it pays stakes and holds debts (rules 15 to 18; the obligation and the creditor's release).
 - `docs/reviews/fable-step-15-agreements.md`: A10, A11, its Q7 and Q8, the five questions.
 
 *Real-world practice is described from general knowledge of company, partnership and cooperative practice and common venture terms; where a country's rule is named, it is as an example of a pattern, not a claim about every jurisdiction, and the author should treat any single legal detail as checkable rather than settled.*

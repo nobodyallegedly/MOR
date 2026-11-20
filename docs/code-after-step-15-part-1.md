@@ -44,7 +44,7 @@ The one ignored Rust test is the same as before (the Lightning regtest test, ski
 | 2.4h (F295 for Money) | `core/tests/money_f295.rs`, as before |
 | Components, "Envelopes and Text" | the container (F293), `prev` (E1, F292, F328), two copies of one act (E4, now at the relay too), a key delivery with a wrong key (E7), the text act's format (F295), `objects` on a text act (F296), invalid beats unknown (T3), the withdrawal's format (F294) and its authority |
 
-The suite's own "to build" marks on these steps are replaced by where each runs (corrected in `spec/03-MOR-freeze-test-suite-v28.md`).
+The suite's own "to build" marks on these steps are replaced by where each runs (corrected in `spec/archive/03-MOR-freeze-test-suite-v28.md`).
 
 ## What was built
 

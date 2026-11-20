@@ -668,7 +668,7 @@ home3 runs on your Mac, started at login by a login agent called `mor.home`. It 
 
 ## The client conformance checklist (Part 3.1), filled as you go
 
-*Some rules only the signer's own app can honour: no verifier can see them from the acts. The freeze test suite marks them "conformance" (`spec/03-MOR-freeze-test-suite-v28.md`). For each: one line, "seen", "not seen", or "not clear". The sitting says where to look.*
+*Some rules only the signer's own app can honour: no verifier can see them from the acts. The freeze test suite marks them "conformance" (`spec/archive/03-MOR-freeze-test-suite-v28.md`). For each: one line, "seen", "not seen", or "not clear". The sitting says where to look.*
 
 1. **What you sign is what you saw.** Every app shows the exact act in plain words before anything is signed, and nothing is signed until you press. Look at: Edubba's **Review the founding**, **Review the change**, **Review the release**, **Read the grant back**; Dub's Signing tab; Kišib's **Read it back**; Damgar's **To sign** and Settings' **Read it back**; Ummia's **Read it back**. *(Sittings 4, 5, 6, 7, 11, 13.)*
 2. **Invisible and bidirectional characters shown before signing.** Look at: Dub's Signing tab and Edubba's **Rely on an act**, which write every invisible control out. To try it: a "right-to-left override" in a test collective's name, from the Mac's Edit menu, **Emoji & Symbols** (to check: whether the name field accepts it), then read the proposal in Dub. *(Sittings 5, 6.)*

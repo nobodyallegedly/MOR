@@ -58,7 +58,7 @@ The full lists follow, one section per range, as each reader wrote it (lightly e
 
 ## Identity
 
-Text: `spec/MIR-identity-draft-15.md` (1092 lines), read whole. Vectors: `core/vectors/verdicts.json` (131 cases, 42 citing Identity). Core: `core/src/chain.rs` (`chain.rs:N` below), `core/src/identity.rs` (`identity.rs:N`). Where it says "probe", I ran a throwaway test against a copy of the core (nothing in the repository was changed; the probes were not kept). "Unit" means a test in `core/tests/chain.rs` covers it.
+Text: `spec/archive/MIR-identity-draft-15.md` (1092 lines), read whole. Vectors: `core/vectors/verdicts.json` (131 cases, 42 citing Identity). Core: `core/src/chain.rs` (`chain.rs:N` below), `core/src/identity.rs` (`identity.rs:N`). Where it says "probe", I ran a throwaway test against a copy of the core (nothing in the repository was changed; the probes were not kept). "Unit" means a test in `core/tests/chain.rs` covers it.
 
 Sorted by priority: money, then exits, then authority, then the rest.
 
@@ -174,7 +174,7 @@ Rule 1 and genesis check 2 (84); genesis checks as a whole (111); rule 28 pendin
 
 ## Money
 
-Text: `spec/MIR-money-draft-11.md`. The file changed while I read it (commit 38269f97 added line 122, about a grantee's pointer); it is now 667 lines, and **the line numbers below are those of the 667-line file** (from line 122 on, the 665-line file's numbers plus 2).
+Text: `spec/archive/MIR-money-draft-11.md`. The file changed while I read it (commit 38269f97 added line 122, about a grantee's pointer); it is now 667 lines, and **the line numbers below are those of the 667-line file** (from line 122 on, the 665-line file's numbers plus 2).
 Code: `core/src/money.rs` and `core/src/agreements/view.rs` (cited as `money.rs:N` and `view.rs:N`). Vectors: `core/vectors/verdicts.json` (131 cases), read through `core/tests/vectors.rs`.
 
 **A limit of the vector format that most rows below run into.** The facts a vector states (`with_facts`, `core/tests/vectors.rs:463`) are only `rail_valid` with `paid_to_flow`, `rail_payments`, `anchors`, `judges_lapsed` and `settled_out_of_turn`. A vector cannot yet state any of these:
@@ -322,7 +322,7 @@ The questions are those already in the set. "Ana" is the payee or creditor, "Bo"
 
 ## Agreements, lines 1 to 1125
 
-Text: `spec/MIR-agreements-draft-17.md`, from the words through Part one sections 1 to 6. Core: `core/src/agreements/view.rs` (written `v:` below) and `core/src/agreements/view/*.rs` (written by file name). The vector harness is `core/tests/vectors.rs`. Its `with_facts` states only `anchors`, `rail_valid` (flow only), `rail_payments`, `judges_lapsed` and `settled_out_of_turn`. No question reaches a split, a transfer, the pointer check, role evidence, work owners or a service's account. Rows marked "needs a question" are vector rows for which a new question would have to be added.
+Text: `spec/archive/MIR-agreements-draft-17.md`, from the words through Part one sections 1 to 6. Core: `core/src/agreements/view.rs` (written `v:` below) and `core/src/agreements/view/*.rs` (written by file name). The vector harness is `core/tests/vectors.rs`. Its `with_facts` states only `anchors`, `rail_valid` (flow only), `rail_payments`, `judges_lapsed` and `settled_out_of_turn`. No question reaches a split, a transfer, the pointer check, role evidence, work owners or a service's account. Rows marked "needs a question" are vector rows for which a new question would have to be added.
 
 | # | Line | Sentence (quoted, shortened) | Verdict it decides | Vector? | What the Rust core does | Kind |
 |---|---|---|---|---|---|---|
@@ -464,7 +464,7 @@ Also, with the `vow` question: a contest beside a confirming claim (row 33) give
 
 ## Agreements, lines 1126 to 2129
 
-Text: `spec/MIR-agreements-draft-17.md` (rules 45 to 48, 94 to 97, 49 to 55, 56 to 72). Code: `core/src/agreements/view.rs` unless another file is named. "Unit test" means a test in `core/tests/` covers the sentence. That shows the core does it. It is not a vector.
+Text: `spec/archive/MIR-agreements-draft-17.md` (rules 45 to 48, 94 to 97, 49 to 55, 56 to 72). Code: `core/src/agreements/view.rs` unless another file is named. "Unit test" means a test in `core/tests/` covers the sentence. That shows the core does it. It is not a vector.
 
 A note on the question set. `consent counts` answers `false` when the core returns an error, and `agreement exists` answers `"unknown"` for terms that fail their checks. So no vector can tell "unknown" apart from "does not count", or "invalid" apart from "unknown", for the rows marked (†). Those rows would need a question that keeps the core's own answer.
 
@@ -783,7 +783,7 @@ Facts the generator would need: `notices_lapsed`, `grant_limits` and `refunds_pa
 
 ## Envelopes
 
-Text: `spec/MIR-envelopes-draft-11.md` (544 lines), read whole. Vectors: `core/vectors/verdicts.json` (5 Envelopes cases before this pass, 30 now), and the encoding files `open-act.json`, `cbor.json`, `sealed.json`, `lock.json`, `running-summary.json`, `sequence-three-acts.json`. Core: `core/src/act.rs` (`act.rs:N`), `core/src/envelopes.rs` and `core/src/envelopes/vow.rs`, `core/src/cbor.rs`, `core/src/sig.rs`, and `core/src/chain.rs` (`chain.rs:N`) for the verdicts on envelope rules. "Unit" names a test in `core/tests/` that already ran the rule; "probe" a throwaway test I ran on a copy (not kept).
+Text: `spec/archive/MIR-envelopes-draft-11.md` (544 lines), read whole. Vectors: `core/vectors/verdicts.json` (5 Envelopes cases before this pass, 30 now), and the encoding files `open-act.json`, `cbor.json`, `sealed.json`, `lock.json`, `running-summary.json`, `sequence-three-acts.json`. Core: `core/src/act.rs` (`act.rs:N`), `core/src/envelopes.rs` and `core/src/envelopes/vow.rs`, `core/src/cbor.rs`, `core/src/sig.rs`, and `core/src/chain.rs` (`chain.rs:N`) for the verdicts on envelope rules. "Unit" names a test in `core/tests/` that already ran the rule; "probe" a throwaway test I ran on a copy (not kept).
 
 Sorted by priority: what makes every act invalid or unknown first, then private delivery, then the Envelopes types (withdrawal, key delivery, encryption key, vow), then the rest. Case names are those now in `verdicts.json` (Envelopes layer) unless another file is named.
 
@@ -942,7 +942,7 @@ Rules 1 and 7 to 13 and the empty string (canonical-text.json, cbor.json, the NF
 
 ## Development
 
-Text: `spec/MIR-development-draft-11.md` (492 lines), read whole. Vectors: `core/vectors/verdicts.json`, the `development` layer (7 cases before S7g, each a specification's content decoded, judged also by `core/vectors/check.py`) and `mir_hashes` (6 cases). Core: `core/src/development.rs` (`dev.rs:N` below), and where the other layers read a specification: `AgreementsView::rails` and `rail_binds`/`is_push_rail` (`view.rs:N`, `core/src/agreements/view.rs`), `ext_layers` (view.rs:78), `proven_delivery` (`core/src/agreements/view/selling.rs:80`) and `proofs.rs`, `Verifier::specification_claim` (`chain.rs:963`), `sig::verify` (`sig.rs:65`). "Probe" means I ran the core on the case with the line in question changed back (nothing kept).
+Text: `spec/archive/MIR-development-draft-11.md` (492 lines), read whole. Vectors: `core/vectors/verdicts.json`, the `development` layer (7 cases before S7g, each a specification's content decoded, judged also by `core/vectors/check.py`) and `mir_hashes` (6 cases). Core: `core/src/development.rs` (`dev.rs:N` below), and where the other layers read a specification: `AgreementsView::rails` and `rail_binds`/`is_push_rail` (`view.rs:N`, `core/src/agreements/view.rs`), `ext_layers` (view.rs:78), `proven_delivery` (`core/src/agreements/view/selling.rs:80`) and `proofs.rs`, `Verifier::specification_claim` (`chain.rs:963`), `sig::verify` (`sig.rs:65`). "Probe" means I ran the core on the case with the line in question changed back (nothing kept).
 
 In plain words: most of what Development decides is whether some bytes are a specification at all, and what a rail Module's specification says about the rail. Before this pass only seven decoding cases showed it, and no case read a rail's kind or binding from its specification: every act case used a rail no specification described. The decoding follows the text everywhere I ran it but one place: a Module working under the Money MIR was answered "unknown" (fixed). One question: whether a collective's grant key can publish a specification for the collective.
 

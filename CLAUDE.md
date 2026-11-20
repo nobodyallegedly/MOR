@@ -2,6 +2,8 @@
 
 Start with `docs/state-of-mor.md` (what exists now), then `docs/build-brief-v1.md` and `docs/roadmap-v1.md` (the history). Each working session does one roadmap step.
 
+The current version of every core text is the one marked LATEST in `spec/README.md`; older versions are in `spec/archive/`. Read it before citing any text.
+
 **Names.** Never write the author's personal name or nicknames in anything that enters this repository: files, commit messages, branch names, pull requests. Write "Nobody, allegedly". Earlier records keep their wording; do not copy the name from them into anything new.
 
 - **Only `docs/decisions.md` records what Nobody, allegedly, decided.** It records exchanges, read whole: his words quoted exactly, never a sentence lifted out of one, with what the exchange arrived at marked "to check" and any technical wording labelled as the lead's. The current stint's wish stays at the top. Everything else (findings, reviews, prompts, reports, a lead's settlement) is a proposal or a record of work, labelled with whose it is. Never write "decided by Nobody, allegedly" over words he did not write; never paraphrase his decisions into a prompt, quote them. Every prompt for a stint opens with its wish, quoted.

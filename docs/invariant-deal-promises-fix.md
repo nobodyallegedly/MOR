@@ -76,7 +76,7 @@ Checked against the working rule "core business, or the participants' choice": i
 
 ### What changed
 
-- **`spec/MIP-agreements-draft-11.md`, rule 9:** one sentence, after the turns paragraph: "The count runs along the service's receipts across every version of the deal, the same stake being the same holder's share in the same work whatever its place in the list, and a new holder starting at zero (new in draft 11, F266)."
+- **`spec/archive/MIP-agreements-draft-11.md`, rule 9:** one sentence, after the turns paragraph: "The count runs along the service's receipts across every version of the deal, the same stake being the same holder's share in the same work whatever its place in the list, and a new holder starting at zero (new in draft 11, F266)."
 - **Core v21 and freeze suite v21: unchanged.** Core v21 doesn't quote rule 9. The freeze suite's component line "Stakes in millionths…" paraphrases it ("ties taking turns along the split service's receipts", F150, F165) and stays true, so it doesn't quote a changed sentence.
 - **The library** (`core/src/agreements/view.rs`, `tally_member`): a split of the service joins the chain for a stake when the version it names is judged under the version in force (as before) **or is on that version's line, the version in force or one before it** (F266). The stake is found in the version the split names by its work (the stake's object), not its index. The previous split's count is read for that stake. `turns`, the public reading of the same count, follows.
   - *Mechanic, the build's:* a split's stake indexes are read on the version it names. "On the line" keeps rule 9's "while a deal stands forked, the turns stay per branch": a branch's chain takes in the splits made before the fork, never the other branch's.

@@ -10,7 +10,7 @@ The texts are done. The code is not: the models run through about ten thousand l
 
 ## The four parts, and the size
 
-`spec/MIR-agreements-draft-18.md`:
+`spec/archive/MIR-agreements-draft-18.md`:
 
 - **Part one, the grammar of agreeing**: rules 1 to 14 and 45, 46, 49 to 54 (making, claims, stakes and transfers, publications and the purchase, clones and marks, contests, standing, the negotiation record); 56 to 59 and 72 (a collective as an identity its members act for); 73 to 75 (grants); 65 (counting a consent).
 - **Part two, what others relied on stands**: keepers (36 to 44); "Made before, made after" (the collective's line); 76 to 80 (a grant's fate); 90 (forks of records); legible money (15 to 32); 48 (no stake moved or reduced without its holder).

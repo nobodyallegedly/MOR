@@ -6,14 +6,14 @@
 
 | Text | New file | State |
 | --- | --- | --- |
-| Identity draft 15 | `spec/MIR-identity-draft-15.md` | Committed; stranger's reading done, wording fixes committed |
+| Identity draft 15 | `spec/archive/MIR-identity-draft-15.md` | Committed; stranger's reading done, wording fixes committed |
 | Text draft 11 | `spec/MIR-text-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
-| Envelopes draft 11 | `spec/MIR-envelopes-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
-| Money draft 11 | `spec/MIR-money-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
-| Agreements draft 17 | `spec/MIR-agreements-draft-17.md` | Committed; stranger's reading done, wording fixes committed |
-| Development draft 11 | `spec/MIR-development-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
-| MICS v30 | `spec/02-MOR-MICS-v30.md` | Committed |
-| Freeze test suite v30 | `spec/03-MOR-freeze-test-suite-v30.md` | Committed; notes in `docs/freeze-ready-suite-notes.md` |
+| Envelopes draft 11 | `spec/archive/MIR-envelopes-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| Money draft 11 | `spec/archive/MIR-money-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| Agreements draft 17 | `spec/archive/MIR-agreements-draft-17.md` | Committed; stranger's reading done, wording fixes committed |
+| Development draft 11 | `spec/archive/MIR-development-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| MICS v30 | `spec/archive/02-MOR-MICS-v30.md` | Committed |
+| Freeze test suite v30 | `spec/archive/03-MOR-freeze-test-suite-v30.md` | Committed; notes in `docs/freeze-ready-suite-notes.md` |
 | Final stranger's reading over all eight | `docs/freeze-ready-strangers/all-eight.md` | Done; wording fixes committed |
 | `spec/README.md` | — | Done: the eight named freeze-ready, for approval |
 | Report | `docs/freeze-ready-drafts-report.md` | Done: questions 1 to 54, the term question |

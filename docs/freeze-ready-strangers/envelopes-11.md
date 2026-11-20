@@ -1,6 +1,6 @@
 # Stranger's reading: Envelopes draft 11
 
-*A subagent read `spec/MIR-envelopes-draft-11.md` with access only to the core texts. Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]** (fixed where it lives).*
+*A subagent read `spec/archive/MIR-envelopes-draft-11.md` with access only to the core texts. Its lists, condensed; what the session did in brackets: **[fixed]**, **[Q]**, **[gap]**, **[as designed]**, **[other text]** (fixed where it lives).*
 
 ## 1. Rules it could not understand or check
 

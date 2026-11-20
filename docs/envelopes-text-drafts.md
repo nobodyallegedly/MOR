@@ -32,10 +32,10 @@ Its two lists, canonical text and validity, become one numbering of 13 rules.
 
 ## What changed, file by file
 
-- `spec/MIP-envelopes-draft-8.md`: new (first commit).
-- `spec/MIP-text-draft-7.md`: new (second commit).
+- `spec/archive/MIP-envelopes-draft-8.md`: new (first commit).
+- `spec/archive/MIP-text-draft-7.md`: new (second commit).
 - `spec/README.md`: one line for each, awaiting approval.
-- **Unchanged:** `spec/MIP-envelopes-draft-7.md` and `spec/MIP-text-draft-6.md` stay as the approved texts. They also stay as the reference that code comments, tests, records, the other drafts, core v21 and the freeze suite cite by their numbers. Core v21 and freeze suite v21 were not edited. No code, test or record was edited.
+- **Unchanged:** `spec/archive/MIP-envelopes-draft-7.md` and `spec/archive/MIP-text-draft-6.md` stay as the approved texts. They also stay as the reference that code comments, tests, records, the other drafts, core v21 and the freeze suite cite by their numbers. Core v21 and freeze suite v21 were not edited. No code, test or record was edited.
 
 ## Envelopes draft 8
 

@@ -92,7 +92,7 @@ Each is listed for you to see; none changes a decided rule.
 
 ## Core v22
 
-`spec/02-MOR-core-v22.md`, new. Version 21 stays in `spec/`.
+`spec/archive/02-MOR-core-v22.md`, new. Version 21 stays in `spec/`.
 
 **The header:** one paragraph saying what version 22 is, naming the six current drafts (Identity 12, Text 7, Envelopes 8, Money 7, Agreements 11, Development 7), and everything decided since v21, F242 to F268, each in a few words. It also says that a rule number cited without its draft is the number in the draft v21 named, as code and records cite them until the freeze-ready drafts (the reports' convention). Version 21's header and its revisions in place moved, word for word, to "Earlier versions", in front of version 20.
 
@@ -119,7 +119,7 @@ Each is listed for you to see; none changes a decided rule.
 
 ## Freeze suite v22
 
-`spec/03-MOR-freeze-test-suite-v22.md`, new. Version 21 stays in `spec/`.
+`spec/archive/03-MOR-freeze-test-suite-v22.md`, new. Version 21 stays in `spec/`.
 
 - **Header:** one paragraph, as core's: the six drafts, F242 to F268, where each is tested, and the same note on rule numbers. Version 21's header and revisions moved to "Earlier versions".
 - **The component line on vows** (the Envelopes report's third sentence): "Vows (F237, F239, F240)", "a vow's own chain", "an offer naming a vow"; and F252 (existing or to come), F259 with reading Q2 (built), F264 (a key as evidence). The test file name `review_announcements.rs` stays.

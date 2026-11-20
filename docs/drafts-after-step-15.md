@@ -4,14 +4,14 @@
 
 | Text | New draft | From |
 | --- | --- | --- |
-| Envelopes | `spec/MIR-envelopes-draft-10.md` | draft 9 |
-| Text | `spec/MIR-text-draft-8.md` | draft 7 |
-| Identity | `spec/MIR-identity-draft-13.md` | draft 12 |
-| Money | `spec/MIR-money-draft-8.md` | draft 7 |
-| Agreements | `spec/MIR-agreements-draft-14.md` | draft 13 |
-| Development | `spec/MIR-development-draft-10.md` | draft 9 |
-| The MICS | `spec/02-MOR-MICS-v28.md` | version 27 |
-| The freeze suite | `spec/03-MOR-freeze-test-suite-v28.md` | version 27 |
+| Envelopes | `spec/archive/MIR-envelopes-draft-10.md` | draft 9 |
+| Text | `spec/archive/MIR-text-draft-8.md` | draft 7 |
+| Identity | `spec/archive/MIR-identity-draft-13.md` | draft 12 |
+| Money | `spec/archive/MIR-money-draft-8.md` | draft 7 |
+| Agreements | `spec/archive/MIR-agreements-draft-14.md` | draft 13 |
+| Development | `spec/archive/MIR-development-draft-10.md` | draft 9 |
+| The MICS | `spec/archive/02-MOR-MICS-v28.md` | version 27 |
+| The freeze suite | `spec/archive/03-MOR-freeze-test-suite-v28.md` | version 27 |
 | Release manifest cMIP | `cmips/cmip-release-manifest-draft-4.md` | draft 3 |
 | Payment cMIP | `cmips/cmip-payment-draft-3.md` | draft 2 |
 | Website cMIP | `cmips/cmip-website-draft-11.md` | draft 10 |

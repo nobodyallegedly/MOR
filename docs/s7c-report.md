@@ -15,7 +15,7 @@ S7b's four questions, as F383 decides them, are now in Identity, in Money, in th
 
 ## What changed, precisely
 
-**Identity** (`spec/MIR-identity-draft-15.md`):
+**Identity** (`spec/archive/MIR-identity-draft-15.md`):
 - **Section 6, "A verifier that cannot tell answers unknown":** the wording "an act below a kept tip whose line it cannot rebuild", and the italic stated cost.
 - **Part four, scenario 8.4:** "display, not resolution", the resolution stopping at the genesis unknown.
 - **"Which rotation counts", after "What stops a chain":** a paragraph giving the order and its principle.
@@ -33,7 +33,7 @@ S7b's four questions, as F383 decides them, are now in Identity, in Money, in th
   The core has one case F383 does not name: two homeless rotations at one position, both still provisional. It is contested, in the later slot, which the principle places there. The text names it, so the text says what the core does.
 - **"What stops a chain":** "the genesis unknown" now adds "and no check it can apply fails" (Envelopes rule 30). This comes from the stranger's reading below.
 
-**Money** (`spec/MIR-money-draft-11.md`), rule 12: a new paragraph, "Where the rail's answer is not held". It says:
+**Money** (`spec/archive/MIR-money-draft-11.md`), rule 12: a new paragraph, "Where the rail's answer is not held". It says:
 - Without the rail Module's answer of which payment each record is, a verifier does not know whether two records are one payment.
 - On one such pair, an answer is judged both ways, and stands where both ways agree.
 - On two or more pairs, the answer is unknown.

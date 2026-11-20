@@ -55,7 +55,7 @@ The ignored Rust test is the Lightning regtest, skipped unless `MOR_LN_REGTEST` 
 
 ### The texts
 
-**Agreements draft 13** (`spec/MIR-agreements-draft-13.md`). Draft 12 stays as it is, approved. Every change is marked:
+**Agreements draft 13** (`spec/archive/MIR-agreements-draft-13.md`). Draft 12 stays as it is, approved. Every change is marked:
 
 1. **Header**, a new first paragraph:
    - "*Draft 13, 13 October 2026 (afternoon), for Nobody, allegedly, to approve: draft 12 (approved 13 October 2026, his reading to follow), with two decisions written in, each change marked "new in draft 13 (F282)" or "new in draft 13 (F284)".
@@ -83,7 +83,7 @@ The ignored Rust test is the Lightning regtest, skipped unless `MOR_LN_REGTEST` 
 
 Rules 22, 48 (beyond F282), 68 and 89 needed no change: F284 adds who holds a vow's stake, and F280, F270 and F279 then apply to it as to any stake.
 
-**The MICS v26** (`spec/02-MOR-MICS-v26.md`). Version 25 was written for approval, and its reading waited for F282 and F284. The sentences changed:
+**The MICS v26** (`spec/archive/02-MOR-MICS-v26.md`). Version 25 was written for approval, and its reading waited for F282 and F284. The sentences changed:
 
 1. **The header:**
    - "*Version 26, 13 October 2026 (afternoon), for Nobody, allegedly, to approve: version 25 (written for approval; its reading waited for F282 and F284) naming Agreements draft 13, which writes in **F282** (decided by Nobody, allegedly: "Q2 also answers itself. A new agreement is born. All signature are needed, yes it is born from a clone"): in a collective, every holder who is no member signs what pays it less, departed members, successors and buyers alike; and **F284** (decided by Nobody, allegedly: "The deal in question is based on a vow. Somebody owns the vow"): a deal made on a vow has an owner, the vow's signer, who holds the stake, the overhead coming off the top and what is left being the owner's. F284 is built (`docs/f282-f284-build.md`).
@@ -100,7 +100,7 @@ Rules 22, 48 (beyond F282), 68 and 89 needed no change: F284 adds who holds a vo
    - **Before:** "…F273's mechanism is superseded by F279; one reading taken building them, who has no voice in a collective, is to confirm (its Q2)."
    - **Now:** "…F273's mechanism is superseded by F279; the reading taken building them, who has no voice in a collective, is decided by F282: every holder who is no member, departed members, successors and buyers alike (Agreements draft 13). F284 is written in Agreements draft 13 and built (`docs/f282-f284-build.md`); two readings taken writing it in are to confirm, the second put as its Q1."
 
-**The freeze suite v26** (`spec/03-MOR-freeze-test-suite-v26.md`). The sentences changed:
+**The freeze suite v26** (`spec/archive/03-MOR-freeze-test-suite-v26.md`). The sentences changed:
 
 1. **The header:**
    - "*Version 26, 13 October 2026 (afternoon), for Nobody, allegedly, to approve: version 25 (written for approval; its reading waited for F282 and F284) matching core v26 and the six current drafts, … Agreements draft 13 and Development draft 8.

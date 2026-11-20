@@ -1,6 +1,6 @@
 # Stranger's reading: Identity draft 15
 
-*A subagent read `spec/MIR-identity-draft-15.md` with access only to the other core texts (no `docs/`, no findings, no code), as the C session will. Its lists, condensed by the freeze-ready session; line numbers are the draft's. What the session did with each item is in brackets: **[fixed]** (wording, no verdict can change), **[Q n]** (a question in `docs/freeze-ready-drafts-report.md`), **[gap]** (a format or procedure the texts do not give, grouped under one question), **[as designed]** (the text already answers it, or the item misreads it).*
+*A subagent read `spec/archive/MIR-identity-draft-15.md` with access only to the other core texts (no `docs/`, no findings, no code), as the C session will. Its lists, condensed by the freeze-ready session; line numbers are the draft's. What the session did with each item is in brackets: **[fixed]** (wording, no verdict can change), **[Q n]** (a question in `docs/freeze-ready-drafts-report.md`), **[gap]** (a format or procedure the texts do not give, grouped under one question), **[as designed]** (the text already answers it, or the item misreads it).*
 
 ## 1. Rules it could not understand or check
 

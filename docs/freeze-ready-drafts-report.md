@@ -46,14 +46,14 @@ Each is written to be read alone by someone who holds only these eight. A later 
 
 | Text | File | From |
 | --- | --- | --- |
-| Identity draft 15 | `spec/MIR-identity-draft-15.md` | draft 14 |
+| Identity draft 15 | `spec/archive/MIR-identity-draft-15.md` | draft 14 |
 | Text draft 11 | `spec/MIR-text-draft-11.md` | draft 10 |
-| Envelopes draft 11 | `spec/MIR-envelopes-draft-11.md` | draft 10 |
-| Money draft 11 | `spec/MIR-money-draft-11.md` | draft 10 |
-| Agreements draft 17 | `spec/MIR-agreements-draft-17.md` | draft 16 |
-| Development draft 11 | `spec/MIR-development-draft-11.md` | draft 10 |
-| MICS v30 | `spec/02-MOR-MICS-v30.md` | v29 |
-| Freeze test suite v30 | `spec/03-MOR-freeze-test-suite-v30.md` | v29 |
+| Envelopes draft 11 | `spec/archive/MIR-envelopes-draft-11.md` | draft 10 |
+| Money draft 11 | `spec/archive/MIR-money-draft-11.md` | draft 10 |
+| Agreements draft 17 | `spec/archive/MIR-agreements-draft-17.md` | draft 16 |
+| Development draft 11 | `spec/archive/MIR-development-draft-11.md` | draft 10 |
+| MICS v30 | `spec/archive/02-MOR-MICS-v30.md` | v29 |
+| Freeze test suite v30 | `spec/archive/03-MOR-freeze-test-suite-v30.md` | v29 |
 
 Each text ends with a single line break and carries no trailing spaces. Whether a frozen text ends with a line break at all is question 12.
 
