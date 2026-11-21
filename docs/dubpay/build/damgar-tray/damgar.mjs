@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Damgar, the Dubsar Suite's money hub, as a tray app. Version 0.2.2, DubPay.
+// Damgar, the Dubsar Suite's money hub, as a tray app. Version 0.2.3, DubPay.
 // Run from your own folder (the one holding kit/, in/, out/, keys/):  node damgar.mjs help
 // What it does: shows your bank balance, makes invoices, pays invoices, and follows a shower
 // payment through the signed leg reports it can read, to everyone it reached.
@@ -15,7 +15,8 @@ import { join } from 'node:path';
 const HERE = process.cwd();
 const KIT = join(HERE, 'kit', 'mor.mjs');
 if (!existsSync(KIT)) { console.error('damgar: run me from your folder (kit/mor.mjs not found here)'); process.exit(1); }
-const { mor, plain, unhex, hex } = await import(join(HERE, 'kit', 'lib', 'core.mjs'));
+const { mor, plain, unhex, hex, SPECS } = await import(join(HERE, 'kit', 'lib', 'core.mjs'));
+const { Kit } = await import(join(HERE, 'kit', 'lib', 'kit.mjs'));
 const REPORT_SPEC = '7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854';
 
 function kit(args) {
@@ -44,8 +45,31 @@ async function bank(args, label) {
 }
 
 // --- following a shower payment -------------------------------------------------------
+// 0.2.3: every report's signature is judged by the core library's verifier against its signer's identity
+// chain, from the identity records held in in/ (GET /identity/ID, GET /feed?signer=ID), the acts in acts/ and
+// every act in the answers read. Only a report judged "valid" can confirm a payment or close a line.
+// Fault fixed: before 0.2.3 a report's key was never checked, so a forged report showed as real (the lurker,
+// day three).
+function verifierFor(bodies) {
+  const v = new mor.Verifier(SPECS.identity, SPECS.money, SPECS.agreements, SPECS.envelopes, SPECS.text);
+  const add = (b) => { try { v.add(b); } catch {} };
+  try { for (const a of new Kit(HERE).heldRecords()) add(a); } catch {}
+  try { for (const f of readdirSync(join(HERE, 'acts'))) if (f.endsWith('.mor')) add(new Uint8Array(readFileSync(join(HERE, 'acts', f)))); } catch {}
+  for (const b of bodies) add(b);
+  return v;
+}
+const STANDING = {
+  valid: 'signature checked against its signer\'s chain',
+  unknown: 'UNCHECKED: its signer\'s chain is not held here, so its lines prove nothing yet',
+  pending: 'UNCHECKED: its signer\'s chain is not complete here, so its lines prove nothing yet',
+  disputed: 'DISPUTED: its signer\'s chain is disputed; its lines confirm nothing',
+  void: 'NOT COUNTED: void under its signer\'s chain',
+  invalid: 'NOT COUNTED: its signature fails against its signer\'s chain (forged or broken)',
+};
+const counts = (r) => r.standing === 'valid';
 function reportsFrom(letters) {
   const out = new Map();
+  const bodies = [];
   for (const name of letters) {
     let b; try { b = readFileSync(join(HERE, 'in', `${name}.answer.body`)); } catch { continue; }
     let items = [];
@@ -53,6 +77,7 @@ function reportsFrom(letters) {
     for (const it of items) {
       const bytes = it[2] instanceof Uint8Array ? it[2] : (typeof it[2] === 'string' ? unhex(it[2]) : null);
       if (!bytes) continue;
+      bodies.push(bytes);
       let d; try { d = plain(mor.describeAct(bytes)); } catch { continue; }
       if (d.spec !== REPORT_SPEC || !d.payload) continue;
       let p; try { p = mor.cborDecode(unhex(d.payload)); } catch { continue; }
@@ -60,8 +85,11 @@ function reportsFrom(letters) {
       out.set(d.id, { id: d.id, signer: d.signer, call: plain(p.get(0)), lines });
     }
   }
+  const v = verifierFor(bodies);
+  for (const r of out.values()) { let st; try { st = v.status(r.id); } catch { st = 'unknown'; } r.standing = st; }
   return [...out.values()];
 }
+const standing = (r) => STANDING[r.standing] || `UNCHECKED: the verifier says "${r.standing}"`;
 const KIND = ['received', 'passed on', 'own part', 'kept (fee)', 'still owed'];
 const who = (w) => (Array.isArray(w) ? (w[0] === 2 ? 'agreement ' : '') + w[1] : (typeof w === 'string' ? w : JSON.stringify(w))).slice(0, 80);
 function amt(a) { return Array.isArray(a) ? Number(a[1]) : Number(a); }
@@ -71,14 +99,14 @@ const idOf = (w) => (Array.isArray(w) ? w[1] : w);
 // The receiver's own report with a received line for this amount and settlement.
 function confirmed(reports, to, value, settlement) {
   const rid = idOf(to);
-  const r = reports.find((x) => x.signer === rid && x.lines.some((l) => l[0] === 0 && l[2] === settlement && amt(l[1]) === value));
+  const r = reports.find((x) => counts(x) && x.signer === rid && x.lines.some((l) => l[0] === 0 && l[2] === settlement && amt(l[1]) === value));
   return r ? r.id : null;
 }
 // A passed-on line, by the same signer, that closes line i of report r for the same amount and receiver.
 function closing(reports, r, i) {
   const owed = r.lines[i];
   for (const x of reports) {
-    if (x.signer !== r.signer) continue;
+    if (x.signer !== r.signer || !counts(x)) continue;
     for (const l of x.lines) {
       if (l[0] === 1 && Array.isArray(l[4]) && l[4][0] === r.id && Number(l[4][1]) === i && amt(l[1]) === amt(owed[1]) && idOf(l[2]) === idOf(owed[2])) return { report: x, line: l };
     }
@@ -93,7 +121,9 @@ function follow(reports, settlement, depth = 0, seen = new Set()) {
   for (const r of here) {
     if (seen.has(r.id)) continue; seen.add(r.id);
     const got = r.lines.filter((l) => l[0] === 0 && l[2] === settlement).reduce((s, l) => s + amt(l[1]), 0);
-    console.log(`${pad}${r.signer.slice(0, 12)}… received ${sats(got)} (report ${r.id.slice(0, 12)}…)`);
+    if (r.standing === 'invalid' || r.standing === 'void') { console.log(`${pad}report ${r.id.slice(0, 12)}…, signed as ${r.signer.slice(0, 12)}…: ${standing(r)}. Its lines are not shown.`); continue; }
+    console.log(`${pad}${r.signer.slice(0, 12)}… received ${sats(got)} (report ${r.id.slice(0, 12)}…; ${standing(r)})`);
+    if (!counts(r)) console.log(`${pad}  to check it: node kit/mor.mjs letter --to HOME --get /identity/${r.signer}, then run this again after the next pass`);
     r.lines.forEach((l, i) => {
       if (l[0] === 0) return;
       const to = l[2] && l[0] !== 2 && l[0] !== 3 ? ' to ' + who(l[2]) : '';
@@ -235,7 +265,8 @@ switch (cmd) {
     const letters = froms.length ? froms : readdirSync(join(HERE, 'in')).filter((f) => f.endsWith('.answer.body')).map((f) => f.replace('.answer.body', ''));
     const reps = reportsFrom(letters);
     console.log(`Following ${settlement.slice(0, 16)}… through ${reps.length} leg report(s) held. Each line is its signer's word (G8); a passed-on line is followed where the receiver's own report names the same settlement.`);
-    console.log('Signatures: UNCHECKED by Damgar. To check them: node kit/mor.mjs agreements check acts/ID.mor');
+    const by = {}; for (const r of reps) by[r.standing] = (by[r.standing] || 0) + 1;
+    console.log(`Signatures, judged against each signer's chain by the core library: ${Object.entries(by).map(([k, n]) => `${n} ${k}`).join(', ') || 'none held'}. Only a valid report confirms a payment or closes a line.`);
     follow(reps, settlement);
     // Straight split draft 6: the full report names SHA-256(settlement || preimage) in line 0, never the settlement.
     const pre = flag('--preimage');
@@ -249,10 +280,10 @@ switch (cmd) {
   case 'check': await check(a[0]); break;
   case 'reports': {
     const letters = readdirSync(join(HERE, 'in')).filter((f) => f.endsWith('.answer.body')).map((f) => f.replace('.answer.body', ''));
-    for (const r of reportsFrom(letters)) { console.log(`${r.id}  by ${r.signer.slice(0, 12)}…`); for (const l of r.lines) console.log(`   ${KIND[l[0]] || l[0]}: ${sats(amt(l[1]))}${typeof l[2] === 'string' ? ' ' + l[2].slice(0, 16) + '…' : ''}`); }
+    for (const r of reportsFrom(letters)) { console.log(`${r.id}  by ${r.signer.slice(0, 12)}…  ${standing(r)}`); for (const l of r.lines) console.log(`   ${KIND[l[0]] || l[0]}: ${sats(amt(l[1]))}${typeof l[2] === 'string' ? ' ' + l[2].slice(0, 16) + '…' : ''}`); }
     break; }
   default:
-    console.log(`Damgar 0.2.2, the money hub (DubPay, the Dubsar Suite). Tray app: runs your own kit, holds no key.
+    console.log(`Damgar 0.2.3, the money hub (DubPay, the Dubsar Suite). Tray app: runs your own kit, holds no key.
   node damgar.mjs balance NAME                         your account
   node damgar.mjs invoice NAME SATS [--memo TEXT]      an invoice for someone to pay you
   node damgar.mjs pay NAME BOLT11 --from ACT [--fee SATS]   check the act the invoice came from, then pay (final).
