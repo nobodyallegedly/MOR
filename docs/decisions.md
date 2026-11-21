@@ -19,6 +19,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **What to merge** (20 November, 22:59–23:00). He: "Dubsar is merging 210. When that is over, you can merge your branches. After that, the wave can start" The MOR lead, asked to choose among 59 open pull requests, leaned: merge this ledger and pull request 208 (LATEST); merge as records the reviews, research, maps and sheets, which only add files; leave open the Agreements drafts 2 to 24, draft 25 and verifier 2 (183, 184) until the findings are in, the postman, the draft 26 brief and the old state of MOR. He: "You know better than me I’d say"
 - *Arrived at (to check):* after pull request 210, the MOR lead merges as it leaned; then the wave starts.
 
+**Back to the leads** (21 November, 13:41; relayed by the Dubsar Suite lead). After the windows' sessions were launched in a tangle, he: "I made a little mess, bringing everything back to the leads, re coordinate and then contribue"
+- *Arrived at (to check):* the work returns to the two leads; they coordinate again, and then the windows go on.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
