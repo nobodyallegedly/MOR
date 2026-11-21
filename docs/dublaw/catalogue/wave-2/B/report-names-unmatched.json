@@ -1,0 +1,50 @@
+[
+ {
+  "name": "anchoring cmip, draft 8",
+  "windows": 5
+ },
+ {
+  "name": "split cmip, draft 5",
+  "windows": 4
+ },
+ {
+  "name": "anchoring, draft 8",
+  "windows": 3
+ },
+ {
+  "name": "split cmip, draft 4",
+  "windows": 2
+ },
+ {
+  "name": "escrow cmip, draft 1",
+  "windows": 2
+ },
+ {
+  "name": "quorum, draft 4",
+  "windows": 2
+ },
+ {
+  "name": "longhouse's anchoring, draft 8",
+  "windows": 2
+ },
+ {
+  "name": "until's escrow cmip, draft 1",
+  "windows": 2
+ },
+ {
+  "name": "public flow, draft 2",
+  "windows": 2
+ },
+ {
+  "name": "buyer by assent, draft 2",
+  "windows": 2
+ },
+ {
+  "name": "split cmip, draft 2",
+  "windows": 2
+ },
+ {
+  "name": "longhouse's anchoring cmip, draft 8",
+  "windows": 2
+ }
+]

@@ -1,0 +1,123 @@
+// DubLaw wave 2, session B. Step 6: listing-agreements.md and listing-agreements.json, from the files steps 1 to 5 wrote.
+// Usage: node 6-write.mjs OUT_DIR
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [OUT] = process.argv.slice(2);
+const L = JSON.parse(readFileSync(join(OUT, 'listing-raw.json'), 'utf8'));
+const P = JSON.parse(readFileSync(join(OUT, 'points.json'), 'utf8'));
+const S = JSON.parse(readFileSync(join(OUT, 'decode-stats.json'), 'utf8'));
+const unmatched = JSON.parse(readFileSync(join(OUT, 'report-names-unmatched.json'), 'utf8'));
+const short = (h) => (h ? '`' + h.slice(0, 16) + '…`' : '—');
+const s8 = (h) => (h ? '`' + h.slice(0, 8) + '…`' : '—');
+const esc = (t) => (t ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+const title = (e) => esc((e.title ?? '(no text held)').replace(/^#\s*/, '').slice(0, 90));
+const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const sock = (e) => Object.entries(e.sockets).map(([k, v]) => `${k.split(' ')[0]}×${v}`).concat(e.k7Statements ? [`K7 kind×${e.k7Statements} Statements`] : []).concat(e.actsUnderIt ? [`spec of ${e.actsUnderIt} acts`] : []).join(', ') + (e.sameTextAs?.length ? `; same text as ${e.sameTextAs.map(s8).join(' ')}` : '') || 'named by no socket';
+const use = (e) => (e.use.terms || e.use.k7Statements || e.use.actsUnderSpec ? `${e.use.terms} / ${e.use.assents} / ${e.use.signers} / ${e.use.windows.length}` : '0');
+const built = (e) => { const n = e.builtOn.termsNamingInFull.length + e.builtOn.textsNamingInFull.length; const c = e.builtOn.cmipTextsCitingByPrefix.length; return `${n} in full; ${pl(c, 'cMIP text')} cite it`; };
+const kit = (e) => (e.kit.word === 'applied by hand' ? 'by hand (' + e.kit.ground.replace(/applied by hand in the /g, '').replace(/ \(.*?\)/g, '').replace(/ count/g, '') + ')' : e.kit.word === 'kit holds it' ? 'kit holds it' : 'unchecked');
+const earlier = (e) => { const ids = [...new Set([...e.replaces, ...e.earlierDraftsSameTitle.map((x) => x.act)])]; return ids.length ? ids.map(s8).join(' ') : '—'; };
+const cats = { 1: 'When Terms are in force, and who signs', 2: 'Ownership and collectives', 3: 'Disputes', 4: 'Consent and terms for people', 5: 'Leaving and carrying on' };
+const held = L.filter((e) => e.held !== 'not held');
+const inSock = L.filter((e) => e.use.terms || e.use.k7Statements);
+const notHeldSock = inSock.filter((e) => e.held === 'not held');
+const law = L.filter((e) => /^[1-5]$/.test(e.category));
+const other = L.filter((e) => !/^[1-5]$/.test(e.category));
+const byHand = L.filter((e) => e.kit.word === 'applied by hand');
+const kitHolds = L.filter((e) => e.kit.word === 'kit holds it');
+const ptsFound = P.points.filter((p) => p.found).length;
+const terms = S.bySpecType['agreements/0'], stmts = S.bySpecType['agreements/1'];
+const md = [];
+md.push('# DubLaw, wave 2, session B: every cMIP and Module in the Agreements area');
+md.push('');
+md.push('The stint\'s wish (Nobody, allegedly, 20 November 2026): "Current wish: extract data, knowledge and understanding from the simulation run"');
+md.push('');
+md.push('*A record of work of DubLaw, wave 2, session B (the listing W2-A\'s catalogue is built from): Nobody, allegedly, 21 November 2026. Made from `_research` (read only) by the scripts beside this file; every number below is theirs and can be rerun (`run.sh`). Full fingerprints and every count are in `listing-agreements.json`; every act decoded is in `all-acts-index.json`.*');
+md.push('');
+md.push('## 1. Summary');
+md.push('');
+md.push(`- ${S.distinctActs} distinct acts decoded (${terms} Terms, ${stmts} Statements, ${S.bySpecType['report-block/0'] ?? 0} reports, ${S.bySpecType['text/0']} texts) from ${S.items} items; ${S.distinctSealed} sealed containers left sealed. *Counted.*`);
+md.push(`- ${inSock.length} distinct fingerprints are named in a socket of Terms or as a Statement's K7 kind; ${inSock.length - notHeldSock.length} of them match a text held, ${notHeldSock.length} ${notHeldSock.length === 1 ? 'does' : 'do'} not. *Counted.*`);
+md.push(`- ${L.length} entries in all: ${held.length} with their text held, ${L.length - held.length} not held. ${law.length} in DubLaw's five categories, ${other.length} in other areas. *Counted; categories inferred.*`);
+md.push(`- By category: ${Object.keys(cats).map((c) => `${c}: ${L.filter((e) => e.category === c).length}`).join(', ')}; DubPay ${L.filter((e) => e.category === 'other: DubPay').length}, DubWeb ${L.filter((e) => e.category === 'other: DubWeb').length}, unplaced ${L.filter((e) => e.category === 'unplaced').length}.`);
+const top = [...inSock].sort((a, b) => b.use.terms - a.use.terms).slice(0, 4).map((e) => `${esc(e.title?.replace(/^#\s*/, '').replace(/^cMIP:?\s*/, '').replace(/\s*\(.*$/, '').slice(0, 40) ?? 'not held ' + e.fingerprint.slice(0, 8))} (${e.use.terms})`).join(', ');
+md.push(`- Most named by Terms: ${top}. *Counted.*`);
+md.push(`- The kit holds ${kitHolds.length} of them (it holds only its eight stub cMIPs and its control cMIP); ${byHand.length} were applied by hand in the hosts' counts; every other answer resting on them is "unchecked". *Counted, from the kit's code and the counts' own lists.*`);
+md.push(`- Known starting points: ${ptsFound} of ${P.points.length} found (section 4). The rerun's seven forked entries: ${P.rerunForks.list.length} agreements with a fork of versions and one resolve each. *Traced.*`);
+md.push('');
+md.push('**How to read the tables.** Fingerprint: as named in sockets (a spec hash, or, where marked, the act id of its text, or the SHA-256 of its opening sentences), first 16 characters. Plugs into: the sockets of the Terms that name it, read from those Terms, ×Terms acts. Use: Terms naming it / assents to those Terms / distinct signing identities (Terms, assents, K7 Statements, acts under it) / windows of those signers. Built on: acts naming it in full other than its own use, and cMIP texts citing its fingerprint or text act by an 8-character prefix. Kit: "by hand" where a count applied it, else "unchecked". Earlier: drafts it says it replaces, and lower drafts of the same title by the same author. Grounds: fingerprint, use, built on and kit are **counted**; the author\'s window is **traced** (the tray that carried the author\'s acts, and the window\'s own reports naming the identity); the category is **inferred** (from the title, by the table in `4-listing.mjs`).');
+md.push('');
+md.push('## 2. The five categories');
+for (const [c, name] of Object.entries(cats)) {
+  const rows = L.filter((e) => e.category === c).sort((a, b) => b.use.terms - a.use.terms || (a.title ?? '').localeCompare(b.title ?? '') || (a.draft ?? 0) - (b.draft ?? 0));
+  md.push('');
+  md.push(`### ${c}. ${name} (${rows.length})`);
+  md.push('');
+  md.push('| Fingerprint | Title (draft) | Author (window) | Published by | Plugs into | Use T/A/S/W | Built on | Kit | Earlier |');
+  md.push('|---|---|---|---|---|---|---|---|---|');
+  for (const e of rows) md.push(`| ${short(e.fingerprint)}${e.namedAs !== 'spec hash' ? ' (' + esc(e.namedAs).replace(' (not a spec hash)', '') + ')' : ''} | ${title(e)} | ${s8(e.author)} (${e.authorWindow ?? '?'}) | ${s8(e.publishedBy)} | ${sock(e)} | ${use(e)} | ${built(e)} | ${kit(e)} | ${earlier(e)} |`);
+}
+md.push('');
+md.push('## 3. Other areas');
+md.push('');
+md.push('One line each, so that the three catalogues meet. *Counted, category inferred.*');
+md.push('');
+for (const area of ['other: DubPay', 'other: DubWeb', 'unplaced']) {
+  const rows = L.filter((e) => e.category === area).sort((a, b) => b.use.terms - a.use.terms || (a.title ?? '').localeCompare(b.title ?? '') || (a.draft ?? 0) - (b.draft ?? 0));
+  if (!rows.length) continue;
+  md.push(`**${area.replace('other: ', '')}** (${rows.length})`);
+  md.push('');
+  for (const e of rows) md.push(`- ${short(e.fingerprint)} ${title(e)}, by ${s8(e.author)} (${e.authorWindow ?? '?'}); ${sock(e)}; use ${use(e)}; kit: ${kit(e)}.`);
+  md.push('');
+}
+md.push('## 4. The known starting points');
+md.push('');
+md.push('*Checked against what was decoded, by `5-points.mjs`; each is traced (the acts named).*');
+md.push('');
+md.push('| Starting point | Found | What was found |');
+md.push('|---|---|---|');
+for (const p of P.points) {
+  const what = p.entries.map((x) => x.fingerprint ? `${esc(x.title?.replace(/^#\s*/, '').replace(/\s*\(.*$/, '').slice(0, 50))}: ${short(x.fingerprint)}, act ${s8(x.act)}, ${x.terms} Terms` : x.terms ? `Terms ${s8(x.terms)}, body ${s8(x.bodyCmip)}` : `text ${s8(x.textAct)} "${esc(x.title).slice(0, 60)}…"${x.termsNamingItsWords?.length ? `, words of Terms ${x.termsNamingItsWords.map(s8).join(' ')}` : ''}`).join('; ');
+  md.push(`| ${p.point} | ${p.found ? 'found' : '**not found**'} | ${what || '—'}${p.note ? ` *(${esc(p.note)})*` : ''} |`);
+}
+md.push(`| The forks and resolves of the rerun's entries | found | ${P.rerunForks.list.length} entries' Terms each hold two versions replacing the same version and one resolve: ${P.rerunForks.list.map((f) => `${s8(f.agreement)} (resolve ${s8(f.resolves[0]?.act)}, tips ${f.resolves[0]?.resolves.map(s8).join(' ')})`).join('; ')}. ${P.rerunForks.totalResolveStatementsDecoded} resolve Statements decoded in all. |`);
+md.push('');
+md.push('**Everything else found** is in the tables of sections 2 and 3: every entry not named above.');
+md.push('');
+md.push('## 5. Not held');
+md.push('');
+md.push('Fingerprints named in a socket, or as the spec of acts, whose text is not held in `_research`, with the acts that name them. *Counted.*');
+md.push('');
+for (const e of L.filter((x) => x.held === 'not held')) {
+  const ids = e.namedByActs ?? [];
+  md.push(`- \`${e.fingerprint}\`: ${sock(e)}; use ${use(e)}. ${ids.length ? `Named by ${pl(ids.length, 'act')}: ${ids.slice(0, 12).map(s8).join(' ')}${ids.length > 12 ? ' … (all in the JSON)' : ''}.` : `Acts under it signed by ${pl(e.signersUnderIt?.length ?? 0, 'identity').replace('identitys', 'identities')} (${(e.signersUnderIt ?? []).slice(0, 5).map(s8).join(' ')}).`}`);
+}
+md.push('');
+md.push('*What the reports and texts say of them (traced, not counted):* `2d7062e9…` is the SHA-256 of one Terms act\'s own words, named again as its body cMIP: no cMIP text stands behind it. `53b1b4be…` (the stand-in lodging spec of Postmark\'s place), `e8891459…` and `bc39bda6…` (the place\'s record acts) are specs of acts, with no text held in `_research`.');
+md.push('');
+md.push('**Names used in reports and matched to no held text**, in two windows or more (counted by `4-listing.mjs`): ' + unmatched.map((u) => `"${u.name}" (${u.windows})`).join(', ') + '. Anchoring draft 8 is a genesis-repository text, not in `_research`; no text of buyer by assent draft 2 or public flow draft 2 is held.');
+md.push('');
+md.push('## 6. For the MOR lead');
+md.push('');
+md.push('Evidence that touches the lead\'s questions; listed, not judged.');
+md.push('');
+md.push(`- *Whether named signers and buyer by assent should be the grammar's default:* ${P.lead.defaults.acts.map((a) => `text ${s8(a.text)} (${a.termsNamingIt} Terms, ${a.assents} assents)`).join('; ')}. They are the two most named cMIPs of category 1 and the kit holds neither.`);
+md.push(`- *How assents to replaced versions, resolved forks and in force at a deadline were counted:* resolves in the rerun's entries ${P.lead.forksAndResolves.resolveStatementsInRerunEntries.map(s8).join(' ')}; the fork tips ${P.lead.forksAndResolves.forkTipsInRerunEntries.map(s8).join(' ')}; ${P.lead.forksAndResolves.assentsToReplacedVersions} assents name a Terms version that a later Terms act replaces (ids in \`listing-agreements.json\`, \`forLead\`).`);
+md.push(`- *Postmark's place's role in ordering acts:* the place's specs ${P.lead.place.specsOfThePlace.map((p) => `${s8(p.spec)} (${p.acts} acts)`).join(', ')}; the hosts' counts order entries by its records. This listing orders acts by the postman's log instead (section 7).`);
+md.push('- The thief\'s valid rotation and "exactly these acts": nothing in this listing touches them.');
+md.push('');
+md.push('## 7. Limits');
+md.push('');
+md.push(`- **Feed order** is the first time the postman carried an act's exact bytes (\`postman/log/carried.jsonl\`, matched by SHA-256); ${S.actsWithCarriedTime} of ${S.distinctActs} acts have one. The rest (genesis acts sent otherwise, the place's records, acts held only by windows) follow, by source and position. Arrival at a relay is no signed proof of time.`);
+md.push('- **Texts are matched** by four fingerprints (spec hash with the act\'s signer as creator, kinds 0 to 3; the act id; SHA-256; MOR\'s work hash) and, for files, spec hash with every identity that signed a text or Agreements act as creator. A text published by one identity under another\'s creator name, or with other bytes, is missed.');
+md.push('- **Windows of identities** come from the trays that carried each identity\'s acts and the windows\' reports; an identity that only one window named but another window\'s tray carried is given the tray. Public windows played many people: their reports do not name every identity.');
+md.push('- **"Built on" by prefix** counts 8-character prefixes in cMIP texts: a prefix shared by two hashes could miscount (none was seen, not checked exhaustively). Report names are matched by title stem and draft; short stems ("split", "signed credits") shared by several authors are matched only with the author\'s window name, and may still mix.');
+md.push('- **Categories are a reading**, by a keyword table on titles: a text whose main task is money went to DubPay even where it also settles a dispute (escrow, home bond). The next wave should read them, not take them.');
+md.push('- **Kit**: "kit holds it" is read from the kit\'s code (stub fingerprints, control cMIP); "by hand" from the counts\' own lists; a cMIP applied by a player by hand outside the hosts\' counts is not seen.');
+md.push('- **Machines:** the players were Claude windows. The shared shape of the titles ("cMIP NAME, draft N (task Kn …)"), the reach for named signers and buyer by assent, and the "free to use, copy and replace" lines may come from what they were told (the prompts, the notices, the kit\'s guides), not from need.');
+md.push(`- **Sealed**: ${S.distinctSealed} sealed containers were not opened; ${S.bySpecType['undefined/undefined'] ?? 0} private acts held without their key were not read. A cMIP used only inside them is not seen.`);
+md.push('');
+writeFileSync(join(OUT, 'listing-agreements.md'), md.join('\n'));
+// JSON: one entry per fingerprint, every count
+writeFileSync(join(OUT, 'listing-agreements.json'), JSON.stringify({ made: 'by 4-listing.mjs, 5-points.mjs and 6-write.mjs, DubLaw wave 2 session B; Nobody, allegedly', totals: { acts: S.distinctActs, sealed: S.distinctSealed, terms, statements: stmts, fingerprintsInSockets: inSock.length, inSocketsHeld: inSock.length - notHeldSock.length, entries: L.length, held: held.length, byCategory: Object.fromEntries([...new Set(L.map((e) => e.category))].map((c) => [c, L.filter((e) => e.category === c).length])), kitHolds: kitHolds.length, appliedByHand: byHand.length }, entries: L, startingPoints: P.points, rerunForks: P.rerunForks, forLead: P.lead, reportNamesUnmatched: unmatched }, null, 1));
+console.log(md.slice(0, 16).join('\n'));
