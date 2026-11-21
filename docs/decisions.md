@@ -22,6 +22,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **Back to the leads** (21 November, 13:41; relayed by the Dubsar Suite lead). After the windows' sessions were launched in a tangle, he: "I made a little mess, bringing everything back to the leads, re coordinate and then contribue"
 - *Arrived at (to check):* the work returns to the two leads; they coordinate again, and then the windows go on.
 
+**How prompts are shared** (21 November, 17:25; to the MOR lead, for every window). He: "I need a prompt to give all other windows about sharing prompts. Each prompt needs to be full, no segmentation. Before each prompt, state environment, and desired model. Repeat for each prompt."
+- *Arrived at (to check):* every prompt a window hands him is whole, never split into a common part and a part of its own; above each prompt the window states the environment it runs in and the model it should run on, and does so again for every prompt.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
