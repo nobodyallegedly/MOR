@@ -37,6 +37,8 @@ import {
 import { escapeControls } from '../../connector/src/words.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { DESK_SPECS } from './specs.ts';
+// Agreements draft 25 (encoding 2), read through the collective client's library; the web build replaces it (`web/agreements-25.ts`).
+import { draft25Item } from './agreements-25.ts';
 import { NUDGE_SPECS, NUDGE_TYPES, TEXT_ACT } from '../../nudge/src/specs.ts';
 import { Reading } from '../../nudge/src/nudge.ts';
 import type { Item, Kind, Received, SignedRecord, Sorted, Store } from './store.ts';
@@ -768,7 +770,7 @@ export class Desk {
           for (;;) {
             const page = await relayAt(hint, via).feed({ to: identity, after });
             for (const it of page.items) {
-              const item = await this.readItem(it.kind, it.item, identity, secrets, mine, hints);
+              const item = await this.readItem(it.kind, it.item, identity, secrets, mine, hints, rec.items);
               // Its own acts sealed to itself (the follow list, people cMIP draft 2) are not something it received.
               if (item.from === identity) continue;
               if (!rec.items.some((x) => x.key === item.key)) {
@@ -840,7 +842,7 @@ export class Desk {
     });
   }
 
-  private async readItem(kind: 'act' | 'sealed', bytes: Uint8Array, me: string, secrets: Uint8Array[], mine: Set<string>, hints: string[]): Promise<Item> {
+  private async readItem(kind: 'act' | 'sealed', bytes: Uint8Array, me: string, secrets: Uint8Array[], mine: Set<string>, hints: string[], earlier: Item[] = this.store.received(me).items): Promise<Item> {
     const base = { found: now(), sorted: 'new' as Sorted, answers: [] as string[], acknowledges: [] as string[], refs: [] as string[] };
     let act: Uint8Array;
     let key: Uint8Array | undefined;
@@ -957,6 +959,20 @@ export class Desk {
       } catch {
         // not a split this desk reads
       }
+    }
+    // Agreements draft 25 (encoding 2): Terms, a Statement or a report, filed as "other" and left unread
+    // until DubLaw's fix (fault list F20): read now from its bytes, checked by the core's checker, and, for
+    // Terms or an assent, whether the Terms are in force among the acts of draft 25 this identity received.
+    // `earlier`: what this identity received before, this refresh's items included.
+    const held25 = earlier
+      .filter((x) => x.raw && x.key !== d.id)
+      .map((x) => ({ act: unb64(x.raw!.act), key: x.raw!.key ? unb64(x.raw!.key) : null }));
+    const a25 = draft25Item(d.spec, act, key, held25, this.store.names());
+    if (a25) {
+      item.kind = a25.kind;
+      item.problem = a25.problem;
+      item.assessment = a25.assessment;
+      item.raw = { act: b64(act), key: key ? b64(key) : undefined };
     }
     return item;
   }

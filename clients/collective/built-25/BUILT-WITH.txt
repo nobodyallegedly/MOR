@@ -1,0 +1,21 @@
+The core library's WebAssembly binding (crate mor-wasm) with Agreements draft 25, encoding 2
+(core/src/agreements_new, the builders, the checker and the read-only grammar verifier), used by
+the collective client and Edubba (clients/desk) for the Agreements acts of draft 25 only.
+
+Copied unchanged from the players' kit of round two: branch claude/round-2-postman, commit 74739bb,
+folder tools/postman/kit/core (its own BUILT-WITH.txt says how it was built: on GitHub, scratch branch
+claude/kishib-agreements-new-scratch, commit e69f770b, from 66fdc5a, whose core/, wasm/, cmips/ and
+Cargo.lock are those of claude/agreements-verifier-2 at 45034874 and f1a13feb). The same .wasm file is
+clients/kishib/built/mor_wasm_bg.wasm on claude/agreements-verifier-2.
+
+Main's core library (core/, built into clients/genesis/wasm) does not have Agreements draft 25: until
+it does, these files are the draft-25 core for these two clients, beside main's binding, which they
+keep using for everything else. test/agreements-25.test.ts checks these fingerprints.
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+
+SHA-256:
+b6742603aa963ea71085dea14c72f276e2c2d5039e606694586e2850ffaab36a  mor_wasm.js
+ef178a13fbc947899674a322adbaf0758ebe4fd373eee2dc934b4f528ff64356  mor_wasm_bg.wasm
+63be1a5dd399ccca326e1077df1fefd5113ea6912ff6e2c2e97524754f3bbcf5  mor_wasm.d.ts

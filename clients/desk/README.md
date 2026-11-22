@@ -34,6 +34,10 @@
 
 `src/publishing.ts`: `prepareOwnership` as a collective returns `collectiveOwnership` (the constitution in force read by `assess`, blocked with "Nothing to sign here"); `preparePublication` appends `beforeSigningPublication` (with the owners' terms: the constitution in force, or the ownership agreement named); `prepareOwnership` appends `beforeSigning`; `preparePublicationEnd` for a collective signs the ending with `signAsMember`, objects `[[first, latest], [owners, owners]]` and the collective's chain, and asks the area's other holders. The `publishing work read` alias is gone (`src/ops.ts`). Tests: `test/publishing.test.ts` ("way 1 as a collective… its owners its constitution; its publication and its ending"), `test/round-3.test.ts` (every hop's receipt).
 
+## Agreements draft 25, encoding 2 (DubLaw, wave 3, 22 November 2026)
+
+*Record of work by Claude for DubLaw; the faults it answers are in `docs/dublaw/wave-3/D/fault-list.md`.* Edubba was built on the earlier Agreements (the MIR series, "Agreements draft 17" above), whose acts are "not this encoding" under draft 25 of Agreements written from scratch, which the second round ran on. An act of draft 25 reaching an identity was filed as "other", unread. Now (`src/agreements-25.ts`, through the collective client's `agreements-25.ts` and `explain-25.ts`): Terms are filed as terms, and every act of draft 25 (or report) is read from its bytes: its fields as written, the checker's verdict, and, for Terms or an assent, whether the Terms are in force among the acts of draft 25 this identity received, as the core's grammar verifier answers (provisional). On the web, such an act is said and not read: the draft-25 binding is not in the web release (`src/web/agreements-25.ts`). Edubba's own writers (claims, ownership agreements, publications, vows, grants, collectives) still write the earlier Agreements: the fault list's questions. Tests: `test/agreements-25.test.ts`.
+
 ## In plain words (round 8, F407, 30 October 2026): what is true now
 
 *Where an older section below says otherwise, this one holds. Report: `docs/suite-r8-report.md`.*
