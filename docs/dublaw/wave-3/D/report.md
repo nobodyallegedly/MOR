@@ -7,13 +7,13 @@ The stint's wish (Nobody, allegedly, 20 November 2026): "Current wish: extract d
 ## Summary
 
 1. Edubba and the collective client implemented the earlier Agreements (the MIR series, "draft 17" and nearby), not draft 25: 25 faults listed (`fault-list.md`): 17 fixed (eleven of them in the library only, the old writers left as questions), 7 left as questions, 1 not reached (the round's additions); 9 questions for the MOR lead.
-2. Tests: __ALL__. The new draft-25 tests: __NEW__.
+2. Tests pass: 173 of 174 run, 0 failed, 1 skipped (the round's real acts, out of reach), 0 changed. New: 8 pass, 1 skipped.
 3. The fix reads and writes draft 25 by the core library's own code (the kit's binding, from `claude/agreements-verifier-2`), never by bytes written by hand.
 4. Edubba now reads every draft-25 act an identity receives: fields, the checker's verdict, whether the Terms are in force.
 5. The collective library writes Terms, assents, counter signatures, contests, resolves and reports, each passing the kit's own `agreements check`.
 6. Not fixed: every old writer (claims, ownership agreements, publications, collectives, grants), which needs cMIPs draft 25 does not name (Q1 to Q7).
 7. Not done: DubLaw's round additions not brought in, and the round's real acts not read, because no folder on the Mac was shared with this session.
-8. Branch `claude/dublaw-w3-clients-draft25`; draft pull request: __PR__.
+8. Branch `claude/dublaw-w3-clients-draft25`; draft pull request: https://github.com/nobodyallegedly/MOR/pull/225.
 
 ## What was fixed
 
@@ -30,7 +30,27 @@ Q1 collectives; Q2 the body and update-condition cMIPs of Edubba's deals; Q3 whi
 
 ## Tests, and how they were counted
 
-__TESTS__
+Run on commit `2175d37c`, each client's whole suite (`node --import tsx --test test/*.test.ts`, with `MOR_CHROMIUM` naming the container's Chromium, since the tests' default path names a build this container does not have):
+
+| | Before (main, untouched) | After | Failed | Changed |
+| --- | --- | --- | --- | --- |
+| collective client | 46 of 46 | 51 pass, 1 skipped, of 52 | 0 | 0 |
+| Edubba (`clients/desk`) | 119 of 119 | 122 of 122 | 0 | 0 |
+
+The new tests (9): in the collective client, 6:
+- the binding's fingerprints and spec hashes;
+- the kit's 6 worked examples plus the offer they need, read to the same fields;
+- 9 acts the library writes, each passing the kit's own `agreements check`, with `previous` and in force by the grammar;
+- refusals;
+- old acts "not this encoding";
+- the real-acts sample, **skipped**.
+
+In Edubba, 3:
+- the worked examples read to the same fields;
+- the web stand-in's spec hashes;
+- Terms and an assent through the program, read, "not shown" in force without its own assent.
+
+The real-acts test was run once against a feed page of the shape `_research` holds (42 kit-signed acts): 36 found, 2 drawn by its rule, both read as the kit reads them. It has not met the round's own acts.
 
 ## Limits
 
