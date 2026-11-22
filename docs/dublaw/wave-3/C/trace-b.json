@@ -1,0 +1,2705 @@
+{
+ "made": "trace-b.mjs, DubLaw wave 3 session C",
+ "seed": 20261122,
+ "rule": "see header",
+ "traces": [
+  {
+   "why": "most named",
+   "fingerprint": "5516c238d6a0a14ff4566990db06cfbae60106a2282d3b1d7aa0e9761e0cd4a3",
+   "b": {
+    "title": "cMIP public flow, draft 8",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "762c0b4cf173f058f1c66ff38267de2fd997000fcf9597360b775339daa37f8b",
+    "publishedBy": "537b6390d73bd4357a7caae4be1495f71a8d0c46e4b783520905126a5507ad17",
+    "sockets": {
+     "K8": 115
+    },
+    "terms": 115,
+    "assents": 256,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 62
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "537b6390d73bd4357a7caae4be1495f71a8d0c46e4b783520905126a5507ad17",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "762c0b4cf173f058f1c66ff38267de2fd997000fcf9597360b775339daa37f8b",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/dubweb/acts"
+      ]
+     }
+    ],
+    "termsNaming": 115,
+    "socketsByKind": {
+     "K8": 115
+    },
+    "sockets": [
+     {
+      "terms": "731807caee58df1685430932e393d2513cd15502555c27c43a5dee1d00c380c6",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "ce0857c487d070addc01236c242fe15e245aca0d251120c48cd4311ada4a132e",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a25b23bb45cc7533c806d99de8fbff67a12f4789c1132a4ca65ffe8abf139c72",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "267913e64c8f61fd53349a61e6543b1118526bcea09ce86f2816ad7c8f50356c",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fe6ebf2aaffc3c223c5e7b266c61bdc792a5bd2474ff8ae218f46938a50c3acb",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "41ee2e7dcd63964cc5e1b4c4b2931bfd3b0cdc2c3e2389a3703d6dc21f69ad20",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "81d42e97a0ce191e575067c19bc144e26ea3a89b368a072faf1f618bedefab6f",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "ebcc0263df32e85fbbb4f7a4be2677c56907f4cf7d3b3dc5d308c451c7069ca1",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "f751766097a563ac7e82a9adfcf7dc6245375651556a03adcfb5d28e818a68c7",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "764211a91df2aaa0158c5d8cf70f5ec318bc4f254ac85c69af287bad6b4d4483",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4bc148bc58f06756cdcac4179f3d781e1b177f338d481a6ceb5fc906752580f0",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fa088129ec86f227779319685253288bd64947a7dc22488cbf61e11a30b3e4fd",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a04b34a34d4d9ad8287b608c80a31a7f396861314b0e363ee43cc9d7c36f9bbf",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "92cbccdfda1427de1011db7edb46cca774d1c2dd7ede73e56b145db2d1323335",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1951c37becd25ab167f44b20124a0c4697701ebdbf888ad365f426a973fa0bb4",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5362a0fbcd0c5dbc136c4515515d5a9e119f6a74e89eaa01b5633c21dde0397c",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "39b56acd4a51df5bcd4e2daa740fca74285c8278a96d617b44173b7d257d1196",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "813a4a43f6dea0891b2f7b2ec4a428fc8532dab82ca883205ee7da60d92ba2e5",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "b4020d8c9e851ea032cb3e9c98fd10225a8679041ee225cfc9afecea5884b9e3",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "086164855348a549b4a5a3dd65b67c2583f364244659396b985bb9c648517d1b",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "530e0122127b68e9570438aa2c2c86aa634efa93190acd8f57edd34dfdcd6915",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "e9aec80aec536829e81484c4ea65277bd3bb7c8ea06335af03360ab4e7ea8e8f",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9c6c8564a079af9dcd0eeefccedbfa1f0df00b94143645e5f49a2abe2f263360",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1239ad3dce6b0e9e495011322cc007d49d2761ed931ad04f152f9896cc209f28",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "83af2ed325a072e5e6dec7bbd694d246500dca2d666f2f3e3cc2bf31106ab060",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "d4aeb70ff89470ad11416df00efdf3d68d38f00f3d8af5421cdf4fa74118c919",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "c931e26fc89d15f9888672628fcdb829bc95cee0b4e285e4bdc914633df5925a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9d6d338469d2eacc8d98dc40c572340e6d0d7498a0dbfdaf1bfad888f26114df",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9939040e3974e3a18be2088b6b00ebdacd64d2527af598e8073cc4734c478ba8",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4409dc2a80717675ca7d333b20dcae522b411e3d0e9777a5397e472066da6d6d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "ef5cd9da0db72ed7fa4f6fb2a317342a8df160aeb54296fe50af3ed9e1827389",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "203d8e3138fd71604d1bdfaadafe64e7ba0698857f72e618b8749b395b8a5807",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "d6ed8cac2285a23ebe202c188c6bf70d1db88e9f495c6d01abd8f1a45df7b382",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "dca7dea7afa82bc0414fd4640b7a79deb3a225d0e7cfb7e9a11c6eec1970e1ef",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "bf9e827801fb75073942f6ab6afb183020c8be76868965446db96003972b8479",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "aea7ca098a773166f6868ea41656140950eb3f28e150b326a73c5c7e12a255c7",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "c1d2526f952fe6144b99184bc36170bcf71eee465422f14f31cfa2cf57e15868",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "535e8c8a51fb53c9315b993feb045bcbb15e8b6778a942d3d44ded190fb6313b",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "729ca3e79e6107925a8dada2ac67d83e2f669804fa699bf57dbaab2dca4db088",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5629d9e25affe9b328e4e3315b8c694de11bda6e10980633d920fdd28547333b",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "d2020b61922a9a5f6853c64e98682c7a6724526290be0bfd4186f045d30ab395",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4b872e241154da2b68e37481c8d83764b3adb59f311aabc72d8861f57ae67e36",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "64cf019c0f20a1aeabad7b914c96870be46fc66ed8c48f322aee019893b5796e",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "aa9f0375de17210090f2422a3ebefc62856b59937d9eb8855497cd60b9591e25",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "edec1f7eb35603592f1c2e7c151ff59f744dc790d8908d7b961a1b095bee0e38",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "575ee818bd6ccba1c0052cf895146a32f2a15834ca1ec65802c23d56b81d2313",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "397ffaf412f9f15a68ea72a61304f977ef3e1d6b72e1e0903acf1aa8c41ba79d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "d4ec1fdf23ae71653f0c87170749e8f56df1f014890ba14e008063a7fd1ca9e6",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5d1f999c0850f58f5c2f2730e642661428926fb574eceb0a73bffc1bc8a0bc3a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4661c9d506063d8e2e624677d1d48bd46b800b75aeb5c3e77e1048212b6dbde7",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "647c6d0b39109bd31f82729afb0f4bdb93d488395488d4a574a22a9a1ef87ecd",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fe1403bcb52a3de8b63667728e949cd9e64f84536522440fbb4093b3bd72fd09",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "b07b8741a576fe0769f364abc99b3c945193b8dcdd44492b0c289ab4857a74df",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "67fca440ae780aad85cc13a90a322a4dc903437ba2bcf2ad7878be3b3e56016f",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "f0152013c2ca8534525ccc8bd0ac7ad68fc5b8addbfe91065209c1e10ad0b450",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1963dd5767a205105dac0d2eac38ec08cc27b43c831948dae8539e0d6e983ed0",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "52c31caf4a746227c6a5349f98ec6506934e57f491adb6dbae87d2f83a4fbc6e",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "45c2bc3d209110d4b53797c3882efb08732a4ff590e9b75a8800bdf43e9cd053",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "795859eefa318092cdcd0278010ee9d5bf4e9daa52fe3af92f332620c402b6ba",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a63638f2efadd8afe47abe553a926574200e3f8109fc895be838c6ace3d064bb",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "6bce2dba5af0740093751bcff46334d68d07113ba22500a27c35b9293563462d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "58e7fe403be6219908757f178790db15d7248b3ac7dd67d8508cff8dba13be80",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "616879a8eb96e4a8ff0a55a901fa88fadd8099a48957efd071cead205aad3dbc",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "db3ce515529dee34a33639b4ee1ef659b13fabc5523e0d42d63081ce3302a76a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fd3b7ae4ff2530ece051d3a65b67d2619c9813993a6e2e4cf49a28c72d2d1cab",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1086401336ddfb4971c3b0486f982fa8e0674329aaa305db39e4fe092f0b94ac",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4818455632ce31e9ad89fba445bfa8f5c9b1530e4a109e71ab300fb384f0826a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "b6b9fa19844853836577b58393e7ab8c81abc5781269a2915fa58443305fc687",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "ca22d7888a25cb46c63f97f30624572187c8b7dae03514f8f73046b2c958e7e7",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fddb0fd10c4e4e17fc5ea9e66e09be28dfde9a8ec75e72649ce349937e20ce1b",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5b9e8c91db1a35e1ea2e2509cc9b965920e0852d8f1f0d5f4cdce2660b0421e6",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a2e92de5d7645af427019d9a3b9ff9ce2f604d00ce1d9fe6f5d105ad0fcc6618",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1f9d26adad980077ea5fdf20f896d0cec3e4bd03e9ad44020c4077ce7b6c8c95",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9a23b5c35131cbf91907ec829ee06d3e439398a4129ffb73d00d52733585b38b",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "7349d438743f98bc11a4d2526074e0e08140e90b58f0e235fcc22f17ed1820f4",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "f9c9ea5bda32bb44b58d8804ddd206831ed5601e47d729819ad962eee6639256",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4faaf2afa57c2cef1981fc1c7bfa1f743ed5400a1ba1dc45566bf23d4e9ca46a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9e000f05350035c418eb357c8e21d7549dcf5c95dfe282af6e8d3b1cc3e0bbf6",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "24c296d421776dbbcba32b8699e060a63eacb809cac219b772540392785639ac",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1fc5e2e8a892315d853439839d1c81c87b15015cfba16b75a4cef0ef49d96a12",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "b55f7c11a1c2d14d249c280081a3794bcbd961d8e7aebb241fb51972b0fab1fa",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "41beaf8f6d102cab5fa58b9d6d4b57ecd5c1bd3fee4cb2a9f55c41eaffb6bac8",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "7a63e100368d5e5a79fde994896b510c35783eced122e97c60d9a5b07505e3fc",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4c797c6ac7224e43128e6d85a2df0dbc90da23e890db34d70ff1d41a32e0fbdb",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "e3666b29f3a8c0bbc4b1475366457e90cac31ae9551100627cd69b7c102515a3",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a8530333a1852e4112a1b3c98b91d97d15ddea220bd8b05a87996afdfc4fd779",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "87c27b0bbbf0bfaf2241f6e06689ebbe92586a52fd3a72df8698d1b22bb88f18",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "190e16866f9f6bcb57410fc7921e16bfa47ad79a652fa4a07e1ea73f402dda8c",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "ebdd4d7dad1ddd5d83ab9fcdb74a04a1e682b40b73b68cc92f8a5fa6c89e092a",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1d63199d7483c506c7145b824c3a5b94f48e0fe42cd3d50df33ed52dfbd2a936",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "2d5f2ab8cbcd8f762c23cf55a3a92fd211ae529cfdff258f7d2e96a69cd33b54",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "8fef8392c8d62c3f2001498a04f208460941d1cba36f5a8ca0dd56d095e99e08",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "e1549c12b4a419a92fedb129d26781738ce461f1c784ff29b9127df216465f5d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "94786d1a7b46e46839007c275189a47dceb6aa50799a0fd0541d59db19696a48",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "07d6d94977b34e93cea0c13a06dbf256d57bdc9519be3af132b1d9d64a01a136",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "4caec95c877c5e2711ed8727712e7248090a17e830ed6176bd61ef8d1851fa95",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "bba999640ae7b0adb9e4cdc25653db6a1c032149193f023c2ce93c546e4b7000",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "0ecccbf17f96a398361c1452217526671cd70d7ee9e0e6b5fa1480f71bafe761",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "1834aea29d9b2052bf8170514e7a3ccc80e62c85521c527f65bdd214c52e9574",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "599ca804760d9e69c7fc1bf9aedb11cd8b79f03cefe048a5c1df73b9602c5c1c",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a10e95edb06e61f179189bf0aa84216de1ef2e2e9b91be8ad78d229f9c545efa",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "a73151f554d4c398e34d105bfbc63b753d2af5debc39d88a9c24aa87e593aa25",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "f662f636581ccc81a26e71ed34fed01f6f59dcff63731ba5293eb4de585404ee",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "2dbe6373e17024eeb93de19cdc7f68aea0297c9820e61308daf62fc0aac5fe2d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "930cfca2e021162113eeecdf660ea91d0293b4de7ede0e6931a96436af8dbeae",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "3aea4737bdabc62c9f5acaa1830b6befb0b0e6dc621b44601aff1fcf536bb1f0",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "fdf6f358cc90287097b577c46798c149107dcd688cf0732c42b9c1877afe6e00",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5a9fd25c906d4790a0fd8457de4e26a159297fcc11b0387babf049748f9caca9",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "5ff980068575e6d8564fcbf5da9b5daf481bf9a7b5e1e0a39cb4a20cd4a8ef37",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "321b65fba2ee7fc9739e1bbf45e51fda634705b5186e4b518b384f868025ce4d",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9c7a0de1b00d18061fb09098c71531b1c0c8d2932fb8d12d7e10838956cc0296",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "9af7561744b5f86be82ae92035deccd48434e4d0087c3f919d53a6c7eb757e96",
+      "socket": "K8",
+      "at": null
+     },
+     {
+      "terms": "e5529ff6d0c6f7df678e0a77b189d2bd2ff314888a28e97378342d251d9afc67",
+      "socket": "K8",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 257,
+    "assentsByTermsHeldOnlyOutsideActs": [
+     {
+      "act": "82452b2eec785d7b8bf0a6901a55cefddbe9fd7714317c04a194bcb6d300f49c",
+      "where": [
+       "file:windows/followers/build/vote/UNPUBLISHED-duplicate-assent-82452b2e.mor"
+      ]
+     }
+    ],
+    "assentsByTermsWithoutThose": 256,
+    "assentsByRoot": 284,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 62
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": false,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "most named",
+   "fingerprint": "61bcdb5b15c282e81a5b822c0d1c6c704af0df360ae98189e63e9715f7114528",
+   "b": {
+    "title": "Counterparty plain-words body, version 1. The words of Terms that name this cMIP in body (task K1) are read as written, by people, in English. They give no part",
+    "namedAs": "sha256 of its opening sentences (4)",
+    "held": "text act",
+    "author": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+    "publishedBy": "ee0fd12101c9f66ffa2213e865f0b109fbe2212953d54f4db1c59ee29456e681",
+    "sockets": {
+     "K1": 100
+    },
+    "terms": 100,
+    "assents": 221,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 96
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "ee0fd12101c9f66ffa2213e865f0b109fbe2212953d54f4db1c59ee29456e681",
+      "how": "sha256 of text to sentence end 4",
+      "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:stall-home",
+       "feed:turnstile-home",
+       "db:dubsar",
+       "file:windows/counterparty/acts",
+       "file:windows/public-creators/acts"
+      ]
+     }
+    ],
+    "termsNaming": 100,
+    "socketsByKind": {
+     "K1": 100
+    },
+    "sockets": [
+     {
+      "terms": "c2df01df0b5a8c7637a7492ad5eeb0e5d75e305e10d68cb81f91f5a3cdca33d1",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "2b30f67e1b7baf1ca1acea4d3cf301d2f116697880b114c11ec778e60950c64f",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "40dcb4ccd1f6293e31a92ad1c5f779e3cce2cd489fedd80231c8f074f5bd5937",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "cd6dd13a5e4af7f08587a1a384d95fac6b4bc944d57d727a43cec4200d3f9cba",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5f5dfa91851d0d20931f6c52d2770f295fd74881ba14aa9642eafaf479d8cdd8",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "d4523f65ef1ed86aee4c40fc87f6bf779417e86310e76a319333acb1cd947ca1",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "81cb3b50736c3129e57777cc02399ec99ab7d6ffc1edb039305c7bb267e50991",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "8321fbce8bc876ec6962ff57f455fd33b3cc7d16c55d733c9ef166629d770175",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "193a160291336de243a5a0d1a0993945c4e27be6e4f1aab26874bf8b75e39726",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "59d7eadd466c0833041b394e69e1438048bfdf97ef7271537871a5e34edc333e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "c1608aa6d2756a467436d6ff24f2383e830f149785758eafc0d9789356ed71e3",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "01898ee9aab15e114f4abde4480ae9c06bf9c4976949f962211704ee4dd1395a",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "f007bdeb153e40fe346c88ff30ff800c08025587a8c9414e2192d49be8b91e58",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "e7297c4ce6a59142edd02b75b0740913282c3285fa9bab8c9483e88df7fd7485",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "f4c00b82187df88334cbb8f1381280cb42116aebdb0149d6120f7cfa219aaf96",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "8fe5503d81b4dc1bbbb96d659d61b9c8b5504203771e7e19dd30cc5396667115",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "99ad64b2c194d996726a71cb52a24fb04ce095af138bb2ce0dd0b12217f01dd7",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "c8a6fe5fee0ba195b20d55010694f728f770c4eeaea659b1c18bece07cbda020",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5d42a349b5dfdf99442f4c4bdaffb5475b2031ded413e5436cda44aa05a9a7e8",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "ae5a0c55612319f02bb86e59cdba71e1176da01dc8683693ed331a161fe4eb89",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "d4fbd1e6e93dcdd8568967e70fdb057189877d34d16c8083380ea8fa99be406d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "82a722c14c47a91f41903343ee5febdc030bd075e3bcdcbeca0bfbda5251b74e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "0cbc7a6c0be02171200d550ab08384957c06d491067edb1bf2722806705bd99e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f335bb4118",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "813a4a43f6dea0891b2f7b2ec4a428fc8532dab82ca883205ee7da60d92ba2e5",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "b4020d8c9e851ea032cb3e9c98fd10225a8679041ee225cfc9afecea5884b9e3",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "086164855348a549b4a5a3dd65b67c2583f364244659396b985bb9c648517d1b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "530e0122127b68e9570438aa2c2c86aa634efa93190acd8f57edd34dfdcd6915",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "e9aec80aec536829e81484c4ea65277bd3bb7c8ea06335af03360ab4e7ea8e8f",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9c6c8564a079af9dcd0eeefccedbfa1f0df00b94143645e5f49a2abe2f263360",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "1239ad3dce6b0e9e495011322cc007d49d2761ed931ad04f152f9896cc209f28",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "83af2ed325a072e5e6dec7bbd694d246500dca2d666f2f3e3cc2bf31106ab060",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5a58f2c7fddb0e0fab39dc6c018a9b9dec7519d8ef4044b4c0693d7a31131da2",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "64cf019c0f20a1aeabad7b914c96870be46fc66ed8c48f322aee019893b5796e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "aa9f0375de17210090f2422a3ebefc62856b59937d9eb8855497cd60b9591e25",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "edec1f7eb35603592f1c2e7c151ff59f744dc790d8908d7b961a1b095bee0e38",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "575ee818bd6ccba1c0052cf895146a32f2a15834ca1ec65802c23d56b81d2313",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "397ffaf412f9f15a68ea72a61304f977ef3e1d6b72e1e0903acf1aa8c41ba79d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "d4ec1fdf23ae71653f0c87170749e8f56df1f014890ba14e008063a7fd1ca9e6",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5d1f999c0850f58f5c2f2730e642661428926fb574eceb0a73bffc1bc8a0bc3a",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "4661c9d506063d8e2e624677d1d48bd46b800b75aeb5c3e77e1048212b6dbde7",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "660721491929de75ae32ff8d2898bafcf1a4f49148ae059250fd4d6a1db7f245",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "825b834deabfa35c3c9cce6cd1dd67b9e6445e1c41c1660df82e1af816e0245b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "51c0ec8b356a28a729ebbf4561174e668230819e890cd845df50b7c55b9c1fdb",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "fd4e44f158c846b7899c6055ac8a520e038cd405085c8e7fa18c76dcf01713ae",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "0f2c3e3422f5480172645d684afaa9aed7f91a454f9574f0827b2a11870f1ffa",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9f387d1d1959abaf7426fe8c84844f7d3f19e887b037e6ab06eaf256021adf73",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "ecc3dd70c9f452bf9b5fdef168de0ee8ed5f14cad5ba4861f416198a5da6f171",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "c3fed11941995b7d9fec302a317f4736b478736450f6314b5819b53a82427a6d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "efc32d8793bca884e3b9c737c98f195c23a3b2342338af33fe72149ed121887e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "f4a1f062c862e05a193ab81e61a062b6ed44de6ab184d2decea4e743cd404e58",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5bb191901dcc4d3c4d7acbd72d04b53d9f6cdac13c23c314fad310a15c78d996",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9bdea95dbe0b0118549e78a584a66fb766bd2f2c5be994ae1b73904bf0b8be5d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "dfa5f5362feff6a823f82f4ee5fdd9d8db1d28ba1452e3c243e94d9e917f2306",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "d3a15980acb3d6c481333b7dae5fb7ddc131a8143d35df0f78904415d06c80fc",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "341554157e75d4cd28e497fb3219718e6b1a775437f2978a947465e1cf552c1b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "8c6a360c91ced099c2b3f282df6e7be2cee3773b5bc4520862781a95db8323c4",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "2f0484d1e0d9f2e01adac37340065bb53d2db7078753a6818cbdf99ee862866d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "4ec2bf97ccdb96bc7c283b0fcd2a7808cf3cf648783901c032ab09e0aaba0907",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "10831dacd680d0dae8e3f2a340ed707e999eeea58705a972b763eda3b6c6448e",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "24c296d421776dbbcba32b8699e060a63eacb809cac219b772540392785639ac",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "b55f7c11a1c2d14d249c280081a3794bcbd961d8e7aebb241fb51972b0fab1fa",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "7a63e100368d5e5a79fde994896b510c35783eced122e97c60d9a5b07505e3fc",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "e3666b29f3a8c0bbc4b1475366457e90cac31ae9551100627cd69b7c102515a3",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "87c27b0bbbf0bfaf2241f6e06689ebbe92586a52fd3a72df8698d1b22bb88f18",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "ebdd4d7dad1ddd5d83ab9fcdb74a04a1e682b40b73b68cc92f8a5fa6c89e092a",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "2d5f2ab8cbcd8f762c23cf55a3a92fd211ae529cfdff258f7d2e96a69cd33b54",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "94786d1a7b46e46839007c275189a47dceb6aa50799a0fd0541d59db19696a48",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "4caec95c877c5e2711ed8727712e7248090a17e830ed6176bd61ef8d1851fa95",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "0ecccbf17f96a398361c1452217526671cd70d7ee9e0e6b5fa1480f71bafe761",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "1834aea29d9b2052bf8170514e7a3ccc80e62c85521c527f65bdd214c52e9574",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "599ca804760d9e69c7fc1bf9aedb11cd8b79f03cefe048a5c1df73b9602c5c1c",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "a10e95edb06e61f179189bf0aa84216de1ef2e2e9b91be8ad78d229f9c545efa",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "a73151f554d4c398e34d105bfbc63b753d2af5debc39d88a9c24aa87e593aa25",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "f662f636581ccc81a26e71ed34fed01f6f59dcff63731ba5293eb4de585404ee",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "2dbe6373e17024eeb93de19cdc7f68aea0297c9820e61308daf62fc0aac5fe2d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "930cfca2e021162113eeecdf660ea91d0293b4de7ede0e6931a96436af8dbeae",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "3aea4737bdabc62c9f5acaa1830b6befb0b0e6dc621b44601aff1fcf536bb1f0",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "fdf6f358cc90287097b577c46798c149107dcd688cf0732c42b9c1877afe6e00",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5a9fd25c906d4790a0fd8457de4e26a159297fcc11b0387babf049748f9caca9",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5ff980068575e6d8564fcbf5da9b5daf481bf9a7b5e1e0a39cb4a20cd4a8ef37",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "321b65fba2ee7fc9739e1bbf45e51fda634705b5186e4b518b384f868025ce4d",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9c7a0de1b00d18061fb09098c71531b1c0c8d2932fb8d12d7e10838956cc0296",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9af7561744b5f86be82ae92035deccd48434e4d0087c3f919d53a6c7eb757e96",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "e5529ff6d0c6f7df678e0a77b189d2bd2ff314888a28e97378342d251d9afc67",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "ce52dfc46e5928d4ae89b101d6ce4d2274fcb624e1a968e48f1dd56469965f48",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "789552185d612f0f45c98577013f932d4f4032457e0bbf6ff69a8a87bbabb78f",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "bb2cd2b94275bd96ef5defc5768414bce76bbb195c530b8ab38b10be641e43ce",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "4b4642eaead2525be191071b25e6bf9ecc17c3531f1ed868405e4c0dc97b230c",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "6f6500634c4b3f2784e8a84fae56bc01bed77cfbc5f9a7ec78a5ffe00feeb92b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9b660a341a83b39e867250da3a17a890db972b6f59b50dce9de5089d438920ea",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "caede5b536aa95ff0a6ba1d67dd6f8aa26e945b566e702d9a87a0925aa893a8b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "6b2736be297abe42c50d24f75b702b7bf8c908d4d6dd12016802b2cc896ad8db",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "b059f5d1e590a950333c004f13683603fedfc5e110886005a8f9444eafc7240f",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "5cdbc71144cf55305372b37ff95dad494bb02277d6b167dd12b695f13ea62772",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "9b82aa60c844f646aa3e5188e297170f4d275b2e48ad81a5a2198a34430b1486",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "f2a745d87096cd280cf448c8d3acceeaef9031ecc2a0bd9dcc252b44e2c5cc6b",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "8e316b5bd29c9abc8971e4134f3e238d98e7bc6670c92a8d7ac895ff2e220791",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "91235c82a8fbed602983e62bb3ed20eb5e376f805ef3fd3dfd14c272dede3298",
+      "socket": "K1",
+      "at": null
+     },
+     {
+      "terms": "dc5d37ad39978e5ac3a10912b1dbb12bbac82550d07551e967d4fc6818c41fde",
+      "socket": "K1",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 221,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 221,
+    "assentsByRoot": 221,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 96
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "most named",
+   "fingerprint": "ed7e3956354a73562105382feaffc2ccc067859d6f5a44fb5ab8870e710308be",
+   "b": {
+    "title": "cMIP named signers, draft 1 (task K2, in force)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+    "publishedBy": "d8a19d7d3c516534c1b0e135534fe1fc434aee10b0abee024c688dce86d0fd72",
+    "sockets": {
+     "K2": 93
+    },
+    "terms": 93,
+    "assents": 286,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 89
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "d8a19d7d3c516534c1b0e135534fe1fc434aee10b0abee024c688dce86d0fd72",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "db:dubsar",
+       "file:windows/dublaw/acts"
+      ]
+     }
+    ],
+    "termsNaming": 93,
+    "socketsByKind": {
+     "K2": 93
+    },
+    "sockets": [
+     {
+      "terms": "c3581c9c3defc1f376ff3ceb53ebabc6130f9952bd7862b6844e00365e7bf5ae",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e60681e68571f219165b37c5ee0d1d0b5a9d21d1e211ca308b9fd817ea592c3e",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4a49aac433e2c84971779355dfbe9cec8e36b38b7441f059810e2ecadf863b74",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "419d829da2d9d84814031a90f9f8ff9a0de325b91c8d3f63624c4cf133e1a990",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "41f4ce8886508c9faa76a444823623eb4c7607262c826ee264c4fc185fa5b1f4",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "2bf722d38dabf441ff282f1832c311c09810e64d162ed7b6f9d9ec1f88c006d9",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a6eaa5faada2b354c9af97e54b678a85a3185b32036c5244dcea327ffe64836d",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e9328c4796c0580e3c9cc6614d521e020e6fdb7d3272ea5ef190d2fd3ee11516",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "6b31f25d2ce9102e62feee88c80b13ce53a5f0f6d3821bc1619cda63bff3660d",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "731807caee58df1685430932e393d2513cd15502555c27c43a5dee1d00c380c6",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a25b23bb45cc7533c806d99de8fbff67a12f4789c1132a4ca65ffe8abf139c72",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "267913e64c8f61fd53349a61e6543b1118526bcea09ce86f2816ad7c8f50356c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "81d42e97a0ce191e575067c19bc144e26ea3a89b368a072faf1f618bedefab6f",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "ebcc0263df32e85fbbb4f7a4be2677c56907f4cf7d3b3dc5d308c451c7069ca1",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "f751766097a563ac7e82a9adfcf7dc6245375651556a03adcfb5d28e818a68c7",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "764211a91df2aaa0158c5d8cf70f5ec318bc4f254ac85c69af287bad6b4d4483",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4bc148bc58f06756cdcac4179f3d781e1b177f338d481a6ceb5fc906752580f0",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "fa088129ec86f227779319685253288bd64947a7dc22488cbf61e11a30b3e4fd",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a04b34a34d4d9ad8287b608c80a31a7f396861314b0e363ee43cc9d7c36f9bbf",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "92cbccdfda1427de1011db7edb46cca774d1c2dd7ede73e56b145db2d1323335",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "1951c37becd25ab167f44b20124a0c4697701ebdbf888ad365f426a973fa0bb4",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "39b56acd4a51df5bcd4e2daa740fca74285c8278a96d617b44173b7d257d1196",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4409dc2a80717675ca7d333b20dcae522b411e3d0e9777a5397e472066da6d6d",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "ef5cd9da0db72ed7fa4f6fb2a317342a8df160aeb54296fe50af3ed9e1827389",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "203d8e3138fd71604d1bdfaadafe64e7ba0698857f72e618b8749b395b8a5807",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "d6ed8cac2285a23ebe202c188c6bf70d1db88e9f495c6d01abd8f1a45df7b382",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "dca7dea7afa82bc0414fd4640b7a79deb3a225d0e7cfb7e9a11c6eec1970e1ef",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "bf9e827801fb75073942f6ab6afb183020c8be76868965446db96003972b8479",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "aea7ca098a773166f6868ea41656140950eb3f28e150b326a73c5c7e12a255c7",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "c1d2526f952fe6144b99184bc36170bcf71eee465422f14f31cfa2cf57e15868",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "535e8c8a51fb53c9315b993feb045bcbb15e8b6778a942d3d44ded190fb6313b",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "729ca3e79e6107925a8dada2ac67d83e2f669804fa699bf57dbaab2dca4db088",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "5629d9e25affe9b328e4e3315b8c694de11bda6e10980633d920fdd28547333b",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4b872e241154da2b68e37481c8d83764b3adb59f311aabc72d8861f57ae67e36",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "b07b8741a576fe0769f364abc99b3c945193b8dcdd44492b0c289ab4857a74df",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "2172e57686beaa1ba368acf413858accf32a6816492a4fc96c10c3b4d4369d5c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "fec22958914ce89caa94d3173902dae53a6fb2457a22aea62596718a5194d247",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e1975bda32e5ef828ac99b510dd5a483f4c16f8acd2c1ada8f936a354d5032d4",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "73065e6a05096b6bccc9b8e53df68e4c462ad77faa7b7653451b0ce24be48beb",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "5a706a74c1bdf187ec0712c6dd002aab461588a727bf21f727377e09654d7533",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "73db2ea4a912e60e54ebf3efc68072d93455aa65fb1a3b1174673f4dc38d64cb",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "0f2c3e3422f5480172645d684afaa9aed7f91a454f9574f0827b2a11870f1ffa",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "67fca440ae780aad85cc13a90a322a4dc903437ba2bcf2ad7878be3b3e56016f",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "47b4087c4333c22a81844df8d7972755920ea4aa2e3aefa98f7b0f75336c26db",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "2e75429a645aeb3f13ac9ff576b8ee68a603e1c77153586662ebf13cd6a4f763",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4e09c429912ce3ee98a8adce5e4351b7932f6fe76d14c6a34a76715b40d56f90",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "547d7dba0d481f1a6f1265d35867d29bdcc64d733db7b1af5e8eecabec2a4176",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "f0152013c2ca8534525ccc8bd0ac7ad68fc5b8addbfe91065209c1e10ad0b450",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "30844d0d4454fc645d4b667a2894f4a66014d08fb13b10b0639c845eaa8c884c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "5da7289e01760a186e19c4db8691b67537ef762abd40fff5b500d36f7cb95f1c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "52c31caf4a746227c6a5349f98ec6506934e57f491adb6dbae87d2f83a4fbc6e",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "45c2bc3d209110d4b53797c3882efb08732a4ff590e9b75a8800bdf43e9cd053",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a63638f2efadd8afe47abe553a926574200e3f8109fc895be838c6ace3d064bb",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "6bce2dba5af0740093751bcff46334d68d07113ba22500a27c35b9293563462d",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "616879a8eb96e4a8ff0a55a901fa88fadd8099a48957efd071cead205aad3dbc",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "50e9574df31481bc2b5f276fa78f53c0e1b0dc6ec94a4b09fb82daa9e4a1dbe1",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "baf8292cd223e95be16a1c8be88d9dd43218523ece21a8396f031fc172a44952",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "eddca3aa50654c497b43cf62cbb7d594d0b77c53d6f49a91c0b4b4f0da71f3a2",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "8c65cd8bde42e9c431b31704c797c9a34003d956531789d43a72453526c88a84",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "35e355f0d58a1d411f9e269eb513182a9d21f1d964729d62755f7ff70ed7c027",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e97f003ee437e11f0f20b04248cb9460b9ec5f104012c4ab29ec9afbc07c8dfc",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e0b3d737f40e97465ef947fdb89947e36f8969ccedc7832e7e21b06e663ba89f",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "99c8436c5ae696685b6847260c727e00f746f21f8aba6943af3963a4226959c4",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a22dea8a534519a60883077efc44354c215ac644f3546c1d3cee9cb0d10d2a1c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "db3ce515529dee34a33639b4ee1ef659b13fabc5523e0d42d63081ce3302a76a",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "fd3b7ae4ff2530ece051d3a65b67d2619c9813993a6e2e4cf49a28c72d2d1cab",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "1086401336ddfb4971c3b0486f982fa8e0674329aaa305db39e4fe092f0b94ac",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4818455632ce31e9ad89fba445bfa8f5c9b1530e4a109e71ab300fb384f0826a",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "b6b9fa19844853836577b58393e7ab8c81abc5781269a2915fa58443305fc687",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "ca22d7888a25cb46c63f97f30624572187c8b7dae03514f8f73046b2c958e7e7",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "fddb0fd10c4e4e17fc5ea9e66e09be28dfde9a8ec75e72649ce349937e20ce1b",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "5b9e8c91db1a35e1ea2e2509cc9b965920e0852d8f1f0d5f4cdce2660b0421e6",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a2e92de5d7645af427019d9a3b9ff9ce2f604d00ce1d9fe6f5d105ad0fcc6618",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "1f9d26adad980077ea5fdf20f896d0cec3e4bd03e9ad44020c4077ce7b6c8c95",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "9a23b5c35131cbf91907ec829ee06d3e439398a4129ffb73d00d52733585b38b",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "7349d438743f98bc11a4d2526074e0e08140e90b58f0e235fcc22f17ed1820f4",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "f9c9ea5bda32bb44b58d8804ddd206831ed5601e47d729819ad962eee6639256",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4faaf2afa57c2cef1981fc1c7bfa1f743ed5400a1ba1dc45566bf23d4e9ca46a",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "9e000f05350035c418eb357c8e21d7549dcf5c95dfe282af6e8d3b1cc3e0bbf6",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "1fc5e2e8a892315d853439839d1c81c87b15015cfba16b75a4cef0ef49d96a12",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "41beaf8f6d102cab5fa58b9d6d4b57ecd5c1bd3fee4cb2a9f55c41eaffb6bac8",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "4c797c6ac7224e43128e6d85a2df0dbc90da23e890db34d70ff1d41a32e0fbdb",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "a8530333a1852e4112a1b3c98b91d97d15ddea220bd8b05a87996afdfc4fd779",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "190e16866f9f6bcb57410fc7921e16bfa47ad79a652fa4a07e1ea73f402dda8c",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "1d63199d7483c506c7145b824c3a5b94f48e0fe42cd3d50df33ed52dfbd2a936",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "8fef8392c8d62c3f2001498a04f208460941d1cba36f5a8ca0dd56d095e99e08",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "e1549c12b4a419a92fedb129d26781738ce461f1c784ff29b9127df216465f5d",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "07d6d94977b34e93cea0c13a06dbf256d57bdc9519be3af132b1d9d64a01a136",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "bba999640ae7b0adb9e4cdc25653db6a1c032149193f023c2ce93c546e4b7000",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "0e995796c5650a11c0cbe3abd80e57089f21969f3756e0c19c37cb51b8f6e16b",
+      "socket": "K2",
+      "at": null
+     },
+     {
+      "terms": "b0c5f084f44f5f9752ee581f4dfe3d6a2db7d7d707254e9dc65148842866b150",
+      "socket": "K2",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 287,
+    "assentsByTermsHeldOnlyOutsideActs": [
+     {
+      "act": "82452b2eec785d7b8bf0a6901a55cefddbe9fd7714317c04a194bcb6d300f49c",
+      "where": [
+       "file:windows/followers/build/vote/UNPUBLISHED-duplicate-assent-82452b2e.mor"
+      ]
+     }
+    ],
+    "assentsByTermsWithoutThose": 286,
+    "assentsByRoot": 318,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 89
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": false,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "most named",
+   "fingerprint": "d47b432221e9fdeb2f66b506d3bd0f5f65f0da1b081dd7f3e65c13fff19270ec",
+   "b": {
+    "title": "cMIP buyer by assent, draft 1 (task K5, spot)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+    "publishedBy": "735c3cf8e8fdb90438ce80e16844ea9ef38ef526e1cd64f63128af159488e9b1",
+    "sockets": {
+     "K5": 79
+    },
+    "terms": 79,
+    "assents": 241,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 71
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "735c3cf8e8fdb90438ce80e16844ea9ef38ef526e1cd64f63128af159488e9b1",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "db:dubsar",
+       "file:windows/dublaw/acts"
+      ]
+     }
+    ],
+    "termsNaming": 79,
+    "socketsByKind": {
+     "K5": 79
+    },
+    "sockets": [
+     {
+      "terms": "419d829da2d9d84814031a90f9f8ff9a0de325b91c8d3f63624c4cf133e1a990",
+      "socket": "K5",
+      "at": "party 6"
+     },
+     {
+      "terms": "41f4ce8886508c9faa76a444823623eb4c7607262c826ee264c4fc185fa5b1f4",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "2bf722d38dabf441ff282f1832c311c09810e64d162ed7b6f9d9ec1f88c006d9",
+      "socket": "K5",
+      "at": "party 4"
+     },
+     {
+      "terms": "a6eaa5faada2b354c9af97e54b678a85a3185b32036c5244dcea327ffe64836d",
+      "socket": "K5",
+      "at": "party 5"
+     },
+     {
+      "terms": "e9328c4796c0580e3c9cc6614d521e020e6fdb7d3272ea5ef190d2fd3ee11516",
+      "socket": "K5",
+      "at": "party 6"
+     },
+     {
+      "terms": "6b31f25d2ce9102e62feee88c80b13ce53a5f0f6d3821bc1619cda63bff3660d",
+      "socket": "K5",
+      "at": "party 6"
+     },
+     {
+      "terms": "267913e64c8f61fd53349a61e6543b1118526bcea09ce86f2816ad7c8f50356c",
+      "socket": "K5",
+      "at": "party 6"
+     },
+     {
+      "terms": "81d42e97a0ce191e575067c19bc144e26ea3a89b368a072faf1f618bedefab6f",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "ebcc0263df32e85fbbb4f7a4be2677c56907f4cf7d3b3dc5d308c451c7069ca1",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "f751766097a563ac7e82a9adfcf7dc6245375651556a03adcfb5d28e818a68c7",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "764211a91df2aaa0158c5d8cf70f5ec318bc4f254ac85c69af287bad6b4d4483",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "4bc148bc58f06756cdcac4179f3d781e1b177f338d481a6ceb5fc906752580f0",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "fa088129ec86f227779319685253288bd64947a7dc22488cbf61e11a30b3e4fd",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "a04b34a34d4d9ad8287b608c80a31a7f396861314b0e363ee43cc9d7c36f9bbf",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "92cbccdfda1427de1011db7edb46cca774d1c2dd7ede73e56b145db2d1323335",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "1951c37becd25ab167f44b20124a0c4697701ebdbf888ad365f426a973fa0bb4",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "4409dc2a80717675ca7d333b20dcae522b411e3d0e9777a5397e472066da6d6d",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "ef5cd9da0db72ed7fa4f6fb2a317342a8df160aeb54296fe50af3ed9e1827389",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "203d8e3138fd71604d1bdfaadafe64e7ba0698857f72e618b8749b395b8a5807",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "d6ed8cac2285a23ebe202c188c6bf70d1db88e9f495c6d01abd8f1a45df7b382",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "dca7dea7afa82bc0414fd4640b7a79deb3a225d0e7cfb7e9a11c6eec1970e1ef",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "bf9e827801fb75073942f6ab6afb183020c8be76868965446db96003972b8479",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "aea7ca098a773166f6868ea41656140950eb3f28e150b326a73c5c7e12a255c7",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "c1d2526f952fe6144b99184bc36170bcf71eee465422f14f31cfa2cf57e15868",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "535e8c8a51fb53c9315b993feb045bcbb15e8b6778a942d3d44ded190fb6313b",
+      "socket": "K5",
+      "at": "party 3"
+     },
+     {
+      "terms": "729ca3e79e6107925a8dada2ac67d83e2f669804fa699bf57dbaab2dca4db088",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "5629d9e25affe9b328e4e3315b8c694de11bda6e10980633d920fdd28547333b",
+      "socket": "K5",
+      "at": "party 5"
+     },
+     {
+      "terms": "4b872e241154da2b68e37481c8d83764b3adb59f311aabc72d8861f57ae67e36",
+      "socket": "K5",
+      "at": "party 3"
+     },
+     {
+      "terms": "b07b8741a576fe0769f364abc99b3c945193b8dcdd44492b0c289ab4857a74df",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "e1975bda32e5ef828ac99b510dd5a483f4c16f8acd2c1ada8f936a354d5032d4",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "0f2c3e3422f5480172645d684afaa9aed7f91a454f9574f0827b2a11870f1ffa",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "2e75429a645aeb3f13ac9ff576b8ee68a603e1c77153586662ebf13cd6a4f763",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "4e09c429912ce3ee98a8adce5e4351b7932f6fe76d14c6a34a76715b40d56f90",
+      "socket": "K5",
+      "at": "party 4"
+     },
+     {
+      "terms": "547d7dba0d481f1a6f1265d35867d29bdcc64d733db7b1af5e8eecabec2a4176",
+      "socket": "K5",
+      "at": "party 4"
+     },
+     {
+      "terms": "30844d0d4454fc645d4b667a2894f4a66014d08fb13b10b0639c845eaa8c884c",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "5da7289e01760a186e19c4db8691b67537ef762abd40fff5b500d36f7cb95f1c",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "52c31caf4a746227c6a5349f98ec6506934e57f491adb6dbae87d2f83a4fbc6e",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "45c2bc3d209110d4b53797c3882efb08732a4ff590e9b75a8800bdf43e9cd053",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "a63638f2efadd8afe47abe553a926574200e3f8109fc895be838c6ace3d064bb",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "6bce2dba5af0740093751bcff46334d68d07113ba22500a27c35b9293563462d",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "616879a8eb96e4a8ff0a55a901fa88fadd8099a48957efd071cead205aad3dbc",
+      "socket": "K5",
+      "at": "party 2"
+     },
+     {
+      "terms": "50e9574df31481bc2b5f276fa78f53c0e1b0dc6ec94a4b09fb82daa9e4a1dbe1",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "baf8292cd223e95be16a1c8be88d9dd43218523ece21a8396f031fc172a44952",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "eddca3aa50654c497b43cf62cbb7d594d0b77c53d6f49a91c0b4b4f0da71f3a2",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "8c65cd8bde42e9c431b31704c797c9a34003d956531789d43a72453526c88a84",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "35e355f0d58a1d411f9e269eb513182a9d21f1d964729d62755f7ff70ed7c027",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "e97f003ee437e11f0f20b04248cb9460b9ec5f104012c4ab29ec9afbc07c8dfc",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "e0b3d737f40e97465ef947fdb89947e36f8969ccedc7832e7e21b06e663ba89f",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "99c8436c5ae696685b6847260c727e00f746f21f8aba6943af3963a4226959c4",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "a22dea8a534519a60883077efc44354c215ac644f3546c1d3cee9cb0d10d2a1c",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "db3ce515529dee34a33639b4ee1ef659b13fabc5523e0d42d63081ce3302a76a",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "fd3b7ae4ff2530ece051d3a65b67d2619c9813993a6e2e4cf49a28c72d2d1cab",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "1086401336ddfb4971c3b0486f982fa8e0674329aaa305db39e4fe092f0b94ac",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "4818455632ce31e9ad89fba445bfa8f5c9b1530e4a109e71ab300fb384f0826a",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "b6b9fa19844853836577b58393e7ab8c81abc5781269a2915fa58443305fc687",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "ca22d7888a25cb46c63f97f30624572187c8b7dae03514f8f73046b2c958e7e7",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "fddb0fd10c4e4e17fc5ea9e66e09be28dfde9a8ec75e72649ce349937e20ce1b",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "5b9e8c91db1a35e1ea2e2509cc9b965920e0852d8f1f0d5f4cdce2660b0421e6",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "a2e92de5d7645af427019d9a3b9ff9ce2f604d00ce1d9fe6f5d105ad0fcc6618",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "1f9d26adad980077ea5fdf20f896d0cec3e4bd03e9ad44020c4077ce7b6c8c95",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "9a23b5c35131cbf91907ec829ee06d3e439398a4129ffb73d00d52733585b38b",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "7349d438743f98bc11a4d2526074e0e08140e90b58f0e235fcc22f17ed1820f4",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "f9c9ea5bda32bb44b58d8804ddd206831ed5601e47d729819ad962eee6639256",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "4faaf2afa57c2cef1981fc1c7bfa1f743ed5400a1ba1dc45566bf23d4e9ca46a",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "9e000f05350035c418eb357c8e21d7549dcf5c95dfe282af6e8d3b1cc3e0bbf6",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "1fc5e2e8a892315d853439839d1c81c87b15015cfba16b75a4cef0ef49d96a12",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "41beaf8f6d102cab5fa58b9d6d4b57ecd5c1bd3fee4cb2a9f55c41eaffb6bac8",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "4c797c6ac7224e43128e6d85a2df0dbc90da23e890db34d70ff1d41a32e0fbdb",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "a8530333a1852e4112a1b3c98b91d97d15ddea220bd8b05a87996afdfc4fd779",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "190e16866f9f6bcb57410fc7921e16bfa47ad79a652fa4a07e1ea73f402dda8c",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "1d63199d7483c506c7145b824c3a5b94f48e0fe42cd3d50df33ed52dfbd2a936",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "8fef8392c8d62c3f2001498a04f208460941d1cba36f5a8ca0dd56d095e99e08",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "e1549c12b4a419a92fedb129d26781738ce461f1c784ff29b9127df216465f5d",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "07d6d94977b34e93cea0c13a06dbf256d57bdc9519be3af132b1d9d64a01a136",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "bba999640ae7b0adb9e4cdc25653db6a1c032149193f023c2ce93c546e4b7000",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "0e995796c5650a11c0cbe3abd80e57089f21969f3756e0c19c37cb51b8f6e16b",
+      "socket": "K5",
+      "at": "party 1"
+     },
+     {
+      "terms": "b0c5f084f44f5f9752ee581f4dfe3d6a2db7d7d707254e9dc65148842866b150",
+      "socket": "K5",
+      "at": "party 1"
+     }
+    ],
+    "assentsByTerms": 242,
+    "assentsByTermsHeldOnlyOutsideActs": [
+     {
+      "act": "82452b2eec785d7b8bf0a6901a55cefddbe9fd7714317c04a194bcb6d300f49c",
+      "where": [
+       "file:windows/followers/build/vote/UNPUBLISHED-duplicate-assent-82452b2e.mor"
+      ]
+     }
+    ],
+    "assentsByTermsWithoutThose": 241,
+    "assentsByRoot": 280,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 71
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": false,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "least named, some use",
+   "fingerprint": "01c17e3894d81c27be1dc97a50e88e110404ab5365b766f09e395166ad423bdb",
+   "b": {
+    "title": "cMIP rotating pot, draft 1 (task K1, the body)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "ba28ac63f5cd0458bff9e213f87da5bcb67d65199b42354380a3881ad06e1cf4",
+    "publishedBy": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+    "sockets": {
+     "K1": 1
+    },
+    "terms": 1,
+    "assents": 6,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 6
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "ba28ac63f5cd0458bff9e213f87da5bcb67d65199b42354380a3881ad06e1cf4",
+      "where": [
+       "feed:longhouse-home-2",
+       "feed:stall-home",
+       "feed:stall-relay",
+       "feed:turnstile-home",
+       "feed:until-home",
+       "file:windows/clusters/acts",
+       "file:windows/hop/acts"
+      ]
+     }
+    ],
+    "termsNaming": 1,
+    "socketsByKind": {
+     "K1": 1
+    },
+    "sockets": [
+     {
+      "terms": "f0152013c2ca8534525ccc8bd0ac7ad68fc5b8addbfe91065209c1e10ad0b450",
+      "socket": "K1",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 6,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 6,
+    "assentsByRoot": 6,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 6
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "least named, some use",
+   "fingerprint": "2d7062e908c51d78553726b3b3628e81615eb883b66c3003b607c7f71c2979e8",
+   "b": {
+    "title": null,
+    "namedAs": "not held",
+    "held": "not held",
+    "author": null,
+    "publishedBy": null,
+    "sockets": {
+     "K1": 1
+    },
+    "terms": 1,
+    "assents": 1,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 1
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "3a1aa6272283da3682d9557ff1c14399efd10bd7a864f8143c56050357872c79",
+      "how": "sha256 of text to sentence end 29",
+      "signer": "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:longhouse-home-2",
+       "feed:stall-home",
+       "feed:turnstile-home",
+       "db:dubsar",
+       "file:windows/hop/acts",
+       "file:windows/longhouse/acts"
+      ]
+     }
+    ],
+    "termsNaming": 1,
+    "socketsByKind": {
+     "K1": 1
+    },
+    "sockets": [
+     {
+      "terms": "293444c67dc051ced92b98b5908b9a1105f9a574daa129a3779c75a79140f909",
+      "socket": "K1",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 1,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 1,
+    "assentsByRoot": 1,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 1
+   },
+   "agree": {
+    "held": false,
+    "publishedByAmongMine": false,
+    "authorIsSignerOfPublishing": null,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": false
+  },
+  {
+   "why": "least named, some use",
+   "fingerprint": "3a2f40f4a4f57819df11415ffdf580ade798bd8d64610232183bd47294ee3a8d",
+   "b": {
+    "title": "cMIP in force by the condition, draft 2 (task K2, in force)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+    "publishedBy": "5f5443a62d9bece4c9652f27b0dff56a17ed24450197a9815e1751c6c3ef2371",
+    "sockets": {
+     "K2": 1
+    },
+    "terms": 1,
+    "assents": 9,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 9
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "5f5443a62d9bece4c9652f27b0dff56a17ed24450197a9815e1751c6c3ef2371",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/hop/acts",
+       "file:windows/plain-words/acts"
+      ]
+     }
+    ],
+    "termsNaming": 1,
+    "socketsByKind": {
+     "K2": 1
+    },
+    "sockets": [
+     {
+      "terms": "9f387d1d1959abaf7426fe8c84844f7d3f19e887b037e6ab06eaf256021adf73",
+      "socket": "K2",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 9,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 9,
+    "assentsByRoot": 9,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 9
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "least named, some use",
+   "fingerprint": "3f2a69dee8f2e09b27a5b78bd20bb237be29e37e18d020939d0be7421f3dc2eb",
+   "b": {
+    "title": "Stall cMIP: the seller may change an offer for future buyers (task K4, condition), draft 1. A new version of Terms that name this cMIP in condition is valid, an",
+    "namedAs": "act id of its text (not a spec hash)",
+    "held": "text act",
+    "author": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+    "publishedBy": "3f2a69dee8f2e09b27a5b78bd20bb237be29e37e18d020939d0be7421f3dc2eb",
+    "sockets": {
+     "K4": 1
+    },
+    "terms": 1,
+    "assents": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 1
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "3f2a69dee8f2e09b27a5b78bd20bb237be29e37e18d020939d0be7421f3dc2eb",
+      "how": "act id",
+      "signer": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:longhouse-home-2",
+       "feed:stall-home",
+       "feed:stall-relay",
+       "feed:turnstile-home",
+       "db:dubsar",
+       "file:windows/stall/acts"
+      ]
+     }
+    ],
+    "termsNaming": 1,
+    "socketsByKind": {
+     "K4": 1
+    },
+    "sockets": [
+     {
+      "terms": "dc5d37ad39978e5ac3a10912b1dbb12bbac82550d07551e967d4fc6818c41fde",
+      "socket": "K4",
+      "at": null
+     }
+    ],
+    "assentsByTerms": 0,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 0,
+    "assentsByRoot": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 1
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "random, seed 20261122",
+   "fingerprint": "8cd7b8b158b0d6f6ddaf3d294e85ca228804ec33f6183a288c44288034971a30",
+   "b": {
+    "title": "cMIP money decision, draft 5 (task K7, a Statement kind)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+    "publishedBy": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+    "sockets": {
+     "K7": 2
+    },
+    "terms": 2,
+    "assents": 19,
+    "k7Statements": 11,
+    "actsUnderSpec": 0,
+    "signers": 21
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/plain-words/acts"
+      ]
+     }
+    ],
+    "termsNaming": 2,
+    "socketsByKind": {
+     "K7": 2,
+     "note": "B labels power kinds K7"
+    },
+    "sockets": [
+     {
+      "terms": "9f387d1d1959abaf7426fe8c84844f7d3f19e887b037e6ab06eaf256021adf73",
+      "socket": "K7 (power kind)",
+      "at": "power 0"
+     },
+     {
+      "terms": "5cdbc71144cf55305372b37ff95dad494bb02277d6b167dd12b695f13ea62772",
+      "socket": "K7 (power kind)",
+      "at": "power 0"
+     }
+    ],
+    "assentsByTerms": 19,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 19,
+    "assentsByRoot": 19,
+    "k7Statements": 11,
+    "actsUnderSpec": 0,
+    "signers": 21
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "random, seed 20261122",
+   "fingerprint": "301481877f9abd20859d6526725a3b902d27edd37acbaff480399d270f87d6ae",
+   "b": {
+    "title": "cMIP money decision, draft 3 (task K7, a Statement kind)",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+    "publishedBy": "14e0144355223ac2bd2c25c8c319280187b2675a3aa817f755a9e89eb00c36af",
+    "sockets": {},
+    "terms": 0,
+    "assents": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "14e0144355223ac2bd2c25c8c319280187b2675a3aa817f755a9e89eb00c36af",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/plain-words/acts"
+      ]
+     }
+    ],
+    "termsNaming": 0,
+    "socketsByKind": {},
+    "sockets": [],
+    "assentsByTerms": 0,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 0,
+    "assentsByRoot": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "random, seed 20261122",
+   "fingerprint": "7ff9be42bef9875f9a74d338fa1b66664f5f66473a7ac0e77fb255903eaf8cb6",
+   "b": {
+    "title": "cMIP: the straight split, draft 5",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+    "publishedBy": "2e295742bbb43e24206a5b8df29221b38734abf76e225c5af45d5b82df045b37",
+    "sockets": {},
+    "terms": 0,
+    "assents": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "2e295742bbb43e24206a5b8df29221b38734abf76e225c5af45d5b82df045b37",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/dubpay/acts"
+      ]
+     }
+    ],
+    "termsNaming": 0,
+    "socketsByKind": {},
+    "sockets": [],
+    "assentsByTerms": 0,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 0,
+    "assentsByRoot": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  },
+  {
+   "why": "random, seed 20261122",
+   "fingerprint": "eea5e5644b2fd2b0f611e096e2b64f6240219077298264ba131ce8507002f335",
+   "b": {
+    "title": "cMIP shower work, draft 8",
+    "namedAs": "spec hash",
+    "held": "text act",
+    "author": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+    "publishedBy": "8acd058fb38b337e740fe735b4bb384a2333ffdb0027b519ffde3907b68ccd35",
+    "sockets": {},
+    "terms": 0,
+    "assents": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "mine": {
+    "textActs": [
+     {
+      "act": "8acd058fb38b337e740fe735b4bb384a2333ffdb0027b519ffde3907b68ccd35",
+      "how": "spec hash, kind 0, creator its signer",
+      "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+      "where": [
+       "feed:longhouse-home-1",
+       "feed:turnstile-home",
+       "file:windows/dublaw/acts"
+      ]
+     }
+    ],
+    "termsNaming": 0,
+    "socketsByKind": {},
+    "sockets": [],
+    "assentsByTerms": 0,
+    "assentsByTermsHeldOnlyOutsideActs": [],
+    "assentsByTermsWithoutThose": 0,
+    "assentsByRoot": 0,
+    "k7Statements": 0,
+    "actsUnderSpec": 0,
+    "signers": 0
+   },
+   "agree": {
+    "held": true,
+    "publishedByAmongMine": true,
+    "authorIsSignerOfPublishing": true,
+    "sockets": true,
+    "terms": true,
+    "assents": true,
+    "assentsWithoutActsHeldOnlyOutsideActs": true,
+    "k7Statements": true,
+    "actsUnderSpec": true,
+    "signers": true
+   },
+   "allAgree": true
+  }
+ ]
+}

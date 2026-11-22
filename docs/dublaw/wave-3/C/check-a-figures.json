@@ -1,0 +1,319 @@
+{
+ "made": "check-a-figures.py, DubLaw wave 3 session C",
+ "sha256": {
+  "A": "d37e2460ed063826bff7a7d3937c57d212fd7c07ff37b953c9c608cb97c2f0a2",
+  "rerun": "d37e2460ed063826bff7a7d3937c57d212fd7c07ff37b953c9c608cb97c2f0a2",
+  "equal": true
+ },
+ "differences": [],
+ "againstThisIndex": {
+  "A": {
+   "distinct": 17169,
+   "terms": 269,
+   "statements": 786,
+   "textActs": 2919
+  },
+  "mine": {
+   "distinct": 17169,
+   "terms": 269,
+   "statements": 786,
+   "textActs": 2924,
+   "textActsWithNonEmptyText": 2919,
+   "textActsWithEmptyText": [
+    "a6410fc14cd95745c3fe670c7ddb32dc11b8097195865dc0bdc5e3a0b8146060",
+    "6e63e83c1a6d63716d6175b1ecec77036ef5b37a43d64919222939017ea50775",
+    "743e0d2662dce6f04e846a574037349265c0f58af66d634fa63500cddbdb68e2",
+    "40e44feab9bae7d66be8e97d8fd50e651a071e554d4a9693a26674ead03e3d62",
+    "a71a85dc1200d3793ac25e76e660663d4de8eadf37d1bceb3256f6443723235a"
+   ]
+  }
+ },
+ "figures": [
+  {
+   "where": "1",
+   "what": "media hashes published",
+   "document": 130,
+   "json": 130,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "programs as text acts",
+   "document": 15,
+   "json": 15,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "media held",
+   "document": 26,
+   "json": 26,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "media not held",
+   "document": 103,
+   "json": 103,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "media not held = entries of to_fetch",
+   "document": 103,
+   "json": 103,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "media hashes = distinct media_hash in apps",
+   "document": 130,
+   "json": 130,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "130 = 26 + 103 + those neither held nor held by any home",
+   "document": null,
+   "json": {
+    "held+to_fetch": 129,
+    "neither (media hash, name, kind)": [
+     [
+      "419d829da2d9d84814031a90f9f8ff9a0de325b91c8d3f63624c4cf133e1a990",
+      "(not in the catalogue)",
+      "not media: an act id asked for as media"
+     ]
+    ]
+   },
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "features (sections 4.1 to 4.n)",
+   "document": 12,
+   "json": 12,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "award cMIP: acts under it, Terms naming it",
+   "document": [
+    0,
+    0
+   ],
+   "json": [
+    0,
+    0
+   ],
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "questions to the MOR lead",
+   "document": 5,
+   "json": 5,
+   "agree": true
+  },
+  {
+   "where": "1",
+   "what": "\"2 to 19 acts each\": every \"N acts by M signers\" in section 4 (the reading of \"each\" is this session's)",
+   "document": [
+    2,
+    19
+   ],
+   "json": [
+    [
+     "4.1 L",
+     [
+      8,
+      4,
+      5
+     ]
+    ],
+    [
+     "4.2 D",
+     [
+      9,
+      4,
+      1,
+      9,
+      0
+     ]
+    ],
+    [
+     "4.3 D",
+     [
+      6,
+      0,
+      1,
+      4
+     ]
+    ],
+    [
+     "4.4 E",
+     [
+      8
+     ]
+    ],
+    [
+     "4.5 T",
+     [
+      13,
+      1
+     ]
+    ],
+    [
+     "4.6 O",
+     [
+      79,
+      119,
+      2
+     ]
+    ],
+    [
+     "4.7 C",
+     [
+      3,
+      1
+     ]
+    ],
+    [
+     "4.8 C",
+     [
+      2,
+      2,
+      10,
+      6,
+      1,
+      0
+     ]
+    ],
+    [
+     "4.9 S",
+     [
+      19,
+      1,
+      3,
+      2
+     ]
+    ],
+    [
+     "4.10 ",
+     [
+      2,
+      8,
+      27
+     ]
+    ],
+    [
+     "4.11 ",
+     [
+      11,
+      0,
+      0
+     ]
+    ],
+    [
+     "4.12 ",
+     [
+      2
+     ]
+    ]
+   ],
+   "agree": null
+  },
+  {
+   "where": "2",
+   "what": "distinct acts",
+   "document": 17169,
+   "json": 17169,
+   "agree": true
+  },
+  {
+   "where": "2",
+   "what": "text acts",
+   "document": 2919,
+   "json": 2919,
+   "agree": true
+  },
+  {
+   "where": "2",
+   "what": "report lines naming a hash",
+   "document": 7273,
+   "json": 7273,
+   "agree": true
+  },
+  {
+   "where": "3",
+   "what": "table rows = to_fetch entries",
+   "document": 103,
+   "json": 103,
+   "agree": true
+  },
+  {
+   "where": "3",
+   "what": "rows differing from to_fetch (hash, name, version, kind, bytes, homes, uploader), in order",
+   "document": 0,
+   "json": 0,
+   "agree": true,
+   "rows": []
+  },
+  {
+   "where": "3",
+   "what": "\"ones that matter\": each hash prefix is in to_fetch (the list says 0.3 and 0.6 of register are held, and names no hash for them)",
+   "document": [
+    "b26c525d",
+    "b3a51fda",
+    "687f9afc",
+    "72507a04",
+    "342921d6",
+    "1b2f1ea2",
+    "0372e86b",
+    "259a2d6d",
+    "117f7d47",
+    "33875a4e",
+    "9b6c2f60",
+    "b4bb924b",
+    "b7849938",
+    "3e0a460a"
+   ],
+   "json": {
+    "b26c525d": "to_fetch: Pointer Look 0.1.5",
+    "b3a51fda": "to_fetch: Pointer Look 0.1.3",
+    "687f9afc": "to_fetch: Pointer Cite 0.3.2",
+    "72507a04": "to_fetch: Pointer Cite 0.1.1",
+    "342921d6": "to_fetch: shelf 0.1.0",
+    "1b2f1ea2": "to_fetch: Buy 0.1",
+    "0372e86b": "to_fetch: register (Proven claim) 0.4",
+    "259a2d6d": "to_fetch: register (Proven claim) 0.5",
+    "117f7d47": "to_fetch: cercle-count 2",
+    "33875a4e": "to_fetch: credits-read2 draft 2",
+    "9b6c2f60": "to_fetch: Courier 0.1",
+    "b4bb924b": "to_fetch: words-check 0.1.1",
+    "b7849938": "to_fetch: turnstile-check 1",
+    "3e0a460a": "to_fetch: turnstile-move 1"
+   },
+   "agree": true
+  },
+  {
+   "where": "3",
+   "what": "\"ones that matter\": versions given match to_fetch",
+   "document": 13,
+   "json": [],
+   "agree": true
+  }
+ ],
+ "newerThanAInventory": {
+  "AInventoryMtime": 1795263341.4729335,
+  "files": [
+   {
+    "file": "HANDOVER.md",
+    "mtime": 1795265894.7280273
+   },
+   {
+    "file": "feeds/dubsar-before-closure/relay.db-shm",
+    "mtime": 1795336104.543391
+   }
+  ]
+ }
+}

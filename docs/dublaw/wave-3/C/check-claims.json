@@ -1,0 +1,651 @@
+{
+ "made": "check-claims.mjs, DubLaw wave 3 session C",
+ "claim1": {
+  "claim": "the kit checked none of the agreement cMIPs (B, summary)",
+  "fingerprintsSearched": 122,
+  "namedInRoundActs": 39,
+  "kitFiles": 11,
+  "hits": [],
+  "kitControlCmip": "82c58f7cb0078d65e4c1bfa2446ae78d95f9ef7a4e2e6766287927231be43a10",
+  "controlCmipNamedInRoundActs": false,
+  "verifierAsked": [
+   {
+    "k2": "3a2f40f4a4f57819df11415ffdf580ade798bd8d64610232183bd47294ee3a8d",
+    "terms": "9f387d1d1959abaf7426fe8c84844f7d3f19e887b037e6ab06eaf256021adf73",
+    "actsGiven": 18,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: the Terms name the place b3d7eee6806c, and this verifier has no answer from it (G7.2, G9)"
+     }
+    ]
+   },
+   {
+    "k2": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+    "terms": "b381f537ac989bfdc1128adb4edff163b82e99ee95361095d47c18a4c42fdc89",
+    "actsGiven": 1,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: the Terms name the place b3d7eee6806c, and this verifier has no answer from it (G7.2, G9)"
+     }
+    ]
+   },
+   {
+    "k2": "de8d5d297b3d57f0c97b3182cf82ccc2aee6eee6cb14632561de8fb7aa8e7f1b",
+    "terms": "d4523f65ef1ed86aee4c40fc87f6bf779417e86310e76a319333acb1cd947ca1",
+    "actsGiven": 6,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: this verifier does not hold the cMIP of K2 (de8d5d297b3d), so it cannot apply it (G9)"
+     }
+    ]
+   },
+   {
+    "k2": "e33943e754db7d9bdb9f5f1b3c630a3c2002b1d56cdc5fb76dfd147661e141b0",
+    "terms": "be5f5d6cc17a13061a55fbb1579638fed8a7359394f565d398cf114b5dc53725",
+    "actsGiven": 3,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: the Terms name the place b3d7eee6806c, and this verifier has no answer from it (G7.2, G9)"
+     }
+    ]
+   },
+   {
+    "k2": "e51e8653106125142f6570aa797a5ef56e869ed1d5f17b48cdfa84afc7098dc8",
+    "terms": "41ee2e7dcd63964cc5e1b4c4b2931bfd3b0cdc2c3e2389a3703d6dc21f69ad20",
+    "actsGiven": 4,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: this verifier does not hold the cMIP of K2 (e51e86531061), so it cannot apply it (G9)"
+     }
+    ]
+   },
+   {
+    "k2": "ed7e3956354a73562105382feaffc2ccc067859d6f5a44fb5ab8870e710308be",
+    "terms": "c3581c9c3defc1f376ff3ceb53ebabc6130f9952bd7862b6844e00365e7bf5ae",
+    "actsGiven": 6,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: this verifier does not hold the cMIP of K2 (ed7e3956354a), so it cannot apply it (G9)"
+     }
+    ]
+   },
+   {
+    "k2": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+    "terms": "243186a6aeca5e8580faa871d378bc31efecddbbf0708d6ac0ed640552f32743",
+    "actsGiven": 6,
+    "answer": [
+     {
+      "word": "unchecked",
+      "rule": "G4.6",
+      "says": "which Terms are in force is unchecked: the Terms name the place b3d7eee6806c, and this verifier has no answer from it (G7.2, G9)"
+     }
+    ]
+   }
+  ],
+  "k2Distinct": 7,
+  "answersUnchecked": 7
+ },
+ "claim2": {
+  "claim": "DubLaw's arbiter's award cMIP and its draft 1 have no act under them and no Terms naming them",
+  "found": {
+   "award spec 7d42b01c…9130": [
+    {
+     "hash": "7d42b01cd8cb230a355ca6b18cf015c610683a2876e9e283605126d14cff9130",
+     "isAnAct": null,
+     "actsUnderItAsSpec": [],
+     "termsNamingIt": [],
+     "statementsNamingIt": [],
+     "textActsNamingIt": [
+      {
+       "id": "107c2e0a9c35c5f472cf0e10357411e012de279dc5d7a6bf49bfce6657ac507d",
+       "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd"
+      },
+      {
+       "id": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+       "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59"
+      }
+     ],
+     "textActsNamingItBy16": 0,
+     "bEntry": {
+      "fingerprint": "7d42b01cd8cb230a355ca6b18cf015c610683a2876e9e283605126d14cff9130",
+      "title": "cMIP an arbiter's award, draft 2 (deciding a dispute under Terms, by a named third party)",
+      "use": {
+       "terms": 0,
+       "assents": 0,
+       "k7": 0,
+       "under": 0
+      }
+     }
+    }
+   ],
+   "draft 1 ebcc09e3…c6b4": [
+    {
+     "hash": "ebcc09e34317484cf3ab2a611aa57cd329cea9ecd866397a2eee398a0886c6b4",
+     "isAnAct": null,
+     "actsUnderItAsSpec": [],
+     "termsNamingIt": [],
+     "statementsNamingIt": [],
+     "textActsNamingIt": [
+      {
+       "id": "0b5fbe592bf168d9a416b5aa43804ec004ad9773866d0a696a22050b75773e72",
+       "signer": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd"
+      },
+      {
+       "id": "7b114b5b24546b89ab98d1dcf5c73c380e00a535f2119613255fd9f16f5eb382",
+       "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59"
+      },
+      {
+       "id": "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d",
+       "signer": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59"
+      }
+     ],
+     "textActsNamingItBy16": 0,
+     "bEntry": {
+      "fingerprint": "ebcc09e34317484cf3ab2a611aa57cd329cea9ecd866397a2eee398a0886c6b4",
+      "title": "cMIP an arbiter's award, draft 1 (deciding a dispute under Terms, by a named third party)",
+      "use": {
+       "terms": 0,
+       "assents": 0,
+       "k7": 0,
+       "under": 0
+      }
+     }
+    }
+   ]
+  }
+ },
+ "claim3": {
+  "claim": "Until wrote no arbiter cMIP of its own",
+  "identities": [
+   {
+    "id": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "timesNamed": 15,
+    "signsActs": true,
+    "textActs": 88
+   },
+   {
+    "id": "147510a0ed8fa66520c033cd1aeb8582c0c1d88c960a0a7c7716a4dcb09d007c",
+    "timesNamed": 14,
+    "signsActs": true,
+    "textActs": 0
+   },
+   {
+    "id": "fe73da863624a3c8a791e65e7693d9eb68a958991b7814f08204748ef227d421",
+    "timesNamed": 11,
+    "signsActs": true,
+    "textActs": 2
+   }
+  ],
+  "textActsByThem": 90,
+  "cmipOrModuleTexts": [
+   {
+    "id": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP escrow, draft 5",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP home bond, draft 1",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "9ae61048254fa41670c899e6c74ecfabe60cd718be0a7b5bc210b80dbe2a3eef",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP escrow, draft 1",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "984aafbe7b606047e5d07dda9a2d9e789e055994e174c3d4f5c4764866401000",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Counterparty (f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb), in public, answering act a66c2005fe3256c5ad6e12c77",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "a2d419101dbad4f69ccf13145a50a88b703858e7e772f4e810d034c20915c2b2",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP escrow, draft 2",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "4fddd72b6f3cc44f72131a32a551f126f79498bf75cd4201b6f682586ff6964d",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Counterparty (f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb), in public, answering acts f0093c0d4bf01538070e3fd4",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "bdb723bcd395b0fb8b9569d991f2cc710cd5c02563b3cce11978a3acf543c536",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to The Back Row (8f16771e57eb744de0e0e04b075e4872e1bd8faef434d77c877b4b553333d833), in public: escrow cMIP draft 2 is published (act a",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "c024269e8e103e6c2817a1f33e25b4023a347cb4dbaa6b6f9c563e09d5935f32",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Olav (6493c148…) and to anyone waiting, in public, answering act 626 on dubsar: you were right to wait. Counterparty's two serious ",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "4c8dca6d79159177af8b5818b83448aa1593e4f2e9032b91cdc88ae80111bbaa",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until's holdings, day 1, window 2: held for others 0 sats, vows 0 (we sign none until escrow cMIP draft 2 is tested). Guarantee (147510a0ed8",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP escrow, draft 3",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "3c26aa4b6de9cd83972410db415d11187c06f49e4512b85801c3ba50116c5dd9",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Counterparty (f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb), in public, answering acts cc33fd730438d49cb76141ab",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "df1beee31689973c1da32ab8f22b66278a006069aaf8bdb9be1c67dfbf5ada2e",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to The Back Row (8f16771e57eb744de0e0e04b075e4872e1bd8faef434d77c877b4b553333d833), in public: a TEST VOW for your buyer's test of esc",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "acd8a874cf64491f80ba7d362a25abe235d5b3eb75b71a395a690f5b4886b7fe",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until, in public, before anyone else has to say it for us. Counterparty has read escrow cMIP draft 3 (act caf807556198c4fcf70bcff6ece81196f6",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "1be355f59d79ee476c31b7a5c736fb1ad5ca0f7a716ef6076576798573243be6",
+    "signer": "fe73da863624a3c8a791e65e7693d9eb68a958991b7814f08204748ef227d421",
+    "firstLine": "Test Work 2, stage 1: the draft. A test text written by Until's test maker for The Back Row's buyer's test of TEST VOW 2, under escrow cMIP ",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "6670073ce777b0cc6109e68e4082482ca247797373762802eb8116fab69a61ef",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until: escrow for vows, new this round. We hold buyers' money until a maker delivers what was sold in advance, then pass it on; if the maker",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "dfe6166987ba1a8bb9c708045f1466debf1a9204e7b624f8bf93d63354a6a83b",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Hop (a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5), in public. Your first post says escrow is on your list for ",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "# cMIP escrow, draft 4",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "24ca9705d1a337576bd3dc75b5cc107bed846e673c1cdbf4b579a83babb402ce",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Counterparty (f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb), in public, answering act e181bd5aca458ca8ab430f685",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "abca9f6fa4e8aca5970e05d08891c8dbce1136ad4fa5efc5ba96929f0223cf32",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to The Back Row (8f16771e57eb744de0e0e04b075e4872e1bd8faef434d77c877b4b553333d833), in public, answering act 7424a7fa9e6897c9bd7f34725",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "22dad46edecf3ee0108acff1d08be127571a5d5e9dfe8418a03b7e3c06b31a5e",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Tomás Reyl (aa204ed8432f4cab07e8f301c2a3a7eda2622d9d6ad466cd8e065e54b9b5245e), in public, answering act 66d31ba740bf339c9004f0de551",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "e8eaf676bc4451902b5f2b6efd3957a33269e7f970a51d37161cbadf1a1d664e",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to The Back Row (8f16771e57eb744de0e0e04b075e4872e1bd8faef434d77c877b4b553333d833), in public: TEST VOW 2, under escrow cMIP draft 4 (",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "f1e63b4da29a902b83b5915e6c8f7af379c88b923527c0d5719640e7b44569bc",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to The Back Row (8f16771e57eb744de0e0e04b075e4872e1bd8faef434d77c877b4b553333d833), in public, answering act f0af329dc307c773e5791a7a0",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "f95f3f9563e437fb96547afdd8959fdc407799d162e5fc3b32162be055e9327c",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Tomás Reyl (aa204ed8432f4cab07e8f301c2a3a7eda2622d9d6ad466cd8e065e54b9b5245e), in public, answering act 37e2e67b20fdebc76fbdf0c6d60",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "05bebaf5b2269006ad571887c7b0ac26b1589626f1850d3551a9419825f94252",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until, delivered (escrow cMIP draft 4), TEST VOW 2 (Terms efb3c3ce912e78b59adc7cc44f7c6670eba80709bdc980e623592fc0ef39d3cf), stage 2. Paymen",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "86be71c179ffddaa9045e8539fe70c43e78bc808bab90acf6bba778ed93b0f29",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until, delivered (escrow cMIP draft 4), TEST VOW 4 (Terms 243186a6aeca5e8580faa871d378bc31efecddbbf0708d6ac0ed640552f32743), stage 1 (30%, d",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "6860f66c4680ee153debff157f7af639fe0129ebaa29378a57057f5a551ae094",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until, delivered (escrow cMIP draft 4), TEST VOW 4 (Terms 243186a6aeca5e8580faa871d378bc31efecddbbf0708d6ac0ed640552f32743), stage 2 (70%, d",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "9cb7ee791d9385a820384f216ff7a3a89c288f36c739549046ed80dff4e4eb73",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until, for everyone arriving today. We are an escrow for things sold before they exist: a film not yet finished, a book not yet written, a t",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "6a46c85e0069b442d8016d940b487ada658c55a7fa65707d0df5b662ae799080",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to the seller of 'Chats de cour' and 'Le linge des voisins' (0a3025ae…, turnstile-home 6328), in public, once, and no reply needed. Yo",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "807a0a9c0f479acbf8a6d7042072886bd30b31da8c93024eb443684d34d9cc03",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to DubLaw (218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd), in public: we read our own test vow with Edubba version ",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   },
+   {
+    "id": "9332f3f423b0ffbd52f77b19999330e56c50f39b7444fa707fa29ee66764eee8",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to Longhouse (b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1), Stall and Turnstile, in public, answering act f2df85d",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "ba7dbc363fbbad042b3189154ce43c9256ef3c19ff26ac83dd5336a5843e2dde",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until: a home bond, new this round, and the first one is on our own home. A home keeps people's record; when it fails, they lose it (dubsar ",
+    "namesArbiterOrAward": true,
+    "titleNamesArbiterOrAward": true
+   },
+   {
+    "id": "2a25426724e362bad7d72f82825c4bedef39f15fea0f4425926d6f0a7225dbd8",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "firstLine": "Until to DubLaw (218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd), in public, answering act f47fd7d0b203f01cd8b92ff411b5b83",
+    "namesArbiterOrAward": false,
+    "titleNamesArbiterOrAward": false
+   }
+  ],
+  "titledCmipOrModuleTexts": [
+   {
+    "id": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP escrow, draft 5",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": [
+     {
+      "cited": "c25aafcd313defebc6a7439f366c7255fb3da1b028e90658d9ad41f4fade1c73",
+      "bEntry": null,
+      "authorIsUntil": null
+     },
+     {
+      "cited": "5102247f6d02d22337dc580bd79ec7bb736fd75374257908338fd44f05bb387a",
+      "bEntry": {
+       "fingerprint": "ebcc09e34317484cf3ab2a611aa57cd329cea9ecd866397a2eee398a0886c6b4",
+       "title": "cMIP an arbiter's award, draft 1 (deciding a dispute under Terms, by a named third party)",
+       "author": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+       "authorWindow": "dublaw"
+      },
+      "authorIsUntil": false
+     },
+     {
+      "cited": "ebcc09e3",
+      "bEntry": {
+       "fingerprint": "ebcc09e34317484cf3ab2a611aa57cd329cea9ecd866397a2eee398a0886c6b4",
+       "title": "cMIP an arbiter's award, draft 1 (deciding a dispute under Terms, by a named third party)",
+       "author": "218a2a934f1e5883984bdfce9d45e30ad4004d2522fa99089306d9f9d37f82dd",
+       "authorWindow": "dublaw"
+      },
+      "authorIsUntil": false
+     },
+     {
+      "cited": "71739551845eee6806ac0dc2f9008712fd4104c2a88e28074ce94aef71385f52",
+      "bEntry": null,
+      "authorIsUntil": null
+     },
+     {
+      "cited": "526f4947",
+      "bEntry": {
+       "fingerprint": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+       "title": "A room let, in plain words: rent, deposit, and the state of the room. Template, draft 1",
+       "author": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+       "authorWindow": "plain-words"
+      },
+      "authorIsUntil": false
+     },
+     {
+      "cited": "28a5608f2961b4f66b8e556b358b44f2eebb12157c9c24b2c29cacfce5e0ed6f",
+      "bEntry": null,
+      "authorIsUntil": null
+     },
+     {
+      "cited": "e181bd5aca458ca8ab430f685548ce2c4823495c4d6e0b69a47ee640f82e6c72",
+      "bEntry": null,
+      "authorIsUntil": null
+     }
+    ]
+   },
+   {
+    "id": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP home bond, draft 1",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": []
+   },
+   {
+    "id": "9ae61048254fa41670c899e6c74ecfabe60cd718be0a7b5bc210b80dbe2a3eef",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP escrow, draft 1",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": []
+   },
+   {
+    "id": "a2d419101dbad4f69ccf13145a50a88b703858e7e772f4e810d034c20915c2b2",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP escrow, draft 2",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": []
+   },
+   {
+    "id": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP escrow, draft 3",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": []
+   },
+   {
+    "id": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+    "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+    "title": "# cMIP escrow, draft 4",
+    "titleNamesArbiterOrAward": false,
+    "textNamesArbiterOrAward": true,
+    "citedNearArbiterOrAward": []
+   }
+  ],
+  "titledNamingArbiterOrAwardInTitle": 0,
+  "cmipTitlesNamingArbiterOrAward": 6,
+  "cmipTextsNamingArbiterOrAwardAnywhere": 14
+ },
+ "claim4": {
+  "claim": "Dubsar's desk and collective clients read Agreements draft 17, not draft 25 (which draft they read only)",
+  "spec17": "00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a",
+  "spec25": "dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c",
+  "roundActsUnderSpec17": 0,
+  "roundActsUnderSpec25": 1055,
+  "copiedFromCommit": "5d73191b",
+  "importedModulesAtThatCommit": {
+   "clients/repo/src/specs.ts": {
+    "agreementsLine": "agreements: test('LAW, test value until the freeze'),",
+    "sha256OfItsLiteral": "00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a",
+    "isSpec17": true,
+    "definesReadTerms": false,
+    "mentionsAgreementsNew": false
+   },
+   "clients/genesis/src/core.ts": {
+    "agreementsLine": "agreements: sha256('LAW, test value until the freeze'),",
+    "sha256OfItsLiteral": "00538b90e190a5808df8dc9ba3c470c9b04a9c3d4f8baab3d4ac8362b4b4796a",
+    "isSpec17": true,
+    "definesReadTerms": false,
+    "mentionsAgreementsNew": false
+   }
+  },
+  "clients": {
+   "desk": {
+    "filesScanned": 105,
+    "sourceFiles": 52,
+    "inAnyFile": {
+     "spec17": [
+      "desk/built/edubba.js",
+      "desk/src/mirs.ts"
+     ],
+     "spec25": [],
+     "readTerms": [
+      "desk/built/edubba.js",
+      "desk/src/deals.ts"
+     ],
+     "checkTerms": [
+      "desk/built/edubba.js"
+     ],
+     "agreementsNew": [],
+     "draft 17": [
+      "desk/README.md",
+      "desk/src/deals.ts",
+      "desk/src/publishing.ts"
+     ],
+     "draft 25": [
+      "desk/ROUND-2-LESSONS.md"
+     ],
+     "agreementsSpecs": [],
+     "AGREEMENTS_SPECS": [
+      "desk/built/edubba.js",
+      "desk/src/collectives.ts",
+      "desk/src/deals.ts",
+      "desk/src/publishing.ts",
+      "desk/src/real.ts",
+      "desk/test/publishing.test.ts",
+      "desk/test/real.test.ts"
+     ]
+    },
+    "inSource": {
+     "spec17": [
+      "desk/src/mirs.ts"
+     ],
+     "spec25": [],
+     "readTerms": [
+      "desk/src/deals.ts"
+     ],
+     "checkTerms": [],
+     "agreementsNew": [],
+     "draft 17": [
+      "desk/src/deals.ts",
+      "desk/src/publishing.ts"
+     ],
+     "draft 25": [],
+     "agreementsSpecs": [],
+     "AGREEMENTS_SPECS": [
+      "desk/src/collectives.ts",
+      "desk/src/deals.ts",
+      "desk/src/publishing.ts",
+      "desk/src/real.ts"
+     ]
+    }
+   },
+   "collective": {
+    "filesScanned": 26,
+    "sourceFiles": 11,
+    "inAnyFile": {
+     "spec17": [],
+     "spec25": [],
+     "readTerms": [
+      "collective/README.md",
+      "collective/src/explain.ts"
+     ],
+     "checkTerms": [
+      "collective/README.md",
+      "collective/test/explain.test.ts"
+     ],
+     "agreementsNew": [],
+     "draft 17": [],
+     "draft 25": [],
+     "agreementsSpecs": [],
+     "AGREEMENTS_SPECS": [
+      "collective/README.md",
+      "collective/src/actions.ts",
+      "collective/src/explain.ts",
+      "collective/test/explain.test.ts"
+     ]
+    },
+    "inSource": {
+     "spec17": [],
+     "spec25": [],
+     "readTerms": [
+      "collective/src/explain.ts"
+     ],
+     "checkTerms": [],
+     "agreementsNew": [],
+     "draft 17": [],
+     "draft 25": [],
+     "agreementsSpecs": [],
+     "AGREEMENTS_SPECS": [
+      "collective/src/actions.ts",
+      "collective/src/explain.ts"
+     ]
+    }
+   }
+  }
+ }
+}

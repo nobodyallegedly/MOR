@@ -1,0 +1,1177 @@
+{
+ "made": "trace-a.py, DubLaw wave 3 session C",
+ "rule": "six sections citing the most distinct acts in the index; ties by section number",
+ "ranking": [
+  [
+   "4.2",
+   26
+  ],
+  [
+   "4.9",
+   25
+  ],
+  [
+   "4.8",
+   22
+  ],
+  [
+   "4.1",
+   19
+  ],
+  [
+   "4.10",
+   16
+  ],
+  [
+   "4.11",
+   15
+  ],
+  [
+   "4.5",
+   14
+  ],
+  [
+   "4.4",
+   11
+  ],
+  [
+   "4.3",
+   10
+  ],
+  [
+   "4.7",
+   4
+  ],
+  [
+   "4.6",
+   3
+  ],
+  [
+   "4.12",
+   3
+  ]
+ ],
+ "features": [
+  {
+   "section": "4.1 Lending between people: listings and loans read from Statements",
+   "citedActs": 19,
+   "citedHexNotActs": [
+    "342921d6dd5cce99de3a37c08eb24392ff7bdaecd147f04f19122dfd8588d572"
+   ],
+   "claims": [
+    {
+     "label": "Statements of kind lending shelf (`255551a7\u2026`)",
+     "A": {
+      "acts": 8,
+      "signers": 6,
+      "listed": 8
+     },
+     "mine": {
+      "listedFound": 8,
+      "listedMissing": [],
+      "signersOfListed": 6,
+      "kinds": {
+       "statement:K7:255551a7": 8
+      },
+      "population": {
+       "rule": "Statements whose K7 kind cMIP begins 255551a7",
+       "acts": 8,
+       "signers": 6,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Terms in those agreements",
+     "A": {
+      "acts": 4,
+      "signers": 4,
+      "listed": 4
+     },
+     "mine": {
+      "listedFound": 4,
+      "listedMissing": [],
+      "signersOfListed": 4,
+      "kinds": {
+       "terms": 4
+      },
+      "population": {
+       "rule": "Terms acts whose root is the agreement of a Statement just listed",
+       "acts": 4,
+       "signers": 4,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Named by others",
+     "A": {
+      "acts": 5,
+      "signers": 3,
+      "listed": 5
+     },
+     "mine": {
+      "listedFound": 5,
+      "listedMissing": [],
+      "signersOfListed": 3,
+      "kinds": {
+       "text": 5
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    }
+   ],
+   "appTexts": [
+    {
+     "act": "73a05f6e191b584624863b27ee0db4b7b271260fa5df2d6b764135078ac17a58",
+     "kind": "text",
+     "signer": "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9",
+     "firstLine": "shelf 0.1.0, a tray app from Steward & Co. for the lending shelf (act 30969bb46052f2ad87bb88b5df0ee4"
+    },
+    {
+     "act": "30969bb46052f2ad87bb88b5df0ee4b67ac4a26c6e41c315923dab97ddd24914",
+     "kind": "text",
+     "signer": "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9",
+     "firstLine": "The lending shelf: Steward & Co. uses MOR for something nothing in this round has used it for. Not s"
+    }
+   ],
+   "authorsTaken": [
+    "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9"
+   ],
+   "namedByOthersRecount": [
+    {
+     "app": "Named by others",
+     "pattern": "shelf\\.mjs|\\bshelf 0\\.1",
+     "authors": [
+      "2c381cf6c34cb8fadcf8594be0ad8503ecbdaaaaed6bb3b3e55688bfa6a7d9f9"
+     ],
+     "acts": 6,
+     "signers": 4,
+     "ids": [
+      "b15edf1c942eed914dbeb7c4882285248e0c2f2d0d323d4526674a599ba94d97",
+      "7f5b0fcba74712a72765ba40e5dc7f9151d1fdaf1b58b54039e2544597aeb2ee",
+      "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+      "beac7f0769ba86086a29325af8b6958c801ae3c3b31d00f8fff9d291752f31fa",
+      "e5e991550c778b52bb0042bf6d511643e14301d1a20a31058090448f98bb9f14",
+      "19ce6306ec1dc5adbc3bc54ff2b1e726127ac5958aca5abd83c00a700fa09289"
+     ],
+     "patternOnly": {
+      "acts": 5,
+      "signers": 3,
+      "ids": [
+       "b15edf1c942eed914dbeb7c4882285248e0c2f2d0d323d4526674a599ba94d97",
+       "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+       "beac7f0769ba86086a29325af8b6958c801ae3c3b31d00f8fff9d291752f31fa",
+       "e5e991550c778b52bb0042bf6d511643e14301d1a20a31058090448f98bb9f14",
+       "19ce6306ec1dc5adbc3bc54ff2b1e726127ac5958aca5abd83c00a700fa09289"
+      ],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 5,
+      "signers": 3,
+      "listed": 5
+     }
+    }
+   ]
+  },
+  {
+   "section": "4.2 Delivery promised, and whether it was kept: receipts counted per seller",
+   "citedActs": 26,
+   "citedHexNotActs": [],
+   "claims": [
+    {
+     "label": "Receipts under draft 1 (`ec1f118d\u2026`)",
+     "A": {
+      "acts": 9,
+      "signers": 4,
+      "listed": 9
+     },
+     "mine": {
+      "listedFound": 9,
+      "listedMissing": [],
+      "signersOfListed": 4,
+      "kinds": {
+       "spec:ec1f118d/0": 9
+      },
+      "population": {
+       "rule": "acts whose spec hash begins ec1f118d",
+       "acts": 9,
+       "signers": 4,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Receipts under draft 2 (`9e19e62c\u2026`)",
+     "A": {
+      "acts": 4,
+      "signers": 2,
+      "listed": 4
+     },
+     "mine": {
+      "listedFound": 4,
+      "listedMissing": [],
+      "signersOfListed": 2,
+      "kinds": {
+       "spec:9e19e62c/0": 4
+      },
+      "population": {
+       "rule": "acts whose spec hash begins 9e19e62c",
+       "acts": 4,
+       "signers": 2,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "The guild's charter Terms",
+     "A": {
+      "acts": 1,
+      "signers": 1,
+      "listed": 1
+     },
+     "mine": {
+      "listedFound": 1,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "terms": 1
+      },
+      "population": {
+       "rule": "Terms acts in the agreements of the listed Terms",
+       "acts": 1,
+       "signers": 1,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "its assents",
+     "A": {
+      "acts": 9,
+      "signers": 9,
+      "listed": 9
+     },
+     "mine": {
+      "listedFound": 9,
+      "listedMissing": [],
+      "signersOfListed": 9,
+      "kinds": {
+       "statement:assent": 9
+      },
+      "population": {
+       "rule": "assent Statements whose agreement is the root of the Terms just listed",
+       "acts": 9,
+       "signers": 9,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Named by others",
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     },
+     "mine": {
+      "listedFound": 0,
+      "listedMissing": [],
+      "signersOfListed": 0,
+      "kinds": {}
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    }
+   ],
+   "appTexts": [
+    {
+     "act": "3fdf9b598bcce3fb087b044f2b62d71b97a7d79a48a046e517bbef62a2854ba5",
+     "kind": "text",
+     "signer": "28070ee883f56514c051466d7fe1f181cd8188ffd180122c66dec9f92b84ee26",
+     "firstLine": "// kept.mjs 0.1, Kept Word (Ana L\u00facia Prado, 28070ee8\u2026ee26). Free to use, copy and change. No warran"
+    },
+    {
+     "act": "9e601202fc4412a7af9f2be172b9a673a3192006aba1a5eec9644f1e963af6d3",
+     "kind": "text",
+     "signer": "28070ee883f56514c051466d7fe1f181cd8188ffd180122c66dec9f92b84ee26",
+     "firstLine": "Ana L\u00facia Prado (28070ee8\u2026ee26), new here, a documentary photographer from Porto who ran a photograp"
+    },
+    {
+     "act": "98e3deb497c022baed9d1963a1658e7d3dd178fcc1f562d29f237e1edf1912e9",
+     "kind": "text",
+     "signer": "28070ee883f56514c051466d7fe1f181cd8188ffd180122c66dec9f92b84ee26",
+     "firstLine": "Ana L\u00facia Prado, for Kept Word, in public: cMIP delivery receipt, draft 2. Text act 87d4b5592f3c0e8b"
+    }
+   ],
+   "authorsTaken": [
+    "28070ee883f56514c051466d7fe1f181cd8188ffd180122c66dec9f92b84ee26"
+   ],
+   "namedByOthersRecount": [
+    {
+     "app": "Named by others",
+     "pattern": "kept\\.mjs",
+     "authors": [
+      "28070ee883f56514c051466d7fe1f181cd8188ffd180122c66dec9f92b84ee26"
+     ],
+     "acts": 2,
+     "signers": 1,
+     "ids": [
+      "7f5b0fcba74712a72765ba40e5dc7f9151d1fdaf1b58b54039e2544597aeb2ee",
+      "12ff0f66c0e9144ef209118a596274f3fa5e6c2331029ed47a636961b5aadcba"
+     ],
+     "patternOnly": {
+      "acts": 0,
+      "signers": 0,
+      "ids": [],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     }
+    }
+   ]
+  },
+  {
+   "section": "4.8 Circles that swap time, counted from Statements in the agreement",
+   "citedActs": 22,
+   "citedHexNotActs": [
+    "053e962eaa72472f88ecbd1127043b47e8e27dbb0ea1e692c5cc572b6d2f8814",
+    "117f7d47163b62ca4fe3eb49d560e840b397538b0b254a6712ae9cb3cbd99ce1"
+   ],
+   "claims": [
+    {
+     "label": "Statements of kind hours of care (`4a737c66\u2026`)",
+     "A": {
+      "acts": 2,
+      "signers": 2,
+      "listed": 2
+     },
+     "mine": {
+      "listedFound": 2,
+      "listedMissing": [],
+      "signersOfListed": 2,
+      "kinds": {
+       "statement:K7:4a737c66": 2
+      },
+      "population": {
+       "rule": "Statements whose K7 kind cMIP begins 4a737c66",
+       "acts": 2,
+       "signers": 2,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "The Cercle's Terms",
+     "A": {
+      "acts": 2,
+      "signers": 1,
+      "listed": 2
+     },
+     "mine": {
+      "listedFound": 2,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "terms": 2
+      },
+      "population": {
+       "rule": "Terms acts in the agreements of the listed Terms",
+       "acts": 2,
+       "signers": 1,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "its assents",
+     "A": {
+      "acts": 10,
+      "signers": 5,
+      "listed": 10
+     },
+     "mine": {
+      "listedFound": 10,
+      "listedMissing": [],
+      "signersOfListed": 5,
+      "kinds": {
+       "statement:assent": 10
+      },
+      "population": {
+       "rule": "assent Statements whose agreement is the root of the Terms just listed",
+       "acts": 10,
+       "signers": 5,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Text records (CERCLE-HOURS, CERCLE-CONFIRM)",
+     "A": {
+      "acts": 6,
+      "signers": 5,
+      "listed": 6
+     },
+     "mine": {
+      "listedFound": 6,
+      "listedMissing": [],
+      "signersOfListed": 5,
+      "kinds": {
+       "text": 6
+      },
+      "population": {
+       "rule": "text acts containing CERCLE-HOURS or CERCLE-CONFIRM",
+       "acts": 6,
+       "signers": 5,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "cercle-count",
+     "A": {
+      "acts": 1,
+      "signers": 1,
+      "listed": 1
+     },
+     "mine": {
+      "listedFound": 1,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "text": 1
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    },
+    {
+     "label": "mending.mjs",
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     },
+     "mine": {
+      "listedFound": 0,
+      "listedMissing": [],
+      "signersOfListed": 0,
+      "kinds": {}
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    }
+   ],
+   "appTexts": [
+    {
+     "act": "046b26cd3bcbd6c3cb2d8ed06763781e6ba4694675b9ba7a4ee5ad4602aaa0a0",
+     "kind": "text",
+     "signer": "e4e5f6db35b34c4ba5e710a87469115eea2df4e1c9c62445645c8a6f9d2f8c04",
+     "firstLine": "// mending.mjs - counts the Mending Circle from feed pages. Read before you run it."
+    }
+   ],
+   "authorsTaken": [
+    "058d65d4eadf458631a858780e9fc9e72c367d698324b6ba0a11f9623fad130c",
+    "e4e5f6db35b34c4ba5e710a87469115eea2df4e1c9c62445645c8a6f9d2f8c04"
+   ],
+   "namedByOthersRecount": [
+    {
+     "app": "cercle-count",
+     "pattern": "cercle-count",
+     "authors": [
+      "058d65d4eadf458631a858780e9fc9e72c367d698324b6ba0a11f9623fad130c",
+      "e4e5f6db35b34c4ba5e710a87469115eea2df4e1c9c62445645c8a6f9d2f8c04"
+     ],
+     "acts": 2,
+     "signers": 2,
+     "ids": [
+      "a6435b87bb3f43f6afcedc5f9b70a2c40b4b6792959d41039ee9ecc13b49f9db",
+      "034fc3c3ffcdbc7d9146d91d5ad903c193d422f65a86e32dbed313fcae82e579"
+     ],
+     "patternOnly": {
+      "acts": 1,
+      "signers": 1,
+      "ids": [
+       "034fc3c3ffcdbc7d9146d91d5ad903c193d422f65a86e32dbed313fcae82e579"
+      ],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 1,
+      "signers": 1,
+      "listed": 1
+     }
+    },
+    {
+     "app": "mending.mjs",
+     "pattern": "mending\\.mjs",
+     "authors": [
+      "058d65d4eadf458631a858780e9fc9e72c367d698324b6ba0a11f9623fad130c",
+      "e4e5f6db35b34c4ba5e710a87469115eea2df4e1c9c62445645c8a6f9d2f8c04"
+     ],
+     "acts": 1,
+     "signers": 1,
+     "ids": [
+      "a6435b87bb3f43f6afcedc5f9b70a2c40b4b6792959d41039ee9ecc13b49f9db"
+     ],
+     "patternOnly": {
+      "acts": 0,
+      "signers": 0,
+      "ids": [],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     }
+    }
+   ]
+  },
+  {
+   "section": "4.9 Signed credits: who did what, confirmed by each person named",
+   "citedActs": 25,
+   "citedHexNotActs": [
+    "332d02f91f1251f4ab542b6c7ac9574e96034e81a06a4b9d91b85dfda0911f68",
+    "33875a4edacf808a2ab42b391b22f1bcefaa73556d5bc6ee70d095fe43cacb05"
+   ],
+   "claims": [
+    {
+     "label": "Acts under credits draft 1 (`91a94236\u2026`)",
+     "A": {
+      "acts": 19,
+      "signers": 14,
+      "listed": 19
+     },
+     "mine": {
+      "listedFound": 19,
+      "listedMissing": [],
+      "signersOfListed": 14,
+      "kinds": {
+       "spec:91a94236/1": 5,
+       "spec:91a94236/2": 14
+      },
+      "population": {
+       "rule": "acts whose spec hash begins 91a94236",
+       "acts": 19,
+       "signers": 14,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Under draft 2 (`4a4f08c2\u2026`)",
+     "A": {
+      "acts": 1,
+      "signers": 1,
+      "listed": 1
+     },
+     "mine": {
+      "listedFound": 1,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "spec:4a4f08c2/1": 1
+      },
+      "population": {
+       "rule": "acts whose spec hash begins 4a4f08c2",
+       "acts": 1,
+       "signers": 1,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Terms naming Backlot's credits cMIP",
+     "A": {
+      "acts": 3,
+      "signers": 2,
+      "listed": 3
+     },
+     "mine": {
+      "listedFound": 3,
+      "listedMissing": [],
+      "signersOfListed": 2,
+      "kinds": {
+       "terms": 3
+      },
+      "population": {
+       "rule": "Terms acts naming in a socket 29dc728f34a2cbd7 (the socket cMIP common to the listed Terms that the fewest Terms name)",
+       "acts": 3,
+       "signers": 2,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Named by others",
+     "A": {
+      "acts": 2,
+      "signers": 1,
+      "listed": 2
+     },
+     "mine": {
+      "listedFound": 2,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "text": 2
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    }
+   ],
+   "appTexts": [],
+   "authorsTaken": [
+    "76f531137bc97b3fdc84d49ca886e254c67d809617da7f0a8d57aa821de557ff"
+   ],
+   "namedByOthersRecount": [
+    {
+     "app": "Named by others",
+     "pattern": "credits-read",
+     "authors": [
+      "76f531137bc97b3fdc84d49ca886e254c67d809617da7f0a8d57aa821de557ff"
+     ],
+     "acts": 2,
+     "signers": 1,
+     "ids": [
+      "1e2e81a07b3545846469dd5fc0552d77a7fa1998a8fac09fda181071786ac95c",
+      "e00901001a7700b3c6dad539819fbf294f76c1441ee4fb19a697df796843008b"
+     ],
+     "patternOnly": {
+      "acts": 2,
+      "signers": 1,
+      "ids": [
+       "1e2e81a07b3545846469dd5fc0552d77a7fa1998a8fac09fda181071786ac95c",
+       "e00901001a7700b3c6dad539819fbf294f76c1441ee4fb19a697df796843008b"
+      ],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 2,
+      "signers": 1,
+      "listed": 2
+     }
+    }
+   ]
+  },
+  {
+   "section": "4.10 A word in advance: deciding, from an agreement, which rotation is the owner's",
+   "citedActs": 16,
+   "citedHexNotActs": [],
+   "claims": [
+    {
+     "label": "The Terms (root `660721491929de75ae32ff8d2898bafcf1a4f49148ae059250fd4d6a1db7f245`)",
+     "A": {
+      "acts": 2,
+      "signers": 1,
+      "listed": 2
+     },
+     "mine": {
+      "listedFound": 2,
+      "listedMissing": [],
+      "signersOfListed": 1,
+      "kinds": {
+       "terms": 2
+      },
+      "population": {
+       "rule": "Terms acts whose id or agreement is 66072149",
+       "acts": 2,
+       "signers": 1,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Statements in it",
+     "A": {
+      "acts": 8,
+      "signers": 4,
+      "listed": 8
+     },
+     "mine": {
+      "listedFound": 8,
+      "listedMissing": [],
+      "signersOfListed": 4,
+      "kinds": {
+       "statement:assent": 8
+      },
+      "population": {
+       "rule": "Statements whose agreement is 66072149",
+       "acts": 8,
+       "signers": 4,
+       "notListedByA": [],
+       "listedNotInPopulation": []
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": true
+     }
+    },
+    {
+     "label": "Text acts naming standing.mjs by others",
+     "A": {
+      "acts": 27,
+      "signers": 6,
+      "listed": 0
+     },
+     "mine": {
+      "listedFound": 0,
+      "listedMissing": [],
+      "signersOfListed": 0,
+      "kinds": {}
+     },
+     "agree": {
+      "listedEqualsN": null,
+      "allListedExist": true,
+      "signersEqualM": null,
+      "populationEqualsN": null
+     }
+    },
+    {
+     "label": "Text acts naming standing.mjs by others (no list given by A)",
+     "A": {
+      "acts": 27,
+      "signers": 6
+     },
+     "mine": {
+      "byOthersThanAllItsAuthors": {
+       "acts": 17,
+       "signers": 5,
+       "ids": [
+        "a99000c910531290341e87a0f0f7641044385b63b9bd984cd91d8f86f929cb69",
+        "16432468a1012324f9a4d56c00d95abafe926b994e5c25b13e8a31dffc48c7f4",
+        "2c6a10b99140c512bb5827da31d390e94705b5b6343a71b0aefc1040052a4dcf",
+        "1820e96c585ede590aaeaa2a3f7ba4634a1af9672b611526ab7a530d39517158",
+        "a2cca3ae11bc539c3bbe9c8e5db627abfa7532fae9f0507323ec90afbf0d1e1c",
+        "5b936578d8b1bf88c44dc9370ecfa3c40e7bd6ed5b29a3b6c50dc24cd2cbe488",
+        "117b2d9cc2874aefcfcdbbfc98461937ce937ad63f0c8b43cfb16869e7c4fdd2",
+        "80ec4b94821331a9397876c729d9d91516b3668105dbb1a917db8fe08a9f9161",
+        "aab7569f08d090c8632a922947ff3305fbab2b52307837e460586b8a027646d5",
+        "c03b0054b45434bb72e3de7da6b2e1fac7de255eb64eb0ad48f2b6aa4d44ed1f",
+        "b08b6a50084937a99529f3b717eaaa0d6bdaeb5882b502a26fbb9800bcbf7323",
+        "a8f62cb2907dc1c5fbb39d03fe9452c8d0ac3b035a664a89faacedeb820640bb",
+        "81ba353abd714b4faf3dc881b8d0bfca6c05e4c52fa962494a98642d361845e0",
+        "c412a37d7d7c3cafa88001caad09af3b21bd7b03546d8aa0b4228b2a21136ea7",
+        "3596a08d44a20d2e97e64d8ef54223dc5dd980ed4930bcb2547cd306b53ba81f",
+        "80aa75b37714e18cbd4382c0a4fb0ecf802c7eb5b41647504c133d421a794b0f",
+        "e00901001a7700b3c6dad539819fbf294f76c1441ee4fb19a697df796843008b"
+       ]
+      },
+      "byOthersThanTheFirstAuthor": {
+       "acts": 27,
+       "signers": 6,
+       "ids": [
+        "a99000c910531290341e87a0f0f7641044385b63b9bd984cd91d8f86f929cb69",
+        "16432468a1012324f9a4d56c00d95abafe926b994e5c25b13e8a31dffc48c7f4",
+        "2c6a10b99140c512bb5827da31d390e94705b5b6343a71b0aefc1040052a4dcf",
+        "cf64943b38a34c05206ac8468c4ad8f6b3acd7e7bf4a553cb0467c1004e68b4f",
+        "f90fd73639a5655522ed0a9bdd8c4e8f8d0f894ee88baeb866bf60aaa91b6618",
+        "5db21117e9d470bc725714e9b3f8552ecbac8261a686256937de9d8cc237925a",
+        "1820e96c585ede590aaeaa2a3f7ba4634a1af9672b611526ab7a530d39517158",
+        "a2cca3ae11bc539c3bbe9c8e5db627abfa7532fae9f0507323ec90afbf0d1e1c",
+        "5b936578d8b1bf88c44dc9370ecfa3c40e7bd6ed5b29a3b6c50dc24cd2cbe488",
+        "117b2d9cc2874aefcfcdbbfc98461937ce937ad63f0c8b43cfb16869e7c4fdd2",
+        "37dee3fe2eb36aa901e5ed2fea7a2875a7fd5391f50ef1ed2189d0ad4afe7d49",
+        "80ec4b94821331a9397876c729d9d91516b3668105dbb1a917db8fe08a9f9161",
+        "aef491383817120eb15957be4a3efac43b9168eb5c9c3c7d8601f336727aa556",
+        "63b6f2d4ffa0f5cf08db026e58fb9b2d357cc9c818215ee87dcb9be5bbc1e50b",
+        "aab7569f08d090c8632a922947ff3305fbab2b52307837e460586b8a027646d5",
+        "c03b0054b45434bb72e3de7da6b2e1fac7de255eb64eb0ad48f2b6aa4d44ed1f",
+        "b08b6a50084937a99529f3b717eaaa0d6bdaeb5882b502a26fbb9800bcbf7323",
+        "a8f62cb2907dc1c5fbb39d03fe9452c8d0ac3b035a664a89faacedeb820640bb",
+        "81ba353abd714b4faf3dc881b8d0bfca6c05e4c52fa962494a98642d361845e0",
+        "9601e5c2c8c4a979072dea10bdd510effb542b5c8efa3609084e7dd6217dfde9",
+        "735c27d532d4475cc483c7d4bb233b7fcc79ec81d620d977cb102fa65a66149c",
+        "218b2a2a55704404fe0cfdd653ab824f01fad42d82a0b4aaa931f76e63a1a3d6",
+        "aa552d9ce6ec462191b1be52701836d3c6afb29ec52b27f7da4e8572f850e1b8",
+        "c412a37d7d7c3cafa88001caad09af3b21bd7b03546d8aa0b4228b2a21136ea7",
+        "3596a08d44a20d2e97e64d8ef54223dc5dd980ed4930bcb2547cd306b53ba81f",
+        "80aa75b37714e18cbd4382c0a4fb0ecf802c7eb5b41647504c133d421a794b0f",
+        "e00901001a7700b3c6dad539819fbf294f76c1441ee4fb19a697df796843008b"
+       ]
+      }
+     },
+     "agree": {
+      "populationEqualsN": true
+     }
+    }
+   ],
+   "appTexts": [
+    {
+     "act": "22fae0ff6316322f49aa54c6120217f9d2773da11a9227191dfdb6108fc13eac",
+     "kind": "text",
+     "signer": "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291",
+     "firstLine": "// standing.mjs 0.1, by Sanne Verhoeven (f9de7f3e\u20265291). Free to use, copy and change. No warranty."
+    },
+    {
+     "act": "aefd33ef2601f52d9f19830e2f757dac3c554b2d789c46abf8d1de3fbbac2085",
+     "kind": "text",
+     "signer": "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291",
+     "firstLine": "// standing.mjs 0.1.1, by Sanne Verhoeven (f9de7f3e\u20265291). Free to use, copy and change. No warranty"
+    },
+    {
+     "act": "f90fd73639a5655522ed0a9bdd8c4e8f8d0f894ee88baeb866bf60aaa91b6618",
+     "kind": "text",
+     "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+     "firstLine": "// standing.mjs 0.1.2 (0.1.1 by Sanne Verhoeven, branch fix by Counterparty), by Sanne Verhoeven (f9"
+    },
+    {
+     "act": "37dee3fe2eb36aa901e5ed2fea7a2875a7fd5391f50ef1ed2189d0ad4afe7d49",
+     "kind": "text",
+     "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+     "firstLine": "// standing.mjs 0.1.3 (0.1.1 by Sanne Verhoeven; branch fix 0.1.2 and forked-witness rule 0.1.3 by C"
+    },
+    {
+     "act": "56e9cc796e5e61f0ddedf91334af874c6425ca8226b6fbe7979662529f816628",
+     "kind": "text",
+     "signer": "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291",
+     "firstLine": "// standing.mjs 0.2, by Sanne Verhoeven (f9de7f3e\u20265291). Free to use, copy and change. No warranty."
+    },
+    {
+     "act": "ae11d44466e755ae5416d0028a492b6f2a3dbb2a632b3417c0585b6fbc61edb2",
+     "kind": "text",
+     "signer": "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291",
+     "firstLine": "// standing.mjs 0.3, by Sanne Verhoeven (f9de7f3e\u20265291). Free to use, copy and change. No warranty."
+    }
+   ],
+   "authorsTaken": [
+    "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+    "f9de7f3e611fd4adffde10b755383b8f67eb4d0364913afab77a8d36904b5291"
+   ],
+   "namedByOthersRecount": []
+  },
+  {
+   "section": "4.11 When a keeper closes: a custody check, and moving one's acts",
+   "citedActs": 15,
+   "citedHexNotActs": [
+    "3e0a460add1332e89322aac4121296d704c2d8e9d3c14d9ff2356d93d4de3ebb"
+   ],
+   "claims": [
+    {
+     "label": "handover check named by others",
+     "A": {
+      "acts": 11,
+      "signers": 5,
+      "listed": 11
+     },
+     "mine": {
+      "listedFound": 11,
+      "listedMissing": [],
+      "signersOfListed": 5,
+      "kinds": {
+       "text": 11
+      }
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    },
+    {
+     "label": "turnstile-move and turnstile-census named by others",
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     },
+     "mine": {
+      "listedFound": 0,
+      "listedMissing": [],
+      "signersOfListed": 0,
+      "kinds": {}
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    },
+    {
+     "label": "and",
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     },
+     "mine": {
+      "listedFound": 0,
+      "listedMissing": [],
+      "signersOfListed": 0,
+      "kinds": {}
+     },
+     "agree": {
+      "listedEqualsN": true,
+      "allListedExist": true,
+      "signersEqualM": true,
+      "populationEqualsN": null
+     }
+    }
+   ],
+   "appTexts": [
+    {
+     "act": "ff1eaf7059312b88671732594650e279f0c8b410009143bbf919e95b153f995b",
+     "kind": "text",
+     "signer": "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1",
+     "firstLine": "Longhouse, in public: the code of our handover check, Module draft 1 (act 3f9351b0\u20260b05), so anyone "
+    },
+    {
+     "act": "505597a00ee55bbb74e460bad028eb7097bb562af7652bd89535a5a04b7a697d",
+     "kind": "text",
+     "signer": "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1",
+     "firstLine": "Longhouse, in public: the code of our handover check, Module draft 1.1. It replaces the code in act "
+    },
+    {
+     "act": "a16164066930a35ecdb56adf6114fa0fb018a5dc51be47e907a806a92c3cf7ca",
+     "kind": "text",
+     "signer": "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0",
+     "firstLine": "// turnstile-census.mjs, version 1.1. Turnstile (11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c"
+    },
+    {
+     "act": "ed92f0e378517a17f2381ade0a5ce9c41f54ebaba90b199ffa69d21b4a2ac894",
+     "kind": "text",
+     "signer": "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0",
+     "firstLine": "// turnstile-census.mjs, version 2. Turnstile (11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95"
+    }
+   ],
+   "authorsTaken": [
+    "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0",
+    "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1"
+   ],
+   "namedByOthersRecount": [
+    {
+     "app": "handover check named by others",
+     "pattern": "(?i)handover check",
+     "authors": [
+      "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1"
+     ],
+     "acts": 16,
+     "signers": 5,
+     "ids": [
+      "bcd4000c3710a175c7022b8f29feb09dde4cd1bc347192499053c43468e993c9",
+      "a94a0e662a27fc24509b9ad870ec06ad251e573e15b41b71241ab20aad99431e",
+      "e27ee53da365445d7d7f78c458cff667c20bd06a15ce2c6141572aafb16e8029",
+      "d0984ecdf941e37817baf5cdd3364c11b46e126d4d3bfa5229cb54f41873a172",
+      "fa8123f6626a8b971a53f326bdefd70b9a328e0ed7cbbcfc97908d1d51bd4ed2",
+      "2769dd7a0eee9a925987d52f552a5d62f86d176908f3aa50110c247b6f7f4257",
+      "732ce4d05a5689e6962fcf194f6c590f8c672c520f30ef536297486bb36517af",
+      "3f62c4b8990e5864fbf522d6b47620093636722f372f0acdb6391ff981dbdac9",
+      "ba354a865d349e1ea94300bc426a2b04397a3a9ccf8d043ee137043eef059fcd",
+      "8e000dc1172f498227a2d9f4d0619ed08580b5c3c3f53e4990b3462e17903f9e",
+      "0f1c7e2a20c0dc354fb6c8988130dd2b78eccdc5d5038bc3237b65155acd1acc",
+      "1ae15cc3138113328c1a4933404e96081d7974269b3d3ad5d2e36fb3bb3ea9b0",
+      "e349b1db74847ec96cfef6da6852b1d73521dcea6265dcc839f94b3b9a8212be",
+      "9462e19dfb8b7fec33873939614685aa983c0f4914b17c814f729f84a439356d",
+      "da02a9091e448ebf613b241ce259ab829d58caa14b4a409483e5397d389cd3cc",
+      "efb6b1269ac23e42d407bf5fb788a96abca6139218250529e8efdb6a177713f7"
+     ],
+     "patternOnly": {
+      "acts": 11,
+      "signers": 5,
+      "ids": [
+       "a94a0e662a27fc24509b9ad870ec06ad251e573e15b41b71241ab20aad99431e",
+       "e27ee53da365445d7d7f78c458cff667c20bd06a15ce2c6141572aafb16e8029",
+       "fa8123f6626a8b971a53f326bdefd70b9a328e0ed7cbbcfc97908d1d51bd4ed2",
+       "2769dd7a0eee9a925987d52f552a5d62f86d176908f3aa50110c247b6f7f4257",
+       "732ce4d05a5689e6962fcf194f6c590f8c672c520f30ef536297486bb36517af",
+       "ba354a865d349e1ea94300bc426a2b04397a3a9ccf8d043ee137043eef059fcd",
+       "8e000dc1172f498227a2d9f4d0619ed08580b5c3c3f53e4990b3462e17903f9e",
+       "0f1c7e2a20c0dc354fb6c8988130dd2b78eccdc5d5038bc3237b65155acd1acc",
+       "9462e19dfb8b7fec33873939614685aa983c0f4914b17c814f729f84a439356d",
+       "da02a9091e448ebf613b241ce259ab829d58caa14b4a409483e5397d389cd3cc",
+       "efb6b1269ac23e42d407bf5fb788a96abca6139218250529e8efdb6a177713f7"
+      ],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 11,
+      "signers": 5,
+      "listed": 11
+     }
+    },
+    {
+     "app": "turnstile-move",
+     "pattern": "turnstile-move",
+     "authors": [
+      "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0"
+     ],
+     "acts": 4,
+     "signers": 1,
+     "ids": [
+      "12ff0f66c0e9144ef209118a596274f3fa5e6c2331029ed47a636961b5aadcba",
+      "0011ad9c451b14a0b00fb7be21861736e4241a26576ba523803ce907fae5bf07",
+      "89c7f0a3c1dcba9c044ba9166f5b5740aa75cabb9d5a0b7a1f968649af31fb7d",
+      "26c96a6fac8fe12764bc41b01cfe2a58518e63e7532f20a35d24d9abd7bf2df9"
+     ],
+     "patternOnly": {
+      "acts": 0,
+      "signers": 0,
+      "ids": [],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     }
+    },
+    {
+     "app": "turnstile-census",
+     "pattern": "turnstile-census",
+     "authors": [
+      "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0"
+     ],
+     "acts": 4,
+     "signers": 1,
+     "ids": [
+      "12ff0f66c0e9144ef209118a596274f3fa5e6c2331029ed47a636961b5aadcba",
+      "0011ad9c451b14a0b00fb7be21861736e4241a26576ba523803ce907fae5bf07",
+      "89c7f0a3c1dcba9c044ba9166f5b5740aa75cabb9d5a0b7a1f968649af31fb7d",
+      "26c96a6fac8fe12764bc41b01cfe2a58518e63e7532f20a35d24d9abd7bf2df9"
+     ],
+     "patternOnly": {
+      "acts": 0,
+      "signers": 0,
+      "ids": [],
+      "sameIdsAsA": true
+     },
+     "A": {
+      "acts": 0,
+      "signers": 0,
+      "listed": 0
+     }
+    }
+   ]
+  }
+ ]
+}
