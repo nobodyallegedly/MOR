@@ -1,0 +1,17 @@
+[package]
+name = "round-2-ask"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Loads .mor files into verifier 2 (mor-core's grammar verifier) as the kit's agreementsNewAsk does, and prints each answer with the rule it applied. Read-only; no network."
+
+# Its own workspace: it is no member of the MOR repository's.
+[workspace]
+
+[dependencies]
+mor-core = { path = "../../../core" }
+hex = "0.4"
+serde_json = "1"
+
+[profile.dev.package.fips205]
+opt-level = 3

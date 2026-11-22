@@ -1,0 +1,3 @@
+# The repository's own toolchain (v2/rust-toolchain.toml).
+[toolchain]
+channel = "1.97.0"
