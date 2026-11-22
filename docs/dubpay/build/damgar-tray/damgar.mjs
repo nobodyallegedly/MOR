@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Damgar, the Dubsar Suite's money hub, as a tray app. Version 0.2.3, DubPay.
+// Damgar, the Dubsar Suite's money hub, as a tray app. Version 0.2.4, DubPay.
 // Run from your own folder (the one holding kit/, in/, out/, keys/):  node damgar.mjs help
 // What it does: shows your bank balance, makes invoices, pays invoices, and follows a shower
 // payment through the signed leg reports it can read, to everyone it reached.
@@ -16,7 +16,7 @@ const HERE = process.cwd();
 const KIT = join(HERE, 'kit', 'mor.mjs');
 if (!existsSync(KIT)) { console.error('damgar: run me from your folder (kit/mor.mjs not found here)'); process.exit(1); }
 const { mor, plain, unhex, hex, SPECS } = await import(join(HERE, 'kit', 'lib', 'core.mjs'));
-const { Kit } = await import(join(HERE, 'kit', 'lib', 'kit.mjs'));
+let Kit = null; try { ({ Kit } = await import(join(HERE, 'kit', 'lib', 'kit.mjs'))); } catch {}
 const REPORT_SPEC = '7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854';
 
 function kit(args) {
@@ -50,22 +50,29 @@ async function bank(args, label) {
 // every act in the answers read. Only a report judged "valid" can confirm a payment or close a line.
 // Fault fixed: before 0.2.3 a report's key was never checked, so a forged report showed as real (the lurker,
 // day three).
+// 0.2.4, after an independent review (W3-F): the verdict is the core's binding status (the one it gives for
+// payments and discharge of debts); "valid" is said to be valid as held here; a report from someone other
+// than the receiver a line names is never shown as that receiver's receipt; a report held but not yet
+// checked is said to be so; forged lines are hidden in `reports` too.
 function verifierFor(bodies) {
   const v = new mor.Verifier(SPECS.identity, SPECS.money, SPECS.agreements, SPECS.envelopes, SPECS.text);
   const add = (b) => { try { v.add(b); } catch {} };
-  try { for (const a of new Kit(HERE).heldRecords()) add(a); } catch {}
+  try { if (Kit) for (const a of new Kit(HERE).heldRecords()) add(a); } catch {}
   try { for (const f of readdirSync(join(HERE, 'acts'))) if (f.endsWith('.mor')) add(new Uint8Array(readFileSync(join(HERE, 'acts', f)))); } catch {}
   for (const b of bodies) add(b);
   return v;
 }
 const STANDING = {
-  valid: 'signature checked against its signer\'s chain',
+  valid: 'signature valid against its signer\'s chain AS HELD HERE (a key change you have not fetched would not show; fetch the signer\'s record to be sure)',
   unknown: 'UNCHECKED: its signer\'s chain is not held here, so its lines prove nothing yet',
-  pending: 'UNCHECKED: its signer\'s chain is not complete here, so its lines prove nothing yet',
-  disputed: 'DISPUTED: its signer\'s chain is disputed; its lines confirm nothing',
+  pending: 'UNCHECKED: its signer\'s chain is not complete here (a key change may lack its homes\' receipts), so its lines prove nothing yet',
+  disputed: 'DISPUTED: voided by a key change of its signer, yet acknowledged by another identity or recorded by a keeper; it confirms nothing here',
+  'not counting': 'NOT COUNTING: held, but the core does not count it under its signer\'s chain; it confirms nothing here',
+  scoped: 'SCOPED: signed with a key a higher layer installs (a grant key); Damgar does not judge those, so it confirms nothing here',
   void: 'NOT COUNTED: void under its signer\'s chain',
   invalid: 'NOT COUNTED: its signature fails against its signer\'s chain (forged or broken)',
 };
+const hidden = (r) => r.standing === 'invalid' || r.standing === 'void';
 const counts = (r) => r.standing === 'valid';
 function reportsFrom(letters) {
   const out = new Map();
@@ -86,42 +93,56 @@ function reportsFrom(letters) {
     }
   }
   const v = verifierFor(bodies);
-  for (const r of out.values()) { let st; try { st = v.status(r.id); } catch { st = 'unknown'; } r.standing = st; }
+  for (const r of out.values()) { let st; try { st = v.bindingStatus(r.id); } catch { st = 'unknown'; } r.standing = st; }
   return [...out.values()];
 }
-const standing = (r) => STANDING[r.standing] || `UNCHECKED: the verifier says "${r.standing}"`;
+const standing = (r) => STANDING[r.standing] || `UNCHECKED: the verifier says "${r.standing}"; it confirms nothing here`;
 const KIND = ['received', 'passed on', 'own part', 'kept (fee)', 'still owed'];
 const who = (w) => (Array.isArray(w) ? (w[0] === 2 ? 'agreement ' : '') + w[1] : (typeof w === 'string' ? w : JSON.stringify(w))).slice(0, 80);
 function amt(a) { return Array.isArray(a) ? Number(a[1]) : Number(a); }
 
 
 const idOf = (w) => (Array.isArray(w) ? w[1] : w);
-// The receiver's own report with a received line for this amount and settlement.
-function confirmed(reports, to, value, settlement) {
+// The receiver's own report with a received line for this amount and settlement: { valid } when one counts,
+// { held } when one is held that does not count (not yet checked, disputed, ...), else null.
+function receipt(reports, to, value, settlement) {
   const rid = idOf(to);
-  const r = reports.find((x) => counts(x) && x.signer === rid && x.lines.some((l) => l[0] === 0 && l[2] === settlement && amt(l[1]) === value));
-  return r ? r.id : null;
+  const mine = reports.filter((x) => !hidden(x) && x.signer === rid && x.lines.some((l) => l[0] === 0 && l[2] === settlement && amt(l[1]) === value));
+  const ok = mine.find(counts);
+  if (ok) return { valid: ok };
+  return mine.length ? { held: mine[0] } : null;
 }
-// A passed-on line, by the same signer, that closes line i of report r for the same amount and receiver.
+// A passed-on line, by the same signer, that closes line i of report r for the same amount and receiver:
+// the first such line in a report that counts, else the first in a report held but not counted.
 function closing(reports, r, i) {
   const owed = r.lines[i];
+  let unchecked = null;
   for (const x of reports) {
-    if (x.signer !== r.signer || !counts(x)) continue;
+    if (x.signer !== r.signer || hidden(x)) continue;
     for (const l of x.lines) {
-      if (l[0] === 1 && Array.isArray(l[4]) && l[4][0] === r.id && Number(l[4][1]) === i && amt(l[1]) === amt(owed[1]) && idOf(l[2]) === idOf(owed[2])) return { report: x, line: l };
+      if (l[0] === 1 && Array.isArray(l[4]) && l[4][0] === r.id && Number(l[4][1]) === i && amt(l[1]) === amt(owed[1]) && idOf(l[2]) === idOf(owed[2])) {
+        if (counts(x)) return { report: x, line: l };
+        unchecked ??= { report: x, line: l, unchecked: true };
+      }
     }
   }
-  return null;
+  return unchecked;
 }
+const receiptWords = (rc) => (rc?.valid ? 'CONFIRMED by the receiver\'s own report ' + rc.valid.id.slice(0, 12) + '… (valid as held here)'
+  : rc?.held ? `by the payer's word only: the receiver's report ${rc.held.id.slice(0, 12)}… is held but does not count yet (${rc.held.standing})`
+  : 'by the payer\'s word only (no received line from the receiver held)');
 
-function follow(reports, settlement, depth = 0, seen = new Set()) {
+// expect: when following a passed-on line, the receiver that line names. A report by anyone else that
+// names the same settlement is not that receiver's receipt, and is said to be so.
+function follow(reports, settlement, depth = 0, seen = new Set(), expect = null) {
   const pad = '  '.repeat(depth);
   const here = reports.filter((r) => r.lines.some((l) => l[0] === 0 && l[2] === settlement));
   if (!here.length) { console.log(`${pad}· no report held names ${settlement.slice(0, 16)}… as received: the flow is not shown past here (one leg, or no path you may read)`); return; }
   for (const r of here) {
     if (seen.has(r.id)) continue; seen.add(r.id);
     const got = r.lines.filter((l) => l[0] === 0 && l[2] === settlement).reduce((s, l) => s + amt(l[1]), 0);
-    if (r.standing === 'invalid' || r.standing === 'void') { console.log(`${pad}report ${r.id.slice(0, 12)}…, signed as ${r.signer.slice(0, 12)}…: ${standing(r)}. Its lines are not shown.`); continue; }
+    if (hidden(r)) { console.log(`${pad}report ${r.id.slice(0, 12)}…, signed as ${r.signer.slice(0, 12)}…: ${standing(r)}. Its lines are not shown.`); continue; }
+    if (expect && r.signer !== expect) { console.log(`${pad}report ${r.id.slice(0, 12)}… by ${r.signer.slice(0, 12)}… also names this payment as received, but it is NOT the receiver the line names (${expect.slice(0, 12)}…): it is no receipt of theirs. Its lines are not shown here.`); continue; }
     console.log(`${pad}${r.signer.slice(0, 12)}… received ${sats(got)} (report ${r.id.slice(0, 12)}…; ${standing(r)})`);
     if (!counts(r)) console.log(`${pad}  to check it: node kit/mor.mjs letter --to HOME --get /identity/${r.signer}, then run this again after the next pass`);
     r.lines.forEach((l, i) => {
@@ -129,18 +150,19 @@ function follow(reports, settlement, depth = 0, seen = new Set()) {
       const to = l[2] && l[0] !== 2 && l[0] !== 3 ? ' to ' + who(l[2]) : '';
       // 0.1.2: say whose word each line rests on.
       if (l[0] === 1) {
-        const ok = l[3] && confirmed(reports, l[2], amt(l[1]), l[3]);
-        console.log(`${pad}  passed on: ${sats(amt(l[1]))}${to}: ${ok ? 'CONFIRMED by the receiver\'s own report ' + ok.slice(0, 12) + '…' : 'by the payer\'s word only (no received line from the receiver held)'}`);
-        if (l[3]) follow(reports, l[3], depth + 2, seen);
+        const rc = l[3] ? receipt(reports, l[2], amt(l[1]), l[3]) : null;
+        console.log(`${pad}  passed on: ${sats(amt(l[1]))}${to}: ${receiptWords(rc)}`);
+        if (l[3]) follow(reports, l[3], depth + 2, seen, idOf(l[2]));
         return;
       }
       if (l[0] === 4) {
         // A later report by the same signer may close this line: [1, amount, to, by, [this report, this line]].
         const c = closing(reports, r, i);
-        if (c) {
-          const ok = confirmed(reports, c.line[2], amt(c.line[1]), c.line[3]);
-          console.log(`${pad}  still owed: ${sats(amt(l[1]))}${to}: PAID LATER by report ${c.report.id.slice(0, 12)}… (payment ${String(c.line[3]).slice(0, 12)}…), ${ok ? 'confirmed by the receiver' : 'by the payer\'s word only'}`);
-        } else console.log(`${pad}  still owed: ${sats(amt(l[1]))}${to}: NOT PAID in any report held`);
+        if (c && !c.unchecked) {
+          const rc = receipt(reports, c.line[2], amt(c.line[1]), c.line[3]);
+          console.log(`${pad}  still owed: ${sats(amt(l[1]))}${to}: PAID LATER by report ${c.report.id.slice(0, 12)}… (payment ${String(c.line[3]).slice(0, 12)}…), ${rc?.valid ? 'confirmed by the receiver' : 'by the payer\'s word only'}`);
+        } else if (c) console.log(`${pad}  still owed: ${sats(amt(l[1]))}${to}: STILL OWED as far as checked: a later report ${c.report.id.slice(0, 12)}… says it was paid, but that report does not count yet (${c.report.standing})`);
+        else console.log(`${pad}  still owed: ${sats(amt(l[1]))}${to}: NOT PAID in any report held`);
         return;
       }
       console.log(`${pad}  ${KIND[l[0]] || 'line ' + l[0]}: ${sats(amt(l[1]))}${to}${l[0] === 2 ? ' (the payer\'s own word)' : ''}`);
@@ -266,7 +288,7 @@ switch (cmd) {
     const reps = reportsFrom(letters);
     console.log(`Following ${settlement.slice(0, 16)}… through ${reps.length} leg report(s) held. Each line is its signer's word (G8); a passed-on line is followed where the receiver's own report names the same settlement.`);
     const by = {}; for (const r of reps) by[r.standing] = (by[r.standing] || 0) + 1;
-    console.log(`Signatures, judged against each signer's chain by the core library: ${Object.entries(by).map(([k, n]) => `${n} ${k}`).join(', ') || 'none held'}. Only a valid report confirms a payment or closes a line.`);
+    console.log(`Signatures, judged against each signer's chain by the core library: ${Object.entries(by).map(([k, n]) => `${n} ${k}`).join(', ') || 'none held'}. Only a report valid as held here confirms a payment or closes a line; a key change you have not fetched would not show.`);
     follow(reps, settlement);
     // Straight split draft 6: the full report names SHA-256(settlement || preimage) in line 0, never the settlement.
     const pre = flag('--preimage');
@@ -280,10 +302,10 @@ switch (cmd) {
   case 'check': await check(a[0]); break;
   case 'reports': {
     const letters = readdirSync(join(HERE, 'in')).filter((f) => f.endsWith('.answer.body')).map((f) => f.replace('.answer.body', ''));
-    for (const r of reportsFrom(letters)) { console.log(`${r.id}  by ${r.signer.slice(0, 12)}…  ${standing(r)}`); for (const l of r.lines) console.log(`   ${KIND[l[0]] || l[0]}: ${sats(amt(l[1]))}${typeof l[2] === 'string' ? ' ' + l[2].slice(0, 16) + '…' : ''}`); }
+    for (const r of reportsFrom(letters)) { console.log(`${r.id}  by ${r.signer.slice(0, 12)}…  ${standing(r)}`); if (hidden(r)) { console.log('   (its lines are not shown)'); continue; } for (const l of r.lines) console.log(`   ${KIND[l[0]] || l[0]}: ${sats(amt(l[1]))}${typeof l[2] === 'string' ? ' ' + l[2].slice(0, 16) + '…' : ''}`); }
     break; }
   default:
-    console.log(`Damgar 0.2.3, the money hub (DubPay, the Dubsar Suite). Tray app: runs your own kit, holds no key.
+    console.log(`Damgar 0.2.4, the money hub (DubPay, the Dubsar Suite). Tray app: runs your own kit, holds no key.
   node damgar.mjs balance NAME                         your account
   node damgar.mjs invoice NAME SATS [--memo TEXT]      an invoice for someone to pay you
   node damgar.mjs pay NAME BOLT11 --from ACT [--fee SATS]   check the act the invoice came from, then pay (final).
