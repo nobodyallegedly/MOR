@@ -1,0 +1,4585 @@
+{
+ "made": "DubPay W3-A, slice-check.mjs. Nobody, allegedly. Every count, match, signer, spec hash and order below is computed by the script; readings marked inferred and DubPay's proposals come from slice-check-hand.json.",
+ "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+ "sources": {
+  "inventory": "dubweb/wave-3/inventory/inventory-all.json",
+  "money_md_present": true,
+  "money_md_used_for": "cross-check of the Money records' count and the to-settle list",
+  "listing_B": "dubpay/wave-2/results/B/listing-money.json",
+  "acts_read": 17168,
+  "public_text_acts": 2924
+ },
+ "money_md_check": {
+  "says_texts": 39,
+  "says_to_settle": 7,
+  "table_rows": 39,
+  "to_settle_items": 7,
+  "json_money_records": 39,
+  "json_money_records_to_settle": 7,
+  "json_to_settle_touching_money_any_area": 18,
+  "agrees": true
+ },
+ "summary": {
+  "inventory_money_records": 39,
+  "inventory_money_by_hand": 3,
+  "inventory_to_settle_touching_money": 18,
+  "B_texts": 36,
+  "B_drafts": 84,
+  "lines": {
+   "in both": 38,
+   "in the inventory only": 1,
+   "in B only": 37,
+   "placed elsewhere in the inventory": 9
+  },
+  "B_texts_by_status": {
+   "all drafts in both": 13,
+   "some drafts in both": 2,
+   "none in the inventory": 17,
+   "placed elsewhere": 4
+  },
+  "records_failing_their_act": 0,
+  "records_elsewhere_failing": 0,
+  "candidates": 15,
+  "count_rows": 47,
+  "count_rows_differing_headline": 11,
+  "count_rows_differing_all": 23
+ },
+ "lines": [
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "b10d576b3eb393629c5ea8b6c42a577a3cd91a670d67cc0efbf4a7f37f925885",
+   "spec_hash": "4fae88be0758aed8fea427db4f44d8c8815b31d0e0e08dd7e0f1e1a056bae01f",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 1",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "23b67a3ada72d97e04f3c3f6a3f43bdbd9d74c8c5464abbe170449d8f9c0bc51",
+   "spec_hash": "d2912f386807948288a716148a01d13beaddc0389b1a339ec251cb487440498f",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 2",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "31579733a1a36701e3835486933e3855248d68ba4a32c757d7587c1108ac43c0",
+   "spec_hash": "6f02c76623b62e327702b78c0784394caf0725c3b13679d836436af654e014f3",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 3",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "4",
+   "act": "0ece915a6f11f17ca50d41b61d664bad7b703994ee71e568cbc6e352331c6a94",
+   "spec_hash": "767b0984c986a3a77c9e75723ad0dfaab2c0e5c131c18ba320e44044a6684fa3",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 4",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "yes",
+    "to_settle": false
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "5",
+   "act": "2e295742bbb43e24206a5b8df29221b38734abf76e225c5af45d5b82df045b37",
+   "spec_hash": "7ff9be42bef9875f9a74d338fa1b66664f5f66473a7ac0e77fb255903eaf8cb6",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 5",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "6",
+   "act": "7e0ac8f1210fc8c9a0aedd625be73197cca015d2f95a908ffbfe9be71f9d9a49",
+   "spec_hash": "4f8626c77ef9736b0dffda6669164760efab020b2ca238c127d7b7875fe80083",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 6",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "7 (first publication, titled \"draft 6\")",
+   "act": "333bdbc7273f5cea252cfba4f6a33447b710e155e7662d5e593846a06ff36e07",
+   "spec_hash": "47c874cbb44d5883f555c4c59c59bfa829fd29ecf169084bee46d9845a38d77b",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 6",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "The straight split",
+   "B_key": "straight-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "7 (republished, title corrected)",
+   "act": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+   "spec_hash": "e51e8653106125142f6570aa797a5ef56e869ed1d5f17b48cdfa84afc7098dc8",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the straight split, draft 7",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "DubPay's shape for a deal's parameters (section 6)",
+   "B_key": "deal-parameters",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "answer to the seam acts",
+   "act": "393f664cbc848318d502b08381aea08415795370be1f033a031256086bfd829e",
+   "spec_hash": "fd2419d9eb7a8517f54e3191b060534e12a07b9bd892918327eeb770869751fa",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public, answering DubLaw's seam act 1a149b9b… and DubWeb's act 11fde723…, each against…",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act; first line does not begin \"# cMIP\" or \"# Module\"; its spec hash is named by 0 other acts",
+   "money_words_in_act": 3,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "it sets a deal's fee and shares for the straight split's section 6: money parameters",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "B_key": "hop-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "f94aa7210b3cf34c64d9826c748cc33319cc64364b87b474bb9d3c615a39812a",
+   "spec_hash": "3de83b05a10a17dc66381c54d37435490b25d8c937b6ecbb9e6d7aeca986b72f",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP split, draft 1 (round two)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "B_key": "hop-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "f8fd362d6f69be11a5fe5f4c23205454fefe4fa42a362e68423c418a7cb74ccd",
+   "spec_hash": "b84b121d09770fad03f441a5d112e3b308cb4399334a5e6c46612cdc0359c4e9",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP split, draft 2 (round two)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "B_key": "hop-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "2185922e604ed8a108cabf5288c3d5fc583967fc0feb898412272b10db314670",
+   "spec_hash": "04c96aba545ddf96eb8cc59e6f5c889d796f65b8cecdb967448923a158062712",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP split, draft 3 (round two)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "B_key": "hop-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "4",
+   "act": "83b71841a44887482858dccb6447fa2e605c1a41b951b840e8d0c6844764d628",
+   "spec_hash": "7933f0bb0749e14e6cc051a90e9248d98d96eaa739395ae0467bf18f69bbb36e",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP split, draft 4 (round two)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "B_key": "hop-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "5",
+   "act": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+   "spec_hash": "3ed64a40d1f2267f144dc7f0db7ee8a5a998abf59b8472398e70c81192c7de27",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP split, draft 5 (round two)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Stall's pass-on and Stall split",
+   "B_key": "stall-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "1 (pass-on by the receiver)",
+   "act": "129271037e340153cb0881a2ab679a16ba9806aec5ed98392899a530198fae00",
+   "spec_hash": "eab368d4cd2fc69b4d4e0c3621e7b6c4cd7a1d094ffac5ff0dbd49ed0da41245",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "In Terms that name this cMIP in control, the receiver they name (the doer)…",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act; first line does not begin \"# cMIP\" or \"# Module\"; its spec hash is named by 0 other acts",
+   "money_words_in_act": 5,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "the receiver named in Terms passes the payment on: a payout",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Stall's pass-on and Stall split",
+   "B_key": "stall-split",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+   "spec_hash": "e8ce35555721ddc18ff7cd04d6f8b1be65937e271ae3fd8b7b945de7fdffbbea",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# Stall split, cMIP draft 2 (task K6, control)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "The client that served the payment (a spot)",
+   "B_key": "client-spot",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "ae1a22e792fb562e25dc9418740d7139b9d681c5096623db7cf588bb3ee25d69",
+   "spec_hash": "de52a4212b219fafd2f5065d63ea2843a76205f6d1b37fbb679901446adf59fa",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: The client that served the payment (a spot, task K5)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": "a spot that pays the client which served a payment: a payout share",
+    "prompted": "no",
+    "to_settle": true
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "The client that served the payment (a spot)",
+   "B_key": "client-spot",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+   "spec_hash": "bdcee1a5606555fc88d9f76b911fc5a7bc057179f9966f0941e8fe08848b7ca2",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: The client that served the payment (a spot, task K5)",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": "a spot that pays the client which served a payment: a payout share",
+    "prompted": "no",
+    "to_settle": true
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "The payment report (the report block, proposal 4)",
+   "B_key": "report-block",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "kitspec",
+   "draft": "proposal 4",
+   "act": null,
+   "spec_hash": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "The report block, proposal 4",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.1.0",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "2e9de3d4b92f145ff5823681c07810084ebadd01997d78a551f58302a4884a7b",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 9,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.1.1",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "25303428d3e52017ead239762f899e004f2c1b7679ce5c8af1e6d31f484323aa",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 1,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.1.2",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "abbe0d2d6f31e47fdacb55294feaec79a718f36e7cd369b07970936454ac5cfb",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 6,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.1.3",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "234b0e723fa62c3d094545dcf9242abd63de672eae2e8eff8ba46896d3127353",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 4,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.2.0",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "393fbe78585b03faa51782f27c6704ed4989d3718792a22f08dfac18d1c38606",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 4,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.2.1",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "d08095fb6376c968e51f67fbcd9773bae0f92b8b2b8a722be2faa3b67b489d6a",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 15,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "B_key": "damgar",
+   "B_category": "1. Splits and payout services",
+   "B_kind": "media",
+   "draft": "0.2.2",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay, in public: Damgar 0.2.2, a release. Media sha256 6e036543a84e58ee67a075f686478ddf702589ebd342e8ab2c04b53bbfa6efe7, 21,051 bytes, at turnstile-home…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 8,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "notice 7 and its posts call it the money app: balance, payments, where the money flows",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "DubPay's common pot",
+   "B_key": "common-pot",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "bba5c058d40c9832fedfe4a4b3ef6ee34be782b0f616333a98ee7536c15de280",
+   "spec_hash": "e91f72f58d5ebe6756c6967be6e9601582668514ed43d2392ddb65ab7110c39d",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the common pot, draft 1",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "yes",
+    "to_settle": false
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "DubPay's common pot",
+   "B_key": "common-pot",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+   "spec_hash": "f608f7fa3686a7c49faa254b27c7efcaa5a1180beb55bbeb1ee2133b16bb1f45",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: the common pot, draft 2",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "work",
+    "to_settle": false
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "DubPay's pot reader (build/pot/pot.mjs)",
+   "B_key": "pot-reader",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "media",
+   "draft": "first media",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "1b912901c7ca5fb8efe951d3f555bbb9da25083a199c1b7733b35980fe9e19e2",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay to Hop (a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5), Spare Wheel, DubLaw and DubWeb, in public. Our two acts…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 25,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "it reads the common pot and checks Hop's clearings",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "DubPay's pot reader (build/pot/pot.mjs)",
+   "B_key": "pot-reader",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "media",
+   "draft": "second media (checks Hop's clearings)",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "9b4661a690bba67f7398ccaed8b3c09327fa7c943fb1f0fe9b46787c00bec967",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay to Hop (a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5), Spare Wheel, DubLaw and DubWeb, in public. Our two acts…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 19,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "it reads the common pot and checks Hop's clearings",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "DubPay's pot reader (build/pot/pot.mjs)",
+   "B_key": "pot-reader",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "media",
+   "draft": "third media (draft 2 of the pot)",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "94514e4fb4bcd574e21b46c55432437522df5137146372ec1a8bf02929fa9e82",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "DubPay to Hop (a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5), Spare Wheel, DubLaw and DubWeb, in public. Our two acts…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 13,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "it reads the common pot and checks Hop's clearings",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Hop's settlement suggestion for the common pot",
+   "B_key": "pot-settlement",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "script",
+   "draft": "0",
+   "act": "2525e63d3ce3ef034f55559e40d8214f9b11c34739117f1adbe283b84ea9bd7a",
+   "spec_hash": "b6e0cc13575823833c54030ac567f48dfc69215b1b7cd8bb96de260ceab302fd",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "// A settlement suggestion for DubPay's common pot (cMIP e91f72f5…, rule P5), from pot…",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act; first line does not begin \"# cMIP\" or \"# Module\"; its spec hash is named by 0 other acts",
+   "money_words_in_act": 31,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "it suggests the settlement of the common pot, under its rule P5",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The clusters' rotating pot",
+   "B_key": "rotating-pot",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+   "spec_hash": "01c17e3894d81c27be1dc97a50e88e110404ab5365b766f09e395166ad423bdb",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP rotating pot, draft 1 (task K1, the body)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Spare Wheel (a hardship fund)",
+   "B_key": "spare-wheel",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 1 (body: plain words)",
+   "act": "db8de37673888609e1afbf299410e0b765bfcf6a5a70fab6c44c5d0796d215f2",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Spare Wheel: a hardship fund for people who work by the job. Version 2,…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 20,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a hardship fund: members pay into shares and draw from it",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Spare Wheel (a hardship fund)",
+   "B_key": "spare-wheel",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 2 (body: common pot, draft 1)",
+   "act": "73db2ea4a912e60e54ebf3efc68072d93455aa65fb1a3b1174673f4dc38d64cb",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Spare Wheel: a hardship fund for people who work by the job. Version 2,…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 17,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a hardship fund: members pay into shares and draw from it",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Hop's tab (clearing a group's debts)",
+   "B_key": "hop-tab",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "3ce77ad5fb68e1ef8e2b208032a6f2c664f9313cb1b3b4bb3d4eba77b6e1f989",
+   "spec_hash": "9b2104409301516be40fb01f122fbb6648968f729bb47d2cef13ca0275e41b3e",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP: Hop's tab, draft 1 (clearing a group's debts; Hop keeps the account, never the money)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "yes",
+    "to_settle": false
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Hop's tab (clearing a group's debts)",
+   "B_key": "hop-tab",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+   "spec_hash": "6924a08fa4dc03703f518f1d0ecbd34327b1926d79b1f804c2c7bf4b65a710c2",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "People who deal with each other often owe each other back and forth: flatmates,…",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act held only in windows' acts/, in no home's feed (the inventory reads feeds); first line begins \"# cMIP\"/\"# Module\"; its spec hash is named by 3 other acts",
+   "money_words_in_act": 44,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "people who owe each other back and forth: debts cleared",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The round's tab (Hop, clerk)",
+   "B_key": "rounds-tab",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 1",
+   "act": "c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "The round's tab, version 2, replacing version 1 (c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383, the tab's root) before any…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 8,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "Terms of a tab of debts, Hop as clerk",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The round's tab (Hop, clerk)",
+   "B_key": "rounds-tab",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 2",
+   "act": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "The round's tab, version 2, replacing version 1 (c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383, the tab's root) before any…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 13,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "Terms of a tab of debts, Hop as clerk",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "B_key": "money-decision",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "759b8d5845984c35a91653baf958d43cc628177c74b698bf4834ca71aca4a869",
+   "spec_hash": "ced79f7c8753c3c5f5f7fb6b8a17c5fb429d40cb7ee1957738cc43589119492e",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP money decision, draft 1 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "B_key": "money-decision",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "e7bba1fa5e4652916cbb8a13f7e9ff6729097dc6bc10e9dc994a08c8f3fd0a7f",
+   "spec_hash": "d9dab85ae904e2041f03dfbcc31df402dc1ee6cb66bec3d85cd3a7a1f516c8f6",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP money decision, draft 2 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "B_key": "money-decision",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "14e0144355223ac2bd2c25c8c319280187b2675a3aa817f755a9e89eb00c36af",
+   "spec_hash": "301481877f9abd20859d6526725a3b902d27edd37acbaff480399d270f87d6ae",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP money decision, draft 3 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "B_key": "money-decision",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "4",
+   "act": "ed56f60ccbbdae7af488f9c15490e2784c78e642fe3b4b1f298f06df40b9e98e",
+   "spec_hash": "88cf4137aaacc8d7ae74a307180a1c145f101b95c78ab2991866d2327f8bfaab",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP money decision, draft 4 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "B_key": "money-decision",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "5",
+   "act": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+   "spec_hash": "8cd7b8b158b0d6f6ddaf3d294e85ca228804ec33f6183a288c44288034971a30",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP money decision, draft 5 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "DubWeb's open books",
+   "B_key": "open-books",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "17be23b63bd20113cd07bfe61a6601b2b061cfcaf2da1d2ef5ce5bfb255036ca",
+   "spec_hash": "d740165a4c93f96b9b760ba71a679242ea458ccaa93b0fff370df1e02cbb0310",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP open books, draft 1",
+    "area": "Web",
+    "area_category": "open books",
+    "area_reason": "a purse shown in the open is DubWeb's own open books; pools keep a pointer",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "task_under_15_words": "Any group that keeps money together has a keeper: a club's treasurer, a tenants'…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 18,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a group's money and its keeper: where did our money go",
+    "mark": "inferred"
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "DubWeb's open books",
+   "B_key": "open-books",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+   "spec_hash": "63560652cb1914d0d539c343faf7cc070ba21113f37b6d29754632bf3d25687e",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP open books, draft 2",
+    "area": "Web",
+    "area_category": "open books",
+    "area_reason": "a purse shown in the open is DubWeb's own open books; pools keep a pointer",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "task_under_15_words": "Any group that keeps money together has a keeper: a club's treasurer, a tenants'…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 46,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a group's money and its keeper: where did our money go",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "Hours of care (a Statement kind, for circles that swap time)",
+   "B_key": "hours-of-care",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+   "spec_hash": "4a737c6692eeeb379343076f1a6e43649f56fb2b773f457db692c0780a0104a1",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP hours of care, draft 1 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "2. Pools and mutual credit",
+    "area_reason": "a balance of hours swapped among members is mutual credit; no sats move, so open books and consent keep pointers",
+    "prompted": "no",
+    "to_settle": true
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Le Cercle de garde (a babysitting circle)",
+   "B_key": "cercle-de-garde",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 1",
+   "act": "ce52dfc46e5928d4ae89b101d6ce4d2274fcb624e1a968e48f1dd56469965f48",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: five parents in Lyon, each a party to these Terms by signing an…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 2,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "parents swap babysitting hours: a balance owed in hours, not sats",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Le Cercle de garde (a babysitting circle)",
+   "B_key": "cercle-de-garde",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 2",
+   "act": "caede5b536aa95ff0a6ba1d67dd6f8aa26e945b566e702d9a87a0925aa893a8b",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: five parents in Lyon, each a party to these Terms by signing an…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 3,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "parents swap babysitting hours: a balance owed in hours, not sats",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "cercle-count.mjs (the Cercle's counting script)",
+   "B_key": "cercle-count",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "media",
+   "draft": "1",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "053e962eaa72472f88ecbd1127043b47e8e27dbb0ea1e692c5cc572b6d2f8814",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Dalia, in public: Le Cercle de garde, version 2 of its Terms, caede5b536aa95ff0a6ba1d67dd6f8aa26e945b566e702d9a87a0925aa893a8b, in…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 2,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "counts the Cercle's hours owed; no sats",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "cercle-count.mjs (the Cercle's counting script)",
+   "B_key": "cercle-count",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "media",
+   "draft": "2",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "117f7d47163b62ca4fe3eb49d560e840b397538b0b254a6712ae9cb3cbd99ce1",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Dalia, in public: Le Cercle de garde, version 2 of its Terms, caede5b536aa95ff0a6ba1d67dd6f8aa26e945b566e702d9a87a0925aa893a8b, in…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 4,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "counts the Cercle's hours owed; no sats",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Krog varstva (a copy of the Cercle, Ljubljana)",
+   "B_key": "krog-varstva",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 1",
+   "act": "4b4642eaead2525be191071b25e6bf9ecc17c3531f1ed868405e4c0dc97b230c",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: four parents in Ljubljana, each a party to these Terms by signing an…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 3,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a copy of the Cercle: hours owed, not sats",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Krog varstva (a copy of the Cercle, Ljubljana)",
+   "B_key": "krog-varstva",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 2",
+   "act": "b059f5d1e590a950333c004f13683603fedfc5e110886005a8f9444eafc7240f",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: four parents in Ljubljana, each a party to these Terms by signing an…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 4,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a copy of the Cercle: hours owed, not sats",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The Mending Circle (a repair circle)",
+   "B_key": "mending-circle",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 1",
+   "act": "bb2cd2b94275bd96ef5defc5768414bce76bbb195c530b8ab38b10be641e43ce",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: six people who fix things, each a party to these Terms by signing…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 16,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "people who fix things count repairs owed; lending of tools besides",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The Mending Circle (a repair circle)",
+   "B_key": "mending-circle",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 2",
+   "act": "6f6500634c4b3f2784e8a84fae56bc01bed77cfbc5f9a7ec78a5ffe00feeb92b",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: six people who fix things, each a party to these Terms by signing…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 18,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "people who fix things count repairs owed; lending of tools besides",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "The Mending Circle (a repair circle)",
+   "B_key": "mending-circle",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "terms",
+   "draft": "version 3",
+   "act": "6b2736be297abe42c50d24f75b702b7bf8c908d4d6dd12016802b2cc896ad8db",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Who: six people who fix things, each a party to these Terms by signing…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 21,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "people who fix things count repairs owed; lending of tools besides",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "mending.mjs (counts the Mending Circle)",
+   "B_key": "mending-count",
+   "B_category": "2. Pools and mutual credit",
+   "B_kind": "script",
+   "draft": "0",
+   "act": "046b26cd3bcbd6c3cb2d8ed06763781e6ba4694675b9ba7a4ee5ad4602aaa0a0",
+   "spec_hash": "0556dfd9bd1d63c1f42c30ddbec44f3e3d13ef12813be8751ef342f78f04973d",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "// mending.mjs - counts the Mending Circle from feed pages. Read before you run…",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act; first line does not begin \"# cMIP\" or \"# Module\"; its spec hash is named by 0 other acts",
+   "money_words_in_act": 6,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "counts the Mending Circle's balances; no sats",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Until's escrow",
+   "B_key": "escrow",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "9ae61048254fa41670c899e6c74ecfabe60cd718be0a7b5bc210b80dbe2a3eef",
+   "spec_hash": "cf337a8eda4789d52be6673853130cd6c6a9fc4e63d12c0aaa51f9cdf66d70d4",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP escrow, draft 1",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Until's escrow",
+   "B_key": "escrow",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "a2d419101dbad4f69ccf13145a50a88b703858e7e772f4e810d034c20915c2b2",
+   "spec_hash": "559c7ffb7725931a6381f19cf619f3970c95ed7882ca1855f86497b62e3f806c",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP escrow, draft 2",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Until's escrow",
+   "B_key": "escrow",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+   "spec_hash": "89c80e3c73b73d712ff5a5080b825c80fe94b09c43ef6502adbd27239499e1ef",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP escrow, draft 3",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Until's escrow",
+   "B_key": "escrow",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "4",
+   "act": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+   "spec_hash": "cadbbc54a8f6abfe17c061cc46a69d1e0f0f789d3fdddf24c01bf8eb3510669c",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP escrow, draft 4",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Until's escrow",
+   "B_key": "escrow",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "5",
+   "act": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+   "spec_hash": "a54b60660feaf58dd6c5c7cd003265e8a3dacce91f0102611720628120df91ff",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP escrow, draft 5",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Until's home bond",
+   "B_key": "home-bond",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+   "spec_hash": "e33943e754db7d9bdb9f5f1b3c630a3c2002b1d56cdc5fb76dfd147661e141b0",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP home bond, draft 1",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": "money set aside and held for a home's residents; homes and the way out keeps a pointer",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "B_key": "room-let",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "526f49479f921b0d76dfa1d9aa338cb5baa3de8b66d0e2cff1fbac0858e64491",
+   "spec_hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 1",
+    "area": "Agreements",
+    "area_category": "4. Consent and terms for people",
+    "area_reason": "a let between two people in plain words; its deposit is held under the escrow cMIP, which stays Money",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "task_under_15_words": "Most of what people sign in life is not a sale but an arrangement…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 36,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a let in plain words; its commonest fight is the deposit",
+    "mark": "inferred"
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "B_key": "room-let",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d",
+   "spec_hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 2",
+    "area": "Agreements",
+    "area_category": "4. Consent and terms for people",
+    "area_reason": "a let between two people in plain words; its deposit is held under the escrow cMIP, which stays Money",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "task_under_15_words": "Most of what people sign in life is not a sale but an arrangement…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 44,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a let in plain words; its commonest fight is the deposit",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "B_key": "room-let",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "3",
+   "act": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+   "spec_hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 3",
+    "area": "Agreements",
+    "area_category": "4. Consent and terms for people",
+    "area_reason": "a let between two people in plain words; its deposit is held under the escrow cMIP, which stays Money",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "task_under_15_words": "Most of what people sign in life is not a sale but an arrangement…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 44,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a let in plain words; its commonest fight is the deposit",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "Stall's held for you",
+   "B_key": "held-for-you",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "ad3b8e7f4b0f60721bddb635f14716d116f0e85c5e01d4f6225e7516d703fca7",
+   "spec_hash": "31b669016dc2ea5878e63aff9979d417821b255b75d99d74d8197e3e752edfb1",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP held for you, draft 1 (a holder's own admission, and how the owner claims)",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": "a holder's public admission of money it holds for others: money held; open books keeps a pointer",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Stall's held for you",
+   "B_key": "held-for-you",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+   "spec_hash": "08ae1b2cb42d8c3a9052021a1daebdbd237016cfba6981bcda1c4fac5d517b9f",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP held for you, draft 2 (a holder's own admission, and how the owner claims)",
+    "area": "Money",
+    "area_category": "3. Money held (escrow, deposits, refunds, held for you)",
+    "area_reason": "a holder's public admission of money it holds for others: money held; open books keeps a pointer",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "held.mjs (Stall's reader for held for you)",
+   "B_key": "held-reader",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "media",
+   "draft": "0.1",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "381f2c97f6d3d4fb1d9c9dd3af197992193fcc35d4af6a83407b8bf70a66ee83",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Stall: a reader for 'held for you' (act 42aa2adc). held.mjs, version 0.1, 3,482 bytes,…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 9,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "reads a holder's 'held for you' admissions",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Kept Word (deliver or refund, a guild charter)",
+   "B_key": "kept-word",
+   "B_category": "3. Money held (escrow, deposits, refunds, held for you)",
+   "B_kind": "terms",
+   "draft": "charter, version 1",
+   "act": "825b834deabfa35c3c9cce6cd1dd67b9e6445e1c41c1660df82e1af816e0245b",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "Written by Ana Lúcia Prado (28070ee8…ee26), 20 November 2026. Words fingerprint: MOR's work hash.…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 8,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a guild charter: deliver or refund",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Hop's answerer (it writes the invoice for you)",
+   "B_key": "answerer",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "script",
+   "draft": "0.1",
+   "act": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+   "spec_hash": "d497df18cbbc9bb6b910588f4787f3eaf2e440aca93a00df831066449fa620ca",
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "#!/usr/bin/env node",
+   "money_words_from": "its own text act",
+   "why_not_in_inventory": "a text act; first line does not begin \"# cMIP\" or \"# Module\"; its spec hash is named by 0 other acts",
+   "money_words_in_act": 29,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a script that writes the invoice for the seller",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Invoice request form (piece A of Commission 1)",
+   "B_key": "invoice-request",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "72bbce87cf62728e3b8791fe7ab22ddb483d308d83c6fbdfd8df4e4f0979afba",
+   "spec_hash": "b13f771cb27614f096bd94fae9d779ca6fd76a1504aa253438cb27c54fd2a74f",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# Invoice request form, draft 1 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f3",
+    "area": "Money",
+    "area_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Invoice request form (piece A of Commission 1)",
+   "B_key": "invoice-request",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+   "spec_hash": "76c65a2625d74ac666a43318c9666a525dcdf2b4f4dace46b2ae75d10d2735ec",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# Invoice request form, draft 2 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f3",
+    "area": "Money",
+    "area_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+    "area_reason": null,
+    "prompted": "no",
+    "to_settle": false
+   },
+   "prompted": "no"
+  },
+  {
+   "text": "Commission 1 (Odile Ferrant pays for an invoice request form and a seller's answerer)",
+   "B_key": "commission-1",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "terms",
+   "draft": "version 1",
+   "act": "bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f335bb4118",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "WHAT I PAY FOR, to whoever first delivers a piece that passes the test:…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 19,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a buyer pays sats for an invoice request form and an answerer",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Commission 1 (Odile Ferrant pays for an invoice request form and a seller's answerer)",
+   "B_key": "commission-1",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "terms",
+   "draft": "version 1, again",
+   "act": "51c0ec8b356a28a729ebbf4561174e668230819e890cd845df50b7c55b9c1fdb",
+   "spec_hash": null,
+   "media_hash": null,
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "WHAT I PAY FOR, to whoever first delivers a piece that passes the test:…",
+   "money_words_from": "the text act of its Terms words",
+   "why_not_in_inventory": "a Terms act, not a text act: the inventory lists texts only",
+   "money_words_in_act": 19,
+   "act_says_it_is_money": {
+    "answer": "yes",
+    "basis": "a buyer pays sats for an invoice request form and an answerer",
+    "mark": "inferred"
+   },
+   "prompted": "not found"
+  },
+  {
+   "text": "Plain Words' period payment (a Statement kind)",
+   "B_key": "period-payment",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+   "spec_hash": "50bcb2e55641c2a7b3e85ed6ee28757fe11bb7c6d4e39dc5f0cd16a87e74ee72",
+   "media_hash": null,
+   "status": "in both",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP period payment, draft 1 (task K7, a Statement kind)",
+    "area": "Money",
+    "area_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+    "area_reason": null,
+    "prompted": "yes",
+    "to_settle": false
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Proven claim (a register of debts)",
+   "B_key": "proven-claim",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "d6647391ab5ab6d5f3aed58f439aaab162ec65a9f73ab08b0bf082a113211f1e",
+   "spec_hash": "ed9a4b4e99ec48af5c13db437590934f18a1c65c16d1b509af5f0f5cf7be1648",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP Proven claim, draft 1",
+    "area": "Web",
+    "area_category": "record and time",
+    "area_reason": "it recovers nothing and needs no Terms: it writes a proven debt where later buyers read it",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "task_under_15_words": "A claim against an identity that took money and gave nothing. It recovers nothing;…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 31,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a claim against one who took money: it records a debt, recovers nothing",
+    "mark": "inferred"
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Proven claim (a register of debts)",
+   "B_key": "proven-claim",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+   "spec_hash": "51f9afc8224a4d79a59881cb4e5f825e88231f198a36af4f3f67c6fb57e69f0a",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP Proven claim, draft 2",
+    "area": "Web",
+    "area_category": "record and time",
+    "area_reason": "it recovers nothing and needs no Terms: it writes a proven debt where later buyers read it",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "task_under_15_words": "A claim against an identity that took money and gave nothing. It recovers nothing;…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 15,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "a claim against one who took money: it records a debt, recovers nothing",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "register.mjs (reads Proven claims)",
+   "B_key": "register",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "media",
+   "draft": "0.3",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "dffe90fbbe2cdfbc93a2e8ee9a3e507069e36c40f30ecc4eb4884a63d67d5806",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "What I took this morning, and from whom, named in the text: - Postmark's…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 9,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "reads Proven claims: debts recorded, nothing paid",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "register.mjs (reads Proven claims)",
+   "B_key": "register",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "media",
+   "draft": "0.4",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "0372e86b00eace338b0deb806f70f3fd76bca914a9fbdf03228e265645296cc5",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "What I took this morning, and from whom, named in the text: - Postmark's…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 0,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "reads Proven claims: debts recorded, nothing paid",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "register.mjs (reads Proven claims)",
+   "B_key": "register",
+   "B_category": "4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "B_kind": "media",
+   "draft": "0.6",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "2992758f4f8c5ae18bdf29fc8701c453af2bbb3578cc6fa162708dab1239d74e",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "What I took this morning, and from whom, named in the text: - Postmark's…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 4,
+   "act_says_it_is_money": {
+    "answer": "partly",
+    "basis": "reads Proven claims: debts recorded, nothing paid",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "Steward & Co.'s lending shelf",
+   "B_key": "lending-shelf",
+   "B_category": "5. Loans and returns",
+   "B_kind": "text",
+   "draft": "1",
+   "act": "e5d774d2e9d60e9000d5a7ff53de5fba070c9e9b2042c4a3b7797b4b10b2052c",
+   "spec_hash": "255551a7692045f442cb15115cde25b1371a0143e18e78513c752ed5c657b536",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP the lending shelf, draft 1",
+    "area": "Agreements",
+    "area_category": "4. Consent and terms for people",
+    "area_reason": "lending a thing between neighbours under Terms, with no money moving; DubPay's loans and returns keeps a pointer",
+    "prompted": "yes",
+    "to_settle": true
+   },
+   "task_under_15_words": "A neighbourhood lends things: a ladder, a drill, a tent, a book. Nothing is…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 14,
+   "act_says_it_is_money": {
+    "answer": "no",
+    "basis": "its words: nothing is sold and no money has to move",
+    "mark": "inferred"
+   },
+   "prompted": "prompted"
+  },
+  {
+   "text": "Steward & Co.'s lending shelf",
+   "B_key": "lending-shelf",
+   "B_category": "5. Loans and returns",
+   "B_kind": "text",
+   "draft": "2",
+   "act": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+   "spec_hash": "43cff6df47df3abab02bba00a3d3124623376d92f4cef85d2e6151795e654be5",
+   "media_hash": null,
+   "status": "placed elsewhere in the inventory",
+   "matched_by": "spec hash",
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP the lending shelf, draft 2",
+    "area": "Agreements",
+    "area_category": "4. Consent and terms for people",
+    "area_reason": "lending a thing between neighbours under Terms, with no money moving; DubPay's loans and returns keeps a pointer",
+    "prompted": "work",
+    "to_settle": true
+   },
+   "task_under_15_words": "A neighbourhood lends things: a ladder, a drill, a tent, a book. Nothing is…",
+   "money_words_from": "its own text act",
+   "money_words_in_act": 26,
+   "act_says_it_is_money": {
+    "answer": "no",
+    "basis": "its words: nothing is sold and no money has to move",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (another draft of the work)"
+  },
+  {
+   "text": "shelf.mjs (the lending shelf's tray app)",
+   "B_key": "shelf-app",
+   "B_category": "5. Loans and returns",
+   "B_kind": "media",
+   "draft": "0.1.0",
+   "act": null,
+   "spec_hash": null,
+   "media_hash": "342921d6dd5cce99de3a37c08eb24392ff7bdaecd147f04f19122dfd8588d572",
+   "status": "in B only",
+   "matched_by": null,
+   "mark": "counted (no key of it in the inventory)",
+   "inventory": null,
+   "task_under_15_words": "It reads every act your tray holds and prints each listing and each loan:…",
+   "money_words_from": "the text act announcing it",
+   "why_not_in_inventory": "an app (media), not a text act: the inventory lists texts only",
+   "money_words_in_act": 5,
+   "act_says_it_is_money": {
+    "answer": "no",
+    "basis": "loans of things; no money moves, by the shelf's own words",
+    "mark": "inferred"
+   },
+   "prompted": "prompted (notice 7 asked for apps)"
+  },
+  {
+   "text": "cMIP guide spot, draft 1",
+   "B_key": null,
+   "draft": 1,
+   "act": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+   "spec_hash": "824698f3485c871dda6438e4d7104102368661f748127cef2ebdb92784f4b708",
+   "status": "in the inventory only",
+   "matched_by": null,
+   "mark": "counted",
+   "inventory": {
+    "title": "# cMIP guide spot, draft 1",
+    "area": "Money",
+    "area_category": "1. Splits and payout services",
+    "area_reason": "a spot paid to whoever led a buyer to a sale, the same shape as the client spot DubPay placed in splits and payouts",
+    "prompted": "no",
+    "to_settle": true
+   },
+   "prompted": "no"
+  }
+ ],
+ "checks": [
+  {
+   "title": "# cMIP hours of care, draft 1 (task K7, a Statement kind)",
+   "act": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+   "spec_hash": "4a737c6692eeeb379343076f1a6e43649f56fb2b773f457db692c0780a0104a1",
+   "creator": "058d65d4eadf458631a858780e9fc9e72c367d698324b6ba0a11f9623fad130c",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP guide spot, draft 1",
+   "act": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+   "spec_hash": "824698f3485c871dda6438e4d7104102368661f748127cef2ebdb92784f4b708",
+   "creator": "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP escrow, draft 1",
+   "act": "9ae61048254fa41670c899e6c74ecfabe60cd718be0a7b5bc210b80dbe2a3eef",
+   "spec_hash": "cf337a8eda4789d52be6673853130cd6c6a9fc4e63d12c0aaa51f9cdf66d70d4",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP escrow, draft 2",
+   "act": "a2d419101dbad4f69ccf13145a50a88b703858e7e772f4e810d034c20915c2b2",
+   "spec_hash": "559c7ffb7725931a6381f19cf619f3970c95ed7882ca1855f86497b62e3f806c",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP escrow, draft 3",
+   "act": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+   "spec_hash": "89c80e3c73b73d712ff5a5080b825c80fe94b09c43ef6502adbd27239499e1ef",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP escrow, draft 4",
+   "act": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+   "spec_hash": "cadbbc54a8f6abfe17c061cc46a69d1e0f0f789d3fdddf24c01bf8eb3510669c",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP escrow, draft 5",
+   "act": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+   "spec_hash": "a54b60660feaf58dd6c5c7cd003265e8a3dacce91f0102611720628120df91ff",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP home bond, draft 1",
+   "act": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+   "spec_hash": "e33943e754db7d9bdb9f5f1b3c630a3c2002b1d56cdc5fb76dfd147661e141b0",
+   "creator": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP money decision, draft 1 (task K7, a Statement kind)",
+   "act": "759b8d5845984c35a91653baf958d43cc628177c74b698bf4834ca71aca4a869",
+   "spec_hash": "ced79f7c8753c3c5f5f7fb6b8a17c5fb429d40cb7ee1957738cc43589119492e",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP money decision, draft 2 (task K7, a Statement kind)",
+   "act": "e7bba1fa5e4652916cbb8a13f7e9ff6729097dc6bc10e9dc994a08c8f3fd0a7f",
+   "spec_hash": "d9dab85ae904e2041f03dfbcc31df402dc1ee6cb66bec3d85cd3a7a1f516c8f6",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP money decision, draft 3 (task K7, a Statement kind)",
+   "act": "14e0144355223ac2bd2c25c8c319280187b2675a3aa817f755a9e89eb00c36af",
+   "spec_hash": "301481877f9abd20859d6526725a3b902d27edd37acbaff480399d270f87d6ae",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP money decision, draft 4 (task K7, a Statement kind)",
+   "act": "ed56f60ccbbdae7af488f9c15490e2784c78e642fe3b4b1f298f06df40b9e98e",
+   "spec_hash": "88cf4137aaacc8d7ae74a307180a1c145f101b95c78ab2991866d2327f8bfaab",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP money decision, draft 5 (task K7, a Statement kind)",
+   "act": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+   "spec_hash": "8cd7b8b158b0d6f6ddaf3d294e85ca228804ec33f6183a288c44288034971a30",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP period payment, draft 1 (task K7, a Statement kind)",
+   "act": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+   "spec_hash": "50bcb2e55641c2a7b3e85ed6ee28757fe11bb7c6d4e39dc5f0cd16a87e74ee72",
+   "creator": "76a78f70bc47ba945ce7ab081facc4f0327ba3698efffc4deccf11adce7aeb59",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: The client that served the payment (a spot, task K5)",
+   "act": "ae1a22e792fb562e25dc9418740d7139b9d681c5096623db7cf588bb3ee25d69",
+   "spec_hash": "de52a4212b219fafd2f5065d63ea2843a76205f6d1b37fbb679901446adf59fa",
+   "creator": "84ae1e82772c227173c0d4726757c5f5db793e678c68b039f06cba713aeb095c",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: The client that served the payment (a spot, task K5)",
+   "act": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+   "spec_hash": "bdcee1a5606555fc88d9f76b911fc5a7bc057179f9966f0941e8fe08848b7ca2",
+   "creator": "84ae1e82772c227173c0d4726757c5f5db793e678c68b039f06cba713aeb095c",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the common pot, draft 1",
+   "act": "bba5c058d40c9832fedfe4a4b3ef6ee34be782b0f616333a98ee7536c15de280",
+   "spec_hash": "e91f72f58d5ebe6756c6967be6e9601582668514ed43d2392ddb65ab7110c39d",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the common pot, draft 2",
+   "act": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+   "spec_hash": "f608f7fa3686a7c49faa254b27c7efcaa5a1180beb55bbeb1ee2133b16bb1f45",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 1",
+   "act": "b10d576b3eb393629c5ea8b6c42a577a3cd91a670d67cc0efbf4a7f37f925885",
+   "spec_hash": "4fae88be0758aed8fea427db4f44d8c8815b31d0e0e08dd7e0f1e1a056bae01f",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 2",
+   "act": "23b67a3ada72d97e04f3c3f6a3f43bdbd9d74c8c5464abbe170449d8f9c0bc51",
+   "spec_hash": "d2912f386807948288a716148a01d13beaddc0389b1a339ec251cb487440498f",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 3",
+   "act": "31579733a1a36701e3835486933e3855248d68ba4a32c757d7587c1108ac43c0",
+   "spec_hash": "6f02c76623b62e327702b78c0784394caf0725c3b13679d836436af654e014f3",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 4",
+   "act": "0ece915a6f11f17ca50d41b61d664bad7b703994ee71e568cbc6e352331c6a94",
+   "spec_hash": "767b0984c986a3a77c9e75723ad0dfaab2c0e5c131c18ba320e44044a6684fa3",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 5",
+   "act": "2e295742bbb43e24206a5b8df29221b38734abf76e225c5af45d5b82df045b37",
+   "spec_hash": "7ff9be42bef9875f9a74d338fa1b66664f5f66473a7ac0e77fb255903eaf8cb6",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: the straight split, draft 6",
+   "act": "7e0ac8f1210fc8c9a0aedd625be73197cca015d2f95a908ffbfe9be71f9d9a49",
+   "spec_hash": "4f8626c77ef9736b0dffda6669164760efab020b2ca238c127d7b7875fe80083",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": [
+    "later draft 47c874cb carries the same draft number (6) in its title"
+   ]
+  },
+  {
+   "title": "# cMIP: the straight split, draft 6",
+   "act": "333bdbc7273f5cea252cfba4f6a33447b710e155e7662d5e593846a06ff36e07",
+   "spec_hash": "47c874cbb44d5883f555c4c59c59bfa829fd29ecf169084bee46d9845a38d77b",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": [
+    "earlier draft 4f8626c7 carries the same draft number (6) in its title"
+   ]
+  },
+  {
+   "title": "# cMIP: the straight split, draft 7",
+   "act": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+   "spec_hash": "e51e8653106125142f6570aa797a5ef56e869ed1d5f17b48cdfa84afc7098dc8",
+   "creator": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP: Hop's tab, draft 1 (clearing a group's debts; Hop keeps the account, never the money)",
+   "act": "3ce77ad5fb68e1ef8e2b208032a6f2c664f9313cb1b3b4bb3d4eba77b6e1f989",
+   "spec_hash": "9b2104409301516be40fb01f122fbb6648968f729bb47d2cef13ca0275e41b3e",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP split, draft 1 (round two)",
+   "act": "f94aa7210b3cf34c64d9826c748cc33319cc64364b87b474bb9d3c615a39812a",
+   "spec_hash": "3de83b05a10a17dc66381c54d37435490b25d8c937b6ecbb9e6d7aeca986b72f",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP split, draft 2 (round two)",
+   "act": "f8fd362d6f69be11a5fe5f4c23205454fefe4fa42a362e68423c418a7cb74ccd",
+   "spec_hash": "b84b121d09770fad03f441a5d112e3b308cb4399334a5e6c46612cdc0359c4e9",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP split, draft 3 (round two)",
+   "act": "2185922e604ed8a108cabf5288c3d5fc583967fc0feb898412272b10db314670",
+   "spec_hash": "04c96aba545ddf96eb8cc59e6f5c889d796f65b8cecdb967448923a158062712",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP split, draft 4 (round two)",
+   "act": "83b71841a44887482858dccb6447fa2e605c1a41b951b840e8d0c6844764d628",
+   "spec_hash": "7933f0bb0749e14e6cc051a90e9248d98d96eaa739395ae0467bf18f69bbb36e",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP split, draft 5 (round two)",
+   "act": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+   "spec_hash": "3ed64a40d1f2267f144dc7f0db7ee8a5a998abf59b8472398e70c81192c7de27",
+   "creator": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP rotating pot, draft 1 (task K1, the body)",
+   "act": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+   "spec_hash": "01c17e3894d81c27be1dc97a50e88e110404ab5365b766f09e395166ad423bdb",
+   "creator": "ba28ac63f5cd0458bff9e213f87da5bcb67d65199b42354380a3881ad06e1cf4",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# cMIP held for you, draft 1 (a holder's own admission, and how the owner claims)",
+   "act": "ad3b8e7f4b0f60721bddb635f14716d116f0e85c5e01d4f6225e7516d703fca7",
+   "spec_hash": "31b669016dc2ea5878e63aff9979d417821b255b75d99d74d8197e3e752edfb1",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP held for you, draft 2 (a holder's own admission, and how the owner claims)",
+   "act": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+   "spec_hash": "08ae1b2cb42d8c3a9052021a1daebdbd237016cfba6981bcda1c4fac5d517b9f",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# Stall split, cMIP draft 2 (task K6, control)",
+   "act": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+   "spec_hash": "e8ce35555721ddc18ff7cd04d6f8b1be65937e271ae3fd8b7b945de7fdffbbea",
+   "creator": "ddafffcdb655a3ce7261daa2770d2f6e02c61d4564d9d08776cb71f66d10a66e",
+   "added_by_hand": false,
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "single draft",
+   "notes": []
+  },
+  {
+   "title": "# Invoice request form, draft 1 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f3",
+   "act": "72bbce87cf62728e3b8791fe7ab22ddb483d308d83c6fbdfd8df4e4f0979afba",
+   "spec_hash": "b13f771cb27614f096bd94fae9d779ca6fd76a1504aa253438cb27c54fd2a74f",
+   "creator": "6d354b6fd5afa2053efe154cecd9245cb5c8e1f8672ca2a077c5216ab52efa19",
+   "added_by_hand": {
+    "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+    "read": null
+   },
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# Invoice request form, draft 2 (piece A of Commission 1, Terms bfac25d40629ca54b15c1ad9ee055237b3cf14cd1666727d3fc059f3",
+   "act": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+   "spec_hash": "76c65a2625d74ac666a43318c9666a525dcdf2b4f4dace46b2ae75d10d2735ec",
+   "creator": "6d354b6fd5afa2053efe154cecd9245cb5c8e1f8672ca2a077c5216ab52efa19",
+   "added_by_hand": {
+    "why_missed": "in the run's own list draft_titled_texts_not_included: a heading with 'draft N' or 'version N', but no act names its spec hash (whole or short) and its title does not begin '# cMIP' or '# Module', the script's rule for a specification",
+    "read": null
+   },
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "The report block, proposal 4",
+   "act": null,
+   "spec_hash": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854",
+   "creator": null,
+   "added_by_hand": {
+    "why_missed": "named as a spec (81 acts are signed under it) but its text is not a text act in the copy: it is a hosts' proposal file in the repository",
+    "read": "Identified from the hosts' 01-where-to-read.md (every window's from-the-hosts/): \"The report block, proposal 4 (a proposal, not yet a rule): docs/lead/proposals/report-block-4.md … spec hash 7b65c60f…7854. Proposals 2 and 3 are replaced.\" Text not in the copy."
+   },
+   "mark": "traced",
+   "act_in_research": "no act (none named)",
+   "signer_is_creator": "not applicable",
+   "spec_hash_computes": "yes: equals the core library's report spec (agreementsNewSpecs().report.spec)",
+   "same_text_acts": null,
+   "drafts_in_order": "not applicable",
+   "notes": [
+    "a spec of the kit, not a players' text: no act, no signer to check"
+   ]
+  }
+ ],
+ "checks_elsewhere": [
+  {
+   "title": "# cMIP custody receipt, draft 1",
+   "area": "Web",
+   "act": "9b6627e32a41f6b8893bc5c926a18ab1daf44143f7c18af0e61f974d66dad3bb",
+   "spec_hash": "07f891358a2827432d0e4c4950ef2d44746f90e91002a34cba5d1f305b1afdf2",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP Proven claim, draft 1",
+   "area": "Web",
+   "act": "d6647391ab5ab6d5f3aed58f439aaab162ec65a9f73ab08b0bf082a113211f1e",
+   "spec_hash": "ed9a4b4e99ec48af5c13db437590934f18a1c65c16d1b509af5f0f5cf7be1648",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP Proven claim, draft 2",
+   "area": "Web",
+   "act": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+   "spec_hash": "51f9afc8224a4d79a59881cb4e5f825e88231f198a36af4f3f67c6fb57e69f0a",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP delivery receipt, draft 1",
+   "area": "Web",
+   "act": "fa31564ea689b5bd346c6fcf69286c3236744cf6470b690865c1d8ed93c2e109",
+   "spec_hash": "ec1f118d998f150cb2a693f7f7b77ddb4a59f21deab95aabfbf20b19e6bc4bc7",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP the lending shelf, draft 1",
+   "area": "Agreements",
+   "act": "e5d774d2e9d60e9000d5a7ff53de5fba070c9e9b2042c4a3b7797b4b10b2052c",
+   "spec_hash": "255551a7692045f442cb15115cde25b1371a0143e18e78513c752ed5c657b536",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP the lending shelf, draft 2",
+   "area": "Agreements",
+   "act": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+   "spec_hash": "43cff6df47df3abab02bba00a3d3124623376d92f4cef85d2e6151795e654be5",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP open books, draft 1",
+   "area": "Web",
+   "act": "17be23b63bd20113cd07bfe61a6601b2b061cfcaf2da1d2ef5ce5bfb255036ca",
+   "spec_hash": "d740165a4c93f96b9b760ba71a679242ea458ccaa93b0fff370df1e02cbb0310",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# cMIP open books, draft 2",
+   "area": "Web",
+   "act": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+   "spec_hash": "63560652cb1914d0d539c343faf7cc070ba21113f37b6d29754632bf3d25687e",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 1",
+   "area": "Agreements",
+   "act": "526f49479f921b0d76dfa1d9aa338cb5baa3de8b66d0e2cff1fbac0858e64491",
+   "spec_hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 2",
+   "area": "Agreements",
+   "act": "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d",
+   "spec_hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 3",
+   "area": "Agreements",
+   "act": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+   "spec_hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+   "mark": "traced",
+   "act_in_research": "yes",
+   "signer_is_creator": "yes",
+   "spec_hash_computes": "yes",
+   "same_text_acts": "none other",
+   "drafts_in_order": "yes (by carry time and title number)",
+   "notes": []
+  }
+ ],
+ "to_settle": [
+  {
+   "title": "# cMIP hours of care, draft 1 (task K7, a Statement kind)",
+   "spec_hash": "4a737c6692eeeb379343076f1a6e43649f56fb2b773f457db692c0780a0104a1",
+   "act": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+   "why": [
+    "placed in Web and Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "Money: 2. Pools and mutual credit",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Money: 2. Pools and mutual credit",
+   "DubPay_proposal": {
+    "placement": "Money: 2. Pools and mutual credit; pointers from Web (open books) and Agreements (4)",
+    "reason": "a balance of hours owed among members is mutual credit, though no sats move",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP custody receipt, draft 1",
+   "spec_hash": "07f891358a2827432d0e4c4950ef2d44746f90e91002a34cba5d1f305b1afdf2",
+   "act": "9b6627e32a41f6b8893bc5c926a18ab1daf44143f7c18af0e61f974d66dad3bb",
+   "why": [
+    "placed in Web and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: record and time",
+   "DubPay": "not Money (beside): beside: Custody receipt (Turnstile): handover of records, not of money.",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Web: record and time",
+   "DubPay_proposal": {
+    "placement": "Web: record and time; no Money pointer",
+    "reason": "a handover of records, not of money",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP guide spot, draft 1",
+   "spec_hash": "824698f3485c871dda6438e4d7104102368661f748127cef2ebdb92784f4b708",
+   "act": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Money: not DubWeb's: DubPay",
+   "DubPay": "not listed",
+   "DubLaw": "Agreements: 1. When Terms are in force, and who signs",
+   "inventory_proposal": "Money: 1. Splits and payout services",
+   "DubPay_proposal": {
+    "placement": "Money: 1. Splits and payout services",
+    "reason": "it pays whoever led a buyer to a sale, the client spot's shape; B missed it",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP Proven claim, draft 1",
+   "spec_hash": "ed9a4b4e99ec48af5c13db437590934f18a1c65c16d1b509af5f0f5cf7be1648",
+   "act": "d6647391ab5ab6d5f3aed58f439aaab162ec65a9f73ab08b0bf082a113211f1e",
+   "why": [
+    "placed in Web and Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: record and time",
+   "DubPay": "Money: 4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "DubLaw": "Agreements: 3. Disputes",
+   "inventory_proposal": "Web: record and time",
+   "DubPay_proposal": {
+    "placement": "Web: record and time; pointer from Money 4",
+    "reason": "it writes a debt where buyers read it, but asks nobody to pay",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP Proven claim, draft 2",
+   "spec_hash": "51f9afc8224a4d79a59881cb4e5f825e88231f198a36af4f3f67c6fb57e69f0a",
+   "act": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+   "why": [
+    "placed in Web and Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: record and time",
+   "DubPay": "Money: 4. Asking to be paid (invoices, payment requests, answerers that invoice)",
+   "DubLaw": "Agreements: 3. Disputes",
+   "inventory_proposal": "Web: record and time",
+   "DubPay_proposal": {
+    "placement": "Web: record and time; pointer from Money 4",
+    "reason": "as draft 1: a recorded debt, no payment asked",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP delivery receipt, draft 1",
+   "spec_hash": "ec1f118d998f150cb2a693f7f7b77ddb4a59f21deab95aabfbf20b19e6bc4bc7",
+   "act": "fa31564ea689b5bd346c6fcf69286c3236744cf6470b690865c1d8ed93c2e109",
+   "why": [
+    "placed in Web and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "not Money (beside): beside: Delivery receipt (Kept Word): judges a delivery; refunds hang on it.",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Web: open books",
+   "DubPay_proposal": {
+    "placement": "Web or Agreements (theirs to settle); pointer from Money 3",
+    "reason": "it judges a delivery; refunds hang on it but it moves no money",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP the lending shelf, draft 1",
+   "spec_hash": "255551a7692045f442cb15115cde25b1371a0143e18e78513c752ed5c657b536",
+   "act": "e5d774d2e9d60e9000d5a7ff53de5fba070c9e9b2042c4a3b7797b4b10b2052c",
+   "why": [
+    "placed in Agreements and Money by different Dubs"
+   ],
+   "DubWeb": "Agreements: not DubWeb's: DubLaw",
+   "DubPay": "Money: 5. Loans and returns",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Agreements: 4. Consent and terms for people",
+   "DubPay_proposal": {
+    "placement": "Agreements: 4. Consent and terms for people; pointer from Money 5",
+    "reason": "its own words: no money has to move; Money's loans category keeps a pointer",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP the lending shelf, draft 2",
+   "spec_hash": "43cff6df47df3abab02bba00a3d3124623376d92f4cef85d2e6151795e654be5",
+   "act": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+   "why": [
+    "placed in Agreements and Money by different Dubs"
+   ],
+   "DubWeb": "Agreements: not DubWeb's: DubLaw",
+   "DubPay": "Money: 5. Loans and returns",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Agreements: 4. Consent and terms for people",
+   "DubPay_proposal": {
+    "placement": "Agreements: 4. Consent and terms for people; pointer from Money 5",
+    "reason": "as draft 1",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP home bond, draft 1",
+   "spec_hash": "e33943e754db7d9bdb9f5f1b3c630a3c2002b1d56cdc5fb76dfd147661e141b0",
+   "act": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+   "why": [
+    "placed in Web and Money by different Dubs"
+   ],
+   "DubWeb": "Web: homes and the way out",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Money: other: DubPay",
+   "inventory_proposal": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubPay_proposal": {
+    "placement": "Money: 3. Money held; pointer from Web (homes)",
+    "reason": "sats set aside and held for a home's residents",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP open books, draft 1",
+   "spec_hash": "d740165a4c93f96b9b760ba71a679242ea458ccaa93b0fff370df1e02cbb0310",
+   "act": "17be23b63bd20113cd07bfe61a6601b2b061cfcaf2da1d2ef5ce5bfb255036ca",
+   "why": [
+    "placed in Web and Money by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "Money: 2. Pools and mutual credit",
+   "DubLaw": "Web: other: DubWeb",
+   "inventory_proposal": "Web: open books",
+   "DubPay_proposal": {
+    "placement": "Web: open books; pointer from Money 2",
+    "reason": "DubWeb's own: it shows a purse, it moves no money",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP open books, draft 2",
+   "spec_hash": "63560652cb1914d0d539c343faf7cc070ba21113f37b6d29754632bf3d25687e",
+   "act": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+   "why": [
+    "placed in Web and Money by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "Money: 2. Pools and mutual credit",
+   "DubLaw": "Web: other: DubWeb",
+   "inventory_proposal": "Web: open books",
+   "DubPay_proposal": {
+    "placement": "Web: open books; pointer from Money 2",
+    "reason": "as draft 1",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP: The client that served the payment (a spot, task K5)",
+   "spec_hash": "de52a4212b219fafd2f5065d63ea2843a76205f6d1b37fbb679901446adf59fa",
+   "act": "ae1a22e792fb562e25dc9418740d7139b9d681c5096623db7cf588bb3ee25d69",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Money: not DubWeb's: DubPay",
+   "DubPay": "Money: 1. Splits and payout services",
+   "DubLaw": "Agreements: 1. When Terms are in force, and who signs",
+   "inventory_proposal": "Money: 1. Splits and payout services",
+   "DubPay_proposal": {
+    "placement": "Money: 1. Splits and payout services; pointer from Agreements (1)",
+    "reason": "a payout share to the client that served the payment",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP: The client that served the payment (a spot, task K5)",
+   "spec_hash": "bdcee1a5606555fc88d9f76b911fc5a7bc057179f9966f0941e8fe08848b7ca2",
+   "act": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Money: not DubWeb's: DubPay",
+   "DubPay": "Money: 1. Splits and payout services",
+   "DubLaw": "Agreements: 1. When Terms are in force, and who signs",
+   "inventory_proposal": "Money: 1. Splits and payout services",
+   "DubPay_proposal": {
+    "placement": "Money: 1. Splits and payout services; pointer from Agreements (1)",
+    "reason": "as draft 2",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP held for you, draft 1 (a holder's own admission, and how the owner claims)",
+   "spec_hash": "31b669016dc2ea5878e63aff9979d417821b255b75d99d74d8197e3e752edfb1",
+   "act": "ad3b8e7f4b0f60721bddb635f14716d116f0e85c5e01d4f6225e7516d703fca7",
+   "why": [
+    "placed in Web and Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubPay_proposal": {
+    "placement": "Money: 3. Money held; pointer from Web (open books)",
+    "reason": "a holder's public admission of money held for others",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# cMIP held for you, draft 2 (a holder's own admission, and how the owner claims)",
+   "spec_hash": "08ae1b2cb42d8c3a9052021a1daebdbd237016cfba6981bcda1c4fac5d517b9f",
+   "act": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+   "why": [
+    "placed in Web and Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "Web: open books",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubPay_proposal": {
+    "placement": "Money: 3. Money held; pointer from Web (open books)",
+    "reason": "as draft 1",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 1",
+   "spec_hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+   "act": "526f49479f921b0d76dfa1d9aa338cb5baa3de8b66d0e2cff1fbac0858e64491",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "no area: draft-titled, not included",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Agreements: 4. Consent and terms for people",
+   "DubPay_proposal": {
+    "placement": "Agreements: 4. Consent and terms for people; pointer from Money 3",
+    "reason": "a let between two people; its deposit is held under escrow, which stays Money",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 2",
+   "spec_hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+   "act": "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "no area: draft-titled, not included",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Agreements: 4. Consent and terms for people",
+   "DubPay_proposal": {
+    "placement": "Agreements: 4. Consent and terms for people; pointer from Money 3",
+    "reason": "as draft 1",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  },
+  {
+   "title": "# A room let, in plain words: rent, deposit, and the state of the room. Template, draft 3",
+   "spec_hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+   "act": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+   "why": [
+    "placed in Money and Agreements by different Dubs"
+   ],
+   "DubWeb": "no area: draft-titled, not included",
+   "DubPay": "Money: 3. Money held (escrow, deposits, refunds, held for you)",
+   "DubLaw": "Agreements: 4. Consent and terms for people",
+   "inventory_proposal": "Agreements: 4. Consent and terms for people",
+   "DubPay_proposal": {
+    "placement": "Agreements: 4. Consent and terms for people; pointer from Money 3",
+    "reason": "as draft 1",
+    "label": "proposal"
+   },
+   "mark": "counted (placements); proposal (DubPay's)"
+  }
+ ],
+ "candidates": [
+  {
+   "act": "4e37b9cb051c308977147b698596a4c56a57f00a072cfa9154e52163b5fd53a6",
+   "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "title": "# Until: terms and prices, 1",
+   "bytes": 2869,
+   "money_words": 23,
+   "money_words_in_title": 0,
+   "top_words": "hold 5, escrow 4, pay 3, payment 3, refund 2",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "reading": {
+    "category": "3. Money held",
+    "reading": "an escrow service's own rules: fee on release, free refund, a late penalty paid to the buyer",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "until",
+   "acts_naming_its_id": 11
+  },
+  {
+   "act": "0e2d9be94509e09aafd21d37a2077ebab4fb55dc86c26fcd0cc7ceceb4505a61",
+   "signer": "3022fb293b6376834a4ced0fed7ae9402f77d9f616bea8bf6080df61b2ac89e7",
+   "title": "# Until: terms and prices, 2",
+   "bytes": 3238,
+   "money_words": 21,
+   "money_words_in_title": 0,
+   "top_words": "hold 6, escrow 3, pay 3, refund 2, held 2",
+   "in_other_listings": true,
+   "day": 1,
+   "mark": "inferred",
+   "reading": {
+    "category": "3. Money held",
+    "reading": "version 2 of Until's terms and prices: the same rules, revised",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "until",
+   "acts_naming_its_id": 9
+  },
+  {
+   "act": "28a5608f2961b4f66b8e556b358b44f2eebb12157c9c24b2c29cacfce5e0ed6f",
+   "signer": "9825c634a168b861d89f2c63b7bdb3074e550fb25eb90babbfe5467d59d8343e",
+   "title": "Marthe Delcourt (9825c634a168b861d89f2c63b7bdb3074e550fb25eb90babbfe5467d59d8343e). The last report, draft 0. Plain words, for attack. It is",
+   "bytes": 2443,
+   "money_words": 21,
+   "money_words_in_title": 0,
+   "top_words": "owed 6, held 4, owes 3, payment 2, holds 1",
+   "in_other_listings": false,
+   "day": 4,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "3. Money held (and what is owed)",
+    "reading": "a template for a service that stops: held, owed, received, passed on; three rules (lines sum, silence has a clock)",
+    "mark": "inferred"
+   },
+   "window_inferred": "lurker",
+   "acts_naming_its_id": 20
+  },
+  {
+   "act": "fb97b75ee64c554a03b630f6a35ceb8dc8395f26c9483b6a7b6d1183e791004a",
+   "signer": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "title": "DubPay: how a maker gets paid through the shower, in plain words (part 1 of 3: the money; DubLaw writes part 2, who owns what, and DubWeb pa",
+   "bytes": 1695,
+   "money_words": 21,
+   "money_words_in_title": 1,
+   "top_words": "split 6, paid 4, owed 3, payment 3, pays 2",
+   "in_other_listings": true,
+   "day": 2,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "1. Splits and payout services",
+    "reading": "a how-to of the split in six steps: parts, leftover, invoices in advance, report",
+    "mark": "inferred"
+   },
+   "window_inferred": "dubpay",
+   "acts_naming_its_id": 5
+  },
+  {
+   "act": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+   "signer": "9825c634a168b861d89f2c63b7bdb3074e550fb25eb90babbfe5467d59d8343e",
+   "title": "Marthe Delcourt (9825c634a168b861d89f2c63b7bdb3074e550fb25eb90babbfe5467d59d8343e). The last report, draft 1. Plain words, for attack. Still",
+   "bytes": 3716,
+   "money_words": 14,
+   "money_words_in_title": 0,
+   "top_words": "holds 3, owed 3, owes 2, held 2, payment 1",
+   "in_other_listings": false,
+   "day": 5,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "3. Money held (and what is owed)",
+    "reading": "draft 1 of the last report: adds order of payment when what is held is short",
+    "mark": "inferred"
+   },
+   "window_inferred": "lurker",
+   "acts_naming_its_id": 13
+  },
+  {
+   "act": "13c98e04590c6f5c8c7b5d9bf9d44e5767d438c28fbbf7954b7045b8afd7130e",
+   "signer": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "title": "# Hop: price list 2",
+   "bytes": 1856,
+   "money_words": 11,
+   "money_words_in_title": 0,
+   "top_words": "split 3, payment 3, escrow 2, owed 1, paid 1",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "a price list with rules for every fee: same for everyone, no private rates",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "hop",
+   "acts_naming_its_id": 2
+  },
+  {
+   "act": "8495d32239e85b19b5b1a49493db5250aa1328a41346efb561dda94d54552972",
+   "signer": "b820fe4bbcc0c2a05766a577c8167292bcdff19593b1bb49977b69eca52310f1",
+   "title": "Longhouse paid services, round two, version 1 (a DRAFT for review, not signed; offer by Longhouse b820fe4bbcc0c2a05766a577c8167292bcdff19593",
+   "bytes": 1917,
+   "money_words": 10,
+   "money_words_in_title": 1,
+   "top_words": "paid 3, payment 3, hold 1, holds 1, refund 1",
+   "in_other_listings": true,
+   "day": 2,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "an offer of paid services, a draft for review, not signed",
+    "mark": "inferred"
+   },
+   "window_inferred": "longhouse",
+   "acts_naming_its_id": 3
+  },
+  {
+   "act": "3edd7886339cdbaa0d1277bb94194a0ef853666db7663f9ec40db5d61d7726e4",
+   "signer": "880d33f2b3e97e25578a8ec027788702ed70df96fe55f6cc42b1702665f7a02f",
+   "title": "DubPay: price list 1, round two. One price for everyone; nothing is updated: a new price is price list 2, and this one stays for anyone who ",
+   "bytes": 1296,
+   "money_words": 9,
+   "money_words_in_title": 0,
+   "top_words": "split 3, payment 2, holds 1, invoice 1, owed 1",
+   "in_other_listings": true,
+   "day": 2,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "DubPay's own price list 1",
+    "mark": "inferred"
+   },
+   "window_inferred": "dubpay",
+   "acts_naming_its_id": 3
+  },
+  {
+   "act": "412c690ed2e923e9d8b60b744ae6d9325cfef3836fc71740489afc01eb2eb286",
+   "signer": "b1ccae2b8d4f84a59d7cdc8f403c8cd629641a5cbcb3ef4a912a32b97526c3ec",
+   "title": "Harmattan Run: terms of sale, version 1, in plain words. Seller and only party: Tunde Adeyemi, identity b1ccae2b8d4f84a59d7cdc8f403c8cd62964",
+   "bytes": 1017,
+   "money_words": 7,
+   "money_words_in_title": 7,
+   "top_words": "paid 2, payment 2, invoice 1, pays 1, refund 1",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "none (Agreements, likely)",
+    "reading": "terms of sale in plain words, copied by many sellers: a template of a sale, not of money",
+    "mark": "inferred"
+   },
+   "window_inferred": "public-prosumers",
+   "acts_naming_its_id": 7
+  },
+  {
+   "act": "90294dc2deef789f22ae747bad5289d984e1fac832087ebde0491a0f65a7d1a7",
+   "signer": "a83df2c7699d19b03eb1e7d140a3945e0f6c5fcc7d6e65c8fe686606a8d21f72",
+   "title": "# Keep: price list 4",
+   "bytes": 2807,
+   "money_words": 6,
+   "money_words_in_title": 0,
+   "top_words": "held 2, hold 1, split 1, splits 1, pay 1",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "Keep's price list with its terms of the list",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "keep",
+   "acts_naming_its_id": 1
+  },
+  {
+   "act": "57bf841857fb0c730ee98d18977fa3e3445b0e39caa681e82497a8d476a64518",
+   "signer": "a48e4b2447087950f9bcb83babb17dbd8a64b0980babd896c115147fb73096c5",
+   "title": "# Hop: price list 3, and the shower contest",
+   "bytes": 1625,
+   "money_words": 6,
+   "money_words_in_title": 0,
+   "top_words": "split 3, paid 2, payment 1",
+   "in_other_listings": true,
+   "day": 2,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "Hop's price list 3, with the contest",
+    "mark": "inferred"
+   },
+   "window_inferred": "hop",
+   "acts_naming_its_id": 1
+  },
+  {
+   "act": "772bda2fe4ead129ec5248aa69e3bf1c604fa61e82514782d4b91e400a878aa7",
+   "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+   "title": "Counterparty, price list 4 (round two, in sats; 1 sat = 1 euro cent). One price for everyone; a shared target is paid once, split evenly; ou",
+   "bytes": 1084,
+   "money_words": 6,
+   "money_words_in_title": 6,
+   "top_words": "paid 2, split 2, pay 1, payment 1",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "found_by": "reading (hand)",
+   "reading": {
+    "category": "4. Asking to be paid (weak)",
+    "reading": "Counterparty's price list 4, a shared target; Pointer accepted it for the client spot",
+    "mark": "inferred"
+   },
+   "window_inferred": "counterparty",
+   "acts_naming_its_id": 5
+  },
+  {
+   "act": "63b6f2d4ffa0f5cf08db026e58fb9b2d357cc9c818215ee87dcb9be5bbc1e50b",
+   "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+   "title": "# Counterparty: day 5, window 2",
+   "bytes": 11661,
+   "money_words": 33,
+   "money_words_in_title": 0,
+   "top_words": "pay 6, held 5, credit 4, paid 4, payment 3",
+   "in_other_listings": true,
+   "day": 5,
+   "mark": "inferred",
+   "reading": {
+    "category": "not read as a rule or template",
+    "reading": "caught by the rule; read and set aside (a report or a reply)",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "counterparty",
+   "acts_naming_its_id": 1
+  },
+  {
+   "act": "aa552d9ce6ec462191b1be52701836d3c6afb29ec52b27f7da4e8572f850e1b8",
+   "signer": "f1de20f8a4e52ddea0a97a66b1133873eb38ea7536a9230a02313b586fda9bfb",
+   "title": "# Counterparty: day 5, window 3, and the end of round two",
+   "bytes": 13704,
+   "money_words": 32,
+   "money_words_in_title": 0,
+   "top_words": "split 6, hold 4, owed 4, paid 4, held 3",
+   "in_other_listings": true,
+   "day": 5,
+   "mark": "inferred",
+   "reading": {
+    "category": "not read as a rule or template",
+    "reading": "caught by the rule; read and set aside (a report or a reply)",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "counterparty",
+   "acts_naming_its_id": 0
+  },
+  {
+   "act": "52bd8175e1852dd5e456ebb81c025e07709705d82631f98dae96cee6ae65fc5b",
+   "signer": "11e77c4b5f82f8ec675d18c1eb04d42b68c1add4caf473ec07c95f056eb119c0",
+   "title": "# Turnstile home: policy",
+   "bytes": 2013,
+   "money_words": 5,
+   "money_words_in_title": 0,
+   "top_words": "holds 3, pays 1, held 1",
+   "in_other_listings": false,
+   "day": 1,
+   "mark": "inferred",
+   "reading": {
+    "category": "not read as a rule or template",
+    "reading": "caught by the rule; read and set aside (a report or a reply)",
+    "mark": "inferred"
+   },
+   "found_by": "rule (heading, rule word, money words)",
+   "window_inferred": "turnstile",
+   "acts_naming_its_id": 5
+  }
+ ],
+ "counts": [
+  {
+   "text": "The straight split",
+   "draft": "1",
+   "act": "b10d576b3eb393629c5ea8b6c42a577a3cd91a670d67cc0efbf4a7f37f925885",
+   "spec_hash": "4fae88be0758aed8fea427db4f44d8c8815b31d0e0e08dd7e0f1e1a056bae01f",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 0,
+   "inventory_all_namings": 6,
+   "B_all_namings": 3,
+   "inventory_by_act": 6,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 3,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 3,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 3
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "2",
+   "act": "23b67a3ada72d97e04f3c3f6a3f43bdbd9d74c8c5464abbe170449d8f9c0bc51",
+   "spec_hash": "d2912f386807948288a716148a01d13beaddc0389b1a339ec251cb487440498f",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 12,
+   "B_all_namings": 9,
+   "inventory_by_act": 10,
+   "B_cited_by_act_id": 7,
+   "B_short_mentions": 3,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 3,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 3
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "3",
+   "act": "31579733a1a36701e3835486933e3855248d68ba4a32c757d7587c1108ac43c0",
+   "spec_hash": "6f02c76623b62e327702b78c0784394caf0725c3b13679d836436af654e014f3",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 8,
+   "B_all_namings": 8,
+   "inventory_by_act": 8,
+   "B_cited_by_act_id": 6,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "4",
+   "act": "0ece915a6f11f17ca50d41b61d664bad7b703994ee71e568cbc6e352331c6a94",
+   "spec_hash": "767b0984c986a3a77c9e75723ad0dfaab2c0e5c131c18ba320e44044a6684fa3",
+   "area": "Money",
+   "inventory_by_hash": 26,
+   "B_uses": 26,
+   "inventory_all_namings": 31,
+   "B_all_namings": 31,
+   "inventory_by_act": 7,
+   "B_cited_by_act_id": 5,
+   "B_short_mentions": 6,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "5",
+   "act": "2e295742bbb43e24206a5b8df29221b38734abf76e225c5af45d5b82df045b37",
+   "spec_hash": "7ff9be42bef9875f9a74d338fa1b66664f5f66473a7ac0e77fb255903eaf8cb6",
+   "area": "Money",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 13,
+   "B_all_namings": 7,
+   "inventory_by_act": 13,
+   "B_cited_by_act_id": 6,
+   "B_short_mentions": 8,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 6,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 6
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "6",
+   "act": "7e0ac8f1210fc8c9a0aedd625be73197cca015d2f95a908ffbfe9be71f9d9a49",
+   "spec_hash": "4f8626c77ef9736b0dffda6669164760efab020b2ca238c127d7b7875fe80083",
+   "area": "Money",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 5,
+   "B_all_namings": 3,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 6,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 2,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 2
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "7 (first publication, titled \"draft 6\")",
+   "act": "333bdbc7273f5cea252cfba4f6a33447b710e155e7662d5e593846a06ff36e07",
+   "spec_hash": "47c874cbb44d5883f555c4c59c59bfa829fd29ecf169084bee46d9845a38d77b",
+   "area": "Money",
+   "inventory_by_hash": 5,
+   "B_uses": 5,
+   "inventory_all_namings": 10,
+   "B_all_namings": 7,
+   "inventory_by_act": 10,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 20,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 3,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 3
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The straight split",
+   "draft": "7 (republished, title corrected)",
+   "act": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+   "spec_hash": "e51e8653106125142f6570aa797a5ef56e869ed1d5f17b48cdfa84afc7098dc8",
+   "area": "Money",
+   "inventory_by_hash": 89,
+   "B_uses": 90,
+   "inventory_all_namings": 91,
+   "B_all_namings": 92,
+   "inventory_by_act": 8,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 30,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "draft": "1",
+   "act": "f94aa7210b3cf34c64d9826c748cc33319cc64364b87b474bb9d3c615a39812a",
+   "spec_hash": "3de83b05a10a17dc66381c54d37435490b25d8c937b6ecbb9e6d7aeca986b72f",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 0,
+   "inventory_all_namings": 10,
+   "B_all_namings": 9,
+   "inventory_by_act": 10,
+   "B_cited_by_act_id": 9,
+   "B_short_mentions": 1,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "draft": "2",
+   "act": "f8fd362d6f69be11a5fe5f4c23205454fefe4fa42a362e68423c418a7cb74ccd",
+   "spec_hash": "b84b121d09770fad03f441a5d112e3b308cb4399334a5e6c46612cdc0359c4e9",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 9,
+   "B_all_namings": 8,
+   "inventory_by_act": 7,
+   "B_cited_by_act_id": 6,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "draft": "3",
+   "act": "2185922e604ed8a108cabf5288c3d5fc583967fc0feb898412272b10db314670",
+   "spec_hash": "04c96aba545ddf96eb8cc59e6f5c889d796f65b8cecdb967448923a158062712",
+   "area": "Money",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 6,
+   "B_all_namings": 4,
+   "inventory_by_act": 6,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 2,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 2
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "draft": "4",
+   "act": "83b71841a44887482858dccb6447fa2e605c1a41b951b840e8d0c6844764d628",
+   "spec_hash": "7933f0bb0749e14e6cc051a90e9248d98d96eaa739395ae0467bf18f69bbb36e",
+   "area": "Money",
+   "inventory_by_hash": 6,
+   "B_uses": 6,
+   "inventory_all_namings": 9,
+   "B_all_namings": 9,
+   "inventory_by_act": 4,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's split (round two)",
+   "draft": "5",
+   "act": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+   "spec_hash": "3ed64a40d1f2267f144dc7f0db7ee8a5a998abf59b8472398e70c81192c7de27",
+   "area": "Money",
+   "inventory_by_hash": 10,
+   "B_uses": 10,
+   "inventory_all_namings": 12,
+   "B_all_namings": 11,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 1,
+   "B_short_mentions": 6,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Stall's pass-on and Stall split",
+   "draft": "2",
+   "act": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+   "spec_hash": "e8ce35555721ddc18ff7cd04d6f8b1be65937e271ae3fd8b7b945de7fdffbbea",
+   "area": "Money",
+   "inventory_by_hash": 10,
+   "B_uses": 10,
+   "inventory_all_namings": 13,
+   "B_all_namings": 13,
+   "inventory_by_act": 6,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 4,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "The client that served the payment (a spot)",
+   "draft": "2",
+   "act": "ae1a22e792fb562e25dc9418740d7139b9d681c5096623db7cf588bb3ee25d69",
+   "spec_hash": "de52a4212b219fafd2f5065d63ea2843a76205f6d1b37fbb679901446adf59fa",
+   "area": "Money",
+   "inventory_by_hash": 15,
+   "B_uses": 15,
+   "inventory_all_namings": 20,
+   "B_all_namings": 20,
+   "inventory_by_act": 14,
+   "B_cited_by_act_id": 5,
+   "B_short_mentions": 4,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "The client that served the payment (a spot)",
+   "draft": "3",
+   "act": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+   "spec_hash": "bdcee1a5606555fc88d9f76b911fc5a7bc057179f9966f0941e8fe08848b7ca2",
+   "area": "Money",
+   "inventory_by_hash": 5,
+   "B_uses": 5,
+   "inventory_all_namings": 8,
+   "B_all_namings": 8,
+   "inventory_by_act": 7,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 1,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "The payment report (the report block, proposal 4)",
+   "draft": "proposal 4",
+   "act": null,
+   "spec_hash": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854",
+   "area": "Money",
+   "inventory_by_hash": 81,
+   "B_uses": 81,
+   "inventory_all_namings": 81,
+   "B_all_namings": 81,
+   "inventory_by_act": 0,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "DubPay's common pot",
+   "draft": "1",
+   "act": "bba5c058d40c9832fedfe4a4b3ef6ee34be782b0f616333a98ee7536c15de280",
+   "spec_hash": "e91f72f58d5ebe6756c6967be6e9601582668514ed43d2392ddb65ab7110c39d",
+   "area": "Money",
+   "inventory_by_hash": 20,
+   "B_uses": 20,
+   "inventory_all_namings": 30,
+   "B_all_namings": 24,
+   "inventory_by_act": 11,
+   "B_cited_by_act_id": 4,
+   "B_short_mentions": 9,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 6,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 6
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "DubPay's common pot",
+   "draft": "2",
+   "act": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+   "spec_hash": "f608f7fa3686a7c49faa254b27c7efcaa5a1180beb55bbeb1ee2133b16bb1f45",
+   "area": "Money",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 3,
+   "B_all_namings": 2,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 1,
+   "B_short_mentions": 1,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "The clusters' rotating pot",
+   "draft": "1",
+   "act": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+   "spec_hash": "01c17e3894d81c27be1dc97a50e88e110404ab5365b766f09e395166ad423bdb",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 12,
+   "B_all_namings": 12,
+   "inventory_by_act": 12,
+   "B_cited_by_act_id": 10,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Hop's tab (clearing a group's debts)",
+   "draft": "1",
+   "act": "3ce77ad5fb68e1ef8e2b208032a6f2c664f9313cb1b3b4bb3d4eba77b6e1f989",
+   "spec_hash": "9b2104409301516be40fb01f122fbb6648968f729bb47d2cef13ca0275e41b3e",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 5,
+   "B_all_namings": 4,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "draft": "1",
+   "act": "759b8d5845984c35a91653baf958d43cc628177c74b698bf4834ca71aca4a869",
+   "spec_hash": "ced79f7c8753c3c5f5f7fb6b8a17c5fb429d40cb7ee1957738cc43589119492e",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 0,
+   "inventory_all_namings": 3,
+   "B_all_namings": 3,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "draft": "2",
+   "act": "e7bba1fa5e4652916cbb8a13f7e9ff6729097dc6bc10e9dc994a08c8f3fd0a7f",
+   "spec_hash": "d9dab85ae904e2041f03dfbcc31df402dc1ee6cb66bec3d85cd3a7a1f516c8f6",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 0,
+   "inventory_all_namings": 5,
+   "B_all_namings": 5,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 5,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "draft": "3",
+   "act": "14e0144355223ac2bd2c25c8c319280187b2675a3aa817f755a9e89eb00c36af",
+   "spec_hash": "301481877f9abd20859d6526725a3b902d27edd37acbaff480399d270f87d6ae",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 0,
+   "inventory_all_namings": 5,
+   "B_all_namings": 4,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 4,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "draft": "4",
+   "act": "ed56f60ccbbdae7af488f9c15490e2784c78e642fe3b4b1f298f06df40b9e98e",
+   "spec_hash": "88cf4137aaacc8d7ae74a307180a1c145f101b95c78ab2991866d2327f8bfaab",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 1,
+   "inventory_all_namings": 3,
+   "B_all_namings": 4,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 0,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 1,
+     "by_rule": {
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by B, not by the inventory",
+     "acts": 1,
+     "by_rule": {
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' money decision (a Statement kind)",
+   "draft": "5",
+   "act": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+   "spec_hash": "8cd7b8b158b0d6f6ddaf3d294e85ca228804ec33f6183a288c44288034971a30",
+   "area": "Money",
+   "inventory_by_hash": 14,
+   "B_uses": 15,
+   "inventory_all_namings": 18,
+   "B_all_namings": 18,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 3,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "DubWeb's open books",
+   "draft": "1",
+   "act": "17be23b63bd20113cd07bfe61a6601b2b061cfcaf2da1d2ef5ce5bfb255036ca",
+   "spec_hash": "d740165a4c93f96b9b760ba71a679242ea458ccaa93b0fff370df1e02cbb0310",
+   "area": "Web",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 8,
+   "B_all_namings": 8,
+   "inventory_by_act": 8,
+   "B_cited_by_act_id": 6,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "DubWeb's open books",
+   "draft": "2",
+   "act": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+   "spec_hash": "63560652cb1914d0d539c343faf7cc070ba21113f37b6d29754632bf3d25687e",
+   "area": "Web",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 5,
+   "B_all_namings": 4,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 1,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Hours of care (a Statement kind, for circles that swap time)",
+   "draft": "1",
+   "act": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+   "spec_hash": "4a737c6692eeeb379343076f1a6e43649f56fb2b773f457db692c0780a0104a1",
+   "area": "Money",
+   "inventory_by_hash": 5,
+   "B_uses": 5,
+   "inventory_all_namings": 8,
+   "B_all_namings": 8,
+   "inventory_by_act": 6,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 3,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's escrow",
+   "draft": "1",
+   "act": "9ae61048254fa41670c899e6c74ecfabe60cd718be0a7b5bc210b80dbe2a3eef",
+   "spec_hash": "cf337a8eda4789d52be6673853130cd6c6a9fc4e63d12c0aaa51f9cdf66d70d4",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 10,
+   "inventory_all_namings": 18,
+   "B_all_namings": 10,
+   "inventory_by_act": 18,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 2,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 10,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 8,
+      "names act id in refs: B counts this, the inventory's by-hash rule counts the spec hash only": 1,
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by B, not by the inventory",
+     "acts": 1,
+     "by_rule": {
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 9,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 9
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's escrow",
+   "draft": "2",
+   "act": "a2d419101dbad4f69ccf13145a50a88b703858e7e772f4e810d034c20915c2b2",
+   "spec_hash": "559c7ffb7725931a6381f19cf619f3970c95ed7882ca1855f86497b62e3f806c",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 11,
+   "inventory_all_namings": 16,
+   "B_all_namings": 11,
+   "inventory_by_act": 16,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 2,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 11,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 9,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 1,
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by B, not by the inventory",
+     "acts": 1,
+     "by_rule": {
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 6,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 6
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's escrow",
+   "draft": "3",
+   "act": "caf807556198c4fcf70bcff6ece81196f6615ba3bcccc8e5be6a00bd800da0f1",
+   "spec_hash": "89c80e3c73b73d712ff5a5080b825c80fe94b09c43ef6502adbd27239499e1ef",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 16,
+   "inventory_all_namings": 20,
+   "B_all_namings": 16,
+   "inventory_by_act": 20,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 2,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 16,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 13,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 1,
+      "names act id in payload+body: B counts this, the inventory's by-hash rule counts the spec hash only": 1,
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by B, not by the inventory",
+     "acts": 1,
+     "by_rule": {
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 5,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 5
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's escrow",
+   "draft": "4",
+   "act": "ef17be4f03d6677f784faf52f454ee47c04b8abbb83a4549302550a110753f23",
+   "spec_hash": "cadbbc54a8f6abfe17c061cc46a69d1e0f0f789d3fdddf24c01bf8eb3510669c",
+   "area": "Money",
+   "inventory_by_hash": 5,
+   "B_uses": 23,
+   "inventory_all_namings": 27,
+   "B_all_namings": 23,
+   "inventory_by_act": 26,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 8,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 18,
+     "by_rule": {
+      "names act id in refs: B counts this, the inventory's by-hash rule counts the spec hash only": 3,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 2,
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 10,
+      "names act id in payload+body: B counts this, the inventory's by-hash rule counts the spec hash only": 3
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 4,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 4
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's escrow",
+   "draft": "5",
+   "act": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+   "spec_hash": "a54b60660feaf58dd6c5c7cd003265e8a3dacce91f0102611720628120df91ff",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 8,
+   "inventory_all_namings": 9,
+   "B_all_namings": 8,
+   "inventory_by_act": 9,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 2,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 6,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 6
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 1,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Until's home bond",
+   "draft": "1",
+   "act": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+   "spec_hash": "e33943e754db7d9bdb9f5f1b3c630a3c2002b1d56cdc5fb76dfd147661e141b0",
+   "area": "Money",
+   "inventory_by_hash": 3,
+   "B_uses": 3,
+   "inventory_all_namings": 8,
+   "B_all_namings": 8,
+   "inventory_by_act": 7,
+   "B_cited_by_act_id": 5,
+   "B_short_mentions": 2,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "draft": "1",
+   "act": "526f49479f921b0d76dfa1d9aa338cb5baa3de8b66d0e2cff1fbac0858e64491",
+   "spec_hash": "d8974b8ec2744e59750b89690e35f3f178e5e18bfd2ff6f2a3dea86994b921dc",
+   "area": "Agreements",
+   "inventory_by_hash": 0,
+   "B_uses": 6,
+   "inventory_all_namings": 10,
+   "B_all_namings": 6,
+   "inventory_by_act": 10,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 4,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 6,
+     "by_rule": {
+      "names act id in refs: B counts this, the inventory's by-hash rule counts the spec hash only": 2,
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 3,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 4,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 4
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "draft": "2",
+   "act": "943e2ad4326af3d663d22f01ead84f90bbbf0e72be181d91cf99a9a19015e40d",
+   "spec_hash": "e585b7d3aba14b7af2d596be8ac4038f0d4244d704c638ccd78ea775b80052ce",
+   "area": "Agreements",
+   "inventory_by_hash": 0,
+   "B_uses": 4,
+   "inventory_all_namings": 7,
+   "B_all_namings": 4,
+   "inventory_by_act": 7,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 2,
+   "differs_headline": true,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 4,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 2,
+      "names act id in refs: B counts this, the inventory's by-hash rule counts the spec hash only": 1,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 1
+     }
+    },
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 3,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 3
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' room let (rent, deposit, the state of the room)",
+   "draft": "3",
+   "act": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+   "spec_hash": "52f04b96f8d0f4f84bd4e59cd30adad69a71487cfe350014e7c16eba1d56a6b0",
+   "area": "Agreements",
+   "inventory_by_hash": 0,
+   "B_uses": 3,
+   "inventory_all_namings": 3,
+   "B_all_namings": 3,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 0,
+   "differs_headline": true,
+   "differs_all": false,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 3,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 3
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Stall's held for you",
+   "draft": "1",
+   "act": "ad3b8e7f4b0f60721bddb635f14716d116f0e85c5e01d4f6225e7516d703fca7",
+   "spec_hash": "31b669016dc2ea5878e63aff9979d417821b255b75d99d74d8197e3e752edfb1",
+   "area": "Money",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 28,
+   "B_all_namings": 24,
+   "inventory_by_act": 28,
+   "B_cited_by_act_id": 23,
+   "B_short_mentions": 8,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 4,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 4
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Stall's held for you",
+   "draft": "2",
+   "act": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+   "spec_hash": "08ae1b2cb42d8c3a9052021a1daebdbd237016cfba6981bcda1c4fac5d517b9f",
+   "area": "Money",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 10,
+   "B_all_namings": 10,
+   "inventory_by_act": 10,
+   "B_cited_by_act_id": 8,
+   "B_short_mentions": 1,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Invoice request form (piece A of Commission 1)",
+   "draft": "1",
+   "act": "72bbce87cf62728e3b8791fe7ab22ddb483d308d83c6fbdfd8df4e4f0979afba",
+   "spec_hash": "b13f771cb27614f096bd94fae9d779ca6fd76a1504aa253438cb27c54fd2a74f",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 11,
+   "inventory_all_namings": 12,
+   "B_all_namings": 11,
+   "inventory_by_act": 12,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 1,
+   "differs_headline": true,
+   "differs_all": false,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 11,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 8,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 2,
+      "held only in windows' acts/, in no home's feed: B reads these, the inventory does not": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Invoice request form (piece A of Commission 1)",
+   "draft": "2",
+   "act": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+   "spec_hash": "76c65a2625d74ac666a43318c9666a525dcdf2b4f4dace46b2ae75d10d2735ec",
+   "area": "Money",
+   "inventory_by_hash": 0,
+   "B_uses": 4,
+   "inventory_all_namings": 4,
+   "B_all_namings": 4,
+   "inventory_by_act": 4,
+   "B_cited_by_act_id": 0,
+   "B_short_mentions": 0,
+   "differs_headline": true,
+   "differs_all": false,
+   "explained": [
+    {
+     "count": "headline",
+     "side": "counted by B, not by the inventory",
+     "acts": 4,
+     "by_rule": {
+      "names act id in payload: B counts this, the inventory's by-hash rule counts the spec hash only": 3,
+      "names act id in refs+payload: B counts this, the inventory's by-hash rule counts the spec hash only": 1
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Plain Words' period payment (a Statement kind)",
+   "draft": "1",
+   "act": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+   "spec_hash": "50bcb2e55641c2a7b3e85ed6ee28757fe11bb7c6d4e39dc5f0cd16a87e74ee72",
+   "area": "Money",
+   "inventory_by_hash": 3,
+   "B_uses": 3,
+   "inventory_all_namings": 7,
+   "B_all_namings": 7,
+   "inventory_by_act": 6,
+   "B_cited_by_act_id": 4,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Proven claim (a register of debts)",
+   "draft": "1",
+   "act": "d6647391ab5ab6d5f3aed58f439aaab162ec65a9f73ab08b0bf082a113211f1e",
+   "spec_hash": "ed9a4b4e99ec48af5c13db437590934f18a1c65c16d1b509af5f0f5cf7be1648",
+   "area": "Web",
+   "inventory_by_hash": 13,
+   "B_uses": 12,
+   "inventory_all_namings": 27,
+   "B_all_namings": 21,
+   "inventory_by_act": 18,
+   "B_cited_by_act_id": 9,
+   "B_short_mentions": 10,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 6,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 6
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Proven claim (a register of debts)",
+   "draft": "2",
+   "act": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+   "spec_hash": "51f9afc8224a4d79a59881cb4e5f825e88231f198a36af4f3f67c6fb57e69f0a",
+   "area": "Web",
+   "inventory_by_hash": 2,
+   "B_uses": 2,
+   "inventory_all_namings": 5,
+   "B_all_namings": 5,
+   "inventory_by_act": 5,
+   "B_cited_by_act_id": 3,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  },
+  {
+   "text": "Steward & Co.'s lending shelf",
+   "draft": "1",
+   "act": "e5d774d2e9d60e9000d5a7ff53de5fba070c9e9b2042c4a3b7797b4b10b2052c",
+   "spec_hash": "255551a7692045f442cb15115cde25b1371a0143e18e78513c752ed5c657b536",
+   "area": "Agreements",
+   "inventory_by_hash": 13,
+   "B_uses": 13,
+   "inventory_all_namings": 19,
+   "B_all_namings": 15,
+   "inventory_by_act": 9,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 6,
+   "differs_headline": false,
+   "differs_all": true,
+   "explained": [
+    {
+     "count": "all",
+     "side": "counted by the inventory, not by B",
+     "acts": 4,
+     "by_rule": {
+      "names it only by short form (8…4) or first 8 characters in words: the inventory counts these, B keeps them apart as short mentions": 4
+     }
+    }
+   ],
+   "mark": "counted"
+  },
+  {
+   "text": "Steward & Co.'s lending shelf",
+   "draft": "2",
+   "act": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+   "spec_hash": "43cff6df47df3abab02bba00a3d3124623376d92f4cef85d2e6151795e654be5",
+   "area": "Agreements",
+   "inventory_by_hash": 1,
+   "B_uses": 1,
+   "inventory_all_namings": 3,
+   "B_all_namings": 3,
+   "inventory_by_act": 3,
+   "B_cited_by_act_id": 2,
+   "B_short_mentions": 0,
+   "differs_headline": false,
+   "differs_all": false,
+   "explained": [],
+   "mark": "counted"
+  }
+ ]
+}
