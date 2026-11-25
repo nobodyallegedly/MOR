@@ -25,6 +25,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **How prompts are shared** (21 November, 17:25; to the MOR lead, for every window). He: "I need a prompt to give all other windows about sharing prompts. Each prompt needs to be full, no segmentation. Before each prompt, state environment, and desired model. Repeat for each prompt."
 - *Arrived at (to check):* every prompt a window hands him is whole, never split into a common part and a part of its own; above each prompt the window states the environment it runs in and the model it should run on, and does so again for every prompt.
 
+**What outlives the release** (25 November, 10:57). The scribe found that its counting scripts read the round's research copy, so its notes can be checked again only if the copy is kept. The MOR lead asked whether the research copy and the scribe's notes should outlive the release, kept together off the repository, and where; leaned yes, on the Mac, with one backup copy elsewhere. He: "agreed, kept on the mac"
+- *Arrived at (to check):* the research copy and the scribe's notes, scripts and outputs outlive the release, kept together on the Mac, never in the repository or the project. The relays are wiped; the data is not. A backup elsewhere was not taken up.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
