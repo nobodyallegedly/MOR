@@ -99,6 +99,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **Money's findings wait for the Money review** (26 November, 16:35–16:36). The MOR lead listed the pow wow's changes so far and asked whether the round's Money findings (a payment report that does not bind its payer; the payee acting first; paying an identity rather than an invoice; eleven things Money could not say) are taken now or in the Money review after Agreements' draft 26; leaned the Money review, by his order "finish agreements, then turn our attention to money". He: "Good to go" Then: "Let’s keep the focus where it is for now. Agreed"
 - *Arrived at (to check):* the focus stays on Agreements. Money's findings from the round go to the Money review, after draft 26, read against draft 14, "What defines Money" and the duo.
 
+**Wave two: check, then attack, then draft 26** (26 November, 16:36–16:37). The MOR lead proposed the next wave before draft 26 is written: the scribe checks each answer of 26 November against the ledger and the draft 26 brief, rule by rule, listing every conflict; the codemeister writes what the changes do to verifier 2, no code changed; and a Fable attack on the answers taken together; then he settles the conflicts, and only then is draft 26 written; leaned yes, with the attack. He: "Yes, with attacks but using Fable 5.1, not 5.2"
+- *Arrived at (to check):* that is wave two, with the attack, run on Fable 5.1, not 5.2. Draft 26 is written only after he has settled the conflicts.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
