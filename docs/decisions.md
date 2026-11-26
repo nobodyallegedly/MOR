@@ -93,6 +93,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 - Then he (16:33): "But let’s answer it… an agreement with no stated anchor cannot build a temporal condition"
 - *Arrived at (to check):* an agreement that states no anchor (no place, no clock) cannot have a condition in time: no deadline, no "before", no "after the close". The MOR lead's reading, to check: a verifier answers such a condition "not shown", with that reason.
 
+**Two keys, so they are kept apart** (26 November, 16:31–16:34; the pow wow's fourteenth question; the research window's question 8). The MOR lead asked what happens when an owner and a thief both hold both keys (the round's kit kept them in one file) and both make an escape at one position; Identity draft 16 already states an owner robbed of both keys bears the loss; leaned that nothing is added, the position contested for good as the text says, and the lesson going to clients: never keep both keys in one file. He: "I’m tempted to state… sorry, we built two keys so that they could be kept separately"
+- *Arrived at (to check):* nothing is added to Identity. The chain key and the signing key exist to be kept apart; whoever keeps both in one place gives up what the second key was for, and an owner robbed of both bears the loss, as Identity already states. Keeping them apart is the clients' duty.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
