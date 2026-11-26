@@ -90,6 +90,8 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **"Before the close" was the simulation's** (26 November, 16:28–16:31; the pow wow's thirteenth question; one of the three things the research window found said two ways). The MOR lead asked what a verifier answers for Terms that say "before the close" and name no place or clock: "unchecked", or "not shown" with the reason; leaned "not shown", nothing being missing. He, first on how he answers: "(Always assume leftovers once I send my reply. The act of sending does something to my thought process)" Then: "That was a simulation artifact, they had numbered windows"
 - *Arrived at (to check):* "the close" was the round's numbered windows, an artefact of the simulation, not a finding about the core. Nothing changes. (Not asked, the MOR lead's lean: Terms that name a deadline and no place or clock get "not shown", with that reason.)
 - On how he answers: after each reply, more may follow; the MOR lead leaves room before moving on.
+- Then he (16:33): "But let’s answer it… an agreement with no stated anchor cannot build a temporal condition"
+- *Arrived at (to check):* an agreement that states no anchor (no place, no clock) cannot have a condition in time: no deadline, no "before", no "after the close". The MOR lead's reading, to check: a verifier answers such a condition "not shown", with that reason.
 
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
