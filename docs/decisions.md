@@ -28,6 +28,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **What outlives the release** (25 November, 10:57). The scribe found that its counting scripts read the round's research copy, so its notes can be checked again only if the copy is kept. The MOR lead asked whether the research copy and the scribe's notes should outlive the release, kept together off the repository, and where; leaned yes, on the Mac, with one backup copy elsewhere. He: "agreed, kept on the mac"
 - *Arrived at (to check):* the research copy and the scribe's notes, scripts and outputs outlive the release, kept together on the Mac, never in the repository or the project. The relays are wiped; the data is not. A backup elsewhere was not taken up.
 
+**Sessions on the Mac may push** (26 November, 13:53). He: "machine session can now push to repo, mac is authorized"
+- *Arrived at (to check):* the earlier rule "Machine sessions on the Mac commit and push nothing" is lifted: a session on the Mac may commit and push to the repository, the Mac being authorized. Every other rule stands: the round's data, access details, keys and addresses never go into the repository, and the author's personal name never appears in it.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
