@@ -33,6 +33,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then he (17:59): "Yes, the difference is how the party is protected. They can chose not to renew under new terms, but whatever they paid for is covered by what they signed, not how it got updated. This creates a situation where two version of the agreement are valid though, depending on the party." The MOR lead: draft 25's G10.6 already says it ("A filling has exactly the rights offered by the version it was earned under"): two questions, one answer each: which version is in force (one, what the known parties now offer, what a new buyer signs), and which version governs a filling (the one its proof names, for as long as its words say); a version can stop being in force and still govern what was bought under it. He: "If it’s already there… all good"
 - *Arrived at (to check):* the core sees one version in force at a time, for the agreement. Each filling carries the version it was earned under, which governs what was bought for as long as its words say; a party protected so may choose not to renew under the new version. Already in draft 25's G10.6; nothing new.
 
+**Valid and in force, two words, two jobs** (26 November, 18:00; the scribe's M5). The MOR lead: with the pin back, "valid" is the gate's answer (the rule allows this update) and "in force" needs both (allowed, and shown first); an update can be valid and not yet in force, or never, if it loses a fork; leaned to keep both words with those jobs, so a verifier can say "valid, not yet in force: no order shown". He: "Agreed."
+- *Arrived at (to check):* "valid" answers the gate only: the update condition allows the update. "In force" answers gate and pin: allowed, and its order shown. This refines his line of 26 November ("in force to be human speech, and valid to be its translation"): both stay, each with its own job.
+
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
