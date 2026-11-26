@@ -28,7 +28,8 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
   if (!(m instanceof Map)) return no('the words are not a map');
   for (const k of m.keys()) if (!Number.isInteger(k) || k < 0 || k > 10) return no('unknown key ' + String(k));
   if (typeof m.get(0) !== 'string') return no('key 0 (the name) is missing');
-  const key = (o, where) => { const k = ownerKey(o, parties); if (k === null) return { err: `an owner in key ${where} is not [0 or 1, 32 bytes] or [2, position]: text is never a hash` }; if (k === undefined) return { err: `an owner in key ${where} is not a party (or a spot is not a role)` }; return { k }; };
+  type Owner = { err: string; k?: undefined } | { err?: undefined; k: string };
+  const key = (o: unknown, where: number): Owner => { const k = ownerKey(o, parties); if (k === null) return { err: `an owner in key ${where} is not [0 or 1, 32 bytes] or [2, position]: text is never a hash` }; if (k === undefined) return { err: `an owner in key ${where} is not a party (or a spot is not a role)` }; return { k }; };
   const holdings = new Map();
   if (!Array.isArray(m.get(1)) || !m.get(1).length) return no('key 1 (who owns what) is missing');
   for (const h of m.get(1)) {
@@ -39,15 +40,15 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
   }
   const roles = [...holdings.keys()].filter((k) => k.startsWith('s:')).map((k) => JSON.stringify(parties[+k.slice(2)].role));
   if (new Set(roles).size !== roles.length) return no('two alike roles hold parts');
-  const named = (k) => holdings.has(k) && !k.startsWith('s:');
+  const named = (k: string) => holdings.has(k) && !k.startsWith('s:');
   let remainder;
   const r2 = m.get(2);
   if (Array.isArray(r2) && r2.length === 1 && r2[0] === 3) remainder = 'rotating';
-  else { const r = key(r2, 2); if (r.err) return no(r.err); if (!named(r.k)) return no('the remainder owner must be a named owner in key 1'); remainder = r.k; }
-  const set = (n) => { const s = new Set(); for (const o of m.get(n) ?? []) { const r = key(o, n); if (r.err) return r; if (!named(r.k)) return { err: `an owner in key ${n} must be a named owner in key 1` }; s.add(r.k); } return { s }; };
+  else { const r = key(r2, 2); if (r.err) return no(r.err); if (!named(r.k!)) return no('the remainder owner must be a named owner in key 1'); remainder = r.k; }
+  const set = (n: number): { err: string; s?: undefined } | { err?: undefined; s: Set<unknown> } => { const s = new Set(); for (const o of m.get(n) ?? []) { const r = key(o, n); if (r.err) return r; if (!named(r.k!)) return { err: `an owner in key ${n} must be a named owner in key 1` }; s.add(r.k); } return { s }; };
   const k3 = set(3); if (k3.err) return no(k3.err);
   const k6 = set(6); if (k6.err) return no(k6.err);
-  for (const k of k6.s) if (k3.s.has(k)) return no('an owner in key 6 may not be in key 3');
+  for (const k of k6.s!) if (k3.s!.has(k)) return no('an owner in key 6 may not be in key 3');
   const fixed = [];
   for (const f of m.get(5) ?? []) {
     if (!Array.isArray(f) || (f.length !== 2 && f.length !== 3)) return no('a fixed line is not [owner, sats, ?evidence]');
@@ -61,7 +62,7 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
   for (const h of m.get(7) ?? []) {
     if (!Array.isArray(h) || h.length !== 2) return no('a key-7 entry is not [owner, parts]');
     const r = key(h[0], 7); if (r.err) return no(r.err);
-    if (!named(r.k) || admitted.has(r.k) || !Number.isInteger(h[1]) || h[1] < 1 || h[1] > holdings.get(r.k)) return no('a key-7 owner must be named in key 1, once, with at most their parts');
+    if (!named(r.k!) || admitted.has(r.k) || !Number.isInteger(h[1]) || h[1] < 1 || h[1] > holdings.get(r.k)) return no('a key-7 owner must be named in key 1, once, with at most their parts');
     admitted.set(r.k, h[1]);
   }
   const floor = params[2] ?? 1008;
@@ -70,11 +71,11 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
     if (!Array.isArray(e) || e.length !== 5) return no('a stand-in entry is not [owner, stand-in, witnesses, k, wait]');
     const r = key(e[0], 8); if (r.err) return no(r.err);
     const [, s, w, k, wait] = e;
-    if (!named(r.k) || standins.has(r.k)) return no('a key-8 owner must be named in key 1, once');
+    if (!named(r.k!) || standins.has(r.k)) return no('a key-8 owner must be named in key 1, once');
     if (!isHash(s) || !Array.isArray(w) || !w.length || !w.every(isHash)) return no('a stand-in or witness is not 32 bytes');
     const si = hx(s), ws = w.map(hx);
     if (!parties.some((p) => p.signer === si)) return no('the stand-in must be a party of the Terms');
-    if (ws.includes(si) || ws.includes(r.k.slice(2)) || new Set(ws).size !== ws.length) return no('a witness may not be the owner or the stand-in, nor named twice');
+    if (ws.includes(si) || ws.includes(r.k!.slice(2)) || new Set(ws).size !== ws.length) return no('a witness may not be the owner or the stand-in, nor named twice');
     if (!Number.isInteger(k) || k < 1 || k > ws.length) return no('k must be at least 1 and at most the number of witnesses');
     if (!Number.isInteger(wait) || wait < floor) return no(`the wait is below the floor of ${floor} blocks`);
     standins.set(r.k, { standIn: 'p:' + si, witnesses: ws.map((x) => 'p:' + x), k, wait });
@@ -84,7 +85,7 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
     const d = m.get(9);
     if (!Array.isArray(d) || d.length !== 3) return no('key 9 is not [deliverer, within, refund]');
     const r = key(d[0], 9); if (r.err) return no(r.err);
-    if (!named(r.k) || !Number.isInteger(d[1]) || d[1] < 1 || typeof d[2] !== 'boolean') return no('the deliverer must be a named owner; within at least 1 block; refund true or false');
+    if (!named(r.k!) || !Number.isInteger(d[1]) || d[1] < 1 || typeof d[2] !== 'boolean') return no('the deliverer must be a named owner; within at least 1 block; refund true or false');
     delivery = { by: r.k, within: d[1], refund: d[2] };
   }
   const former = [];
@@ -96,11 +97,11 @@ export function read(words: Uint8Array | Map<number, any>, parties: any[], param
 // fillings: { 's:3': [signer, ...] } (null: its cMIP cannot answer); evidence: { <index of fixed line>: true | false } (absent: cannot answer, the line is held, N3); settlement: hex string (for a rotating remainder);
 // successors: { 'p:<gone>': 'p:<new>' } from later versions in force under rules 3b(a) and 3c (section 2, succession).
 export function divide(rd: any, sats: number, { fillings = {}, evidence = {}, settlement = null, successors = {}, fee = 0 }: { fillings?: Record<string, string[] | null>; evidence?: Record<number, boolean>; settlement?: string | null; successors?: Record<string, string>; fee?: number } = {}): [string, number, string][] {
-  const pay = (k) => successors[k] ?? k;
-  const filler = (k) => { const f = fillings[k] ?? []; return f && f.length === 1 ? 'p:' + f[0] : null; };
-  const silent = (k) => fillings[k] === null;   // the spot's cMIP cannot answer
-  const out = []; let pot = sats;
-  rd.fixed.forEach((f, i) => {
+  const pay = (k: string) => successors[k] ?? k;
+  const filler = (k: string) => { const f = fillings[k] ?? []; return f && f.length === 1 ? 'p:' + f[0] : null; };
+  const silent = (k: string) => fillings[k] === null;   // the spot's cMIP cannot answer
+  const out: [string, number, string][] = []; let pot = sats;
+  rd.fixed.forEach((f: any, i: number) => {
     const to = f.to.startsWith('s:') ? filler(f.to) : pay(f.to);
     if (f.evidence && evidence[i] === undefined) { if (f.sats <= pot) { pot -= f.sats; out.push([f.to, f.sats, 'held: its evidence cannot be read']); } else out.push([f.to, 0, 'did not fit']); return; }
     if (f.evidence && evidence[i] !== true) { out.push([f.to, 0, 'no evidence']); return; }
@@ -131,10 +132,10 @@ export function divide(rd: any, sats: number, { fillings = {}, evidence = {}, se
 export function condition(orig: any, upd: any, ctx: any): { answer: string; rule: string | number; ground: string } {
   if (!orig.ok || !upd.ok) return { answer: 'not valid', rule: 'reading', ground: orig.why || upd.why };
   const { own = new Set(), changed = new Set(), params = {} } = ctx;
-  const named = (rd) => [...rd.holdings.keys()].filter((k) => !k.startsWith('s:'));
-  const voiced = (rd) => named(rd).filter((k) => !rd.left.has(k) && !rd.admitted.has(k));
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const ser = (rd, n) => JSON.stringify(rd.raw.get(n) ?? null);
+  const named = (rd: any) => [...rd.holdings.keys()].filter((k) => !k.startsWith('s:'));
+  const voiced = (rd: any) => named(rd).filter((k) => !rd.left.has(k) && !rd.admitted.has(k));
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const ser = (rd: any, n: number) => JSON.stringify(rd.raw.get(n) ?? null);
   // Rule 3c, a stand-in (asked first where the update has its shape).
   if (ctx.shape === 'standin') {
     const [gone] = [...orig.standins.keys()].filter((k) => !upd.holdings.has(k));
@@ -147,7 +148,7 @@ export function condition(orig: any, upd: any, ctx: any): { answer: string; rule
     const kth = b[e.k - 1], at = ctx.standin?.assentBlock;
     if (at == null) return { answer: 'not valid', rule: '3c.4', ground: 'no placement answers for the wait' };
     if (at - kth < e.wait) return { answer: 'not valid', rule: '3c.4', ground: `${at - kth} of ${e.wait} blocks waited` };
-    const back = (ctx.standin?.ownerActsBlocks ?? []).find((x) => x >= kth && x <= at);
+    const back = (ctx.standin?.ownerActsBlocks ?? []).find((x: number) => x >= kth && x <= at);
     if (back !== undefined) return { answer: 'not valid', rule: '3c.5', ground: `the owner acted at block ${back}, within the wait` };
     return { answer: 'valid', rule: '3c', ground: 'the stand-in takes the owner\'s place' };
   }
@@ -171,7 +172,7 @@ export function condition(orig: any, upd: any, ctx: any): { answer: string; rule
   const cut = new Set();
   const everyone = () => named(orig).forEach((k) => cut.add(k));
   for (const n of [2, 5, 9]) if (ser(orig, n) !== ser(upd, n)) everyone();
-  if (!orig.former.every((h) => upd.former.includes(h))) everyone();   // a former receiver removed
+  if (!orig.former.every((h: string) => upd.former.includes(h))) everyone();   // a former receiver removed
   // W1: a change of service like for like (ctx.likeForLike, computed by the caller from both deals' Terms with sameService) is not a cut.
   const likeForLike = ctx.likeForLike === true && [...changed].every((f) => ['receiver', 'calls'].includes(f));
   for (const f of ['receiver', 'control', 'calls', 'data', 'bodyCmip', 'conditionCmip', 'powersAssent']) if (changed.has(f) && !(likeForLike && (f === 'receiver' || f === 'calls'))) everyone();
