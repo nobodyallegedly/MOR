@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { folderOf, listFolders, nearMatch, readPath, refusedSay } from '../src/folders.ts';
@@ -27,8 +27,19 @@ test('H23: where no folder is, a near match is named: a space at its end, other 
   mkdirSync(join(base, 'Tablets'));
   writeFileSync(join(base, 'a-file'), 'x');
   assert.throws(() => folderOf(join(base, 'testrelease')), /There is no folder at .*testrelease\. Did you mean “testrelease ” \(with a space at the end\)\? Its whole path: .*testrelease /);
-  assert.throws(() => folderOf(join(base, 'tablets', '')), /Did you mean “Tablets” \(in other capital letters\)/);
-  assert.deepEqual(nearMatch(join(base, 'tablets')), { path: join(base, 'Tablets'), said: '“Tablets” (in other capital letters)' });
+  // Other capital letters: what follows depends on the disk. On a case-sensitive
+  // disk "tablets" is no folder, so the near match is named; on a case-insensitive
+  // one (a Mac's, by default) "tablets" is the folder "Tablets", found as typed,
+  // and there is nothing near to name.
+  const caseSensitive = !existsSync(join(base, 'tablets'));
+  if (caseSensitive) {
+    assert.throws(() => folderOf(join(base, 'tablets', '')), /Did you mean “Tablets” \(in other capital letters\)/);
+    assert.deepEqual(nearMatch(join(base, 'tablets')), { path: join(base, 'Tablets'), said: '“Tablets” (in other capital letters)' });
+  } else {
+    assert.equal(folderOf(join(base, 'tablets', '')), join(base, 'tablets'));
+    assert.equal(realpathSync.native(folderOf(join(base, 'tablets', ''))), join(base, 'Tablets'), 'the same folder');
+    assert.equal(nearMatch(join(base, 'tablets')), null);
+  }
   assert.equal(nearMatch(join(base, 'nothing-like-it')), null);
   assert.throws(() => folderOf(join(base, 'nothing-like-it')), /^Error: There is no folder at .*nothing-like-it\.$/);
   // As typed, with the space at its end: from the Terminal ("\ "), or kept as pasted.
