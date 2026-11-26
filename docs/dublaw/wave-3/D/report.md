@@ -105,3 +105,48 @@ The one failure, before and after: Edubba's `folders.test.ts`, "H23: where no fo
 - **`clients/README.md`** has no row for `clients/arbiter/` yet: that would be a change beyond the copy.
 - **Edubba's released web files** (`clients/desk/built/`), as above, not rebuilt.
 - **Other clients' suites**: not run; this session changed no file of theirs.
+
+## 26 November 2026: session D3, on the Mac
+
+*A record of work by Claude for DubLaw, 26 November 2026. Not a decision; nothing merged. It fixes the three things D2 left (above, "Left undone, and why": the type errors, the names; and "Tests, before and after": H23). `clients/desk/built/` is not rebuilt nor touched, so the release check stays red until DubWeb answers Q8; the questions Q1 to Q9 are left as they are.*
+
+### What each fix changed
+
+1. **The type errors in `clients/desk/src/shower-work.ts`** (commit `97e9c3ba`). Types and narrowing only: every parameter that was an implicit `any` has its type; the two helpers that give an error or a value (`key` and `set`) have their union written out; the division's lines have their tuple type (`[string, number, string][]`); and where a value is read after `if (r.err) return …`, which already guarantees it, it is asserted present (`!`). **Nothing runs differently**: the file compiled by esbuild before and after gives byte-identical JavaScript.
+2. **H23 in `clients/desk/test/folders.test.ts`** (commit `599e6a15`). The test now asks the disk first: does `tablets` exist beside `Tablets`? On a case-sensitive disk, as before: no folder, and the near match "Tablets" (in other capital letters) is named. On a case-insensitive disk: the folder is found as typed (`…/tablets`), it is the same folder as `Tablets` (`realpathSync.native`), and `nearMatch` names nothing. **The code under test is unchanged; it was not wrong**: where a folder is, it is found as typed, and a near match is named only where none is. Only the test assumed a case-sensitive disk. Checked on both kinds of disk: this Mac's (APFS, case-insensitive) and a case-sensitive APFS disk image made for the purpose (`TMPDIR` on it): `folders.test.ts` passes 4 of 4 on each. (On the case-sensitive image the old test passed too, so H23 still checks there what it checked before.)
+3. **The two simulated player names** (commit `8510b18b`). "Gaël" became "Alex" in `clients/desk/src/before-signing.ts` (line 15, a comment) and `clients/desk/test/before-signing.test.ts` (line 55, a test's name). "Léa" became "Sam" in `clients/desk/test/deal-parameters.test.ts` (line 9, a test's name). Only a comment and two test names changed; no check changed.
+
+### Type check
+
+`npx tsc --noEmit` in `clients/desk`:
+
+| | Before (`bb83f273`) | After (`8510b18b`) |
+| --- | --- | --- |
+| `clients/desk/src/shower-work.ts` | 27 | 0 |
+| all of Edubba's typecheck | 28 | 1 |
+
+The one left is the known one, on main as well: `clients/kishib`'s airgap package is not built (`../kishib/src/airgap.ts`, TS2307). Before 28 (27 + that one), as D2 counted. Of the 27: 17 implicit `any` (TS7006), 8 a property read on a union without narrowing (TS2339), and 1 each of "possibly undefined" (TS18048) and an untyped array returned as tuples (TS2322).
+
+### Tests, before and after
+
+Run on this Mac (Node 26.10.0; the core's WebAssembly built by `clients/genesis/scripts/build-wasm.sh`; `MOR_CHROMIUM` naming the installed Google Chrome, as D2 did), `node --import tsx --test test/*.test.ts` in each client and `node --test clients/arbiter/arbiter.test.ts`, before on `bb83f273` and after on `8510b18b`, in the same checkout:
+
+| | Before (`bb83f273`) | After (`8510b18b`) | Changed |
+| --- | --- | --- | --- |
+| Edubba (`clients/desk`) | 153 pass, 1 failed, 0 skipped, of 154 | 154 pass, 0 failed, 0 skipped, of 154 | H23 now passes; two tests renamed (the names); no other outcome changed |
+| collective client | 52 pass, 0 failed, 0 skipped, of 52 | 52 pass, 0 failed, 0 skipped, of 52 | none |
+| arbiter (`clients/arbiter`) | 12 pass, 0 failed, 0 skipped, of 12 | 12 pass, 0 failed, 0 skipped, of 12 | none |
+
+Compared test by test (each test's name and outcome, before and after), the only differences are H23 (failed, then passes) and the two renamed tests (passed, still pass). `shower-work.test.ts` passed before and passes after. `npm run test:build`, the release check, was not run: `clients/desk/built/` is not rebuilt, so it stays red until Q8, as expected.
+
+The before run was made twice: a first time, five of Edubba's browser tests (`real-browser.test.ts`, `web-browser.test.ts`) failed because this checkout had no dependencies installed for `clients/dub`, whose web client those tests build. Once they were installed (`npm ci` in `clients/dub`; no file of the repository changed), the five passed and the run above was made.
+
+### Names left in place
+
+- **`clients/desk/ROUND-2-LESSONS.md`, line 49**: "…a buyer's payment sat at the split service (Gaël)." Left unchanged: it is the round's record. This is the only line of Edubba that still holds either name.
+- Not touched, outside this session's files, for the lead to know: `clients/collective/test/collective.test.ts` (lines 516, 518, 571, 573, 579) names test identities "Lea", "Lee", "Lou", "Lyn", "Lia"; and the case studies in `docs/case-studies/` (08, 10) and some other documents name "Lea" as an invented musician. They are not the round's simulated players, and are another client and other texts.
+
+### Left undone, and why
+
+- Nothing of the three fixes is left undone.
+- `clients/desk/built/` not rebuilt (as asked); the release check stays red until DubWeb answers Q8.
