@@ -47,6 +47,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 - Then he (15:46): "Just to stay with the previous one… it is just strange. Something was cooked with a cMIP then a group of people say, we don’t use it, and try to find another way to cook the result. What they should find is a closed door. The simulation had apps, they needed an app that supported the cMIP."
 - *Arrived at (to check):* Terms made with a cMIP are read with that cMIP. A reader without it should find a closed door ("unchecked"), not another way to the result. In the round the way through was an app that supported the cMIP, and that is what was missing.
 
+**A resolve with nothing to resolve: "not shown", with the reason** (26 November, 15:45–15:48; the pow wow's fourth question; the research window's question 7, the codemeister's build-list row on order.rs 355). The MOR lead asked what a verifier answers for a resolve Statement where there is no fork: "unchecked", as verifier 2 does, or "not shown, nothing to resolve", as G12.3's "an act like any other" reads; leaned "not shown", since the verifier lacks nothing and can see there is no fork. He: "Agreed. It’s a different reason for a “sorry can’t do” and it’s always good to state why"
+- *Arrived at (to check):* a resolve that resolves nothing is answered "not shown", with the reason: nothing to resolve. "Unchecked" is kept for a reader that lacks something. Every refusal states its own reason.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
