@@ -12,7 +12,8 @@
 
 > "We need to change the current wish to updating the core after the findings" (26 November, 16:46)
 
-What carries over from the stint of 20 November is his to say; the MOR lead has asked.
+Asked whether everything from the stint of 20 November carries over (the pow wow of 26 November, wave two as planned, Money's findings waiting for the Money review), he (16:47): "Yes, we’ll go back to analysis, maybe add the focus on agreements"
+*Arrived at (to check):* everything from the stint of 20 November carries over, and the stint of 10 to 20 November with it. The analysis of the round is returned to later. The focus is Agreements ("maybe", in his word).
 
 ## His words in this stint
 
