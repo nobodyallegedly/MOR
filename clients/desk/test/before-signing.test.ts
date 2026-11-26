@@ -52,7 +52,7 @@ test('only an assent in one\'s own name counts as one\'s own (Plain Words; Y1)',
   assert.equal(s.has('X'), false);
 });
 
-test('invoices: warn before they run out, and when none is left (Gaël)', () => {
+test('invoices: warn before they run out, and when none is left (Alex)', () => {
   assert.match(invoicesWarning(0, 4) ?? '', /holds up its buyer/);
   assert.match(invoicesWarning(3, 4) ?? '', /Only 3 unused invoices/);
   assert.equal(invoicesWarning(16, 4), null);

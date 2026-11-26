@@ -6,7 +6,7 @@ test("J4.2: DubPay's shape, all six, integer keys", () => {
   const r = dealParameters(new Map<number, unknown>([[0, [10000]], [1, 100000], [2, 10000], [3, 432], [4, 'lightning'], [5, 'postmark-place']]));
   assert.equal(r.meets, true); assert.equal(r.line, 'section 6: all six named');
 });
-test("J4.2: Léa's text keys (deal 795859ee…)", () => {
+test("J4.2: Sam's text keys (deal 795859ee…)", () => {
   const r = dealParameters({ cap: 100000, fee: 0, rail: 'lightning regtest', place: 'postmark-place', deadline: 432, capPerReceiver: 10000 });
   assert.equal(r.meets, true);
 });

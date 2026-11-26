@@ -12,7 +12,7 @@
 // 4. "Your own signature" counts only an act in your own name, never one
 //    made for you under a power (Plain Words' finding; Counterparty's Y1).
 // 5. Invoices: say early that a payee's unused invoices are running out
-//    (Gaël's payment held at the split service).
+//    (Alex's payment held at the split service).
 // 6. Sealed acts addressed to you and not yet opened are counted and shown.
 //
 // TEST IDENTITIES ONLY.
