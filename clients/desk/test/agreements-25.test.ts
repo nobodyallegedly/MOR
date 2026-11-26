@@ -10,7 +10,9 @@
 //   terms, read as written, with the grammar's answer: not in force, since
 //   this identity's own assent is not there (G4.1); and the assent read too;
 // - the web build's stand-in names encoding 2's spec hashes (E2), as the
-//   binding gives them.
+//   binding gives them;
+// - the round's real acts, a sample of fifty (the collective client's
+//   test/real-acts/), read through Edubba as the kit reads them.
 //
 // TEST IDENTITIES ONLY.
 
@@ -18,7 +20,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { SPECS_25, assentFields, sign, type Held } from '../../collective/src/agreements-25.ts';
+import { SPECS_25, assentFields, describe25, read, sign, type Held } from '../../collective/src/agreements-25.ts';
 import { signWorkedExamples } from '../../collective/test/kit-examples.ts';
 import { draft25Item } from '../src/agreements-25.ts';
 import { SPEC_DRAFT_25, SPEC_REPORT_BLOCK_4, draft25Item as onTheWeb } from '../src/web/agreements-25.ts';
@@ -89,4 +91,40 @@ test('through the program: Terms and an assent of draft 25 sent to an identity h
   assert.match(said(s), /An assent: its signer agrees to the Terms it names/);
   // The grammar's answer, from the acts this identity received: this identity has not assented, so the Terms are not shown in force.
   assert.match(said(s), /Whether the Terms [0-9a-f]{64} are in force: NOT SHOWN, G4\.1/);
+});
+
+/**
+ * The round's real acts, a sample of fifty (the collective client's
+ * test/real-acts/: 20 Terms and 30 Statements, copied unchanged from the
+ * round's `_research`, with the manifest that drew them), read through
+ * Edubba's reading (`draft25Item`), with the fifty held: the core's verdict,
+ * the kit's (its `agreements check`, each act alone); Terms filed as terms,
+ * Statements as other; the fields the collective library gives; and, for
+ * Terms, the plain words name the kit's answer on whether they are in force
+ * (`agreements ask in_force`, the fifty held).
+ */
+test('the round’s real acts, a sample of fifty: read through Edubba as the kit reads them', async () => {
+  const { realActs, kit, tally } = await import('../../collective/test/real-acts.ts');
+  const sample = realActs();
+  assert.equal(sample.acts.length, 50);
+  const all = sample.acts.map((a) => a.file);
+  const rows: { id: string; what: string; ours: unknown; theirs: unknown }[] = [];
+  for (const a of sample.acts) {
+    const row = (what: string, ours: unknown, theirs: unknown) => rows.push({ id: a.id, what, ours, theirs });
+    const spec = (describe25(a.bytes) as { spec: string }).spec;
+    const item = draft25Item(spec, a.bytes, undefined, sample.held, names);
+    const k = (kit(['agreements', 'check', a.file]) as { verdict: string }[])[0];
+    row('the core’s verdict', item?.verdict, k.verdict);
+    row('filed as', item?.kind, a.type === 'Terms' ? 'terms' : 'other');
+    row('fields, the collective library’s', item?.fields, read(a.bytes)?.fields);
+    if (a.type === 'Terms') {
+      const word = (kit(['agreements', 'ask', 'in_force', a.id, '--acts', ...all]) as { word: string }[])[0].word.toUpperCase();
+      const text = (item?.assessment ?? []).flatMap((x) => [x.heading, ...x.lines.map((l) => l.text)]).join('\n');
+      row('in force, the plain words name the kit’s answer', text.includes(`in force: ${word}`) ? word : `not ${word}`, word);
+    }
+  }
+  const t = tally(rows);
+  console.log(`# the round's real acts through Edubba: ${t.match} of ${rows.length} comparisons match the kit, ${t.mismatch.length} do not`);
+  for (const l of t.lines) console.log(`# mismatch: ${l}`);
+  assert.deepEqual(t.lines, []);
 });

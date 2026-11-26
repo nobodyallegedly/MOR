@@ -17,6 +17,9 @@
 // - An act of the earlier Agreements (the test spec hash "LAW") is not one
 //   of draft 25: the kit's checker answers "not this encoding" (E2), and a
 //   collective's keyless identity, whose acts carry `objects`, is refused (E3).
+// - The round's real acts, a sample of fifty (test/real-acts/): each read as
+//   the kit reads it: kind, id, signer, the core's verdict, its fields, and
+//   for Terms whether they are in force with the fifty held.
 //
 // TEST IDENTITIES ONLY.
 
@@ -34,6 +37,7 @@ import {
   check,
   contestFields,
   counterSignatureFields,
+  describe25,
   fieldsOf,
   inForce,
   previousFor,
@@ -45,7 +49,7 @@ import {
   type Held,
 } from '../src/agreements-25.ts';
 import { explain25 } from '../src/explain-25.ts';
-import { kitCheck, signWorkedExamples } from './kit-examples.ts';
+import { KIT, kitCheck, signWorkedExamples } from './kit-examples.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const HOME = { operator: 'a'.repeat(64), hint: 'home.test' };
@@ -173,52 +177,64 @@ test('an act of the earlier Agreements is no act of draft 25: the checker answer
 // ---------------------------------------------------------------- the round's real acts
 
 /**
- * A sample of the round's real Terms and Statements, read here as the kit's
- * checker reads them. Run where `MOR_RESEARCH` names a copy of the round's
- * `_research` folder (read only); skipped, and said so, anywhere else.
+ * A sample of the round's real Terms and Statements (test/real-acts/: fifty
+ * public acts, 20 Terms and 30 Statements, copied unchanged from the round's
+ * `_research`, with the manifest that drew them and its rule), read by this
+ * client's library and by the kit (test/kit/, round two's, unchanged), each
+ * act on its own.
  *
- * The rule that draws the sample: from every home's feed pages
- * (`feeds/HOME/feed-after-N.cbor`, items of kind 0, an act), every act under
- * draft 25's spec hash of type 0 or 1, deduplicated by act id; of those,
- * every one whose act id begins with the hexadecimal digit 0 or 1 (about one
- * in eight, fixed by the bytes, whatever order the feeds hold them in). For
- * each: this client's verdict is the kit's checker's on the act alone; where
- * it passes, its fields are given, and they are the act (the builder writes
- * the same bytes from them, `fieldsOf`).
+ * For each act: its kind, id and signer as the kit's `agreements check`
+ * gives them, and as the manifest lists them; the core's verdict, this
+ * library's and the kit's; where it passes, its fields are given, and the
+ * kit's own builder writes the act's payload from them, byte for byte. For
+ * Terms: the body's cMIP, the manifest's; and whether they are in force,
+ * with the fifty acts held, as this library and the kit's `agreements ask
+ * in_force` answer (word, rule and qualifier). In force means as far as these
+ * fifty show: the sample holds few of the assents the round made.
  */
-test('a sample of the round’s real Terms and Statements, drawn by a rule fixed here, is read as the kit’s checker reads it', { skip: process.env.MOR_RESEARCH ? false : 'MOR_RESEARCH names no copy of the round’s _research folder: the sample was not read' }, async () => {
-  const { readdirSync } = await import('node:fs');
-  const { cborDecode } = await import('../../genesis/src/core.ts');
-  const feeds = join(process.env.MOR_RESEARCH!, 'feeds');
-  const found = new Map<string, Uint8Array>();
-  for (const home of readdirSync(feeds).sort()) {
-    let files: string[];
-    try {
-      files = readdirSync(join(feeds, home)).filter((f) => /^feed-after-\d+\.cbor$/.test(f));
-    } catch {
-      continue;
-    }
-    for (const f of files) {
-      const page = cborDecode(new Uint8Array(readFileSync(join(feeds, home, f)))) as Map<number, [unknown, unknown, Uint8Array][]>;
-      for (const [, kind, item] of page.get(0) ?? []) {
-        if (Number(kind) !== 0) continue;
-        const r = read(item);
-        if (r && (r.act === 'terms' || r.act === 'statement')) found.set(r.id, item);
+test('the round’s real acts, a sample of fifty: read by this library as the kit reads them', async () => {
+  const { realActs, kit, tally } = await import('./real-acts.ts');
+  const { Kit } = (await import(join(KIT, 'lib', 'kit.mjs'))) as { Kit: { agreementsBuild(act: string, f: Fields): Uint8Array } };
+  const sample = realActs();
+  assert.equal(sample.acts.length, 50);
+  const KIND = { terms: 'Terms', statement: 'Statement', report: 'Report' } as const;
+  const hexOf = (b: Uint8Array) => Buffer.from(b).toString('hex');
+  const all = sample.acts.map((a) => a.file);
+  const rows: { id: string; what: string; ours: unknown; theirs: unknown }[] = [];
+  const inForceWords: Record<string, number> = {};
+  for (const a of sample.acts) {
+    const r = read(a.bytes);
+    const k = (kit(['agreements', 'check', a.file]) as { verdict: string; act: string; id: string; signer: string }[])[0];
+    const row = (what: string, ours: unknown, theirs: unknown) => rows.push({ id: a.id, what, ours, theirs });
+    row('kind, the kit’s check', r ? KIND[r.act!] : null, k.act);
+    row('kind, the manifest', a.type, k.act);
+    row('id, the kit’s check', r?.id, k.id);
+    row('id, the manifest', a.id, k.id);
+    row('signer, the kit’s check', r?.signer, k.signer);
+    row('signer, the manifest', a.signer, k.signer);
+    row('the core’s verdict', r?.check.verdict, k.verdict);
+    row('fields given where it passes', k.verdict === 'pass' ? r?.fields != null : null, k.verdict === 'pass' ? true : null);
+    if (r?.fields) {
+      const d = describe25(a.bytes) as { payload: Uint8Array };
+      let built: string;
+      try {
+        built = hexOf(Kit.agreementsBuild(r.act!, r.fields));
+      } catch (e) {
+        built = `refused: ${e instanceof Error ? e.message : String(e)}`;
       }
+      row('the payload, written by the kit’s builder from these fields', built, hexOf(d.payload));
+    }
+    if (a.type === 'Terms') {
+      row('the body’s cMIP, the manifest', (r?.fields?.body as { cmip?: string } | undefined)?.cmip, a.bodyCmip);
+      const ours = inForce(sample.held, a.id).map((x) => [x.word, x.rule, x.qualifier]);
+      const theirs = (kit(['agreements', 'ask', 'in_force', a.id, '--acts', ...all]) as { word: string; rule: string | null; qualifier: string }[]).map((x) => [x.word, x.rule, x.qualifier]);
+      row('in force, with the fifty held', ours, theirs);
+      for (const [w] of theirs) inForceWords[w as string] = (inForceWords[w as string] ?? 0) + 1;
     }
   }
-  const sample = [...found.entries()].filter(([id]) => id[0] === '0' || id[0] === '1').sort(([a], [b]) => (a < b ? -1 : 1));
-  assert.ok(sample.length > 0, 'the rule draws at least one act');
-  // The kit's own command, on each act alone.
-  const verdicts = sample.map(([, act]) => kitCheck([{ act }])[0].verdict);
-  let passed = 0;
-  sample.forEach(([id, act], i) => {
-    const r = read(act)!;
-    assert.equal(r.check.verdict, verdicts[i], id);
-    if (r.check.verdict === 'pass') {
-      assert.ok(r.fields, `${id}: its fields are given`);
-      passed++;
-    }
-  });
-  console.log(`# the round's real acts: ${found.size} Terms and Statements found in the feeds; ${sample.length} drawn; ${passed} pass, every verdict the kit's`);
+  const t = tally(rows);
+  console.log(`# the round's real acts (${sample.acts.length}: ${sample.acts.filter((a) => a.type === 'Terms').length} Terms, ${sample.acts.filter((a) => a.type === 'Statement').length} Statements): ${t.match} of ${rows.length} comparisons match the kit and the manifest, ${t.mismatch.length} do not`);
+  console.log(`# in force, with the fifty held, as the kit answers: ${Object.entries(inForceWords).map(([w, n]) => `${w} ${n}`).join(', ')}`);
+  for (const l of t.lines) console.log(`# mismatch: ${l}`);
+  assert.deepEqual(t.lines, []);
 });
