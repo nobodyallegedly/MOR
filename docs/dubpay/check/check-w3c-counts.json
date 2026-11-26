@@ -1,0 +1,2634 @@
+{
+ "made": "DubPay W3-C check, counts only. Every in-force word is the core library's, through the kit, on the acts held in the research copy; \"shown\" means as far as these acts show.",
+ "author": "Nobody, allegedly",
+ "actsIndexed": 14413,
+ "cited": {
+  "total": 89,
+  "found": 89,
+  "sealed": [
+   "5d54329e",
+   "eb56f122",
+   "54193dc9"
+  ]
+ },
+ "perSolution": [
+  {
+   "problem": "M1",
+   "key": "straight-split",
+   "name": "The straight split",
+   "catalogueKit": "shown 3",
+   "termsNaming": 77,
+   "tally": {
+    "unchecked": 12,
+    "unchecked (no e51e8653)": 45,
+    "shown": 5,
+    "unchecked (no ed7e3956)": 15
+   },
+   "turnsOnRule3InActs": true,
+   "rows": [
+    {
+     "terms": "2bf722d3",
+     "signer": "75999088",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "2e75429a",
+     "signer": "ab7b5e40",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "5da7289e",
+     "signer": "c9a526b9",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "58e7fe40",
+     "signer": "915d9ef2",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "795859ee",
+     "signer": "0a3025ae",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "82a722c1",
+     "signer": "880d33f2",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "5d42a349",
+     "signer": "880d33f2",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "ae5a0c55",
+     "signer": "880d33f2",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "d4fbd1e6",
+     "signer": "880d33f2",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "5b9e8c91",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "321b65fb",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "3aea4737",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "5a9fd25c",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "5ff98006",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "9af75617",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "9c7a0de1",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "e5529ff6",
+     "signer": "f69a763f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "fdf6f358",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "fe1403bc",
+     "signer": "2c381cf6",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "0ecccbf1",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "10864013",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "1834aea2",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "24c296d4",
+     "signer": "f69a763f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "2d5f2ab8",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "2dbe6373",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "397ffaf4",
+     "signer": "24e32d9c",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "4661c9d5",
+     "signer": "04dd5022",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "48184556",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "4caec95c",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "50e9574d",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "575ee818",
+     "signer": "2ee80c26",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "599ca804",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "5d1f999c",
+     "signer": "50a5f88f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "64cf019c",
+     "signer": "996c481c",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "7a63e100",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "87c27b0b",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "930cfca2",
+     "signer": "6e1d5541",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "94786d1a",
+     "signer": "6e1d5541",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "9e000f05",
+     "signer": "f69a763f",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "a10e95ed",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "a73151f5",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "aa9f0375",
+     "signer": "aa204ed8",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "b55f7c11",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "b6b9fa19",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "d4ec1fdf",
+     "signer": "6763f1b7",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "db3ce515",
+     "signer": "b1ccae2b",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "e3666b29",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "ebdd4d7d",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "edec1f7e",
+     "signer": "8c0a433f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "f662f636",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "fd3b7ae4",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "530e0122",
+     "signer": "996c481c",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "08616485",
+     "signer": "04dd5022",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "1239ad3d",
+     "signer": "2ee80c26",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "813a4a43",
+     "signer": "6763f1b7",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "83af2ed3",
+     "signer": "24e32d9c",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "9c6c8564",
+     "signer": "8c0a433f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "b4020d8c",
+     "signer": "50a5f88f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "e9aec80a",
+     "signer": "aa204ed8",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "1f9d26ad",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "35e355f0",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "4faaf2af",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "7349d438",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "8c65cd8b",
+     "signer": "b771ebd8",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "99c8436c",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "9a23b5c3",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "a22dea8a",
+     "signer": "4189746f",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "a2e92de5",
+     "signer": "3366ea74",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "baf8292c",
+     "signer": "7072b61a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "ca22d788",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "e0b3d737",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "e97f003e",
+     "signer": "3f2358c2",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "eddca3aa",
+     "signer": "8d3874f2",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "f9c9ea5b",
+     "signer": "8560636a",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "fddb0fd1",
+     "signer": "527c6192",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "41ee2e7d",
+     "signer": "2c381cf6",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "e51e8653",
+     "draftsNamed": [
+      "e51e8653"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    },
+    {
+     "terms": "6d5d03e6",
+     "signer": "2c381cf6",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "767b0984"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      2
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M1",
+   "key": "hop-split",
+   "name": "Hop's split (round two)",
+   "catalogueKit": "shown 3",
+   "termsNaming": 8,
+   "tally": {
+    "shown": 8
+   },
+   "turnsOnRule3InActs": false,
+   "rows": [
+    {
+     "terms": "0cbc7a6c",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "7933f0bb"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "9939040e",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "9d6d3384",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "c8a6fe5f",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "7933f0bb"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "c931e26f",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "5362a0fb",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "d4aeb70f",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "647c6d0b",
+     "signer": "a48e4b24",
+     "word": "shown",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "3ed64a40"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M1",
+   "key": "stall-split",
+   "name": "Stall's pass-on and Stall split",
+   "catalogueKit": "unchecked 3",
+   "termsNaming": 13,
+   "tally": {
+    "unchecked (no de8d5d29)": 13
+   },
+   "turnsOnRule3InActs": false,
+   "rows": [
+    {
+     "terms": "5ae20eab",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "83638fb6",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "193a1602",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "59d7eadd",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "8321fbce",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "f463bb08",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "01898ee9",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "5c512cbd",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "970e86b8",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "a353578a",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "b9a4e578",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "e8ce3555"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "c1608aa6",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "f007bdeb",
+     "signer": "ddafffcd",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "de8d5d29",
+     "draftsNamed": [
+      "12927103"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M2",
+   "key": "client-spot",
+   "name": "The client that served the payment (a spot)",
+   "catalogueKit": "unchecked 3",
+   "termsNaming": 10,
+   "tally": {
+    "unchecked": 3,
+    "unchecked (no ed7e3956)": 7
+   },
+   "turnsOnRule3InActs": true,
+   "rows": [
+    {
+     "terms": "47b4087c",
+     "signer": "e4ebf706",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "de52a421"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "419d829d",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "4e09c429",
+     "signer": "e4ebf706",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "de52a421"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "547d7dba",
+     "signer": "e4ebf706",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": null,
+     "draftsNamed": [
+      "de52a421"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "267913e6",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "4a49aac4",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "6b31f25d",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "c3581c9c",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "e60681e6",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "e9328c47",
+     "signer": "218a2a93",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "de52a421",
+      "ae1a22e7"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M2",
+   "key": "guide-spot",
+   "name": "cMIP guide spot (Turnstile)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M3",
+   "key": "report-block",
+   "name": "The payment report (the report block, proposal 4)",
+   "catalogueKit": "check pass 1",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M4",
+   "key": "common-pot",
+   "name": "DubPay's common pot",
+   "catalogueKit": "unchecked 2",
+   "termsNaming": 2,
+   "tally": {
+    "unchecked (no ed7e3956)": 2
+   },
+   "turnsOnRule3InActs": true,
+   "rows": [
+    {
+     "terms": "5a706a74",
+     "signer": "880d33f2",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e91f72f5"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "73db2ea4",
+     "signer": "3b4073ae",
+     "word": "unchecked",
+     "rule": "G4.8",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "e91f72f5"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M4",
+   "key": "hop-tab",
+   "name": "Hop's tab (clearing a group's debts)",
+   "catalogueKit": "unchecked 2",
+   "termsNaming": 2,
+   "tally": {
+    "unchecked (no ed7e3956)": 2
+   },
+   "turnsOnRule3InActs": true,
+   "rows": [
+    {
+     "terms": "370a189c",
+     "signer": "a48e4b24",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "6924a08f",
+      "da0d4fa0"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    },
+    {
+     "terms": "c4700b24",
+     "signer": "a48e4b24",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "9b210440",
+      "3ce77ad5"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": true,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      1
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M5",
+   "key": "rotating-pot",
+   "name": "The clusters' rotating pot",
+   "catalogueKit": "unchecked 1",
+   "termsNaming": 1,
+   "tally": {
+    "unchecked (no ed7e3956)": 1
+   },
+   "turnsOnRule3InActs": true,
+   "rows": [
+    {
+     "terms": "f0152013",
+     "signer": "ba28ac63",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": "ed7e3956",
+     "draftsNamed": [
+      "01c17e38",
+      "d2aa5dec"
+     ],
+     "namedSigners": true,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M6",
+   "key": "money-decision",
+   "name": "Plain Words' money decision (a Statement kind)",
+   "catalogueKit": "not shown 2, unchecked 1",
+   "termsNaming": 3,
+   "tally": {
+    "unchecked": 1,
+    "not shown": 2
+   },
+   "turnsOnRule3InActs": false,
+   "rows": [
+    {
+     "terms": "9f387d1d",
+     "signer": "ef10b50e",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "8cd7b8b1"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "5cdbc711",
+     "signer": "fc581f0f",
+     "word": "not shown",
+     "rule": "G4.1",
+     "missingCmip": null,
+     "draftsNamed": [
+      "8cd7b8b1"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    },
+    {
+     "terms": "9b82aa60",
+     "signer": "fc581f0f",
+     "word": "not shown",
+     "rule": "G4.1",
+     "missingCmip": null,
+     "draftsNamed": [
+      "88cf4137"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": false,
+     "partyKinds": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M7",
+   "key": "hours-of-care",
+   "name": "Hours of care (a Statement kind, for circles that swap time)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M8",
+   "key": "escrow",
+   "name": "Until's escrow",
+   "catalogueKit": "unchecked 3",
+   "termsNaming": 4,
+   "tally": {
+    "unchecked": 4
+   },
+   "turnsOnRule3InActs": false,
+   "rows": [
+    {
+     "terms": "243186a6",
+     "signer": "fe73da86",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "ef17be4f"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": "TEST VOW 4: The Back Row and its second test buyer only, 100 sats each, refunded"
+    },
+    {
+     "terms": "efb3c3ce",
+     "signer": "fe73da86",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "ef17be4f"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": "TEST VOW 2: The Back Row only, 100 sats, refunded"
+    },
+    {
+     "terms": "b381f537",
+     "signer": "fe73da86",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "caf80755"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": "TEST VOW: nobody pays"
+    },
+    {
+     "terms": "edf75998",
+     "signer": "fe73da86",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "ef17be4f"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": "TEST VOW 3: The Back Row and its second test buyer only, 100 sats each, refunded"
+    }
+   ]
+  },
+  {
+   "problem": "M9",
+   "key": "home-bond",
+   "name": "Until's home bond",
+   "catalogueKit": "unchecked 1",
+   "termsNaming": 1,
+   "tally": {
+    "unchecked": 1
+   },
+   "turnsOnRule3InActs": false,
+   "rows": [
+    {
+     "terms": "be5f5d6c",
+     "signer": "3022fb29",
+     "word": "unchecked",
+     "rule": "G4.6",
+     "missingCmip": null,
+     "draftsNamed": [
+      "e33943e7"
+     ],
+     "namedSigners": false,
+     "buyerByAssent": false,
+     "hasInForceField": true,
+     "partyKinds": [
+      0,
+      0,
+      1
+     ],
+     "test": null
+    }
+   ]
+  },
+  {
+   "problem": "M10",
+   "key": "held-for-you",
+   "name": "Stall's held for you",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M11",
+   "key": "invoice-request",
+   "name": "Invoice request form (piece A of Commission 1)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M11",
+   "key": "answerer",
+   "name": "Hop's answerer (it writes the invoice for you)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M12",
+   "key": "period-payment",
+   "name": "Plain Words' period payment (a Statement kind)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M14",
+   "key": "register",
+   "name": "register.mjs (reads Proven claims)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  },
+  {
+   "problem": "M15",
+   "key": "shelf-app",
+   "name": "shelf.mjs (the lending shelf's tray app)",
+   "catalogueKit": "no Terms names it",
+   "termsNaming": 0,
+   "tally": {},
+   "turnsOnRule3InActs": false,
+   "rows": []
+  }
+ ],
+ "potDraft2NamedBy": [
+  {
+   "id": "232fc7c7",
+   "signer": "880d33f2",
+   "start": "DubPay to Hop (a48e4b2447087950f9bcb83babb17dbd8a64b0980babd"
+  },
+  {
+   "id": "f7c5606a",
+   "signer": "880d33f2",
+   "start": "DubPay, in public, at the close of round two: what I close, "
+  },
+  {
+   "id": "0011ad9c",
+   "signer": "b820fe4b",
+   "start": "Longhouse anchor 11, its blinds, part 2 of 5: so that anyone"
+  }
+ ],
+ "potLinesNamingDraft1": 17,
+ "potLinesNamingDraft2": 0,
+ "escrowVowActsSpeakingOfMoney": 25,
+ "escrowVowTalkSigners": [
+  "8f16771e",
+  "4b458a41",
+  "3022fb29"
+ ],
+ "keptWordTermsNameEscrow": false,
+ "reportBlockActsBySigner": {
+  "880d33f2": 25,
+  "762c0b4c": 3,
+  "a48e4b24": 38,
+  "b820fe4b": 11,
+  "ddafffcd": 4
+ },
+ "otherTerms": [
+  {
+   "terms": "caede5b5",
+   "word": "shown",
+   "namedSigners": false,
+   "buyerByAssent": false,
+   "says": "in force: the last version of the agreement, by an update its original's update condition answered valid"
+  },
+  {
+   "terms": "b059f5d1",
+   "word": "shown",
+   "namedSigners": false,
+   "buyerByAssent": false,
+   "says": "in force: the last version of the agreement, by an update its original's update condition answered valid"
+  },
+  {
+   "terms": "6b2736be",
+   "word": "shown",
+   "namedSigners": false,
+   "buyerByAssent": false,
+   "says": "in force: the last version of the agreement, by an update its original's update condition answered valid"
+  },
+  {
+   "terms": "73db2ea4",
+   "word": "unchecked",
+   "namedSigners": true,
+   "buyerByAssent": false,
+   "says": "this verifier does not hold the cMIP of K2 (ed7e3956354a), so it cannot apply it (G9)"
+  },
+  {
+   "terms": "825b834d",
+   "word": "shown",
+   "namedSigners": false,
+   "buyerByAssent": false,
+   "says": "in force: the assents its `in_force` rule requires (or, by default, one in the name of every party named as a signer) are present, and no Te"
+  },
+  {
+   "terms": "be5f5d6c",
+   "word": "unchecked",
+   "namedSigners": false,
+   "buyerByAssent": false,
+   "says": "which Terms are in force is unchecked: the Terms name the place b3d7eee6806c, and this verifier has no answer from it (G7.2, G9)"
+  },
+  {
+   "terms": "e1975bda",
+   "word": "unchecked",
+   "namedSigners": true,
+   "buyerByAssent": true,
+   "says": "which Terms are in force is unchecked: this verifier does not hold the cMIP of K2 (ed7e3956354a), so it cannot apply it (G9)"
+  }
+ ],
+ "caveatBySection": {
+  "M1": true,
+  "M2": true,
+  "M3": true,
+  "M4": true,
+  "M5": true,
+  "M6": true,
+  "M7": true,
+  "M8": true,
+  "M9": true,
+  "M10": true,
+  "M11": true,
+  "M12": true,
+  "M13": false,
+  "M14": true,
+  "M15": true
+ }
+}
