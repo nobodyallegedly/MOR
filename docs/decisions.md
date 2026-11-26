@@ -28,6 +28,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - The MOR lead offered register, keeper, clerk or sequencer; leaned register, saying he had set "keeper" aside on 17 November. He: "Why not use keeper again?" The MOR lead: no good reason; on 17 November he had set aside the machinery, not the word; for keeper, Identity draft 16 already says "a named keeper recorded it", and the round's players used it; the one risk, older drafts' keeper grammar, cured by defining a keeper in draft 26 as the pointer and its one rule, nothing else. He: "Those old drafts should be buried deep, only for people who wish to do some archeology…"
 - *Arrived at (to check):* "place" is renamed **keeper**: the agreement's official relay, named in its Terms, vouching for the chaining only, defined in draft 26 as that and nothing more; the same word as Identity's. The old drafts are archaeology: kept, buried deep, not read for what words mean now.
 
+**Who signs an update by default: the known parties** (26 November, 17:51–17:56; the scribe's M1). The MOR lead: draft 25's default update (G4.8(a), G4.11(e)) asks every signer to sign each update, every buyer who filled a role included, against his words "she has no say in the updating of it, only the known parties can"; leaned that the default signers are the known parties, those named in the Terms when made, never those who joined through a role, G10.6 (a) already keeping what each buyer bought. He: "It’s the protect the unknown party expressed the old way."
+- *Arrived at (to check, the MOR lead's reading):* draft 25's default, every filler signing each update, was the old way of protecting the unknown party, by a veto. With G10.6 (a) protecting what each filler earned, the default signers of an update are the known parties only, those named in the Terms when they were made.
+
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
