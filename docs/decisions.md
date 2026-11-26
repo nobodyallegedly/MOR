@@ -87,6 +87,10 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 - *Arrived at (to check):* the Text act carrying the words comes first, as a rule: Terms can name only an act that already exists, so the words are published before the Terms that point to them.
 - *To check, the MOR lead's proposal, not answered:* before the rewrite, the scribe checks every answer of 26 November against the ledger and the draft 26 brief, rule by rule, and lists each conflict.
 
+**"Before the close" was the simulation's** (26 November, 16:28–16:31; the pow wow's thirteenth question; one of the three things the research window found said two ways). The MOR lead asked what a verifier answers for Terms that say "before the close" and name no place or clock: "unchecked", or "not shown" with the reason; leaned "not shown", nothing being missing. He, first on how he answers: "(Always assume leftovers once I send my reply. The act of sending does something to my thought process)" Then: "That was a simulation artifact, they had numbered windows"
+- *Arrived at (to check):* "the close" was the round's numbered windows, an artefact of the simulation, not a finding about the core. Nothing changes. (Not asked, the MOR lead's lean: Terms that name a deadline and no place or clock get "not shown", with that reason.)
+- On how he answers: after each reply, more may follow; the MOR lead leaves room before moving on.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
