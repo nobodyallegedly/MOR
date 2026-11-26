@@ -63,6 +63,12 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 - *Arrived at (to check):* a place named only by a rule the parties never signed does not order their Terms. A verifier may give an answer per such a place only as the reader's choice, named so. A contest counts by its own place for its own purposes.
 - *Arrived at (to check):* "Protect the unknown party" is a principle of MOR. Where it is written is not yet asked.
 
+**Protect the unknown party is an Agreements principle** (26 November, 16:05). Asked where the principle is written, the MOR lead leaned the working rules and the companion, the core carrying it by the rules that apply it (G10.6, "nothing about me without my signature"). He: "It’s an agreements principle"
+- *Arrived at (to check):* it belongs to Agreements: stated in the Agreements companion, applied by Agreements' rules.
+
+**A key change that waits is a home's service** (26 November, 16:05–16:07; the pow wow's seventh question; DubWeb's and Keep's finding that an identity cannot say "my rotations count only after N blocks unless my current key objects", the round's theft being a valid rotation with no wait). The MOR lead leaned that it stays a home's service, Identity draft 16 saying "Homes guarding acceptance are a market service": a home may hold a rotation N blocks and drop it on the current key's objection. He: "Is that something that can be built atop without messing the universality of the identity layer?" The MOR lead: yes; every verifier still checks the same bytes by the same home rule; a waiting home accepts later or not at all; no new act, field or answer; limits: none for a self-hosted identity; the wait must cover enough homes for the rule; the promise is not in the bytes; the honest owner waits too; with both keys stolen the thief can object as well. He: "I don’t feel it’s a feature worth messing the core for"
+- *Arrived at (to check):* nothing is added to Identity. A rotation that waits, dropped on the current key's objection, can be offered by homes, above the core.
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
