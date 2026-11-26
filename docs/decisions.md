@@ -31,6 +31,9 @@ The data is the round's research copy on the Mac (`~/Documents/mor-round-2/_rese
 **Sessions on the Mac may push** (26 November, 13:53). He: "machine session can now push to repo, mac is authorized"
 - *Arrived at (to check):* the earlier rule "Machine sessions on the Mac commit and push nothing" is lifted: a session on the Mac may commit and push to the repository, the Mac being authorized. Every other rule stands: the round's data, access details, keys and addresses never go into the repository, and the author's personal name never appears in it.
 
+**MOR first, then Dubsar** (26 November, 15:26; to the Dubsar Suite lead, relayed in its closing note of wave 3). He: "i'll probably work on MOR first. the core is close to getting frozen. we've already planned some changes on agreements and money layers. when MOR is done with this wave my attention will turn to dubsar under the light of the updated core"
+- *Arrived at (to check):* the core comes first: the planned changes to Agreements and Money, then the freeze. Dubsar holds until then; once the core is updated, its catalogues are read again in its light before any lean reaches him. At the close of MOR's wave, the MOR lead gives the Dubsar Suite lead the list of what changed in Agreements and Money, by rule (the suite lead's request).
+
 ## The previous stint, 10 to 20 November: Agreements written from scratch
 
 *Moved below by the new wish of 20 November. Asked by the MOR lead whether this stint's work carries into the new one (the two gates, the duo, "What defines Money", the order "the findings, then finish Agreements, then Money"), he (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications."*
