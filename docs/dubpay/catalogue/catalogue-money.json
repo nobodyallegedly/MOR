@@ -1,0 +1,4553 @@
+{
+ "made": "DubPay W3-B, the catalogue of Money by problem. Counts computed by catalogue-money.mjs; problems, fields and leans hand-made in catalogue-money-hand.mjs. Every lean is DubPay's (proposed).",
+ "author": "Nobody, allegedly",
+ "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+ "rules": {
+  "usedIsNotChecked": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+  "vouching": "Recovery by vouching was not tested; no Money solution here is catalogued as tried with it.",
+  "namedSignersAndBuyerByAssent": "Groupings that turn on it carry namedSignersAndBuyerByAssent.turns = true, with both outcomes."
+ },
+ "sources": {
+  "listingB": "dubpay/wave-2/results/B/listing-money.json",
+  "sliceA": "dubpay/wave-3/results/A/slice-check.json",
+  "inventory": "dubweb/wave-3/inventory/inventory-all.json",
+  "actsRead": 17168
+ },
+ "tally": {
+  "problems": 15,
+  "solutions": 19,
+  "builtOn": 14,
+  "moneyKeysInSlice": 33,
+  "placedOnce": 33,
+  "leans": {
+   "keep one": 8,
+   "merge two": 4,
+   "gap still open": 3
+  },
+  "turnOnRule3": 7,
+  "idsCited": 89,
+  "idsActs": 89,
+  "idsMedia": 0,
+  "idsNotFound": 0,
+  "seams": 16
+ },
+ "placement": [
+  {
+   "key": "straight-split",
+   "text": "The straight split",
+   "status": "in both",
+   "problems": [
+    "M1"
+   ]
+  },
+  {
+   "key": "deal-parameters",
+   "text": "DubPay's shape for a deal's parameters (section 6)",
+   "status": "in B only",
+   "problems": [
+    "M1"
+   ]
+  },
+  {
+   "key": "hop-split",
+   "text": "Hop's split (round two)",
+   "status": "in both",
+   "problems": [
+    "M1"
+   ]
+  },
+  {
+   "key": "stall-split",
+   "text": "Stall's pass-on and Stall split",
+   "status": "in B only + in both",
+   "problems": [
+    "M1"
+   ]
+  },
+  {
+   "key": "client-spot",
+   "text": "The client that served the payment (a spot)",
+   "status": "in both",
+   "problems": [
+    "M2"
+   ]
+  },
+  {
+   "key": "report-block",
+   "text": "The payment report (the report block, proposal 4)",
+   "status": "in both",
+   "problems": [
+    "M3"
+   ]
+  },
+  {
+   "key": "damgar",
+   "text": "Damgar (DubPay's money hub, a tray app)",
+   "status": "in B only",
+   "problems": [
+    "M1"
+   ]
+  },
+  {
+   "key": "common-pot",
+   "text": "DubPay's common pot",
+   "status": "in both",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "pot-reader",
+   "text": "DubPay's pot reader (build/pot/pot.mjs)",
+   "status": "in B only",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "pot-settlement",
+   "text": "Hop's settlement suggestion for the common pot",
+   "status": "in B only",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "rotating-pot",
+   "text": "The clusters' rotating pot",
+   "status": "in both",
+   "problems": [
+    "M5"
+   ]
+  },
+  {
+   "key": "spare-wheel",
+   "text": "Spare Wheel (a hardship fund)",
+   "status": "in B only",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "hop-tab",
+   "text": "Hop's tab (clearing a group's debts)",
+   "status": "in both + in B only",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "rounds-tab",
+   "text": "The round's tab (Hop, clerk)",
+   "status": "in B only",
+   "problems": [
+    "M4"
+   ]
+  },
+  {
+   "key": "money-decision",
+   "text": "Plain Words' money decision (a Statement kind)",
+   "status": "in both",
+   "problems": [
+    "M6"
+   ]
+  },
+  {
+   "key": "hours-of-care",
+   "text": "Hours of care (a Statement kind, for circles that swap time)",
+   "status": "in both",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "cercle-de-garde",
+   "text": "Le Cercle de garde (a babysitting circle)",
+   "status": "in B only",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "cercle-count",
+   "text": "cercle-count.mjs (the Cercle's counting script)",
+   "status": "in B only",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "krog-varstva",
+   "text": "Krog varstva (a copy of the Cercle, Ljubljana)",
+   "status": "in B only",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "mending-circle",
+   "text": "The Mending Circle (a repair circle)",
+   "status": "in B only",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "mending-count",
+   "text": "mending.mjs (counts the Mending Circle)",
+   "status": "in B only",
+   "problems": [
+    "M7"
+   ]
+  },
+  {
+   "key": "escrow",
+   "text": "Until's escrow",
+   "status": "in both",
+   "problems": [
+    "M8"
+   ]
+  },
+  {
+   "key": "home-bond",
+   "text": "Until's home bond",
+   "status": "in both",
+   "problems": [
+    "M9"
+   ]
+  },
+  {
+   "key": "held-for-you",
+   "text": "Stall's held for you",
+   "status": "in both",
+   "problems": [
+    "M10"
+   ]
+  },
+  {
+   "key": "held-reader",
+   "text": "held.mjs (Stall's reader for held for you)",
+   "status": "in B only",
+   "problems": [
+    "M10"
+   ]
+  },
+  {
+   "key": "kept-word",
+   "text": "Kept Word (deliver or refund, a guild charter)",
+   "status": "in B only",
+   "problems": [
+    "M8"
+   ]
+  },
+  {
+   "key": "answerer",
+   "text": "Hop's answerer (it writes the invoice for you)",
+   "status": "in B only",
+   "problems": [
+    "M11"
+   ]
+  },
+  {
+   "key": "invoice-request",
+   "text": "Invoice request form (piece A of Commission 1)",
+   "status": "in both",
+   "problems": [
+    "M11"
+   ]
+  },
+  {
+   "key": "commission-1",
+   "text": "Commission 1 (Odile Ferrant pays for an invoice request form and a seller's answerer)",
+   "status": "in B only",
+   "problems": [
+    "M11"
+   ]
+  },
+  {
+   "key": "period-payment",
+   "text": "Plain Words' period payment (a Statement kind)",
+   "status": "in both",
+   "problems": [
+    "M12"
+   ]
+  },
+  {
+   "key": "register",
+   "text": "register.mjs (reads Proven claims)",
+   "status": "in B only",
+   "problems": [
+    "M14"
+   ]
+  },
+  {
+   "key": "shelf-app",
+   "text": "shelf.mjs (the lending shelf's tray app)",
+   "status": "in B only",
+   "problems": [
+    "M15"
+   ]
+  },
+  {
+   "key": "guide-spot",
+   "text": "cMIP guide spot, draft 1",
+   "status": "in the inventory only",
+   "problems": [
+    "M2"
+   ]
+  }
+ ],
+ "placementOk": true,
+ "problems": [
+  {
+   "id": "M1",
+   "problem": "A buyer's payment for a work reaches every owner of it, each their share, at once: including an owner who has not signed yet, or cannot be paid",
+   "category": "1. Splits and payout services",
+   "solutions": [
+    {
+     "key": "straight-split",
+     "task": "K6 control, with K4 inForce and condition, in a deal between the service and the owners",
+     "counts": {
+      "name": "The straight split",
+      "author": "880d33f2",
+      "window": "dubpay",
+      "drafts": [
+       "1: b10d576b → 4fae88be",
+       "2: 23b67a3a → d2912f38",
+       "3: 31579733 → 6f02c766",
+       "4: 0ece915a → 767b0984",
+       "5: 2e295742 → 7ff9be42",
+       "6: 7e0ac8f1 → 4f8626c7",
+       "7 (first publication, titled \"draft 6\"): 333bdbc7 → 47c874cb",
+       "7 (republished, title corrected): b9e43db4 → e51e8653"
+      ],
+      "uses": {
+       "acts": 126,
+       "identities": 31,
+       "windows": 13
+      },
+      "byOthers": {
+       "acts": 107,
+       "identities": 30
+      },
+      "builtOn": 77,
+      "faultActs": 13,
+      "kit": "shown 3",
+      "days": [
+       "day 2",
+       "day 3",
+       "day 4",
+       "day 5",
+       "unknown"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted (another draft of the work); prompted",
+     "promptedRead": "Notice 8 named draft 4 for attack, with bounties; the contest asked for \"a split service whose cMIP names its remainder rule\".",
+     "holdsAndDecides": {
+      "text": "The service holds between receipt and payout, up to a cap per receiver (default 10,000 sats) and per deal (100,000). It decides nothing: it pays exactly the lines the work's body cMIP returns (S2a), at once (S5).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Remainder to the body's remainder owner (S2a); rounding gives up to owners − 1 sats to that owner (S14). A share that cannot be paid, or whose owner has not assented, stays a still-owed line in that owner's own name, never spread or kept (S6, S7, section 1). An unchecked step holds that one line only, never the payment (S2b). Lateness freezes one line, never the work (S7).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "An owner who stops answering: their share waits as owed and counts toward no cap, so sales go on (S7, after Until's finding a0c711ff). A service the owners replaced says so and issues no invoice (S7a).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       },
+       {
+        "cited": "a0c711ff",
+        "full": "a0c711ff8cf20a9f2ff2b11f5b74617d03fe423aad3ac57ca7c67204a9b8f192",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "The owners move the work to a new deal under the work's own condition, like for like (section 1, \"Changing service\"). The core cannot stop a payment naming an old version from reaching the replaced service (section 8, W5).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proven by bytes: the report lines add up (S1), a line is closed only by a report naming it, a line is confirmed only by its receiver's received line (section 4, vectors 6 and 7). Only the service's word: every line its receiver has not confirmed, and what came in, beyond the window list sealed to owners (S11, section 5).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "13 acts by others speak of a fault (listing B, counted). Read: Hop, serious, the service could rewrite its deal alone and refuse the owners' exit (9144a9c0): fixed in draft 7, section 1. Until, one owner who can never be paid froze the work (a0c711ff): fixed, S7. Counterparty's one-pipe readings W1 to W10 and N1 to N7 (2ac300da, c924941a): folded in, credited in section 9. The text says \"nothing pending\".",
+      "acts": [
+       {
+        "cited": "9144a9c0",
+        "full": "9144a9c092cdde901d4d8f0064c04afe8129ec4f7f3f1f5abb4a353e5c3d4899",
+        "kind": "act"
+       },
+       {
+        "cited": "a0c711ff",
+        "full": "a0c711ff8cf20a9f2ff2b11f5b74617d03fe423aad3ac57ca7c67204a9b8f192",
+        "kind": "act"
+       },
+       {
+        "cited": "2ac300da",
+        "full": "2ac300da1cd602704e62b91db5f8d100ac97da6927e45dc0aa21d928590c8422",
+        "kind": "act"
+       },
+       {
+        "cited": "c924941a",
+        "full": "c924941a95ffc1e57c9db19063ece90d3c6c2acb2413fb66b30b7c869b29bf7c",
+        "kind": "act"
+       },
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "deal-parameters",
+       "counts": {
+        "name": "DubPay's shape for a deal's parameters (section 6)",
+        "author": "880d33f2",
+        "window": "dubpay",
+        "drafts": [
+         "answer to the seam acts: 393f664c → fd2419d9"
+        ],
+        "uses": {
+         "acts": 15,
+         "identities": 6,
+         "windows": 6
+        },
+        "byOthers": {
+         "acts": 7,
+         "identities": 5
+        },
+        "builtOn": 2,
+        "faultActs": 0,
+        "kit": "unchecked 1",
+        "days": [
+         "day 4",
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "DubPay's shape for section 6 (fee, caps, deadline, rail as one map), answering DubLaw's and DubWeb's seam acts; the hosts' ruling calls it \"one way to write them, not the only one\"; Léa's deal wrote them as text keys (795859ee).",
+        "acts": [
+         {
+          "cited": "393f664c",
+          "full": "393f664cbc848318d502b08381aea08415795370be1f033a031256086bfd829e",
+          "kind": "act"
+         },
+         {
+          "cited": "795859ee",
+          "full": "795859eefa318092cdcd0278010ee9d5bf4e9daa52fe3af92f332620c402b6ba",
+          "kind": "act"
+         },
+         {
+          "cited": "ede89994",
+          "full": "ede89994e42ff01e00ef40d59e1904bbea6b18fb3725a7bc1e1b175911bb6048",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "damgar",
+       "counts": {
+        "name": "Damgar (DubPay's money hub, a tray app)",
+        "author": "880d33f2",
+        "window": "dubpay",
+        "drafts": [
+         "0.1.0: 2e9de3d4",
+         "0.1.1: 25303428",
+         "0.1.2: abbe0d2d",
+         "0.1.3: 234b0e72",
+         "0.2.0: 393fbe78",
+         "0.2.1: d08095fb",
+         "0.2.2: 6e036543"
+        ],
+        "uses": {
+         "acts": 9,
+         "identities": 2,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 1,
+         "identities": 1
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 2",
+         "day 3",
+         "day 4"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "prompted (notice 7 asked for apps)",
+       "note": {
+        "text": "DubPay's tray app (balance, payments, flow). Its one fault not fixed in the round: a report's key is never checked against its signer's chain (0.1.3 says so, 9be6cfc3); the wave-3 order names it a fault to fix.",
+        "acts": [
+         {
+          "cited": "9be6cfc3",
+          "full": "9be6cfc322fe13c6696a7575048149ac82cfbb8f26205439555c0aec47ca7919",
+          "kind": "act"
+         },
+         {
+          "cited": "db5bcb2e",
+          "full": "db5bcb2ecdff68af00f1139eb34788c6001c9b88a7fcd9528c3757d7b1e72b06",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    },
+    {
+     "key": "hop-split",
+     "task": "K6 control, in a deal D between the service and the work W",
+     "counts": {
+      "name": "Hop's split (round two)",
+      "author": "a48e4b24",
+      "window": "hop",
+      "drafts": [
+       "1: f94aa721 → 3de83b05",
+       "2: f8fd362d → b84b121d",
+       "3: 2185922e → 04c96aba",
+       "4: 83b71841 → 7933f0bb",
+       "5: 86011ca3 → 3ed64a40"
+      ],
+      "uses": {
+       "acts": 19,
+       "identities": 3,
+       "windows": 3
+      },
+      "byOthers": {
+       "acts": 3,
+       "identities": 2
+      },
+      "builtOn": 8,
+      "faultActs": 3,
+      "kit": "shown 3",
+      "days": [
+       "day 2",
+       "day 3",
+       "day 4",
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "The contest's remainder-rule requirement (prompted); otherwise no prompt found.",
+     "holdsAndDecides": {
+      "text": "The service holds up to `limit`, pauses at 9/10 of it, pays out within `payout_within` (48 blocks). It decides nothing: the division is a rule anyone can recompute.",
+      "acts": [
+       {
+        "cited": "86011ca3",
+        "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Remainder to the owner the body names; else one sat each to the largest fractions dropped; or, by `remainder_by: settlement`, by the payment hash mod the number of owners [E1]. A payout that fails stays owed to that owner, never kept or given to another.",
+      "acts": [
+       {
+        "cited": "86011ca3",
+        "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "No rule for a silent owner beyond \"still owed\"; before the first payout the service asks the verifier whether D is in force, and pays nothing while it is not shown [C4].",
+      "acts": [
+       {
+        "cited": "86011ca3",
+        "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "The owners update W's receiver without the service's signature (\"Leaving\"); a `backup` service may be named; once W names another receiver the old service takes no fee [C2] and pays out everything still owed.",
+      "acts": [
+       {
+        "cited": "86011ca3",
+        "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Each owner can recompute their own line from A, the fee and W's shares; the window list of received settlements, lodged at a place, lets a buyer check their payment is in it [C1]. Only the service's word: any owner's line beyond their own leg (G11.6, \"Open\").",
+      "acts": [
+       {
+        "cited": "86011ca3",
+        "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "3 acts by others (listing B, counted): Counterparty's five findings on draft 1 (1a7b3d53) and two on draft 3 (02646bd6), answered in drafts 2 to 4; Counterparty's end-of-round report (aa552d9c). Still open by Hop's own words: draft 6 (the clock field, where a deal's parameters live) is named but no text act of it is held.",
+      "acts": [
+       {
+        "cited": "1a7b3d53",
+        "full": "1a7b3d534ddf50eec85cf32334952664624058c8268bd07d90ee102b37a8c6e3",
+        "kind": "act"
+       },
+       {
+        "cited": "02646bd6",
+        "full": "02646bd6f1195c66bc830a4a9d10aca5f511441d298af5f0455450977d66fea8",
+        "kind": "act"
+       },
+       {
+        "cited": "aa552d9c",
+        "full": "aa552d9ce6ec462191b1be52701836d3c6afb29ec52b27f7da4e8572f850e1b8",
+        "kind": "act"
+       },
+       {
+        "cited": "8df3e122",
+        "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    },
+    {
+     "key": "stall-split",
+     "task": "K6 control, the receiver named in Terms (the doer)",
+     "counts": {
+      "name": "Stall's pass-on and Stall split",
+      "author": "ddafffcd",
+      "window": "stall",
+      "drafts": [
+       "1 (pass-on by the receiver): 12927103 → eab368d4",
+       "2: 79832852 → e8ce3555"
+      ],
+      "uses": {
+       "acts": 10,
+       "identities": 2,
+       "windows": 2
+      },
+      "byOthers": {
+       "acts": 2,
+       "identities": 1
+      },
+      "builtOn": 7,
+      "faultActs": 2,
+      "kit": "unchecked 3",
+      "days": [
+       "day 2",
+       "day 3"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "not found; no",
+     "promptedRead": "The contest's remainder-rule requirement (prompted; it counted Stall split draft 2).",
+     "holdsAndDecides": {
+      "text": "The doer receives and pays each line within the window or the next, on the payee's invoice.",
+      "acts": [
+       {
+        "cited": "79832852",
+        "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Remainder to the body's remainder owner, else the first signer, never the doer. A line with no invoice is still owed, every window, never the doer's.",
+      "acts": [
+       {
+        "cited": "79832852",
+        "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "Not stated beyond \"still owed\" (inferred: a silent payee simply waits).",
+      "acts": [
+       {
+        "cited": "79832852",
+        "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "wayOut": {
+      "text": "Not stated in the text (inferred: a new version of the Terms naming another receiver).",
+      "acts": [
+       {
+        "cited": "79832852",
+        "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "What the doer may never do is listed; the leg report is the doer's word. No window list, no commitment.",
+      "acts": [
+       {
+        "cited": "79832852",
+        "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "2 acts by others (listing B, counted): Turnstile's contest catalogue naming draft 2, \"Not yet attacked, Stall says\", beside a warning about an identity posing as Stall (2ef3ee1b), and its catalogue update (fb4fab43). Neither is a fault of the text; no finding against it was found.",
+      "acts": [
+       {
+        "cited": "2ef3ee1b",
+        "full": "2ef3ee1bfa026766b685e54b9eb0684f7132261c9745788c2f01368e6a6e94fc",
+        "kind": "act"
+       },
+       {
+        "cited": "fb4fab43",
+        "full": "fb4fab43fc061abb81d0968c7d6c0f6026648fb1f56106364a707083ff44a231",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Shower work (DubLaw) writes the division the straight split pays; it sits in Agreements.",
+     "acts": [
+      {
+       "cited": "b9e43db4",
+       "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "All three: the service keeps no remainder; a share that cannot be paid stays owed in its owner's name; the body's remainder owner wins where it names one; the service is paid by a named fee or a part, never both.",
+    "acts": [
+     {
+      "cited": "b9e43db4",
+      "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+      "kind": "act"
+     },
+     {
+      "cited": "86011ca3",
+      "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+      "kind": "act"
+     },
+     {
+      "cited": "79832852",
+      "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Who must sign the deal (straight split: the service and owners holding the group threshold; Hop: the service and every owner, or W's own signature); how the owners leave (straight split: by the work's condition, a deal like for like; Hop: by updating W alone, the service not needed); what a late payee does to sales (straight split freezes one line; Hop pauses the whole deal at 9/10 of its limit); remainder with no named owner (largest fractions or by settlement against first signer). It matters because the first two decide whether one party can hold a work hostage (Hop's finding 9144a9c0 was exactly that).",
+    "acts": [
+     {
+      "cited": "b9e43db4",
+      "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+      "kind": "act"
+     },
+     {
+      "cited": "86011ca3",
+      "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+      "kind": "act"
+     },
+     {
+      "cited": "79832852",
+      "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+      "kind": "act"
+     },
+     {
+      "cited": "9144a9c0",
+      "full": "9144a9c092cdde901d4d8f0064c04afe8129ec4f7f3f1f5abb4a353e5c3d4899",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "merge two",
+    "text": "Merge the straight split and Hop's split into one split text: the straight split's per-line holding (S2b, S7) with Hop's exit without the service's signature, its `backup`, and remainder by settlement as an option. Keep Stall split as the small form the windows ask for (\"the texts that need no change are the small ones\").",
+    "acts": [
+     {
+      "cited": "b9e43db4",
+      "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+      "kind": "act"
+     },
+     {
+      "cited": "86011ca3",
+      "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+      "kind": "act"
+     },
+     {
+      "cited": "79832852",
+      "full": "79832852464cf9b4b25fccb349084127a523166d11cc1f2c0aecb2f9aba29493",
+      "kind": "act"
+     },
+     {
+      "cited": "9144a9c0",
+      "full": "9144a9c092cdde901d4d8f0064c04afe8129ec4f7f3f1f5abb4a353e5c3d4899",
+      "kind": "act"
+     },
+     {
+      "cited": "a0c711ff",
+      "full": "a0c711ff8cf20a9f2ff2b11f5b74617d03fe423aad3ac57ca7c67204a9b8f192",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "Who signs the deal is the difference that matters, and the kit answered \"unchecked\" on deals because it holds no named-signers cMIP.",
+    "ifDefault": "If named signers become the grammar's default: a deal naming the owners as signers (Hop's E2) is checked by the kit with no cMIP; the straight split's threshold count becomes one parameter of it; the merge is mostly wording.",
+    "ifNot": "If not: each split keeps its own in-force rule, read by hand; the merge must carry the straight split's inForce cMIP, and readers keep answering \"unchecked\".",
+    "acts": [
+     {
+      "cited": "86011ca3",
+      "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+      "kind": "act"
+     },
+     {
+      "cited": "b9e43db4",
+      "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+      "kind": "act"
+     },
+     {
+      "cited": "fe1403bc",
+      "full": "fe1403bcb52a3de8b63667728e949cd9e64f84536522440fbb4093b3bd72fd09",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M2",
+   "problem": "Whoever brought the buyer (the app they paid through, the guide they followed) gets a share of that sale, and only if the buyer says so",
+   "category": "1. Splits and payout services",
+   "solutions": [
+    {
+     "key": "client-spot",
+     "task": "K5 spot, kind done, in an offer's parties",
+     "counts": {
+      "name": "The client that served the payment (a spot)",
+      "author": "84ae1e82",
+      "window": "pointer",
+      "drafts": [
+       "2: ae1a22e7 → de52a421",
+       "3: a0108c37 → bdcee1a5"
+      ],
+      "uses": {
+       "acts": 20,
+       "identities": 3,
+       "windows": 3
+      },
+      "byOthers": {
+       "acts": 14,
+       "identities": 2
+      },
+      "builtOn": 11,
+      "faultActs": 1,
+      "kit": "unchecked 3",
+      "days": [
+       "day 2",
+       "day 3",
+       "day 4",
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found.",
+     "holdsAndDecides": {
+      "text": "Holds nothing. The buyer's assent names one served record; the split or receiver pays the part the offer's words give.",
+      "acts": [
+       {
+        "cited": "a0108c37",
+        "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Unfilled, or named twice: the part goes where the offer's words say (recommended \"stays with the owners\"). An unchecked filling is paid nothing (P6).",
+      "acts": [
+       {
+        "cited": "a0108c37",
+        "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "Not applicable: nobody owes a payment over time (inferred).",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "wayOut": {
+      "text": "A client that closes serves no more records; its past fillings stand once a leg report has paid them (R1).",
+      "acts": [
+       {
+        "cited": "a0108c37",
+        "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves that a signed record from client C is named by the buyer's assent and the first payment (conditions 1 to 6). Only the buyer's word: that C served them; \"nothing is checked about served\".",
+      "acts": [
+       {
+        "cited": "a0108c37",
+        "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "Counterparty's seven findings on draft 1 and two retest points, all accepted (section 10); the core form, \"when is a filling final\", published by Counterparty (d7b32ddf). One act by others in listing B (14b01383) is Edubba's release reading it, not a fault (inferred).",
+      "acts": [
+       {
+        "cited": "a0108c37",
+        "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+        "kind": "act"
+       },
+       {
+        "cited": "d7b32ddf",
+        "full": "d7b32ddfd3c6cb59069d842f1da0b253e11d61b0774ac2d7aaaa805b690c1514",
+        "kind": "act"
+       },
+       {
+        "cited": "14b01383",
+        "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    },
+    {
+     "key": "guide-spot",
+     "task": "K5 spot, kind done, in an offer's parties",
+     "counts": {
+      "name": "cMIP guide spot (Turnstile)",
+      "author": "11e77c4b",
+      "window": "turnstile",
+      "drafts": [
+       "1: b7fca8d1 → 824698f3"
+      ],
+      "uses": {
+       "acts": 0,
+       "identities": 0,
+       "windows": 0
+      },
+      "byOthers": null,
+      "builtOn": 0,
+      "faultActs": 0,
+      "kit": "no Terms names it",
+      "days": [],
+      "source": "inventory (by spec hash)",
+      "answersToItsAct": 3
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found.",
+     "holdsAndDecides": {
+      "text": "Holds nothing; the guide's pay is the offer's own Terms. Turnstile's own: 1% rounded down, remainders to the seller.",
+      "acts": [
+       {
+        "cited": "b7fca8d1",
+        "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "No assent naming a listing: no filling, nothing paid to any guide.",
+      "acts": [
+       {
+        "cited": "b7fca8d1",
+        "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "Not applicable (inferred).",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "wayOut": {
+      "text": "Not stated (inferred: listings stay readable on homes; a listing made after the fact can fill unless the offer names a place, rule 3).",
+      "acts": [
+       {
+        "cited": "b7fca8d1",
+        "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "Proves the buyer's assent names an act signed by the guide that mentions the offer. Only the buyer's word: that they followed it. \"Not yet attacked: rely on it for no money before it is.\"",
+      "acts": [
+       {
+        "cited": "b7fca8d1",
+        "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found; the text says it was not attacked. The inventory counts it never named, 0 uses by hash (counted, inventory).",
+      "acts": [
+       {
+        "cited": "b7fca8d1",
+        "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [],
+   "agree": {
+    "text": "Same shape: a K5 spot of kind done, filled once per sale by the buyer's own assent naming one act, resting on the buyer's word, paying nothing where the buyer names nothing.",
+    "acts": [
+     {
+      "cited": "a0108c37",
+      "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+      "kind": "act"
+     },
+     {
+      "cited": "b7fca8d1",
+      "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Who may fill (client spot: any client that served a record; guide spot: one named `guide`); what is named (a served record with a fresh random value and nothing about the buyer, against a public listing); when a filling is final (client spot fixes it at the leg report that pays it; guide spot does not say). It matters for buyers' privacy and for whether a later act can unmake a payout (d7b32ddf).",
+    "acts": [
+     {
+      "cited": "a0108c37",
+      "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+      "kind": "act"
+     },
+     {
+      "cited": "b7fca8d1",
+      "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+      "kind": "act"
+     },
+     {
+      "cited": "d7b32ddf",
+      "full": "d7b32ddfd3c6cb59069d842f1da0b253e11d61b0774ac2d7aaaa805b690c1514",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "merge two",
+    "text": "One spot text with two fillers (any client, a named guide), taking the client spot's finality rule and served record; the guide spot was never used or attacked.",
+    "acts": [
+     {
+      "cited": "a0108c37",
+      "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+      "kind": "act"
+     },
+     {
+      "cited": "b7fca8d1",
+      "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+      "kind": "act"
+     },
+     {
+      "cited": "d7b32ddf",
+      "full": "d7b32ddfd3c6cb59069d842f1da0b253e11d61b0774ac2d7aaaa805b690c1514",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "Both are filled by the buyer's assent.",
+    "ifDefault": "If buyer by assent becomes a grammar case: the assent naming a served record or a listing is a grammar fact, and the spot reduces to \"which act the assent names\"; Edubba's warning \"it proves an assent, never a payment\" (4c59cb1f) still holds.",
+    "ifNot": "If not: both stay spots resting on a cMIP the kit does not check, and the filling stays unchecked until Money answers a settlement (client spot, section 7).",
+    "acts": [
+     {
+      "cited": "a0108c37",
+      "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+      "kind": "act"
+     },
+     {
+      "cited": "14b01383",
+      "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+      "kind": "act"
+     },
+     {
+      "cited": "4c59cb1f",
+      "full": "4c59cb1f69066da800f6ef8bbcb637d2dc51373c654811f8e55a10ebc04de30a",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M3",
+   "problem": "Everyone paid from one payment can check, in signed lines, what came in, what was passed on, what was kept and what is still owed",
+   "category": "1. Splits and payout services",
+   "solutions": [
+    {
+     "key": "report-block",
+     "task": "The report block, proposal 4 (a spec of the kit, not a players' text)",
+     "counts": {
+      "name": "The payment report (the report block, proposal 4)",
+      "author": "the kit",
+      "window": "no window",
+      "drafts": [
+       "proposal 4: — → 7b65c60f"
+      ],
+      "uses": {
+       "acts": 81,
+       "identities": 5,
+       "windows": 5
+      },
+      "byOthers": {
+       "acts": 81,
+       "identities": 5
+      },
+      "builtOn": 0,
+      "faultActs": 0,
+      "kit": "check pass 1",
+      "days": [
+       "day 2",
+       "day 3",
+       "day 4",
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found; it came with the kit.",
+     "holdsAndDecides": {
+      "text": "Holds nothing; it is the language of the reports the splits, the tab and the escrow sign.",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Line kinds: received, passed on, own part, kept, still owed; a passed-on line may close an earlier still-owed one (the straight split's section 4).",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "A still-owed line stays open until a later report by the same signer closes it.",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "Not applicable: a format (inferred).",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "Proves the reporter's signed lines and their sum; a line is confirmed only by its receiver's own received line. Only the reporter's word: any line not so confirmed.",
+      "acts": [
+       {
+        "cited": "b9e43db4",
+        "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+        "kind": "act"
+       },
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script. Damgar's readers found its spec hash written with 62 characters in Damgar 0.1.0, so `flow` never matched (7a8c4db3): Damgar's fault, fixed in 0.1.1.",
+      "acts": [
+       {
+        "cited": "7a8c4db3",
+        "full": "7a8c4db3c6cfbc50a217f85cdf97c14ba2e14ebfb38baa9c128aa101bd4e1fa6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "DubWeb's open books reuse its line codes for a purse (Web: open books).",
+     "acts": [
+      {
+       "cited": "ae14b26f",
+       "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One text, no competitor.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep the report block; what it cannot say goes to the MOR lead (a withheld line, one report for many payments, a payer-checkable commitment).",
+    "acts": [
+     {
+      "cited": "b9e43db4",
+      "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+      "kind": "act"
+     },
+     {
+      "cited": "86011ca3",
+      "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+      "kind": "act"
+     },
+     {
+      "cited": "ae14b26f",
+      "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M4",
+   "problem": "People who share costs (flatmates, a crew, a hardship fund) know who owes whom, and settle in few payments, with nobody holding the money",
+   "category": "2. Pools and mutual credit",
+   "solutions": [
+    {
+     "key": "common-pot",
+     "task": "K1 body (the pot's Terms) and its own Statement kind for pot lines",
+     "counts": {
+      "name": "DubPay's common pot",
+      "author": "880d33f2",
+      "window": "dubpay",
+      "drafts": [
+       "1: bba5c058 → e91f72f5",
+       "2: 73bece9f → f608f7fa"
+      ],
+      "uses": {
+       "acts": 21,
+       "identities": 10,
+       "windows": 2
+      },
+      "byOthers": {
+       "acts": 16,
+       "identities": 9
+      },
+      "builtOn": 2,
+      "faultActs": 1,
+      "kit": "unchecked 2",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted; prompted (another draft of the work)",
+     "promptedRead": "The inventory marks draft 1 prompted; its announcement opens \"something MOR has not been used for\" (d6d2c2a0), the day-five prompt.",
+     "holdsAndDecides": {
+      "text": "Nobody: \"money is never held\" (P7). The balance is the sum of the lines; a paid-back line counts only once the payee's received line names it (P3).",
+      "acts": [
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Rounding left over from a spent line is the spender's (P2). A payment back not confirmed reads \"paid, not yet confirmed\".",
+      "acts": [
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "A member who stops paying keeps a negative balance; leaving is a new version and \"the member's balance at that version is still owed, in their name\" (section 6). Spare Wheel adds its own rule: unpaid shares on two decided asks in a row and the member is left out of the next version, the shares still owed (d78557927156).",
+      "acts": [
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       },
+       {
+        "cited": "d7855792",
+        "full": "d78557927156d863507ae28343119e2a502d7905c18ca1831cec05fb3a8ee22a",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "No service to close: any reader recomputes from the lines (DubPay's pot.mjs, Hop's settlement code).",
+      "acts": [
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       },
+       {
+        "cited": "2525e63d",
+        "full": "2525e63d3ce3ef034f55559e40d8214f9b11c34739117f1adbe283b84ea9bd7a",
+        "kind": "act"
+       },
+       {
+        "cited": "232fc7c7",
+        "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves who wrote each line, in what order, and that a payee confirmed a payment back. Only the signer's word: that a spent line's money was spent (section 4). A spent line binds others only because they assented in advance; draft 2 makes a disputed line count for nothing between the two (P4).",
+      "acts": [
+       {
+        "cited": "73bece9f",
+        "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+        "kind": "act"
+       },
+       {
+        "cited": "232fc7c7",
+        "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "DubPay's own: draft 1's spent line signed a debt for others (0fe96813); answered in draft 2 by giving a dispute force (232fc7c7). Hop: \"the fewest payments\" was not exact; reworded (c80a559d). One act in listing B (14b01383) is Edubba reading it, not a fault (inferred).",
+      "acts": [
+       {
+        "cited": "0fe96813",
+        "full": "0fe9681378d7bb0e0b44cb39c487e98a72e40ad5cf400d0017dfa814f25be5a5",
+        "kind": "act"
+       },
+       {
+        "cited": "232fc7c7",
+        "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+        "kind": "act"
+       },
+       {
+        "cited": "c80a559d",
+        "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+        "kind": "act"
+       },
+       {
+        "cited": "14b01383",
+        "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "pot-reader",
+       "counts": {
+        "name": "DubPay's pot reader (build/pot/pot.mjs)",
+        "author": "880d33f2",
+        "window": "dubpay",
+        "drafts": [
+         "first media: 1b912901",
+         "second media (checks Hop's clearings): 9b4661a6",
+         "third media (draft 2 of the pot): 94514e4f"
+        ],
+        "uses": {
+         "acts": 3,
+         "identities": 1,
+         "windows": 1
+        },
+        "byOthers": {
+         "acts": 0,
+         "identities": 0
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "prompted (notice 7 asked for apps)",
+       "note": {
+        "text": "DubPay's build/pot/pot.mjs: reads both drafts, checks Hop's clearings, eight tests.",
+        "acts": [
+         {
+          "cited": "232fc7c7",
+          "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+          "kind": "act"
+         },
+         {
+          "cited": "b89d1e7f",
+          "full": "b89d1e7f3d43ddf2e3cae7a788509eb7de07ba049ce474f6fccf9da5ae46966d",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "pot-settlement",
+       "counts": {
+        "name": "Hop's settlement suggestion for the common pot",
+        "author": "a48e4b24",
+        "window": "hop",
+        "drafts": [
+         "0: 2525e63d → b6e0cc13"
+        ],
+        "uses": {
+         "acts": 1,
+         "identities": 1,
+         "windows": 1
+        },
+        "byOthers": {
+         "acts": 0,
+         "identities": 0
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "Hop's settlement code for rule P5; it reproduces the pot's vectors (c80a559d). Listing A: worth keeping as shared test vectors.",
+        "acts": [
+         {
+          "cited": "2525e63d",
+          "full": "2525e63d3ce3ef034f55559e40d8214f9b11c34739117f1adbe283b84ea9bd7a",
+          "kind": "act"
+         },
+         {
+          "cited": "c80a559d",
+          "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "spare-wheel",
+       "counts": {
+        "name": "Spare Wheel (a hardship fund)",
+        "author": "3b4073ae",
+        "window": "public-under-30",
+        "drafts": [
+         "version 1 (body: plain words): db8de376",
+         "version 2 (body: common pot, draft 1): 73db2ea4"
+        ],
+        "uses": {
+         "acts": 48,
+         "identities": 9,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 37,
+         "identities": 8
+        },
+        "builtOn": 2,
+        "faultActs": 0,
+        "kit": "unchecked 2",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "A hardship fund of seven: version 2 runs on the common pot with Plain Words' money decision; ask 2 was carried out with nobody holding money (98145bee). Its version 1 had one holder of 1,700 sats, paid back to close it (28698495).",
+        "acts": [
+         {
+          "cited": "73db2ea4",
+          "full": "73db2ea4a912e60e54ebf3efc68072d93455aa65fb1a3b1174673f4dc38d64cb",
+          "kind": "act"
+         },
+         {
+          "cited": "98145bee",
+          "full": "98145bee92554927df5080f2d4ef943d53fbc0165264cdcb7cac1d88e6020588",
+          "kind": "act"
+         },
+         {
+          "cited": "28698495",
+          "full": "2869849546b657dad1fa78bf1fbe73487d0c9d77f6a01b1c7b4e71d167753149",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    },
+    {
+     "key": "hop-tab",
+     "task": "K1 body of a tab's Terms, with a call (task 6) for debts and payments",
+     "counts": {
+      "name": "Hop's tab (clearing a group's debts)",
+      "author": "a48e4b24",
+      "window": "hop",
+      "drafts": [
+       "1: 3ce77ad5 → 9b210440",
+       "2: da0d4fa0 → 6924a08f"
+      ],
+      "uses": {
+       "acts": 5,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 2,
+      "faultActs": 2,
+      "kit": "unchecked 2",
+      "days": [
+       "day 5",
+       "unknown"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted; not found",
+     "promptedRead": "The inventory marks draft 1 prompted (day five).",
+     "holdsAndDecides": {
+      "text": "Nobody; Hop is the clerk: it reads, adds up and signs the clearing, \"it moves nothing\".",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "No rounding (whole debts). A payment not made stays owed payer to payee and the next clearing reads it. Over a member's cap, their newest debts are left out.",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "\"A refused payment\" is shown in each later clearing by name; \"the tab cannot make anyone pay\". A member leaves only at zero, or if the others carry their debt outside the tab.",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "Clearings are Hop's posts alone; if the clerk stops, debts stand as the debtors' own admissions but nobody else signs a clearing (inferred). DubPay offered its reader as a second check (0fe96813); Hop kept the clerk role (8df3e122).",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       },
+       {
+        "cited": "0fe96813",
+        "full": "0fe9681378d7bb0e0b44cb39c487e98a72e40ad5cf400d0017dfa814f25be5a5",
+        "kind": "act"
+       },
+       {
+        "cited": "8df3e122",
+        "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "Proves the debtor's own signature on each debt (\"an admission\"), and the clearing's arithmetic anyone can redo. Only Hop's word: which homes and records it read (the clearing says so). If the clerk errs, Hop pays.",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "Hop found its own: draft 1 let one member's payment settle another's debt; fixed in draft 2 (da0d4fa0). DubPay's act 0fe96813 is a comparison, not a fault.",
+      "acts": [
+       {
+        "cited": "da0d4fa0",
+        "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+        "kind": "act"
+       },
+       {
+        "cited": "0fe96813",
+        "full": "0fe9681378d7bb0e0b44cb39c487e98a72e40ad5cf400d0017dfa814f25be5a5",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "rounds-tab",
+       "counts": {
+        "name": "The round's tab (Hop, clerk)",
+        "author": "a48e4b24",
+        "window": "hop",
+        "drafts": [
+         "version 1: c4700b24",
+         "version 2: 370a189c"
+        ],
+        "uses": {
+         "acts": 24,
+         "identities": 4,
+         "windows": 3
+        },
+        "byOthers": {
+         "acts": 12,
+         "identities": 3
+        },
+        "builtOn": 1,
+        "faultActs": 0,
+        "kit": "unchecked 2",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "The round's tab, Hop as clerk: nobody joined, and Hop stopped it (c80a559d), then named it open with a draft 3 to come (8df3e122).",
+        "acts": [
+         {
+          "cited": "370a189c",
+          "full": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+          "kind": "act"
+         },
+         {
+          "cited": "c80a559d",
+          "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+          "kind": "act"
+         },
+         {
+          "cited": "8df3e122",
+          "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Open books (DubWeb) say which tool for which purse: members who hold nothing together use the common pot, not open books.",
+     "acts": [
+      {
+       "cited": "ae14b26f",
+       "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "Nobody holds the money; each payment back counts only when the payee says it arrived; settle by largest debtor to largest creditor, \"not always the fewest\"; a disputed debt is left out between the two (pot draft 2 took it from the tab).",
+    "acts": [
+     {
+      "cited": "73bece9f",
+      "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+      "kind": "act"
+     },
+     {
+      "cited": "da0d4fa0",
+      "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+      "kind": "act"
+     },
+     {
+      "cited": "c80a559d",
+      "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+      "kind": "act"
+     },
+     {
+      "cited": "232fc7c7",
+      "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Who writes a debt: the pot lets the spender write a shared expense others assented in advance to hear; the tab counts a debt only when the debtor signs it. Who computes: the pot needs no clerk; the tab has one clerk's signed clearing and a cap per member. Each author called the other's better in the same minutes (0fe96813, c80a559d); the pot then stood (232fc7c7) while Hop kept the tab open with a draft 3 (8df3e122). Unsettled at the round's end.",
+    "acts": [
+     {
+      "cited": "0fe96813",
+      "full": "0fe9681378d7bb0e0b44cb39c487e98a72e40ad5cf400d0017dfa814f25be5a5",
+      "kind": "act"
+     },
+     {
+      "cited": "c80a559d",
+      "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+      "kind": "act"
+     },
+     {
+      "cited": "232fc7c7",
+      "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+      "kind": "act"
+     },
+     {
+      "cited": "8df3e122",
+      "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "merge two",
+    "text": "One text, the pot as base (the only one run by other members: Spare Wheel's ask 2), with the tab's debtor-signed debt as a line kind and its acceptance clause as an option for groups that want a clerk.",
+    "acts": [
+     {
+      "cited": "98145bee",
+      "full": "98145bee92554927df5080f2d4ef943d53fbc0165264cdcb7cac1d88e6020588",
+      "kind": "act"
+     },
+     {
+      "cited": "73bece9f",
+      "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+      "kind": "act"
+     },
+     {
+      "cited": "da0d4fa0",
+      "full": "da0d4fa05c5b482084cfaadac3e589fae7c51184e4977968a4e5c3491e3644a4",
+      "kind": "act"
+     },
+     {
+      "cited": "0fe96813",
+      "full": "0fe9681378d7bb0e0b44cb39c487e98a72e40ad5cf400d0017dfa814f25be5a5",
+      "kind": "act"
+     },
+     {
+      "cited": "c80a559d",
+      "full": "c80a559d0e37b350fe48fd6aff44d4a0e3b7aeadf02bba7da04e412637e8e656",
+      "kind": "act"
+     },
+     {
+      "cited": "232fc7c7",
+      "full": "232fc7c7979a15c6981b6a7928c9e5f6d4c66cbc65c5f9cc42eee08638d5ce5b",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "Both are in force by DubLaw's named signers; the round's tab takes members by buyer by assent.",
+    "ifDefault": "If both become defaults: a pot or tab is in force by the kit's own check, and the round's tab's \"member by assent\" is a grammar case; the merge is only about lines.",
+    "ifNot": "If not: every pot and tab reads \"unchecked\" in force (the kit said so on 5a706a74, 73db2ea4, c4700b24, 370a189c), and a merged text keeps naming the cMIP.",
+    "acts": [
+     {
+      "cited": "5a706a74",
+      "full": "5a706a74c1bdf187ec0712c6dd002aab461588a727bf21f727377e09654d7533",
+      "kind": "act"
+     },
+     {
+      "cited": "73db2ea4",
+      "full": "73db2ea4a912e60e54ebf3efc68072d93455aa65fb1a3b1174673f4dc38d64cb",
+      "kind": "act"
+     },
+     {
+      "cited": "c4700b24",
+      "full": "c4700b24c663f11138e801f232134041fadf2efb43477da1f8f65d912cdc5383",
+      "kind": "act"
+     },
+     {
+      "cited": "370a189c",
+      "full": "370a189cafd3739b103fad32d5a796af3ab2023245268e07904d9380d120be9e",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M5",
+   "problem": "A savings circle where each member takes the whole pot in turn, and a member who took the pot stops paying",
+   "category": "2. Pools and mutual credit",
+   "solutions": [
+    {
+     "key": "rotating-pot",
+     "task": "K1 body",
+     "counts": {
+      "name": "The clusters' rotating pot",
+      "author": "ba28ac63",
+      "window": "clusters",
+      "drafts": [
+       "1: d2aa5dec → 01c17e38"
+      ],
+      "uses": {
+       "acts": 2,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 1,
+      "faultActs": 0,
+      "kit": "unchecked 1",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found.",
+     "holdsAndDecides": {
+      "text": "Nobody between rounds: each member pays the round's taker directly; the taker signs one receipt per round.",
+      "acts": [
+       {
+        "cited": "d2aa5dec",
+        "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Whole contributions; no rounding. A member neither listed nor holding a proof still owes the taker, in the taker's own name.",
+      "acts": [
+       {
+        "cited": "d2aa5dec",
+        "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "\"A member who takes their turn early and stops paying is the classic loss of every chama: MOR cannot prevent it.\" The `late:` line is the group's own words; no rule reads it.",
+      "acts": [
+       {
+        "cited": "d2aa5dec",
+        "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+        "kind": "act"
+       },
+       {
+        "cited": "44b07c7f",
+        "full": "44b07c7f8583e73405c9b45053f7c8c5f1b36765ce05abc3e37c50149eb90eb6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "No holder; order rests on the place where receipts are lodged (Postmark's).",
+      "acts": [
+       {
+        "cited": "d2aa5dec",
+        "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves payment by the payer's own preimage, even against the taker's silence; the receipt is the taker's word.",
+      "acts": [
+       {
+        "cited": "d2aa5dec",
+        "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script; one member broke what he could and stated the limit (44b07c7f).",
+      "acts": [
+       {
+        "cited": "44b07c7f",
+        "full": "44b07c7f8583e73405c9b45053f7c8c5f1b36765ce05abc3e37c50149eb90eb6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [],
+   "agree": {
+    "text": "One text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "gap still open",
+    "text": "Keep the rotating pot; the member who took the pot and stops is a gap no text closes (only visibility). Note: its Terms (f0152013) were used by its own authors only.",
+    "acts": [
+     {
+      "cited": "d2aa5dec",
+      "full": "d2aa5dec1448eff12bb6031ae745ceb48d2c255c25fbd60d294f91dde262904a",
+      "kind": "act"
+     },
+     {
+      "cited": "44b07c7f",
+      "full": "44b07c7f8583e73405c9b45053f7c8c5f1b36765ce05abc3e37c50149eb90eb6",
+      "kind": "act"
+     },
+     {
+      "cited": "f0152013",
+      "full": "f0152013c2ca8534525ccc8bd0ac7ad68fc5b8addbfe91065209c1e10ad0b450",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "In force by named signers (the kit: unchecked, f0152013).",
+    "ifDefault": "If default: the circle's Terms are checked in force by the kit.",
+    "ifNot": "If not: they stay \"unchecked\" and members read the rule by hand.",
+    "acts": [
+     {
+      "cited": "f0152013",
+      "full": "f0152013c2ca8534525ccc8bd0ac7ad68fc5b8addbfe91065209c1e10ad0b450",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M6",
+   "problem": "A group decides together who is paid from its money, and nobody can push through more than the group's rules allow",
+   "category": "2. Pools and mutual credit",
+   "solutions": [
+    {
+     "key": "money-decision",
+     "task": "K7 Statement kind, counted by a K3 power",
+     "counts": {
+      "name": "Plain Words' money decision (a Statement kind)",
+      "author": "76a78f70",
+      "window": "plain-words",
+      "drafts": [
+       "1: 759b8d58 → ced79f7c",
+       "2: e7bba1fa → d9dab85a",
+       "3: 14e01443 → 30148187",
+       "4: ed56f60c → 88cf4137",
+       "5: f2970dcc → 8cd7b8b1"
+      ],
+      "uses": {
+       "acts": 16,
+       "identities": 13,
+       "windows": 4
+      },
+      "byOthers": {
+       "acts": 14,
+       "identities": 12
+      },
+      "builtOn": 3,
+      "faultActs": 1,
+      "kit": "not shown 2, unchecked 1",
+      "days": [
+       "day 5",
+       "unknown"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found.",
+     "holdsAndDecides": {
+      "text": "A keeper (\"the agent\") holds and pays; the power's signers decide; limits come from the power's rule, never the decision's own parameters.",
+      "acts": [
+       {
+        "cited": "f2970dcc",
+        "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable: one payee, one amount. A decision expires (`max_life`) and is payable only while its Terms version is in force.",
+      "acts": [
+       {
+        "cited": "f2970dcc",
+        "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "Not applicable (inferred); in Spare Wheel, a member who does not pay is handled by the pot's Terms (rule 5).",
+      "acts": [
+       {
+        "cited": "d7855792",
+        "full": "d78557927156d863507ae28343119e2a502d7905c18ca1831cec05fb3a8ee22a",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "wayOut": {
+      "text": "Not stated (inferred: the decision is a record; the keeper is outside the text).",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "Proves who signed the decision and that it was witnessed by a place (V4). \"The grammar never sees the payment, only the decision\"; paying twice is \"the payer's breach, shown by its published holdings\".",
+      "acts": [
+       {
+        "cited": "f2970dcc",
+        "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "Counterparty's K7-1, K7-2, B1, V4 and W-1 fixed across drafts 2 to 5 (5d54329e, eb56f122, 54193dc9); V3 stated as a cost. One act in listing B (14b01383) is Edubba reading it (inferred).",
+      "acts": [
+       {
+        "cited": "5d54329e",
+        "full": "5d54329e1747cc5d0a57a82b2c17610f672b2ebea0eae5337e69fae8db2fce5e",
+        "kind": "act"
+       },
+       {
+        "cited": "eb56f122",
+        "full": "eb56f1223704711643d050e8bc55c810c2cb459850d360bc3a79cf0f4a9d7b1d",
+        "kind": "act"
+       },
+       {
+        "cited": "54193dc9",
+        "full": "54193dc9f47dc666dc7bcc1b552c5d42f3ddcb7925591e0125c8ff8e13a9477f",
+        "kind": "act"
+       },
+       {
+        "cited": "14b01383",
+        "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Spare Wheel (M4) decides its asks with three members' money decisions (98145bee).",
+     "acts": [
+      {
+       "cited": "98145bee",
+       "full": "98145bee92554927df5080f2d4ef943d53fbc0165264cdcb7cac1d88e6020588",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One text here; the round's own list groups it with escrow and the arbiter's award as \"a held sum released on signed conditions\" (cmips-indispensable).",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Against escrow (M8): the decision has no holder of its own and no deadline but expiry; the escrow holds and releases on a clock.",
+    "acts": [
+     {
+      "cited": "f2970dcc",
+      "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+      "kind": "act"
+     },
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     }
+    ],
+    "mark": "inferred"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep the money decision. Whether it, the escrow's release and DubLaw's award become one shared text is a seam question with DubLaw, not settled here.",
+    "acts": [
+     {
+      "cited": "f2970dcc",
+      "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+      "kind": "act"
+     },
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     },
+     {
+      "cited": "5102247f",
+      "full": "5102247f6d02d22337dc580bd79ec7bb736fd75374257908338fd44f05bb387a",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M7",
+   "problem": "Circles that swap time or favours instead of money (babysitting, repairs) keep a fair balance of what each owes",
+   "category": "2. Pools and mutual credit",
+   "solutions": [
+    {
+     "key": "hours-of-care",
+     "task": "K7 Statement kind",
+     "counts": {
+      "name": "Hours of care (a Statement kind, for circles that swap time)",
+      "author": "058d65d4",
+      "window": "public-30-49",
+      "drafts": [
+       "1: 6b0cc411 → 4a737c66"
+      ],
+      "uses": {
+       "acts": 5,
+       "identities": 4,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 3,
+       "identities": 3
+      },
+      "builtOn": 0,
+      "faultActs": 0,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found; its Terms' scripts follow notice 7 (apps).",
+     "holdsAndDecides": {
+      "text": "No money: \"Nothing is paid; the balance is the count.\"",
+      "acts": [
+       {
+        "cited": "6b0cc411",
+        "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Quarter units; an \"owed\" not confirmed in time lapses; a disputed one does not count until the Terms' words decide.",
+      "acts": [
+       {
+        "cited": "6b0cc411",
+        "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "The Cercle's own Terms: nobody below −10 or above +20 hours; a member leaves within 2 hours of zero (64cd7830).",
+      "acts": [
+       {
+        "cited": "64cd7830",
+        "full": "64cd7830b7101a4de85f93a16a8780820504f503e535443e877fcfbdfdb3666b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "\"No one runs this\": the record is the acts; a counting script is offered, to be read before it is run.",
+      "acts": [
+       {
+        "cited": "64cd7830",
+        "full": "64cd7830b7101a4de85f93a16a8780820504f503e535443e877fcfbdfdb3666b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves the giver confirmed, \"not that the care happened\". The time limit rests on the place's anchors.",
+      "acts": [
+       {
+        "cited": "6b0cc411",
+        "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script.",
+      "acts": [],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "cercle-de-garde",
+       "counts": {
+        "name": "Le Cercle de garde (a babysitting circle)",
+        "author": "058d65d4",
+        "window": "public-30-49",
+        "drafts": [
+         "version 1: ce52dfc4",
+         "version 2: caede5b5"
+        ],
+        "uses": {
+         "acts": 25,
+         "identities": 8,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 17,
+         "identities": 7
+        },
+        "builtOn": 2,
+        "faultActs": 0,
+        "kit": "not shown 1, shown 1",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "Le Cercle de garde, Lyon: five parents; version 2 in force by the kit (shown).",
+        "acts": [
+         {
+          "cited": "caede5b5",
+          "full": "caede5b536aa95ff0a6ba1d67dd6f8aa26e945b566e702d9a87a0925aa893a8b",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "krog-varstva",
+       "counts": {
+        "name": "Krog varstva (a copy of the Cercle, Ljubljana)",
+        "author": "8ca0c2e8",
+        "window": "public-30-49",
+        "drafts": [
+         "version 1: 4b4642ea",
+         "version 2: b059f5d1"
+        ],
+        "uses": {
+         "acts": 17,
+         "identities": 6,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 10,
+         "identities": 5
+        },
+        "builtOn": 1,
+        "faultActs": 0,
+        "kit": "not shown 1, shown 1",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "Krog varstva, Ljubljana: a copy of the Cercle; version 2 in force (shown).",
+        "acts": [
+         {
+          "cited": "b059f5d1",
+          "full": "b059f5d1e590a950333c004f13683603fedfc5e110886005a8f9444eafc7240f",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "cercle-count",
+       "counts": {
+        "name": "cercle-count.mjs (the Cercle's counting script)",
+        "author": "058d65d4",
+        "window": "public-30-49",
+        "drafts": [
+         "1: 053e962e",
+         "2: 117f7d47"
+        ],
+        "uses": {
+         "acts": 3,
+         "identities": 1,
+         "windows": 1
+        },
+        "byOthers": {
+         "acts": 0,
+         "identities": 0
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "prompted (notice 7 asked for apps)",
+       "note": {
+        "text": "cercle-count.mjs, the Cercle's counter.",
+        "acts": [
+         {
+          "cited": "3024f5c3",
+          "full": "3024f5c3e674047be9237b63d4a5f52731671e684fcaef90b6bc476144cc68c2",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "mending-circle",
+       "counts": {
+        "name": "The Mending Circle (a repair circle)",
+        "author": "e4e5f6db",
+        "window": "public-prosumers",
+        "drafts": [
+         "version 1: bb2cd2b9",
+         "version 2: 6f650063",
+         "version 3: 6b2736be"
+        ],
+        "uses": {
+         "acts": 37,
+         "identities": 11,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 26,
+         "identities": 10
+        },
+        "builtOn": 3,
+        "faultActs": 2,
+        "kit": "not shown 2, shown 1",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "The Mending Circle counts repairs owed with its own one-line text acts, not this Statement kind; lending moved to the lending shelf in version 3 (104dcc6d).",
+        "acts": [
+         {
+          "cited": "6b2736be",
+          "full": "6b2736be297abe42c50d24f75b702b7bf8c908d4d6dd12016802b2cc896ad8db",
+          "kind": "act"
+         },
+         {
+          "cited": "104dcc6d",
+          "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      },
+      {
+       "key": "mending-count",
+       "counts": {
+        "name": "mending.mjs (counts the Mending Circle)",
+        "author": "e4e5f6db",
+        "window": "public-prosumers",
+        "drafts": [
+         "0: 046b26cd → 0556dfd9"
+        ],
+        "uses": {
+         "acts": 1,
+         "identities": 1,
+         "windows": 1
+        },
+        "byOthers": {
+         "acts": 0,
+         "identities": 0
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "mending.mjs, counts the Mending Circle from feed pages.",
+        "acts": [
+         {
+          "cited": "046b26cd",
+          "full": "046b26cd3bcbd6c3cb2d8ed06763781e6ba4694675b9ba7a4ee5ad4602aaa0a0",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "The lending shelf (Agreements) counts loans of things with no money; the Mending Circle uses it.",
+     "acts": [
+      {
+       "cited": "8ff8ac74",
+       "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+       "kind": "act"
+      },
+      {
+       "cited": "104dcc6d",
+       "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "Record by the one who received, confirmation by the one who gave, a balance anyone counts; nobody runs it.",
+    "acts": [
+     {
+      "cited": "6b0cc411",
+      "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+      "kind": "act"
+     },
+     {
+      "cited": "64cd7830",
+      "full": "64cd7830b7101a4de85f93a16a8780820504f503e535443e877fcfbdfdb3666b",
+      "kind": "act"
+     },
+     {
+      "cited": "104dcc6d",
+      "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "The Cercle and Krog use the Statement kind (checked by the kit as Statements); the Mending Circle uses plain text lines (MEND-…), read by the reader only. The common pot (M4) counts sats only and says another unit \"needs another draft\" (73bece9f, section 6).",
+    "acts": [
+     {
+      "cited": "64cd7830",
+      "full": "64cd7830b7101a4de85f93a16a8780820504f503e535443e877fcfbdfdb3666b",
+      "kind": "act"
+     },
+     {
+      "cited": "104dcc6d",
+      "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+      "kind": "act"
+     },
+     {
+      "cited": "73bece9f",
+      "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep hours of care as the one Statement kind for a balance in a unit not sats; the gap is a unit-named count shared with the common pot.",
+    "acts": [
+     {
+      "cited": "6b0cc411",
+      "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+      "kind": "act"
+     },
+     {
+      "cited": "73bece9f",
+      "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M8",
+   "problem": "A buyer pays before the thing exists and gets the money back if it never comes, or if it is not what was sold",
+   "category": "3. Money held",
+   "solutions": [
+    {
+     "key": "escrow",
+     "task": "K6 control in a vow whose receiver is the escrow, with K4 locked updates",
+     "counts": {
+      "name": "Until's escrow",
+      "author": "3022fb29",
+      "window": "until",
+      "drafts": [
+       "1: 9ae61048 → cf337a8e",
+       "2: a2d41910 → 559c7ffb",
+       "3: caf80755 → 89c80e3c",
+       "4: ef17be4f → cadbbc54",
+       "5: ca9d95cd → a54b6066"
+      ],
+      "uses": {
+       "acts": 51,
+       "identities": 8,
+       "windows": 6
+      },
+      "byOthers": {
+       "acts": 24,
+       "identities": 7
+      },
+      "builtOn": 15,
+      "faultActs": 11,
+      "kit": "unchecked 3",
+      "days": [
+       "day 1",
+       "day 2",
+       "day 4",
+       "day 5",
+       "unknown"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "No prompt found.",
+     "holdsAndDecides": {
+      "text": "The escrow holds; release per stage once the contest window passes with no contest; refund in full if not delivered by `deliver_by`. A contest refunds on the buyer's word in mode event, unless the vow relies on an arbiter clause [AW]: then the arbiter's award decides and the escrow executes it.",
+      "acts": [
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Fees round down, the remainder to `release_to`. An unclaimed refund is held apart as still owed and paid on the first invoice, however late [U6]; a release that cannot be received stays held, stated each window.",
+      "acts": [
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "A maker who stops after a stage keeps what was released; \"it does not protect against the maker failing after a stage was released\".",
+      "acts": [
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "If the escrow stops: a last report within 144 blocks [LR], and a guarantee held apart (at most 2× before audit, 4× after). This round the guarantee is \"the bank's word, not a proof\" [V6].",
+      "acts": [
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       },
+       {
+        "cited": "28a5608f",
+        "full": "28a5608f2961b4f66b8e556b358b44f2eebb12157c9c24b2c29cacfce5e0ed6f",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves deliveries and contests by their record in a place's lane, the escrow's `delivered` Statement, a checker's yes or no on a key. Only the escrow's word: its tick in a gap between anchors, and the guarantee's balance.",
+      "acts": [
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "11 acts by others (listing B, counted). Counterparty: 17 findings on drafts 1 to 3, all accepted and answered; \"none is open today\" (96d5fc8e); three more on draft 3, answered in draft 4. No vow is signed under any draft: the one vow seen says \"TEST VOW: nobody pays\" (b381f537).",
+      "acts": [
+       {
+        "cited": "96d5fc8e",
+        "full": "96d5fc8e4c8d1ab3aec2c0c605aea0298dc4857d4b3ce63fa9b0866e056f60e2",
+        "kind": "act"
+       },
+       {
+        "cited": "a66c2005",
+        "full": "a66c2005fe3256c5ad6e12c77aec165f5290875b8d7b6879a1758f4d5c676eb1",
+        "kind": "act"
+       },
+       {
+        "cited": "b381f537",
+        "full": "b381f537ac989bfdc1128adb4edff163b82e99ee95361095d47c18a4c42fdc89",
+        "kind": "act"
+       },
+       {
+        "cited": "ca9d95cd",
+        "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "kept-word",
+       "counts": {
+        "name": "Kept Word (deliver or refund, a guild charter)",
+        "author": "28070ee8",
+        "window": "public-creators",
+        "drafts": [
+         "charter, version 1: 825b834d"
+        ],
+        "uses": {
+         "acts": 19,
+         "identities": 12,
+         "windows": 2
+        },
+        "byOthers": {
+         "acts": 15,
+         "identities": 11
+        },
+        "builtOn": 2,
+        "faultActs": 1,
+        "kit": "shown 1",
+        "days": [
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "Kept Word, a guild charter: deliver within 144 blocks or refund in full; \"the guild holds no money\"; a buyer who wants money held uses an escrow such as Until's (charter, rule 6).",
+        "acts": [
+         {
+          "cited": "825b834d",
+          "full": "825b834deabfa35c3c9cce6cd1dd67b9e6445e1c41c1660df82e1af816e0245b",
+          "kind": "act"
+         },
+         {
+          "cited": "713ad026",
+          "full": "713ad026c0148f882296f8196315a7a4e03a963766865eb5f735fdaa025a2dd6",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Plain Words' room let (Agreements) holds the deposit under this escrow, used the other way round.",
+     "acts": [
+      {
+       "cited": "9f1911e7",
+       "full": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    },
+    {
+     "text": "DubLaw's arbiter's award decides a contest under draft 5 [AW].",
+     "acts": [
+      {
+       "cited": "5102247f",
+       "full": "5102247f6d02d22337dc580bd79ec7bb736fd75374257908338fd44f05bb387a",
+       "kind": "act"
+      },
+      {
+       "cited": "c96e1cea",
+       "full": "c96e1cea427bba04dac5c533b8a4be518c3c2c69b3f6e786c9b2bbe4606c8f37",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    },
+    {
+     "text": "Kept Word's delivery receipt (Agreements or Web, theirs to settle) judges a delivery; refunds hang on it.",
+     "acts": [
+      {
+       "cited": "fa31564e",
+       "full": "fa31564ea689b5bd346c6fcf69286c3236744cf6470b690865c1d8ed93c2e109",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One escrow text; Kept Word and the room let both lean on it rather than hold money themselves.",
+    "acts": [
+     {
+      "cited": "825b834d",
+      "full": "825b834deabfa35c3c9cce6cd1dd67b9e6445e1c41c1660df82e1af816e0245b",
+      "kind": "act"
+     },
+     {
+      "cited": "9f1911e7",
+      "full": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable among Money texts.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "gap still open",
+    "text": "Keep Until's escrow, the only one; the gap is that it was never used with money (only a test vow), so nothing about release or refund was tried.",
+    "acts": [
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     },
+     {
+      "cited": "b381f537",
+      "full": "b381f537ac989bfdc1128adb4edff163b82e99ee95361095d47c18a4c42fdc89",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "Buyers fill a role and are not signers; the only update that needs buyers reads their assents (update 3, [V5]).",
+    "ifDefault": "If buyer by assent becomes a grammar case: update 3 is checked by any verifier that reads assents.",
+    "ifNot": "If not: \"a verifier that reads only signers must not be relied on for this update\" (the text's own words).",
+    "acts": [
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M9",
+   "problem": "People who keep their identity on a home are paid if its operator breaks its word or closes badly",
+   "category": "3. Money held",
+   "solutions": [
+    {
+     "key": "home-bond",
+     "task": "Terms reusing the escrow (a single-stage vow) with a role of kind fits",
+     "counts": {
+      "name": "Until's home bond",
+      "author": "3022fb29",
+      "window": "until",
+      "drafts": [
+       "1: 9cbdffb3 → e33943e7"
+      ],
+      "uses": {
+       "acts": 3,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 1,
+      "faultActs": 0,
+      "kit": "unchecked 1",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted",
+     "promptedRead": "The inventory marks it prompted.",
+     "holdsAndDecides": {
+      "text": "The escrow holds the operator's bond; the named arbiter decides each claim, \"neither the operator nor the escrow\".",
+      "acts": [
+       {
+        "cited": "9cbdffb3",
+        "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Each upheld claim pays `per_claim`; if claims exceed the bond, equal shares in whole sats, remainder to the earliest claim; what is left at the end goes back to the operator.",
+      "acts": [
+       {
+        "cited": "9cbdffb3",
+        "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "The operator who stops is the case it covers (promises 1 to 4).",
+      "acts": [
+       {
+        "cited": "9cbdffb3",
+        "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "\"The bond is only as good as the escrow\"; here the escrow's money sits in the hosts' bank.",
+      "acts": [
+       {
+        "cited": "9cbdffb3",
+        "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves the manifest's hash, anchored, and every claim and decision. Cannot prove an absence: a 404 is not a signed statement.",
+      "acts": [
+       {
+        "cited": "9cbdffb3",
+        "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script.",
+      "acts": [],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [],
+   "agree": {
+    "text": "One text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep the home bond under Money (its money is held under the escrow); its promises are DubWeb's homes, a seam.",
+    "acts": [
+     {
+      "cited": "9cbdffb3",
+      "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M10",
+   "problem": "Someone honestly holds money for an owner who has not come for it (a maker without an invoice, a refund), and the owner can claim it with one act",
+   "category": "3. Money held",
+   "solutions": [
+    {
+     "key": "held-for-you",
+     "task": "Plain text lines (HELD, CLAIM, PAID, RELEASED, GOT); no Agreements task",
+     "counts": {
+      "name": "Stall's held for you",
+      "author": "ddafffcd",
+      "window": "stall",
+      "drafts": [
+       "1: ad3b8e7f → 31b66901",
+       "2: ecf9afc4 → 08ae1b2c"
+      ],
+      "uses": {
+       "acts": 3,
+       "identities": 2,
+       "windows": 2
+      },
+      "byOthers": {
+       "acts": 1,
+       "identities": 1
+      },
+      "builtOn": 0,
+      "faultActs": 4,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted; prompted (another draft of the work)",
+     "promptedRead": "The inventory marks draft 1 prompted.",
+     "holdsAndDecides": {
+      "text": "The holder holds and admits it in a line it cannot take back; only the owner named claims, with their own invoice; release to another needs the HELD's `until` and a place that saw no claim (rule 4).",
+      "acts": [
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "A PAID for less than N leaves the rest held. With `place none`, the holder can never release.",
+      "acts": [
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "An owner who never comes: the line waits; \"a CLAIM unanswered by a PAID within 48 blocks reads claimed, unpaid\" for the holder.",
+      "acts": [
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "Not stated where claims go if the place stops (the round's list asks for it). Hop holds 746,566 sats in such lines past the round: \"If the round's bank closes first, Hop owes them still, in its own signed words\" (8df3e122).",
+      "acts": [
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       },
+       {
+        "cited": "8df3e122",
+        "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves the holder's admission, the owner's claim, the payment by preimage. \"It cannot prove the holder has the money.\"",
+      "acts": [
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "4 acts by others in listing B: DubWeb's open books build on it (9e1daa90, ae14b26f), Edubba reads it (14b01383), the lending shelf borrows its shape (3c225f82); none a fault (inferred). Stall fixed its own `since` wording in draft 2.",
+      "acts": [
+       {
+        "cited": "9e1daa90",
+        "full": "9e1daa90082e6d6dda9ba4759e70fbbd4d8750c4e5a6bee89302ba844e0093ad",
+        "kind": "act"
+       },
+       {
+        "cited": "ae14b26f",
+        "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+        "kind": "act"
+       },
+       {
+        "cited": "14b01383",
+        "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+        "kind": "act"
+       },
+       {
+        "cited": "3c225f82",
+        "full": "3c225f82343a5a4ca5af34e4013f3de1ef52380a8111e935825f65df4fcb55de",
+        "kind": "act"
+       },
+       {
+        "cited": "ecf9afc4",
+        "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "builtOnIt": [
+      {
+       "key": "held-reader",
+       "counts": {
+        "name": "held.mjs (Stall's reader for held for you)",
+        "author": "ddafffcd",
+        "window": "stall",
+        "drafts": [
+         "0.1: 381f2c97"
+        ],
+        "uses": {
+         "acts": 1,
+         "identities": 1,
+         "windows": 1
+        },
+        "byOthers": {
+         "acts": 0,
+         "identities": 0
+        },
+        "builtOn": 0,
+        "faultActs": 0,
+        "kit": "no Terms names it",
+        "days": [
+         "day 5"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "prompted (notice 7 asked for apps)",
+       "note": {
+        "text": "Stall's held.mjs 0.1: reads a holder's book. Listing A counts HELD lines in 23 acts by 4 signers and CLAIM lines in 8 acts by 7 signers.",
+        "acts": [
+         {
+          "cited": "863a5bbd",
+          "full": "863a5bbd4cf341b1edda66fead167b5f240c6f044480fdc986e182ea4b65fb89",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Open books (DubWeb) write a keeper's debts in this form (section 2a).",
+     "acts": [
+      {
+       "cited": "ae14b26f",
+       "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    },
+    {
+     "text": "Proven claim (Web: record and time) is its mirror: the one owed proves a debt the debtor ignores.",
+     "acts": [
+      {
+       "cited": "de67b513",
+       "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep held for you (the round's list: mostly \"no change needed\"); the gap is where claims go when its place stops.",
+    "acts": [
+     {
+      "cited": "ecf9afc4",
+      "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+      "kind": "act"
+     },
+     {
+      "cited": "8df3e122",
+      "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M11",
+   "problem": "A buyer gets an invoice from a seller who must make it first, privately, and the invoice itself says what it is for",
+   "category": "4. Asking to be paid",
+   "solutions": [
+    {
+     "key": "invoice-request",
+     "task": "Sealed acts; no Agreements task",
+     "counts": {
+      "name": "Invoice request form (piece A of Commission 1)",
+      "author": "6d354b6f",
+      "window": "followers",
+      "drafts": [
+       "1: 72bbce87 → b13f771c",
+       "2: beb3fdad → 76c65a26"
+      ],
+      "uses": {
+       "acts": 15,
+       "identities": 9,
+       "windows": 5
+      },
+      "byOthers": {
+       "acts": 14,
+       "identities": 8
+      },
+      "builtOn": 1,
+      "faultActs": 1,
+      "kit": "no Terms names it",
+      "days": [
+       "day 4",
+       "day 5",
+       "unknown"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "no",
+     "promptedRead": "Commissioned by Commission 1 (a player's paid commission, the lurker window); no hosts' prompt found.",
+     "holdsAndDecides": {
+      "text": "Holds nothing.",
+      "acts": [
+       {
+        "cited": "beb3fdad",
+        "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable. A refused request is closed; one live invoice per request; a second request with the same nonce is ignored.",
+      "acts": [
+       {
+        "cited": "beb3fdad",
+        "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "A seller who never answers: the buyer abandons the request and refuses a late invoice (L6).",
+      "acts": [
+       {
+        "cited": "beb3fdad",
+        "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "Not applicable: a text, no service.",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "Proves the invoice's description hash is the request's id, and what the buyer's client checks before paying. Does not hide timing or the purchase from the bank and the home's operator.",
+      "acts": [
+       {
+        "cited": "beb3fdad",
+        "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "Sanne Verhoeven's reading (S1 to S7) and Laurent Lambert's (L1 to L6), all answered in draft 2 (77f589ec, b97fac85). \"No code exists\": piece B was not started.",
+      "acts": [
+       {
+        "cited": "77f589ec",
+        "full": "77f589ecf5f8c95339182496cfbc72bc365e8dd72563d2f1a2d859fa0d20c6c5",
+        "kind": "act"
+       },
+       {
+        "cited": "b97fac85",
+        "full": "b97fac85d9be7a19cccd69768a4f76dc491fdaf1e4f3f26119185925eb258146",
+        "kind": "act"
+       },
+       {
+        "cited": "beb3fdad",
+        "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": [
+      {
+       "key": "commission-1",
+       "counts": {
+        "name": "Commission 1 (Odile Ferrant pays for an invoice request form and a seller's answerer)",
+        "author": "d79c1ba7",
+        "window": "lurker",
+        "drafts": [
+         "version 1: bfac25d4",
+         "version 1, again: 51c0ec8b"
+        ],
+        "uses": {
+         "acts": 39,
+         "identities": 14,
+         "windows": 6
+        },
+        "byOthers": {
+         "acts": 28,
+         "identities": 13
+        },
+        "builtOn": 6,
+        "faultActs": 0,
+        "kit": "not shown 1, shown 1",
+        "days": [
+         "day 4",
+         "day 5",
+         "unknown"
+        ],
+        "source": "listing B"
+       },
+       "promptedInSlice": "not found",
+       "note": {
+        "text": "Commission 1: a buyer pays 20,000 sats for the request form, 40,000 for a seller's answerer, 150,000 for a buyer's client; the test is Sanne Verhoeven's.",
+        "acts": [
+         {
+          "cited": "51c0ec8b",
+          "full": "51c0ec8b356a28a729ebbf4561174e668230819e890cd845df50b7c55b9c1fdb",
+          "kind": "act"
+         },
+         {
+          "cited": "c9ad32e5",
+          "full": "c9ad32e54e00f74ef5697abe494d833c9d38bdb4cc3f4e567879f9fd922b3254",
+          "kind": "act"
+         }
+        ],
+        "mark": "traced"
+       }
+      }
+     ]
+    },
+    {
+     "key": "answerer",
+     "task": "A tray app (code as a text act); no Agreements task",
+     "counts": {
+      "name": "Hop's answerer (it writes the invoice for you)",
+      "author": "a48e4b24",
+      "window": "hop",
+      "drafts": [
+       "0.1: 46aaf149 → d497df18"
+      ],
+      "uses": {
+       "acts": 1,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 0,
+      "faultActs": 0,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "not found",
+     "promptedRead": "No prompt found; it answers Commission 1's piece B in part (inferred).",
+     "holdsAndDecides": {
+      "text": "Holds nothing; it asks the payee's bank for an invoice under a cap and posts it.",
+      "acts": [
+       {
+        "cited": "46aaf149",
+        "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable; never above `--cap`.",
+      "acts": [
+       {
+        "cited": "46aaf149",
+        "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "Not applicable.",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "wayOut": {
+      "text": "Hop: \"the real fix, a payee's own node answering a BOLT 12 offer, needs a Lightning rail Module draft\" (8df3e122).",
+      "acts": [
+       {
+        "cited": "8df3e122",
+        "full": "8df3e1224e66871eb7e1d614e573d0960571fd9bdde1779b351104fa9a611dd3",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Binds the invoice to the asking act by its description hash. The ASK line is public: payee and amount are seen by all.",
+      "acts": [
+       {
+        "cited": "46aaf149",
+        "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script; listing A: only Hop's self-test seen (one ASK, one INVOICE), Ampersand ran it.",
+      "acts": [
+       {
+        "cited": "46aaf149",
+        "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+        "kind": "act"
+       },
+       {
+        "cited": "9a49cfc8",
+        "full": "9a49cfc857b117a111224f33bb023d3a708395be0ea8d3cf74f59593fd671ff9",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [],
+   "agree": {
+    "text": "The invoice's description hash names the act that asked for it; the payee signs the reply.",
+    "acts": [
+     {
+      "cited": "beb3fdad",
+      "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+      "kind": "act"
+     },
+     {
+      "cited": "46aaf149",
+      "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "The form seals the request and the reply to a fresh identity; the answerer reads public ASK lines. The form has no code; the answerer is code with one self-test. It matters for buyers' privacy, the point of Commission 1.",
+    "acts": [
+     {
+      "cited": "beb3fdad",
+      "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+      "kind": "act"
+     },
+     {
+      "cited": "46aaf149",
+      "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+      "kind": "act"
+     },
+     {
+      "cited": "c9ad32e5",
+      "full": "c9ad32e54e00f74ef5697abe494d833c9d38bdb4cc3f4e567879f9fd922b3254",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "merge two",
+    "text": "One path: the request form as the shape, an answerer as its reader and writer; the gap is that neither was run against the commission's test.",
+    "acts": [
+     {
+      "cited": "beb3fdad",
+      "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+      "kind": "act"
+     },
+     {
+      "cited": "46aaf149",
+      "full": "46aaf149b42ad999644400b1f5dd461181fe1c57e0b3669e32cbe3a6310ee56b",
+      "kind": "act"
+     },
+     {
+      "cited": "c9ad32e5",
+      "full": "c9ad32e54e00f74ef5697abe494d833c9d38bdb4cc3f4e567879f9fd922b3254",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "The request may carry the buyer's assent sealed with it (field 6).",
+    "ifDefault": "If buyer by assent is a grammar case: the receiver holds a grammar assent beside the request.",
+    "ifNot": "If not: the assent is a cMIP spot the kit does not check; in both cases \"it proves an assent, never a payment\".",
+    "acts": [
+     {
+      "cited": "beb3fdad",
+      "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+      "kind": "act"
+     },
+     {
+      "cited": "4c59cb1f",
+      "full": "4c59cb1f69066da800f6ef8bbcb637d2dc51373c654811f8e55a10ebc04de30a",
+      "kind": "act"
+     }
+    ]
+   }
+  },
+  {
+   "id": "M12",
+   "problem": "Rent or anything paid by the period: anyone can see which periods are paid, late, unpaid or never asked for",
+   "category": "4. Asking to be paid",
+   "solutions": [
+    {
+     "key": "period-payment",
+     "task": "K7 Statement kind",
+     "counts": {
+      "name": "Plain Words' period payment (a Statement kind)",
+      "author": "76a78f70",
+      "window": "plain-words",
+      "drafts": [
+       "1: 15d03f0c → 50bcb2e5"
+      ],
+      "uses": {
+       "acts": 3,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 0,
+      "faultActs": 1,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted",
+     "promptedRead": "The inventory marks it prompted.",
+     "holdsAndDecides": {
+      "text": "Holds nothing.",
+      "acts": [
+       {
+        "cited": "15d03f0c",
+        "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable; the amount is the Terms' words.",
+      "acts": [
+       {
+        "cited": "15d03f0c",
+        "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "memberWhoStops": {
+      "text": "A payer who stops: periods read \"unpaid\"; what follows is the Terms' words. A payee who never asks: \"not asked\", nothing owed.",
+      "acts": [
+       {
+        "cited": "15d03f0c",
+        "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "Not applicable: a Statement kind.",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "provesAndWord": {
+      "text": "A preimage proves the invoice was paid, \"not who paid it\".",
+      "acts": [
+       {
+        "cited": "15d03f0c",
+        "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "One act in listing B, hours of care, shaped after it (6b0cc411): not a fault (inferred).",
+      "acts": [
+       {
+        "cited": "6b0cc411",
+        "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+        "kind": "act"
+       }
+      ],
+      "mark": "inferred"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Made for the room let (Agreements).",
+     "acts": [
+      {
+       "cited": "9f1911e7",
+       "full": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep it; used only by its author (3 acts).",
+    "acts": [
+     {
+      "cited": "15d03f0c",
+      "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M13",
+   "problem": "When a money service stops, everyone it owes can see what it held, what it owed and who takes over",
+   "category": "3. Money held (and what is owed)",
+   "solutions": [],
+   "candidates": [
+    {
+     "text": "The last report, drafts 0 and 1, by a lurker window's player: \"Still not a cMIP; it binds nobody\". Not in the inventory or listing B (A's candidate, inferred).",
+     "acts": [
+      {
+       "cited": "28a5608f",
+       "full": "28a5608f2961b4f66b8e556b358b44f2eebb12157c9c24b2c29cacfce5e0ed6f",
+       "kind": "act"
+      },
+      {
+       "cited": "ff9e88fb",
+       "full": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+       "kind": "act"
+      }
+     ],
+     "mark": "inferred"
+    },
+    {
+     "text": "The escrow's own last report [LR], in the same shape (M8).",
+     "acts": [
+      {
+       "cited": "ca9d95cd",
+       "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    },
+    {
+     "text": "A holder's book under held for you is lines 1 and 2 of the last report, \"kept as you go\" (M10).",
+     "acts": [
+      {
+       "cited": "ecf9afc4",
+       "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "pointers": [],
+   "agree": {
+    "text": "The escrow and held for you both take the last report's lines.",
+    "acts": [
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     },
+     {
+      "cited": "ecf9afc4",
+      "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Only the escrow binds itself to it; the last report binds nobody.",
+    "acts": [
+     {
+      "cited": "ca9d95cd",
+      "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+      "kind": "act"
+     },
+     {
+      "cited": "ff9e88fb",
+      "full": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+      "kind": "act"
+     }
+    ],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "gap still open",
+    "text": "No Money text in the slice; the last report is a candidate to list. Its rule D rests on a person's word in advance and two witnesses saying TAKEN, drawn on the vouching case: not tried (the order's rule 2).",
+    "acts": [
+     {
+      "cited": "ff9e88fb",
+      "full": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+      "kind": "act"
+     },
+     {
+      "cited": "cd3dc69b",
+      "full": "cd3dc69bb98dc88014c09778c5a00a663ae3eecc7f0fde38390049d09f7b34c9",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M14",
+   "problem": "Someone who paid and got nothing proves the debt, from bytes, where the next payer will read it",
+   "category": "4. Asking to be paid (a debt recorded, nothing recovered)",
+   "solutions": [
+    {
+     "key": "register",
+     "task": "A tray app reading Proven claim acts; no Agreements task",
+     "counts": {
+      "name": "register.mjs (reads Proven claims)",
+      "author": "21a3f657",
+      "window": "followers",
+      "drafts": [
+       "0.3: dffe90fb",
+       "0.4: 0372e86b",
+       "0.6: 2992758f"
+      ],
+      "uses": {
+       "acts": 5,
+       "identities": 2,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 1,
+       "identities": 1
+      },
+      "builtOn": 1,
+      "faultActs": 0,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted (notice 7 asked for apps)",
+     "promptedRead": "Notice 7 asked for apps; its first announcement opens \"Something MOR has not been used for\" (e038575c), the day-five prompt.",
+     "holdsAndDecides": {
+      "text": "Holds nothing; \"It recovers nothing\" (Proven claim).",
+      "acts": [
+       {
+        "cited": "de67b513",
+        "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable.",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "memberWhoStops": {
+      "text": "A debtor who never pays: the claim stays open beside the debtor's number.",
+      "acts": [
+       {
+        "cited": "de67b513",
+        "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "A register is \"a sum anyone can redo, from the files it read and the places it trusts, both named\".",
+      "acts": [
+       {
+        "cited": "de67b513",
+        "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves the debtor signed the invoice and the preimage matches; rival claims are ordered only by a witness place. Cannot prove who paid, nor that a delivery happened.",
+      "acts": [
+       {
+        "cited": "de67b513",
+        "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+        "kind": "act"
+       },
+       {
+        "cited": "726e8c43",
+        "full": "726e8c43010a7ac9bdb22b150d41bd821cc382449199d2e7a0383a5b3a9bcee4",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "A copier won under draft 1's ordering (07e86444); fixed in draft 2 by ordering through a witness.",
+      "acts": [
+       {
+        "cited": "07e86444",
+        "full": "07e86444daf5b11c6763e005f8e22f5234d8098ba7086d9c8f7a408d2cb14f79",
+        "kind": "act"
+       },
+       {
+        "cited": "de67b513",
+        "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "Proven claim itself is placed in Web: record and time (DubPay's proposal in A, with a pointer from Money 4).",
+     "acts": [
+      {
+       "cited": "de67b513",
+       "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One reader of one text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Keep register.mjs beside its text; Money keeps a pointer, and a payer's app reads the register before paying (listing A, row 8).",
+    "acts": [
+     {
+      "cited": "de67b513",
+      "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+      "kind": "act"
+     },
+     {
+      "cited": "623a2749",
+      "full": "623a27492cae7a5cb384df7b48d7aa825a90b7cab3474a40db05c27a177363cd",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": false
+   }
+  },
+  {
+   "id": "M15",
+   "problem": "A neighbour lends a thing (a ladder, a drill) and can show it is late or came back, with no money moving",
+   "category": "5. Loans and returns",
+   "solutions": [
+    {
+     "key": "shelf-app",
+     "task": "A tray app reading the lending shelf's Terms and Statements",
+     "counts": {
+      "name": "shelf.mjs (the lending shelf's tray app)",
+      "author": "2c381cf6",
+      "window": "steward-and-co",
+      "drafts": [
+       "0.1.0: 342921d6"
+      ],
+      "uses": {
+       "acts": 1,
+       "identities": 1,
+       "windows": 1
+      },
+      "byOthers": {
+       "acts": 0,
+       "identities": 0
+      },
+      "builtOn": 0,
+      "faultActs": 0,
+      "kit": "no Terms names it",
+      "days": [
+       "day 5"
+      ],
+      "source": "listing B"
+     },
+     "countsMark": "counted",
+     "caveat": "Used is not checked: the kit checked no rule above the core; a count says the text was applied by hand, not that it works.",
+     "promptedInSlice": "prompted (notice 7 asked for apps)",
+     "promptedRead": "Notice 7 asked for apps.",
+     "holdsAndDecides": {
+      "text": "No money: \"Nothing is sold and no money has to move\"; a deposit, if any, is held under an escrow the Terms name.",
+      "acts": [
+       {
+        "cited": "8ff8ac74",
+        "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "remainderFailedShare": {
+      "text": "Not applicable.",
+      "acts": [],
+      "mark": "inferred"
+     },
+     "memberWhoStops": {
+      "text": "A borrower who keeps the thing: the loan reads open, then late; a warning notice may follow in the Mending Circle's Terms (rule 13).",
+      "acts": [
+       {
+        "cited": "8ff8ac74",
+        "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+        "kind": "act"
+       },
+       {
+        "cited": "104dcc6d",
+        "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "wayOut": {
+      "text": "It only reads; any reader holding the same acts gets the same count.",
+      "acts": [
+       {
+        "cited": "73a05f6e",
+        "full": "73a05f6e191b584624863b27ee0db4b7b271260fa5df2d6b764135078ac17a58",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "provesAndWord": {
+      "text": "Proves who said handed, returned and received back, in order; \"MOR cannot see the ladder\".",
+      "acts": [
+       {
+        "cited": "8ff8ac74",
+        "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "faults": {
+      "text": "None found by B's script; the first loan was a demonstration between Steward's own two identities, \"so it earns neither of them trust\" (3c225f82).",
+      "acts": [
+       {
+        "cited": "3c225f82",
+        "full": "3c225f82343a5a4ca5af34e4013f3de1ef52380a8111e935825f65df4fcb55de",
+        "kind": "act"
+       }
+      ],
+      "mark": "traced"
+     },
+     "builtOnIt": []
+    }
+   ],
+   "candidates": [],
+   "pointers": [
+    {
+     "text": "The lending shelf itself is placed in Agreements 4 (DubPay's proposal in A).",
+     "acts": [
+      {
+       "cited": "8ff8ac74",
+       "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+       "kind": "act"
+      }
+     ],
+     "mark": "traced"
+    }
+   ],
+   "agree": {
+    "text": "One reader of one text.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "differ": {
+    "text": "Not applicable.",
+    "acts": [],
+    "mark": "traced"
+   },
+   "lean": {
+    "kind": "keep one",
+    "text": "Not Money's by its own words: shelf.mjs follows its text to Agreements, and Money keeps a pointer for a deposit held under escrow.",
+    "acts": [
+     {
+      "cited": "8ff8ac74",
+      "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+      "kind": "act"
+     },
+     {
+      "cited": "e5d774d2",
+      "full": "e5d774d2e9d60e9000d5a7ff53de5fba070c9e9b2042c4a3b7797b4b10b2052c",
+      "kind": "act"
+     }
+    ],
+    "by": "DubPay's (proposed)"
+   },
+   "namedSignersAndBuyerByAssent": {
+    "turns": true,
+    "text": "The borrower is a role filled by buyer by assent; the listing is in force by named signers.",
+    "ifDefault": "If both become defaults: a listing and a loan are checked by the kit with no cMIP.",
+    "ifNot": "If not: the shelf names both cMIPs and the kit answers \"unchecked\" (e1975bda).",
+    "acts": [
+     {
+      "cited": "8ff8ac74",
+      "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+      "kind": "act"
+     },
+     {
+      "cited": "e1975bda",
+      "full": "e1975bda32e5ef828ac99b510dd5a483f4c16f8acd2c1ada8f936a354d5032d4",
+      "kind": "act"
+     }
+    ]
+   }
+  }
+ ],
+ "seams": [
+  {
+   "problem": "M1",
+   "with": "DubLaw",
+   "what": "The division itself is shower work's; the deal's parameters (section 6) were settled by seam act and a hosts' ruling, not in the text.",
+   "acts": [
+    {
+     "cited": "393f664c",
+     "full": "393f664cbc848318d502b08381aea08415795370be1f033a031256086bfd829e",
+     "kind": "act"
+    },
+    {
+     "cited": "ede89994",
+     "full": "ede89994e42ff01e00ef40d59e1904bbea6b18fb3725a7bc1e1b175911bb6048",
+     "kind": "act"
+    },
+    {
+     "cited": "b9e43db4",
+     "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M2",
+   "with": "DubLaw",
+   "what": "A spot in an offer's parties, filled by a buyer's assent: DubLaw placed both spots in Agreements 1 (when Terms are in force, who signs).",
+   "acts": [
+    {
+     "cited": "a0108c37",
+     "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+     "kind": "act"
+    },
+    {
+     "cited": "b7fca8d1",
+     "full": "b7fca8d1207a3c8cad9b2202c813093c284571966aa2353857891c142f7802be",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M3",
+   "with": "DubWeb",
+   "what": "Who may read a full report (public flow's readers, the commitment): what people see.",
+   "acts": [
+    {
+     "cited": "b9e43db4",
+     "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M4",
+   "with": "DubLaw",
+   "what": "A disputed pot line may go to an arbiter under DubLaw's award.",
+   "acts": [
+    {
+     "cited": "73bece9f",
+     "full": "73bece9f9228c5b2c4dc8ae3944d0223b8cb7a342ba0957ce2bad97d9acddf98",
+     "kind": "act"
+    },
+    {
+     "cited": "5102247f",
+     "full": "5102247f6d02d22337dc580bd79ec7bb736fd75374257908338fd44f05bb387a",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M4",
+   "with": "DubWeb",
+   "what": "Open books say which tool for which purse; a pot and a purse shown in the open meet there.",
+   "acts": [
+    {
+     "cited": "ae14b26f",
+     "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M6",
+   "with": "DubLaw",
+   "what": "A held sum released on signed conditions: money decision, the escrow's release and the arbiter's award.",
+   "acts": [
+    {
+     "cited": "f2970dcc",
+     "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+     "kind": "act"
+    },
+    {
+     "cited": "5102247f",
+     "full": "5102247f6d02d22337dc580bd79ec7bb736fd75374257908338fd44f05bb387a",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M7",
+   "with": "DubLaw",
+   "what": "Circles are Terms for people (consent, joining, disputes by three members).",
+   "acts": [
+    {
+     "cited": "64cd7830",
+     "full": "64cd7830b7101a4de85f93a16a8780820504f503e535443e877fcfbdfdb3666b",
+     "kind": "act"
+    },
+    {
+     "cited": "104dcc6d",
+     "full": "104dcc6d8f33941435ddafeb2d1722d0618b2d36143289a7851ecb489ff1d1e5",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M7",
+   "with": "DubWeb",
+   "what": "Hours of care was placed in open books by DubWeb; its time limit rests on a place's anchors (records and time).",
+   "acts": [
+    {
+     "cited": "6b0cc411",
+     "full": "6b0cc4110bc7f573af524a740b098fb58bcf9ce1fd1e45ceb58375afc1c4f333",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M8",
+   "with": "DubLaw",
+   "what": "Contests, the arbiter's award, deposits under Terms (the room let), the delivery receipt.",
+   "acts": [
+    {
+     "cited": "ca9d95cd",
+     "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+     "kind": "act"
+    },
+    {
+     "cited": "9f1911e7",
+     "full": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+     "kind": "act"
+    },
+    {
+     "cited": "fa31564e",
+     "full": "fa31564ea689b5bd346c6fcf69286c3236744cf6470b690865c1d8ed93c2e109",
+     "kind": "act"
+    },
+    {
+     "cited": "c96e1cea",
+     "full": "c96e1cea427bba04dac5c533b8a4be518c3c2c69b3f6e786c9b2bbe4606c8f37",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M9",
+   "with": "DubWeb",
+   "what": "Homes and the way out: the bond's promises (notice, receipts, nothing lost, closure by the book).",
+   "acts": [
+    {
+     "cited": "9cbdffb3",
+     "full": "9cbdffb3945332ef182ac68c22417d439eec6f14ba81b4d44f5b2b16b06d1160",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M10",
+   "with": "DubWeb",
+   "what": "Open books 2a and the two clocks (place and anchor): records and time.",
+   "acts": [
+    {
+     "cited": "ecf9afc4",
+     "full": "ecf9afc498fc6d68573983111a3a2ba22e9b06277560825e2c178cffd602e862",
+     "kind": "act"
+    },
+    {
+     "cited": "ae14b26f",
+     "full": "ae14b26f688541fa4898b2a77f308b6211d2339ceea9f94a15dd2d1ac7223863",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M11",
+   "with": "DubWeb",
+   "what": "What a buyer is seen doing: the timing and size of sealed containers (L1).",
+   "acts": [
+    {
+     "cited": "beb3fdad",
+     "full": "beb3fdaddf7b367bc063bc518b656a37a1ca45cb7b265bfc91484b6238a9a80d",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M12",
+   "with": "DubLaw",
+   "what": "Rent under a let, in plain words: the room let is DubLaw's.",
+   "acts": [
+    {
+     "cited": "15d03f0c",
+     "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+     "kind": "act"
+    },
+    {
+     "cited": "9f1911e7",
+     "full": "9f1911e7a35f91b8895384d11ec8610f30c987a2039c12d7cdaf5360e91655c6",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "M13",
+   "with": "DubWeb",
+   "what": "Where a record lives after a service stops, and how a person carries their own out (line 6).",
+   "acts": [
+    {
+     "cited": "ff9e88fb",
+     "full": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "pointer",
+   "with": "DubWeb",
+   "what": "Proven claim (Web: record and time), with a pointer from Money 4.",
+   "acts": [
+    {
+     "cited": "de67b513",
+     "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+     "kind": "act"
+    }
+   ]
+  },
+  {
+   "problem": "pointer",
+   "with": "DubLaw",
+   "what": "The lending shelf (Agreements 4), with a pointer from Money 5 (loans and returns).",
+   "acts": [
+    {
+     "cited": "8ff8ac74",
+     "full": "8ff8ac743b751f6fc963334d3fdf0b1da3da926429c6076bca0ab7b4fd1869a8",
+     "kind": "act"
+    }
+   ]
+  }
+ ],
+ "morLead": [
+  {
+   "text": "A payment naming a version that is no longer in force is still divided by it (G13.1): no cMIP can stop a replaced service taking it. The straight split leaves it to the core (section 8, W5); the escrow refunds such a payment at once (U2); Hop's split takes no fee on it.",
+   "acts": [
+    {
+     "cited": "b9e43db4",
+     "full": "b9e43db473bdf8b7a04c9c94a17034bd5ff4de960eb209e24c726ec3eb2ccf39",
+     "kind": "act"
+    },
+    {
+     "cited": "96d5fc8e",
+     "full": "96d5fc8e4c8d1ab3aec2c0c605aea0298dc4857d4b3ce63fa9b0866e056f60e2",
+     "kind": "act"
+    },
+    {
+     "cited": "ca9d95cd",
+     "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+     "kind": "act"
+    },
+    {
+     "cited": "86011ca3",
+     "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "No settlement act: Money's side of draft 25 (\"the same payment\", the order of settlements) is undefined; spots stay unchecked and the escrow stands in a Lightning payment hash.",
+   "acts": [
+    {
+     "cited": "a0108c37",
+     "full": "a0108c37f478ea72c61ab6d539e3dbd54c317ec4f6ce3c8e38293f886057087c",
+     "kind": "act"
+    },
+    {
+     "cited": "ca9d95cd",
+     "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "Who paid: a preimage proves knowledge, not identity. Said by the period payment, Proven claim and the escrow (which refuses to pay whoever shows a preimage).",
+   "acts": [
+    {
+     "cited": "15d03f0c",
+     "full": "15d03f0c81e9cbb2afaa75a1821b6d678c5cb5e6e1adaaf7b8ee23ae6b41e052",
+     "kind": "act"
+    },
+    {
+     "cited": "de67b513",
+     "full": "de67b5136ee47c48fbf9e803bb512d5e08546d47096eae0b8c2165416234009c",
+     "kind": "act"
+    },
+    {
+     "cited": "ca9d95cd",
+     "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "A leg report shows one leg (G11.6): a payer-checkable commitment of membership in the report block would let any owner check what came in; and whether one report may cover several payments is open.",
+   "acts": [
+    {
+     "cited": "86011ca3",
+     "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+     "kind": "act"
+    },
+    {
+     "cited": "ca9d95cd",
+     "full": "ca9d95cd25132e1bcae1759f0ab70029227ffc0c0aa2db0faa5af9d0aabe3ca6",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "A pool: what a leg report names from a pool is open in draft 25 (P6), so Hop's split keeps none.",
+   "acts": [
+    {
+     "cited": "86011ca3",
+     "full": "86011ca3cba124c3512957460d60e028eaa63f19a59e557b43d6bdd188edaa5b",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "A decision to pay and the payment are not linked in the grammar: \"the grammar never sees the payment, only the decision\"; paying twice is invisible to it.",
+   "acts": [
+    {
+     "cited": "f2970dcc",
+     "full": "f2970dccc1b61b87d3ec41980deabf9c9b20e7351202bb33336fa1efb2159098",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "A debt cannot follow an identity that was taken: \"only the debtor signing again moves the debt\". This rests on the vouching case, which was not tested (rule 2).",
+   "acts": [
+    {
+     "cited": "ff9e88fb",
+     "full": "ff9e88fb0e986630a5dae21bf7511f223f23ca3c09fdd559c7edc8b7d88f7c01",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  },
+  {
+   "text": "A buyer's assent proves an assent, never a payment (Pointer's finding, ruled; Edubba 12 prints it).",
+   "acts": [
+    {
+     "cited": "14b01383",
+     "full": "14b01383b748c67a96349978a7398967f3c82cf02799b63d36d4d7d8d3f4c639",
+     "kind": "act"
+    },
+    {
+     "cited": "4c59cb1f",
+     "full": "4c59cb1f69066da800f6ef8bbcb637d2dc51373c654811f8e55a10ebc04de30a",
+     "kind": "act"
+    }
+   ],
+   "mark": "traced"
+  }
+ ],
+ "top": [
+  "M1",
+  "M4",
+  "M8"
+ ],
+ "missing": []
+}
