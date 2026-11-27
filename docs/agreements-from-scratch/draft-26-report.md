@@ -1,18 +1,32 @@
-# Agreements, draft 26: the report, after wave five
+# Agreements, draft 26: the report, after wave five and P5
 
-*The scribe's session P3, 27 November 2026, to the MOR lead and Nobody, allegedly; rewritten whole in N1's shape. A record of work, not a decision: nothing in it is chosen. Marks: TRACED (to a rule or a ledger entry), COUNTED (by a script, named in `draft-26-trace.md` under "P3"), INFERRED (the scribe's reading). Draft 26 is not merged and not LATEST; draft 25, encoding 2 and `spec/README.md` are untouched.*
+*The scribe's session P3, 27 November 2026, to the MOR lead and Nobody, allegedly; rewritten whole in N1's shape; brought up to date by the scribe's session P5, the same evening, which adds the first section and marks what it changed below. A record of work, not a decision: nothing in it is chosen. Marks: TRACED (to a rule or a ledger entry), COUNTED (by a script, named in `draft-26-trace.md` under "P3" and "P5"), INFERRED (the scribe's reading). Draft 26 is not merged and not LATEST; draft 25, encoding 2 and `spec/README.md` are untouched.*
 
 **The wish** (Nobody, allegedly, 26 November, 16:46): "We need to change the current wish to updating the core after the findings". On the order (27 November, 14:53): "We finish this rewrite of agreements, then we turn our attention to money, and after that we’ll tackle development."
 
+## What P5 changed
+
+**In plain words.** He said that an update the keeper never showed is no update, that a dead keeper leaves the agreement where it stood and what its parties do next is a new agreement, and that no rule is written for a case the other rules already settle. So the way out by the parties' own acts, keeper or not, is gone again. Where Terms name keepers, the keepers order every act; where they name none, the acts naming one another do. An agreement whose keepers fall silent stays as they left it, and a buyer's filling under it stands as they showed it. Draft 26, encoding 3 and the companion say so, partly on the lead's readings of 22:45, to check.
+
+**His entries** (TRACED, each read whole in `docs/decisions.md` on main; his words as the ledger has them; each "Arrived at" line is the lead's, to check):
+
+1. **An update the keeper never showed is no update** (27 November, 22:27–22:30): "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper." Rules, with the lead's 22:45, 1: §3.3 **Gate** and **Update**, 5.5.1(a), 5.5.4, 5.5.7(a), 5.12.2 (P5-3, P5-5, P5-11, P5-14, P5-18, P5-25, P5-27).
+2. **A dead keeper: the agreement is dead; what follows is a new act** (22:36): "There is no update. It’s a new act. If you always think about it as a new act then it’s easier to solve these ones. The act is found at the tip of its chain, and it points to a keeper, and the keeper is dead. Angreement is dead. So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage, but the truth is, every single time, it’s a new act. Disputes, races… that’s where it’s a fork and rules have to settle." Rules, with the lead's 22:45, 3 and 4: §1, 5.8.3, 5.10.6 (P5-2, P5-20, P5-23).
+3. **No rule for an exception logic covers** (22:37–22:39): "They didn’t skip it. They just created a new act because the previous one was a dead end no? Are you creating rules for exceptions that are covered by logic?" Rules: the pin one rule again, §3.3 **Pin**, 5.4.1, 5.5.1(b), 5.5.3, 5.5.5(d), 5.8.4, 5.13.3 (P5-4, P5-9, P5-10, P5-12, P5-13, P5-17, P5-21, P5-22, P5-26); with the lead's 22:45, 2, 5.5.4(a) (P5-15, P5-16).
+
+Also, on the lead's answers of 22:30 that still stand: 1, §3.2 **Unknown party**, §3.3 **Apply**, 5.5.7(f), 5.10.6, 5.10.8 (P5-6, P5-7, P5-19, P5-23, P5-24); 2, 5.1.2 (P5-8); 4, 5.4.1, checked, no change. Mechanical: draft 26's head names draft 25's branch (P5-1). COUNTED: 27 edits to draft 26; 26 to the companion's text, 18 table rows of its section 9, and five scenarios rewritten in part (8.28, 8.30, 8.31, 8.32, 8.36); 5 to encoding 3 and the hash (the trace, P5).
+
 ## What wave five changed
 
-**In plain words.** Three sessions carried this evening into the rules. A buyer's yes gives nobody a power over her. Known parties and unknown parties are two classes with two sets of rules. Publishing the Terms is its signer's yes. An update every known party signs, each after the other, is ordered by their own acts, keeper or not; any other update, two of three included, waits on every keeper named; a dead keeper is left only by a new version every known party signs. Draft 26 now says so, partly on the lead's readings, to check. The lead's readings of the last open questions are written into the rules they touch, each listed below for him to see. The bytes and the companion follow, and the three files were checked again as one.
+*As P3 wrote it; where P5 changed a rule below, it is marked "(P5)".*
+
+**In plain words.** Three sessions carried this evening into the rules. A buyer's yes gives nobody a power over her. Known parties and unknown parties are two classes with two sets of rules. Publishing the Terms is its signer's yes. An update every known party signs, each after the other, is ordered by their own acts, keeper or not; any other update, two of three included, waits on every keeper named; a dead keeper is left only by a new version every known party signs (P5: withdrawn after his 22:36 and 22:39; above). Draft 26 then said so, partly on the lead's readings, to check. The lead's readings of the last open questions are written into the rules they touch, each listed below for him to see. The bytes and the companion follow, and the three files were checked again as one.
 
 **His words of the evening**, each exchange by the scribe's short name, what it arrived at to check (TRACED, each to its entry in `docs/decisions.md` on main, read whole; his words as the ledger has them):
 
 1. **A filling gives no power** (18:39–18:47): "Yup, this should not happen. Not sure I caught all the details though"; "Buona did they build it in agreements?"; corrected: "“that fills an unknown party spot”". Rules: §3.2 **Power** and **Unknown party**, 5.4.3, 5.6.1(b), (c), 5.6.2, 5.6.3, 5.10.6, 5.10.7 (P1).
 2. **Two classes**, in the same exchange (18:47): "It’s seems important to really make a point that these two are not the same class or IDs and are not bound by the same rules." Rules: §0, §3.2 **Two classes**, now with the rule beside each item (P1, P3-33).
-3. **The pin in two halves**: "A dead keeper: an update every needed signer signs needs no keeper" (18:44–18:51): "A dead keeper forces a new version of the agreement, no?"; "Sounds good"; read again in "A dead keeper: two of three cannot leave it" (21:29–21:42): "Keeper is dead. That version of the agreement is dead. For the agreement to be valid, the keeper is indeed needed to verify the agreement. It’s not “act exists” as a condition, it’s “act exists @“. Condition is not met, agreement is dead. What can save them? All three signature that sign a clone to the agreement to a new keeper." Rules: §1, §3.3 **Pin**, 5.4.1, 5.5.1(b), 5.5.3, 5.5.5(d), 5.8.3, 5.8.4, 5.10.2, 5.13.3 (P1, P3-9 to P3-18).
+3. **The pin in two halves**: "A dead keeper: an update every needed signer signs needs no keeper" (18:44–18:51): "A dead keeper forces a new version of the agreement, no?"; "Sounds good"; read again in "A dead keeper: two of three cannot leave it" (21:29–21:42): "Keeper is dead. That version of the agreement is dead. For the agreement to be valid, the keeper is indeed needed to verify the agreement. It’s not “act exists” as a condition, it’s “act exists @“. Condition is not met, agreement is dead. What can save them? All three signature that sign a clone to the agreement to a new keeper." Rules: §1, §3.3 **Pin**, 5.4.1, 5.5.1(b), 5.5.3, 5.5.5(d), 5.8.3, 5.8.4, 5.10.2, 5.13.3 (P1, P3-9 to P3-18). (P5: the two halves taken out after his 22:36 and 22:39, the pin one rule again; above.)
 4. **Publishing the Terms is the publisher's assent** (20:49–20:50): "Yes, I don’t see the need to have her sign twice". Rules: §3.1 **Terms** and **Assent**, §3.2 **Author**, §4.3 **An author's first act**, 5.4.1, 5.5.7(e) (P3-1 to P3-6); encoding 3's E13 and E17. Fable 1.1: his 20:50 answers it, as the lead reads it; to check.
 
 **The lead's readings carried** (COUNTED): of the fifty rows, 39 by P1, 4 by P2 into encoding 3, 7 with no text change; of the seven of 20:41, all seven, as the batch of 21:45 and his 21:42 correct them; the codemeister's two; of the twelve of 20:55, nine into the text, three (11, 13, 14) with no change, as the note says; of the batch of 21:45, all five. Rows that could not be carried: none whole; what a carried row left open is listed below. Each reading P3 carried is in the table "The MOR lead's readings, for him to check".
@@ -21,13 +35,13 @@
 
 ## In plain words
 
-*As draft 26 now says, partly on the lead's readings (below), to check.*
+*As draft 26 now says, partly on the lead's readings (below), to check; item 5 rewritten by P5.*
 
 1. Draft 26 is the rules of Agreements rewritten after the round's findings: a new file beside draft 25, which stays as it is.
 2. It is a grammar, not a rule book: it says how signed acts are read, and leaves what people agree to cMIPs in eight sockets.
 3. Two people write the words (a Text act) and Terms that name them; the one who publishes the Terms has said yes by publishing; the other says yes in an act of their own; the Terms count once their order is shown.
 4. A change is an update: allowed by the old version's own condition (the gate), and ordered after it (the pin).
-5. Who orders it: every keeper the Terms name, always; and, for an update every known party signs one after the other, their own acts too. A dead keeper is left only by a new version every known party signs.
+5. Who orders it: where the Terms name keepers, those keepers, for every act, whoever signs it; where they name none, the acts naming one another. An update the keepers never show is no update. If the keepers fall silent, the agreement stays as they left it, and what its parties do next is a new agreement, which may name the old one; a buyer's filling under the old one stands as the keepers showed it.
 6. Two allowed changes that nothing orders are a fork: both stop, the old version stays, until the agreement resolves it its own way.
 7. Someone who joins later through a role keeps exactly what the version they signed gave, on that version's clock; no update reaches them, and nobody can act for them but under a power they gave in a Statement of their own.
 8. An act signed for someone else under a power binds the one who gave the power, not the one who signed.
@@ -38,31 +52,35 @@ COUNTED (`wc -lc`, the final files on `claude/draft-26-outline-vbtvu7`):
 
 | File | Lines | Bytes |
 |---|---|---|
-| `draft-26.md` (the hashed text) | 433 | 155,996 |
-| `encoding-3.md` (its bytes) | 500 | 68,020 |
-| `draft-26-companion.md` | 2257 | 463,742 |
-| `draft-26-trace.md` | 1840 | 402,087 |
-| `draft-26-report.md` (this file) | 199 | 27,127 |
+| `draft-26.md` (the hashed text) | 433 | 155,679 |
+| `encoding-3.md` (its bytes) | 508 | 69,028 |
+| `draft-26-companion.md` | 2271 | 478,018 |
+| `draft-26-trace.md` | 1931 | 433,547 |
+| `draft-26-report.md` (this file) | 242 | 39,209 |
 
 **The hashes** of the final `draft-26.md`, computed last, after every other edit of it:
-- E2's tagged hash, `SPEC_DRAFT_26`: `60c0b84ed81a48e9e869bb6d0d813358f92019faa48a97115400736030bc9f12`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives N1's `04bae25c…` on the file as N1 left it).
-- The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `c770b32460a1390c08307d4858a9e07d2d700f309ff18459396b031a98ffb75c`.
+- E2's tagged hash, `SPEC_DRAFT_26`: `783f68213acd058847117d321435cf07cf83134d21594a52b2fe5edec776e4b5`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives P3's `60c0b84e…` on the file as P3 left it).
+- The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `a0ee4064ac2ee1567ac2b404c5c3c26edac46c55c8705f2e28a031c7d0876329`.
 
-The first names the text, as encoding 3's E2 has it. Both are written, each named, in encoding 3's E2 and the companion's head. N1's values (`04bae25c…`, `09ba9ce5…`) name the text before wave five.
+Computed by P5, after every other edit of the file. The first names the text, as encoding 3's E2 has it. Both are written, each named, in encoding 3's E2 and the companion's head. P3's values (`60c0b84e…`, `c770b324…`) name the text before P5; N1's (`04bae25c…`, `09ba9ce5…`) the text before wave five.
 
 ## The counts
 
 COUNTED unless marked.
-- **Rules of draft 26**: 68 numbered and 33 lettered clauses, 32 headings; 8 tasks, 7 modules, 6 open values (§7). Unchanged by wave five.
+- **Rules of draft 26**: 68 numbered and 33 lettered clauses, 32 headings; 8 tasks, 7 modules, 6 open values (§7). Unchanged by wave five and by P5.
 - **Words defined**: 94 bold terms in §3's entry heads, 93 distinct; none new in P3.
-- **References**: 965 in draft 26, 292 in encoding 3, 202 in the companion's sections 9 and 10; none bad.
+- **References**: 965 in draft 26, 295 in encoding 3 (292 before P5), 202 in the companion's sections 9 and 10; none bad.
 - **Quotations**: of his words, 162 spans after "He:" in the four files as P3 found them, all in the ledger word for word; of draft 26, 135 in the companion and 34 in encoding 3 that stand in the text now, and 4 in the companion that quote an older draft 26 on purpose, each labelled.
-- **Edits of wave five**: P1, 62 to draft 26; P2, 30 to encoding 3 and the companion's sections; P3, 47 to draft 26, 15 to encoding 3, 33 and 22 table rows to the companion.
-- **Scenarios**: 36 (8.1 to 8.36); vectors named from 8.22 onward: 8.22 to 8.36, of which 8.36 waits (below).
+- **Edits of wave five**: P1, 62 to draft 26; P2, 30 to encoding 3 and the companion's sections; P3, 47 to draft 26, 15 to encoding 3, 33 and 22 table rows to the companion; P5, 27 to draft 26, 5 to encoding 3, 26 and 18 table rows to the companion, with five scenarios rewritten in part.
+- **Scenarios**: 36 (8.1 to 8.36); vectors named from 8.22 onward: 8.22 to 8.36; after P5, 8.28's fourth waits on encoding 3's item 14 (below).
 
 ## What the check found and fixed
 
-Eight checks, by script; each script and result is in the trace under P3.
+**P5's check** (seven checks, by script, on the touched rules and their quotations; each in the trace under P5). References: none bad in draft 26 (965) and encoding 3 (295); the companion's 8 hits are P3's, each named on purpose. Words: nothing defined twice; no word left that only the dropped half used; no answer word and no state word added. Knots: every hit read in draft 26 (37), encoding 3 (7) and the companion's sections 9 and 10 (30): none pins by knots where keepers are named. Only rules in §4 to §7. Quotations: encoding 3 holds none of a rule P5 changed; the companion's four older ones are each labelled as P3's words; one fixed (8.29's §3.2). His words: 180 spans, all in the ledger but P3's seven marked shortenings; fixed, "Carla’s" in 8.28. Nothing forbidden.
+
+**P5's stranger** (one subagent, draft 26 alone). (1) All three sign under a live keeper that has not shown it: **not shown** as a replacement, never **not valid**, per keeper, the keeper named; the order of their signing does not help (5.5.1(a), 5.5.5(c), 5.5.7(e), 5.8.3, 5.8.4), 85%. (2) Two of three, the keeper silent before showing it, then a new first act all three sign: the two's update is no update and makes no fork (5.5.1(a)), 70%; the old agreement stays where its keeper left it and is not ended (5.8.3, 5.5.6), 85%; the new act is a new agreement, no update and no fork, in force once its own keeper shows its assents (5.4.1, 5.8.3), 80%; the buyer's filling stands as the keeper showed it, nothing reaching it (5.10.6), 80%. Least understood: 5.5.1(a)'s "no update of that version" (fixed: "while they do not show it", P5-27); 5.5.4(a)'s "Each such choice is read whole" and 5.12.2's "signed by all the parties that needed to sign it" (listed, as P3 listed them). It also found that the new act cannot name the old root in `agreement` (§4.2), and asked whether a named condition's answer is passed on (both listed below).
+
+*P3's check, as P3 wrote it:* eight checks, by script; each script and result is in the trace under P3.
 
 1. **References.** None bad in the three files.
 2. **Words.** Fixed: §3.2 **Two classes** bolded two words it says are "defined below" (unbolded); encoding 3's "powers: [kind, rule]" and "a role of kind future" (now "sort", N1's rename). Listed: "agreement" twice in §3's heads (as **Party**'s third way and as **Agreement**); **grantor** (5.6.6) and **proof** (5.10.2) defined where they stand, not in §3; **Assent** now also a Terms act; "a filling" beside "an unknown party's filling"; "Control" in §1's list of operations.
@@ -81,10 +99,10 @@ One line each; nothing chosen. Where a reading of the lead's now answers a line,
 
 **P1's thirteen lines**
 1. The rules of each class (§3.2 **Two classes**): the lead's line, now with the rule beside each item (reading 12); to check.
-2. A known party's own filling: 5.10.7 no longer stands for it (reading 7); 5.10.6, 5.10.8, 5.5.7(f) and §3.3 **Apply** still say "a filling" (the stranger's case 3).
-3. Which signers an update needs, and "each shown after the other": answered by his 21:42 and the lead's answer 1 of 21:45; to check.
-4. A first version every party signs, pinned by knots whatever keepers it names: reading 2, written as "every known party"; to check.
-5. Lateness by knots with keepers named: reading 3; to check.
+2. A known party's own filling: 5.10.7 no longer stands for it (reading 7); 5.10.6, 5.10.8, 5.5.7(f) and §3.3 **Apply** now say "an unknown party's filling", and §3.2 that an update reaches a known party's filling as it reaches that party (P5, the lead's answer 1 of 22:30; to check).
+3. Which signers an update needs, and "each shown after the other": answered by his 21:42 and the lead's answer 1 of 21:45; "each shown after the other" answered by his 22:36 and 22:39 (the pin by knots where keepers are named is gone; the lead's reading, to check).
+4. A first version every party signs, pinned by knots whatever keepers it names: answered by his 22:36 and 22:39 (reading 2 withdrawn, 5.4.1 pins by the keepers; the lead's reading, to check).
+5. Lateness by knots with keepers named: answered by his 22:36 and 22:39 (reading 3 withdrawn; the lead's 22:45, 2: knots do not show an update late, and still expose a keeper; to check).
 6. Fable 1.1: his 20:50 bears on it (the lead's reading); to check.
 7. A Terms act signed by one who is no party: invalid, reading 6; to check.
 8. Which act gives a power "in an act of her own": reading 5 and answer 4 of 21:45 (a Statement of a K7 kind), the lead's, to check; which field names the grantee is not said (the stranger).
@@ -94,30 +112,36 @@ One line each; nothing chosen. Where a reading of the lead's now answers a line,
 12. 5.6.1(b)'s "in force" beside 5.6.4: reading 8; to check.
 13. What shows a signer's fork came after the update: reading 9; to check.
 
-**P2's line**: under two of three, may the two leave a keeper without it: his 21:42 bears on it ("Condition is not met, agreement is dead"); the lead reads it as no; to check.
+**P2's line**: under two of three, may the two leave a keeper without it: his 21:42 bears on it ("Condition is not met, agreement is dead"); answered by his 22:36 and 22:39: no act leaves a keeper as an update; what the parties do next is a new agreement (5.8.3; the lead's reading, to check).
+
+**P5's lines**
+- The lead's 22:45, 4, for him to check: an unknown party's filling under an agreement whose keepers no longer show its acts "stands as the keeper showed it before it died, bound by her version for as long as its words say, recorded and checkable; nothing reaches it, the new agreement included" (written in 5.10.6, P5-23).
+- His 21:42, "All three signature that sign a clone to the agreement to a new keeper", as the lead reads it after 22:36: a new agreement, a new first act naming the old one, not a new version of it (5.8.3); for him to check.
+- From the stranger: where Terms name a keeper and a named condition counts signatures, what a verifier passes on for an update whose assents the keeper does not show: the cMIP's answer on none counted (likely not valid, per keeper, 5.5.7(c)), or only not shown, as the default (5.5.5(c)); the text does not say (the lead's question 1, below).
+- From the stranger: which field of the new first act names the old agreement; not `agreement`, which a first act cannot carry (§4.2); encoding 3's item 14, for the codemeister.
 
 **N1's list, where no reading reached**: the brief's 7 (how a fork that is not of a line is resolved in bytes), 8 (which acts compete "to change the same state"), 11 (how long a filling binds when its words state no term), 12 ("the anchoring of the purchase"; a filling that is not bought; the stranger again), 13 (what a verifier shows of an agreement dissolved while a filling's version binds), 29 (what the known parties may still do), 30 ("Terms state their anchors" for all Terms), 34(a) (how Terms name their clock), 35 (the two copies of "A condition in time with no anchor is refused"); the lead's 09:47 sentence on unreadable tips; **Rival** against 5.12.8's heading; **Knot** MOR-wide, not said in §3.4; **Vow**, no test from an offer; a payment that "holds" K6; case 8 not checkable from bytes; a keeper's identifier.
 
 **Found in wave five**
-- A valid update two of three sign, unpinned behind a dead keeper, beside a new version every known party signs: by 5.5.1(b) as written they read as a fork (INFERRED; the stranger's case 2); whether it must be resolved first is his question below.
-- "Naming a new keeper": whether a keeper the old version did not name is asked, or a version naming none leaves it too.
+- A valid update two of three sign, unpinned behind a dead keeper, beside a new version every known party signs: by 5.5.1(b) as written they read as a fork (INFERRED; the stranger's case 2); whether it must be resolved first is his question below. *Answered* by his 22:30 ("An update the keeper never showed is no update"): no update, no fork (5.5.1(a), P5-11; the lead's line, to check).
+- "Naming a new keeper": whether a keeper the old version did not name is asked, or a version naming none leaves it too. *No longer asked*: the way out by a new version is withdrawn (his 22:36 and 22:39); the lead's 22:30, 3 on it is withdrawn too.
 - 5.6.3's "the grantor (5.6.6), who gave the power" against 5.6.6's "the one in whose name it was made", which come apart where a known party gave the power (P2's blind reader).
 - 5.5.5(a) and 5.5.7(e)'s "never a signer who fills a role", for a known party who fills its own spot (P2's blind reader).
 - 5.5.4(a)'s "Each such choice is read whole" and 5.12.2's "signed by all the parties that needed to sign it" (the stranger).
-- `draft-25.md`, named in the head as beside it, is not on this branch or on main; the pull request names its branch, `claude/agreements-clean-1-hahuwn`.
+- `draft-25.md`, named in the head as beside it, is not on this branch or on main; the pull request names its branch, `claude/agreements-clean-1-hahuwn`. *Fixed* (P5-1, the lead's mechanical find of 22:30): the head names the branch and pull request 183.
 
 ## The MOR lead's readings, for him to check
 
-Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, one line each, with the rule it changed; each is the lead's reading, not a decision of Nobody, allegedly; two rest on his words, as marked. The notes are `docs/lead/notes/2026-11-27-readings-for-p2.md` on main.
+Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, and of 22:30 and 22:45 carried by P5, one line each, with the rule it changed; each is the lead's reading, not a decision of Nobody, allegedly; two rest on his words, as marked. The notes are `docs/lead/notes/2026-11-27-readings-for-p2.md` on main. Rows marked *Withdrawn* stay as the record; the entry that withdrew each is named.
 
 | Reading | What it made the text say | Rule (P3 row) |
 |---|---|---|
 | 20:41, 1, as 21:45's 1 corrects it | the signers an update needs for its gate are those the condition's cMIP (K4) requires; by default the known parties | 5.5.5, 5.5.7(d) (P3-7, P3-8) |
-| 20:41, 1, "each shown after"; 21:45, 2 | every keeper named pins any update; knots also pin one every known party signs, each one's act shown after every other's assent | 5.5.1(b), §3.3 **Pin**, 5.5.5(d), 5.8.3, 5.8.4 (P3-9 to P3-13) |
-| 21:45, 3, the lead's, resting on his 21:42 | any other update, two of three included, only by the keepers, or not shown; a dead keeper left only by a new version, naming a new keeper, every known party signs | 5.5.1(b), 5.8.3, §1 (P3-9, P3-12, P3-16) |
-| 21:45, on P2's "For P3" 8 and 9 | 5.13.3's "only they pin" brought to agree with 5.5.1(b) | 5.13.3 (P3-15) |
-| 20:41, 2 | a first version every known party signs is pinned by their knots whatever keepers it names | 5.4.1, 5.8.4 (P3-17, P3-18, P3-14) |
-| 20:41, 3 | with keepers named, knots still show an update late; a keeper vouches for the chaining only | 5.5.4(a), (c), 5.8.4 (P3-19 to P3-21, P3-13) |
+| 20:41, 1, "each shown after"; 21:45, 2 | every keeper named pins any update; knots also pin one every known party signs, each one's act shown after every other's assent. *Withdrawn* (its "pinned by knots" half), by his 22:36 and 22:39 and the lead's note of 22:45 | 5.5.1(b), §3.3 **Pin**, 5.5.5(d), 5.8.3, 5.8.4 (P3-9 to P3-13; taken out, P5) |
+| 21:45, 3, the lead's, resting on his 21:42 | any other update, two of three included, only by the keepers, or not shown; a dead keeper left only by a new version, naming a new keeper, every known party signs. *Withdrawn*, by his 22:36 and 22:39 (the lead's note of 22:45) | 5.5.1(b), 5.8.3, §1 (P3-9, P3-12, P3-16; taken out, P5) |
+| 21:45, on P2's "For P3" 8 and 9 | 5.13.3's "only they pin" brought to agree with 5.5.1(b). *Withdrawn* with the split it followed, by his 22:39 | 5.13.3 (P3-15; P5-26) |
+| 20:41, 2 | a first version every known party signs is pinned by their knots whatever keepers it names. *Withdrawn*, by his 22:36 and 22:39 (the lead's note of 22:45) | 5.4.1, 5.8.4 (P3-17, P3-18, P3-14; taken out, P5-9, P5-10, P5-22) |
+| 20:41, 3 | with keepers named, knots still show an update late; a keeper vouches for the chaining only. *Withdrawn*, by his 22:36 and 22:39 (the lead's note of 22:45) | 5.5.4(a), (c), 5.8.4 (P3-19 to P3-21, P3-13; P5-15, P5-16, P5-21) |
 | 20:41, 4, the lead's, resting on his 20:50 | the Terms act is its signer's assent; the others assent later | §3.1, §3.2, §4.3, 5.4.1, 5.5.7(e) (P3-1 to P3-6) |
 | 20:41, 5; 21:45, 4 | a holder gives a power only by a Statement in her own name, of a K7 kind, naming the grantee and the sort, read by K3 | 5.6.1(b), 5.10.7 (P3-22, P3-25) |
 | 20:41, 6; 21:45, 5 | Terms that carry `parties` and whose signer is no party they name as a signer are invalid | 5.3.1, §4.4 case 5 (P3-26, P3-27) |
@@ -134,6 +158,15 @@ Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, one line ea
 | 20:55, 18 | each sentence said once: the receiver 5.1.3's, the keepers 5.8.4's, the counter signature 5.4.5's | §4.2 `receiver`, 5.4.1, 5.5.3, 5.8.4, 5.4.4 (P3-38 to P3-42) |
 | 20:55, 19 | `in_force` in an update read only for who fills a role; counter signatures that "each name the other"; the contest's `terms` and `relies_on` | 5.4.2, 5.4.5, 5.11.9 (P3-43 to P3-45) |
 | 20:55, 11, 13, 14 | no change (the lead's): P1-1 stands; "kind" and "sort" stand | none |
+| 22:30, 1 (P3's batch of four) | a spot a known party fills is a known party's act, and an update reaches it as it reaches that party | §3.2 **Unknown party**, §3.3 **Apply**, 5.5.7(f), 5.10.6, 5.10.8 (P5-6, P5-7, P5-19, P5-23, P5-24) |
+| 22:30, 2 | where Terms give no power, an agreement's signing by every one of its signers is one act, and serves the pin as one act | 5.1.2 (P5-8) |
+| 22:30, 3 | a new version every known party signs may name any keeper, or none. *Withdrawn*, by his 22:36 and 22:39 (the lead's note of 22:45) | none |
+| 22:30, 4 | "every known party" in 5.4.1 | 5.4.1, checked: no change (the sentence it named went with P5-9) |
+| 22:33, the narrowing | the gate waits on the keepers only for an update not every known party signs. *Withdrawn*, by his 22:36 and 22:39 (the lead's note of 22:45) | none (P4 wrote nothing) |
+| 22:45, 1, resting on his 22:30 | with keepers named, the gate of every update counts only the assents every keeper shows; an update not shown so is no update, competes with nothing, makes no fork | §3.3 **Gate**, **Update**, 5.5.1(a), 5.5.4, 5.5.7(a), 5.12.2 (P5-3, P5-5, P5-11, P5-14, P5-18, P5-25, P5-27) |
+| 22:45, 2 | with keepers named, knots do not show an update late; they still expose a keeper whose record contradicts them | 5.5.4(a) (P5-15, P5-16); 5.5.4(c), 5.8.4 kept |
+| 22:45, 3 | a new first act MAY name an earlier agreement; no new field; which field is the codemeister's, nothing chosen | 5.8.3 (P5-20); encoding 3, section 11, item 14 |
+| 22:45, 4, resting on "Protect the unknown party"; for him to check | an unknown party's filling under an agreement its keepers left stands as they showed it; nothing reaches it, the new agreement included | 5.10.6 (P5-23) |
 
 **Questions for the MOR lead**, one batch, each with the scribe's lean (the scribe's reading, INFERRED, not a proposal):
 1. 5.10.6's last sentence, 5.10.8, 5.5.7(f) and §3.3 **Apply** say "a filling": does reading 7 reach them, so that an update reaches a known party's own filling? *Lean*: yes.
@@ -141,12 +174,22 @@ Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, one line ea
 3. "Naming a new keeper": is a new version naming only the surviving keeper, or none, a way out too? *Lean*: yes; the pin by knots asks nothing of the keepers it names.
 4. Reading 2's "every party", written "every known party" (5.4.1): right? *Lean*: yes.
 
+*Answered* by the lead's batch of 22:30: 1, yes (written, P5); 2, yes (written, P5-8); 3, the lead's reading, withdrawn at 22:45; 4, yes (checked, no change left to make).
+
+**P5's questions for the MOR lead**, one batch, each with the scribe's lean (INFERRED, not a proposal):
+1. With keepers named and a named condition that counts signatures, an update whose assents the keepers do not show: does the verifier pass on the cMIP's answer on none counted (5.5.7(c), likely **not valid**, per keeper), or answer only **not shown**, as for the default (5.5.5(c))? *Lean*: the cMIP's answer, per keeper, as 5.5.7(c) says, with **not shown** as in force; the text does not say which (the stranger).
+2. 5.5.5(d) still lets a live keeper show an update that names other keepers; the lead's line of 22:39 says "Parties who leave a keeper, dead or alive, make a new agreement". Does an update naming a new keeper, shown by the live one, still replace? *Lean*: yes; P5 wrote "no act gets past them as an update" (5.8.3) so as not to contradict 5.5.5(d).
+3. 21:45's answer 2 ("knots are a second way, for an update every known party signs"): withdrawn with the hatch, though the note of 22:45 names only 21:45's 3? *Lean*: yes.
+4. Should draft 26's §7 list "which field of a first act names an earlier agreement" beside encoding 3's item 14? *Lean*: yes, one line, once the lead says so; P5 added none.
+
 **For Nobody, allegedly**, one at a time, his:
-1. *His*: where two of three have signed a valid update that the dead keeper will never pin, and all three then sign a new version naming a new keeper, the two are a fork by the rules as written; must they first resolve it, or does the version all three sign stand? (The stranger's case 2.)
+1. *His*, *answered* by his 22:30 ("An update the keeper never showed is no update"): "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper." The lead's line, to check: no update, no fork. The question as P3 asked it: where two of three have signed a valid update that the dead keeper will never pin, and all three then sign a new version naming a new keeper, the two are a fork by the rules as written; must they first resolve it, or does the version all three sign stand? (The stranger's case 2.)
+
+P5 has no new question for him: the two lines marked for him above are to check.
 
 ## What waits on the codemeister
 
-Encoding 3's section 11, as P2 left it and P3 kept: open, 1 the set's label, 2 how a set's members are joined (and the empty set), 3 where the set's rule stands, 7 what a keeper's identifier is the hash of, 11 how a cMIP's declared needs are read for case 8, 13 whether the checker applies Text's own rules; read as the lead's, 4, 5, 6, 8, 10; 9, which the lead reads as met by 5.2.2, to check; 12 `SPEC_DRAFT_26`, computed again by P3, for him to check. Also `TEXT`'s values (E25). The vectors the scenarios name, none written: 8.22 to 8.26 (wave four); 8.27 to 8.29 (on his words of 18:39 to 18:51); 8.4's and 8.28's variants, 8.30 (**not shown**, per keeper, two of three, his 21:42); 8.31 to 8.35, writable on P3's text, which rests on the lead's readings, to check; 8.36 waiting on the lead's question 1; 8.14's set vectors waiting on items 1 and 2.
+Encoding 3's section 11, as P2 left it and P3 kept: open, 1 the set's label, 2 how a set's members are joined (and the empty set), 3 where the set's rule stands, 7 what a keeper's identifier is the hash of, 11 how a cMIP's declared needs are read for case 8, 13 whether the checker applies Text's own rules, 14 which field of a first act names an earlier agreement (P5, the lead's 22:45, 3); read as the lead's, 4, 5, 6, 8, 10; 9, which the lead reads as met by 5.2.2, to check; 12 `SPEC_DRAFT_26`, computed again by P3 and by P5, for him to check. Also `TEXT`'s values (E25). The vectors the scenarios name, none written: 8.22 to 8.26 (wave four); 8.27 to 8.29 (on his words of 18:39 to 18:51); 8.4's variant (**not shown**, per keeper, K2 named); 8.28's four, rewritten by P5 (the live keeper; the dead keeper, no update and no fork; the new first act W1, no update and no fork; the filling as the keeper showed it), the last waiting on encoding 3's item 14 for W1's field; 8.30 (**not shown** as a replacement, per keeper); 8.31 (**not shown**, per keeper); 8.32 (no update, no fork, per keeper; two variants); 8.33 to 8.35, writable on the text, which rests on the lead's readings, to check; 8.36, now writable (P5); 8.14's set vectors waiting on items 1 and 2.
 
 ## What draft 26 hands to other texts
 
@@ -196,4 +239,4 @@ All of 27 November, given to the scribe; each with the rules it shaped and the o
 - 09:16, on M2's rows: 6.4. 09:27, on M3's questions: 6.5. 09:47, on M4's rows: 6.6. 10:07, on M5's rows: 6.7.
 - 13:20, on M6's question: 6.8. The rows of the note the lead calls settled: 6.9. 14:33, on M7: 6.10. 14:59, on M8 and M9: 6.11. 15:34, on M10: 6.12.
 - Wave four: the lean on four words, and the five lines: 6.13.
-- The evening: the fifty rows, 6.14; 18:41, on "by default", 6.15; 20:41, 20:55 and 21:45, with his 20:50 and 21:42, 6.16.
+- The evening: the fifty rows, 6.14; 18:41, on "by default", 6.15; 20:41, 20:55 and 21:45, with his 20:50 and 21:42, 6.16; 22:30 and 22:45, with his 22:30, 22:36 and 22:39, 6.16, "After P3" (P5).

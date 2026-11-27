@@ -1,6 +1,6 @@
 # Agreements, from scratch: the encoding, third edition
 
-27 November 2026. Written by the scribe's session M8, from encoding 2 and draft 26; brought to draft 26 as the scribe's session P1 left it by the scribe's session P2 (wave five); and to draft 26 as the scribe's session P3 left it, by P3; for the MOR lead to take or change; not a decision. Where each change comes from is in `draft-26-trace.md`, under "M8", "P2" and "P3".
+27 November 2026. Written by the scribe's session M8, from encoding 2 and draft 26; brought to draft 26 as the scribe's session P1 left it by the scribe's session P2 (wave five); to draft 26 as the scribe's session P3 left it, by P3; and to draft 26 as the scribe's session P5 left it, by P5; for the MOR lead to take or change; not a decision. Where each change comes from is in `draft-26-trace.md`, under "M8", "P2", "P3" and "P5".
 
 ## In plain words
 
@@ -41,7 +41,7 @@ Draft 26 has three answers for an act that does not hold, and this text keeps th
 
 A spec hash is computed as the core computes a MIR's from its file (Development rule 26; `Spec::mir_file_hash` in the core library): `tagged_hash("MOR/spec", {0 => 4, 9 => text})`, where 4 is the kind of a MIR in Development's numbering, and `text` is the file's content with its final line break removed if it has one (only one; nothing else is removed), which must be canonical text. **[lead]**
 
-- `SPEC_DRAFT_26`: of `docs/agreements-from-scratch/draft-26.md` as the scribe's session P3 (wave five) left it on branch `claude/draft-26-outline-vbtvu7` (433 lines, 155,996 bytes): `60c0b84ed81a48e9e869bb6d0d813358f92019faa48a97115400736030bc9f12`, computed as this rule says, by the core library's `Spec::mir_file_hash` on the file. The plain sha256 of the file's bytes, which is not the spec hash, is `c770b32460a1390c08307d4858a9e07d2d700f309ff18459396b031a98ffb75c` (`sha256sum draft-26.md`). One changed byte of the file changes both. The values N1 gave (`04bae25c…` and `09ba9ce5…`) and M11's (`e9e5b683…` and `6ee29fc2…`) name the text before wave five, and no longer.
+- `SPEC_DRAFT_26`: of `docs/agreements-from-scratch/draft-26.md` as the scribe's session P5 (after wave five) left it on branch `claude/draft-26-outline-vbtvu7` (433 lines, 155,679 bytes): `783f68213acd058847117d321435cf07cf83134d21594a52b2fe5edec776e4b5`, computed as this rule says, by the core library's `Spec::mir_file_hash` on the file. The plain sha256 of the file's bytes, which is not the spec hash, is `a0ee4064ac2ee1567ac2b404c5c3c26edac46c55c8705f2e28a031c7d0876329` (`sha256sum draft-26.md`). One changed byte of the file changes both. The values P3 gave (`60c0b84e…` and `c770b324…`) name the text before P5, and no longer. The values N1 gave (`04bae25c…` and `09ba9ce5…`) and M11's (`e9e5b683…` and `6ee29fc2…`) name the text before wave five, and no longer.
 
 **Said aloud.** The hash is of the file **as published on its branch**. A writer uses the hash as given here, never one recomputed from a copy of their own: one changed byte in a copy is another specification. Acts written under a hash stay that text's, whatever is written later; a later draft is a new specification with a hash of its own, and nothing written under this one is updated. Encoding 2's hashes (draft 25's, `dd90f8af…`, and the report block's fourth proposal's, `7b65c60f…`) and encoding 1's name other specifications: an act under them is **not this encoding**.
 
@@ -437,8 +437,9 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 9. Whether a `words` act held without its key, or not held, gives a note or nothing. *Answered by draft 26's 5.2.2*: unchecked, with a note of what is lacking, each act named (E25).
 10. Which spec hashes are `TEXT`. *Read*: every Text draft, listed in E25; the values are the codemeister's to compute; after the change to Development the list goes (E25).
 11. How a checker reads a cMIP's declared needs from the cMIP's own published act (5.8.6), in the form Development fixes, and whether the checker or only the grammar verifier gives case 8. *Open: for the codemeister, who proposes, and for Nobody, allegedly.*
-12. `SPEC_DRAFT_26`: not a choice; computed by M11 once the text was final, again by N1 after wave four, and by P3 after wave five, and given in E2. *For the codemeister, who checks it.*
+12. `SPEC_DRAFT_26`: not a choice; computed by M11 once the text was final, again by N1 after wave four, by P3 after wave five, and by P5 after it, and given in E2. *For the codemeister, who checks it.*
 13. Whether the checker applies Text's own grammar rules to the act `body` names (E25, "A Text act invalid under Text's own grammar rules is no Text act here", 5.2.2). *Open: for the codemeister, who proposes.*
+14. Which field of a first act names an earlier agreement (draft 26, 5.8.3: "a new first act, which MAY name the earlier agreement, and is not an update of it and no fork with it"). Any fingerprint in any field is a knot (5.13.1); `agreement` (key 1) is carried exactly when `replaces` is (§4.2), so a first act does not carry it. *Open: for the codemeister, who proposes; nothing chosen* (the lead's 22:45, 3: "No new field").
 
 Items 4, 5, 6, 8 and 10 are read as the MOR lead's readings of 27 November evening (`docs/lead/notes/2026-11-27-draft-26-readings.md`, rows C36/C45/F14, C8/C35/C34 and C33/F15), and the empty keeper list as his answer 1 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`); each is the lead's reading, not a decision of Nobody, allegedly (the trace, P2).
 
@@ -498,3 +499,10 @@ Entry by entry; each is draft 26's, or follows from it; the wording is the scrib
 - **Section 4, item 4; section 9, step 7.4.** 5.3.1 quoted for the signer who is no party.
 - **Section 9, "One fault, one rule".** §4.4's case 2 quoted for the words note.
 - **Section 11.** Item 12: P3 named.
+
+**After wave five (the scribe's session P5), to draft 26 as P5 left it.** No byte changes.
+
+- **Head line.** P5 named.
+- **E2.** `SPEC_DRAFT_26` and the plain sha256 of draft 26 as P5 left it.
+- **Section 11.** Item 14, new and open: which field of a first act names an earlier agreement (the lead's 22:45, 3); item 12: P5 named.
+- No quotation of a rule P5 changed stands in this text (P5's check 5).
