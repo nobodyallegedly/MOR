@@ -263,6 +263,11 @@ pub mod tk {
     pub const RESOLVES: u64 = 17;
     pub const CONTINUES: u64 = 18;
     pub const PREVIOUS: u64 = 19;
+    /// The keepers' cMIP (task K9), a socket beside key 8. Taken by the
+    /// codemeister, to check: encoding 3, section 11, item 15 (key 20; an
+    /// empty socket is the field left out; written only beside key 8, and
+    /// never on a resolving update, E19).
+    pub const KEEPERS_CMIP: u64 = 20;
 }
 
 /// The keys of a Statement payload (encoding 3, section 5).
@@ -414,6 +419,13 @@ impl Made {
 /// `prev` its signer's act before it (`[]` for the first), its position
 /// counting from 1, its running summary over every act before it.
 pub fn make(m: Make) -> Made {
+    make_full(m, None)
+}
+
+/// As [`make`], the act's inside carrying `acks` (for a Text act that its
+/// own Text draft makes invalid: "A text act carrying `acks` is invalid",
+/// Text draft 11, Part three).
+pub fn make_full(m: Make, acks: Option<Vec<Hash>>) -> Made {
     let (prev, position, summary) = SEQUENCES.with(|s| {
         let s = s.borrow();
         let q = s.get(&m.who.id);
@@ -427,7 +439,7 @@ pub fn make(m: Make) -> Made {
         payload: m.payload.entries(),
         position: Some(position),
         summary: Some(summary),
-        acks: None,
+        acks,
         refs: None,
         hint: None,
         salt: fixed(&format!("{}/salt", m.label))[..16].try_into().unwrap(),
@@ -585,9 +597,10 @@ const Q_E2: &str = "encoding 3, E2: \"An act under any other spec hash is **not 
 const Q_E2_OLD: &str = "encoding 3, E2: \"Encoding 2's hashes (draft 25's, `dd90f8af…`, and the report block's fourth proposal's, `7b65c60f…`) and encoding 1's name other specifications: an act under them is **not this encoding**.\"";
 const Q_E2_REPORT: &str = "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"";
 const Q_STEP3: &str = "encoding 3, section 9, step 3: \"Its spec hash and type (E2): another spec, **not this encoding**; another type, **rejected**, E2.\"";
-const Q_KEEPER_I: &str = "encoding 3, section 4, key 8, reading (i): \"keeper = [+ hash]              ; one keeper is a list of one\"";
-const Q_E6: &str = "encoding 3, E6: \"An identifier (draft 26, §4.1: \"an identifier (of a signer, a keeper or a clock)\") of a keeper or of a clock is `hash`. Anything else is rejected, under E6.\"";
-const Q_FAULT_E6: &str = "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form, section 4, under whichever reading is taken)\"";
+const Q_KEEPER_I: &str = "encoding 3, section 4, \"Key 8, the keeper field\": \"keeper = [+ hash]              ; one keeper is a list of one; sorted, each keeper once (E18)\"";
+const Q_KEY8: &str = "encoding 3, section 4, \"Key 8, the keeper field\": \"One keeper and several are written the same way. A bare `hash` in key 8, or any form but a list of identifiers, is rejected under E6, the rule that gives the keeper's form; an empty list, one out of order, or one keeper twice, under E18.\"";
+const Q_E6: &str = "encoding 3, E6: \"of a keeper or of a clock is `hash`. Anything else is rejected, under E6.\"";
+const Q_FAULT_E6: &str = "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form: a list of identifiers, section 4)\"";
 const Q_FAULT_E18: &str = "encoding 3, section 9, \"One fault, one rule\": \"E18 for a list's emptiness, order and repeats\"";
 const Q_E18_EMPTY: &str = "encoding 3, E18: \"A list with nothing in it is left out: absent means none (no power, no call, no keeper, nothing relied on). An empty list is rejected.\"";
 const Q_E18_SET: &str = "encoding 3, E18: \"An entry out of order, or twice, is rejected.\"";
@@ -599,26 +612,44 @@ const Q_542: &str = "draft 26, 5.4.2: \"Terms that name a party by role MUST car
 const Q_571: &str = "draft 26, 5.7.1: \"An act whose `previous` names, among the acts held, anything that is not an act of the same signer within the same agreement (an act of another signer, or of another agreement; a report; a payment; any record that is no Terms act and no Statement) is **invalid** (§3.6).\"";
 const Q_E23_TEXT: &str = "encoding 3, E23: \"Otherwise the act is **invalid** (5.7.1): `previous` names an act of another signer, an act within another agreement, a report, a payment, an act of another specification (a Text act among them), or an act held that is **rejected**\"";
 const Q_522: &str = "draft 26, 5.2.2: \"Where the act `body` names is held and is not a Text act, the Terms are **invalid**: they lack what they need.\"";
-const Q_E25_TEXT: &str = "encoding 3, E25: \"A Text act is an act under Text's spec hash, `TEXT`, of type 0, whose payload is as Text's Part three gives it (Text, rule 14 and \"Text act (type 0)\").\"";
+const Q_E25_TEXT: &str = "encoding 3, E25: \"A Text act is an act under a Text spec hash, `TEXT` (below), of type 0, whose payload is as that Text draft's Part three gives it (Text, rule 14 and \"Text act (type 0)\").\"";
 const Q_E25_FOUND: &str = "encoding 3, E25: \"Where the act it names is held, opens, and is a **Text act**, nothing is found.\"";
 const Q_E25_NOT: &str = "encoding 3, E25: \"Where the act it names is held, opens, and is not a Text act (an act under another spec hash, of another type, or with a payload Text does not give), the Terms are **invalid**\"";
-const Q_E25_NOT_HELD: &str = "encoding 3, E25: \"Where the act it names is **not held**, the Terms are not invalid. **Open**, as for the act that cannot be opened: a note (unchecked) or nothing (not read).\"";
-const Q_E25_PRIVATE: &str = "encoding 3, E25: \"Where it is held and **cannot be opened** (a private Text act, held without its key), what it is cannot be read, and the Terms are **not invalid** (§3.6: \"If an act the verifier does not hold could change the answer, the answer is never invalid\").\"";
-const Q_UNCHECKED: &str = "draft 26, §3.6: \"**Unchecked**: the verifier lacks something it needs to apply a grammar rule: a cMIP the Terms name, or an act named in a field that it does not hold. A missing act never becomes a yes, and never a no.\"";
-const Q_E25_TEXT_LIST: &str = "encoding 3, E25: \"**Open**: which spec hashes are `TEXT`: Text draft 11's alone (draft 26, §2, names \"Text, draft 11\"), or any draft of Text. An act under an earlier Text draft's spec hash is a Text act under the second reading, and not one under the first.\"";
+const Q_E25_NOT_HELD: &str = "encoding 3, E25: \"Where the act it names is **not held**, or is held and **cannot be opened** (a private Text act, held without its key), the Terms are **not invalid** ... The checker passes the act with a note naming 5.2.2 and the act lacking, by its act id, and whether it is not held or held and not opened\"";
+const Q_E25_PRIVATE: &str = Q_E25_NOT_HELD;
+const Q_522_LACK: &str = "draft 26, 5.2.2: \"Where that act is not held, or is held and cannot be opened, whether the Terms are invalid under this rule is **unchecked**, with a note of what is lacking; where several acts are checked together, the note names each.\"";
+const Q_NOTE_RULE: &str = "encoding 3, section 9, \"One fault, one rule\": \"the note on the words (E25) names 5.2.2\"";
+const Q_UNCHECKED: &str = "draft 26, §3.6: \"**Unchecked**: the verifier lacks something it needs to apply a grammar rule: a cMIP the Terms name, an act named in a field that it does not hold, or a keeper's record that it does not hold. A missing act never becomes a yes, and never a no.\"";
+const Q_E25_TEXT_LIST: &str = "encoding 3, E25: \"**`TEXT`**: the spec hash of any draft of Text, each listed here.\"";
 const Q_TEXT_11: &str = "Text draft 11, Part three: \"a text act with no field 0, a byte string in field 0, a field 2, or type 7 under `TEXT` is not a text act anywhere.\"";
-const Q_ORDER: &str = "draft 26, §4.4: \"2. *Invalid*, under §5.2: the body's words, then the cMIP of the body's socket, ... not named by fingerprint; then the act `body` names, held and not a Text act. 3. *Invalid*, for each role in `parties`, in their order: its sort lacking or not one of the five, then its `what` lacking or not a fingerprint (but for sort future), then its spot's cMIP lacking (§5.10), or not named by fingerprint (§5.2).\"";
+const Q_ORDER: &str = "draft 26, §4.4, case 2: \"*Invalid*, under §5.2: the body's words, then the cMIP of the body's socket, ... not named by fingerprint; then the act `body` names, held and not a Text act.\"";
+const Q_ORDER3: &str = "draft 26, §4.4, case 3: \"*Invalid*, for each role in `parties`, in their order: its sort lacking or not one of the five, then its `what` lacking or not a fingerprint (but for sort future), then its spot's cMIP lacking (§5.10), or not named by fingerprint (§5.2).\"";
 const Q_STEP7: &str = "encoding 3, section 9, step 7: \"**Invalid** (draft 26, §4.4, cases 2 to 8), every case found listed in `invalid`, in this order, and `rule` the first of them\"";
 const Q_E10_SORT: &str = "encoding 3, E10: \"a role with no sort, or a sort that is not an unsigned integer from 0 to 4, is read as lacking it; ... each makes the Terms invalid (5.10.1)\"";
-const Q_SET_FIELD: &str = "encoding 3, \"The set of acts\": \"*The checker cannot tell a set's value from an act id by its bytes: where one stands in a field that holds act ids (an entry of `relies_on`, say), it is read as an act id, which no act held has.*\"";
+const Q_SET_FIELD: &str = "encoding 3, \"The set of acts\": \"The checker cannot tell a set's value from an act id by its bytes: where one stands in a field that holds act ids (an entry of `relies_on`, say), it is read as an act id, which no act held has.\"";
 const Q_ONE_ACT: &str = "encoding 3, section 7: \"A checker handed several acts reads them as the acts a verifier holds. It reads two things among them: what `previous` names (E23), and what `body` names (E25).\" One act is handed here, so neither is read.";
 
+const Q_531_MUST: &str = "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\"";
+const Q_531_INVALID: &str = "draft 26, 5.3.1: \"Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**; so are Terms that carry `parties` and whose signer is not one of the parties they name as signers.\"";
+const Q_531_SIGNER: &str = "draft 26, 5.3.1: \"The signer of a Terms act is its first author, whether or not `authors` names them: `authors` names the other authors, and MAY name the signer too. No Terms are invalid for leaving their signer out of `authors`.\"";
+const Q_CASE5: &str = "draft 26, §4.4, case 5: \"*Invalid*, under §5.3: Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, in the order of `authors`; then Terms whose signer is not one of the parties they name as signers.\"";
+const Q_STEP74: &str = "encoding 3, section 9, step 7: \"case 5, 5.3.1: each author at fault, in the order of `authors`; then the act's signer named by no party `[0, signer]`\"";
+const Q_E13_SIGNER: &str = "encoding 3, E13: \"Where the act's signer is the `signer` of no party `[0, signer]` in `parties`, the Terms are **invalid**, at §4.4's case 5, after the authors\"";
+const Q_521: &str = "draft 26, 5.2.1: \"The `body`, every piece in `relies_on`, and every cMIP named anywhere in a Terms act MUST be named by fingerprint.\"";
+const Q_D26_K9: &str = "draft 26, §4.2, `keeper`: \"Beside them, a socket (task K9): the cMIP that says how many of them must show an act; empty means every keeper named (5.8.3)\"";
+const Q_D26_K9_533: &str = "draft 26, 5.8.3: \"Where the Terms name several keepers, how many of them must show an act is said by the cMIP the same Terms name beside them (task K9); where that socket is empty, every keeper named is needed.\"";
+const Q_D26_NEW_ACT: &str = "draft 26, 5.8.3: \"What its parties do next is a new agreement: a new first act, which MAY name the earlier agreement, and is not an update of it and no fork with it (5.4.1, §5.12).\"";
+const Q_E14_OPEN: &str = "encoding 3, section 11, item 14: \"`agreement` (key 1) is carried exactly when `replaces` is (§4.2), so a first act does not carry it.\"";
+const R_LEAD_SIGNER: &str = "the lead's note of 27 November (docs/lead/notes/2026-11-27-draft-26-readings.md), row C1, S: \"The signer is the first author whether or not listed; `authors` names the others; no Terms are invalid for leaving the signer out.\" The lead's reading, resting on the ledger's \"The signer of a Terms act is an author\" (27 November, 16:48–16:50) and its correction";
+const R_LEAD_NO_PARTY: &str = "the lead's readings for P2 (docs/lead/notes/2026-11-27-readings-for-p2.md), the seven, row 6: \"A Terms act signed by someone who is not a party is invalid.\" The lead's reading, resting on the ledger's \"There is no unsigned act: the author is a known party\" (27 November, 07:13–07:18)";
+const R_K9_HIS: &str = "the ledger, \"Keepers: cross verification by default, a socket to lift it\" (27 November, 23:52, to 28 November, 00:00): \"Agreed, and there is a socket to lift it. (Which needs to be in the header)\"";
+const R_NEW_ACT_HIS: &str = "the ledger, \"A dead keeper: the agreement is dead; what follows is a new act\" (27 November, 22:36): \"So, whatever they do next is a new act, a new agreement, that can point to the dead one if they wish to show lineage\"";
 const R_LEAD_KEEPER: &str = "the lead's note of 27 November (docs/lead/notes/2026-11-27-draft-26-readings.md), row C8, C35, C34: \"One form, always a list, sorted, each once; key 9 (the clock) kept, 32 bytes.\" The lead's reading, resting on the ledger's \"More than one place\" and \"Ana's month ends by the clock\"";
 const R_LEAD_WORDS: &str = "the lead's note of 27 November, row C16, F11: \"Unchecked, with a note of what is lacking; several acts checked together, the note names each.\" The lead's reading, resting on the ledger's \"Missing act is always I don't know\" (27 November, \"Knots are knots\")";
 const R_LEAD_TEXT: &str = "the lead's note of 27 November, row C33, F15: \"Every Text draft, listed in encoding 3; after the Development change, the words act is named by id and the list goes.\" The lead's reading";
 const R_LEAD_SET: &str = "the lead's note of 27 November, row C36, C45, F14: \"No grammar field holds a set's value for now; a cMIP's parameters may.\" The lead's reading, resting on the ledger's \"One way to name a set of acts\"";
 const R_TEXT: &str = "the text alone: no choice is needed";
-const R_NOTE_NAME: &str = "the note named 5.2.2, the rule whose test the words act would need, as E23's note is named 5.7.1: taken by the codemeister, to check (encoding 3 names no rule for E25's note)";
+const R_NOTE_NAME: &str = "the note named 5.2.2, as encoding 3's \"One fault, one rule\" now names it, on the lead's answer 2 to the codemeister of 20:41 (docs/lead/notes/2026-11-27-readings-for-p2.md): \"5.2.2 names the fault on a words note: the rule that names it is 5.2.2.\" The lead's reading";
 
 fn write_checker(dir: &Path) {
     let a = tid("A");
@@ -689,7 +720,7 @@ fn write_checker(dir: &Path) {
         line: "85 (2 of 7)",
         acts: vec![&m],
         want: rejected("E6"),
-        decides: &[Q_KEEPER_I, Q_FAULT_E6],
+        decides: &[Q_KEY8, Q_FAULT_E6],
         reading: &[R_LEAD_KEEPER],
         choices: &[5],
     });
@@ -828,7 +859,7 @@ fn write_checker(dir: &Path) {
         line: "91",
         acts: vec![&other, &m],
         want: Want { verdict: "pass", rule: None, invalid: &[], notes: &["5.2.2"] },
-        decides: &[Q_E25_NOT_HELD, Q_UNCHECKED],
+        decides: &[Q_E25_NOT_HELD, Q_522_LACK, Q_NOTE_RULE, Q_UNCHECKED],
         reading: &[R_LEAD_WORDS, R_NOTE_NAME],
         choices: &[9],
     });
@@ -883,7 +914,7 @@ fn write_checker(dir: &Path) {
         line: "95",
         acts: vec![&held, &m],
         want: Want { verdict: "pass", rule: None, invalid: &[], notes: &["5.2.2"] },
-        decides: &[Q_E25_PRIVATE, Q_UNCHECKED],
+        decides: &[Q_E25_PRIVATE, Q_522_LACK, Q_NOTE_RULE, Q_UNCHECKED],
         reading: &[R_LEAD_WORDS, R_NOTE_NAME],
         choices: &[9],
     });
@@ -897,7 +928,7 @@ fn write_checker(dir: &Path) {
         line: "96",
         acts: vec![&b_assent, &m],
         want: Want { verdict: "invalid", rule: Some("5.2.2"), invalid: &["5.2.2", "5.10.1"], notes: &[] },
-        decides: &[Q_ORDER, Q_STEP7, Q_522, Q_E10_SORT],
+        decides: &[Q_ORDER, Q_ORDER3, Q_STEP7, Q_522, Q_E10_SORT],
         reading: &[R_TEXT],
         choices: &[],
     });
@@ -911,6 +942,231 @@ fn write_checker(dir: &Path) {
         decides: &[Q_E25_TEXT_LIST, Q_E25_FOUND],
         reading: &[R_LEAD_TEXT],
         choices: &[10],
+    });
+
+    // ================================================================ session 2: the five that waited, and the new ones
+    // Draft 26 at b58e417 (the scribe's P7). Each answer from 5.3.1 as it now
+    // reads, the sentence quoted.
+    let pos = |label: &str| fixed(&format!("a stand-in {label}"));
+    let role_ok = party_role(Some(0), Some(&fixed("what: a deed (stand-in)")), Some(socket(&fixed("cMIP: spot (stand-in)"), Value::Null)));
+
+    // ---------------------------------------------------------------- V 1: every optional field, an author at position 2 naming a role
+    let wv1 = w("V 1");
+    let other_root = pos("root of another agreement, named as a party");
+    let bake = pos("bake of an envelope");
+    let powers = sorted_set(vec![
+        arr(vec![u(0), socket(&fixed("cMIP: power, assent (stand-in)"), Value::Null)]),
+        arr(vec![u(1), socket(&fixed("cMIP: power, counter signature (stand-in)"), Value::Null)]),
+        arr(vec![u(2), socket(&fixed("cMIP: power, contest (stand-in)"), Value::Null)]),
+        arr(vec![u(3), socket(&fixed("cMIP: power, resolves (stand-in)"), Value::Null)]),
+        arr(vec![b(&fixed("cMIP: a K7 kind (stand-in)")), socket(&fixed("cMIP: power, a K7 kind (stand-in)"), Value::Null)]),
+    ]);
+    let v1 = first_terms(&a.id, &wv1.id, &reader)
+        .set(tk::PARTIES, arr(vec![party_signer(&a.id), party_signer(&bb.id), role_ok.clone(), arr(vec![u(2), b(&other_root)])]))
+        .set(tk::AUTHORS, arr(vec![u(0), u(1), u(2)]))
+        .set(tk::RELIES_ON, sorted_set(vec![b(&pos("piece relied on 1")), b(&pos("piece relied on 2"))]))
+        .set(tk::IN_FORCE, in_force.clone())
+        .set(tk::POWERS, powers)
+        .set(tk::KEEPER, keeper(&[k1]))
+        .set(tk::CLOCK, b(&fixed("a clock's identifier (stand-in)")))
+        .set(tk::RECEIVER, arr(vec![u(0), u(0)]))
+        .set(tk::ENVELOPE, b(&bake))
+        .set(tk::ENVELOPE_AT, b(&bake))
+        .set(tk::CONDITION, socket(&fixed("cMIP: update condition (stand-in)"), arr(vec![u(2), u(3)])))
+        .set(tk::CONTROL, socket(&fixed("cMIP: control (stand-in)"), Value::Null))
+        .set(tk::CALLS, arr(vec![arr(vec![u(6), u(2)])]))
+        .set(tk::DATA, socket(&fixed("cMIP: data (stand-in)"), Value::Null));
+    let m = terms_act("terms/V 1, every optional field", &a, v1);
+    push(&mut invalid, Case {
+        name: "terms: every optional field of section 4 at once (the receiver a party, by position; the bake cited in both envelope fields; one keeper, as a list); an author at position 2 naming a party named by role (verifier 2's V 1, rewritten)",
+        line: "V 1 (section 4.1)",
+        acts: vec![&m],
+        want: Want { verdict: "invalid", rule: Some("5.3.1"), invalid: &["5.3.1"], notes: &[] },
+        decides: &[Q_531_MUST, Q_531_INVALID, Q_CASE5, Q_STEP74],
+        reading: &[R_TEXT, "rewritten in encoding 3's bytes: the words a Text act's act id (not held, one act handed), key 8 a list of one; written as a bare hash, as verifier 2 wrote key 8, it is rejected under E6 before any case of invalid (line 85, 2 of 7)"],
+        choices: &[5, 6, 7, 8],
+    });
+
+    // ---------------------------------------------------------------- V 7: no party named as a signer, an author named by role
+    let wv7 = w("V 7");
+    let p = first_terms(&a.id, &wv7.id, &reader)
+        .set(tk::PARTIES, arr(vec![party_role(Some(3), Some(&fixed("what: an identity that fits (stand-in)")), Some(socket(&fixed("cMIP: spot (stand-in)"), Value::Null)))]))
+        .set(tk::AUTHORS, arr(vec![u(0)]))
+        .set(tk::IN_FORCE, in_force.clone());
+    let m = terms_act("terms/V 7, an author by role", &a, p);
+    push(&mut invalid, Case {
+        name: "terms: no party named as a signer, the one author a party named by role, signed by A, who is no party (verifier 2's V 7, rewritten): both faults of case 5 listed, the author's first",
+        line: "V 7 (section 4.1)",
+        acts: vec![&m],
+        want: Want { verdict: "invalid", rule: Some("5.3.1"), invalid: &["5.3.1", "5.3.1"], notes: &[] },
+        decides: &[Q_531_MUST, Q_531_INVALID, Q_CASE5, Q_STEP74, Q_E13_SIGNER, Q_STEP7],
+        reading: &[R_TEXT, R_LEAD_NO_PARTY, "the two faults are listed as two cases, both 5.3.1, in step 7.4's order (the author first, then the signer named by no party): encoding 3, section 9, \"Several faults\": \"Where an act shows several cases of invalid, all are listed, in step 7's order\""],
+        choices: &[],
+    });
+
+    // ---------------------------------------------------------------- line 84: an author naming a role, in_force present
+    let w84 = w("line 84");
+    let p = first_terms(&a.id, &w84.id, &reader)
+        .set(tk::PARTIES, arr(vec![party_signer(&a.id), role_ok.clone()]))
+        .set(tk::AUTHORS, arr(vec![u(1)]))
+        .set(tk::IN_FORCE, in_force.clone());
+    let m = terms_act("terms/line 84, an author by role", &a, p);
+    push(&mut invalid, Case {
+        name: "terms: the one author named in `authors` a party named by role, in_force present, the signer a party named as a signer",
+        line: "84",
+        acts: vec![&m],
+        want: Want { verdict: "invalid", rule: Some("5.3.1"), invalid: &["5.3.1"], notes: &[] },
+        decides: &[Q_531_MUST, Q_531_INVALID, Q_CASE5],
+        reading: &[R_TEXT],
+        choices: &[],
+    });
+
+    // ---------------------------------------------------------------- V 12: a second version by a signer `authors` leaves out
+    let w12 = w("V 12, v2 by B");
+    let p = update(P::new().set(tk::PARTIES, arr(vec![party_signer(&a.id), party_signer(&bb.id)])).set(tk::AUTHORS, arr(vec![u(0)])).set(tk::BODY, body(&w12.id, socket(&reader, Value::Null))), &root.id, &agr, &b_assent.id);
+    let v12 = terms_act("terms/V 12, a second version by B", &bb, p);
+    push(&mut valid, Case {
+        name: "terms: a second version of the root, signed by B, a party named as a signer whom `authors` leaves out (verifier 2's V 12, rewritten)",
+        line: "V 12 (section 4.2)",
+        acts: vec![&v12],
+        want: PASS,
+        decides: &[Q_531_SIGNER, Q_531_INVALID],
+        reading: &[R_LEAD_SIGNER, "the lead's reading for V 12 and V 43, in the prompt of this session: valid where the signer is a party named as a signer"],
+        choices: &[],
+    });
+
+    // ---------------------------------------------------------------- V 43: a fork of Terms, and the resolving update
+    let w43a = w("V 43, v2a by A");
+    let v2a = terms_act("terms/V 43, v2a by A", &a, update(P::new().set(tk::PARTIES, arr(vec![party_signer(&a.id), party_signer(&bb.id)])).set(tk::AUTHORS, arr(vec![u(0)])).set(tk::BODY, body(&w43a.id, socket(&reader, Value::Null))), &root.id, &agr, &root.id));
+    let mut tips = [v2a.id, v12.id];
+    tips.sort();
+    let res = P::new()
+        .set(tk::REPLACES, b(&root.id))
+        .set(tk::AGREEMENT, b(&agr))
+        .set(tk::RESOLVES, arr(vec![b(&tips[0]), b(&tips[1])]))
+        .set(tk::CONTINUES, b(&v2a.id))
+        .set(tk::PREVIOUS, previous(Some(&root.id)));
+    let r43 = terms_act("terms/V 43, the resolving update by A", &a, res);
+    push(&mut valid, Case {
+        name: "held: the root, B's assent, two versions replacing the root (the second signed by B, whom `authors` leaves out: V 12's act), and A's resolving update naming both: the resolving update passes (verifier 2's V 43, rewritten)",
+        line: "V 43 (section 4.2)",
+        acts: vec![&root, &b_assent, &v2a, &v12, &r43],
+        want: PASS,
+        decides: &[Q_531_SIGNER, Q_D26_RESOLVING, "encoding 3, E17: \"a resolve, and a Terms act written as a resolving update, name **the shared act** both tips follow (5.12.4), not either tip\""],
+        reading: &[R_LEAD_SIGNER, "the lead's reading for V 12 and V 43, in the prompt of this session: valid where the signer is a party named as a signer", "the answer is about the last act, the resolving update; the third act (V 12's) passes too, as V 12 says"],
+        choices: &[],
+    });
+
+    // ---------------------------------------------------------------- the signer named by no party
+    let wnp = w("signer no party");
+    let p = first_terms(&bb.id, &wnp.id, &reader);
+    let m = terms_act("terms/signed by A, naming only B", &a, p);
+    push(&mut invalid, Case {
+        name: "terms: one party, B, named as a signer and named in `authors`; signed by A, who is no party",
+        line: "session 2: the signer named by no party",
+        acts: vec![&m],
+        want: Want { verdict: "invalid", rule: Some("5.3.1"), invalid: &["5.3.1"], notes: &[] },
+        decides: &[Q_531_INVALID, Q_CASE5, Q_E13_SIGNER],
+        reading: &[R_TEXT, R_LEAD_NO_PARTY],
+        choices: &[],
+    });
+
+    // ---------------------------------------------------------------- F11: a Text act its own Text draft makes invalid
+    let bad_text = make_full(Make { label: "words/a Text act carrying acks", who: &a, spec: t11, type_: 0, payload: text_payload("Words in a text act carrying acks (test)."), public: true }, Some(vec![fixed("an act acknowledged (stand-in)")]));
+    let m = terms_act("terms/words a Text act carrying acks", &a, first_terms(&a.id, &bad_text.id, &reader));
+    push(&mut invalid, Case {
+        name: "held: Terms whose body names a Text act (TEXT, Text draft 11, type 0, field 0 a text string) that carries `acks`, which its own Text draft makes invalid",
+        line: "session 2: F11",
+        acts: vec![&bad_text, &m],
+        want: Want { verdict: "invalid", rule: Some("5.2.2"), invalid: &["5.2.2"], notes: &[] },
+        decides: &["draft 26, 5.2.2: \"A Text act invalid under Text's own grammar rules is no Text act here.\"", Q_522, "Text draft 11, rule 14: \"A text act carrying `acks` is invalid.\""],
+        reading: &["the lead's note of 27 November, row F11: \"a Text act invalid under its own layer is no Text act for 5.2.2.\" The lead's reading, resting on the ledger's \"Signing an agreement relies on its words\"", "Text's own rules as the core library applies them (`core/src/text.rs`, `check_act`: \"a text act carries no acks (Envelopes rule 18)\")"],
+        choices: &[13],
+    });
+
+    // ---------------------------------------------------------------- item 15: the keepers' cMIP, key 20
+    let k9 = socket(&fixed("cMIP: keepers, how many must show an act (stand-in)"), arr(vec![u(1)]));
+    let wk = w("key 20 beside key 8");
+    let m = terms_act("terms/key 20 beside key 8", &a, first_terms(&a.id, &wk.id, &reader).set(tk::KEEPER, keeper(&[k1, k2])).set(tk::KEEPERS_CMIP, k9.clone()));
+    push(&mut valid, Case {
+        name: "terms: two keepers (key 8) and, beside them, the keepers' cMIP (task K9) under key 20, a socket",
+        line: "session 2: item 15 (1 of 5)",
+        acts: vec![&m],
+        want: PASS,
+        decides: &[Q_D26_K9, Q_D26_K9_533],
+        reading: &[R_K9_HIS],
+        choices: &[5, 6, 7, 15],
+    });
+    let wk = w("key 20 without key 8");
+    let m = terms_act("terms/key 20 without key 8", &a, first_terms(&a.id, &wk.id, &reader).set(tk::KEEPERS_CMIP, k9.clone()));
+    push(&mut invalid, Case {
+        name: "terms: the keepers' cMIP under key 20, and no keeper (no key 8)",
+        line: "session 2: item 15 (2 of 5)",
+        acts: vec![&m],
+        want: rejected("E19"),
+        decides: &[Q_D26_K9, "draft 26, §4.4, case 1: \"a field allowed only beside another (`agreement` beside `replaces`, `envelope_at` beside `envelope`, `continues` beside `resolves`, `for` beside `under`) without it\""],
+        reading: &[R_K9_HIS, "key 20 written only beside key 8; without it, rejected under E19, the presence rule: the codemeister's taking (item 15), not yet in encoding 3's text; draft 26's case 1 lists the fields allowed only beside another, and K9's socket is \"beside them\" (§4.2, `keeper`)"],
+        choices: &[15],
+    });
+    let m = terms_act("terms/resolving with key 20", &a, resolving.clone().set(tk::KEEPERS_CMIP, k9.clone()));
+    push(&mut invalid, Case {
+        name: "terms: a resolving update carrying the keepers' cMIP (key 20)",
+        line: "session 2: item 15 (3 of 5)",
+        acts: vec![&m],
+        want: rejected("E19"),
+        decides: &[Q_D26_RESOLVING, Q_E19_RESOLVING],
+        reading: &[R_TEXT, "key 20 is \"a socket\" among the fields a resolving update does not carry (E19's list); the codemeister's taking (item 15)"],
+        choices: &[15],
+    });
+    let wk = w("key 20 not a fingerprint");
+    let m = terms_act("terms/key 20 cmip not a fingerprint", &a, first_terms(&a.id, &wk.id, &reader).set(tk::KEEPER, keeper(&[k1, k2])).set(tk::KEEPERS_CMIP, arr(vec![txt("keepers: any one of those named"), arr(vec![u(1)])])));
+    push(&mut invalid, Case {
+        name: "terms: two keepers, and under key 20 a socket whose cMIP is a text, not a fingerprint",
+        line: "session 2: item 15 (4 of 5)",
+        acts: vec![&m],
+        want: Want { verdict: "invalid", rule: Some("5.2.1"), invalid: &["5.2.1"], notes: &[] },
+        decides: &[Q_521, "draft 26, 5.2.3: \"A `body`, or a cMIP in a socket, that is not named by fingerprint makes the Terms **invalid**, under 5.2.1 (§3.6).\"", Q_D26_K9],
+        reading: &[R_K9_HIS, "checked in case 2 after each power's rule (the codemeister's taking, item 15): draft 26's case 2 names the sockets of its day and not K9's"],
+        choices: &[15],
+    });
+    let wk = w("key 20 bare");
+    let m = terms_act("terms/key 20 not a socket", &a, first_terms(&a.id, &wk.id, &reader).set(tk::KEEPER, keeper(&[k1, k2])).set(tk::KEEPERS_CMIP, b(&fixed("cMIP: keepers, how many must show an act (stand-in)"))));
+    push(&mut invalid, Case {
+        name: "terms: two keepers, and under key 20 a bare fingerprint, not a socket",
+        line: "session 2: item 15 (5 of 5)",
+        acts: vec![&m],
+        want: rejected("E7"),
+        decides: &["encoding 3, E7: \"A socket that is not an array of exactly two items is rejected\"", "draft 26, §4.1: \"a socket that is not written as a socket at all (a cMIP and its parameters), and a power's sort that is neither one of its words nor a fingerprint, hold another kind than their field's, and are not Agreements acts.\""],
+        reading: &[R_K9_HIS, "key 20 written as a socket (E7), as item 15 takes it"],
+        choices: &[15],
+    });
+
+    // ---------------------------------------------------------------- item 14: a first act naming an earlier agreement
+    let wo = w("an earlier agreement");
+    let old_root = terms_act("terms/an earlier agreement's root", &a, first_terms(&a.id, &wo.id, &reader).set(tk::KEEPER, keeper(&[k1])));
+    let wo2 = w("an earlier agreement, its last version");
+    let old_tip = terms_act("terms/an earlier agreement's last version (its tip)", &a, update(first_terms(&a.id, &wo2.id, &reader).set(tk::KEEPER, keeper(&[k1])), &old_root.id, &old_root.id, &old_root.id));
+    let wn = w("a new agreement naming the earlier one");
+    let m = terms_act("terms/a new first act naming the earlier agreement's tip", &a, first_terms(&a.id, &wn.id, &reader).set(tk::KEEPER, keeper(&[k2])).set(tk::RELIES_ON, arr(vec![b(&old_tip.id)])));
+    push(&mut valid, Case {
+        name: "held: an earlier agreement (its root and its last version, its tip, naming keeper 1), and a new first act, naming keeper 2, whose `relies_on` names that tip",
+        line: "session 2: item 14 (1 of 2)",
+        acts: vec![&wo, &old_root, &wo2, &old_tip, &wn, &m],
+        want: PASS,
+        decides: &[Q_D26_NEW_ACT, "draft 26, §4.2, `relies_on`: \"fingerprints of every other piece the Terms use, and of every version or act they relied on\"", Q_E14_OPEN],
+        reading: &[R_NEW_ACT_HIS, "the codemeister's taking (item 14): a first act names an earlier agreement in `relies_on` (key 5), by the act id of that agreement's last version, the tip; no new field (the lead's 22:45, 3: \"No new field.\")"],
+        choices: &[5, 6, 7, 14],
+    });
+    let wn = w("a new agreement naming the earlier one in key 1");
+    let m = terms_act("terms/a new first act naming the earlier agreement in agreement", &a, first_terms(&a.id, &wn.id, &reader).set(tk::KEEPER, keeper(&[k2])).set(tk::AGREEMENT, b(&old_root.id)));
+    push(&mut invalid, Case {
+        name: "terms: a new first act (no `replaces`) naming an earlier agreement's root in `agreement` (key 1)",
+        line: "session 2: item 14 (2 of 2)",
+        acts: vec![&m],
+        want: rejected("E19"),
+        decides: &["encoding 3, E19: \"`agreement` (1) is written exactly when `replaces` (0) is; one without the other is rejected.\"", Q_E14_OPEN],
+        reading: &[R_TEXT, "the field a first act names an earlier agreement in is `relies_on` (item 14); `agreement` is not it"],
+        choices: &[5, 6, 7, 14],
     });
 
     // ---------------------------------------------------------------- lines 80, 81 and I 8: not this encoding
@@ -991,7 +1247,7 @@ fn write_sets(dir: &Path) {
     write_file(dir, "sets.json", &json!({
         "about": "The set of acts (encoding 3, \"The set of acts\"; draft 26, §4.1): ids in, value out. The value is tagged_hash(\"MOR/act-set\", the ids sorted bytewise, repeats dropped, concatenated). A set of one id is not that id. Line 82 of the codemeister's sheet (four vectors: two orders, a repeat, one id, the empty set). TEST DATA: the ids are stand-ins.",
         "decides": [
-            "draft 26, §4.1: \"The set of acts (§3.1) is a value computed from a list of act ids: the ids sorted, repeats dropped, and hashed with a label for a set of acts.\"",
+            "draft 26, §4.1: \"is a value computed from a list of act ids: the ids sorted, repeats dropped, and hashed with a label for a set of acts.\"",
             "draft 26, §4.1: \"The same acts give the same value, whoever computes it.\"",
             "draft 26, §4.1: \"The empty set has the label and no members.\"",
         ],
@@ -1001,7 +1257,7 @@ fn write_sets(dir: &Path) {
     }));
 }
 
-/// The eight reference payloads (X1 to X8): payload bytes only, before
+/// The reference payloads (X1 to X8, X2 twice): payload bytes only, before
 /// signing, without the act around them. Every fingerprint is the SHA-256
 /// of the ASCII label given. Test data.
 fn write_reference(dir: &Path) {
@@ -1028,6 +1284,13 @@ fn write_reference(dir: &Path) {
     let mut out = vec![
         one("X1", "first Terms: one party, a signer, test:ana; its authors, that party; the words, act test:words-1; one socket naming cMIP test:cmip-in-force, no parameters (null); one keeper, test:keeper-1; previous []", Some(TERMS), &x1, &[5, 6, 7], &[socket_note]),
         one("X2", "as X1, with two keepers, test:keeper-2 then test:keeper-1 as the writer gives them: written sorted", Some(TERMS), &x1.clone().set(tk::KEEPER, keeper(&[k2, k1])), &[5, 6, 7], &[socket_note, if k2 < k1 { "test:keeper-2 sorts first: the writer's order is the sorted order, so this example does not tell a sorted list from the writer's order" } else { "test:keeper-1 sorts first: the writer's order is reversed" }]),
+        {
+            let (first, second) = if k1 < k2 { (k2, k1) } else { (k1, k2) };
+            let (fl, sl) = if k1 < k2 { ("test:keeper-2", "test:keeper-1") } else { ("test:keeper-1", "test:keeper-2") };
+            let about = format!("as X1, with two keepers given by the writer in the order {fl} then {sl}, which is not their sorted order: written sorted, {sl} first");
+            let _ = (first, second);
+            one("X2 (the writer's order unsorted)", &about, Some(TERMS), &x1.clone().set(tk::KEEPER, keeper(&[first, second])), &[5, 6, 7], &[socket_note, "the writer's order is not the bytes' order: a set is written sorted, each keeper once (E18), whatever order the writer gives"])
+        },
         one("X3", "as X1, with a clock, test:clock-1 (key 9, 32 bytes)", Some(TERMS), &x1.clone().set(tk::CLOCK, b(&test_fp("test:clock-1"))), &[5, 6, 7, 8], &[socket_note]),
         one("X5", "an update of X1, naming act test:terms-v1 as the version it replaces, otherwise as X1: agreement test:terms-v1 (X1 is the first Terms, the root); previous [test:terms-v1] (the author's next act within the agreement names the Terms act she made, E17)", Some(TERMS), &update(x1.clone(), &v1, &v1, &v1), &[5, 6, 7], &[socket_note, "agreement and previous are not given by the example: read so, the codemeister's reading, to check (if Ana made another act within the agreement between them, previous names that one)"]),
         one("X6 (an author's assent)", "a Statement assenting to Terms test:terms-v1, signed by their author: agreement test:terms-v1 (the root), previous [test:terms-v1]", Some(STATEMENT), &statement(&v1, &v1, kind::ASSENT, Some(&v1)), &[], &["the signer is not given by the example: written twice, by the Terms' author (previous names the Terms act) and by a party with no act in the agreement yet (previous [])"]),
@@ -1054,7 +1317,7 @@ fn write_reference(dir: &Path) {
         .map(|l| json!({ "label": l, "sha256": hx(&test_fp(l)) }))
         .collect();
     write_file(dir, "reference-payloads.json", &json!({
-        "about": "Eight reference payloads, for comparing a stranger's encoder with this one: each payload's deterministic CBOR bytes, before signing, without the act around it, and their plain SHA-256. Every fingerprint is the SHA-256 of the ASCII label given (test:ana and so on). TEST DATA. Encoding 3 does not let X4 be written (see `left_out`). A Terms act carries draft 26's spec hash in its inside, not in its payload, so these bytes do not change when draft 26 does.",
+        "about": "Nine reference payloads (X2 twice), for comparing a stranger's encoder with this one: each payload's deterministic CBOR bytes, before signing, without the act around it, and their plain SHA-256. Every fingerprint is the SHA-256 of the ASCII label given (test:ana and so on). TEST DATA. Encoding 3 does not let X4 be written (see `left_out`). A Terms act carries draft 26's spec hash in its inside, not in its payload, so these bytes do not change when draft 26 does.",
         "labels": labels,
         "payloads": out,
         "left_out": [{
@@ -1097,7 +1360,7 @@ fn write_retired(dir: &Path) {
             "rule": "5.3.1",
             "says": ["draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\""],
             "sheet": "docs/code/impact-draft-26.md, section 4.1: \"V 7: Terms with no party named as a signer, an author named by role: **pass** → **invalid**, 5.3.1 (then retired as a passing case).\"",
-            "waiting": "5.3.1 is among the rules the scribe's closing pass (pull request 292) changes: this retirement is to confirm once draft 26 is final, and the case's rewrite as invalid is not written (docs/code/verifier-3-build.md, \"Waiting\").",
+            "confirmed": "draft 26 at b58e417 (the scribe's P7): 5.3.1 reads as quoted; the case is rewritten in encoding 3's bytes as invalid, 5.3.1 (invalid.json, line \"V 7 (section 4.1)\").",
         },
         "case": valid["cases"][7],
     }));

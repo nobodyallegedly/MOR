@@ -44,7 +44,7 @@
     }
   ],
   "decides": [
-    "draft 26, §4.1: \"The set of acts (§3.1) is a value computed from a list of act ids: the ids sorted, repeats dropped, and hashed with a label for a set of acts.\"",
+    "draft 26, §4.1: \"is a value computed from a list of act ids: the ids sorted, repeats dropped, and hashed with a label for a set of acts.\"",
     "draft 26, §4.1: \"The same acts give the same value, whoever computes it.\"",
     "draft 26, §4.1: \"The empty set has the label and no members.\""
   ],

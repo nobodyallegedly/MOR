@@ -18,8 +18,8 @@
         "verdict": "rejected"
       },
       "decides": [
-        "encoding 3, section 4, key 8, reading (i): \"keeper = [+ hash]              ; one keeper is a list of one\"",
-        "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form, section 4, under whichever reading is taken)\""
+        "encoding 3, section 4, \"Key 8, the keeper field\": \"One keeper and several are written the same way. A bare `hash` in key 8, or any form but a list of identifiers, is rejected under E6, the rule that gives the keeper's form; an empty list, one out of order, or one keeper twice, under E18.\"",
+        "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form: a list of identifiers, section 4)\""
       ],
       "line": "85 (2 of 7)",
       "name": "terms: one keeper written bare, 32 bytes, not a list",
@@ -127,8 +127,8 @@
         "verdict": "rejected"
       },
       "decides": [
-        "encoding 3, E6: \"An identifier (draft 26, §4.1: \"an identifier (of a signer, a keeper or a clock)\") of a keeper or of a clock is `hash`. Anything else is rejected, under E6.\"",
-        "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form, section 4, under whichever reading is taken)\""
+        "encoding 3, E6: \"of a keeper or of a clock is `hash`. Anything else is rejected, under E6.\"",
+        "encoding 3, section 9, \"One fault, one rule\": \"E6 for a keeper and a clock (key 8's form: a list of identifiers, section 4)\""
       ],
       "line": "85 (7 of 7)",
       "name": "terms: a keeper whose identifier is 31 bytes",
@@ -369,7 +369,7 @@
       "decides": [
         "draft 26, 5.2.2: \"Where the act `body` names is held and is not a Text act, the Terms are **invalid**: they lack what they need.\"",
         "encoding 3, E25: \"Where the act it names is held, opens, and is not a Text act (an act under another spec hash, of another type, or with a payload Text does not give), the Terms are **invalid**\"",
-        "encoding 3, E25: \"A Text act is an act under Text's spec hash, `TEXT`, of type 0, whose payload is as Text's Part three gives it (Text, rule 14 and \"Text act (type 0)\").\""
+        "encoding 3, E25: \"A Text act is an act under a Text spec hash, `TEXT` (below), of type 0, whose payload is as that Text draft's Part three gives it (Text, rule 14 and \"Text act (type 0)\").\""
       ],
       "line": "94 (1 of 2)",
       "name": "held: Terms whose body names an act under TEXT (Text draft 11) of type 1",
@@ -440,7 +440,8 @@
         "verdict": "invalid"
       },
       "decides": [
-        "draft 26, §4.4: \"2. *Invalid*, under §5.2: the body's words, then the cMIP of the body's socket, ... not named by fingerprint; then the act `body` names, held and not a Text act. 3. *Invalid*, for each role in `parties`, in their order: its sort lacking or not one of the five, then its `what` lacking or not a fingerprint (but for sort future), then its spot's cMIP lacking (§5.10), or not named by fingerprint (§5.2).\"",
+        "draft 26, §4.4, case 2: \"*Invalid*, under §5.2: the body's words, then the cMIP of the body's socket, ... not named by fingerprint; then the act `body` names, held and not a Text act.\"",
+        "draft 26, §4.4, case 3: \"*Invalid*, for each role in `parties`, in their order: its sort lacking or not one of the five, then its `what` lacking or not a fingerprint (but for sort future), then its spot's cMIP lacking (§5.10), or not named by fingerprint (§5.2).\"",
         "encoding 3, section 9, step 7: \"**Invalid** (draft 26, §4.4, cases 2 to 8), every case found listed in `invalid`, in this order, and `rule` the first of them\"",
         "draft 26, 5.2.2: \"Where the act `body` names is held and is not a Text act, the Terms are **invalid**: they lack what they need.\"",
         "encoding 3, E10: \"a role with no sort, or a sort that is not an unsigned integer from 0 to 4, is read as lacking it; ... each makes the Terms invalid (5.10.1)\""
@@ -454,8 +455,321 @@
     {
       "acts": [
         {
-          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820dc20225f483c5e1585fea32419ce0ece95d04df392cdb0153211a441fced91f70358207be4e27fc900ad49eba625694719e1d6017e9acf819bf13d4302d9753d05732504581885456ce50e45c6e8450b59afb393a44c63eccbc6b021d65f05582007a45471fa0b936a84bc99011efe8c4b45b96b9e1bbd09de818f91b38c4c5729590107f6472ec56a7aa0cf9c721e74d8bbb8a6c5d508b2bee259a5df03f06908f1b344946073c1fe7430537bd3caf562f028b259a9b8f88c0e6c097c1c7dec5562cca49f213d69d4def2197f6e66b839f3800b450611cf22d69d939fe7a3ca2a3db1031c4789f29ddb14d137a40a48967b304a7b83424008b2a97b2813a7e72100875d05f259c47e4a085757522af7cb81d8df34899cb1d5a0a8976312a9283b1c43e8992c348ad6c48822c6d0f63a9d8e3d9d4ffcef865bc1a1811be889fac8ced9965184e0d71aa2571673a103d3fc2089fa4c78f6098d14dc3c3ac5131fdc01d4bb3a2306f01cd6a6303b3ffd2a7d7bcdc8520b5a8865cb363a916327a7d08c77909d674046e0578883015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584042e48c865192990b933eaeba0ea802abcddf6dfe9238b43eaaac0d9315ea7054884558a4cdfcb0494987ef0d3c40b6bcde3aaf34c7f5341f6940720cc9368c38",
-          "id": "9ec0a6d5415c802638b66d2bffa2fbbfbb4857f76c757ce2fc78778b785981e2",
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820a4290ec6084d7a7183b09329c64c8097018b0e8901d4860619d829e46395518603582079217699996e5e9298f797c4cdbd180f4543d7e7d22b04ebfa6e5d4c4011bd4004581838293c58ada3ba6630bdd00643c6fac60e3f7976da81c1fd05582074968f1e5be1ac05c74a7e869b2c6827d4672e62edc174e2787327e4df6e71dc5903f18d7f6c0e2159d7d2c245f660f05098f98908498c7f5853f1779611b7d501cead99a0088a5f133ec76e157d0339afbdcb0ddbe53558aabdc278e98899f0ac5cbf60336b430878b6d75df12cf513546b4eb599aaa6c5df6f273e9d8973246cb49c6c1efdc5f756f40e695660e26ef4de49a30d8b017c91cc39c7b5370a97923b1d7f591cf685c2bddb8442b5c52a4663b421bcf6b3cb094baac63a15352380ea53098644bd4fbab53897e8ab8e07b99c39119ddf8af2defef50d769daca6ee6a3246798ec4320316412703478375ac1eb3cff0934adf12ea6a01c535cdb1c2e5f53997d2c98f7fa6d502f46e57d3e11647536f7b5865e3caefb1e70053c634e295fe28ff385f58295c91ed822ebda5b25d1cf1d6d287b50fe41f2fe946c463145726a63027ea90ba524e3d5368d7e576a2136555c5b3811709edbb2f52be8a8f55ebab577d378b0d06da873df0f8c066b21b3a8ba56943f332c64745401914ef06e95b7793a90899e3c9d667636d4fdef34a0fe796f4a1d11180df0c3f00a8a76db08fb66a20b06e2478a27b67acd9dd643c15c9217b38adad1a17c53ad402e953962d421f03fb314128e6ea811a12cffd8750eb698960bd8592c95387d8cbe56dfdabed394c638121471d9d3fa63f8785a49ed60067e3ebc6f3a6c06c0d3f4cca3b6715e16000c5e4304348c6b631d0f8b92ae5c9d68e609641a35b20630d27fecf3187411a31bd413bcea0a93dfc4df10700bab5b14a914f0cb1b1aa2f583708cd78408fd4446a4881c1d8096879ebcccbc4f91ec843ebc20cfa1a47ffa66e0997f5415b07515b35481d22abbd2b9be011884393565342e89f301c5bd28ee58ef24b2a0c194def0249734fb8dabb6a661179e93c2548546bb11bab855ce2dd42294a56730a51a9665e89c2d7ad601613b9e11788fd7867d414a1d2cdc39dad4d198f800efea346036bb6c57ead00c639d28c5fbc4decf6ee45b21b7c5c38a5655c09e0fa3f1674056a2530af7aec50ba1b1c6ca2a83ab17cd76e23a6aba9b5a9e02b339c3d16e06e94d782fcaefa5f6e16afcfade07d6b995ba6bb8b9cfc6520ba092e0988d506c6699ac3f6039a921db5508d2e17461c50dc39f884812879e3e81bbd5011fc6fd3e148f888469c6172c3f94cdb9603c442edf3854aeea577f33d01cd82fe7f30394461bc6d929cc1ee850c93662aaf8ae92505ee71c9e902b343f76f5906026a640371d4758ec30dab232bcdb3d9c90bff82615a8b471e01122147052a07212b891c9f3fc0aee1c5f6a6983b5cf945f333b5127b235304f266d331e0cfd8783db76a15a81c6395de435731bcb7830d0514edd1dd513bfc75dc849272dee60c78c821d6aa67203703520d5163a028eceb3b367ad5197c324b67de65a1d0ed6be55fd575992e27664218c683015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840ca7a1be2797f841e30ac17f9085b0dd568bbec616751680d32958586884ad7a87a8a0318fe682ebffec3c83bc2c55d34a0a1145657b7414c0dc7cbba55cc7d90",
+          "id": "8141270e585f421900dca5d58fa84e4b1c78bab781f871053090cbcf7f14e38d",
+          "key": null,
+          "label": "terms/V 1, every optional field",
+          "payload": "b0028482005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6820058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e358201a30000015820de8cea0839f693bcc1c032d0bf65c15007b75da8f449b6bf1a4f30885c2f59470282582071ed528a72ea8c27b2fe356217feab02137a17ff038d265f56dc0990be90ab42f682025820e74e08f30eebbdfbefe940931805bea776935dd12a971cd91521c7d22698cf3d038300010204825820ed5146a2ea43ea6f5214087740605c35221131b70187298d3b30a115d60111708258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f6058258201a171308c544d5f6963437c3945690445087567b90a57594534d4a910f7bad115820fc09e48c2fcfaa20e69ce9aa740abdfdb68583175e5ab31308318c1d2e1092ea06825820e47337c07faf8267349fe5700b6d2695a4a690917c532dd6dcbe14a4c14230f1f6078582008258202cb50e1c968cbc2d73fc11dbc2014eb3d19601f050a8cf022a36f2b25078c1f5f6820182582073dd61875302948d901163c9f4165f5b1a9592357c7e62d0bfe4ac1c9b8b23dcf6820282582081d54a07e4dbf4dd55d4c7df6424083c5cbb5ac92c64cc24da94a02d7148e438f68203825820d2d1d3741f2eab19de65da5b33b21202fbdd8e3460d917e178fb323f9a214a21f682582045e563efcf12c8715f8324b59a0baee86c5cb63cc92ad75f34dfe2a9a6e107d38258208fc786c665e2b135d37a8605b52af570a40527583ccbe4a5faff59e0bd7f1c70f60881582054bf12204ac8f622e0b28d5cbb7323a00e411d23b6cbe3cf16f2ae29a69a0237095820ab9c585ccae9c5626da6d785016113b0f2434845644d0c1eff3be68fd60d25ce0a8200000b582068ca0f4975ef237b0cfb699e845e0fb252fe5075617bc62eccdec1b4e597c3660c582068ca0f4975ef237b0cfb699e845e0fb252fe5075617bc62eccdec1b4e597c3660d8258205ea834aa906a12a4e9e707c9a33fc71ab341c81aca2f62268c786531f457f5f08202030e82582061586b76e2e7f469e8d199120908b65563fbe37e0cec3c477a6c5dacbeee33bdf60f8182060210825820b2f6e5b4677fb4667db58e50a70439839a18384a36a6a3b37aafa5e28718a70ef61380"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.3.1"
+        ],
+        "notes": [],
+        "rule": "5.3.1",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\"",
+        "draft 26, 5.3.1: \"Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**; so are Terms that carry `parties` and whose signer is not one of the parties they name as signers.\"",
+        "draft 26, §4.4, case 5: \"*Invalid*, under §5.3: Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, in the order of `authors`; then Terms whose signer is not one of the parties they name as signers.\"",
+        "encoding 3, section 9, step 7: \"case 5, 5.3.1: each author at fault, in the order of `authors`; then the act's signer named by no party `[0, signer]`\""
+      ],
+      "line": "V 1 (section 4.1)",
+      "name": "terms: every optional field of section 4 at once (the receiver a party, by position; the bake cited in both envelope fields; one keeper, as a list); an author at position 2 naming a party named by role (verifier 2's V 1, rewritten)",
+      "reading": [
+        "the text alone: no choice is needed",
+        "rewritten in encoding 3's bytes: the words a Text act's act id (not held, one act handed), key 8 a list of one; written as a bare hash, as verifier 2 wrote key 8, it is rejected under E6 before any case of invalid (line 85, 2 of 7)",
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7",
+        "taken by the codemeister, to check: encoding 3, section 11, item 8"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c702582068b2d819d15fbffe51fec92ca7e1bd8b374f66c1316987bfca0abd70d75378020358204dbe209df08860afd98b53c1a04ffbea09b0e902d1d755d8c98db2e251894b48045818f58df5eaee81b65231d7c4ccaaaa1263945119beb1270f570558206e9d17fa0098e5baab4a88b10092e40e45bc139c3490d0c1bba5020a31f07ce9590155763e7b00eadb12e10bc863dd863a0cafb8ae48156a11e34a65204c48eeaa48ebf0f9aa8b3874d44cee56c05c033aa249797cb2b5f91a48e92d99bcaedd3bd3fb9f7375f33621b0bbed2f74de719db907a8ca0d47fba051274fec96ffd11e65c27bc7836111f06483ccc6cf5694b39dc4027daf87924fcfc2893cb4a4316b6f4da11e94e64af4b8d5c7a2c7e688520caafa631f837769767c769905a15b726f71f9ce76bbf8bec7b9bc4a22ea129b5317b5e5bf7a43d77c9f80ddbba2db2c56ab6a44edef1e7a51f4499a13aa3e83486e35e89bf8a0643f8389e424cbd55f3347745260a82d854dd0f2bffcc6acb30f76e97a9a8e57e441c155e64f9796e459ecdc18535c46ea26a84cd6c743009203f01ea19ecf45d89d37798398bf1c1e262bb5b933e3e00a84d079cc867dc7c40843e380681da0f33eced78972cb24e20972eca3cf960af0572091c892aae2f00f73b6217e919583015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958406abfd357ffc04588531974d6ebc3120bcd07a1f5419c8b95042eafb8e69503efa5ae10de61d8ead49dad8dad232bb07f99fea7da4b2822ff5f732233c8a96d92",
+          "id": "69fc595d1acf33ffef5d29d9cdac3dfc4b6ed666a264d4856bd25adc05566f1b",
+          "key": null,
+          "label": "terms/V 7, an author by role",
+          "payload": "a502818201a30003015820f59f396f06680647ecf7468c582b8692e7b36ace20baf7a55c701f52c39e8b680282582071ed528a72ea8c27b2fe356217feab02137a17ff038d265f56dc0990be90ab42f603810004825820e28e3caa16e534d6e8961bf296cc4500dd8d216930e91b15a3c1dd1d1273d6ea8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f606825820e47337c07faf8267349fe5700b6d2695a4a690917c532dd6dcbe14a4c14230f1f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.3.1",
+          "5.3.1"
+        ],
+        "notes": [],
+        "rule": "5.3.1",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\"",
+        "draft 26, 5.3.1: \"Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**; so are Terms that carry `parties` and whose signer is not one of the parties they name as signers.\"",
+        "draft 26, §4.4, case 5: \"*Invalid*, under §5.3: Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, in the order of `authors`; then Terms whose signer is not one of the parties they name as signers.\"",
+        "encoding 3, section 9, step 7: \"case 5, 5.3.1: each author at fault, in the order of `authors`; then the act's signer named by no party `[0, signer]`\"",
+        "encoding 3, E13: \"Where the act's signer is the `signer` of no party `[0, signer]` in `parties`, the Terms are **invalid**, at §4.4's case 5, after the authors\"",
+        "encoding 3, section 9, step 7: \"**Invalid** (draft 26, §4.4, cases 2 to 8), every case found listed in `invalid`, in this order, and `rule` the first of them\""
+      ],
+      "line": "V 7 (section 4.1)",
+      "name": "terms: no party named as a signer, the one author a party named by role, signed by A, who is no party (verifier 2's V 7, rewritten): both faults of case 5 listed, the author's first",
+      "reading": [
+        "the text alone: no choice is needed",
+        "the lead's readings for P2 (docs/lead/notes/2026-11-27-readings-for-p2.md), the seven, row 6: \"A Terms act signed by someone who is not a party is invalid.\" The lead's reading, resting on the ledger's \"There is no unsigned act: the author is a known party\" (27 November, 07:13–07:18)",
+        "the two faults are listed as two cases, both 5.3.1, in step 7.4's order (the author first, then the signer named by no party): encoding 3, section 9, \"Several faults\": \"Where an act shows several cases of invalid, all are listed, in step 7's order\""
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c702582000e16d82681e50cf892a8428963a85d644c02a95a98e2a82e461169d16d5bd04035820e5f091afec353f9c5a6b00f02982b8a603861ce434fa45e82d955a49db7b7b38045818d4fd7fdb7776684935909f5a00e74b851605221d96ba607005582070e11309e3aa162f9bb5e1865beb8ea3819d35c098e859ca1db4284151e0ad035901794c4311986e818f512474adc8fd9edfb1a852b563e5e07a82fca69230dffdd9535d42e51ce9def10d742988b00079a56de10e116d7ac31cd3c252794f7ae656a2080259973f258306d46734e0e7003f2d5806aca03a1c086be4bb2c9f5a32e7b2da5b85c3fa5a2a61a0d42d6d2d66a09c181afd065284316827afc69ceebc3a75771339b5ee0e4910128781d8bf1eb7b9805c6489628ed0c8e3a29dba5d99e8505c9d131574d2ad9a51f17c7adcaf6248d834d58714998318fbf6fc6001e15d5f60c6a86c7a5b020b665774b8bad503250a0937d0151cdf376321d70c168b140e00aa426ff08c8bac62266c42bf2c2839659acf0c3e7512712101acaa48326cb581bad9cd345ea7c2c12cf1dc02f8fecb2f004252f184eba0ea3cef270d360858daf28d0255737589f2a60f2ba4ef056e35c96f9c1b3d8faa1154d2b3cf032956abaed96adca88b3c664f8579d857f939c8ab43c0805a95ca2218ced721e50ac1759c03599d0865d046fcc3742d51baf9b72fa807a672d2305383015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584079f85bf3593c53e84ce18c35f6d926e390eef2587c7cf387942b1c36ddb9fc68729b724be37d484c172a1d1bf6ea03df69d5e2c6064484d1d3be7d1e40ee5122",
+          "id": "491941cbca75d5c017bac2b9c3648fa69f63fc729283c1ac37356a2b334db736",
+          "key": null,
+          "label": "terms/line 84, an author by role",
+          "payload": "a5028282005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd68201a30000015820de8cea0839f693bcc1c032d0bf65c15007b75da8f449b6bf1a4f30885c2f59470282582071ed528a72ea8c27b2fe356217feab02137a17ff038d265f56dc0990be90ab42f603810104825820d8b832b98c41c113c045b4065963780c850725fb23aab84647452f6f078e65768258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f606825820e47337c07faf8267349fe5700b6d2695a4a690917c532dd6dcbe14a4c14230f1f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.3.1"
+        ],
+        "notes": [],
+        "rule": "5.3.1",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\"",
+        "draft 26, 5.3.1: \"Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**; so are Terms that carry `parties` and whose signer is not one of the parties they name as signers.\"",
+        "draft 26, §4.4, case 5: \"*Invalid*, under §5.3: Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, in the order of `authors`; then Terms whose signer is not one of the parties they name as signers.\""
+      ],
+      "line": "84",
+      "name": "terms: the one author named in `authors` a party named by role, in_force present, the signer a party named as a signer",
+      "reading": [
+        "the text alone: no choice is needed"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258206f1be7a0462e5ac50c77cf88ca6a08a6328abd653cfe5c9e623ba126804e752003582089ae80901725edaeb13b8910cf7401b1cfb1ff247dfe279853806b50230f560a0458184c05ae3755407cbdfae4f61d1fb52ca1a8f1b21240ffd2cd055820d7c876410db88706bab521bb42bb7393e403078d3db25bed21bc9789dbf1ad38590107455eea5196a53bbacc0c135d8b0e65aa14e8082494f549823fa019dd658578e71c0dd1b176f1a227d0fcbd5e9c351091ee7cbf70bdf6d28d868b71b91225210631384ea5fefbf4ff0b1a63510e44f7d7bfc10890beb0464f324454c6cbae72e492f8cc9365cf43bc5f33c252d50a31459a187f6f482cb19b880e1b826e7c5cc8c80f7e49b32a3ff7af2f2332aaebc4fe9da59633656892e922af975253ce50d31d78d342e2c4a7663035b013d540b8973b4fbcd0b49f0776df2119f06423d378d98384a8fdefeadb96e9fca6457c2781fe76b75b4011989f4358a4d077c857fe7a618f0090ec96b3b1d41bb870a4c042bf72835b3e13a10565bba7f92c92a96852a5141ed57aa083015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958403c844ff3a175fe490a705d144e47d0ffde82c2f24cbcdf2109a6fbfccd3b90b47976c1c7c57971572988473804a691014c02f387d865dd79bc5e7fc7a2a9cb2a",
+          "id": "98f2ee228765e109bdb676bf8ab16943f83101c856f1099b4014550c9ef097d9",
+          "key": null,
+          "label": "terms/signed by A, naming only B",
+          "payload": "a40281820058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e3503810004825820facbf3b7913fd97bdaab215ac415c45494f90d621b39034fd9699c7196718e378258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.3.1"
+        ],
+        "notes": [],
+        "rule": "5.3.1",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.3.1: \"Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**; so are Terms that carry `parties` and whose signer is not one of the parties they name as signers.\"",
+        "draft 26, §4.4, case 5: \"*Invalid*, under §5.3: Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, in the order of `authors`; then Terms whose signer is not one of the parties they name as signers.\"",
+        "encoding 3, E13: \"Where the act's signer is the `signer` of no party `[0, signer]` in `parties`, the Terms are **invalid**, at §4.4's case 5, after the authors\""
+      ],
+      "line": "session 2: the signer named by no party",
+      "name": "terms: one party, B, named as a signer and named in `authors`; signed by A, who is no party",
+      "reading": [
+        "the text alone: no choice is needed",
+        "the lead's readings for P2 (docs/lead/notes/2026-11-27-readings-for-p2.md), the seven, row 6: \"A Terms act signed by someone who is not a party is invalid.\" The lead's reading, resting on the ledger's \"There is no unsigned act: the author is a known party\" (27 November, 07:13–07:18)"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258208704ecc9768da2f423ebea49d555123ea8da989c8cc13a711308a1a746a4d369035820caa51228a0e081b28be6011ad72c237ece8f3a70523ae233e3461722235937c9045818d883b2deb4ca36ab7cb6a30a193650241cc1e557097306eb0558203a876056dcee955352e2f0bf5798515173acdb42a3a45fa2557efc05479ffd6d58e4f3f46e92b30c5d9a6a0e388fe1b672aa343d7808b20f1eac2de135cb4061ee245e1c555b7d10bf005b96bc4cdc66eedaf2996ce397e450f7ad7190e72827247340d6d8eb9e1f02bc09f060ea025eed564b3c481989cd6d3113465ae76937e4aa88fe803fc6c8510e162d14510f6e1cd47b31ee9dd3e7169bfb080ac2b1310f317f0c9161381e94011d944de01953e36e76392049668654855a93b75f381219b8df39c4926a2ffdbef35915e9ddf6d4db0b15083b6dc3f6fb4a0cf1abde1b0778da8aa0eddc52990c4ad5498bc89b230f848d0b1df4f6dd05c20b504f3a5891a5454a46f483015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840f1ae910a9bf82b7b3bc871ac241604d75db8e8dd000a68d4bc45589ddcbfeee9c5cfbc255f12326d907f5b8a774c769d723def7ff885e4f06d0483e5f8e634fd",
+          "id": "14bdf3ef04ca08f98f9676840d0b14b22034b239b2f14d428a330d4b973e06a3",
+          "key": null,
+          "label": "words/a Text act carrying acks",
+          "payload": "a1007829576f72647320696e2061207465787420616374206361727279696e672061636b73202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c702582016e2c922f71f86a866e8412dce394b82a34fe05494c193ee9195a99f4b9c42d4035820c1d7fc31350846c31c03d6280ab1d3c04b0f4a5329e0fe431904b6b6bfd3e83f0458183b361686494faaebf90edc16ce0e4a4bc23dca520e90ee320558208e3addd371a60a2956634633b14b5122f9107bbf17c3b9efcde7011b4d758c77590107ffa4f7654feb54d2b37d817ae263920461b7b7ba15ac668b0f8fc7fcf06ea6e2df177e1d79188e6d0b6da9e8d70729cff4ff4f1fe853a34ddc28aeda2c69a0f22d845ca5e5ad65ea89ebf01bbdbdfe899fa176f6ad119a3e97558cee2554f3ae8a6f6833dafb820ebe6293f70c6e3fef2484da4906c54b257a80e57327e4083d648261eb8ed02b9273ff09d00deb1f2069e14b8836f13140739526e41ffa7fb90beb065446b48bdd1d66314cd402e048f69d868ea1b1c4d024050f392b8a7707634d7269949b7f9b161692c5969e3d071a362838017655d59db5cc424c65866df7c430e43cb94b71aa1b7c66efaa808410a8de272b3bb1be8fa975365d140e68721c0a47e28bcc83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840c1eaa1dcb7e4fda8fcef417642a5065e5c9ce3348234132eee57b0e6bb7a5cf242045f6558b13bb290ac6644cc20d2e1231c62fb77413c695d6230b3743a5a66",
+          "id": "4654a0ba4a5d510cb7fcf2844e8fcbfce208ebcbd2aed6c447c9535c28338eae",
+          "key": null,
+          "label": "terms/words a Text act carrying acks",
+          "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd60381000482582014bdf3ef04ca08f98f9676840d0b14b22034b239b2f14d428a330d4b973e06a38258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.2.2"
+        ],
+        "notes": [],
+        "rule": "5.2.2",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.2.2: \"A Text act invalid under Text's own grammar rules is no Text act here.\"",
+        "draft 26, 5.2.2: \"Where the act `body` names is held and is not a Text act, the Terms are **invalid**: they lack what they need.\"",
+        "Text draft 11, rule 14: \"A text act carrying `acks` is invalid.\""
+      ],
+      "line": "session 2: F11",
+      "name": "held: Terms whose body names a Text act (TEXT, Text draft 11, type 0, field 0 a text string) that carries `acks`, which its own Text draft makes invalid",
+      "reading": [
+        "the lead's note of 27 November, row F11: \"a Text act invalid under its own layer is no Text act for 5.2.2.\" The lead's reading, resting on the ledger's \"Signing an agreement relies on its words\"",
+        "Text's own rules as the core library applies them (`core/src/text.rs`, `check_act`: \"a text act carries no acks (Envelopes rule 18)\")",
+        "taken by the codemeister, to check: encoding 3, section 11, item 13"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820f166878dddb00f0a4f1ef6d6474268caa1849f9c9905cad3d2d0a43bc6ca7740035820183994931991927fe098c82f287c956b27f3e866f7e6843cff4c230f173730f3045818afed55f83eca317a2f8103687544754770c50c5f52c854b50558203d1f2255bb9981a00c06176e74a43a5f9c684cbb217b8fbf50be8e3880052a9159012d571b8c546c671d5b5e27c06eefc87526fb333f6c1d844f6470279cca77f402318e796b95580c2231ded1c374cd196c0a41917015f1a22b4391ba72bad8c819b056f230412c69e0d6cc701a2bce917da687741c01c239de3e9f11d711bb9ba000cc894bc0f4a21e4218892889dcab15b84e0be3f648f0b989f8fdc633fca09b2e450423b12912e453437fcb05724a43d8eefd96380462b20fa0e342e1a4c10ad4038fec08b61c60e021ef6b47feaf4f9250065f3370fd1c8fbe2ebe11f908bc0536f239687b34404bbe032c4fe177d2e3928d2cf871006b90d89e722d1e537479a9db709118d4a490c2eb7aa03c6afdcc2ce7b20baa044ddb281d421c532ff6ada7675bcefb680642c91af3ae5899b16843baf1e479dc223001a1b06b3427ee4f395101875b306fce16d4b843d383015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584012f8ce0d38d7c4960ffd42c0da53a60e8f4d24bd08b5bce7ad659fad4011958a3752cc7a792f36b3d5851efab65e0d9fcb6cf0106576451c1fa76cb83284529e",
+          "id": "12ef409bc65d21754c2d7524f6137a5d0561512f3dd3cd0a6ae69ace371d491b",
+          "key": null,
+          "label": "terms/key 20 without key 8",
+          "payload": "a5028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820759f773a5a85fd701a107865189b1efdcfec5df5b3a21131480388d687f7b1528258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f613801482582098a5229274ad4d7d34138598147a7a1c2380392cf64274bfa2d04e5f9caa7afb8101"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": "E19",
+        "verdict": "rejected"
+      },
+      "decides": [
+        "draft 26, §4.2, `keeper`: \"Beside them, a socket (task K9): the cMIP that says how many of them must show an act; empty means every keeper named (5.8.3)\"",
+        "draft 26, §4.4, case 1: \"a field allowed only beside another (`agreement` beside `replaces`, `envelope_at` beside `envelope`, `continues` beside `resolves`, `for` beside `under`) without it\""
+      ],
+      "line": "session 2: item 15 (2 of 5)",
+      "name": "terms: the keepers' cMIP under key 20, and no keeper (no key 8)",
+      "reading": [
+        "the ledger, \"Keepers: cross verification by default, a socket to lift it\" (27 November, 23:52, to 28 November, 00:00): \"Agreed, and there is a socket to lift it. (Which needs to be in the header)\"",
+        "key 20 written only beside key 8; without it, rejected under E19, the presence rule: the codemeister's taking (item 15), not yet in encoding 3's text; draft 26's case 1 lists the fields allowed only beside another, and K9's socket is \"beside them\" (§4.2, `keeper`)",
+        "taken by the codemeister, to check: encoding 3, section 11, item 15"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258205bd05d7c02ce0d58968b3af4147149c7bf5582463816738102016ea1c894dd900358202d1358c8760ad3c4a03e91bfd7c42eeecb8bbdf2b923946366619eb21bb3282b045818e236567b842682b396d468d59c1f48f82868a743c7076e2c055820ecc7f927f6dd2279d7b9ef5171ea7d572c0f4394c8229d6f2489e797d02083dd59018ddf4e10e91cdbb2c9f6b181067f822205b636a638ed050b7d6a64fd86117d62b529ef8e67554766ed296188c72f5f71db921db9e94491db560ae68e132876b1de94145ee9c0c76e9ebb4292708ac48e282244965ea62889fea55aaffbb7c5178c60a0d261b27e217fe8cf537963b195bb26f9dfdfef0d4a8986b2535e1a25f991a63a0d1f0eb4e90fddcd4dae5e8b6afe136cddb61fe735d5c4e0a398673670d7c3357929b9927546535e898ede745acad0a9e2d8a3db067a733d51302c5193c4d1a7e8c135a0f124320a8213f021b7803e13b010cc8526344f2d8ad46a8a96eabb3ecf61a7b4935c9e16c55e457106e35dcb1aed5167b2ce3cebfb4bc627ad81d43069226665fd20b7eded08a30743b2f3fea9a461ce8eeb404b7b35c86adfc402ad374a27ed238d1277a7fdb76bf73d3246f8c1b94ce6c6995b06befcf233ae949cf99a8d4b7e82ce7780c13b277f44af21400afdd1ccfb4531811fedd2b5ac61c644555606e933b7c30452e3c230616a0082a8bcd92eea90270b40dff53902f11902f2c87dcdf92fd9e84d0983015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840c9f8f06cd2c84b6b1049af296d000090daed6bd68e4f655aa1ba24a8f60d0fcc968394d63d8a726415a587f55c4658ba86a3a1467c16e38d635cf642ae11fa32",
+          "id": "45cc412dd5f5f2cf8b6dfe241c60b89dd6ccd64006569e37470c1ae14443d5b3",
+          "key": null,
+          "label": "terms/resolving with key 20",
+          "payload": "a6005820668f465219eac3b1b5fd8f1fdc5bb92c42084fed40c775525fd05b207cc86305015820668f465219eac3b1b5fd8f1fdc5bb92c42084fed40c775525fd05b207cc8630511825820ae72f344be3f91c156119af12fe9504b8bdc6c0ebbe4f36219e63ca0c32ec0455820dc16b18d78a87c0f613b18955e73b757c1849218fd1d509288f3a9c56a3f22f6125820ae72f344be3f91c156119af12fe9504b8bdc6c0ebbe4f36219e63ca0c32ec04513815820668f465219eac3b1b5fd8f1fdc5bb92c42084fed40c775525fd05b207cc863051482582098a5229274ad4d7d34138598147a7a1c2380392cf64274bfa2d04e5f9caa7afb8101"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": "E19",
+        "verdict": "rejected"
+      },
+      "decides": [
+        "draft 26, §4.3, \"What a resolving update carries\": \"A Terms act written as a resolving update (with `resolves` and `continues`) carries `replaces`, `agreement`, `resolves`, `continues` and `previous`, and MAY carry `relies_on` (§5.13); it carries nothing else.\"",
+        "encoding 3, E19: \"One that lacks `replaces`, or carries any other field (`parties`, `authors`, `body`, `in_force`, `keeper`, `clock`, the receiver, a socket, anything), is rejected (§4.3: \"it carries nothing else\").\""
+      ],
+      "line": "session 2: item 15 (3 of 5)",
+      "name": "terms: a resolving update carrying the keepers' cMIP (key 20)",
+      "reading": [
+        "the text alone: no choice is needed",
+        "key 20 is \"a socket\" among the fields a resolving update does not carry (E19's list); the codemeister's taking (item 15)",
+        "taken by the codemeister, to check: encoding 3, section 11, item 15"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258208ca215b2d575925f2cd390a27741545d1c8d0c5b049be9dd2addbfb23521343f035820dac4b9037c683bb2d94604851ed978310107a05517fdca2d599604c829e2debc04581854e8450c64fd23f0bd7762c7e562046299ce0f2ccaa81a4f055820075a14826b611aff967e24570fed882379a887a8f28a30a6b1ad637c69aa8df85901728a1574191a6040cb007ed5adeed88fd996c05c8d6fd52ed94d1e983a91a59fc98c449aa23791daa35526d4236207303521fa6965e800f3406c2f0f790686e66eb0d2db8e76a91f4c87d8943af00adee43c0805ccb3ace759620309b3e61793cb13e44d50fdd9561ab781076a49822f17a7b1ed89ea4f27bcb0aca6bcdc7a5ddcaac8018e9dac0361a6648058e85f6ceee0e859b746649e3df9c6c96ab96f598af25f0a55e54ab9c713d9f172469b25782e34ccef85cc2112cff8cbe80637e0e641c382c1bd32d20d7fd4fb2c8d107592d610e3a9a925a888435966fb082323c3b9945e9e0acd66638adb0020c28aaadfc94d4ef9aa320d51a2d66c609d568e20a62de82def1e2bc05fe885939ea608881346706bfb5e1552c8f4ae6ba8740cc40b2b477d8fc999c961fae03805adc948014e84ba828bcc772e9e13054b6b52c35b8c4862c9a502ecb14119e4a4bddb968ebb238f86ddbb96b6c1c1af295eb6c0d48290374612247efff055b4b43bee7ab35783015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584006dde6f4d1719bcf6d76c507cb421659a5027c9eb5e5268164fdeb7bd36c5c73459dc295c980a1636c1a9015b2a22d6a0bc3f8bc1d6f91454490f5e586e27858",
+          "id": "5dfbe932f5c60d0307a32781242a2c3228c8ad95789f62a6101e11e92ebea746",
+          "key": null,
+          "label": "terms/key 20 cmip not a fingerprint",
+          "payload": "a6028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6038100048258205eb11831d6a2d160b3836b79f2e76ed33550d09dbe11433d7ca07c9a907822908258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f60882582054bf12204ac8f622e0b28d5cbb7323a00e411d23b6cbe3cf16f2ae29a69a02375820d58d9cb05375bcfe19ab97d6d835e9196bfa29f98a7852027264bc9fbca3444013801482781f6b6565706572733a20616e79206f6e65206f662074686f7365206e616d65648101"
+        }
+      ],
+      "answer": {
+        "invalid": [
+          "5.2.1"
+        ],
+        "notes": [],
+        "rule": "5.2.1",
+        "verdict": "invalid"
+      },
+      "decides": [
+        "draft 26, 5.2.1: \"The `body`, every piece in `relies_on`, and every cMIP named anywhere in a Terms act MUST be named by fingerprint.\"",
+        "draft 26, 5.2.3: \"A `body`, or a cMIP in a socket, that is not named by fingerprint makes the Terms **invalid**, under 5.2.1 (§3.6).\"",
+        "draft 26, §4.2, `keeper`: \"Beside them, a socket (task K9): the cMIP that says how many of them must show an act; empty means every keeper named (5.8.3)\""
+      ],
+      "line": "session 2: item 15 (4 of 5)",
+      "name": "terms: two keepers, and under key 20 a socket whose cMIP is a text, not a fingerprint",
+      "reading": [
+        "the ledger, \"Keepers: cross verification by default, a socket to lift it\" (27 November, 23:52, to 28 November, 00:00): \"Agreed, and there is a socket to lift it. (Which needs to be in the header)\"",
+        "checked in case 2 after each power's rule (the codemeister's taking, item 15): draft 26's case 2 names the sockets of its day and not K9's",
+        "taken by the codemeister, to check: encoding 3, section 11, item 15"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258201778ddb418902ace93cf68bb7b02837d06b1f48c1704d52ba8da6f75d893de600358205dfe9c3730323bad6555e810ee28f119e499d29d39571bb2d0af9b8119450df8045818a8fb44a2d7d4a3ee8e9bd9c1eec48bdd45885293669e076d0558206cfa52c208691ebb70bee9c745fc8d55ddfc472e41410b77d95a9a23d825ced7590170ef6ca3c52a0353580899bc4c2416711cd8728de6304aa4635182542c54a1de144d743c4678ac91fe65de28b24380506936eeec72725b3fb5e4ecb3f2f33ef8f25173a722cf854d49ae8f06650fd1cb9bcde9724a8841e0e981e42d67e2be08f05e7fa4d25483f2e41b305687bcd70e786020da21fadeadc130f6632708060e4717429004a221c67bcc638ca9a2031b672147e4441600aa32d40b61e492ce95b91220dc521741ab32610e3daae5a51c910a4fb6b8d140046aa032a7a8a3a8d06e9e64a2279a1196d4240dd3a8834e1ea110295656e6e3cf3a587125850d6766e7bbe232d17bef7c9a6b57f7869e5a36ba3e4222d371476c1a39bbdd0a423c7ccbb083c9dfd9e89a2766153a203da11bfbb2f0c73c7220e5a2661e56ccf8a2a2cf291aa9c298def523227952ec94abcde671922f3cb82f9ca3eae664e5df31516be7992d847f75a9a0207d8ca25802a5dd810a814e62839152078bc1e45daced4dffd5960be8f921d52ea90660d7ff61bf83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840099c1700f1e8c9d40b9f410bddb6c5820f25237ee2dd55e0cb36463c64ae2bd847cbf092a5e0c9289b3e3aba8879dce152bf5ea24b368aea85ef621315d8050f",
+          "id": "06d347a5a06499b428abc509f58d1183c48ba6dd646d7256f6b5970bd3b15d06",
+          "key": null,
+          "label": "terms/key 20 not a socket",
+          "payload": "a6028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820f780e651eaea3345abb4ae30444446299634f24f68dcb0b8bc71f5d981cd3b4b8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f60882582054bf12204ac8f622e0b28d5cbb7323a00e411d23b6cbe3cf16f2ae29a69a02375820d58d9cb05375bcfe19ab97d6d835e9196bfa29f98a7852027264bc9fbca34440138014582098a5229274ad4d7d34138598147a7a1c2380392cf64274bfa2d04e5f9caa7afb"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": "E7",
+        "verdict": "rejected"
+      },
+      "decides": [
+        "encoding 3, E7: \"A socket that is not an array of exactly two items is rejected\"",
+        "draft 26, §4.1: \"a socket that is not written as a socket at all (a cMIP and its parameters), and a power's sort that is neither one of its words nor a fingerprint, hold another kind than their field's, and are not Agreements acts.\""
+      ],
+      "line": "session 2: item 15 (5 of 5)",
+      "name": "terms: two keepers, and under key 20 a bare fingerprint, not a socket",
+      "reading": [
+        "the ledger, \"Keepers: cross verification by default, a socket to lift it\" (27 November, 23:52, to 28 November, 00:00): \"Agreed, and there is a socket to lift it. (Which needs to be in the header)\"",
+        "key 20 written as a socket (E7), as item 15 takes it",
+        "taken by the codemeister, to check: encoding 3, section 11, item 15"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820218e584ad4a91cc76da50b3eeb6f328a2a915a6e2d95047df269b214ad1be6ab035820fb0baeeb2de890267e763c37cb347b93b638cd53bad9d43dab2d50625be03ab604581862bc8ed0cf3da204be20d6b782a95e4aa783e4cf50c8713e0558206dd8c97aeda9f6e10d7dc7144f82cefe97ed08fa0bad3a76b517f015ec7d7e2a59014e4b28f451eb530a4b0e1c827e177a6dacc49aab4b166ae0038fcfc385fe517320cf7c9c108a47cf314aea864c1ed8f30599bf2d7bbc76a027a8ce0e67f414ab0a32b7c3a5a4c6818dc3f5716868682055a770aefbd505148874687c491f6f91c1598260dc4d61ce7c28137ad3f6603aac5330136c1f87b75924be7d037562b4edc2d215908a6ce83239290d967a061df8da0e52c030fd1f9c5566d485a55499bf485f4eba6b042deee1a6c4d225d18f785163b6cd8068f6e5f77a68c70746003215ce7a5368c00e20aa2c3e1060990962922949c0481a38ff5618788375cab919140d655fb1610317f63b07b8c4ae33aac572f2d9cce8ea3679acfcd8d941e76cfe2868318bc7d0c07e7a6fb5ca37d7a819257ef5eaeded50a97f6f2a80e36d36731b8abcd3ba3bbd76220eec8d137fba11f930b777c9e070174182bbbe0fe41558aa811bb058e07cdb83732965dc83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840f75d1162b62cd61a3a058305d1dc9a9ab1fda3a2f4b8b6debe66137999d88b39b3dd9d4d7d3fc24e0f98c3d5d222e98a8cb3d1b037e3ffb91e954178927f0c8c",
+          "id": "5ec8c4f866f4e6e8dddebea593e5da76f23d782b31be5d35543a997aa044f44d",
+          "key": null,
+          "label": "terms/a new first act naming the earlier agreement in agreement",
+          "payload": "a601582045ffd4e8490e0cd203678dd455b66029c89785f0f69cc0dc41347136129b6be2028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820bfd3fb054f0e46608339cd5cb279dcd8a64dadba07d1ceccdbf1eb11b95cf69a8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f608815820d58d9cb05375bcfe19ab97d6d835e9196bfa29f98a7852027264bc9fbca344401380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": "E19",
+        "verdict": "rejected"
+      },
+      "decides": [
+        "encoding 3, E19: \"`agreement` (1) is written exactly when `replaces` (0) is; one without the other is rejected.\"",
+        "encoding 3, section 11, item 14: \"`agreement` (key 1) is carried exactly when `replaces` is (§4.2), so a first act does not carry it.\""
+      ],
+      "line": "session 2: item 14 (2 of 2)",
+      "name": "terms: a new first act (no `replaces`) naming an earlier agreement's root in `agreement` (key 1)",
+      "reading": [
+        "the text alone: no choice is needed",
+        "the field a first act names an earlier agreement in is `relies_on` (item 14); `agreement` is not it",
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7",
+        "taken by the codemeister, to check: encoding 3, section 11, item 14"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820d6a180feca4d3db3d14692f278a7f19fd4eac3fc0e2c794be6b4d0b4685b715d03582082802e2853048e6eb3eee019906dfd42697711c9c3b62677be46724229cb235f04581885456ce50e45c6e8450b59afb393a44c63eccbc6b021d65f05582007a45471fa0b936a84bc99011efe8c4b45b96b9e1bbd09de818f91b38c4c5729590107f6472ec56a7aa0cf9c721e74d8bbb8a6c5d508b2bee259a5df03f06908f1b344946073c1fe7430537bd347269e85a7aa9b73d0e98a3774f21d5eea204e70bf19c956b0d4896f1370742a66b839f3800b450611cf22d69d939fe7a3ca2a3db1031c4789f29ddb14d137a40a48967b304a7b83424008b2a97b2813a7e72100875d05f259c47e4a085757522af7cb81d8df34899cb1d5a0a8976312a9283b1c43e8992c348ad6c48822c6d0f63a9d8e3d9d4ffcef865bc1a1811be889fac8ced99651ebe0d71aef9163bc7b0125bf5cd7876f81d5f45b8c99a50236ec5152d72e97d68fa7b11ad6a6303b3ffd2a7d7bcdc8520b5a8865cb366a3be51aea900901a95a616e779b6fdc83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584008deb69377ed90c5f48c8dc3564a935870df437302821d82a20cd10dc96efb1956f4a04120da9c2785e2f4635d1062c0039cc5604700feb327c4f7a57f077b2c",
+          "id": "c3d1b97ebd02f5d8260a617e55cf218e9a732858829ea9f9487a8d6760c38f81",
           "key": null,
           "label": "act/draft 25",
           "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820483f41bc730a3cc5d4568da9cc57000d6cef24b4ddaddc0f057829b78cb1901a8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
@@ -482,8 +796,8 @@
     {
       "acts": [
         {
-          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258200a3400e6dddbffec293c522e8981f543325c05c7a30985c96611aee089b8705703582086b275904e10f646a66f35f11edc8fe7f06b1a7db9f9a6f5800ae94001ebd1a2045818d77a98f5dca83579effb62cd389bb536cf7000b79eafa1da05582083d984c8f78ca06203e7af16d957e09ad024ab9f984457bd157429e4b7c414c758b9de7bf2be9173b9e8e72a4c66572b607753e97550f6b8f30514e3f69010330eccd04f169a263d26ddc4f874522e30b2b7ab3d120674125e630e8fd86fcb1c3108897d6aeddbd7dd95ebe0087e5309079eca8498d9c448341ce4905d29a2518f7f1969a57d347cae61c2232cc2ac0a1605ccbe593cf2ce927e0dcb8a0695339b7e67ea79accc8410112826760de33377a78d77b3bdf042ad0e4cbc52d4d1e55fb632e0763d0cf60e05a7f7dcc04ae3ee3c7450038dcb6628623083015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958408ae4c09e1fb783af5e1cfb3ab11ccba8a36ef549a08682c30b373e94b69fc497e31c756226158962446c9f3842ded0b3a718a3078fb7898beb7b33a3a763db29",
-          "id": "d0dbf3f3142e9c4a6cf14688e9668e5258f0d36d4a8e092f623785f959a8f630",
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c702582048b873f2c9e178d2448d3eb53db295c057e7c49ee9fdee8aa2d8783a594a5dfd03582023dbf47ff8f580d8f900d764e0766c169f6fe2d459c6048412da11922b59b035045818d77a98f5dca83579effb62cd389bb536cf7000b79eafa1da05582083d984c8f78ca06203e7af16d957e09ad024ab9f984457bd157429e4b7c414c758b9de7bf2be9173b9e8e72a4c66572b607753e97550f6b8f30514e3f69010330eccd04f169a263d26ddc4f82943319b4ee9dec30cba7847f40ed4bef954b4b3dfe35c66deef213bc50fe583087e5309079eca8498d9c448341ce4905d29a2518f7f1969a57d347cae61c2232cc2ac0a1605ccbe595df2ce92512a79712c6a8d63fbc1e181ecdd5abcb470dd0e0c1df2c394bfae7ac19609190e4cbc52d4d1e55fb632e0763d0cf60e05a772093d5ab7b2c317d5cb224ed249569383015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840667d4a7f58c1df4b2b83a7a3f32ec9ee8a893052847d166d7d9894529ff4bf4b6f74af669ba1b99cbbd0d5772e26efd117a6dcfb922d8b8052cc91f2441d1e44",
+          "id": "81faae21307fded01e9a51412c7e54901606a259fe457c585d5915c2ee881ec0",
           "key": null,
           "label": "act/report",
           "payload": "a100825820668f465219eac3b1b5fd8f1fdc5bb92c42084fed40c775525fd05b207cc8630506"
@@ -510,8 +824,8 @@
     {
       "acts": [
         {
-          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258206c50a7504a3875bb8f6bbad750d68ee8db7e69f44a457405d1540e83a3bce5df03582087804cde155e3c18353fee5d47aef9240409690df7308e6e04151a11e6a0a839045818ec16b900d4e32e1059450b86c52bf0c4f5fefe89c8b671f4055820892ad8f32b2d1c3da527e6b50d5f23b73745f8bc7e6a652a3ed8c405c67e890a590107efe875bce5f90d188add233ad20322e6068138a0645eb579d0c9ad55efc54dd4fe581e129c46b37728d11861c0ee3cfde62db7f40c65c21b8390fd50b46b042c3e7de42d4f99f05ce868ff23b24e336ffdee17930b4c026273e81be7377cdd28c5f185e60d2203cab871eec52a4292435854a9859a0837227a46f2293bd9afeddb41bb33b6880d2313789b13344758950278d44dabda34753a434103a1734bcbbc2802f00a783dd3a177b7eb00b6f8c08769a2b52399db163e318fe335ef0e0494dfa2874123fe689728b43bc7ce8ca56aa2fd769ff4422afcc3644ce4ea6ab52fb23cade0441a8536f3c3b0dcebeb768e1053f84764edb7b72843d203d60dba7aef8b67c40f4a83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958407e4114ac5e90a2d7d2ad21908c47ccee64db49ffeca56d452510debd12560a9e3ab742d5ff98c965375466a15881f634a6c0a3eebe55d4f120c71fee9057011e",
-          "id": "946276617d18f5c1ce37604d96a8b1847e3985c64808d7b6e782830097c21803",
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258201c690dbd9b1d17a58186c54b1d6b398a53c0168086f6a5f53bcf167903df46af035820ac1e8dae6721a3be261d354339e458ab79344891d952b1500503b90a81162f16045818ec16b900d4e32e1059450b86c52bf0c4f5fefe89c8b671f4055820892ad8f32b2d1c3da527e6b50d5f23b73745f8bc7e6a652a3ed8c405c67e890a590107efe875bce5f90d188add233ad20322e6068138a0645eb579d0c9ad55efc54dd4fe581e129c46b37728d149409d3c18aca4b7c59f1bac07035952b3a6c55fb0e74b0adb43dfa2477c0098ff23b24e336ffdee17930b4c026273e81be7377cdd28c5f185e60d2203cab871eec52a4292435854a9859a0837227a46f2293bd9afeddb41bb33b6880d2313789b13344758950278d44dabda34753a434103a1734bcbbc2802f00a783dd3a177b7eb00b6f8c08769a2b52399db163e318fe335ef0e0494bca287415735dc33e4346472614583fca8aa836b5c7bcfa2ace5589dd06fff37b03646e0441a8536f3c3b0dcebeb768e1053f84764ed2310db0b80a1a7bdec76445fbe9e86cf83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958401b1229602a903cf1e3dd1d282682cea4dfc2105eadc1d2738dd2b0acde9961808502b4482fd7e2d39e9968bc35f5dce92b21a9a24d53549a79bdd29e2157b7ae",
+          "id": "c5267ccac6665ed8340c737648b0b034ca367d372d9107248825d0539e33e7ec",
           "key": null,
           "label": "act/report block type 1",
           "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd60381000482582059d3517da2a76a20c44a2bea1ca3dc58672509e8ec8de6a9a255a95656ab22668258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
