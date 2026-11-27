@@ -1,12 +1,20 @@
-# Agreements, draft 26: the report, after wave five, P5 and P6
+# Agreements, draft 26: the report, after wave five, P5, P6 and P7
 
-*The scribe's session P3, 27 November 2026, to the MOR lead and Nobody, allegedly; rewritten whole in N1's shape; brought up to date by the scribe's session P5, the same evening, and by the scribe's session P6 after it; each adds a first section and marks what it changed below. A record of work, not a decision: nothing in it is chosen. Marks: TRACED (to a rule or a ledger entry), COUNTED (by a script, named in `draft-26-trace.md` under "P3", "P5" and "P6"), INFERRED (the scribe's reading). Draft 26 is not merged and not LATEST; draft 25, encoding 2 and `spec/README.md` are untouched.*
+*The scribe's session P3, 27 November 2026, to the MOR lead and Nobody, allegedly; rewritten whole in N1's shape; brought up to date by the scribe's session P5, the same evening, by the scribe's session P6 after it, and by the scribe's session P7 after that; each adds a first section and marks what it changed below. A record of work, not a decision: nothing in it is chosen. Marks: TRACED (to a rule or a ledger entry), COUNTED (by a script, named in `draft-26-trace.md` under "P3", "P5", "P6" and "P7"), INFERRED (the scribe's reading). Draft 26 is not merged and not LATEST; draft 25, encoding 2 and `spec/README.md` are untouched.*
 
 **The wish** (Nobody, allegedly, 26 November, 16:46): "We need to change the current wish to updating the core after the findings". On the order (27 November, 14:53): "We finish this rewrite of agreements, then we turn our attention to money, and after that we’ll tackle development."
 
+## What P7 changed
+
+**In plain words.** He has made the keepers' socket his (27 November, 23:52, to 28 November, 00:00): by default every keeper named must show an act, so that each checks the others, which he calls cross verification; a cMIP in its own socket beside the keeper list lifts that. P6 had written it as the lead's reading; it is now marked his, and draft 26's words already said it. The lead's four lines of 23:55 are written in, each the lead's, to check: a keeper's record the verifier does not hold makes the answer unchecked; a keeper's signed record counts wherever a copy is held, for every answer about order, and what it signed stands when it stops; the keepers named with an answer are those that counted, the others named as not showing it; a keeper whose two signed answers contradict each other counts as one not showing the act, its contradiction shown. The socket's bytes stay open, for the codemeister.
+
+**His entry** (TRACED, read whole in `docs/decisions.md` on main; his words as the ledger has them; its "Arrived at" line is the lead's, to check): **Keepers: cross verification by default, a socket to lift it** (23:52 to 00:00): "It’s own socket makes sense."; "Interesting debate. / Do we force cross verification, or simply redundancy."; "Agreed, and there is a socket to lift it. (Which needs to be in the header)". The header is for the Development review, not draft 26. No rule's words change for it but 5.8.3's "where they name none", read as "where that socket is empty" (P7-3, mechanical).
+
+**The lead's 23:55** (TRACED, the note's "P6's four lines, 23:55"): 1, §3.6 **Unchecked** (P7-1); 2, 5.8.4, with a pointer in 5.10.6 (P7-5, P7-6); 3, 5.5.3 and 5.8.4 (P7-2, P7-5); 4, 5.8.3 (P7-4). COUNTED: 6 edits to draft 26; 24 to the companion (scenarios 8.22, 8.28, 8.37 to 8.39 re-read, a variant each in 8.37 and 8.38) and the hash; 5 to encoding 3 and the hash (the trace, P7).
+
 ## What P6 changed
 
-**In plain words.** He said that how many of the keepers an agreement names must show an act is the agreement's own choice, made through a cMIP: two of two to check that neither cheats, two of three to go on when one dies. With no such cMIP, every keeper named is needed, as before. A buyer's filling under an agreement whose keeper died stands where a copy of the keeper's signed record shows it; with no copy held, the answer is "I don't know" (unchecked); no one is told to keep a copy. The clone of 21:42 is the new agreement of 22:36. Where that cMIP is named, beside the keeper list, is the lead's reading, to check; its bytes are left to the codemeister.
+**In plain words.** He said that how many of the keepers an agreement names must show an act is the agreement's own choice, made through a cMIP: two of two to check that neither cheats, two of three to go on when one dies. With no such cMIP, every keeper named is needed, as before. A buyer's filling under an agreement whose keeper died stands where a copy of the keeper's signed record shows it; with no copy held, the answer is "I don't know" (unchecked); no one is told to keep a copy. The clone of 21:42 is the new agreement of 22:36. Where that cMIP is named, beside the keeper list, is the lead's reading, to check; its bytes are left to the codemeister. (*His* since 23:52 to 00:00: P7, above.)
 
 **His entries** (TRACED, each read whole in `docs/decisions.md` on main; his words as the ledger has them; each "Arrived at" line is the lead's, to check):
 
@@ -60,33 +68,35 @@ Also, on the lead's answers of 22:30 that still stand: 1, §3.2 **Unknown party*
 
 ## The files
 
-COUNTED (`wc -lc`, the final files on `claude/draft-26-outline-vbtvu7`, after P6):
+COUNTED (`wc -lc`, the final files on `claude/draft-26-outline-vbtvu7`, after P7):
 
 | File | Lines | Bytes |
 |---|---|---|
-| `draft-26.md` (the hashed text) | 436 | 157,698 |
-| `encoding-3.md` (its bytes) | 519 | 71,263 |
-| `draft-26-companion.md` | 2334 | 495,378 |
-| `draft-26-trace.md` | 2016 | 460,293 |
-| `draft-26-report.md` (this file) | 275 | 48,964 |
+| `draft-26.md` (the hashed text) | 436 | 158,140 |
+| `encoding-3.md` (its bytes) | 526 | 72,272 |
+| `draft-26-companion.md` | 2348 | 502,609 |
+| `draft-26-trace.md` | 2072 | 472,205 |
+| `draft-26-report.md` (this file) | 300 | 55,376 |
 
 **The hashes** of the final `draft-26.md`, computed last, after every other edit of it:
-- E2's tagged hash, `SPEC_DRAFT_26`: `eff0648f5fd1d6b623ccb581ab2f2e07e0bf406b9ddb58fed555642b4cf43b91`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives P5's `783f6821…` on the file as P5 left it).
-- The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `5d63d56f1e6edd21ae0a714cda5138f748ded7526d07caa4bbd56a42368ce7b1`.
+- E2's tagged hash, `SPEC_DRAFT_26`: `eb8bfb8735a73517f44679d532098bb9779d0e1cc2092a0d3472f5ff223b6fcc`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives P6's `eff0648f…` on the file as P6 left it).
+- The plain sha256 of the file's bytes, `sha256sum draft-26.md`: `afadb7d593e7408be8a233b79454d0e5d84310a12cb45d883244f9b8078c4307`.
 
-Computed by P6, after every other edit of the file. The first names the text, as encoding 3's E2 has it. Both are written, each named, in encoding 3's E2 and the companion's head. P5's values (`783f6821…`, `a0ee4064…`) name the text before P6. P3's values (`60c0b84e…`, `c770b324…`) name the text before P5; N1's (`04bae25c…`, `09ba9ce5…`) the text before wave five.
+Computed by P7, after every other edit of the file. The first names the text, as encoding 3's E2 has it. Both are written, each named, in encoding 3's E2 and the companion's head. P6's values (`eff0648f…`, `5d63d56f…`) name the text before P7; P5's (`783f6821…`, `a0ee4064…`) the text before P6. P3's values (`60c0b84e…`, `c770b324…`) name the text before P5; N1's (`04bae25c…`, `09ba9ce5…`) the text before wave five.
 
 ## The counts
 
 COUNTED unless marked.
-- **Rules of draft 26**: 68 numbered and 33 lettered clauses, 32 headings; 9 tasks, 7 modules, 8 open values (§7). Unchanged by wave five and by P5; P6 added the task K9 and two open values.
+- **Rules of draft 26**: 68 numbered and 33 lettered clauses, 32 headings; 9 tasks, 7 modules, 8 open values (§7). Unchanged by wave five and by P5; P6 added the task K9 and two open values; unchanged by P7.
 - **Words defined**: 94 bold terms in §3's entry heads, 93 distinct; none new in P3.
-- **References**: 965 in draft 26, 295 in encoding 3 (292 before P5), 202 in the companion's sections 9 and 10; none bad. P6's count, task numbers included: 1074 in draft 26, 343 in encoding 3, 228 in the companion's sections 9 and 10; none bad but the named 5.7.3.
+- **References**: 965 in draft 26, 295 in encoding 3 (292 before P5), 202 in the companion's sections 9 and 10; none bad. P6's count, task numbers included: 1074 in draft 26, 343 in encoding 3, 228 in the companion's sections 9 and 10; none bad but the named 5.7.3. P7's: 1078 in draft 26, none bad; 175 in the lines P7 wrote, none bad.
 - **Quotations**: of his words, 162 spans after "He:" in the four files as P3 found them, all in the ledger word for word; of draft 26, 135 in the companion and 34 in encoding 3 that stand in the text now, and 4 in the companion that quote an older draft 26 on purpose, each labelled.
-- **Edits of wave five**: P1, 62 to draft 26; P2, 30 to encoding 3 and the companion's sections; P3, 47 to draft 26, 15 to encoding 3, 33 and 22 table rows to the companion; P5, 27 to draft 26, 5 to encoding 3, 26 and 18 table rows to the companion, with five scenarios rewritten in part; P6, 24 to draft 26, 8 to encoding 3, 37 to the companion, with three scenarios new.
+- **Edits of wave five**: P1, 62 to draft 26; P2, 30 to encoding 3 and the companion's sections; P3, 47 to draft 26, 15 to encoding 3, 33 and 22 table rows to the companion; P5, 27 to draft 26, 5 to encoding 3, 26 and 18 table rows to the companion, with five scenarios rewritten in part; P6, 24 to draft 26, 8 to encoding 3, 37 to the companion, with three scenarios new; P7, 6 to draft 26, 5 to encoding 3, 24 to the companion, each with the hash, with five scenarios re-read and two variants new.
 - **Scenarios**: 39 (8.1 to 8.39; 8.37 to 8.39 by P6); vectors named from 8.22 onward: 8.22 to 8.36; after P5, 8.28's fourth waits on encoding 3's item 14 (below).
 
 ## What the check found and fixed
+
+**P7's check** (six checks, by script, on the touched rules and their quotations; each in the trace under P7). References: none bad (draft 26, 1078; the 175 in every line P7 wrote). Words: nothing defined twice (67 heads, as P6 left them); no word added; "cross verification" and a keeper's death are not draft 26's words. Only rules in §4 to §7. Quotations: one brought to the words in the companion (section 3's 5.10.6), one kept labelled in this report (P6's line on 5.8.3). His words: 242 spans, 240 in the ledger word for word, the other 2 descriptions of checks. Nothing forbidden. No stranger this time.
 
 **P6's check** (six checks, by script, on the touched rules and their quotations; each in the trace under P6). References: none bad (draft 26, 1074; encoding 3, 343; every line P6 wrote). Words: nothing defined twice; the new task named once, "Keepers", in its row; every sentence left that speaks of every keeper carries the default or the cMIP. Only rules in §4 to §7. Quotations: three brought to the words in the companion, one kept labelled "as wave four left it"; encoding 3's §3.4 quotation brought to it. His words: 224 spans, all in the ledger word for word. Nothing forbidden.
 
@@ -136,12 +146,17 @@ One line each; nothing chosen. Where a reading of the lead's now answers a line,
 - From the stranger: where Terms name a keeper and a named condition counts signatures, what a verifier passes on for an update whose assents the keeper does not show: the cMIP's answer on none counted (likely not valid, per keeper, 5.5.7(c)), or only not shown, as the default (5.5.5(c)); the text does not say (the lead's question 1, below). *Answered* by the lead's 23:22, 1: the cMIP's answer, per keeper, **not shown** as in force (5.5.7(c), P6-13).
 - From the stranger: which field of the new first act names the old agreement; not `agreement`, which a first act cannot carry (§4.2); encoding 3's item 14, for the codemeister. Draft 26's §7 now lists it (the lead's 23:22, 4; P6-23).
 
-**P6's lines**
-- The socket for the keepers' cMIP: a cMIP beside the keeper list, in the keeper field, as `in_force` names one (§4.2 `keeper`, 5.8.3, K9); the lead's reading of 23:33, to check; its bytes, encoding 3's item 15.
-- From the stranger: 5.10.6 answers **unchecked** where no copy of a dead keeper's record is held (his 23:29's line, the lead's 23:33), while §3.6 **Unchecked** names only a cMIP or an act not held, and §3.6 **Not shown** and 5.8.3 give **not shown** for a keeper that does not show an act; which word §3.6 gives it is a choice.
-- From the stranger: whether a held copy of a dead keeper's record counts for anything but a filling (which Terms are in force, 5.5.3), K9 accepting "the keepers' records the verifier holds".
-- From the stranger: whether "with those keepers named" (5.5.3, 5.8.4) names every keeper the Terms name or those that counted; and whether a keeper that stopped differs from one that has "not yet" shown an act (§3.4 **Placed**).
-- 5.8.3: where the verifier holds two contradicting answers of one keeper, "it has no answer from that keeper: **unchecked**"; under a named cMIP, whether the other keepers' records still give the answer (INFERRED).
+**P6's lines** (*answered*: the socket by his entry of 23:52 to 00:00; the four by the lead's 23:55, as P7 writes them)
+- The socket for the keepers' cMIP: a cMIP beside the keeper list, in the keeper field, as `in_force` names one (§4.2 `keeper`, 5.8.3, K9); the lead's reading of 23:33, to check; its bytes, encoding 3's item 15. *Answered* by his "Keepers: cross verification by default, a socket to lift it" (23:52 to 00:00): its own socket, beside the keeper list; empty, cross verification; a cMIP in it lifts it. Its bytes stay open (encoding 3's item 15).
+- From the stranger: 5.10.6 answers **unchecked** where no copy of a dead keeper's record is held (his 23:29's line, the lead's 23:33), while §3.6 **Unchecked** names only a cMIP or an act not held, and §3.6 **Not shown** and 5.8.3 give **not shown** for a keeper that does not show an act; which word §3.6 gives it is a choice. *Answered* by the lead's 23:55, 1: §3.6 **Unchecked** also names a keeper's record not held (P7-1).
+- From the stranger: whether a held copy of a dead keeper's record counts for anything but a filling (which Terms are in force, 5.5.3), K9 accepting "the keepers' records the verifier holds". *Answered* by the lead's 23:55, 2: it counts for every answer about order (5.8.4, P7-5).
+- From the stranger: whether "with those keepers named" (5.5.3, 5.8.4) names every keeper the Terms name or those that counted; and whether a keeper that stopped differs from one that has "not yet" shown an act (§3.4 **Placed**). *Answered* in its first half by the lead's 23:55, 3: those that counted, by K9's answer, the others named as not showing it (5.5.3, 5.8.4, P7-2, P7-5); its second half is left (P7's question 1, below).
+- 5.8.3: where the verifier holds two contradicting answers of one keeper, "it has no answer from that keeper: **unchecked**"; under a named cMIP, whether the other keepers' records still give the answer (INFERRED). (P6's line quotes 5.8.3 as P6 left it.) *Answered* by the lead's 23:55, 4: that keeper counts as one not showing the act, the contradiction shown as evidence; the other keepers may still meet the cMIP (P7-4).
+
+**P7's lines** (the scribe's, INFERRED; nothing chosen)
+- §3.6 **Unchecked** now names a keeper's record not held; §3.6 **Not shown** names a keeper that does not yet show an act: which a keeper that answers nothing gives is not said (5.8.3, 5.10.6, 8.28).
+- "by K9's answer" (5.5.3, 5.8.4) where the socket is empty: no cMIP answers, and 5.8.3's default is meant (INFERRED).
+- "a keeper's death does not void what it signed" is written in 5.10.6's words, draft 26 having no word for a keeper's death (P7-5).
 
 **N1's list, where no reading reached**: the brief's 7 (how a fork that is not of a line is resolved in bytes), 8 (which acts compete "to change the same state"), 11 (how long a filling binds when its words state no term), 12 ("the anchoring of the purchase"; a filling that is not bought; the stranger again), 13 (what a verifier shows of an agreement dissolved while a filling's version binds), 29 (what the known parties may still do), 30 ("Terms state their anchors" for all Terms), 34(a) (how Terms name their clock), 35 (the two copies of "A condition in time with no anchor is refused"); the lead's 09:47 sentence on unreadable tips; **Rival** against 5.12.8's heading; **Knot** MOR-wide, not said in §3.4; **Vow**, no test from an offer; a payment that "holds" K6; case 8 not checkable from bytes; a keeper's identifier.
 
@@ -155,7 +170,7 @@ One line each; nothing chosen. Where a reading of the lead's now answers a line,
 
 ## The MOR lead's readings, for him to check
 
-Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, of 22:30 and 22:45 carried by P5, and of 23:22 and 23:33 carried by P6, one line each, with the rule it changed; each is the lead's reading, not a decision of Nobody, allegedly; two rest on his words, as marked. The notes are `docs/lead/notes/2026-11-27-readings-for-p2.md` on main. Rows marked *Withdrawn* stay as the record; the entry that withdrew each is named.
+Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, of 22:30 and 22:45 carried by P5, of 23:22 and 23:33 carried by P6, and of 23:55 carried by P7, one line each, with the rule it changed; each is the lead's reading, not a decision of Nobody, allegedly; two rest on his words, as marked. The notes are `docs/lead/notes/2026-11-27-readings-for-p2.md` on main. Rows marked *Withdrawn* stay as the record; the entry that withdrew each is named.
 
 | Reading | What it made the text say | Rule (P3 row) |
 |---|---|---|
@@ -198,6 +213,11 @@ Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, of 22:30 an
 | 23:22, 3 | 21:45's answer 2, its second clause, withdrawn with the hatch | the companion's 6.16 |
 | 23:22, 4 | one line in §7 beside encoding 3's item 14 | §7 (P6-23) |
 | 23:33, resting on his 23:22–23:32 | her filling stands where a held copy of the keeper's signed record shows it; no copy, unchecked; no client duty. How many keepers, the agreement's by its cMIP; with none, every keeper named. The socket: the keeper field's own, a cMIP beside the list, to check; encoding 3 lists it open. The clone of 21:42 is the new agreement of 22:36 | §3.4, §4.2, 5.8.3, 5.10.6, K9, §7 (P6); encoding 3, item 15 |
+| 23:33's socket, now his (23:52 to 00:00) | how many keepers count has its own socket beside the keeper list; empty, cross verification, every keeper named; a cMIP in it lifts it | none: §4.2 `keeper`, 5.8.3, K9 already say it; 5.8.3's "where that socket is empty" (P7-3, mechanical) |
+| 23:55, 1 | §3.6 **Unchecked** also names a keeper's record not held | §3.6 (P7-1); 5.10.6 already says it |
+| 23:55, 2 | a keeper's signed record counts wherever a copy is held, for every answer about order; what a keeper signed stands when it no longer shows the agreement's acts | 5.8.4 (P7-5); 5.10.6, a pointer (P7-6) |
+| 23:55, 3 | with keepers named, those that counted, by K9's answer; the others named as not showing it | 5.5.3, 5.8.4 (P7-2, P7-5) |
+| 23:55, 4 | a keeper whose two signed answers contradict each other counts as one not showing the act, the contradiction shown as evidence; the other keepers may still meet the cMIP | 5.8.3 (P7-4) |
 
 **Questions for the MOR lead**, one batch, each with the scribe's lean (the scribe's reading, INFERRED, not a proposal):
 1. 5.10.6's last sentence, 5.10.8, 5.5.7(f) and §3.3 **Apply** say "a filling": does reading 7 reach them, so that an update reaches a known party's own filling? *Lean*: yes.
@@ -215,14 +235,19 @@ Every reading of 20:41, 20:55 and 21:45 carried into draft 26 by P3, of 22:30 an
 
 *Answered* by the lead's batch of 23:22: 1, the cMIP's answer, per keeper, with **not shown** as in force (written, P6-13); 2, yes, it replaces (written, P6-12, P6-16); 3, yes, withdrawn with the hatch (the companion's 6.16); 4, yes (written, P6-23).
 
+**P7's questions for the MOR lead**, one batch, each with the scribe's lean (INFERRED, not a proposal):
+1. A keeper that answers nothing (stopped, or silent): is it a keeper's record not held (§3.6 **Unchecked**, P7-1), or a keeper that does not yet show the act (§3.6 **Not shown**, 5.8.3)? *Lean*: **not shown** where the verifier holds a record of that keeper's that does not show the act; **unchecked** where it holds none of that keeper's records for it (5.10.6, scenario 8.39).
+2. "by K9's answer" (5.5.3, 5.8.4) where the socket is empty: read as 5.8.3's default? *Lean*: yes; a pointer "(5.8.3)" after it would say so.
+3. The lead's "a keeper's death does not void what it signed", written "what a keeper signed stands when it no longer shows the agreement's acts" (5.8.4): right? *Lean*: yes; draft 26 has no word for a keeper's death.
+
 **For Nobody, allegedly**, one at a time, his:
 1. *His*, *answered* by his 22:30 ("An update the keeper never showed is no update"): "Why? The update never got to the keeper, how can it be valid? To be valid the agreement needs to be checked at the keeper." The lead's line, to check: no update, no fork. The question as P3 asked it: where two of three have signed a valid update that the dead keeper will never pin, and all three then sign a new version naming a new keeper, the two are a fork by the rules as written; must they first resolve it, or does the version all three sign stand? (The stranger's case 2.)
 
-P5 has no new question for him: the two lines marked for him above are to check. *Answered* by his 23:22–23:32 (P6, above). P6 has no new question for him; the socket for the keepers' cMIP is the lead's reading, for him to check.
+P5 has no new question for him: the two lines marked for him above are to check. *Answered* by his 23:22–23:32 (P6, above). P6 has no new question for him; the socket for the keepers' cMIP is the lead's reading, for him to check. *Answered* by his 23:52 to 00:00 (P7, above). P7 has no new question for him; the lead's four lines of 23:55 are for him to check.
 
 ## What waits on the codemeister
 
-Encoding 3's section 11, as P2 left it and P3 kept: open, 1 the set's label, 2 how a set's members are joined (and the empty set), 3 where the set's rule stands, 7 what a keeper's identifier is the hash of, 11 how a cMIP's declared needs are read for case 8, 13 whether the checker applies Text's own rules, 14 which field of a first act names an earlier agreement (P5, the lead's 22:45, 3; now in draft 26's §7), 15 the keepers' cMIP: where it is named, its key, what it is asked (P6); read as the lead's, 4, 5, 6, 8, 10; 9, which the lead reads as met by 5.2.2, to check; 12 `SPEC_DRAFT_26`, computed again by P3 and by P5, for him to check. Also `TEXT`'s values (E25). The vectors the scenarios name, none written: 8.22 to 8.26 (wave four); 8.27 to 8.29 (on his words of 18:39 to 18:51); 8.4's variant (**not shown**, per keeper, K2 named); 8.28's four, rewritten by P5 (the live keeper; the dead keeper, no update and no fork; the new first act W1, no update and no fork; the filling as the keeper showed it), the last waiting on encoding 3's item 14 for W1's field; 8.30 (**not shown** as a replacement, per keeper); 8.31 (**not shown**, per keeper); 8.32 (no update, no fork, per keeper; two variants); 8.33 to 8.35, writable on the text, which rests on the lead's readings, to check; 8.36, now writable (P5); 8.37 and 8.39, writable (P6); 8.38, waiting on item 15; 8.14's set vectors waiting on items 1 and 2.
+Encoding 3's section 11, as P2 left it and P3 kept: open, 1 the set's label, 2 how a set's members are joined (and the empty set), 3 where the set's rule stands, 7 what a keeper's identifier is the hash of, 11 how a cMIP's declared needs are read for case 8, 13 whether the checker applies Text's own rules, 14 which field of a first act names an earlier agreement (P5, the lead's 22:45, 3; now in draft 26's §7), 15 the keepers' cMIP: where it is named, its key, what it is asked (P6; the socket his since 23:52 to 00:00, its bytes open, P7); read as the lead's, 4, 5, 6, 8, 10; 9, which the lead reads as met by 5.2.2, to check; 12 `SPEC_DRAFT_26`, computed again by P3 and by P5, for him to check. Also `TEXT`'s values (E25). The vectors the scenarios name, none written: 8.22 to 8.26 (wave four); 8.27 to 8.29 (on his words of 18:39 to 18:51); 8.4's variant (**not shown**, per keeper, K2 named); 8.28's four, rewritten by P5 (the live keeper; the dead keeper, no update and no fork; the new first act W1, no update and no fork; the filling as the keeper showed it), the last waiting on encoding 3's item 14 for W1's field; 8.30 (**not shown** as a replacement, per keeper); 8.31 (**not shown**, per keeper); 8.32 (no update, no fork, per keeper; two variants); 8.33 to 8.35, writable on the text, which rests on the lead's readings, to check; 8.36, now writable (P5); 8.37 and 8.39, writable (P6); 8.38, waiting on item 15; 8.14's set vectors waiting on items 1 and 2.
 
 ## What draft 26 hands to other texts
 
@@ -272,4 +297,4 @@ All of 27 November, given to the scribe; each with the rules it shaped and the o
 - 09:16, on M2's rows: 6.4. 09:27, on M3's questions: 6.5. 09:47, on M4's rows: 6.6. 10:07, on M5's rows: 6.7.
 - 13:20, on M6's question: 6.8. The rows of the note the lead calls settled: 6.9. 14:33, on M7: 6.10. 14:59, on M8 and M9: 6.11. 15:34, on M10: 6.12.
 - Wave four: the lean on four words, and the five lines: 6.13.
-- The evening: the fifty rows, 6.14; 18:41, on "by default", 6.15; 20:41, 20:55 and 21:45, with his 20:50 and 21:42, 6.16; 22:30 and 22:45, with his 22:30, 22:36 and 22:39, 6.16, "After P3" (P5); 23:22 and 23:33, with his 23:22 to 23:32, 6.16, "After P5" (P6).
+- The evening: the fifty rows, 6.14; 18:41, on "by default", 6.15; 20:41, 20:55 and 21:45, with his 20:50 and 21:42, 6.16; 22:30 and 22:45, with his 22:30, 22:36 and 22:39, 6.16, "After P3" (P5); 23:22 and 23:33, with his 23:22 to 23:32, 6.16, "After P5" (P6); 23:55, with his 23:52 to 00:00, 6.16, "After P6" (P7).
