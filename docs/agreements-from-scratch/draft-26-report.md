@@ -41,7 +41,7 @@ COUNTED (`wc -lc`, the final files on `claude/draft-26-outline-vbtvu7`):
 | `draft-26.md` (the hashed text) | 433 | 155,996 |
 | `encoding-3.md` (its bytes) | 500 | 68,020 |
 | `draft-26-companion.md` | 2257 | 463,742 |
-| `draft-26-trace.md` | 1840 | 402,077 |
+| `draft-26-trace.md` | 1840 | 402,087 |
 | `draft-26-report.md` (this file) | 199 | 27,127 |
 
 **The hashes** of the final `draft-26.md`, computed last, after every other edit of it:
