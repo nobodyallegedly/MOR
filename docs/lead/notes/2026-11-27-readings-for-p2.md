@@ -26,3 +26,24 @@ Also for the scribe: an empty keeper list is E18's fault (as the codemeister's a
 ## For P2 and P3
 
 P2 writes the companion's scenarios and encoding 3's "One fault, one rule" on these readings, citing this note by path. Draft 26's own words for them are P3's. Number 4 is now his, as the ledger records it.
+
+## The rest of the batch of 19, 20:55
+
+*The lead's readings, by the scribe's numbers (the P1 trace's "For Nobody, allegedly", 1 to 13; 13 to 19 are N1's seven wordings). None is his. Each goes to P3 as the lead's, listed for him to check in the report.*
+
+| Scribe's # | The lead's reading | Rests on |
+|---|---|---|
+| 8 (5.6.1(b) "in force" against 5.6.4) | "In force" in 5.6.1(b) is read at the act's own position: the Terms `under` names were in force when the act was made, as 5.6.4 places it. 5.6.1(b) says so and points to 5.6.4; no rule changes. | "Nothing an agent made is set aside" (5.6.6); 5.6.6(a): a version that ends a power reaches only acts made after it |
+| 9 (what shows a signer's fork came after the update) | As any order: knots or the keepers named (§5.13, 5.8.3). The fork is made after the update where the tip that competes with the signer's counted act is shown after acts enough to put the update in force. Where nothing shows that, the update is **not shown** as in force, with the reason: a needed signer's line forked, order not shown. Never a yes from a missing order. | "Knots are knots" (27 November); "Missing act is always "I don't know"" |
+| 10 (Fable 1.10: counter signature against an agent's assent; an agreement-party's pin) | (a) A counter signature in the party's own name cancels an assent an agent made for her, while one is available: 5.6.6(c) already says so; P3 points to it. (b) An agreement acts only through powers its Terms give (5.1.2), so its act for the pin is one act made `for` it under such a power, by whoever that power names. | 5.6.6(c); 5.1.2; "The giver of a power bears it" ("Ana took the risk") |
+| 11 (where the principle stands) | Both: one sentence in §0, which states what the text does and holds no rule, and the reasons in the companion. P1-1 stands. | "It’s an agreements principle" (26 November); F18 |
+| 12 (the lead's line on the two classes' rules) | It stands as the lead's, to check with him: every item of §3.2's **Two classes** is already a grammar rule of draft 26 (5.6.1(b), 5.6.1(c), §5.10); the paragraph gathers them and adds none. P3 cites the rule beside each item. | "A filling gives no power", his line of 18:47 |
+| 13 ("kind" of a value, §4.1) | Stays: "kind" for a value's kind and a Statement's `kind`; "sort" for a spot's and a power's. No change. | the lean on four words (6.13) |
+| 14 ("sort" for a spot and a power) | Stands, for both. | as 13 |
+| 15 (§4.4's "rule" alone) | The heading becomes "One fault, one grammar rule", and "one fault fits two grammar rules"; encoding 3 follows. | §3.1 **Rule**: "The word alone always means this" |
+| 16 ("control" for the layer and K6) | K6 keeps "Control"; wherever a layer is meant, the layer's own name is written. A better word for K6 is for the Money review. | "We finish this rewrite of agreements, then we turn our attention to money" (27 November, 14:53) |
+| 17 (§3.1 **Rule** "trusts nobody", against K3's trust column) | "It computes; it trusts nobody" becomes "It computes; what it leans on is named by its modules (§6.1)". | §6.1 |
+| 18 (sentences said twice) | Each said once, in the rule that owns it; the other place points by number. 5.1.3 owns the receiver (§4.2's row points); the keepers are 5.8's (5.4.1 and 5.5.3 point); 5.4.5 owns the counter signature (5.4.4 points). | "One fault, one grammar rule", as a habit of the text |
+| 19 (the stranger's three) | (a) 5.4.2: say plainly that in an update `in_force` is read only for who fills a role, as K5's input, and its answer on coming into force is left unread. (b) 5.4.5's "lean on one another": write what is meant, each names the other (a knot, §5.13). (c) 5.11.9: the contest names the Terms in `terms` and the holder's own envelope act in `relies_on`; no new field. None changes a rule. | §4.3's fields; 5.13.1 |
+
+**What his answer of 20:50 reaches.** "Yes, I don’t see the need to have her sign twice" (ledger, "Publishing the Terms is the publisher's assent"). §4.3's paragraph **An author's first act** ("their assent to those Terms names it in `previous`") and every rule that counts the author's assent apart (5.4.1, 5.5.7(e)) change with it: the Terms act is the assent counted in its signer's name, and that signer's next act names it in `previous`. P3 writes it; encoding 3 and the vectors follow.
