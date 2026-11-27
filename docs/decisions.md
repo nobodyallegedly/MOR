@@ -130,6 +130,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then (23:29), the MOR lead asked whether a client that fills a spot should keep the keeper's signed record of it, leaning a client duty. He: "It’s not something I would specify."
 - *Arrived at (to check):* no client duty is written for it. Her filling stands where a held copy of the keeper's record shows it; with no copy held, unchecked. Who keeps a copy is left to clients and to the keepers the agreement names. The MOR lead's lean is withdrawn.
 
+**The clone is the new agreement** (27 November, 23:30–23:32; the scribe's P5, held for him). The MOR lead asked whether "a clone to the agreement to a new keeper" (21:42) and "whatever they do next is a new act, a new agreement" (22:36) are the same thing: a new first act that may name the old one for lineage, not an update of it. He: "I laughed… because to me it still always the same question. And it boils down to you try real hard to think like a human, I try real hard to think like a machine."
+- *Arrived at (to check):* yes, the same: the clone of 21:42 is the new agreement of 22:36.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
