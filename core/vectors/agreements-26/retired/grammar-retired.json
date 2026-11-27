@@ -1,4 +1,1346 @@
 {
   "about": "Verifier 2's grammar cases that draft 26 retires, each copied whole from core/vectors/agreements-new/grammar.json (which stays as it is), with the rule that retires it, quoted, and what the retirement rests on. These answers are draft 25's; they are kept as a record, and no verifier of draft 26 is tested against them.",
-  "cases": []
+  "cases": [
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820ac45815930f915988d912d8be7c8a153eb06d009a98a3078ab6099e07511ba2c035820145a3dcf1799b5f3231ac61dc6e15a241c373a4a50f9c806f20d3a0b20e5e0010458185f0505ee2ef1807a7e79f475c1649a1e2c8a2200f89582690558208fa16dd3cc62a81e9f9ee5f3f38912ee359f963dd25419f3983dfad8fd0fd73259012620246329c946e2077d11b7ba398781bd6c2f1ee414b5ed4165b2b38508e576756f9bcceab4d84643c9beca3ac0cb777dc4c4f429363a102d410e523cd7a105649cc1f8f2931e6a40c0dd452f2e261e9a231092c78084783d48ccf8e234e96b05c00bc72f508f7ed35ccc68506e5a940b44f6d6df46a7c47bfe243c0e48a6afcf0b56d8355c75b64dda37056c51c01251aa24d1b38614bbbe14e32c586c2c029f5c7e9881490d2daddbbf302db8c8c919bfec1363f0887dfe9ee32114811294ead54499ea2d025d85ab15886b6456c9150110688a6a94250c1b754f345c15e09a3ccc6c07823438b49498c3aff70691a818cc78dd7cff96beb9a226d5fa352c9423405fd79ed29d39a1cbf40fdc47f2419d095a6ea0d07bc7be5ab37b2c6685d1cbfb3d59b8d2830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840e1f2f082987996e08d54c82a54d8027485a8e225e6f6afbcdc7bc6ea02bedf50573edff635f65dcdead4436437b586fff75a2e3fc7607c4c4b6f464a6a2f46ca",
+            "id": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+            "label": "leg/S's leg report"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b02582015cc86bb39cdad469f374dc1721d0e7993dec3219ca7b7eba351c07453acaddc0358205a3dbd850e6628174e99c11ce991ccd89b95a3582ba9698f6071cc3686c38f1a0458185b56d099ceb319745dd16838a4484c29c6b6c72c286a9d48055820ac233ccd330ce9ea522108053819cf200cf17cce920432bb774107fde2726e7d590102af68ee9b00370ce9d9a58d26d0dfb04338b8aa6e2abd10a71fa8d2fd4fa2314f83079f028e19c1ce9c543e6452c3c3829ffa0333f6ea0c21c225462c6b6406daf08c67467876bfc2dbf5fff7c711a437e24a592aefea6b5562c59f92d1fe67bc4f59f0a2e698d0eca0bd423f8f411d801deec759f2fe5ee8ebae198cfb272267be9611fcfb16bfa6464a9535d57ee2c3ef27dd6e20fb1cbf828ce0975c997c6e5480745fb279d2f54d6fa55dfa70113662331b5917d49be64cd416208e8c87ccf0ad5b0e01f0f4170d8e790c8eeb3ecb434b1dbdb9df6c24179e11e77f0974b5d259a4de0b57da11fc63c3b4ef9405d2ab889b9aaae33307630ea64269711938f840830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e58401b5049805c08140e38a834e21caee32fc66e7d2bc71002cae31863a0d3cddb16c000f289a6e821615be7ac763ed0682321c2aa5302474ab2c5eac847e59f9c67",
+            "id": "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76",
+            "label": "leg/P's confirmation"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": {
+            "signer": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+          },
+          "word": "matched"
+        },
+        "answers": [
+          {
+            "acts": [
+              "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+              "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76",
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [
+              {
+                "act": "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76",
+                "as": "the receiving side, in its confirmation",
+                "by": "signer",
+                "id": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+              },
+              {
+                "act": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+                "as": "the doer, in its leg report",
+                "by": "signer",
+                "id": "8675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c"
+              }
+            ],
+            "says": "matched: the doer and the receiving side state the same amount (5) for the settlement 9129cdba728a (the report block's word)",
+            "who": {
+              "signer": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+            },
+            "with": [],
+            "word": "matched"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "one leg's call, its two halves matched",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "As the block asks, the verifier shows, for each such act, **matched**, **mismatched** (both shown, neither chosen), or **one side only**.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 78,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820ac45815930f915988d912d8be7c8a153eb06d009a98a3078ab6099e07511ba2c035820145a3dcf1799b5f3231ac61dc6e15a241c373a4a50f9c806f20d3a0b20e5e0010458185f0505ee2ef1807a7e79f475c1649a1e2c8a2200f89582690558208fa16dd3cc62a81e9f9ee5f3f38912ee359f963dd25419f3983dfad8fd0fd73259012620246329c946e2077d11b7ba398781bd6c2f1ee414b5ed4165b2b38508e576756f9bcceab4d84643c9beca3ac0cb777dc4c4f429363a102d410e523cd7a105649cc1f8f2931e6a40c0dd452f2e261e9a231092c78084783d48ccf8e234e96b05c00bc72f508f7ed35ccc68506e5a940b44f6d6df46a7c47bfe243c0e48a6afcf0b56d8355c75b64dda37056c51c01251aa24d1b38614bbbe14e32c586c2c029f5c7e9881490d2daddbbf302db8c8c919bfec1363f0887dfe9ee32114811294ead54499ea2d025d85ab15886b6456c9150110688a6a94250c1b754f345c15e09a3ccc6c07823438b49498c3aff70691a818cc78dd7cff96beb9a226d5fa352c9423405fd79ed29d39a1cbf40fdc47f2419d095a6ea0d07bc7be5ab37b2c6685d1cbfb3d59b8d2830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840e1f2f082987996e08d54c82a54d8027485a8e225e6f6afbcdc7bc6ea02bedf50573edff635f65dcdead4436437b586fff75a2e3fc7607c4c4b6f464a6a2f46ca",
+            "id": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+            "label": "leg/S's leg report"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b02582077afa45aaffc0eeb50d93757da77f27c5a21a1c5684d5b6a044e1982f26970910358203aa68a34af7e74c2b6bfe593deb5c768539fe0eb700386f50c3fb39d0c20e7040458185b56d099ceb319745dd16838a4484c29c6b6c72c286a9d48055820ac233ccd330ce9ea522108053819cf200cf17cce920432bb774107fde2726e7d590102af68ee9b00370ce9d9a58d26d0dfb04338b8aa6e2abd10a71fa8d2fd4fa2314f83079f028e19c1ce9c543e6452c3c3829ffa0333f6ea0c21c225462c6b6406daf08c67467876bfc2dbf5fff7c711a437e24a592aefea6b5562c59f92d1fe67bc4f59f0a2e698d0eca0bd423f8f411d801deec759f2fe5ee8ebae198cfb272267be9611fcfb16bfa6464a9535d57ee2c3ef27dd6e20fb1cbf838ce0975c997c6e5480745fb279d2f54d6fa55dfa70113662331b5917d49be64cd416208e8c87ccf0ad5b0e01f0f4170d8e790c8eeb3ecb434b1dbdb9df6c24179e11e77f0974b5d259a4de0b57da11fc63c3b4ef9405d2ab881c1756fa7b8867c6c725e62bfff3cde1830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e5840750a481baf44cbc14f5642f3a0029b1bab84c67387c002311f76e6382708568e67988830c4d7a45372d3eaedb44aa84148c30f014e437fb1dff4694dc3a8e57e",
+            "id": "824b323cf23436a43c5d98d683144ad7689d713b39ebe368934fdef56c10f58c",
+            "label": "leg/P's confirmation"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "mismatched"
+        },
+        "answers": [
+          {
+            "acts": [
+              "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+              "824b323cf23436a43c5d98d683144ad7689d713b39ebe368934fdef56c10f58c",
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [
+              {
+                "act": "824b323cf23436a43c5d98d683144ad7689d713b39ebe368934fdef56c10f58c",
+                "as": "the receiving side, in its confirmation",
+                "by": "signer",
+                "id": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+              },
+              {
+                "act": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+                "as": "the doer, in its leg report",
+                "by": "signer",
+                "id": "8675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c"
+              }
+            ],
+            "says": "mismatched: the doer states 5 and the receiving side 4 for the settlement 9129cdba728a; both are shown, neither is chosen (G11.4(c))",
+            "who": {
+              "signer": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+            },
+            "with": [],
+            "word": "mismatched"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "one leg's call, its two halves mismatched: both shown, neither chosen",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "Where they do not, the verifier MUST show both, with the amount each states, and MUST NOT choose between them.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 80,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820ac45815930f915988d912d8be7c8a153eb06d009a98a3078ab6099e07511ba2c035820145a3dcf1799b5f3231ac61dc6e15a241c373a4a50f9c806f20d3a0b20e5e0010458185f0505ee2ef1807a7e79f475c1649a1e2c8a2200f89582690558208fa16dd3cc62a81e9f9ee5f3f38912ee359f963dd25419f3983dfad8fd0fd73259012620246329c946e2077d11b7ba398781bd6c2f1ee414b5ed4165b2b38508e576756f9bcceab4d84643c9beca3ac0cb777dc4c4f429363a102d410e523cd7a105649cc1f8f2931e6a40c0dd452f2e261e9a231092c78084783d48ccf8e234e96b05c00bc72f508f7ed35ccc68506e5a940b44f6d6df46a7c47bfe243c0e48a6afcf0b56d8355c75b64dda37056c51c01251aa24d1b38614bbbe14e32c586c2c029f5c7e9881490d2daddbbf302db8c8c919bfec1363f0887dfe9ee32114811294ead54499ea2d025d85ab15886b6456c9150110688a6a94250c1b754f345c15e09a3ccc6c07823438b49498c3aff70691a818cc78dd7cff96beb9a226d5fa352c9423405fd79ed29d39a1cbf40fdc47f2419d095a6ea0d07bc7be5ab37b2c6685d1cbfb3d59b8d2830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840e1f2f082987996e08d54c82a54d8027485a8e225e6f6afbcdc7bc6ea02bedf50573edff635f65dcdead4436437b586fff75a2e3fc7607c4c4b6f464a6a2f46ca",
+            "id": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+            "label": "leg/S's leg report"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "one side only"
+        },
+        "answers": [
+          {
+            "acts": [
+              "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [
+              {
+                "act": "8b630c209538834b2fb8c6625b2b6794e96fb5576d96160647dca26a104683f4",
+                "as": "the doer, in its leg report",
+                "by": "signer",
+                "id": "8675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c"
+              }
+            ],
+            "says": "one side only: the doer's line for the settlement 9129cdba728a has no confirmation from the receiving side held (the report block's words)",
+            "who": {
+              "signer": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+            },
+            "with": [],
+            "word": "one side only"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "one leg's call, the doer's half only: one side only",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "the verifier shows, for each such act, **matched**, **mismatched** (both shown, neither chosen), or **one side only**.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 81,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b02582015cc86bb39cdad469f374dc1721d0e7993dec3219ca7b7eba351c07453acaddc0358205a3dbd850e6628174e99c11ce991ccd89b95a3582ba9698f6071cc3686c38f1a0458185b56d099ceb319745dd16838a4484c29c6b6c72c286a9d48055820ac233ccd330ce9ea522108053819cf200cf17cce920432bb774107fde2726e7d590102af68ee9b00370ce9d9a58d26d0dfb04338b8aa6e2abd10a71fa8d2fd4fa2314f83079f028e19c1ce9c543e6452c3c3829ffa0333f6ea0c21c225462c6b6406daf08c67467876bfc2dbf5fff7c711a437e24a592aefea6b5562c59f92d1fe67bc4f59f0a2e698d0eca0bd423f8f411d801deec759f2fe5ee8ebae198cfb272267be9611fcfb16bfa6464a9535d57ee2c3ef27dd6e20fb1cbf828ce0975c997c6e5480745fb279d2f54d6fa55dfa70113662331b5917d49be64cd416208e8c87ccf0ad5b0e01f0f4170d8e790c8eeb3ecb434b1dbdb9df6c24179e11e77f0974b5d259a4de0b57da11fc63c3b4ef9405d2ab889b9aaae33307630ea64269711938f840830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e58401b5049805c08140e38a834e21caee32fc66e7d2bc71002cae31863a0d3cddb16c000f289a6e821615be7ac763ed0682321c2aa5302474ab2c5eac847e59f9c67",
+            "id": "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76",
+            "label": "leg/P's confirmation"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "one side only"
+        },
+        "answers": [
+          {
+            "acts": [
+              "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [
+              {
+                "act": "db83195911071177422d597450f32e5082c9ce4adfc4dbc9dd2167f7cc6fbe76",
+                "as": "the signer of the report",
+                "by": "signer",
+                "id": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+              }
+            ],
+            "says": "one side only: a confirmation by a party the Terms name as a signer, of which no doer's report held speaks",
+            "who": null,
+            "with": [],
+            "word": "one side only"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "a confirmation by a party named as a signer, of which no doer's report speaks: one side only",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "A confirmation by a party those Terms name as a signer, of which no doer's report held speaks, is shown as **one side only**.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 82,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820c9b57a6f87d3f12ee39a4b7ca5cf691df7a50f347cc502615145234e3ab9265303582062ee50dd79f1b1f59607d998e3e3a221dd75071e030014b8c71897020ede5f23045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb9709a036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8dec070cecc7d42cee9ead12975d93d5bc5830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b584054b8ed2d0639f2718fab6f7a1919efd62212c0ad41e7328638185fdfa182ee90ada171fe22527623b377678ef365d860c7deb66dd0e4d415d653b612aca2d781",
+            "id": "2be8daf79b4167a47ffa6993054914b209c159f66798ee4917f37aa4e04afc8f",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820d9cdde578251815a4c94b23a76a30e7e79df4a6c8282202a65316a53a9e06fec0358209ea9579686bc3024ab6ffac631039f41f674164433f6b16af5226288048c0bb1045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1abf8051e724678b70bb1acb40fea6f97ed34b4a29341a304a6e6c5dcf728bd7074ec42bcfd2ce22bd1938b18aa7a778b232a2d9d5f69f089557a7f8a2f73c617976b1b4de2c7b39638e9eea31379049441d2aa97be6ce5783ffe6127e957d0f629d8a1067ff1e2b69387b736675fd46151e54a5b49dd40af9349186f51edd99cd9fed0a54d0dee3ee42c5af3081b06972cad94c15ae7dfc79a95d26b63ca25b475515f37926064c55a3ec6b39ca3d051010eb59eea066f10a9fb4aef274f345d97a19168d1568486fc1d9a354bf213edcd53a05fb0f3830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b584039e8a4511d9726fd8eb61c39e8f23eea1c9b31204eb1ffe21a710abe1434b35cbf46680e598f0a8490ccfa3844b5fcc20792c7b7ec5616ac41ec21d3cf0aee8b",
+            "id": "30134e5712b7de83d0cc6ffd7d3a9e497ae7425b8638279cafb4a754f5c9a6b6",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258207765be9f7d1be41b81caf5ae7e72e07d033298752f5f317d988b5299c8686e0d03582054b32525cbcad779d27fb30f9d2bd4984c9aafa3d6c03a271dd6711d48bf7fa2045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335e013e2fdf79cf6df04ef04f97986e49ae03b3ee4b3587b52cbd47ac08f53a9c461b59d18671392512b9f5a6f417a52df9322a193699c4732f13a032ead7578976d0fce26be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df14095010664cdb1cc7ecedb51883471830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e58406da02fbd4b748d82d55bdf7429a7cf779443164254bd76f2a720b7a25fc4f0c394e71402037fab0959b378642be5d05cd3432986b12a99601fec61bdf486e466",
+            "id": "7e57d8612b6a640f45c7a3dc251c578bf975c25d03a6a2c3f26759a645bf4a41",
+            "label": "leg/P's assent"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820158fbd0e4952e938433a0b6520fbba41c884957dcfdb867c5bb25fa10dcbdc9503582098605abf54845453725e06862ac7dca9a9d6acb6b4d21237a66bfdab74f46f5b0458185f0505ee2ef1807a7e79f475c1649a1e2c8a2200f89582690558208fa16dd3cc62a81e9f9ee5f3f38912ee359f963dd25419f3983dfad8fd0fd73259012620246329c946e2077d11b7ba398781bd6c2f1ee414b5ed4165b2b38508e576756f9bcceab4d84643c9be731243635696b97b129be2b263d666e77842e318a49934b215458fe91840d6e6452f2e261e9ae7dda3ee364ba8373cbd2ac502664616352517f14479f0e87851b2fe2ce895ea44f6d6df46a7c47bfe243c0e48a6afcf0b56d8355c75b64dda37056c51c01251aa24d1b38614bbbe14e32c586c2c029f5c7e9881490d2daddbbf302db8c8c919bfec1363f0887dfe9ee32114811294ead54499ea2d025d85ab15886b6456c9150110688a6a94250c1b754f345c15e09a3ccc6c077e7a5113b365d8a9fec8807b198ea5bd4760adc4cb9fb33f893135f33fb1b1819ed29d39a1cbf40fdc47f2419d095a6ea0d026e2235dc9fd6620299e660f3d9301be830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840dcf6a53edd2ced3bfbb69a8d9844b0e6e8b5b1af437b0b4f60ea7ba6fbd577c72bff7fbc7394166cdb1d3a0c7dbfab0cb9200af5cfca95404777dc40a9917649",
+            "id": "75d858a3eb01f18a61a6ea3c47596f64f8340d00bf0e711e5e919a0346c3a178",
+            "label": "leg/S's leg report"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "shown"
+        },
+        "answers": [
+          {
+            "acts": [
+              "75d858a3eb01f18a61a6ea3c47596f64f8340d00bf0e711e5e919a0346c3a178",
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [
+              {
+                "act": "75d858a3eb01f18a61a6ea3c47596f64f8340d00bf0e711e5e919a0346c3a178",
+                "as": "the doer, in its leg report",
+                "by": "signer",
+                "id": "8675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c"
+              }
+            ],
+            "says": "the doer states 5 passed on by 9129cdba728a: shown as stated; the call expects one side only, so no tie is answered (G11.4(b))",
+            "who": null,
+            "with": [],
+            "word": "shown"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "a call that expects one side only: each report shown as stated, no tie answered",
+        "question": {
+          "args": [
+            "2be8daf79b4167a47ffa6993054914b209c159f66798ee4917f37aa4e04afc8f"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "Where a call expects one side only, each report held is shown as stated, and no tie is answered.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 83,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "unanswered"
+        },
+        "answers": [
+          {
+            "acts": [
+              "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [],
+            "says": "the call has no report held, and the verifier reads as a side of that leg: unanswered (the report block's word); not read as kept, nor as failed (G11.4(d))",
+            "who": null,
+            "with": [],
+            "word": "unanswered"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "a call with no report, read by a side of that leg: unanswered",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "silence"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": {
+            "signer": "6d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5"
+          }
+        },
+        "sentence": "As the block asks, the verifier shows a call with no report as **unanswered**",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 84,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820e4b8d9f338cda5750f44d7b5eb5712d6995504708f63695af40d7861642883e0035820b1b370e4f64f4139b5ae399206b5f82e05fab687ad44196f86c1ba1e95035b19045818c1153007d8695634ce9507a5419ee49a210632979c6b5fd90558206ceaed60c47505fe9efb945d5d9e857447459622c8391363dfe7c07cef5aa735590136ee772d50f046971683ad0d7c08c1959e14396953b90366976a2d52a93f5678088e645ca2ca4aa1d38961b44f53240ee85e85304248516724b17b38320c722909ca3165f4c86b2579586aa7f62a1d5272bab3c29aa263b38bd0639dbcc29b83b6afbcf8cb994e14a495963355ae1d98f04ed54a59aa989e906876c2a90ce333ed5fd37b0a75ce189ae832cfce34885d7167bae6bd264ea50f144f0161ee8705f6cef6b645192165fa5f7eafd24eed3645bcab208d181f3c3c558be0271a3920c26dddfa17e190dcd127a2bc98aa0af19f1572f5ad570aebde9a85801f1bcd191c910040c9d26c7931819cbb970ba036c5267ee9dcfcc11b3e536749f422c51208cab272e51d8ed8d3d041748507854ae7a3957c0845ff1d09c546188cddb8f4c1ae28d7adf8de47ee9ac6b07e9bc630a6cab2b26be381830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840621bc6d6a03b270e41fc4d7198961ffa25d25f231249c7499dd0362290ff7e67a87ada0d7cd225a276b4f2fc3e84da6ed7677400bd0491ebe4c6db1eb9b04cbd",
+            "id": "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e",
+            "label": "leg/W, a service passing on to P"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f9102582052fae47ecd45b196527120a765fd13e653a21b8084f2dc16124996298fe5db85035820df6e4a9cbdddc90c466e3fbda9c5ac8e64ce65a5918b11ed8c04bcb0219e085c045818faa81ab8656780e0dd901d25514f07b95bf8fd4ec3fb0c8f055820cd6af2622490e2a5e575033756d33b5dadda8a950538b4a5a558b92fa6cbfdd958ff5575af25b0140aff25017c87b890c01edde34cb0065db4ac9535737b4ad14c92ea3da2ed46616defb1ab3cc82f5bf0b76701c5dd6628dce0bafec19a724d55558a9dc25806596a0f7195ec42bcfd2c26e6e0ba3dd77a7003faf10d1b12727a05a785a46b7ca148e28a4dc559ffe326b396382d23923acfcb444ba6db45995a6a552c0b4ff73743267812fc3cdcd1b350b77287b736675fd4a59cd463ed860d4adbe29b3f59dec0ca69f72e0eb1bb83d51a79f6f4b1ba1ae7972cad94c163b3aa7aca815f8e7379aea902d5bec3cf47f73e78ff9830a771fe1b472821e0ea066f10a9fb4aef274f345d97a19168d156e69322b56071bc65c4738a68b0d88b49830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b58407b5ead01213219cbb6051502c8bcdcc7ca75156dfd00c56491d4bae267fb085bff31f9c21316d637b8b4acea98904581b40852f42e44d4b8eccdbfe59cda5c1c",
+            "id": "893bcdff335ca33c367ebb750ec1b9a0509976e227c58fef4203bba387c9b08d",
+            "label": "leg/S's assent"
+          },
+          {
+            "bytes": "83a60058206d7419863555a2a4c4e83eef6471aa4be38edebb937ce0aae1d57994b249b1e5015820d307466ec58b919e5bb804ee4602459bdde56065a5f45fb08653302c4989f02b0258205742531f96e2e1ee380d623152227ee2537381e82a54704e69a1b39f0d98b794035820bb45e1b57ccd2631170584aa15d3c95c85e47539a6d45874ec2b8d0c035c38f6045818e660a4f4c278f93f148c49fc3438c755f3b65c42fc5cbf05055820a10891ccaa28b467f061e0a3042214b62a2953b32aec5b1b9bedae040030084b58bb8e2e2f435cdb76619cedb9ef7d09ca397971bf7dc5eadd83e5f2fd77ba84109ecc028cf026d36f9a118a3a335ec5f31ef6cf00bdfa3a819db0aee164bdf69d3e9521713b1799da76a6b7889da71b59d142bc080ca47625ac8066770acfbd070ac3b714ad3be52e09ce4a8d273462fd036be453a67a24028f2ffc87cc202ece9f673bee6494757a0b089e706742fe705a0e1f05b2366fc35a0c6cea84d888bab6e82291120da29cdaa5603df7a5efab99915aadea893d9b235058c9830158200cfe0aead6df2ae4a1fe1f418303e444a9e2c6b372b29dfce3ec44a51c55143e584049da04a5ec89264ee6d29c954f9353b3fe7a5698b500ca21a90fd6e900daccb214c52981c02d3ce12413350ab6c27936e93c4eaecf9cdc7cb63e553034adf33f",
+            "id": "b29b86b9af9b49a285b10a26a443376258809f6410e0215ab3bae7310df8efed",
+            "label": "leg/P's assent"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "not shown"
+        },
+        "answers": [
+          {
+            "acts": [],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [],
+            "says": "the verifier was told on whose behalf it reads by no one: it reads as no side of any leg, and for it that leg's reports are not shown (G11.4(d))",
+            "who": null,
+            "with": [],
+            "word": "not shown"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [],
+            "same_payment": [],
+            "settlements": [
+              "9129cdba728a585dda5cc8ec72184856bc7605c4ce0346c025b36278ef8db18e"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "a call with no report, read on behalf of no one: that leg's reports are not shown",
+        "question": {
+          "args": [
+            "ef25ebde2d8eb7ae0b8bbbb433c639a1fcef8928736e6072336ea00aa2f8fd6e"
+          ],
+          "ask": "silence"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "A verifier told nothing reads as no side of any leg. ... A verifier that does not ... MUST NOT show the call as unanswered: for it, that leg's reports are **not shown**.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 85,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820f22b1fcbdd16a5d990bb64e36b00a3ce51c4b9d16d9118fb9359d7ccd13c1b66035820d32fb61898ab838588dc0052084d7297cb11f9cb72d28a79016e348b51d88831045818a073a5f9b6beb6fd640b53f52cddbb7c99ee370a95d9950a055820d2185d412958cc3dd85e81ab5299b1e3208c5dce452cb4c59d6cbce3d373297c59013178aff28245221e27bada80bc0c31a577791420eaf56e801d80c21679d3b04035ff28312a34b7be6673d374bac7c8d2433bbfa2085613d375dd079a3869af72ffa5708a506e52ff9841fe0a0602325315725c82279e8a03ee745571e4966fae9094f3a4b03ef357b87386b5c2fa67fb78807fe438b71aa90f5c1c18172cca2d9b9c60892d81fd6ecf0a6788837cfa2da47e19b2fca1de9eae34b7db93a3b025d528de05266261e7ff0d8080dd60e941b1fa9ebd898f21e5939686f39f9af883a8fba0435f630cddbd2867faaf1a56a978208ed82db2f49b5fa269a42b4ee978d921e69f2f7d838874a89aed33aa4222b6abd9d41011cc3b2262f8f83a5390dacd65b41b47690062cad3e84d539d8ba4cb0dd46abe4fb5ef250fac33b1ab35e7b1780ce06f7bb66f01c028feef97a2c87c44830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840709bbec365491325c5064973bd7278850c9ea1ba96e856b56da49fb332b0fcbe8466d2e2f60467dedbeb43c7170f4b8f6e4a6040b99c54a26cb76f2f7d5c63ab",
+            "id": "5ef73452b2aa3fc9f3b0821eea9b2883063dfc5528ab59d7e866231564fc4d7d",
+            "label": "leg/W0, no call"
+          },
+          {
+            "bytes": "83a60058208675a9b9d540f0e52b9cf83bc2a2f5165a94b979291e664ef50cea70bb544f4c015820b3cbed2429f9186c6e08cf249fa14e89e10a3d8d8c6a04f4fa031ae122768f91025820f7104286e83f7b054f0a902b802f59d1f8b122f8967308d9a410ebd1c9671cbb0358204e76a9b7099d8f8fda27a112cc6764219d132de4974c74080e261a8cde64e3ca0458189ad2b944c371dcaa305dfcd4c6b03d9fb4d701c1b8f36eaf055820c8b9168eb51bb6c4ce959016cccd459bb78b611ce80241065ba8bbf008a3a0cd58ff0ca3c9302dd1239e15b09d5e3a1731f17f49ae4e6c3bf131d6d2f4103ef585755fc3948755d28e6330aeabd8bef642803ce378eb69d6ff7c79a2cbe42def56d3fe7f0a2aeb329cf3473a1617c5fa4056517ee00e6f814f775285769825cf8f0d2afcb452ad8d9ff5d02b00cf591c43a0c72f2ab1d14599d2f6b5087f22d8df309169b5573dcb55ee21aaa3f68d7eeec5545ef9a724d1910bc3dec41bb907c1c68c3c322d708aaef529782d010fb2df00353727e6f721e615025bd74d51b2da64d56842a2bcb9c4287bb9166ac47a18285420a35792d8f6baf521b2c5aae02e98b3b0d81b9ec4925912dd96c36323e31ede3aa4ae9654f17fd6b5392b8610c6830158200c1d27f15cfb8ad764677ddf41fe6ca61e4ead22d6a3b212bbe76719b4ed5b5b5840f322abf23bf26b3368bfb10debc655a071833905203624857299ac665a87f25a00e504815d43ecbee5165ee8e9a00298c4817edee26183633fe7fc93f6c609ea",
+            "id": "cf31abc90ed86318a861ff492c56008f5ed8e610b3417fff44b1ff0d09e3ef31",
+            "label": "leg/W0 S's assent"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.4",
+          "who": null,
+          "word": "no report called for"
+        },
+        "answers": [
+          {
+            "acts": [
+              "5ef73452b2aa3fc9f3b0821eea9b2883063dfc5528ab59d7e866231564fc4d7d"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.4",
+            "said": [],
+            "says": "the Terms hold the Control task and carry no call: no report called for (the report block's words; G11.4(d))",
+            "who": null,
+            "with": [],
+            "word": "no report called for"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": null,
+          "places": []
+        },
+        "limits": null,
+        "name": "Terms that hold the Control task and carry no call: no report called for",
+        "question": {
+          "args": [
+            "5ef73452b2aa3fc9f3b0821eea9b2883063dfc5528ab59d7e866231564fc4d7d"
+          ],
+          "ask": "leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "and Terms that hold the Control task and carry no call as **no report called for**.",
+        "stubs_asked": [],
+        "tests": "G11.4"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 86,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258209f5223637f1931c864d6182944edd9c4cafdc7ac8a4b9eb264fff01b9ddca6e6035820509d522439b771307b11a0e5f9d76a718e89ecb5c3763c28ff36154dc3a416190458185c307c1376ad0850da69ecd8d6b8fe6370af4aae71211f540558205338412d497d6ebc13cbfc37e1d38fd455edab36046cc8fcc39035702271096359017eab4dfa2e038d3bad4b1fb96cc0296fdaf97734ecdf449bb7e7dbb4530a541a2bd2a587ba5469495a15b5968f548d3ddb8550a77598dabee39cd61a64a84ded6a7f5960fdb8174f56f39e242b033431bc53ebc60abc9829e8a5ed77673b1bd7f25f6c53adf0f2ad7dee3c272460f0232ff3d86538d71eec914a9d95b17ec8c59b91974aba2ee2ef49a075cfc6026688abc8c14f008cfd44a681320d9e64a923315972ddaaf5f3b6e2704cc3149c82196bc18228362797862dd7a6fb08cd202270c0447788b96be7cdbb957ebbc4df6881de1e6bb7a89160edc67134fd587bffa7700140f23eba21146efa2571910c687adf1abbee27a231786655edb2374962dcd1be33945ac65060fb2fad13fc62ba22f64ae7c9ec54597200ea6979dd2254b879502544d2009733bdfa06b4e3e30f9fd52fb8ecd93140761919a312a9c0ec621cc59370aeb452e21a35878ed95843ddf88b35bbd6237519ccfe783fb4a8c7a4bd224b61688f441c4518f9ed6e0244ba2e3760704404e3a816059b287a8183015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a5840e5defed1f1b9f43d8d763ce53f899a013bf455e0e03987ab6961f383dcd2a0bd384a9fcb4799e76a1420aa2c1bb56f3cecad476b56a13cf85d61579ea5a9da42",
+            "id": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3",
+            "label": "buyer/the offer"
+          },
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258207eb95c10265a3f64ce3bacea5eb04d8e2ffdd7c606ae5c25d9b864910a550dfb035820df3049b32f3fe8edd52bc204dcca020dd0d559837cc95f30c88ea6b8b9d6759f045818f2afe4c8ab4d244f481e5d20979af412887dfb217d214f1d0558204d990fcad762bd4878d02ea8c9a0963ad042ca117d96a1067e9984f57bc48b8a58ff586dc8a9fd06c51b526c8873f7e319538773345ec722d1b2eccca6195ea5f4b5e3baa9fd245fe61e075d663ad39f35dc07bce28ded0e344eb74ff8fab132ab54e5adcab0c20793e3fc96b9dd113f3e3f91fe9708f9ab7b3d82c2011065e964ddaf258e23df420d8347ef5a7e0b9d4bb62db411ec2a8c7bf7470a4c2ff18a76a5618c2f7d58c6364de5932fbd8fba379ee06aa24bde29d22d00d92cc8b4c956d57c7775d58d840bddb9243af6e47be8343d70e5f8c27851ed0a19b5b69e2ff06822615f5324318e4bc5aa0df370d0267e08b36a117fb703b4c4e66b3947a7157536e77b272c887ee84e6cc68c7f3d3cf1e2b220c2e784458187e3372138941283015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a584078043a4a4da4d3bd37300a460d142f70e48f425ec753b7a5bcc761e9b6370b56ef9b533fa7a28a1635ae12cf11f26aa38fb54098a02fee74fbf6fc349493d2e6",
+            "id": "0e4853dabe21273e464345001bf3294b975da840de95a25f603c56852e544292",
+            "label": "buyer/M's assent"
+          },
+          {
+            "bytes": "83a60058202bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f015820996942dabdec0c28a53c91706c266d81decd3141159782cc14b4adf963957ac80258209e9ad371b67a2d83d27b91d53bc088d95dc2a7ee1946fbd50488e30ccc6ffdeb0358209ff4b679086a5ffd26527afcdb11d7fb4f9a0607e4a47e409b028a49f165a1e0045818c0369ecf656ae62d8c53900d3ca18f6b2fa8a5906fd18c650558201628fc3880a8e54cb0e18c72519a21c2a701b2587ce7bacdb04ebbdfb876835e58bbf18c80affd16092bb1c14e025a91f016609930c5159a0dd3536603d664476b0c392a08c13972b30e619af606395d7a5af40329bf2d10399de7bb727a63868c0d5cebbea50efba9d71923f963d755cac3cb94e0bcac8647280a4dbf49815d5c2329c6e5cec50e30c25da114efb07ca92137aca724ccf7d5d5f83c8b083041a2945de32f7e8db60540fde42392db9d8437f9165a0363dccfa884ec9ee09310bd364ded5340c1484682e5b13e911a3dc5952a56d96de2599fe7f7e970830158203807af770347c7ad2d35155f8eb7663e8d336d7c7cdceadbf3878a56c81ebf0f5840636ba51c8dad1e64199e1ec569ce6db05799576559e730c347492de173806cb89656cf49ea59c71549683c94eeb18bd03f864ac5fe2fb7b545725032c70b92e7",
+            "id": "c8e7903476aa39587859ee2ab63a6aa3e057230df3de7a54cb7571dd19928139",
+            "label": "buyer/U's assent (the buyer signs the offer's Terms)"
+          },
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd574025820e732874dbec4b4b9d45c4eb4baad4c89c4319dc1460b79a21eff584683cc2b6f035820b854b439e2fe896eadde76a7c49719744e9e78bb63d917e0304a89dc778dc908045818ca0c0cf73b69186d92b1b541dbfe9eee18e96ba428c528450558209d00d81cd1a9249b54db004d383618850992b94b695f3f46f119e12396a3484d590101ec8dfc170420623f1a3b34d7cf8066e5b0030c4aceb07e116378edb5f938aba935cd63e1aa016823a1d80822fb3e96384cfb0ae07327ba9c7acfe978c8eda3c9e8a2c0052496174ca544706b58950f6d0c2643d435048adbf6478a22fdc0c783f1ff341529fdc8d757815d828d51741d9189e875c629b8a57509ec05ff0b892d288f59e337a2de5636d36aaa2727d898d117ffddece73937a5f6c403a84abce16917136ea6b5ea75ec7ed83f2653a501a1839b3860f0f54ddad9be8bf04ac67ccd51eedf32e6e6e00bea28ca492e66fe252f525bb13712f435cfb4f26f236087fae9085526191186c8fc4a6ac0380b4f85932d52fb7e506ab01fac27bbe5e3809183015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a58407cccfd6fc6852beb286d047ffbce1a83237b648854c698fc4ea86062d48c978780bc6ea0894cebd9140e38c4117eae217e990921e3f0658cbed10427bf26dcb7",
+            "id": "adcc2e2329b92e09f9fb13a7066c6864312ad15e0aa0fcc0d4169fa89637fabd",
+            "label": "buyer/M's confirmation"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.7",
+          "who": {
+            "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+          },
+          "word": "matched"
+        },
+        "answers": [
+          {
+            "acts": [
+              "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+              "adcc2e2329b92e09f9fb13a7066c6864312ad15e0aa0fcc0d4169fa89637fabd"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.7",
+            "said": [
+              {
+                "act": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "as": "the payer, in its payment (the doer's half)",
+                "by": "signer",
+                "id": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f"
+              },
+              {
+                "act": "adcc2e2329b92e09f9fb13a7066c6864312ad15e0aa0fcc0d4169fa89637fabd",
+                "as": "the receiving side, in its confirmation",
+                "by": "signer",
+                "id": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+              }
+            ],
+            "says": "matched: the receiving side confirms the amount the payment states (10); the payment is shown as received on the receiving side's word",
+            "who": {
+              "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+            },
+            "with": [],
+            "word": "matched"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [
+              {
+                "amount": [
+                  "bebadfd4668de5b201e5cf028d3b8908c1532b10233d556003ca2c8adcb3045d",
+                  10
+                ],
+                "id": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "payer": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f",
+                "settlement": "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc",
+                "version": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+              }
+            ],
+            "same_payment": [],
+            "settlements": [
+              "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "the buyer's leg: the payment and the receiving side's confirmation, matched",
+        "question": {
+          "args": [
+            "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0"
+          ],
+          "ask": "buyer_leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "As for any two halves, a verifier shows a payment so confirmed as **matched**, one whose confirmation states another amount as **mismatched**, and one the receiving side has not confirmed as **one side only**",
+        "stubs_asked": [
+          {
+            "about": [
+              "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+            ],
+            "answer": "yes",
+            "cmip": "80d832812f9046fb02bb2c5b88361222b0799ee47ae2eb497bce252e632d9ebe",
+            "stub": "stub K2",
+            "task": "K2"
+          }
+        ],
+        "tests": "G11.7"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 92,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258209f5223637f1931c864d6182944edd9c4cafdc7ac8a4b9eb264fff01b9ddca6e6035820509d522439b771307b11a0e5f9d76a718e89ecb5c3763c28ff36154dc3a416190458185c307c1376ad0850da69ecd8d6b8fe6370af4aae71211f540558205338412d497d6ebc13cbfc37e1d38fd455edab36046cc8fcc39035702271096359017eab4dfa2e038d3bad4b1fb96cc0296fdaf97734ecdf449bb7e7dbb4530a541a2bd2a587ba5469495a15b5968f548d3ddb8550a77598dabee39cd61a64a84ded6a7f5960fdb8174f56f39e242b033431bc53ebc60abc9829e8a5ed77673b1bd7f25f6c53adf0f2ad7dee3c272460f0232ff3d86538d71eec914a9d95b17ec8c59b91974aba2ee2ef49a075cfc6026688abc8c14f008cfd44a681320d9e64a923315972ddaaf5f3b6e2704cc3149c82196bc18228362797862dd7a6fb08cd202270c0447788b96be7cdbb957ebbc4df6881de1e6bb7a89160edc67134fd587bffa7700140f23eba21146efa2571910c687adf1abbee27a231786655edb2374962dcd1be33945ac65060fb2fad13fc62ba22f64ae7c9ec54597200ea6979dd2254b879502544d2009733bdfa06b4e3e30f9fd52fb8ecd93140761919a312a9c0ec621cc59370aeb452e21a35878ed95843ddf88b35bbd6237519ccfe783fb4a8c7a4bd224b61688f441c4518f9ed6e0244ba2e3760704404e3a816059b287a8183015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a5840e5defed1f1b9f43d8d763ce53f899a013bf455e0e03987ab6961f383dcd2a0bd384a9fcb4799e76a1420aa2c1bb56f3cecad476b56a13cf85d61579ea5a9da42",
+            "id": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3",
+            "label": "buyer/the offer"
+          },
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258207eb95c10265a3f64ce3bacea5eb04d8e2ffdd7c606ae5c25d9b864910a550dfb035820df3049b32f3fe8edd52bc204dcca020dd0d559837cc95f30c88ea6b8b9d6759f045818f2afe4c8ab4d244f481e5d20979af412887dfb217d214f1d0558204d990fcad762bd4878d02ea8c9a0963ad042ca117d96a1067e9984f57bc48b8a58ff586dc8a9fd06c51b526c8873f7e319538773345ec722d1b2eccca6195ea5f4b5e3baa9fd245fe61e075d663ad39f35dc07bce28ded0e344eb74ff8fab132ab54e5adcab0c20793e3fc96b9dd113f3e3f91fe9708f9ab7b3d82c2011065e964ddaf258e23df420d8347ef5a7e0b9d4bb62db411ec2a8c7bf7470a4c2ff18a76a5618c2f7d58c6364de5932fbd8fba379ee06aa24bde29d22d00d92cc8b4c956d57c7775d58d840bddb9243af6e47be8343d70e5f8c27851ed0a19b5b69e2ff06822615f5324318e4bc5aa0df370d0267e08b36a117fb703b4c4e66b3947a7157536e77b272c887ee84e6cc68c7f3d3cf1e2b220c2e784458187e3372138941283015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a584078043a4a4da4d3bd37300a460d142f70e48f425ec753b7a5bcc761e9b6370b56ef9b533fa7a28a1635ae12cf11f26aa38fb54098a02fee74fbf6fc349493d2e6",
+            "id": "0e4853dabe21273e464345001bf3294b975da840de95a25f603c56852e544292",
+            "label": "buyer/M's assent"
+          },
+          {
+            "bytes": "83a60058202bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f015820996942dabdec0c28a53c91706c266d81decd3141159782cc14b4adf963957ac80258209e9ad371b67a2d83d27b91d53bc088d95dc2a7ee1946fbd50488e30ccc6ffdeb0358209ff4b679086a5ffd26527afcdb11d7fb4f9a0607e4a47e409b028a49f165a1e0045818c0369ecf656ae62d8c53900d3ca18f6b2fa8a5906fd18c650558201628fc3880a8e54cb0e18c72519a21c2a701b2587ce7bacdb04ebbdfb876835e58bbf18c80affd16092bb1c14e025a91f016609930c5159a0dd3536603d664476b0c392a08c13972b30e619af606395d7a5af40329bf2d10399de7bb727a63868c0d5cebbea50efba9d71923f963d755cac3cb94e0bcac8647280a4dbf49815d5c2329c6e5cec50e30c25da114efb07ca92137aca724ccf7d5d5f83c8b083041a2945de32f7e8db60540fde42392db9d8437f9165a0363dccfa884ec9ee09310bd364ded5340c1484682e5b13e911a3dc5952a56d96de2599fe7f7e970830158203807af770347c7ad2d35155f8eb7663e8d336d7c7cdceadbf3878a56c81ebf0f5840636ba51c8dad1e64199e1ec569ce6db05799576559e730c347492de173806cb89656cf49ea59c71549683c94eeb18bd03f864ac5fe2fb7b545725032c70b92e7",
+            "id": "c8e7903476aa39587859ee2ab63a6aa3e057230df3de7a54cb7571dd19928139",
+            "label": "buyer/U's assent (the buyer signs the offer's Terms)"
+          },
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd574025820df1776d5d3d6c80b4209e2224f8c7f9db34ed392403cabbe85e59a43e6ff48970358206dcc0d46b2fd9c412307f32a3187bc6e584b55e97059346eb685155f828904fb045818ca0c0cf73b69186d92b1b541dbfe9eee18e96ba428c528450558209d00d81cd1a9249b54db004d383618850992b94b695f3f46f119e12396a3484d590101ec8dfc170420623f1a3b34d7cf8066e5b0030c4aceb07e116378edb5f938aba935cd63e1aa016823a1d80822fb3e96384cfb0ae07327ba9c7acfe978c8eda3c9e8a2c0052496174ca544706b58950f6d0c2643d435048adbf6478a22fdc0c783f1ff341529fdc8d757815d828d51741d9189e875c629b8a57509ec05ff0b892d288f59e337a2de5636d36aaa2727d898d117ffddece73934a5f6c403a84abce16917136ea6b5ea75ec7ed83f2653a501a1839b3860f0f54ddad9be8bf04ac67ccd51eedf32e6e6e00bea28ca492e66fe252f525bb13712f435cfb4f26f236087fae9085526191186c8fc4a6ac0380b4f85e72bb0844d0ec7f0ac7f66f19446454a83015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a584079d833f195ce18bd565c823c989948f7f326f5f4640f3e5aa0ec51b0959517104ddf7beac7bef40664702c51905fe357327554feee2aa0936b77aebbcffb806d",
+            "id": "09c6a14aa3bae42f37e8315e302abecaf21d44dd88e394633389959021bf067e",
+            "label": "buyer/M's confirmation"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.7",
+          "who": {
+            "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+          },
+          "word": "mismatched"
+        },
+        "answers": [
+          {
+            "acts": [
+              "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+              "09c6a14aa3bae42f37e8315e302abecaf21d44dd88e394633389959021bf067e"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.7",
+            "said": [
+              {
+                "act": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "as": "the payer, in its payment (the doer's half)",
+                "by": "signer",
+                "id": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f"
+              },
+              {
+                "act": "09c6a14aa3bae42f37e8315e302abecaf21d44dd88e394633389959021bf067e",
+                "as": "the receiving side, in its confirmation",
+                "by": "signer",
+                "id": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+              }
+            ],
+            "says": "mismatched: the payment states 10, the receiving side's confirmation 9; both shown, neither chosen",
+            "who": {
+              "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+            },
+            "with": [],
+            "word": "mismatched"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [
+              {
+                "amount": [
+                  "bebadfd4668de5b201e5cf028d3b8908c1532b10233d556003ca2c8adcb3045d",
+                  10
+                ],
+                "id": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "payer": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f",
+                "settlement": "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc",
+                "version": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+              }
+            ],
+            "same_payment": [],
+            "settlements": [
+              "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "the buyer's leg: the payment and the receiving side's confirmation, mismatched",
+        "question": {
+          "args": [
+            "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0"
+          ],
+          "ask": "buyer_leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "As for any two halves, a verifier shows a payment so confirmed as **matched**, one whose confirmation states another amount as **mismatched**, and one the receiving side has not confirmed as **one side only**",
+        "stubs_asked": [
+          {
+            "about": [
+              "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+            ],
+            "answer": "yes",
+            "cmip": "80d832812f9046fb02bb2c5b88361222b0799ee47ae2eb497bce252e632d9ebe",
+            "stub": "stub K2",
+            "task": "K2"
+          }
+        ],
+        "tests": "G11.7"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 93,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258209f5223637f1931c864d6182944edd9c4cafdc7ac8a4b9eb264fff01b9ddca6e6035820509d522439b771307b11a0e5f9d76a718e89ecb5c3763c28ff36154dc3a416190458185c307c1376ad0850da69ecd8d6b8fe6370af4aae71211f540558205338412d497d6ebc13cbfc37e1d38fd455edab36046cc8fcc39035702271096359017eab4dfa2e038d3bad4b1fb96cc0296fdaf97734ecdf449bb7e7dbb4530a541a2bd2a587ba5469495a15b5968f548d3ddb8550a77598dabee39cd61a64a84ded6a7f5960fdb8174f56f39e242b033431bc53ebc60abc9829e8a5ed77673b1bd7f25f6c53adf0f2ad7dee3c272460f0232ff3d86538d71eec914a9d95b17ec8c59b91974aba2ee2ef49a075cfc6026688abc8c14f008cfd44a681320d9e64a923315972ddaaf5f3b6e2704cc3149c82196bc18228362797862dd7a6fb08cd202270c0447788b96be7cdbb957ebbc4df6881de1e6bb7a89160edc67134fd587bffa7700140f23eba21146efa2571910c687adf1abbee27a231786655edb2374962dcd1be33945ac65060fb2fad13fc62ba22f64ae7c9ec54597200ea6979dd2254b879502544d2009733bdfa06b4e3e30f9fd52fb8ecd93140761919a312a9c0ec621cc59370aeb452e21a35878ed95843ddf88b35bbd6237519ccfe783fb4a8c7a4bd224b61688f441c4518f9ed6e0244ba2e3760704404e3a816059b287a8183015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a5840e5defed1f1b9f43d8d763ce53f899a013bf455e0e03987ab6961f383dcd2a0bd384a9fcb4799e76a1420aa2c1bb56f3cecad476b56a13cf85d61579ea5a9da42",
+            "id": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3",
+            "label": "buyer/the offer"
+          },
+          {
+            "bytes": "83a6005820a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764015820e2489d63b2644186e0d9d22a027230f0b3cd2b473b489baf5cf840223cacd5740258207eb95c10265a3f64ce3bacea5eb04d8e2ffdd7c606ae5c25d9b864910a550dfb035820df3049b32f3fe8edd52bc204dcca020dd0d559837cc95f30c88ea6b8b9d6759f045818f2afe4c8ab4d244f481e5d20979af412887dfb217d214f1d0558204d990fcad762bd4878d02ea8c9a0963ad042ca117d96a1067e9984f57bc48b8a58ff586dc8a9fd06c51b526c8873f7e319538773345ec722d1b2eccca6195ea5f4b5e3baa9fd245fe61e075d663ad39f35dc07bce28ded0e344eb74ff8fab132ab54e5adcab0c20793e3fc96b9dd113f3e3f91fe9708f9ab7b3d82c2011065e964ddaf258e23df420d8347ef5a7e0b9d4bb62db411ec2a8c7bf7470a4c2ff18a76a5618c2f7d58c6364de5932fbd8fba379ee06aa24bde29d22d00d92cc8b4c956d57c7775d58d840bddb9243af6e47be8343d70e5f8c27851ed0a19b5b69e2ff06822615f5324318e4bc5aa0df370d0267e08b36a117fb703b4c4e66b3947a7157536e77b272c887ee84e6cc68c7f3d3cf1e2b220c2e784458187e3372138941283015820f562488f2c42dbfe673165c6061db94ee35360852f608f83b69d9121900ac57a584078043a4a4da4d3bd37300a460d142f70e48f425ec753b7a5bcc761e9b6370b56ef9b533fa7a28a1635ae12cf11f26aa38fb54098a02fee74fbf6fc349493d2e6",
+            "id": "0e4853dabe21273e464345001bf3294b975da840de95a25f603c56852e544292",
+            "label": "buyer/M's assent"
+          },
+          {
+            "bytes": "83a60058202bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f015820996942dabdec0c28a53c91706c266d81decd3141159782cc14b4adf963957ac80258209e9ad371b67a2d83d27b91d53bc088d95dc2a7ee1946fbd50488e30ccc6ffdeb0358209ff4b679086a5ffd26527afcdb11d7fb4f9a0607e4a47e409b028a49f165a1e0045818c0369ecf656ae62d8c53900d3ca18f6b2fa8a5906fd18c650558201628fc3880a8e54cb0e18c72519a21c2a701b2587ce7bacdb04ebbdfb876835e58bbf18c80affd16092bb1c14e025a91f016609930c5159a0dd3536603d664476b0c392a08c13972b30e619af606395d7a5af40329bf2d10399de7bb727a63868c0d5cebbea50efba9d71923f963d755cac3cb94e0bcac8647280a4dbf49815d5c2329c6e5cec50e30c25da114efb07ca92137aca724ccf7d5d5f83c8b083041a2945de32f7e8db60540fde42392db9d8437f9165a0363dccfa884ec9ee09310bd364ded5340c1484682e5b13e911a3dc5952a56d96de2599fe7f7e970830158203807af770347c7ad2d35155f8eb7663e8d336d7c7cdceadbf3878a56c81ebf0f5840636ba51c8dad1e64199e1ec569ce6db05799576559e730c347492de173806cb89656cf49ea59c71549683c94eeb18bd03f864ac5fe2fb7b545725032c70b92e7",
+            "id": "c8e7903476aa39587859ee2ab63a6aa3e057230df3de7a54cb7571dd19928139",
+            "label": "buyer/U's assent (the buyer signs the offer's Terms)"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "none",
+          "rule": "G11.7",
+          "who": {
+            "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+          },
+          "word": "one side only"
+        },
+        "answers": [
+          {
+            "acts": [
+              "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "none",
+            "rule": "G11.7",
+            "said": [
+              {
+                "act": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "as": "the payer, in its payment (the doer's half)",
+                "by": "signer",
+                "id": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f"
+              }
+            ],
+            "says": "one side only: the receiving side has not confirmed the payment; it is not shown as received on the buyer's word alone (G8.3)",
+            "who": {
+              "signer": "a027ea15049b81ca7e8639fe828d763f53e1bda51d7d04ee27a752105ad30764"
+            },
+            "with": [],
+            "word": "one side only"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": {
+            "payments": [
+              {
+                "amount": [
+                  "bebadfd4668de5b201e5cf028d3b8908c1532b10233d556003ca2c8adcb3045d",
+                  10
+                ],
+                "id": "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0",
+                "payer": "2bc3f5018d08cb83c68c1db1ea80cffb244caace6d9b054fa1372330fb02ae7f",
+                "settlement": "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc",
+                "version": "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+              }
+            ],
+            "same_payment": [],
+            "settlements": [
+              "ee84c52cc9f5a228721ff870a677ef67ff93c9b6bb63065f0fc0c9dd391ad7bc"
+            ]
+          },
+          "places": []
+        },
+        "limits": null,
+        "name": "the buyer's leg: the payment and the receiving side's confirmation, one side only",
+        "question": {
+          "args": [
+            "342f74318ab2d989394fb4c1c918330376ddc9b14a09908f816c79a93c6b89e0"
+          ],
+          "ask": "buyer_leg"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "As for any two halves, a verifier shows a payment so confirmed as **matched**, one whose confirmation states another amount as **mismatched**, and one the receiving side has not confirmed as **one side only**",
+        "stubs_asked": [
+          {
+            "about": [
+              "6699395676fc5a704be20ef0d621d973097e2690bf83440372f9be7e672f52e3"
+            ],
+            "answer": "yes",
+            "cmip": "80d832812f9046fb02bb2c5b88361222b0799ee47ae2eb497bce252e632d9ebe",
+            "stub": "stub K2",
+            "task": "K2"
+          }
+        ],
+        "tests": "G11.7"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 94,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row F21, C40: \"§5.11 names the report block; until the MICS carries it, every answer about reports is unchecked, and the eleven leg cases wait with it.\" The lead's reading; the sheet, section 4.3: retired, the reading of leg reports going to the MICS's report block"
+        ],
+        "rule": "§4.3",
+        "says": [
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\"",
+          "draft 26, 5.11.3: \"How a leg report is read is the MICS's report block's (§2).\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258202e6be8ac549e2a5f2949a844c159e81e207505b58fb3f17540137d95f5923dad035820af2f4c66a62e58cb3ef78a04667c2718f0d3d5c49822172ac0f897cb8f88bae704581897e13d5c7670c3038a199dbb6bd7e1e2fccfd9e702293555055820ddd77ac4ff6531a2c9c322b7bafc200413ff1d5f474e2fb8ca65f8d3747918405901575f628422d052b3fa16f08204ee58050316ac69dec3171758885b8f83b83b263a9f5323d866662694690641f0e581488135330b2ae764aaf574888d8c0531ee80c3d2c519f68bbfe5578536bd7639c67a42441cd8f17aae4d620a10e78d428eb667960239c6ecd0bd1786e78dbd9a050b0f378a062849915b4f988b7404095059ff90fc8efd588f8aa32456a85054c897954d4d0f35a85be14753575ba2b5eef5dfae12921d7076290d577d702c734be309dddbf4ae06b8d46282f7a686997c01242c7a104b289be1c7e68f5bf0fad40752e3bd3c28f6566ac6a5d112a0d83e66ef0e5483064dc35f3695063e767551f5f420c214a704db0c8eb6782c976cc2e28d7a8a75495dcd423710c20058743424d841c1255eca7ab0c4b51a448b833e39dc14bee0b630bf736f72176ba6c66e7a6259c217386e0ed66bc2eb0809b600dc4d3c69e45e68182be66898621b5f27a7104664852737118301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840de07eca3adcffc67058dea9340c7294f3464f2a05d2ed7fd8847a049564c90ec3062ed8bc21a1a0c8fb405da493fb098972e38717b3aecb74bb1cee0a93fdd1b",
+            "id": "e7d75677af4a6e7bc4bbf86ed1769321ef992ed80c0eacd35b957f0b226394bc",
+            "label": "bound/delegation D"
+          },
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258209a348b8ba0623cf4c4f109fad21afe3a56979255e1a79f5cce9ce8c6360d73740358206fbf10a821e4691bc2b241ec5c238bc0c5fe056b41ec5ab6bf7c3bfb1dd52aa704581856323b46ea63ffb9c9213431cab084b2090034dc293dc5eb055820cee30231a37d03db89cf8eadf829dab89bce9899704b4c5a7e806d83f7067cb058ffa3a307e277c47b0708da07989c94fb15aa683e4dee2b1827a468cb6f192a4881f02a61aeb79a9abc0047c8619e46584038923a453e49f21a751eabd5dcf45be97bf259731e61e0a136f2b04abcae85c4f1f8ce10108a30d81534879ef5455e80443e7f4f9d6238441076f25ca2fece6e3be464c714553b102491616870df9503b5c2c95dcc11840cfa85eed3a947920e0a39a822daa79d782a23c2356d4e499cfb8ce8286cbfa9530291a3d39faaa768ff8cb7c5e0af152742c447ee48cca1587953a6e08cd85d717c5e55ddd685dae89c928c551768e67a8f8e640668919bd8a401a5a9664c2bd18ed94a933198e69714c4171617325598ca95cdaeee1db18301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58405e4313d6e92b2e6683bef4fb49b9a23dd7945c41009d3559caa9317ed7b238d956fce5ed49cb093bd671cddbf5eed9b558458a862fd7e3dc81c7088ccb020752",
+            "id": "12bbdbe8e4d657fc869802899a5a2b77cff047c769b966e890c1997c47d593ce",
+            "label": "bound/A's assent to D"
+          },
+          {
+            "bytes": "83a60058200725dad1ea351054b2608972b626b37a8b9a49bc5e7a78099bfdcda2a56d9b8b0158200fbcaef23e373d05d4bf199694010cb9c6c6bc7dff3453b58ff5b99771cf0271025820b755d65c26e8b8694cafca7974261a8f69235a35a98636e2bb8da5c87a91b958035820397b87dad50674c5ca2efbf58fff148269ef3b160897449804ac0989eb53799b045818b49a65c66d6caf0c5cf21861717671cb7ffc7d9a57e08130055820533676a483168439b64e6c069166ed44ad1be5cc1b58bd33e302426481e9ff0558bbd9b43d9f9f3369086aa080503ce928a8d50accb7664f0cd5dbbde60b787a4e5dc67a76053a0f84d104d54245b68b1f599699583510cdf65c31a4bee38f74e134f2e1db2991a0090f010c75e32c81c1695d051bcfbc0c5c4f65e7794d2cda2566d92e19c7c9f4155ef01c627c88e558dbc26005a86efac57035a629ee35c60e371f5719b9b8d6aa27b9267659588052120b305d33db1c916d9c2c6270d0b4fd72e790e9b5d4979d12bbe4d10e2963679cf81e053cc8534316f1ac9a8301582095dacef7961f11d3dd10d093e712cca48374a8261b4925988815a6dc623c1ce8584059dbf858857c652d2a6966e7328d66e0a182e5450f297a69d6598ec2f9cf5a3dd53d666822a315df3871c7fa16119a18b2a6a20614196639df1c05e070e1f648",
+            "id": "4610bf2ee56e86a5025b99f3a47b4238f64ef86eb14c846f8cb31f2b6071704d",
+            "label": "bound/G's assent to D"
+          },
+          {
+            "bytes": "83a60058208fe2da7ab7714a9a72dcd21c15d1f17afce32212fc9a09ddbfa8fbf71f795342015820164a933e6603d63cc2bea2544f1ed6fa674e02d10353906aac54dae3c6cbb02f025820e7d6a2e508de56585bc23e391757ebbd438b526e59dceda411a229e549a07631035820b644a48811dbaf1280f57740584c4122f8b502d656104fe5afe38e4d1d1c3a69045818a61184e99fcaa9f3083cd5daa2da2db11aadfd536625e0a5055820706de984007b7611be8dff2da82246cb90798f8e1cc0a9b83d6a5e64365ab53e5901086d7c46b49624cacb1911f88eba268112355680abb8ec02be42bbfb0ddaf3413657146911bd04c93cb68b63f04f6de6a892adc99b643cb48f023b13db4f609701007fdcf1b1d57c296361cd6893e4044ea873c2fd8e7ca9095a4a0f8e2bc90825a8b8fe877214300abdbbdcb8c5681aa587f18e9df8bc7b738777facf7ec41a49445487e85d7696a21a9b1f9f9f811ff4d97e3b0df8ca14dea1dcf1225fdfcd2cce229eb2a63023c479088e2c55c0482801a827400f5afb1a6f647b7e692b730b287baef819bfc5af4235b5d0f776dcb7a07b450e57f33e54e697d3d29f34dff22b939195322e87c39231462f8b20b29f8ef878f6562898190ca171fd917bfbc1cd7ec160e4b73f5983015820e2b25d558bf1a25efb3581d8afd9e3ba987ae9fd8d74a3a497c1bf148210d2655840c6e3af01a3bc505c1f90973f05f7d8727a257096c587a660a22cc971f227b4e886402000b6e439da82438e32fce60ec7733c8f61aa6888f23f05348f62d7df2a",
+            "id": "5f10d4ca41a55a1ae14f10a07bf6c99a51f7b604e2b9584cc5104759544ef7af",
+            "label": "bound/Y"
+          },
+          {
+            "bytes": "83a60058208fe2da7ab7714a9a72dcd21c15d1f17afce32212fc9a09ddbfa8fbf71f795342015820164a933e6603d63cc2bea2544f1ed6fa674e02d10353906aac54dae3c6cbb02f0258203be1a55d22f48ee26f2a800d6fe00ec831fcdb4d7d07f6d1c920485ae57ce271035820895ec353c9d7d5903946b8ee49f13289bbac12f5e7e152b97562e6353b37768e04581842a74e98678e4e4c9bafdb4407f8ca667afce1c180e591cf055820f8f0836b86aca5a222d19412db30abcd4f75d9d8d1a8feb561dba1fb9baa76fe58ff925a9b56e086bb2fa0f83456d50812919ff0e1489d59d9b4ebbda36b683a82150e1e6d66d4494e9c8c0fdbb46ab87bb315c6cdf3aeefa63b4a288fe2dfd64a2b78d4e2f780ba4565fe1ef9ff334d233202095c9a8d45db56d54a9361202c35f8cff9025e121f54402c2192a52ea4bfacbd7621bd119afacaa35c5dd304d172d5f6535e91598c6774ed6ea1a7af68c9e122dd93a8a0d93958094d6de75b1404fee99ac07661020e4c06505e4079b94ec38c9e9981a3491599f61de2ae2fe2b81d6a9d072e31d15c8105878334e631096a44706a41d8817c199fb0b47d5625605e90beb13d94f4c267689dcdf44823436cf38e40173ec0586026eea304e3aa5b83015820e2b25d558bf1a25efb3581d8afd9e3ba987ae9fd8d74a3a497c1bf148210d2655840305f3417e1cbd8a5747a247a8e4591820672441bc52dcd7eb5a38cbefdf59d2f59d737e13fd6fef718b7342782bec922f6a1906426e1f1c253f13a126fba0167",
+            "id": "1d822e3dd76198ac46db2285b4e3e0170b5c3f9c4c089c9e5295686a9945e62f",
+            "label": "bound/B's assent to Y"
+          },
+          {
+            "bytes": "83a60058200725dad1ea351054b2608972b626b37a8b9a49bc5e7a78099bfdcda2a56d9b8b0158200fbcaef23e373d05d4bf199694010cb9c6c6bc7dff3453b58ff5b99771cf02710258208a1a9656f81e940d961857d051929b05a12ebde8a2eadac803136c0e3db764b00358204eacb2167b909613c3a5c191e4ee063739a291ced8bcc204462046beab5cf5050458181eb502da47b8f22881730932136fcd0e56a8c8e96e02f970055820bebe20a2aa96b86f996f7aec2329580df8ab067983186922b612f9956f6fd4985901254586faaf330793b459b6d769a271e655f93c22c884550ded119523aeaf748a7c196625dc3a1f4702ec58670cc23d6863eeb6312670de45afe5b9602a67dd264e2b7fba1af2be3d55e89b592aef90404ae6a6a3d152123ee26caf1c99a8beeabbf9edb0bd7767c466cdc78e962ce004b202bbaf2d03ff3d7783c5c6a340fdc3558543fe62fdd55c19e8c8bd409c6e2f28577c46de43488501351bf6e66d14ed18f6058671fbf4cb100aff80e7b8a04429fbf6cb79e68b8f2cb1720332bfa5a411aaeccc517b1c76a04534aaf0c46face92c32e12005ed153bceaf580ab8a0aaa4b086a60d979885c1327c6859787af210a8ddf6a5fc7dfd7dd3225d851e78393055fb1f0930f21208046a72ce82ef8471184b31e1d302d9b5a7b3e098ecab9d6f679080aa778301582095dacef7961f11d3dd10d093e712cca48374a8261b4925988815a6dc623c1ce858405af4de65a0f706903c7d43ec6f82cc8d140535d3d77bb78ea9e04e94b26a7be261bf04e95fe8c3e34bc55a858159715bc1b84f5640b6d75ff4cf789267e91762",
+            "id": "6be823ee6ce2752849da94c5ddb71f5c626c5153014082ebb32d7a813e77dda1",
+            "label": "bound/G's assent to Y for A, under D"
+          },
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820981aea9159da21a50842dd60baede1e73f3c21c2bbfaa32e0286d437a751354903582026fefb3878738f878696037108fe27a428ebfb039052dc75f04a0be86692ad960458184209a3169d11ddd9dfe866145be2cb4c2e1bc909796ea6410558206d884fc9a07c57ccd176698433ab9fe40f3081990d8e1841a003401b5af4866d590197edb93b8091c97b56d1f654825961f8813aefbffbab04792bd8fb0c70b59d4b60c103470ba62661d057ebb41b89e45bbd81b128cb0d4ef355e847ee53188b7c14d9b43f07aeeaf37f63d97e8481db4447036378fe8ccc31114b7a413b443bc490b18d77234790a7d9aa4b8f831a5f1d59771d3a585cf910880b02b1baf2be9600d2be1f406d618e8cecd991cbc85cd97f3a9f9d99e18a8aa5197b66d6557ecad37bcd8b18211b710a27a433d063431a516758eba30a8fbbc1c67c5576633e4630dbdfb11aafae156adaaf5fd4dd2f64dd63a19f45a43529af5e9178914bd7c46c200d233231965ac53b0721b1ac688fe89a67bbd09d20fc645468a8ddda2c785260bad70be6e5d7a8abffa1356ae8610b654873a5a0dc6b1ce28d1f1d9e3aba38ebffd4787377b20081d8861dadc210b2857d2b4e6e57390ac4c39f5f6489d048778e5902ba87e977eefcf987036e76b9094a8ae60c8209af6acb3135a6d2ff4391a0a77f18cc019f9a096a75d85a90246dd53620bf669a7fad54dc8b7fbc4e68864d616f91892c8a1bc67c86546ac2cdfcf78765cadf928301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840d789cd70c163d189f143ff9d9eaffe21a70375c92fa5df6fb771404520dce8a177f6c6718559df740187fa70d9e3ef9d732010894221caf44d61f55f487e2bd3",
+            "id": "8586137f903cb8721dcbf58b29a0c8b65d10d196886e40564b85f9bb3cff575a",
+            "label": "bound/D2, without the power"
+          },
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258200efcd65bd24febb1d178c088001163997e0147b427f0e6904e59f9002e85ff510358205cb0699cfc3b2d9a1d7f9921be5636333661e1523348bbf890eaea494370e0270458186c7cdcac7efe95a1bb6676c89287b4ec07c4a66be832382a055820e87ab59d84e474b4d9f0f42eb1a8c26f351c72180e87237aaeb4e5719f8c6ed858ff31852736ab8e6a3eb9e9843f7eebac22a0ad7bcfa067f8d99270b1b845476488eebab361a985addc085ad4e1ff0e95516f6d74ac8e75b82142c8e35883d14ebf032896a4b7f086b4fecf6e881f8401e71de88c259702f1bf276e69d84b1f18e6423001060112c7dff688fe4bb2b93d2dc5de8677a2a7be787925206d78054ea6101af6d19ebf0e383791244714166ad8d7b4d068b32330c61745ddecebd216c6b84ec301881e6ace4c15755bc67ec6bd3c55ee2d978867b8a5d9b748ca626efd0447dad72836f39a8272f48f43b4985ad9bc14d1f32909f9cbadb6fc33824957aa3e09613eb148820af335c8a2e99e0617e590ac0bd8de7261e71d5112db148301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58409d01fff6045223e889009f58024adf53ad95778344638227a0289a08dc5b61584df93d52ccb6bbfcbbfdd2569d02624f6b8976e6bdbd8dfabcb6b2654b320eb7",
+            "id": "24d639ab1ca0e8f6efd39836830456d8ca79b653e964434b8905e8d8f92276bf",
+            "label": "bound/A's assent to D2"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "as shown",
+          "rule": "G4.11",
+          "who": null,
+          "word": "valid"
+        },
+        "answers": [
+          {
+            "acts": [],
+            "cmip": {
+              "by_default": true,
+              "task": "K4"
+            },
+            "disputed": false,
+            "qualifier": "as shown",
+            "rule": "G4.11",
+            "said": [],
+            "says": "8586137f903c is an update of e7d75677af4a: the update condition answers valid, and it is in force by its own `in_force` (G4.8)",
+            "who": null,
+            "with": [],
+            "word": "valid"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": null,
+          "places": []
+        },
+        "limits": null,
+        "name": "a delegation ended by the delegator alone: a version that removes the power, with the delegator's part alone, is valid by default",
+        "question": {
+          "args": [
+            "8586137f903cb8721dcbf58b29a0c8b65d10d196886e40564b85f9bb3cff575a"
+          ],
+          "ask": "update"
+        },
+        "reader": {
+          "anchoring": null,
+          "on_behalf_of": null
+        },
+        "sentence": "By default the delegator can end it at any time: where those Terms name no update condition, a version of them that removes or narrows the power is valid, and replaces them (G4.8, G4.11(e)), when it carries the delegator's part alone, without the agent's.",
+        "stubs_asked": [
+          {
+            "about": [
+              "e7d75677af4a6e7bc4bbf86ed1769321ef992ed80c0eacd35b957f0b226394bc"
+            ],
+            "answer": "parts [], a delegation",
+            "cmip": "0078bc4a8ab62a403d736704af1dfd7c06525ce32bbd9e600368476f02bd1689",
+            "stub": "stub K1",
+            "task": "K1"
+          }
+        ],
+        "tests": "G5.5"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 58,
+      "retired_by": {
+        "reading": [
+          "the sheet, section 4.3: \"G 58 (`update`; 5.5.5, part 1): a delegation ended by the delegator alone, valid by default: G5.5 is gone (its bytes would answer **not shown**)\"",
+          "draft 26 has no rule letting the delegator alone end a delegation by default: by 5.6.6(a) and 5.5.7(e) such a version needs every known party, the agent among them; the case's sentence (draft 25's G5.5) is gone, and its bytes, read under draft 26, would answer not shown (the sheet's new line 51 tells that story)",
+          "the ledger, \"Who signs an update by default: the known parties\" (26 November, 17:51–17:56)"
+        ],
+        "rule": "5.6.6(a)",
+        "says": [
+          "draft 26, 5.6.6(a): \"By a version of the Terms that give the power, which ends or narrows it, made as any update of those Terms is: their update condition decides, as its cMIP dictates (5.5.7), or, where they name none, the default (5.5.5(a))\"",
+          "draft 26, 5.5.7(e): \"There is no power for replacement (§5.6): Terms that name no update condition are updated only by their known parties, whatever their `powers` say.\""
+        ]
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582033bc65eea2d7927a3fddd44b707748401238f573f6d26c46a9b8f29a131e8584035820f793037a043f613d2c4f7e34c003e4fa33f18ab6e7e99f6018942cbf8fb9557c0458189fedaec58e875f66a480d180d9b22f46a74231f6f9f8bccf0558208b7cddd096de8a825ff01d98ec0bdab43066d015e402cd2c19af46ebc27f797b590108a905b33bb6ccb701ba1f526a4d57077e0a8097babe62aeed3e39639292c56c913398b115a17a2c14444f412954845f28349548320d129341b9ff698f32f8f7d9f41bdfdb70113fc3c1bb2ec9730f14d0d902d30422f281453a55115f553a7e298eb96ab5bd810d59b593ee65c3b04ed3a2c04a3a533b7cdb86f28b5d3ae90a254709c88a746c95efc127def5e8bf3e677209b0c0c98aab65ce9c45dcd51ff06617ce7801880dfa07f063b1f76d043b11e8656ef4cc1198eb6aafbc6677f745135dacdbbe6ecd4baf4abe198d0bdc093cdd373674578d3b6e6da53dab9f49af276d4605ffbc6c305803d81658c78232bc82b6801e10938690eb07dbe66440d53e365806677706b7bd8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58409d91f98753d6ae7d01017d02c43155b21687a6374afd687aff3cea6f009152ebd71ff8b0783f8d5e3e6f4bb96b38d73155334c2f2e90a3c362e610bf607522c8",
+            "id": "2563f87df134022464cdb6970df5125002eff424ac67a5723bbb398c7fb7b6c1",
+            "label": "anchoring/root"
+          },
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820ad6866f581fd0b6cb82e9f88962f98951459af234ad0cf6414466a5b8dfb1fe3035820fdf6b54bba62a52c87fc24356db59e875ca3aa1b4805d8b8c9ffba5612d069ec04581868e94b2b26e3f50b1b94cb0916b7b7ada2943f71177dbd060558202236334018cf443c934337cda55473deb780dab0cc9225b995ba83bbbd739d8a58ff8ff3eafc03fef49fd8ab40047eefbdaf82112cf31ded526d8a984118726c6381dbe17e64daa62ffba9928894463cc9c06a0d58139dd8af8814a14b982af792ca6e3bdfeb083ae3bfc37b7573a374399d5c486319d24f2cb699f46e1a84cf80f5e7d3ef2234981969c46adb3fe8dca64ea8b5c63731714d377f60aa4b3239308fea31bff04b21b52ca5a493ae98cfbcb17068ce74cb36adaef31cc98d3992614371d0c8cbeef6b2668257223357c45f9697174d66c8b9edb9fa5c2422be6e5ec9b0537b47523d7e791ba8839a4ab97dacfa9be53ddfe4e36d059b00cc22a3496e82d5209fa120737180b10bc9e33f26b78b4adbde0a3fe8dce96847baffecff8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58402279884a295537ecf67e85bcbf71d644a02584463a5e0b18bc675d5cfecd2781a2aaa72c7e954e5b2e55293f9a1712d45a502207b753b04faa309fbf472dabb4",
+            "id": "5df63b93606fa0addf680bcd5b7f27039243231813ca92dc30e1c28f00ba8d4d",
+            "label": "anchoring/A's assent"
+          },
+          {
+            "bytes": "83a60058208fe2da7ab7714a9a72dcd21c15d1f17afce32212fc9a09ddbfa8fbf71f795342015820164a933e6603d63cc2bea2544f1ed6fa674e02d10353906aac54dae3c6cbb02f0258200bd5ce01d1d49a08927a33a97ec51e889ec4c33180f21ab5be4d0235b3a8462e035820ef50225320361fe39d1e6f581792441c7b63e0d6c288d56394232571353068200458180be28cebb1607f4dd7502d03002937295eb3a30803b3502a0558202833285fcff9ff2d9318e86e91425169e1f0bcfc845e23659a17612dbe077c7b58bb1b704690dacf45db2a722f9700fde473825b6e1adaa57fff206f84c61b087bed08d5ac55adf38893a15c4d0c78bbfe8a8d77793569b26488f568a3e1249f466d456a353bf5d85d6883f248cb248ae364672ee0e37f7a559fa87ed39b19fc0953ca4edb1e0d5f6882d7a07cb1aafa8621791cd1ade2be12cc34efb22f7a31b9f74885b55fa5eacad8c892378c1313883e2aec584b64a2e096f87a8ecaa24ffcd0d9cbb3d88e0b4bdf44854a3619a4177cf01804de59d93b03493f9083015820e2b25d558bf1a25efb3581d8afd9e3ba987ae9fd8d74a3a497c1bf148210d2655840b568224b1313ae9ada26aa5191b102a8eee1fb7c093ad2f5ea50f275b10c7251684e8b8f6eeb591fc347b4b4cf1798ce7192b539695d4531253e3f38295612a3",
+            "id": "cebcc06b611c8d24b28e929e4a62dfde8293c5ab2f0fa7aa268a74ca8e787431",
+            "label": "anchoring/B's assent"
+          }
+        ],
+        "answer": {
+          "disputed": false,
+          "pick": 0,
+          "qualifier": "per anchoring",
+          "rule": "G4.6",
+          "who": null,
+          "word": "shown"
+        },
+        "answers": [
+          {
+            "acts": [
+              "2563f87df134022464cdb6970df5125002eff424ac67a5723bbb398c7fb7b6c1"
+            ],
+            "cmip": null,
+            "disputed": false,
+            "qualifier": "per anchoring 36c02c8814ff",
+            "rule": "G4.6",
+            "said": [],
+            "says": "in force: the assents its `in_force` rule requires (or, by default, one in the name of every party named as a signer) are present, and no Terms replace them",
+            "who": null,
+            "with": [],
+            "word": "shown"
+          }
+        ],
+        "layers": {
+          "clocks": [],
+          "envelope_chain": null,
+          "money": null,
+          "places": [
+            {
+              "contradicted": [],
+              "id": "36c02c8814ff737c5560b72bbbee972f28c19eb02c6f837a6aab42aeef55e508",
+              "positions": [
+                [
+                  "2563f87df134022464cdb6970df5125002eff424ac67a5723bbb398c7fb7b6c1",
+                  1
+                ],
+                [
+                  "5df63b93606fa0addf680bcd5b7f27039243231813ca92dc30e1c28f00ba8d4d",
+                  2
+                ],
+                [
+                  "cebcc06b611c8d24b28e929e4a62dfde8293c5ab2f0fa7aa268a74ca8e787431",
+                  3
+                ]
+              ]
+            }
+          ]
+        },
+        "limits": null,
+        "name": "no place named: in force per the anchoring the reader accepts, with it named",
+        "question": {
+          "args": [
+            "2563f87df134022464cdb6970df5125002eff424ac67a5723bbb398c7fb7b6c1"
+          ],
+          "ask": "in_force"
+        },
+        "reader": {
+          "anchoring": "36c02c8814ff737c5560b72bbbee972f28c19eb02c6f837a6aab42aeef55e508",
+          "on_behalf_of": null
+        },
+        "sentence": "Where no place is named, a verifier MUST qualify every such answer **as shown**, or **per anchoring** where the reader accepts one, with it named (G13.4).",
+        "stubs_asked": [],
+        "tests": "G7.3"
+      },
+      "from": "core/vectors/agreements-new/grammar.json",
+      "index": 64,
+      "retired_by": {
+        "reading": [
+          "the lead's note of 27 November, row C9: \"Retired; its sentence is gone.\" The lead's reading, resting on the ledger's \"A condition in time with no anchor is refused\" (26 November, 18:00–18:30)"
+        ],
+        "rule": "5.5.3",
+        "says": [
+          "draft 26, 5.5.3: \"A keeper or an anchoring of the reader's own choosing gives an answer only as that reader's, named so: it never gives the Terms' own answer, never puts Terms in force, and never makes an update late (§5.13).\""
+        ]
+      }
+    }
+  ]
 }
