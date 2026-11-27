@@ -133,6 +133,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 **The clone is the new agreement** (27 November, 23:30–23:32; the scribe's P5, held for him). The MOR lead asked whether "a clone to the agreement to a new keeper" (21:42) and "whatever they do next is a new act, a new agreement" (22:36) are the same thing: a new first act that may name the old one for lineage, not an update of it. He: "I laughed… because to me it still always the same question. And it boils down to you try real hard to think like a human, I try real hard to think like a machine."
 - *Arrived at (to check):* yes, the same: the clone of 21:42 is the new agreement of 22:36.
 
+**The header's form is the MICS's** (27 November, 23:40; Development, ahead of its review, after "Every act links to a text", which left open whether it is written in each layer or in the MICS). He: "Going back to the header… so the header is formatted for all MIRs in the MICS, the reason being some thanking an indirect route."
+- *Arrived at (to check):* the header has one form, written in the MICS for every MIR, because an act may reach its text by an indirect route that crosses layers, and each step must read the same way. The MOR lead reads "thanking" as "taking".
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
