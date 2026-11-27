@@ -70,3 +70,8 @@ P2's "For P3" 8 and 9: yes, 5.13.3's "only they pin" is brought to agree with 5.
 4. **Yes:** "every known party", in 5.4.1 and in reading 2.
 
 The mechanical find: draft 26's head points to draft 25 where it lives, `claude/agreements-clean-1-hahuwn` (pull request 183), until draft 25 is merged or archived.
+
+## Before P4, 22:33
+
+1. **The scribe's lean is right; the lead's reading of 22:30 is narrowed.** Read for every update, it would lock the way out of his 21:42. So: the gate waits on the keepers named only for an update that not every known party signs (two of three included); an update every known party signs, each shown after the other, counts its assents by their knots, whatever keeper is named, as 5.5.5(d) has it. His 22:30 case is of the first kind: no update, no fork. The lead's reading, to check.
+2. **P4 writes answer 3 as the lead's reading, to check, and lists it for him.** One question to him after P4.
