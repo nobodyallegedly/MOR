@@ -59,3 +59,14 @@ P2 writes the companion's scenarios and encoding 3's "One fault, one rule" on th
 5. **No test from its bytes:** the gate already asks who signs a resolving update (5.12.4).
 
 P2's "For P3" 8 and 9: yes, 5.13.3's "only they pin" is brought to agree with 5.5.1(b), as answer 3 reads it.
+
+## P3's batch of four, 22:30
+
+*The lead's answers to P3's questions, by its numbers. None is his.*
+
+1. **Yes.** Reading 7 reaches 5.10.6's last sentence, 5.10.8, 5.5.7(f) and §3.3 **Apply**: a spot a known party fills is a known party's act, and an update reaches it as it reaches that party ("A filling gives no power", 18:44: "the known parties' rule applies to it").
+2. **Yes.** Where Terms give no power, an agreement signs by every one of its signers (5.1.2); that signing is one act, the agreement's, and serves the pin as one act.
+3. **The lead's, to check with him.** A new version signed by every known party may name a new keeper, a surviving one, or none: which keeper a version names is the parties' choice, written in it, and the grammar rule asks only that every known party sign. His "to a new keeper" is read as his example, not a limit.
+4. **Yes:** "every known party", in 5.4.1 and in reading 2.
+
+The mechanical find: draft 26's head points to draft 25 where it lives, `claude/agreements-clean-1-hahuwn` (pull request 183), until draft 25 is merged or archived.
