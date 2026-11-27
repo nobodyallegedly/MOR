@@ -90,6 +90,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 **The giver bears it, not the agent** (27 November, 16:50–16:53; the fifth of the five questions, carried from the scribe's M5). The MOR lead: Ben signs an assent for Ana under a power she gave; Ana is bound ("a power given binds its giver"); is Ben bound too; leaned no, not by the grammar, Ben's duties toward Ana being the power's cMIP's, his signature visible on the record. He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality. What will be more likely is acting for an “agreement as a party” via granted powers, there two the agreement bears the responsability"
 - *Arrived at (to check):* an act signed for another under a power binds the giver of the power, never the agent: the giver took the risk and bears the responsibility. The same where the giver is an agreement acting as a party through granted powers, the likelier case: the agreement bears it. The agent's own duties toward the giver are the power's cMIP's, above the core.
 
+**Wave four: close draft 26, its impact, its attack** (27 November, 16:53–16:54). With the five questions answered, the MOR lead proposed wave four: the scribe carries the five answers into draft 26 and closes its list; the codemeister writes what draft 26 does to verifier 2, the 22 vectors and the twelve byte choices, each with a proposal, no code changed; a fresh Fable 5.1 attack on draft 26 whole, with its companion; then the review and the verifications, in his order, and Money after. He: "Yes pls"
+- *Arrived at (to check):* wave four as proposed.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
