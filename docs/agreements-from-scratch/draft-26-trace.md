@@ -1132,3 +1132,251 @@ COUNTED (`wc -lc`, final files): `draft-26.md` 428 lines, 146,051 bytes; `encodi
 ## M11: the report, read for decisions
 
 A second subagent, which had seen neither the ledger nor the assignment, read `draft-26-report.md` alone and was asked whether anything in it reads as a decision. It named twelve places: the hash named `SPEC_DRAFT_26` while its naming is listed open; "answered" for items settled only by a reading of the lead's (3, 10, 17, 18); item 22 written as a statement; a found item written as an answer; the ledger entry of 14:47 cited without whose words; "a key change continues the signer's line" without its source; the lead's readings placed after the finding; "none his" and M8's findings unmarked. Each was reworded to record or list: the readings named as the lead's and put first, the items as questions, the marks added. Nothing in the report was chosen.
+
+# N1: wave four: his five answers, the four words, the sixteen, the list, the hash, the check
+
+*Added by the scribe's session N1, 27 November 2026, the one session of the scribe's share of wave four. Not a decision, and not part of the hashed text. Nothing above is changed. Marks are M2's: TRACED (to a rule or a ledger entry, cited), COUNTED (by a script, named), INFERRED (N1's reading). The scripts are N1's scratch scripts, outside the repository: `edit.py` made every edit, asserting each old wording occurs exactly as often as stated, and logged each; `where.py` finds where each new wording stands in the final files; `check_n1.py`, `quotes_n1.py` and `stale.py` are the checks. The MOR lead's words for this wave are quoted from the assignment as given; they are the lead's, not his.*
+
+**The wish** (Nobody, allegedly, 26 November, 16:46): "We need to change the current wish to updating the core after the findings". On the order (27 November, 14:53): "We finish this rewrite of agreements, then we turn our attention to money, and after that we’ll tackle development." On this wave (27 November, 16:54): "Yes pls".
+
+## N1: his five answers, edit by edit
+
+Each row: the edit (by its tag in the log), where it stands in the final file (COUNTED, `where.py`), the entry it rests on with his words, and its mark. Each entry was read whole in `docs/decisions.md` on main; where its "Arrived at (to check)" line says more than his words, the extra is the lead's, listed in the companion's 6.13.
+
+| Edit | Where | Rests on | Mark |
+|---|---|---|---|
+| A1 5.8.3 | draft-26.md: 5.8.3 | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED; "not shown", with that reason, and "names the keeper that does not yet show it" are the lead's line and N1's wording (rows to check, 1) |
+| A1 5.8.4 | draft-26.md: (the clause as rewritten) | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED |
+| A1 5.5.5(d) | draft-26.md: 5.5.5(d) | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED |
+| A1 5.6.4 | draft-26.md: 5.6.4 | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED |
+| A1 §3.4 Keeper | draft-26.md: §3.4 Keeper | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED |
+| A1 §3.6 Not shown | draft-26.md: §3.6 Not shown | "Two keepers named, both needed" (27 November, 16:40–16:44). He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do" | TRACED |
+| A2 §3.2 Known party | draft-26.md: §3.2 Author | "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?"; to the lead's one rule, version by version: "Yes" | TRACED; "as a signer or as an agreement" kept against the line's "the signers it names" (rows to check, 2) |
+| A2 5.5.5(a) | draft-26.md: 5.5.5(a) | "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?"; to the lead's one rule, version by version: "Yes" | TRACED |
+| A2 5.5.5(a) added | draft-26.md: 5.5.5(a) | "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?"; to the lead's one rule, version by version: "Yes" | TRACED to the line ("she was unknown to the versions before it"), the lead's |
+| A2 5.5.5(b) | draft-26.md: 5.5.5(b) | "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?"; to the lead's one rule, version by version: "Yes" | TRACED |
+| A2 5.5.7(e) | draft-26.md: 5.5.7(e) | "The known parties of a version are the signers it names" (27 November, 16:44–16:46). He: "Is Dana a known party at the signing of the new act?"; to the lead's one rule, version by version: "Yes" | TRACED |
+| A4 §3.1 Terms | draft-26.md: §3.1 Terms | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED |
+| A4 §3.2 Author | draft-26.md: §3.2 Author | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED |
+| A4 §4.2 authors | draft-26.md: §4.2 `authors` | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED |
+| A4 §4.4 case 5 | draft-26.md: §4.4 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED |
+| A4 5.3.1 | draft-26.md: 5.3.1 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED; "invalid" is the line's, his words say "by default" (rows to check, 3) |
+| A5 5.6.1(a) | draft-26.md: 5.6.1(a) | "The giver bears it, not the agent" (27 November, 16:50–16:53). He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality. What will be more likely is acting for an “agreement as a party” via granted powers, there two the agreement bears the responsability" | TRACED |
+| A5 5.6.3 | draft-26.md: (the clause as rewritten) | "The giver bears it, not the agent" (27 November, 16:50–16:53). He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality. What will be more likely is acting for an “agreement as a party” via granted powers, there two the agreement bears the responsability" | TRACED; "binds only as 5.6.1(b) says" and the agent "not bound by that act as an act of its own" are N1's wording, INFERRED (rows to check, 4) |
+| A5 5.6.3 wording | draft-26.md: 5.6.3 | "The giver bears it, not the agent" (27 November, 16:50–16:53). He: "No, Ana took the risk, she bears the responsability. It’s my “blame the manager not the worker” mentality. What will be more likely is acting for an “agreement as a party” via granted powers, there two the agreement bears the responsability" | TRACED |
+| A3 (none) | draft-26.md: no sentence added; 5.10.6, 5.10.7, 5.10.8 already say it | "\"Renewed on the terms then current\" cannot be built" (27 November, 16:46–16:48). He: "How did they build such terms in agreements?"; "Yes, it’s the scenario we trying to make difficult on the “walls of terms”" | INFERRED: that the three rules already say it (rows to check, 5) |
+| encoding 3, A4 E13 | E13 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED to 5.3.1; the bytes: the outside's signer against `[0, signer]` of `authors` (E1, E9), INFERRED |
+| encoding 3, A4 sec4 item 4 | E19 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED to 5.3.1; the bytes: the outside's signer against `[0, signer]` of `authors` (E1, E9), INFERRED |
+| encoding 3, A4 sec9 step 7.4 | section 9 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED to 5.3.1; the bytes: the outside's signer against `[0, signer]` of `authors` (E1, E9), INFERRED |
+| encoding 3, A4 sec12 E13 | section 12 | "The signer of a Terms act is an author" (27 November, 16:48–16:50). He: "Absolutely. The person publishing the act is by default an author, the rest adds signature later" | TRACED to 5.3.1; the bytes: the outside's signer against `[0, signer]` of `authors` (E1, E9), INFERRED |
+| companion | section 5 (§5.3, §5.5, §5.6, §5.8, §5.10, wave-four entries); 6.9 (M28); 6.13; 8.4 variant; 8.22 to 8.26; 9.1 rows 5.3.1, 5.5.5, 5.6.1, 5.6.3, 5.8.3, 5.8.4, 5.10.6; 9.2 rows Author, Known party, Keeper, Power, Keeper's record, Resolution, and two new (Placed, Spot); "Left out": items 2, 5, 14 and the two carried, each marked closed | the five entries above | TRACED; the five vectors are N1's reading of the rules, INFERRED |
+
+**The vectors named for the codemeister** (the companion's section 8), each: the acts in order, the rule, the expected answer word. INFERRED, as every scenario's answer is; none is written as a vector file, and no code or vector is changed.
+
+1. 8.22: V1 naming keepers K1 and K2; A(Ana, V1), A(Ben, V1); K1 places all three, K2 none. Rule 5.8.3. **not shown**, per keeper, "a keeper the Terms name does not yet show it".
+2. 8.23: V1 (Ana, Ben); V2 adding Dana, assented by all three; V3 assented by Ana and Ben. Rule 5.5.5(a). V2 **valid**, by default; V3 **not shown** as a replacement, Dana's assent not held.
+3. 8.24: an offer V1 whose words renew "on the terms then current"; Ana fills its role; V2 replaces V1; the month ends on the clock. Rule 5.10.7. Ana's filling **shown** under V1, no later version named; with her new assent to V2, a second filling **shown** under V2.
+4. 8.25: a Terms act signed by Carla whose `authors` name Ana and Ben. Rule 5.3.1 (E13). **invalid**.
+5. 8.26: Ben assents to V1 for Ana under a power she signed. Rule 5.6.3. Ana **shown** as bound by V1; Ben **not shown**, "made for another under a power".
+
+## N1: the four words, renamed
+
+The lead's lean, from the assignment: "chain" for an agreement's versions only, "line" for a signer's acts, a keeper's "record"; "kind" for a Statement only, a spot's and a power's "sort"; "resolve" the Statement, "resolution" the fork's end; "in force" for Terms only, an act the keepers show is "placed". Applied as the lead's reading. Each row: the edit, the number of places it touched, where (COUNTED, `edit.py` and `where.py`).
+
+| Edit | Places | Where |
+|---|---|---|
+| B1 chain §3.3 Chain | 1 | draft-26.md: §3.3 Chain |
+| B1 chain §3.4/5.13.3 a chain of acts | 2 | draft-26.md: §3.4 Shown after, 5.13.3 |
+| B1 chain §3.4 Shown after, such a chain | 1 | draft-26.md: §3.4 Shown after |
+| B1 chain 5.5.4(c) | 1 | draft-26.md: 5.5.4(c) |
+| B1 chain 5.13.3 missing act | 1 | draft-26.md: 5.13.3 |
+| B1 chain §3.4 Keeper's record | 1 | draft-26.md: §3.4 Keeper |
+| B1 chaining §3.4 Keeper | 1 | draft-26.md: §3.4 Keeper |
+| B1 chaining 5.8.1 | 1 | draft-26.md: 5.8.1 |
+| B2 sort §3.2 Spot | 1 | draft-26.md: §3.2 Spot |
+| B2 sort §3.2 Power | 1 | draft-26.md: §3.2 Power |
+| B2 sort §4.1 role | 1 | draft-26.md: §4.1 |
+| B2 sort power's kind §4.1 | 1 | draft-26.md: §4.1 |
+| B2 sort role of kind | 3 | draft-26.md: §4.1, 5.2.3, 5.10.4 |
+| B2 sort kind future | 3 | draft-26.md: §4.4, 5.10.1, §6 K5 |
+| B2 sort role of kind **future** | 1 | draft-26.md: 5.10.4 |
+| B2 sort §4.2 parties | 1 | draft-26.md: §4.2 `parties` |
+| B2 sort §4.2 powers | 1 | draft-26.md: §4.2 `powers` |
+| B2 sort §4.2 K7 | 1 | draft-26.md: §4.2 `powers` |
+| B2 sort power of kind | 8 | draft-26.md: §4.2 `powers`, 5.4.5, 5.4.5, 5.4.5, 5.6.2, 5.6.5(e), 5.6.5(f), 5.12.5 |
+| B2 sort powers of kind | 4 | draft-26.md: 5.2.3, 5.6.5(c), 5.12.5, 5.12.5 |
+| B2 sort §4.2 one kind | 1 | draft-26.md: §4.2 `powers` |
+| B2 sort no kind replaces (§4.2) | 1 | draft-26.md: §4.2 `powers` |
+| B2 sort no kind replaces (5.6.2, K3) | 2 | draft-26.md: §4.2 `powers`, 5.6.2, §6 K3 |
+| B2 sort §4.4 case 3 | 1 | draft-26.md: §4.4 |
+| B2 sort §4.4 close | 1 | draft-26.md: §4.4 |
+| B2 sort 5.10.1 | 1 | draft-26.md: (the clause as rewritten) |
+| B2 sort role (its kind and | 2 | draft-26.md: 5.10.1, §6 K5 |
+| B2 sort 5.10.4 four kinds | 1 | draft-26.md: 5.10.4 |
+| B2 sort 5.12.5 no other kind | 1 | draft-26.md: 5.12.5 |
+| B2 sort K3 question | 1 | draft-26.md: §6 K3 |
+| B2 sort K3 For kind | 1 | draft-26.md: §6 K3 |
+| B2 plain cMIP | 1 | draft-26.md: §3.1 cMIP |
+| B2 plain module | 1 | draft-26.md: §6.1 |
+| B3 §3.3 Resolution | 1 | draft-26.md: §3.3 Apply |
+| B4 placed (§3.3 Pin) | 1 | draft-26.md: §3.3 Pin |
+| B4 placed (5.4.1, 5.5.1(b)) | 2 | draft-26.md: 5.4.1, 5.5.1(b) |
+| B4 placed §3.4 entry | 1 | draft-26.md: §3.4 Placed |
+| B4 placed 5.8.4 | 1 | draft-26.md: 5.8.4 |
+| B4 placed 5.5.5(d) | 1 | draft-26.md: 5.5.5(d) |
+| B2 sort 5.6.2 that kind | 1 | draft-26.md: 5.6.2 |
+| B2 plain §4.4 case 1 | 1 | draft-26.md: §4.4 |
+| encoding 3: E14 Kind 4 | 1 | E14 |
+| encoding 3: E14 act they are for | 1 | E14 |
+| encoding 3: E10 act format's own kinds | 1 | E10 |
+| encoding 3: sec1 power of kind | 1 | section 1 |
+| encoding 3: sec1 role of kind | 1 | section 1 |
+| encoding 3: sec4 role kind | 1 | E19 |
+| encoding 3: sec4 notes power of kind | 1 | E19 |
+| encoding 3: sec5 power of kind resolves | 1 | E20 |
+| encoding 3: sec11 power of kind | 1 | section 11 |
+| encoding 3: sec10 role's kind | 1 | section 10 |
+| encoding 3: sec7 stale quote of 5.13.3 | 1 | E25 |
+| encoding 3: E10, "kind" to "sort", whole block (CDDL comments and prose) | 12 | E10 |
+| encoding 3: E14, the power's "kind" to "sort" (CDDL label and prose; "a Statement of that kind", "a Statement of kind 3" and "K7 kind" kept) | 9 | E14 |
+| companion: K stale 209 (5.5.7) (a quote of draft 26 brought to its words) | 1 | 4.3 The language, not the solution |
+| companion: K stale 253, 415 (§3.4, 5.8.1) (a quote of draft 26 brought to its words) | 2 | 4.4 The layers split so relays can speci, §5.8 The keeper, and the clock |
+| companion: K stale 281 (§3.4) (a quote of draft 26 brought to its words) | 1 | 4.6 The keeper, "that and nothing more" |
+| companion: K stale 359 (5.5.5(d)) (a quote of draft 26 brought to its words) | 1 | §5.5 Updates: the gate and the pin |
+| companion: K stale 369 (5.5.7(e)) (a quote of draft 26 brought to its words) | 1 | §5.5 Updates: the gate and the pin |
+| companion: K stale 421 (5.8.4) (a quote of draft 26 brought to its words) | 1 | §5.8 The keeper, and the clock |
+| companion: K stale 467 (5.13.3) (a quote of draft 26 brought to its words) | 1 | §5.13 Knots: what an act names, and "sho |
+| companion: K stale 1873 (§3.4) (a quote of draft 26 brought to its words) | 1 | For Identity |
+| companion: K placed 726 (a quote of draft 26 brought to its words) | 1 | 7.1 Draft 25's thirty-eight |
+
+COUNTED: in `draft-26.md`, **chain** 9 places (7 of "chain" and 2 of "chaining"), **sort** 40 places (and 3 plain uses of "kind" reworded: §3.1 cMIP, §4.4 case 1, §6.1), **resolution** 1 (the §3.3 entry), **placed** 6 (with the new §3.4 entry). In `encoding-3.md`, 30 (sort 29, chain 1). In the companion, 10 (9 quotes of draft 26 brought to its new words, 1 "placed"), and two rows added to section 9.2. Not renamed, listed: "kind" of a value (§4.1, its heading "The kinds of value", "that field's kind", 11 uses), which the lean does not reach; the envelope's chain and §2's chains, the layer below's; the verb "resolve" (a fork is resolved), which §3.3 now says is used when a resolution is made.
+
+## N1: the sixteen definitions said again
+
+M11's list names seventeen terms in eleven rules (COUNTED: line, update, fork, shared act, tip, branch; sequence, leg, doer, receiving side; late update; update condition; the original; set aside; buyer's contest; receiver for the act; the sorts of a spot). Each rule now keeps the words it needs and cites the §3 entry; each definition stays as §3 has it. Each row: the sentence that went, and the one that stays.
+
+| Rule | Went | Stays |
+|---|---|---|
+| 5.12.2 line, update, fork, shared act, tip, branch | - **5.12.2** **Lines, updates and forks.** A **line** is a set of acts of which each names the one before it, so that only one act may follow each: one signer's acts within an agreement, by `previous` (5.7.1); an agreement's Terms, by `replaces` (§5.5); and any other acts these grammar rules read as following one another. An **update** of an act is an act that names it as the one before, and that all the parties that needed to sign it have signed: for one signer's line, that signer (5.7.1); for Terms, those whose signing the update condition asks, or the default (the gate, 5.5.1(a), 5.5.5, 5.5.7). For Terms, a late update (5.5.4) is no update of the version it names. Where an act has one update, that update is the next act of the line. A **fork** is two acts competing to change the same state, with no order shown between them: two updates of the same act of one line (5.5.4, 5.7.2); Terms coming into force against a counter signature that cancels one of the assents they need (5.4.5); or any other. Three or more are one fork with that many tips. Two acts of one signer that both name no `previous` are a fork with no shared act. These grammar rules see a fork from the acts alone: for a fork of a line, two acts were signed by all the parties that needed to sign them. They say nothing of what anyone meant. Where the fork is of a line, the act both follow is the **shared act**; each of the two updates is a **tip**; a tip, with every act that follows it in the line, is a **branch**. | - **5.12.2** **Lines, updates and forks.** A line, an update, a fork, and a fork's shared act, tips and branches, are as §3.3 defines them (**Line**, **Update**, **Fork**): for one signer's line, by `previous` (5.7.1); for an agreement's Terms, by `replaces` (§5.5), the gate deciding which signatures an update needs (5.5.1(a), 5.5.5, 5.5.7); for Terms, a late update is no update of the version it names (5.5.4). Only one act may follow each act of a line: where an act has one update, that update is the next act of the line. Two acts of one signer that both name no `previous` are a fork with no shared act. For a fork of a line, each of the two acts was signed by all the parties that needed to sign it. |
+| 5.11.1 sequence, leg, doer, receiving side | - **5.11.1** **Sequence, and leg.** Where what one agreement gives or owes reaches another agreement (a party named as an agreement, 5.1.1; a receiver that is an agreement, 5.1.3), and so on from one to the next, those agreements are a **sequence**. A **leg** is one obligation carried out, between its two sides: the **doer**, who carries it out, and the **receiving side**, who receives it. A payment to an agreement is a leg between the payer and that agreement's receiver for the payment (5.1.4). A payout divided among several is one leg for each of them: between whoever pays out (a service, or a party who receives for the others) and each one paid; where one paid is an agreement, that agreement's receiver for the act (5.1.4). These grammar rules define the two sides of a leg, and nothing more of it. Each leg | - **5.11.1** **Sequence, and leg.** A sequence, a leg, and a leg's doer and receiving side are as §3.3 defines them (**Sequence**, **Leg**, **Doer**, **receiving side**). What one agreement gives or owes reaches another through a party named as an agreement (5.1.1) or a receiver that is an agreement (5.1.3); a payment to an agreement, or a payout to one, is a leg whose receiving side is that agreement's receiver for the act (5.1.4); whoever pays out a payout divided among several is a service, or a party who receives for the others. Each leg |
+| 5.5.4 late update (the first mention) | two updates, each allowed by the version they name. A late update (below) is no update, and no tip. **A late update.** | two updates, each allowed by the version they name. **A late update.** |
+| 5.5.4 late update | L is a **late update** where L is shown after the acts that put F, the version L should have named, through O's gate and pin (5.5.1), as (a) and (b) say. A late update replaces nothing, and is no tip of a fork: O stays replaced by F, and the line goes on from F as if L were not there. Where nothing shows it, L and F are a fork whose shared act is O, | L is a late update (§3.3, **Late update**) where L is shown after the acts that put F, the version L should have named, through O's gate and pin (5.5.1), as (a) and (b) say: O stays replaced by F, and the line goes on from F as if L were not there. Where nothing shows it, L and F are a fork whose shared act is O, |
+| 5.5.7 update condition | with its parameters: their **update condition**, called the condition for short. It is one simple field, and these grammar rules read one thing of it: whether the agreement can be updated or not. Asked of a proposed update, that is **valid** or **not valid**, as that cMIP answers: the gate (5.5.1). Everything else is that cMIP's to specify: who must sign an update (two owners of three, one named party, everyone), which parts of an agreement an update may change (a share, a party, the rights a version offers, the offer itself, a power, the judge, the condition itself), when, and on what. It is never asked about a filling: no update reaches one (§5.10). | with its parameters: their update condition (§3.3, **Condition**). It is one simple field, and these grammar rules read one thing of it: asked of a proposed update, **valid** or **not valid**, as that cMIP answers: the gate (5.5.1). What that cMIP specifies includes who must sign an update (two owners of three, one named party, everyone), which parts of an agreement an update may change (a share, a party, the rights a version offers, the offer itself, a power, the judge, the condition itself), when, and on what. |
+| 5.5.5 the original | A Terms act replaces the Terms its `replaces` names (the **original**) only as 5.5.1 says | A Terms act replaces the Terms its `replaces` names, the original (§3.3, **Version**), only as 5.5.1 says |
+| 5.12.4 set aside | Every other tip is **set aside**: it never counted as the next act of the line (for Terms, it never counted as the next version), and no act that follows it in the line counts. | Every other tip is set aside (§3.3, **Set aside**), and no act that follows it in the line counts. |
+| 5.11.8 buyer's contest | **A buyer's contest** is a contest by which a buyer says that what they bought was not delivered after payment. It is made against the offer or vow the buyer bought under, | **A buyer's contest** (§3.1, **Contest**) is made against the offer or vow the buyer bought under, |
+| 5.11.8 buyer's contest, only there | These grammar rules read a buyer's contest only there: where what was bought was not delivered after payment. | These grammar rules read a buyer's contest for that case only. |
+| 5.1.4 receiver for the act | it gives or owes to that agreement's **receiver for the act**: the `receiver` named by the version of that agreement which the act that gives or owes names (§5.13). | it gives or owes to that agreement's receiver for the act (§3.2, **Receiver for an act**), read from the version of that agreement that the act names (§5.13). |
+| 5.10.1 the sorts |   - its **sort**, one of: **done** (whoever proves they have done X), **received** (whoever proves they have received Y), **holding** (whoever proves they are holding Z), **fits** (whoever proves their identity fits the conditions in W), or **future**; |   - its sort (§3.2, **Spot**), one of: done (whoever proves they have done X), received (whoever proves they have received Y), holding (whoever proves they are holding Z), fits (whoever proves their identity fits the conditions in W), or future; |
+| 5.5.7 everything else kept | What that cMIP specifies includes who must sign an update | Everything else is that cMIP's to specify: who must sign an update |
+
+Marks: each TRACED to §3 (the entry cited); that nothing a rule needed was lost is INFERRED (rows to check, 6). Not in M11's list and not touched: 5.11.8's "A contest is an act of these grammar rules" against §3.1 **Contest**; 5.1.3 against §4.2's `receiver` row; 5.4.4 against 5.4.5; 5.4.1's and 5.5.3's "Which keepers" (the stranger's finds, below).
+
+## N1: the stranger's fixes
+
+| Edit | Was | Now | Mark |
+|---|---|---|---|
+| §3.6 inverted parenthesis | (a fingerprint where §4 says fingerprint) | (anything but a fingerprint where §4 says fingerprint) | INFERRED; needs no choice |
+| 5.5.7(a) pointer | an assent in a tip that has stopped (5.7.2, 5.12.2) | an assent in a tip that has stopped (5.7.2, 5.12.3) | INFERRED; needs no choice |
+| 5.8.6 bare rule | have no rule for it | have no grammar rule for it | INFERRED; needs no choice |
+| 5.6.6 bare rule | under the update rules these grammar rules already have | under the grammar rules for updates (§5.5) | INFERRED; needs no choice |
+| 5.12.2 my sentence | For a fork of a line, each of the two acts was signed by all the parties that needed to sign it. | These grammar rules see a fork of a line only where each of the two acts was signed by all the parties that needed to sign it. | INFERRED; needs no choice |
+
+## N1: the report's "What needs a choice", line by line
+
+Each line of M11's list, with what closes or settles it. "Closed" is by his answer (the entry cited); "settled as the lead's" is by a reading of the MOR lead's, the note's row or the time cited, and is not his decision; "remains" is for Nobody, allegedly, the line as it was. Nothing is chosen here.
+
+| M11's line | Now | By | Mark |
+|---|---|---|---|
+| Carried 1: the Terms act's signer among `authors` | closed | "The signer of a Terms act is an author" (27 November, 16:48–16:50) | TRACED |
+| Carried 2: an agent bound by what it signs for another | closed | "The giver bears it, not the agent" (27 November, 16:50–16:53) | TRACED |
+| 2: which Terms fix the known parties | closed | "The known parties of a version are the signers it names" (27 November, 16:44–16:46) | TRACED |
+| 3: an author named by role a known party | settled as the lead's | the lead's reading of 09:27 (companion 6.5): an author is a signer; 5.3.1 | TRACED |
+| 5: several keepers, the pin | closed | "Two keepers named, both needed" (27 November, 16:40–16:44) | TRACED |
+| 6: what a keeper answers beyond order | settled as the lead's | the changes note, row G7: "defined as that and nothing more" | TRACED |
+| 7: a fork not of a line, in bytes | remains | no reading reaches it | — |
+| 8: which acts compete, a list or a test | remains | none | — |
+| 10: a resolving update pinned | settled as the lead's, for Terms | the lead's reading of 15:34, item 4 (companion 6.12): "in force once pinned"; a resolve in one signer's line stays below | TRACED |
+| 11: a filling whose words state no term | remains | none | — |
+| 12: which act the purchase's anchoring anchors | remains | none | — |
+| 13: a dissolved agreement while a filling binds | remains | none | — |
+| 14: "renewed on the terms then current" | closed | ""Renewed on the terms then current" cannot be built" (27 November, 16:46–16:48) | TRACED |
+| 16: the principle beyond the rules that apply it | settled as the lead's | the line of "Protect the unknown party is an Agreements principle" (26 November, 16:05): "stated in the Agreements companion, applied by Agreements' rules" | TRACED |
+| 17: where N10's client reliance is written | settled as the lead's | the lead's reading of 09:16 (companion 6.4) | TRACED |
+| 18: an assent under a power she gave | settled as the lead's | the settled note, M22; the lead's reading on G5.6(f), G10.6(a) (companion 6.3) | TRACED |
+| 21: her client relies on the others' assents too | settled as the lead's | the settled note, F4, F9 | TRACED |
+| 22: private words' key delivered first | settled as the lead's | the settled note, F10 (client conformance) | TRACED |
+| 24: "rejected" a verifier's answer | settled as the lead's | the settled note, M5: "not an answer word" | TRACED |
+| 29: what the known parties may still do | remains | none | — |
+| 30: "Terms state their anchors" for all Terms | remains | the settled note sends the clock back to him | TRACED |
+| 34: how Terms name their clock; where a cMIP's needs are written | remains | the settled note: "Back to him" | TRACED |
+| 35: the two copies of "A condition in time with no anchor is refused" | remains | none | — |
+| Found: an agreement named as a party a default signer | settled as the lead's | the lead's reading of 09:47 (5.5.5(a)) | TRACED |
+| Found: the act `body` names, held and not a Text act | settled as the lead's | 09:27 (5.2.2) | TRACED |
+| Found: the holder of the baker's rights for a contest | settled as the lead's | 13:20 to 15:34 (5.11.9) | TRACED |
+| Found: a counter signature in a fork, once resolved | settled as the lead's | 09:47: "as the resolver decides" (companion only) | TRACED |
+| Found: 09:47's "a resolving update whose tips a verifier cannot read resolves nothing" | remains | the reading is the lead's; whether the text carries it is not said | — |
+| Found: a resolve in one signer's line that resolves has no answer word | remains | none | — |
+| Found: a counter signature shown after the completion pins | settled as the lead's | 09:47 (5.4.1) | TRACED |
+| Found: **chain**, **kind**, **resolve**, **in force** in two senses | settled as the lead's | the lead's lean in this wave's assignment, applied (above); "kind" of a value remains | TRACED |
+| Found: the sixteen definitions said again | done | the assignment; above | TRACED |
+| Found: **Rival** against 5.12.8's heading | remains | none | — |
+| Found: **Knot** MOR-wide in §0, not in §3.4 | remains | none | — |
+| Found: §2's MICS line | settled as the lead's | 09:16 (companion 6.4) | TRACED |
+| Found: §3.1 **Vow**, no test | remains | none | — |
+| Found: 5.11.7's payment holding K6 | remains | none | — |
+| M8 1: a set's value in `relies_on` or `answers` | remains; its bytes are encoding 3's open item 4 | the lead's reading of 14:59, item 2 | TRACED |
+| M8 3: case 8 from bytes | remains; open item 11 | 14:59, item 2 | TRACED |
+| M8 4: a held act that cannot be opened, in `body` | remains; open item 9 | 14:59, item 2 | TRACED |
+| M8 5: a call's bytes without a text | settled as the lead's | the settled note, M24: the MICS is rewritten after draft 26 | TRACED |
+| M8 6: no layer gives a keeper's identifier | remains; open item 7 | 14:59, item 2 | TRACED |
+| The ledger's "A specification is a Text act" and §2 | settled as the lead's | that entry's line: "A change to the Development MIR, queued behind draft 26"; the order, 14:53 | TRACED |
+| Which value is `SPEC_DRAFT_26` | settled as the lead's | this wave's assignment: "E2's tagged hash, SPEC_DRAFT_26; the plain sha256 of the file"; as E2 has it | TRACED |
+
+COUNTED (a count of this table's rows): 44 lines; 5 closed by his answers, 19 settled as the lead's, 1 done, 19 remain, of which 4 also wait on a byte choice. The found item on the double assent's author: M11's list holds no such line by that name (COUNTED: `grep` of the report); where it turned on 4, it is carried 1, closed.
+
+## N1: the hash
+
+Computed last, after every other edit of `draft-26.md` (COUNTED; `draft-26.md` 429 lines, 147,279 bytes):
+- E2's tagged hash, `SPEC_DRAFT_26`: `04bae25cb3416e111e1f65ddca2c99c5769d3945c0751a6846621929c0d29904`, by the core library's `Spec::mir_file_hash` (`mor-core`, `core/src/development.rs`), run from a scratch crate on the file. The same crate reproduced M11's `e9e5b683…` on the file as M11 left it.
+- The plain sha256 of the file, `sha256sum draft-26.md`: `09ba9ce52f1e995872aaf7a35838442516f7c014e0b104256f273c2c7f0f85ff`.
+Written in encoding 3's E2 and section 11, item 12; the companion's head; the report. Which names the text: E2's tagged hash, as E2 has it, and as this wave's assignment names it.
+
+## N1: the check again, by script
+
+M11's eight, on the final files. Each COUNTED by the script named.
+
+1. **Words** (`check_n1.py`, part 1). §3: 79 entries (78 and **Placed**), 134 distinct bold terms (with answer words, sorts and kinds). §3 terms in bold in §4 to §7: 21 terms, each a citation of its §3 entry beside a section number, none a definition. **chain**: 4 uses outside the envelope's and §2's, each of an agreement's versions. **kind**: none of a spot or a power; 11 of a value, listed. **resolve** in bold: the Statement's kind (§3.1, and cited in §3.3); **resolution** in bold once, in §3.3. "not yet in force": 2, both of Terms. **placed** 7 uses; **sort** 42. Answer words: none outside §3.6 but "triggered", used as no answer (5.10.8), as M11 found.
+2. **References** (`check_n1.py`, part 2, against 32 headings, 68 numbered rules, 33 lettered clauses). `draft-26.md` 903, none bad; `encoding-3.md` 240, none bad; the companion's sections 9 and 10, 267, of which 28 are the companion's own "(6.3)" and one the "5.7.3" named there as no rule: none bad; the companion's N1 additions (the 5.3.1 entry, 6.13, 8.22 to 8.26) 83, none bad.
+3. **Only rules** (`check_n1.py`, part 3). Sentences of §4 to §7 bearing a mark of history, attribution or scenario: 1, the verb "lead" in §3.4 and 5.13.3's "that lead from B back to A", a rule. §0: no MUST, MAY or answer word.
+4. **The bytes against the rules** (`check_n1.py`, part 4). 20 Terms fields and 12 Statement fields, each with its key in encoding 3; 39 E-rule citations of draft 26, every number in the index (part 2). By eye: E13 asks what 5.3.1 now gives; the other E-rules unchanged.
+5. **The companion's trace** (`check_n1.py`, part 5, and a second count by cell). 68 rows for 68 rules, none missing; 220 dated headings cited in section 9, 219 found word for word, the other one M10's cell of two headings, one undated, read by eye.
+6. **Quotations** (`quotes_n1.py`, every quoted span of 12 characters or more). His quoted words in N1's additions: 7, all in the ledger word for word. Spans added by N1 to the companion: 108: 58 in the ledger, 22 in another source (draft 26, the trace, the notes), 28 in neither, read by eye: 26 are the text between two quotations, 1 the lead's assignment of this wave, 1 a vector's reason, N1's. Quotes of draft 26 that no longer match its words (`stale.py`): 10 in the companion and 1 in encoding 3, each brought to the final words (above); 1 left, a quote of draft 21 in section 11 that happens to match the old words; 1 in the old report, rewritten.
+7. **The head.** Unchanged: it says what draft 26 rewrites, that it is not merged and not LATEST, and where the companion and encoding 3 are. Hash above.
+8. **What the files must not hold** (`check_n1.py`, part 8). No trailing space; no onion, IP, URL, port, key, password, e-mail or SSH shape in the three files. Names: Ana, Ben, Carla, Dana (test identities), the text and layer names. No personal name.
+
+## N1: the stranger
+
+A subagent that had seen neither the ledger nor this wave's assignment read `draft-26.md` alone, once, from a copy in scratch space. Its four answers: (1) a grammar by which a verifier tells, from copies of acts alone, who is bound by which Terms, eight tasks left to cMIPs, "not to be used bare" (90%); (2) a Text act, a Terms act (`parties`, `authors` naming at least the first writer, `body`, `previous`), an assent each, and the pin, by keepers or by each party acting again after the assents (70%); (3) a change passes the gate and the pin; two that nothing orders are a fork, both stop, the last shared version stays; a late one replaces nothing; a resolving update ends a fork (80%); (4) someone who joins through a role keeps exactly what the version their proof names gave, on its clock, no update reaching them, changed only by their own assent (85%). Each matches the text (INFERRED).
+
+The five sentences it understood least: 5.10.8's "anchoring of the purchase" (item 12, remains); 5.12.2's sentence on the signatures of a fork of a line (N1's own wording: fixed); 5.4.2's "read for who fills a role" (remains); 5.11.9's contest naming an envelope while §4.3 gives a Statement no `envelope` field (remains); 5.4.5's counter signatures that "lean on one another" (remains).
+
+Its errors: fixed, needing no choice: §3.6's "(a fingerprint where §4 says fingerprint)"; 5.5.7(a)'s pointer "(5.12.2)", where tips stop in 5.12.3 (the lead's 15:34 words cite 5.12.2, and stay quoted so in the companion); "rule" alone for a grammar rule in 5.8.6 and 5.6.6. Listed, each a choice: §4.4's heading and "one fault fits two rules" (encoding 3 quotes the heading 18 times); "Control" both a layer and task K6; a payment holding K6 against §3.1 **Task** (M11's list too); §3.1 **Rule** "trusts nobody" against K3's trust column; **sort** used for a spot and a power (the lead's lean gives both the word); 5.1.3 against §4.2's `receiver` row, 5.4.1 against 5.5.3 ("Which keepers"), 5.4.4 against 5.4.5, sentences said twice beyond the sixteen; §4.1's "is open (§7)" beside §7's "in this text none does".
+
+## N1: rows to check
+
+1. 5.8.3's "not shown", with that reason, and "names the keeper that does not yet show it": the lead's line and N1's wording, his words being "both keepers are needed". INFERRED.
+2. §3.2 **Known party** keeps "as a signer or as an agreement", against the line's "the signers it names", on the lead's reading of 09:47. INFERRED.
+3. 5.3.1 writes "invalid" without exception, his words saying "by default"; not asked of a resolving update, which carries no `authors`. INFERRED.
+4. 5.6.3's last sentence: the signer who acts for an agreement is not bound by the act as its own; where it is a party of that agreement, it is bound as that agreement's Terms bind their parties (the companion). INFERRED.
+5. Answer 3: no sentence added, 5.10.6 to 5.10.8 read as already saying it. INFERRED.
+6. The sixteen: that each rule kept every word it needed, the §3 entry carrying the rest; 5.11.1's payment and payout sentences now rest on §3.3 **Leg** and **Doer** and on 5.1.4. INFERRED.
+7. "A chain of acts" (§3.4, 5.5.4(c), 5.13.3) rewritten without a noun ("acts, each naming the one before … that lead from B back to A"), the lean giving no word for it; "chaining" (the keeper's) written "order". INFERRED.
+8. **Resolution**: the verb "resolve" stays for forks ("a fork is resolved"), §3.3 saying so; only the defined word moves. INFERRED.
+9. **Placed** is defined with 5.8.3's every keeper; 5.8.4 now reads "only once it is placed". INFERRED.
+10. E13: the outside's signer compared with `[0, signer]` in `authors`; whether an identity hash on the outside and in a party are the same value is the codemeister's to check. INFERRED.
+11. The five vectors of section 8 (8.22 to 8.26). INFERRED.
+
+## N1: counts
+
+COUNTED (`wc -lc` and `edit.py`'s log): `draft-26.md` 429 lines, 147,279 bytes (was 428, 146,051); 68 numbered rules, 33 lettered clauses, 8 tasks, 7 modules, 6 open values (unchanged). Edits logged: 133 (`draft-26.md` 77 edits, 95 places: his answers 19, the renames 41 edits in 59 places, the sixteen 12, the stranger's fixes 5; `encoding-3.md` 17, beside the two block renames of E10 and E14, 21 places; the companion 39, its two new rows beside them; the hashes are 2 of encoding 3's and 2 of the companion's). Files touched: `draft-26.md`, `encoding-3.md`, `draft-26-companion.md`, this trace, `draft-26-report.md`. Not touched: draft 25, encoding 2, `spec/README.md`, every other file.

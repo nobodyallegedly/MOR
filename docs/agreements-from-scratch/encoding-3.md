@@ -24,7 +24,7 @@ Draft 26 has three answers for an act that does not hold, and this text keeps th
 
 - **rejected**: the checker's word for bytes that are **not an Agreements act** (draft 26, §3.6, §4): bytes that never reach the grammar rules. The core calls such an act **invalid** as an act: outside its specification's format (MICS, "Common conventions"), or refused by the act format. "Rejected" is the checker's verdict and no answer of the grammar. A checker names the rule of this text (or of the act format) that gives the form at fault (draft 26, §4.4, "One fault, one rule", case 1).
 - **invalid**: draft 26's word for an act of this encoding that shows, by itself or with the acts held, that it cannot count (§3.6, "Invalid"; §4.4, cases 2 to 8). A checker names the grammar rule.
-- **left unread**: a value draft 26 says is not read and changes nothing. 5.2.3 lists them all: an entry of `relies_on` that is not a fingerprint; a power of kind `replaces` (§5.6); a call in Terms that do not hold the task it is attached to (§5.11); a `what` on a role of kind future (5.10.4); and the answer of `in_force` on coming into force, in a Terms act that carries `replaces` (5.4.2). A checker gives a note for each of these its bytes show: all but the call, since whether Terms hold a call's task needs their cMIPs, the grammar verifier's (E16).
+- **left unread**: a value draft 26 says is not read and changes nothing. 5.2.3 lists them all: an entry of `relies_on` that is not a fingerprint; a power of sort `replaces` (§5.6); a call in Terms that do not hold the task it is attached to (§5.11); a `what` on a role of sort future (5.10.4); and the answer of `in_force` on coming into force, in a Terms act that carries `replaces` (5.4.2). A checker gives a note for each of these its bytes show: all but the call, since whether Terms hold a call's task needs their cMIPs, the grammar verifier's (E16).
 
 ## 2. The act
 
@@ -41,7 +41,7 @@ Draft 26 has three answers for an act that does not hold, and this text keeps th
 
 A spec hash is computed as the core computes a MIR's from its file (Development rule 26; `Spec::mir_file_hash` in the core library): `tagged_hash("MOR/spec", {0 => 4, 9 => text})`, where 4 is the kind of a MIR in Development's numbering, and `text` is the file's content with its final line break removed if it has one (only one; nothing else is removed), which must be canonical text. **[lead]**
 
-- `SPEC_DRAFT_26`: of `docs/agreements-from-scratch/draft-26.md` as the scribe's session M11 left it on branch `claude/draft-26-outline-vbtvu7` (428 lines, 146,051 bytes): `e9e5b6837c10fd310157cc2a620ba268e3c3684efdb0e3ba68af068701e0e214`, computed as this rule says, by the core library's `Spec::mir_file_hash` on the file. The plain sha256 of the file's bytes, which is not the spec hash, is `6ee29fc27844908b7a29205ddabcf3d704dc343bbc41bacf7a326980f315d541` (`sha256sum draft-26.md`). One changed byte of the file changes both.
+- `SPEC_DRAFT_26`: of `docs/agreements-from-scratch/draft-26.md` as the scribe's session N1 (wave four) left it on branch `claude/draft-26-outline-vbtvu7` (429 lines, 147,279 bytes): `04bae25cb3416e111e1f65ddca2c99c5769d3945c0751a6846621929c0d29904`, computed as this rule says, by the core library's `Spec::mir_file_hash` on the file. The plain sha256 of the file's bytes, which is not the spec hash, is `09ba9ce52f1e995872aaf7a35838442516f7c014e0b104256f273c2c7f0f85ff` (`sha256sum draft-26.md`). One changed byte of the file changes both. The values M11 gave (`e9e5b683…` and `6ee29fc2…`) name the text before wave four, and no longer.
 
 **Said aloud.** The hash is of the file **as published on its branch**. A writer uses the hash as given here, never one recomputed from a copy of their own: one changed byte in a copy is another specification. Acts written under a hash stay that text's, whatever is written later; a later draft is a new specification with a hash of its own, and nothing written under this one is updated. Encoding 2's hashes (draft 25's, `dd90f8af…`, and the report block's fourth proposal's, `7b65c60f…`) and encoding 1's name other specifications: an act under them is **not this encoding**.
 
@@ -123,13 +123,13 @@ Anything else is rejected, under E9: a party `[0, "A"]` (a signer not named by a
 
 ```cddl
 role = {
-  ? 0 => any,       ; kind: 0 done, 1 received, 2 holding, 3 fits, 4 future
-  ? 1 => any,       ; what: a fingerprint (not read for kind 4)
+  ? 0 => any,       ; sort: 0 done, 1 received, 2 holding, 3 fits, 4 future
+  ? 1 => any,       ; what: a fingerprint (not read for sort 4)
   ? 2 => socket,    ; spot socket (task K5)
 }
 ```
 
-A role whose kind is lacking or not one of the five is not of kind 4: its `what` is read as for any other kind, so a role with a bad kind and no `what` shows 5.10.1 twice. A role that is not a map is rejected; so is a key other than 0, 1 and 2 (E4), and a spot that is not a socket (E7). The three fields are optional in the bytes because draft 26 reads their lack as **invalid**, not as rejected (§4.1; 5.10.1): a role with no kind, or a kind that is not an unsigned integer from 0 to 4, is read as lacking it; a role of any kind but 4 with no `what`, or a `what` that is not a fingerprint, is read as lacking it; a role with no spot socket lacks its cMIP; each makes the Terms invalid (5.10.1). A spot whose `cmip` is not a fingerprint makes them invalid (5.2.1). A `what` on a role of kind 4 is left unread (5.10.4). **[lead]**: the five kinds (done, received, holding, fits, future) are written as numbers, as the act format writes its kinds.
+A role whose sort is lacking or not one of the five is not of sort 4: its `what` is read as for any other sort, so a role with a bad sort and no `what` shows 5.10.1 twice. A role that is not a map is rejected; so is a key other than 0, 1 and 2 (E4), and a spot that is not a socket (E7). The three fields are optional in the bytes because draft 26 reads their lack as **invalid**, not as rejected (§4.1; 5.10.1): a role with no sort, or a sort that is not an unsigned integer from 0 to 4, is read as lacking it; a role of any sort but 4 with no `what`, or a `what` that is not a fingerprint, is read as lacking it; a role with no spot socket lacks its cMIP; each makes the Terms invalid (5.10.1). A spot whose `cmip` is not a fingerprint makes them invalid (5.2.1). A `what` on a role of sort 4 is left unread (5.10.4). **[lead]**: the five sorts (done, received, holding, fits, future) are written as numbers, as the act format writes its kinds.
 
 **How a role is named**: by its position in `parties` (E13, E12). A role carries no label. **[lead]**
 
@@ -156,16 +156,16 @@ Anything else is rejected, under E12: a bare number or a bare hash, `[0, h]` wit
 authors = [+ uint]   ; sorted, each once (E18)
 ```
 
-Positions count from 0, as in E12. An entry that is not an unsigned integer is rejected. A position beyond the list, or one naming a party named by role or as an agreement, makes the Terms **invalid** (5.3.1: "an author is never a party named by role, and never one named as an agreement").
+Positions count from 0, as in E12. An entry that is not an unsigned integer is rejected. A position beyond the list, or one naming a party named by role or as an agreement, makes the Terms **invalid** (5.3.1: "an author is never a party named by role, and never one named as an agreement"). The act's signer, named on its outside (E1), MUST be the `signer` of a party `[0, signer]` (E9) that one of `authors` names: Terms whose `authors` name no such party make the Terms **invalid** (5.3.1: "Terms whose `authors` do not name their own signer are **invalid**"). A resolving update carries no `authors` (E19), and this is not asked of it.
 
-**E14. A power** (draft 26, §4.2, `powers`; §5.6) is its kind and its rule:
+**E14. A power** (draft 26, §4.2, `powers`; §5.6) is its sort and its rule:
 
 ```cddl
-power = [ kind: 0 / 1 / 2 / 3 / 4 / hash, rule: socket ]
+power = [ sort: 0 / 1 / 2 / 3 / 4 / hash, rule: socket ]
 ; 0 assent, 1 counter_signature, 2 contest, 3 resolves, 4 replaces; hash: a K7 kind's cMIP
 ```
 
-Anything else is rejected, a kind written as text included (§4.1: "a power's kind that is neither one of its words nor a fingerprint"). Kind 4, `replaces`, is written so that draft 26's case can be: an entry of that kind gives no power and is left unread (a note), not rejected (§4.2, `powers`; 5.2.3). **[lead]** **What a power is for** (§4.2, `powers`): kind 0, 1 and 2 for a Statement of that kind; kind 3, `resolves`, for a resolving update: in a signer's line, a Statement of kind 3, `resolve` (E15); for a fork of Terms, a Terms act written as a resolving update whose `replaces` names the Terms that give the power (5.12.5); a hash, for every Statement whose K7 kind's `cmip` is that hash, whatever its parameters. Two entries of one kind, with different rules, are two entries of the set (E18): an act of that kind binds where any one of their rules says yes (§4.2; 5.6.1(b)). Which power a verifier reads is the grammar's; the checker reads none.
+Anything else is rejected, a sort written as text included (§4.1: "a power's sort that is neither one of its words nor a fingerprint"). Sort 4, `replaces`, is written so that draft 26's case can be: an entry of that sort gives no power and is left unread (a note), not rejected (§4.2, `powers`; 5.2.3). **[lead]** **What a power is for** (§4.2, `powers`): sort 0, 1 and 2 for a Statement of that kind; sort 3, `resolves`, for a resolving update: in a signer's line, a Statement of kind 3, `resolve` (E15); for a fork of Terms, a Terms act written as a resolving update whose `replaces` names the Terms that give the power (5.12.5); a hash, for every Statement whose K7 kind's `cmip` is that hash, whatever its parameters. Two entries of one sort, with different rules, are two entries of the set (E18): an act they are for binds where any one of their rules says yes (§4.2; 5.6.1(b)). Which power a verifier reads is the grammar's; the checker reads none.
 
 **E15. A Statement's kind** (draft 26, §4.3, `kind`):
 
@@ -258,14 +258,14 @@ Under reading (i), one keeper has one form and several have the same; under read
 **What Terms show by themselves** (the checker answers **invalid**, the rule named), in draft 26's order (§4.4, "One fault, one rule", cases 2 to 5 and 8; cases 6 and 7, and the second part of case 2, need other acts: section 7, section 9):
 
 1. Case 2, 5.2.1: the body's `words` (an act id is a fingerprint: 32 bytes, E5), then the `cmip` of the body's socket, of `in_force`, of `condition`, of `control`, of `data`, and of each power's rule (in the order of `powers`), is not a fingerprint.
-2. Case 3, for each role in `parties`, in their order: 5.10.1, its kind lacking or not one of the five; then 5.10.1, its `what` lacking or not a fingerprint (but for kind future); then 5.10.1, its spot socket lacking, or 5.2.1, its spot's `cmip` not a fingerprint (E10).
+2. Case 3, for each role in `parties`, in their order: 5.10.1, its sort lacking or not one of the five; then 5.10.1, its `what` lacking or not a fingerprint (but for sort future); then 5.10.1, its spot socket lacking, or 5.2.1, its spot's `cmip` not a fingerprint (E10).
 3. Case 4, 5.4.2: a party is named by role, and `in_force` is absent, in every Terms act that carries `parties`, an update included.
-4. Case 5, 5.3.1: an author is beyond the parties, or names a party named by role or as an agreement (E13), in the order of `authors`.
+4. Case 5, 5.3.1: an author is beyond the parties, or names a party named by role or as an agreement (E13), in the order of `authors`; then the act's signer, not named by any of `authors` (E13).
 5. Case 8, 5.8.6: Terms that do not supply what a cMIP they name declares it needs. **Open**: the checker cannot give it from the act's bytes, since no byte of a Terms act says what a cMIP it names declares; section 9, step 7, gives the readings.
 
 *Case 7 (Envelopes' rules for Terms that name an envelope, §4.4) needs the envelope's chain and Envelopes' rules: a checker of these bytes does not give it.*
 
-**Notes the checker gives** (the act passes): an entry of `relies_on` that is not a fingerprint, left unread (5.2.3); a power of kind `replaces`, left unread (5.2.3, §4.2); a `what` on a role of kind future, not read (5.10.4); `in_force` in a Terms act that carries `replaces`, its answer on coming into force left unread, still read for who fills a role (5.2.3, 5.4.2); `resolves` with no `continues`, read as an act like any other (§4.3, 5.12.4); a receiver whose position is beyond the parties, by which no one receives (5.1.4, not shown).
+**Notes the checker gives** (the act passes): an entry of `relies_on` that is not a fingerprint, left unread (5.2.3); a power of sort `replaces`, left unread (5.2.3, §4.2); a `what` on a role of kind future, not read (5.10.4); `in_force` in a Terms act that carries `replaces`, its answer on coming into force left unread, still read for who fills a role (5.2.3, 5.4.2); `resolves` with no `continues`, read as an act like any other (§4.3, 5.12.4); a receiver whose position is beyond the parties, by which no one receives (5.1.4, not shown).
 
 ## 5. Statement (type 1)
 
@@ -291,7 +291,7 @@ statement = {
 - `agreement`, `terms`, `kind` and `previous` are required.
 - `for` and `under` are written together, or neither.
 - `content` is left out for an assent, a counter signature and a resolve (§4.3: "An assent's `content` is empty", and a counter signature's and a resolve's too); written there, the act is rejected. For a contest it is optional, any value, and not read by the grammar rules. For a K7 kind it is as that cMIP says: optional, any value. "By fingerprint or inline as the kind says": a fingerprint is written as `hash`, inline as any value; the bytes do not tell them apart, the kind's cMIP does. **[lead]**
-- **A resolve** (kind 3) carries `resolves` and `continues`, `continues` one of the entries of `resolves`; one that lacks either is rejected. No Statement of another kind carries `resolves` or `continues`: one that does is rejected (§4.3: "no Statement of another kind carries `resolves` or `continues`"). So, for a Statement, `resolves` without `continues` cannot be written. A resolve MAY carry `for` and `under` (made under a power of kind `resolves`, 5.12.5), `answers`, `relies_on` and `settlement`, as §4.3 says.
+- **A resolve** (kind 3) carries `resolves` and `continues`, `continues` one of the entries of `resolves`; one that lacks either is rejected. No Statement of another kind carries `resolves` or `continues`: one that does is rejected (§4.3: "no Statement of another kind carries `resolves` or `continues`"). So, for a Statement, `resolves` without `continues` cannot be written. A resolve MAY carry `for` and `under` (made under a power of sort `resolves`, 5.12.5), `answers`, `relies_on` and `settlement`, as §4.3 says.
 - `resolves` is the list of the tips' ids (5.12.4), and `continues` is one of its entries (§4.3), as for Terms.
 
 A Statement shows no case of invalid by itself: the one draft 26 lists for a Statement (§4.4, case 6; 5.7.1) needs the acts held (section 7).
@@ -320,7 +320,7 @@ Where `previous` names no act held, the act counts and its signer's line is unch
 - Where the act it names is held, opens, and is a **Text act**, nothing is found. A Text act is an act under Text's spec hash, `TEXT`, of type 0, whose payload is as Text's Part three gives it (Text, rule 14 and "Text act (type 0)"). The checker reads nothing else of it: not its words, not its signer, not whether it came first (5.2.2: "naming it by its act id is all that this asks").
 - Where the act it names is held, opens, and is not a Text act (an act under another spec hash, of another type, or with a payload Text does not give), the Terms are **invalid** (5.2.2: "Where the act `body` names is held and is not a Text act, the Terms are **invalid**").
 - Where it is held and **cannot be opened** (a private Text act, held without its key), what it is cannot be read, and the Terms are **not invalid** (§3.6: "If an act the verifier does not hold could change the answer, the answer is never invalid"). **Open**: whether the checker gives a note (the words unchecked, as E23 gives for `previous`) or nothing (the words not read: the grammar does not read them, 5.2.2).
-- Where the act it names is **not held**, the Terms are not invalid. **Open**, as for the act that cannot be opened: a note (unchecked) or nothing (not read). Draft 26 does not say; 5.13.3 ("Where a chain of acts … needs an act that is named in a field of an act held, and the verifier does not hold it, the answer is **unchecked**") speaks of chains of order, not of the words.
+- Where the act it names is **not held**, the Terms are not invalid. **Open**, as for the act that cannot be opened: a note (unchecked) or nothing (not read). Draft 26 does not say; 5.13.3 ("Where the acts that could show B after A need an act that is named in a field of an act held, and the verifier does not hold it, the answer is **unchecked**") speaks of order, not of the words.
 - **Open**: which spec hashes are `TEXT`: Text draft 11's alone (draft 26, §2, names "Text, draft 11"), or any draft of Text. An act under an earlier Text draft's spec hash is a Text act under the second reading, and not one under the first.
 
 ## 8. One signing
@@ -343,7 +343,7 @@ For one act, in this order, the first failing step giving the answer (invalid be
    1. case 2, 5.2.1: what is not a fingerprint, in section 4's order (its item 1); then, with several acts, 5.2.2: the act `body` names, held and not a Text act (E25);
    2. case 3, 5.10.1 and 5.2.1: each role, in the order of `parties` (section 4, item 2);
    3. case 4, 5.4.2: a role and no `in_force` (section 4, item 3);
-   4. case 5, 5.3.1: each author at fault, in the order of `authors` (section 4, item 4);
+   4. case 5, 5.3.1: each author at fault, in the order of `authors`, then the act's signer not among them (section 4, item 4);
    5. case 6, 5.7.1: with several acts, `previous` among the acts held (E23);
    6. case 7: not given (section 4);
    7. case 8, 5.8.6 (§4.4's case 8, "the case it names, of a condition in time with no anchor the Terms state", is 5.8.6's test: "Terms that do not supply what a cMIP they name, in any socket, declares it needs (a clock, a keeper) are **invalid**"): **open** (draft 26, §7, "How a cMIP declares what it needs"). No byte of the act shows what a cMIP it names declares it needs, so the checker cannot give this case from the act, or from the acts held, as this text writes them. Two readings, neither chosen: (a) the checker is handed, beside the acts, what each cMIP named declares it needs, in a form Development would give, and finds the case where a declared need for a clock finds no key 9, or a declared need for a keeper finds no key 8 (a keeper never supplies a clock, 5.8.6), naming the socket; (b) the case is not the checker's: it is given by the grammar verifier, which holds the cMIPs. Until one is chosen, the checker gives no case 8, and an act that would show it passes this step.
@@ -377,7 +377,7 @@ Draft 26 gives no list of tasks for the encoding, as draft 25's section 10 did. 
 
 **Encoding 2's section 10, re-read against draft 26.**
 
-11. **Each field's kind** (encoding 2, item 1). Changes: the identifier is a keeper's or a clock's (E6); the words are an act id (E8); the set of acts is a new kind (section 3). The three exceptions that reach the grammar rules are §4.1's: a body's words or a socket's cMIP not a fingerprint (invalid, 5.2.1); a role's kind or `what` (invalid, 5.10.1); an entry of `relies_on` not a fingerprint (left unread, 5.2.3).
+11. **Each field's kind** (encoding 2, item 1). Changes: the identifier is a keeper's or a clock's (E6); the words are an act id (E8); the set of acts is a new kind (section 3). The three exceptions that reach the grammar rules are §4.1's: a body's words or a socket's cMIP not a fingerprint (invalid, 5.2.1); a role's sort or `what` (invalid, 5.10.1); an entry of `relies_on` not a fingerprint (left unread, 5.2.3).
 12. **Required and optional fields** (item 2). Stays, cited to §4.2 and §4.3 (E19, E20); a resolving update carries no `keeper` or `clock`.
 13. **Lists** (item 3). Changes: a report's `relies_on` and `lines` go with the report; the keeper list is new, its order open (E18).
 14. **The entries of `parties`** (item 4). Stays (E9, E10, E12, E13).
@@ -410,7 +410,7 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 7. A socket is `[cmip, params]`, `null` for none; an empty socket is the field left out (E7). **Kept**.
 8. The words of the text (kinds, from whom) are written as small numbers; the resolve is kind 3 of a Statement, as `resolves` is kind 3 of a power (E10, E14, E15, E16). **Kept**.
 9. A role is named by its position in `parties`, and carries no label (E10, E12, E13). **Kept**.
-10. A power of kind `replaces` is written (4), and left unread (E14). **Kept** (§4.2, `powers`; 5.2.3).
+10. A power of sort `replaces` is written (4), and left unread (E14). **Kept** (§4.2, `powers`; 5.2.3).
 11. A K7 kind is a socket, with parameters (E15). **Kept**.
 12. One call per task (E16). **Kept**, with a call's form; draft 26 gives calls to the MICS's report block (§4.2, `calls`), so both stand until the MICS gives a call's bytes. Listed.
 13. Sets are sorted, each entry once; an empty list is never written (E18). **Kept**; whether the keeper list is one of these sets is **open**.
@@ -434,7 +434,7 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 9. Whether a `words` act held without its key, or not held, gives a note or nothing. *for the codemeister, who proposes, and for Nobody, allegedly.*
 10. Which spec hashes are `TEXT`. *for the codemeister, who proposes, and for Nobody, allegedly.*
 11. How a cMIP's declared needs are read, and by whom (case 8). *for the codemeister, who proposes, and for Nobody, allegedly.*
-12. `SPEC_DRAFT_26`: not a choice; computed by M11 once the text was final, and given in E2. *For the codemeister, who checks it.*
+12. `SPEC_DRAFT_26`: not a choice; computed by M11 once the text was final, and again by N1 after wave four, and given in E2. *For the codemeister, who checks it.*
 
 ## 12. What changed from encoding 2
 
@@ -450,7 +450,7 @@ Entry by entry; each is draft 26's, or follows from it; the wording is the scrib
 - **E7.** Stays; the defaults cited to draft 26.
 - **E8.** Changed: `words` is the Text act's act id; the held test is E25's.
 - **E9, E10, E11, E12.** Stay in bytes; cited to draft 26 (5.10.1, 5.10.4, 5.1.2, 5.1.3, 5.1.4); E11 no longer serves a report's line.
-- **E13.** Stays in bytes; changed in what is invalid: an author naming a party named by role is now invalid too (5.3.1).
+- **E13.** Stays in bytes; changed in what is invalid: an author naming a party named by role is now invalid too (5.3.1); and Terms whose `authors` leave out the act's own signer are invalid (5.3.1, the scribe's session N1).
 - **E14, E15.** Stay; cited to draft 26.
 - **E16.** Stays in bytes; the call's form is the MICS block's to give; the report's naming of the payer's call goes.
 - **E17.** Stays; cited to 5.7.1 and 5.12.4.
