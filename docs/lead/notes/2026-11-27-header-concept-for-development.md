@@ -24,4 +24,5 @@
 - 23:18, his: "One link to force that could be worth it. Link to text. Text being the universal layer with identity it ties it all to the two."
 - On 23:18, the lead's, to check: the one forced link is to a Text act. Forced directly only on acts that ask someone to rely on them (Terms, a cMIP, an offer); every other act reaches a text through its knots (a counter signature names Terms, which name their words). Read so, it is one guarantee: every chain of references ends at words a person can read, signed by an identity. It matches "Text comes first as a rule", "The words of Terms are a Text act" and "A specification is a Text act, named by its id". Open: whether it is a grammar rule of every layer or of the MICS.
 - 23:40, his: "Going back to the header… so the header is formatted for all MIRs in the MICS, the reason being some thanking an indirect route." Recorded in the ledger, "The header's form is the MICS's".
+- 28 November, 00:00, his: the keepers' socket (K9) "needs to be in the header". Recorded in the ledger, "Keepers: cross verification by default, a socket to lift it".
 
