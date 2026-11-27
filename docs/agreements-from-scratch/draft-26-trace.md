@@ -198,3 +198,112 @@ Items 2 (which Terms fix the known parties; a party a later version adds), 5 (se
 7. **The §5 subheadings.** The placeholder lists §4.1 to §4.3 and §5.1 to §5.13 as the outline names them, so that the definitions' cross-references land; the assignment named §4 to §7 only.
 8. **"Not shown" and a missing act.** D25 has "not shown: … an act not held might" and, since "Knots are knots", a named act not held is unchecked. The definition reads D25's case as an act named by none held. If the MOR lead reads it otherwise, the two definitions need one more look.
 9. **The blind reader** (a subagent shown §0 and §3 only) could answer all three questions. Fixed after its reading: a relay "vouching for nothing" against a keeper that vouches (3.5 now says how); the answers' list said which word is of what; "withdrawal" written as a counter signature; "the order the Terms need" reworded; the baker named as Envelopes' word. Not fixed, since each would need a choice: which Terms fix the known parties (item 2); how several keepers give one order (item 5); "a keeper's record" (row 5); anchoring's "nothing is later" beside "never absence" (D25's words, kept); whether an agreement named as a party that has not signed has a say in updates; D25's "own parties", "Control; the Money layer", "without bytes attached" and the spot kinds, kept as D25 has them.
+
+---
+
+# M3: the trace of §4 and §5.1 to §5.3
+
+*Added by the scribe's session M3, 27 November 2026. Not a decision, and not part of the hashed text. M2's trace above is unchanged. One line per rule and per field M3 wrote. Marks and abbreviations are M2's (above). The lead's readings given to M3 (27 November: on G1.4, G3.1, G6.1/G6.2, G13.1, N10, and items 1, 4, 28) are the lead's, not his. None of them is in the ledger on main yet, so none is cited to it.*
+
+## §4 The data each act carries
+
+| Line | Rests on | His words | Mark |
+|---|---|---|---|
+| §4 lead paragraph | D25 §3, first paragraph. Each "rejected" is written as "not an Agreements act", per M2's §3.6 and SN M5 ("Rejected" is not an answer word; item 24 left out) | — | TRACED; the rewording INFERRED |
+| 4.1 kinds of value | D25 §3, "Each field holds one kind of value". "place" is read as keeper ("The place vouches for the chaining only", 26 Nov). The set of acts is added (N3). "encoding-2.md" is read as encoding 3 | "Why not use keeper again?" | TRACED |
+| 4.1 the set of acts: the recipe; it says nothing of completeness, meaning or time | "One way to name a set of acts, in Agreements" (26 Nov, 16:11–16:16), its lines and its "Arrived at"; M2's §3.1 definition | "You are going to expand what the set of byte is and what it does pls"; "Should it be in envelopes though? It feels like agreements stuff"; "Knots making is core core business, a" | TRACED |
+| 4.1: "a value computed from a list, never a list written in a field"; "the field says it is a set" | SN M21 (the note's; the ledger is silent) | — | TRACED to the note |
+| 4.1: "the empty set has the label and no members"; "no knot by itself" | SN M21 (the note's; the ledger is silent, item 23). As the assignment asks, written as the note has it | — | TRACED to the note |
+| 4.1: "no order"; "members are acts only" | SN F12, F13 (the notes'). Added because the outline lists them for N3 | — | TRACED to the notes |
+| 4.1: "No field of §4.2 or §4.3 is given this kind: which fields may hold it is open (§7)" | The outline, section 5, new item 1: "[open]: … which fields may hold a set's value". No ledger entry names a field | — | INFERRED; see M3's rows to check, 1 |
+| 4.2 `replaces`, `agreement`, `parties`, `relies_on`, `powers`, `receiver`, `control`, `data`, `resolves`, `continues`, `previous` | D25 §3.1, stays. The "read by" column is renumbered by the outline's placement (G1→§5.1 … G13→§5.13; G4.1–4.4 and 4.10 →§5.4, the rest of G4 →§5.5). History notes go ("New in draft 18", "New in draft 19; the name is the MOR lead's", "the name is Claude's"), per "Only rules in the hashed text" (17 Nov). Each "rejected" is written as "not an Agreements act" | "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested." | TRACED; the renumbering INFERRED |
+| 4.2 `authors` | D25 §3.1, changed by the lead's reading on G3.1 ("an author is a named party, never a role; Terms whose author is not a named party are invalid") and by M2's Author ("named as a signer or as an agreement"). "by its position among the parties" was added after the blind reader (added by M3, to check). It is encoding 2's E13 written in the text | "There is no such thing as an unsigned act on Mor" ("There is no unsigned act", 27 Nov) | TRACED; the position clause INFERRED |
+| 4.2 `body` | N4: "The words of Terms are a Text act" (26 Nov, 16:25–16:28), its "Arrived at" ("the Terms name it by its act id"). Read by §5.13, from the lead's reading on G13.1 ("any fingerprint in any field, the body's included, is a knot"). "The socket is the task" was added after the blind reader: M2's Task says every field naming a cMIP is a task. Added by M3, to check | "I think it”s cleaner, it keeps text to text and agreement grammar to agreement grammar, both have their own hashes to verify" | TRACED; the §5.13 entry and the socket sentence INFERRED |
+| 4.2 `in_force` | D25 §3.1. "Left unread in a Terms act that carries `replaces`" comes from SN Q7 ("An update's own `in_force` field is left unread, listed in G2.2 with the rest"): the note's | — | TRACED to the note |
+| 4.2 `keeper` | D25's `place`, changed: N2; "The place vouches for the chaining only" (26 Nov, 17:47–17:49, with its addition of 17:49). The field's name `keeper` is M3's (M2 writes "keeper field"), to check. It reads one keeper or several. How the pin reads several is left out (item 5) | "Yes, they should. Can we find a better name for “place”?"; "Why not use keeper again?" | TRACED; the name INFERRED |
+| 4.2 `clock` | D25 §3.1, as it is: item 34(a) is left out (the assignment; the outline §4.2) | "The clock specified in the agreement and its anchoring." ("Ana's month", 27 Nov) | TRACED |
+| 4.2 `envelope`, `envelope_at` | D25 §3.1. The fields stay and the rules that read them move to Envelopes (the outline's row 8; the brief, G14). The invalid case and the holder's reading are pointed to Envelopes | — | INFERRED; M3's rows to check, 3 |
+| 4.2 `condition` | D25 §3.1. "Empty means … everyone who signed the original" becomes "the known parties": "Who signs an update by default: the known parties" (26 Nov, the MOR lead's reading); "There is no unsigned act" (27 Nov); M2's Condition | "It’s the protect the unknown party expressed the old way."; "Sounds right." | TRACED |
+| 4.2 `calls` | D25 §3.1. "the shared language (section 8.1)" is read as the MICS ("Where three rules live", 17 Nov). "(G11.6)" is read as M2's Report, since G11.6 moves to the MICS | "Agreed" | TRACED |
+| 4.3 Statement table | D25 §3.2, unchanged but for the "read by" column (the outline). "(G8, G11)" for `settlement` becomes §5.9, §5.11, since G8.5 is in §5.9 and the rest of G8 moves. "does not make the act rejected" becomes "does not make the act any less an Agreements act" | — | TRACED; the renumbering INFERRED |
+| 4.3 the paragraph on content | D25 §3.2, stays, renumbered | — | TRACED |
+| 4.3 An author's first act | D25 §3.2, stays. It rests on G6.1, which stays per the lead's reading ("G6.1, G6.2, and E23 with them: stay in Agreements; `previous` is the agreement's thread, per signer"). The ledger: "Two threads, two owners" (17 Nov) | "It does" | TRACED; the reading is the lead's |
+| 4.3 what a resolving update is; what it carries | D25 §3.2, stays. "draft 15's `joins`" goes as history. Each "rejected" is written as "not an Agreements act" | — | TRACED |
+| 4.3 the report paragraph | D25 §3.2, stays. "the shared language … (section 8.1)" is read as the MICS's report block. The outline does not list this paragraph; M3 kept it because it carries a reading ("no report stands in a signer's line"). To check | — | TRACED to D25; keeping it INFERRED |
+| 4.3 One fault, one rule: the list | D25 §3, "One fault, one rule", with D25 §2's list of the cases of invalid, in D25's order. M2's row 3 asked for it here. Case 5 is G3.1 changed (role). Case 6 is G6.1 (stays, the lead's reading). Case 7 is G14.3, pointed to Envelopes. Case 8 is N9, its words left to §5.8 ("A condition in time with no anchor is refused", 26 Nov; item 35 left out). Item 1 of the list collects D25 §2's "Not an Agreements act" | "Yes, condition is missing, it should be refused" | TRACED; the place of cases 7 and 8 is added by M3, to check |
+
+## §5.1 An agreement as a party
+
+| Rule | D25 | Rests on | His words | Mark |
+|---|---|---|---|---|
+| 5.1.1 | G1.1, stays | no entry (the brief) | — | TRACED |
+| 5.1.2 | G1.2, changed | "Nothing about me without my signature" (18 Nov): "a power to act for someone counts only where that person's own signature is on the version that gives it. No update condition can give it for her." "Delegation is a leftover" (18 Nov): "a named delegate" becomes "a signer its Terms give a power to sign for it" / "a signer x's power names". "Lie exposed / Protects" goes to the companion | "Absolutely, no need to even debate this. Nothing about me is accepted without my signature. But, I suspect we opened Pandora's box… how to fire an employee?"; "I think it's best. It's a leftover of the old ways" | TRACED; the wording INFERRED |
+| 5.1.3 | G1.3, stays ("rejected" becomes "not an Agreements act") | no entry (the brief) | — | TRACED |
+| 5.1.4 | G1.4, changed by the lead's reading on G1.4: the clause "per the anchoring the reader accepts" goes. "Per place" becomes "per keeper", with the keepers the Terms name (N2). G14.3 is read as Envelopes' rules. "(G9.2; P8)" becomes §3.6, §7. The rule rests on "Whose place counts; protect the unknown party, as a principle" (26 Nov), "A condition in time with no anchor is refused" (26 Nov) and SN M20 | "I think you are right. It is worth turning it into a principle. Protect the unknown party" | TRACED; the reading is the lead's |
+| 5.1.5 | G1.5, stays | no entry (the brief) | — | TRACED |
+
+## §5.2 The words, and what the Terms use
+
+| Rule | D25 | Rests on | His words | Mark |
+|---|---|---|---|---|
+| 5.2.1 | G2.1, stays | "The words of Terms are a Text act" (26 Nov). An act id is a fingerprint (encoding 2, E5) | as below | TRACED |
+| 5.2.2 | N4, new | "The words of Terms are a Text act" (26 Nov, 16:25–16:28), read whole with its 16:28 addition: the words are a Text act, public or private, named by act id; "Text comes first" read by its "Arrived at" ("Terms can name only an act that already exists"). "naming it … is all that this asks" is SN Q25's ("asks nothing beyond the naming"). Whether a `words` act not held is unchecked or simply not read (SN Q24; encoding 3's open point) is not decided: the rule says only that the grammar does not read the words, as M2's §3.1 does | "How many acts are involved here?"; "I think it”s cleaner, it keeps text to text and agreement grammar to agreement grammar, both have their own hashes to verify"; "Text comes first as a rule since agreement needs to point to it" | TRACED; the Q25 clause to the note |
+| 5.2.3 | G2.2, stays, with one entry added to "what is left unread": `in_force` on an update (SN Q7: "listed in G2.2 with the rest"). "three things more" becomes "four" | — | TRACED; the added entry to the note |
+
+## §5.3 Authors
+
+| Rule | D25 | Rests on | His words | Mark |
+|---|---|---|---|---|
+| 5.3.1 | G3.1, changed by the lead's reading on G3.1 ("an author is a named party, never a role; Terms whose author is not a named party are invalid"), in M2's words (Author: "a signer or … an agreement, never by role"). **Item 3 is answered by that reading.** | "There is no unsigned act: the author is a known party" (27 Nov) | "Let’s speak Mor…. terms are record, agreement is law, right? There is no such thing as an unsigned act on Mor"; "Sounds right." | TRACED; the reading is the lead's |
+| 5.3.2 | G3.2, stays. "(#4 Align)" goes as the research's numbering, as M2 cut it in §1 | no entry (the brief) | — | TRACED |
+
+## M3: left out, by the brief's item number
+
+- **Item 5** (several keepers and the pin): the `keeper` field holds one or several; how they are read is not written.
+- **Item 24** ("rejected"): not used; "not an Agreements act" is used, per M2's §3.6.
+- **Item 34(a)**: `clock` is as D25 has it.
+- **Item 34(b)** and **item 35**: case 8 of the list names §5.8 only.
+- **SN Q24** (a `words` act not held): not decided in 5.2.2.
+- Not written, and listed: what a verifier answers where the act `body` names is held and is not a Text act. No source says. INFERRED.
+- Not written: any rule that the signer of a Terms act be among its `authors`. M2's Author says "who signs them". No rule in the outline asks for it, so none is added.
+- D25's §4 lead ("MUST and MAY are used as in RFC 2119"; "These grammar rules say how acts are read"): this belongs to §5's own lead paragraph, which is left as a placeholder for a later session.
+
+## M3: rows to check
+
+1. **Which fields may hold the set of acts.** The assignment asks §4 to say which. No ledger entry or note names a field. The impact sheet's fifth vector puts one in `relies_on`, but there an entry is read as a knot, and a set is "no knot by itself" (SN M21). §4.1 says no field of the tables holds one and points to §7. M7 carries it there. The MOR lead to say.
+2. **An agreement as author.** D25's G3.1 allows signers or roles, and encoding 2's E13 makes an author naming an agreement invalid. M2's Author, and 5.3.1 written in its words, allow an agreement. A Terms act carries no `for` or `under`, so how an agreement signs Terms as their author is not said. The lead's "a named party" does not settle which reading is meant. For M8 (E13) and the MOR lead.
+3. **`envelope`, `envelope_at` and G14.3.** The fields stay and their rules move (outline row 8). 5.1.4 and case 7 of the list point to "Envelopes' rules for Terms that name an envelope", which Envelopes draft 12 does not yet have.
+4. **The place of cases 7 and 8** in "One fault, one rule": D25's order is kept, and N9 is placed last. Added by M3, to check.
+5. **The report paragraph** of §4.3 is kept, though the outline does not list it.
+6. **5.1.2's "nothing about me" sentence** applies the 18 November rule to an agreement's parties. G5.1(b) (§5.6) carries it in general; M5 should word it so the two agree.
+
+## M3: for M2's words
+
+1. **"text act" and "Text act".** §3.1 (The words) writes "the text act", and §2 writes "The text act (rule 14)". §4 and §5.2 write "Text act", as the ledger does. The blind reader noticed the difference.
+2. **Author: "who signs them".** One Terms act has one signer, but `authors` may name several, and §3.1 Terms says "signed by its author". Whether every author signs the Terms act, or one signs it and the others assent, is not said (see left out).
+3. **Call: "A call names no place".** "place" here is D25's word, not the keeper. §4.2 `calls` copies M2's wording. Whether "place" stays is M2's or M11's to judge.
+
+## M3: the blind reader
+
+A subagent that had seen neither the ledger nor the assignment was given §3, §4.2 and §5.3 alone. It answered all three questions:
+- `body`: the act id of the words' Text act, and the K1 socket (85% sure).
+- Authors: parties named as signers or as agreements, never by role (85% sure).
+- Invalid: an author named by role, or one who is not among the parties (70% sure that this is the whole list, since §5's other sections were not given).
+
+Fixed after its reading:
+- `body` now says the socket is the task and the act id is not.
+- `authors` now says how an author is matched to a party: by position.
+
+Not fixed, since each would need a choice or M2's words:
+- whether every author must sign the Terms act;
+- how an agreement signs as author;
+- whether the K1 socket may be empty (D25 is silent);
+- how a private Text act is checked as a knot;
+- "text act" against "Text act" (M2's);
+- who authors a resolving update (it carries no `authors`, as D25 has it).
+
+## M3: counts
+
+COUNTED by M3's inline Python (scratch space, not in the repository), on the commit's `draft-26.md`:
+- §4 and §5.1 to §5.3 are 94 lines and 23,852 bytes.
+- §0 to §3 are byte-for-byte unchanged (checked by `git diff`: no change above `## 4.`).
