@@ -97,6 +97,8 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - *Arrived at (to check):* the rule "a power counts only if that person signed the version that gives it" is for known parties, who write and sign versions. An unknown party's assent is an acceptance, not a signing of the version: it gives no power to anyone. A power can be used for a filling only where the filling's holder granted it herself, in an act of her own. The MOR lead's wording for draft 26, to check: "A power a version carries is given by its known parties and binds only them. An assent that fills a spot gives no power. An act made for a filling's holder under a power counts as her signature only where she gave that power in an act of her own."
 - He corrected the wording (18:46): "“that fills an unknown party spot”"
 - *Arrived at (to check):* the sentence reads "An assent that fills an unknown party spot gives no power." A spot a known party fills is a known party's act, and the known parties' rule applies to it.
+- Then he (18:47): "It’s seems important to really make a point that these two are not the same class or IDs and are not bound by the same rules."
+- *Arrived at (to check):* known parties and unknown parties are two classes of participant in an agreement, not two situations of one class. Each has its own rules: the known parties write, sign, update and give powers, and are bound by the versions they sign; an unknown party fills a spot, is bound by the version she accepted, gives no power, has no say in updates, and no update reaches her. Draft 26 says so as a point of its own, in the introduction and in the definitions, not only rule by rule.
 
 ## The previous stint, 20 to 26 November: what the simulation taught
 
