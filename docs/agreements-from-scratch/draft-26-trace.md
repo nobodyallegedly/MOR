@@ -926,6 +926,7 @@ Not fixed, since each is an open byte choice: whether case 8 is given at all (Op
 ## M8: counts
 
 COUNTED by `wc -lc`: `encoding-3.md` is 453 lines and 56222 bytes. COUNTED by `grep -o '^\*\*E[0-9]*\.'` (distinct rule heads, 23): E-rules E1 to E20, E23, E24, E25 (23 rules), E21 and E22 gone, E26 reserved for reading (ii) of the set. Changed or new: E2, E5, E6, E8, E13, E16, E18, E19, E23, the set of acts, E25; gone: E21, E22; the rest stay, renumbered to draft 26.
+
 ---
 
 # M9: the companion, sections 1 to 6
