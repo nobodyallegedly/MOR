@@ -92,3 +92,10 @@ The mechanical find: draft 26's head points to draft 25 where it lives, `claude/
 3. **Yes,** withdrawn with the hatch.
 4. **Yes,** one line in §7 beside encoding 3's item 14.
 
+
+## P6's four lines, 23:55
+
+1. **Yes.** §3.6 **Unchecked** also names a keeper's record not held ("Missing act is always “I don’t know”").
+2. **Yes.** A keeper's signed record counts wherever a copy is held, for every answer about order; a keeper's death does not void what it signed.
+3. **Those that counted**, by K9's answer; the others are named as not showing it.
+4. **Yes.** A keeper whose two signed answers contradict each other counts as one not showing the act, and the contradiction is shown as evidence (5.8.4); the other keepers may still meet the cMIP.
