@@ -926,3 +926,71 @@ Not fixed, since each is an open byte choice: whether case 8 is given at all (Op
 ## M8: counts
 
 COUNTED by `wc -lc`: `encoding-3.md` is 453 lines and 56222 bytes. COUNTED by `grep -o '^\*\*E[0-9]*\.'` (distinct rule heads, 23): E-rules E1 to E20, E23, E24, E25 (23 rules), E21 and E22 gone, E26 reserved for reading (ii) of the set. Changed or new: E2, E5, E6, E8, E13, E16, E18, E19, E23, the set of acts, E25; gone: E21, E22; the rest stay, renumbered to draft 26.
+---
+
+# M9: the companion, sections 1 to 6
+
+*Added by the scribe's session M9, 27 November 2026. Not a decision, and not part of the hashed text. The trace above is unchanged. M9 wrote `draft-26-companion.md`, sections 1 to 6, from this trace, the ledger on main, the two notes of 27 November, draft 25 and the research by path; sections 7 to 11 and "What draft 26 hands to other texts" are headings only, for M10. Marks are M2's. The lead's readings of 27 November are the lead's, not his; none is in the ledger on main (a search of the ledger for 09:16, 09:27, 09:47, 10:07 and 13:20 finds none), so none is cited to it.*
+
+## M9: what the companion says that this trace, the ledger, a note or draft 25 does not source
+
+Each is the companion's own and labelled there "the scribe's reading", or cited to a file outside the four. INFERRED unless marked.
+
+1. **§1.1, the research read against draft 26**: that "the least two people need to write down is exactly the least a third person needs to see" (`docs/strangers-2026-11/agreement-tasks.md`) is the shape of draft 26's verifier; that 5.3.2 is the strangers' "assign in advance who bears the failure"; that Keep and Check are §1's last sentence (TRACED to this trace, §1, for the cut numbers); that the receiver's receipt is 5.11.7's confirmation; that "Only a stranger arriving later is exposed" (`agreement-grammar.md`) is the principle before its name; that `late-roles.md`'s four ways are the four named kinds of spot. The quotations are TRACED to the files by path; the links are INFERRED.
+2. **§1.2, what the review found**: read as Fable's review of 10 November (`docs/reviews/fable-after-the-task-list.md` on main, Fable's words, labelled so): "The operations are the layers" and "Three kinds of socket". TRACED to that file; that it is the review his 17 November line means is INFERRED (rows to check, 1).
+3. **§1.2, round two read the same way** (pull request 232's three most raised labels against the keeper, the clock and the missing act). INFERRED, and said in the companion to be uncertain.
+4. **§2, how the line reads in Agreements**. INFERRED.
+5. **§3.3, "What it protects her from"**, and §3.2's sentence on 5.10.6 beside 5.10.7 (added after the blind reader). INFERRED.
+6. **§4.2 item 1's "Why"**; **§4.3**, what the language does to the text, and the *changed* marks in the two tables carried from draft 25's §5.1 and §5.2. INFERRED.
+7. **§5, the rewritten *lie exposed / protects* lines** (G2's addition; G4, G5, G7, G10 rewritten; G12 and G13 widened): the scribe's wording, sourced to no line; each says only what the changed rule says.
+8. **§5, the two-questions sentence's origin** in Fable's two-question test: the wording is near-identical; TRACED to the review, the descent INFERRED.
+9. **§5, 5.12.1's "Why one word"**, the 5.5.5(a) found item's consequence, and "Why knots matter in Agreements". INFERRED.
+10. **§6, each "other reading"'s verifier answer**, and 6.1 item 28's example. INFERRED; the other readings themselves are TRACED to the brief's rows or this trace's rows to check.
+
+**Rules given their reasoning in section 5** (COUNTED, `rules9.py`, below, against the closing count above): the 43 that change (39 the brief sorts "changes", and G1.4, G3.1, G4.1, G13.1, which the lead's readings settled as changing) and the 9 new (N1 to N9), 52 in all; N10 with its status. **Of the 52, none lacks a source**: each entry cites its ledger exchange and his words; where a rule rests on a reading of the lead's, section 6 gives it.
+
+```
+# rules9.py: the draft 25 numbers and N numbers that section 5 gives an entry, against the 43 + 9
+import re,sys
+t=open(sys.argv[1]).read(); s=t[t.index('## 5. '):t.index('## 6. ')]
+want='G1.2 G1.4 G3.1 G4.1 G4.3 G4.10 G4.5 G4.6 G4.7 G4.7(a) G4.7(b) G4.7(c) G4.8 G4.8(a) G4.8(d) G4.9 G4.11(a) G4.11(c) G4.11(d) G4.11(e) G4.11(f) G4.11(g) G4.11(i) G5.1(b) G5.1(c) G5.2 G5.4 G5.6(a) G5.7 G5.7(a) G5.7(b) G5.7(c) G7.1 G7.2 G7.4 G10.5 G10.6 G10.7 G12.1 G12.3 G13.1 G13.3 G13.4'.split()+['N%d'%i for i in range(1,10)]
+import re as r
+miss=[w for w in want if not r.search(r'[( ]'+r.escape(w)+r'[,);]',s)]
+print(len(want),'wanted;',len(miss),'missing',miss)
+```
+
+## M9: for the text (for M11)
+
+Where explaining a rule showed it cannot be understood from draft 26 alone. Nothing changed in `draft-26.md`.
+
+1. **Which clock counts a filling's term.** 5.8.5 says that where the Terms in force name a clock, what time it was is answered per that clock "for every answer that turns on a time, … how long what a filling gave lasts (5.4.3, §5.10) among them". §3.3 Apply, 5.4.3, 5.5.7(f) and 5.10.8 say the clock that version names, "never that of the Terms in force" (the lead's reading of 13:20). The two disagree where a later version names another clock. 5.10.5's "per the clock the Terms name" does not say which Terms (the blind reader).
+2. **Which keepers qualify a filling.** 5.10.2 answers each filling "per keeper or as shown (§5.8)", and 5.8.4 takes the keepers of the Terms in force; the 13:20 reading says "a filling's clock and keepers are its own version's". The text does not say so for keepers (M6's rows to check, 7, carried).
+3. **"An anchoring" in "shown after".** §3.4 and 5.13.3 say B is shown after A by "a keeper's record or an anchoring that places them so", unqualified; 5.5.3 and 5.13.5 say a reader's own anchoring never puts Terms in force or makes an update late. Read alone, 5.13.3 lets any anchoring show "after" for the pin.
+4. **§0's "where this text treats relying on acts".** With N10 outside the text, the pointer lands on 5.13.2 ("An act names what it relied on"), which states a rule and does not take up knots' importance (M2's rows to check, 2, carried). The companion gives the importance (section 5, under 5.13.3).
+5. **5.10.6 beside 5.10.7.** "For a filling, no later update exists" reads as absolute; 5.10.7 asks a verifier to name "each later version that changes what it earned", by the holder's own assent. The text does not say that her own assent to a later version is not an update reaching her (the blind reader).
+
+## M9: rows to check
+
+1. **"What the review found"** (17 November) is read as Fable's review of the strangers' texts (10 November), which says "The operations are the layers" and names the sockets. It could instead mean the strangers' research itself, or a later review. INFERRED.
+2. **The four kinds of spot and `late-roles.md`**: the companion says draft 26's done, received, holding and fits are the report's four ways; no ledger line ties them. INFERRED.
+3. **Draft 25's §5.1 and §5.2** are carried in section 4.3, references renumbered and rows the stint changed marked. The outline puts draft 25's explanations in the companion without saying which section; M10's archaeology may want the rows that no longer hold (delegation, the baker) instead.
+4. **The *lie exposed / protects* lines of G8, G9 and G14** are not rewritten: they go with rules that moved (to the MICS, to Envelopes). Section 5 says M10 lists them under "for the MICS"; M10 to carry them, with G14's for Envelopes.
+5. **The rewritten lines** (section 5) are the scribe's; M11 to judge whether any says more than its rule.
+6. **The outline's section 6** was followed in order. Where it looked wrong: its item 5 has N10 "with its section 7 status", while the lead's reading of 09:16 places N10 in the companion as client conformance; section 5 gives N10 there, with that status.
+7. **No time for the rulings on items 1, 4, 28 and the held rules**: the trace records none; the companion says so.
+8. **Five readings of the lead's** quoted in section 6 still leave a choice and are listed, not made: who fills a role (K2 or K5); the unwritten "a resolving update whose tips a verifier cannot read resolves nothing"; which act the baker's holder is read at; the two carried for Nobody, allegedly (the signer among `authors`; an agent's own binding).
+
+## M9: the blind reader
+
+A subagent that had seen neither the ledger nor the assignment was given the companion's sections 3 and 6 and draft 26's §5.10, nothing else, and asked: "what does the principle protect her from, which rules apply it, and which of the readings in section 6 would change a verifier's answer if read the other way?" It answered all three:
+1. From an update of the known parties (5.10.6, 5.6.1(c), 5.6.2, 5.6.6, 5.10.3); from an update condition reaching what she holds (5.5.7, 5.10.6, 5.10.8); from a later version redefining her role (5.10.2); from a change without her assent (5.10.7); from a power she never gave (5.6.1(b), 5.1.2); from a clock, keeper or anchoring she never accepted (5.10.8, 5.5.3, 5.8.5, 5.13.5).
+2. 5.10.2, 5.10.3, 5.10.5 to 5.10.8; 5.6.1(b), (c), 5.6.2, 5.6.6; 5.5.5(a), 5.5.7, 5.5.7(e); 5.5.3, 5.8.5, 5.13.5.
+3. Seventeen readings that change a verifier's answer (60% to 90% sure), among them item 1, item 33, G5.6(f)/G10.6(a), G13.1, the 09:27 author and `body` readings, the 09:47 rows 2, 4 and 5, the 10:07 rows 2 and 6, and 13:20; eight that change none; and a list it could not judge.
+
+Fixed after its reading: §3.2 now says why 5.10.7's later versions are no update reaching her; §3.3 "an update condition she signed" now reads "the update condition of the version she signed"; §3.1 quotes the 07:55 line whole, so that "close the offer, or dissolve it among themselves" is there to be found; §3.1 says "place" was draft 25's word for the keeper; 6.1 item 28 gives a concrete case of the other reading; 6.3 says what a verifier would answer on the other reading of G4.9, and that the readings on where G11's and G14.5(e)'s sentences sit change no answer of draft 26's verifier; 6.6 item 1 says the unwritten sentence is in the lead's own reading; the companion's head says who the scribe is and that its words are draft 26's §3.
+
+Not fixed: the words it lacked (cMIP, socket, gate, pin, keeper, knot, known party, the answer words) are defined in draft 26's §3, which it was not given; 5.10.5's "the Terms" and 5.10.8's "that version" (for the text, 1); "the anchoring of the purchase" (item 12, left out); whether the principle binds a verifier beyond its rules (item 16, unsaid); 6.6 item 3 (K2 or K5, open).
+
+## M9: counts
+
+COUNTED by M9's inline Python (scratch space, not in the repository), on the commit's `draft-26-companion.md`: sections 1 to 6, from `## 1.` up to `## 7.`, 555 lines and 125,872 bytes; the whole file 588 lines. `quotes2.py` (scratch) checked 649 quotations of eight characters or more, split at elisions, against the ledger, the two notes, the research files, the fable review, draft 25, M5's draft 26, draft 26, this trace, the brief, the outline and the lead's readings as given to M9: all but two found; the two are the scribe's rewritten *lie exposed* and *protects* lines, marked so. Section 6 quotes **38** readings of the lead's (COUNTED by entry: 4 in 6.1, 3 in 6.2, 11 in 6.3 (its pointers to G3.1 and G4.1 not counted), 4 in 6.4, 4 in 6.5, 6 in 6.6, 3 in 6.7, 3 in 6.8; and 6.9's 14 settled-note rows apart). No file but this trace and the companion was touched.
