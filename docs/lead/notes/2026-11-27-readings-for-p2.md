@@ -47,3 +47,15 @@ P2 writes the companion's scenarios and encoding 3's "One fault, one rule" on th
 | 19 (the stranger's three) | (a) 5.4.2: say plainly that in an update `in_force` is read only for who fills a role, as K5's input, and its answer on coming into force is left unread. (b) 5.4.5's "lean on one another": write what is meant, each names the other (a knot, §5.13). (c) 5.11.9: the contest names the Terms in `terms` and the holder's own envelope act in `relies_on`; no new field. None changes a rule. | §4.3's fields; 5.13.1 |
 
 **What his answer of 20:50 reaches.** "Yes, I don’t see the need to have her sign twice" (ledger, "Publishing the Terms is the publisher's assent"). §4.3's paragraph **An author's first act** ("their assent to those Terms names it in `previous`") and every rule that counts the author's assent apart (5.4.1, 5.5.7(e)) change with it: the Terms act is the assent counted in its signer's name, and that signer's next act names it in `previous`. P3 writes it; encoding 3 and the vectors follow.
+
+## P2's batch of five, 21:45
+
+*The lead's answers to P2's questions, by its numbers; number 3 went to him, and his answer is in the ledger, "A dead keeper: two of three cannot leave it" (21:42).*
+
+1. **K4.** The lead's error: the signers an update needs are K4's (the update condition); K2 (`in_force`) answers it for a first version only. Reading 1 reads so.
+2. **Yes.** With keepers named, they pin an update whatever its signers; knots are a second way, for an update every known party signs, not the only one.
+3. **His, 21:42: no.** The pin by knots, whatever keeper is named, is for an update every known party signs, each shown after the other. An update two of three sign under a named condition is pinned by every keeper named, or not shown. A dead keeper is left only by a new version, naming a new keeper, that every known party signs. Readings 1 and 2 change with it: reading 1's "needed signers" are K4's for the gate; the pin by knots asks every known party. Reading 2 already speaks of a first version every party signs, and stands.
+4. **A K7 kind**, read by K3 through its cMIP; the grammar rules name no kind of their own for it.
+5. **No test from its bytes:** the gate already asks who signs a resolving update (5.12.4).
+
+P2's "For P3" 8 and 9: yes, 5.13.3's "only they pin" is brought to agree with 5.5.1(b), as answer 3 reads it.
