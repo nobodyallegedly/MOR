@@ -1,6 +1,6 @@
 # Agreements, from scratch: the encoding, third edition
 
-27 November 2026. Written by the scribe's session M8, from encoding 2 and draft 26; for the MOR lead to take or change; not a decision. Where each change comes from is in `draft-26-trace.md`, under "M8".
+27 November 2026. Written by the scribe's session M8, from encoding 2 and draft 26; brought to draft 26 as the scribe's session P1 left it by the scribe's session P2 (wave five); for the MOR lead to take or change; not a decision. Where each change comes from is in `draft-26-trace.md`, under "M8" and "P2".
 
 ## In plain words
 
@@ -47,7 +47,7 @@ A spec hash is computed as the core computes a MIR's from its file (Development 
 
 Under `SPEC_DRAFT_26`, a type other than 0 or 1 is rejected. An act under any other spec hash is **not this encoding**. *A report is not one of draft 26's act types (draft 26, §4.3: "one act type, defined once, in the MICS's report block"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*
 
-**E3. No `objects`, no `acks`.** An act of this encoding MUST NOT carry `objects` or `acks` in its inside; one that does is rejected. Its lines (an agreement's chain, by `replaces`; a signer's line within an agreement, by `previous`) and everything it names are in its payload, where draft 26 reads them (5.13.1). It MAY carry `refs` and a `hint`, which the act format says never decide anything (Envelopes rules 6 and 20); this encoding does not read them, and they are no knot of draft 26 (5.13.1 reads fields of the payload; the act format says `refs` decide nothing). **[lead]**
+**E3. No `objects`, no `acks`.** An act of this encoding MUST NOT carry `objects` or `acks` in its inside; one that does is rejected. Its lines (an agreement's chain, by `replaces`; a signer's line within an agreement, by `previous`) and everything it names are in its payload, where draft 26 reads them (5.13.1). It MAY carry `refs` and a `hint` (Envelopes rules 6 and 20). **[lead]** **`refs` and `prev` are knots** (draft 26, 5.13.1: "the layer below's `prev` and `refs`"; "a verifier reads the fields of every layer of the core (§2)"): each fingerprint in them is a naming, which the grammar verifier reads for "shown after" as it reads one in a field of the payload (5.13.3). The checker reads `prev` only as E1 says (present, of one entry or none) and does not read `refs`: whether one act is shown after another is the grammar's, not the checker's (section 9). A `hint` names no act and is no knot.
 
 **E4. A closed map.** Each payload, and every map within it (a role), is a closed map whose keys are the small unsigned integers its format lists. A key it does not list, or one that is not an unsigned integer, makes the act rejected. *Draft 26 says the same (§4, its opening; §3.6): a field §4 does not give makes the act not an Agreements act, and is never left unread (5.2.3).*
 
@@ -84,14 +84,16 @@ A set of acts is named by one value, computed from a list of act ids and never w
 
 - **The label's bytes** (draft 26, §7, "its hash and its label"). A tag text for `tagged_hash`, which Identity's list of the core's tags would then name (Identity, "Encoding and conventions": "Every tag the core uses begins with `MOR/`"). No text gives its string.
 - **`members`: how the sorted ids are joined.** Reading (a): the ids concatenated, 32 bytes after 32 bytes, nothing between (the MOR lead's recipe in the exchange of 26 November: "joined"); the empty set is then the label over no bytes. Reading (b): the deterministic CBOR array of the ids as byte strings, as the rest of the payload is written; the empty set is then the label over the one byte of an empty array. Draft 26 says only "sorted, repeats dropped, and hashed with a label".
-- **Which fields may hold a set's value** (draft 26, §7: "in this text none does"). This text gives no field the set form: no key of section 4 or 5 is written as one. A parameter of a cMIP is any value (E7), which only that cMIP reads: a cMIP that asks for acts names them by this value (§4.1), in its own parameters, and the checker does not read them.
+- **Which fields may hold a set's value** (draft 26, §7: "in this text none does"). No grammar field holds a set's value: no key of section 4 or 5 is written as one. A parameter of a cMIP may (E7): a cMIP that asks for acts names them by this value (§4.1), in its own parameters, which only that cMIP reads, and the checker does not read them.
+
+**Before any vector.** The label's bytes, the joining and the empty set's value are this text's to fix. They are fixed by the codemeister's proposal and written here before any vector of a set is written; none is picked in this text. Until they are written, no verifier conforms to `SPEC_DRAFT_26` on a set of acts.
 
 *A set's value is no knot by itself (§4.1; 5.13.1): it names no act a verifier can read without the list it was computed from. The checker cannot tell a set's value from an act id by its bytes: where one stands in a field that holds act ids (an entry of `relies_on`, say), it is read as an act id, which no act held has.*
 
 **E6. An identifier** (draft 26, §4.1: "an identifier (of a signer, a keeper or a clock)") of a keeper or of a clock is `hash`. Anything else is rejected, under E6.
 
 - **A keeper's identifier** (5.8.1: "by the identifier the layer that orders acts gives it"). **Open: what it is the hash of.** Reading (a): the keeper's identity hash, the act id of its genesis, as a signer is named (E5), since a keeper lodges signed records (§3.4, **Keeper's record**; 5.8.4). Reading (b): 32 bytes kept as encoding 2 kept them, opaque, until the layer that orders acts gives keepers an identifier; a richer form would then be a new specification. Neither is chosen.
-- **A clock's identifier** (5.8.5: "What a clock is, and how it is identified, is for the layer that gives it"). Kept as encoding 2 wrote it, 32 bytes, **[lead]**. **Open**: whether key 9 stands as written (draft 26, §7, "How Terms name their clock"), which waits on what identifies a clock.
+- **A clock's identifier** (5.8.5: "What a clock is, and how it is identified, is for the layer that gives it"). Kept as encoding 2 wrote it: key 9, 32 bytes, **[lead]**, and key 9 stands as written. What the 32 bytes are the identifier of is the layer's that gives the clock (5.8.5); draft 26's §7 still lists "How Terms name their clock" as open.
 
 **E7. A socket** (draft 26, §3.1, **Task**; §4: "Every socket holds a cMIP by fingerprint, with its parameters") is a cMIP and its parameters, written as the act format writes them for a vow:
 
@@ -107,7 +109,7 @@ socket = [ cmip: any, params: any ]   ; exactly two items
 body = [ words: any, socket ]   ; words: the Text act's act id (E5)
 ```
 
-Anything other than an array of two items, the second a socket, is rejected. `words` that are not a fingerprint make the Terms **invalid** (5.2.1). The checker reads no words: what `words` names is tested only among the acts held (E25).
+Anything other than an array of two items, the second a socket, is rejected. `words` that are not a fingerprint make the Terms **invalid** (5.2.1). The checker reads no words: what `words` names is tested only among the acts held (E25). The body's cMIP (task K1) is given the act id in `words` as its input (draft 26, §6, K1's row: "the Text act `body` names, by its act id (5.2.2)").
 
 **E9. A party** (draft 26, §3.2, **Party**) is named in one of three ways, told apart by its first item:
 
@@ -156,7 +158,11 @@ Anything else is rejected, under E12: a bare number or a bare hash, `[0, h]` wit
 authors = [+ uint]   ; sorted, each once (E18)
 ```
 
-Positions count from 0, as in E12. An entry that is not an unsigned integer is rejected. A position beyond the list, or one naming a party named by role or as an agreement, makes the Terms **invalid** (5.3.1: "an author is never a party named by role, and never one named as an agreement"). The act's signer, named on its outside (E1), MUST be the `signer` of a party `[0, signer]` (E9) that one of `authors` names: Terms whose `authors` name no such party make the Terms **invalid** (5.3.1: "Terms whose `authors` do not name their own signer are **invalid**"). A resolving update carries no `authors` (E19), and this is not asked of it.
+Positions count from 0, as in E12. An entry that is not an unsigned integer is rejected. A position beyond the list, or one naming a party named by role or as an agreement, makes the Terms **invalid** (5.3.1: "Terms whose `authors` name a party named by role or as an agreement, or one who is not one of their parties, are **invalid**").
+
+**The signer.** The act's signer, named on its outside (E1), is its first author, whether or not `authors` names it (5.3.1: "The signer of a Terms act is its first author, whether or not `authors` names them: `authors` names the other authors, and MAY name the signer too"). `authors` MAY hold the position of the party `[0, signer]` (E9) that names the signer, and need not. No Terms are invalid for leaving their signer out of `authors` (5.3.1).
+
+**A signer who is no party.** Where the act's signer is the `signer` of no party `[0, signer]` in `parties`, the Terms are **invalid**, at §4.4's case 5, after the authors (section 4, item 4; section 9, step 7.4). This is the MOR lead's reading 6 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A Terms act signed by someone who is not a party is invalid." Draft 26 names an author as a signer (§3.2, **Author**) and its signer as its first author (5.3.1), and does not yet name this case invalid: 5.3.1's list and §4.4's case 5 end at the authors. A resolving update carries no `parties` and no `authors` (E19): neither test is asked of it from its bytes.
 
 **E14. A power** (draft 26, §4.2, `powers`; §5.6) is its sort and its rule:
 
@@ -189,13 +195,13 @@ Anything else is rejected, a call carrying anything more included (a closed form
 previous = [] / [hash]   ; [] for none: the signer's first act in this agreement
 ```
 
-Anything else is rejected. It is always written, in Terms and in Statements (§4.2, §4.3: "`previous` | yes"). It names the signer's act before this one **within the same agreement** (5.7.1), whatever kind it is, but for a resolving update: a resolve, and a Terms act written as a resolving update, name **the shared act** both tips follow (5.12.4), not either tip. **The author's first act** (§4.3, "An author's first act"): the first Terms act is its signer's first act within its agreement, so that signer's assent to it, and any next act of theirs there, names it, or the act after it, in `previous`; never `[]`. A party with no act in the agreement yet writes `[]`.
+Anything else is rejected. It is always written, in Terms and in Statements (§4.2, §4.3: "`previous` | yes"). It names the signer's act before this one **within the same agreement** (5.7.1), whatever kind it is, but for a resolving update: a resolve, and a Terms act written as a resolving update, name **the shared act** both tips follow (5.12.4), not either tip. **The author's first act** (§4.3, "An author's first act"): the first Terms act is its signer's first act within its agreement, so that signer's assent to it, and any next act of theirs there, names it, or the act after it, in `previous`; never `[]`. A party with no act in the agreement yet writes `[]`. *The ledger's "Publishing the Terms is the publisher's assent" (27 November, 20:49–20:50) makes the first Terms act its signer's assent, the signer not signing again; draft 26's words for it are not yet written (§4.3, **An author's first act**, still says "their assent to those Terms names it in `previous`"), and this paragraph follows §4.3 as it stands until they are. No byte of `previous` changes either way: the signer's next act there names the Terms act, or an act after it.*
 
 **E18. Lists** (draft 26, §4.1, §4.2, §4.3).
 
 - **No empty list.** A list field holds one or more entries. A list with nothing in it is left out: absent means none (no power, no call, no keeper, nothing relied on). An empty list is rejected. The one exception is `previous` (E17), which writes "none" as `[]`, as `prev` does.
-- **Sets are sorted.** `authors`, `relies_on`, `powers`, `calls`, `answers` and `resolves` are sets: their entries are in the bytewise lexicographic order of their deterministic encodings (byte by byte, a shorter encoding first where it is a prefix of a longer one), and each entry appears once. An entry out of order, or twice, is rejected. Order carries no meaning in them. **[lead]** *A sorted list of act ids, written in a field, is not the set of acts of section 3: that is one value computed from such a list, and no field of this text holds one. `resolves` is written as the list of the tips' ids (5.12.4), sorted as a set is.*
-- **The keeper field.** **Open**: whether its list (in either form of key 8, section 4) is a set, sorted and each keeper once, as the lists above; or keeps the writer's order, as `parties` does. Draft 26 gives the keepers no order (5.8.3 reads where they agree), and says nothing of the bytes.
+- **Sets are sorted.** `authors`, `relies_on`, `powers`, `calls`, `answers`, `resolves` and the keeper field (key 8) are sets: their entries are in the bytewise lexicographic order of their deterministic encodings (byte by byte, a shorter encoding first where it is a prefix of a longer one), and each entry appears once. An entry out of order, or twice, is rejected. Order carries no meaning in them. **[lead]** *A sorted list of act ids, written in a field, is not the set of acts of section 3: that is one value computed from such a list, and no field of this text holds one. `resolves` is written as the list of the tips' ids (5.12.4), sorted as a set is.*
+- **The keeper field** (key 8, section 4) is always a list, and a set: its identifiers sorted as the sets above, each keeper once. Draft 26 gives the keepers no order (5.8.3 reads where they agree). **[lead]** A keeper list that is present and empty is rejected under this rule, as any empty list is: the MOR lead's answer 1 to the codemeister of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`): "A keeper list that is present and empty is E18's fault."
 - **One list keeps the writer's order**, because positions in it are named: `parties` (by `authors` and `receiver`). The same party twice in `parties` (the same bytes) is rejected (§4.2, `parties`): a spot that several fill is **one role, filled more than once** (5.10.2), not two identical roles. A signer named directly and the same signer able to fill a role are two different entries.
 - **Named in two fields.** An act named in `relies_on` that another field of the same act also names is read once, as one naming, and is not rejected (§4.3, `relies_on`).
 
@@ -215,7 +221,7 @@ terms = {
   ? 5 => [+ any],          ; relies_on: fingerprints; an entry that is not one is left unread (5.2.3)
   ? 6 => socket,           ; in_force (K2); absent: 5.4.1's default; in a Terms act with 0, its answer on coming into force is left unread (5.2.3)
   ? 7 => [+ power],        ; powers: [kind, rule] (K3)
-  ? 8 => keeper,           ; keeper: one keeper or several, by identifier (E6); its form is open (below)
+  ? 8 => keeper,           ; keeper: one keeper or several, by identifier (E6): always a list, sorted (below)
   ? 9 => hash,             ; clock, by identifier (E6)
   ? 10 => receiver,        ; [0, position] / [2, root] (E12)
   ? 11 => hash,            ; envelope: the bake's act id
@@ -232,17 +238,13 @@ terms = {
 
 The keys follow the order of draft 26's table (§4.2), which is draft 25's.
 
-**Key 8, the keeper field** (draft 26, §4.2, `keeper`; 5.8.1: "one keeper or several, each by the identifier the layer that orders acts gives it"). **Open: its form.** Two readings, neither chosen:
+**Key 8, the keeper field** (draft 26, §4.2, `keeper`; 5.8.1: "one keeper or several, each by the identifier the layer that orders acts gives it"). One form, a list always:
 
 ```cddl
-; reading (i): one form, a list always
-keeper = [+ hash]              ; one keeper is a list of one
-
-; reading (ii): two forms, told apart by their bytes
-keeper = hash / [2* hash]      ; one keeper bare; several as a list of two or more
+keeper = [+ hash]              ; one keeper is a list of one; sorted, each keeper once (E18)
 ```
 
-Under reading (i), one keeper has one form and several have the same; under reading (ii), a list of one keeper is rejected, so that one keeper is still written one way. Under either, the keeper field is not a socket (§3.4, **Keeper**: "not a cMIP, so the keeper field is not a task"), each entry is an identifier (E6), and whether a list is sorted is E18's open point. A keeper is not a clock: key 8 never stands for key 9 (5.8.6). A keeper is not an act, and a list of keepers is not the set of acts (§4.1: "its members are acts only").
+One keeper and several are written the same way. A bare `hash` in key 8, or any form but a list of identifiers, is rejected under E6, the rule that gives the keeper's form; an empty list, one out of order, or one keeper twice, under E18. **[lead]** The keeper field is not a socket (§3.4, **Keeper**: "not a cMIP, so the keeper field is not a task"), each entry is an identifier (E6), and the list is a set (E18). A keeper is not a clock: key 8 never stands for key 9 (5.8.6). A keeper is not an act, and a list of keepers is not the set of acts (§4.1: "its members are acts only").
 
 **E19. Presence** (draft 26, §4.2's "Required" column; §4.3, "What a resolving update carries").
 
@@ -260,8 +262,8 @@ Under reading (i), one keeper has one form and several have the same; under read
 1. Case 2, 5.2.1: the body's `words` (an act id is a fingerprint: 32 bytes, E5), then the `cmip` of the body's socket, of `in_force`, of `condition`, of `control`, of `data`, and of each power's rule (in the order of `powers`), is not a fingerprint.
 2. Case 3, for each role in `parties`, in their order: 5.10.1, its sort lacking or not one of the five; then 5.10.1, its `what` lacking or not a fingerprint (but for sort future); then 5.10.1, its spot socket lacking, or 5.2.1, its spot's `cmip` not a fingerprint (E10).
 3. Case 4, 5.4.2: a party is named by role, and `in_force` is absent, in every Terms act that carries `parties`, an update included.
-4. Case 5, 5.3.1: an author is beyond the parties, or names a party named by role or as an agreement (E13), in the order of `authors`; then the act's signer, not named by any of `authors` (E13).
-5. Case 8, 5.8.6: Terms that do not supply what a cMIP they name declares it needs. **Open**: the checker cannot give it from the act's bytes, since no byte of a Terms act says what a cMIP it names declares; section 9, step 7, gives the readings.
+4. Case 5, 5.3.1: an author is beyond the parties, or names a party named by role or as an agreement (E13), in the order of `authors`. Then, on the MOR lead's reading 6 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`), the act's signer named by no party `[0, signer]` (E13, "A signer who is no party"). Leaving the signer out of `authors` is no case (5.3.1).
+5. Case 8, 5.8.6: Terms that do not supply what a cMIP they name declares it needs. A cMIP declares it in its own published text, and a verifier reads it from that act (5.8.6). **Open**: no byte of a Terms act says what a cMIP it names declares; section 9, step 7, gives the readings.
 
 *Case 7 (Envelopes' rules for Terms that name an envelope, §4.4) needs the envelope's chain and Envelopes' rules: a checker of these bytes does not give it.*
 
@@ -317,11 +319,12 @@ Where `previous` names no act held, the act counts and its signer's line is unch
 
 **E25. The act `body` names** (draft 26, 5.2.2; §4.4, case 2, its last part). For each Terms act with a `body` whose `words` is a fingerprint:
 
-- Where the act it names is held, opens, and is a **Text act**, nothing is found. A Text act is an act under Text's spec hash, `TEXT`, of type 0, whose payload is as Text's Part three gives it (Text, rule 14 and "Text act (type 0)"). The checker reads nothing else of it: not its words, not its signer, not whether it came first (5.2.2: "naming it by its act id is all that this asks").
+- Where the act it names is held, opens, and is a **Text act**, nothing is found. A Text act is an act under a Text spec hash, `TEXT` (below), of type 0, whose payload is as that Text draft's Part three gives it (Text, rule 14 and "Text act (type 0)"). The checker reads nothing else of it: not its words, not its signer, not whether it came first (5.2.2: "naming it by its act id is all that this asks").
+- "A Text act invalid under Text's own grammar rules is no Text act here" (5.2.2). **Open**: whether the checker applies Text's own rules to the act `body` names. Reading (a): it does, as Text's checker would, and an act Text's rules make invalid is not a Text act, so the Terms are **invalid** (5.2.2). Reading (b): it reads the spec hash, the type and the payload's form only, and Text's other rules are the grammar verifier's. Neither is chosen.
 - Where the act it names is held, opens, and is not a Text act (an act under another spec hash, of another type, or with a payload Text does not give), the Terms are **invalid** (5.2.2: "Where the act `body` names is held and is not a Text act, the Terms are **invalid**").
-- Where it is held and **cannot be opened** (a private Text act, held without its key), what it is cannot be read, and the Terms are **not invalid** (§3.6: "If an act the verifier does not hold could change the answer, the answer is never invalid"). **Open**: whether the checker gives a note (the words unchecked, as E23 gives for `previous`) or nothing (the words not read: the grammar does not read them, 5.2.2).
-- Where the act it names is **not held**, the Terms are not invalid. **Open**, as for the act that cannot be opened: a note (unchecked) or nothing (not read). Draft 26 does not say; 5.13.3 ("Where the acts that could show B after A need an act that is named in a field of an act held, and the verifier does not hold it, the answer is **unchecked**") speaks of order, not of the words.
-- **Open**: which spec hashes are `TEXT`: Text draft 11's alone (draft 26, §2, names "Text, draft 11"), or any draft of Text. An act under an earlier Text draft's spec hash is a Text act under the second reading, and not one under the first.
+- Where the act it names is **not held**, or is held and **cannot be opened** (a private Text act, held without its key), the Terms are **not invalid**: "whether the Terms are invalid under this rule is **unchecked**, with a note of what is lacking; where several acts are checked together, the note names each" (5.2.2). The checker passes the act with a note naming 5.2.2 and the act lacking, by its act id, and whether it is not held or held and not opened; handed several Terms acts, it gives each its own note, each naming the act it lacks.
+- Where that act is disowned by its signer's key change (Identity, rule 34), "the Terms stand, and they are **unchecked** as to their words" (5.2.2). A key change is the identity chain's to show (E1), not one act's bytes: the checker gives no answer about it, and the note is the grammar verifier's.
+- **`TEXT`**: the spec hash of any draft of Text, each listed here. Held in the repository: Text draft 11 (`spec/MIR-text-draft-11.md`, the LATEST); MIR Text drafts 6 to 10 and MIP Text drafts 6 and 7 (`spec/archive/`). Each value is computed by E2's recipe from its file; none is written yet: the codemeister's to compute, before any vector. Drafts of Text not held in `spec/` (drafts 1 to 5) are listed as missing, not as values; the MIP drafts' texts define no Text act (a search for "Text act" in them finds none), and whether an act under their hash can be a Text act is not said. After the change to Development ("A specification is a Text act, named by its id", the ledger, 27 November, 14:47–14:52), the words act is named by its act id and this list goes.
 
 ## 8. One signing
 
@@ -340,16 +343,16 @@ For one act, in this order, the first failing step giving the answer (invalid be
 5. The signature (E1): does not verify, **rejected**, E1; a scheme not implemented, remembered.
 6. The payload (E4 to E20): **rejected**, the rule named (draft 26, §4.4, case 1: "Not an Agreements act").
 7. **Invalid** (draft 26, §4.4, cases 2 to 8), every case found listed in `invalid`, in this order, and `rule` the first of them:
-   1. case 2, 5.2.1: what is not a fingerprint, in section 4's order (its item 1); then, with several acts, 5.2.2: the act `body` names, held and not a Text act (E25);
+   1. case 2, 5.2.1: what is not a fingerprint, in section 4's order (its item 1); then, with several acts, 5.2.2: the act `body` names, held, opened, and not a Text act (E25);
    2. case 3, 5.10.1 and 5.2.1: each role, in the order of `parties` (section 4, item 2);
    3. case 4, 5.4.2: a role and no `in_force` (section 4, item 3);
-   4. case 5, 5.3.1: each author at fault, in the order of `authors`, then the act's signer not among them (section 4, item 4);
+   4. case 5, 5.3.1: each author at fault, in the order of `authors`; then the act's signer named by no party `[0, signer]`, on the MOR lead's reading 6 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`; E13; section 4, item 4). No step asks that `authors` name the signer (5.3.1: "No Terms are invalid for leaving their signer out of `authors`");
    5. case 6, 5.7.1: with several acts, `previous` among the acts held (E23);
    6. case 7: not given (section 4);
-   7. case 8, 5.8.6 (§4.4's case 8, "the case it names, of a condition in time with no anchor the Terms state", is 5.8.6's test: "Terms that do not supply what a cMIP they name, in any socket, declares it needs (a clock, a keeper) are **invalid**"): **open** (draft 26, §7, "How a cMIP declares what it needs"). No byte of the act shows what a cMIP it names declares it needs, so the checker cannot give this case from the act, or from the acts held, as this text writes them. Two readings, neither chosen: (a) the checker is handed, beside the acts, what each cMIP named declares it needs, in a form Development would give, and finds the case where a declared need for a clock finds no key 9, or a declared need for a keeper finds no key 8 (a keeper never supplies a clock, 5.8.6), naming the socket; (b) the case is not the checker's: it is given by the grammar verifier, which holds the cMIPs. Until one is chosen, the checker gives no case 8, and an act that would show it passes this step.
-8. A scheme not implemented: **unknown**, E1. Otherwise **pass**, with the notes: section 4's; E23's (a signer's line unchecked before the act, where `previous` names an act not held, or held and not opened); and E25's, where the open point there is read as a note (the words named and not held, or held and not opened).
+   7. case 8, 5.8.6 (§4.4's case 8, "the case it names, of a condition in time with no anchor the Terms state", is 5.8.6's test: "Terms that do not supply what a cMIP they name, in any socket, declares it needs (a clock, a keeper) are **invalid**"): **open**. Draft 26 says where the need is declared: "A cMIP declares what it needs in its own published text, in the form Development fixes (§7), and a verifier reads it from that act; where the verifier lacks the cMIP, this rule is **unchecked** for it" (5.8.6). No byte of the Terms act shows it, and the form is Development's, not yet fixed (draft 26, §7, "How a cMIP declares what it needs"). Two readings, neither chosen: (a) the checker is handed, beside the acts, each named cMIP's own published act, reads its declaration in the form Development fixes, and finds the case where a declared need for a clock finds no key 9, or a declared need for a keeper finds no key 8 (a keeper never supplies a clock, 5.8.6), naming the socket; where a cMIP named is not handed, 5.8.6 is **unchecked** for it, a note; (b) the case is not the checker's: the grammar verifier, which reads each cMIP's act, gives it, and the checker gives no note. Until one is chosen, the checker gives no case 8, and an act that would show it passes this step.
+8. A scheme not implemented: **unknown**, E1. Otherwise **pass**, with the notes: section 4's; E23's (a signer's line unchecked before the act, where `previous` names an act not held, or held and not opened); and E25's (the act `body` names not held, or held and not opened: unchecked, naming 5.2.2 and that act).
 
-**One fault, one rule** (draft 26, §4.4). A fault is rejected under the rule that gives the form of the field it is in, the innermost: E9 for a party (its signer's fingerprint included), E10 for a role's map, E7 for a socket wherever it sits (a role's spot, a power's rule, the body's socket), E8 for the body, E11 for `for`, E12 for the receiver, E13 for an author, E14 for a power, E15 for a Statement's kind, E16 for a call, E17 for `previous`, E6 for a keeper and a clock (key 8's form, section 4, under whichever reading is taken); E5 only for a field whose form is a bare fingerprint (`replaces`, `agreement`, `envelope`, `envelope_at`, `continues`, `under`, `settlement`, an entry of `resolves` or `answers`); E18 for a list's emptiness, order and repeats; E4 for a key; E19 and E20 for presence. A fault that fits two grammar rules is invalid under one (§4.4, its last paragraph): 5.2.1 for a body or a cMIP not named by fingerprint, 5.10.1 for a role's kind or `what`.
+**One fault, one rule** (draft 26, §4.4). A fault is rejected under the rule that gives the form of the field it is in, the innermost: E9 for a party (its signer's fingerprint included), E10 for a role's map, E7 for a socket wherever it sits (a role's spot, a power's rule, the body's socket), E8 for the body, E11 for `for`, E12 for the receiver, E13 for an author, E14 for a power, E15 for a Statement's kind, E16 for a call, E17 for `previous`, E6 for a keeper and a clock (key 8's form: a list of identifiers, section 4); E5 only for a field whose form is a bare fingerprint (`replaces`, `agreement`, `envelope`, `envelope_at`, `continues`, `under`, `settlement`, an entry of `resolves` or `answers`); E18 for a list's emptiness, order and repeats, a keeper list present and empty included (the MOR lead's answer 1 to the codemeister of 20:41, `docs/lead/notes/2026-11-27-readings-for-p2.md`); E4 for a key; E19 and E20 for presence. A fault that fits two grammar rules is invalid under one (§4.4, its last paragraph): 5.2.1 for a body or a cMIP not named by fingerprint, 5.10.1 for a role's kind or `what`; a Terms act whose signer is named by no party `[0, signer]`, 5.3.1, at case 5, after the authors (the MOR lead's reading 6 of 20:41, the same note). A note names its grammar rule as an invalid case does: the note on the words (E25) names 5.2.2 (the MOR lead's answer 2 to the codemeister of 20:41, the same note: "5.2.2 names the fault on a words note"); the note on `previous` (E23), 5.7.1.
 
 **Several faults.** Where an act is rejected for several faults, the checker names the first it meets and stops; which one is not fixed by this text, so each rejected vector has one fault only. Where an act shows several cases of invalid, all are listed, in step 7's order, and the first is named, as §4.4 asks of a verifier that names one.
 
@@ -369,17 +372,17 @@ Draft 26 gives no list of tasks for the encoding, as draft 25's section 10 did. 
 **§7's values, where they reach bytes.**
 
 5. **The set of acts: its hash and its label.** Open (section 3).
-6. **Which fields take the set form.** None in this text (section 3); a cMIP's parameters are its own (E7).
+6. **Which fields take the set form.** No grammar field (section 3); a cMIP's parameters may (E7).
 7. **The empty set.** Its value is written by the same recipe with no member (section 3); its bytes wait on the joining.
-8. **How Terms name their clock.** Key 9, 32 bytes, kept from encoding 2 (E6); open.
-9. **How a cMIP declares what it needs.** Not in an act's bytes; case 8 open (section 9, step 7).
+8. **How Terms name their clock.** Key 9, 32 bytes, kept from encoding 2, and it stands (E6); what identifies a clock is the layer's (draft 26, §7).
+9. **How a cMIP declares what it needs.** In the cMIP's own published text, read from that act (5.8.6), in a form Development fixes; not in a Terms act's bytes; case 8 open (section 9, step 7).
 10. **How far a verifier follows.** Not in these bytes: the grammar verifier's. The checker follows nothing beyond one `previous` and one `body` (E23, E25).
 
 **Encoding 2's section 10, re-read against draft 26.**
 
 11. **Each field's kind** (encoding 2, item 1). Changes: the identifier is a keeper's or a clock's (E6); the words are an act id (E8); the set of acts is a new kind (section 3). The three exceptions that reach the grammar rules are §4.1's: a body's words or a socket's cMIP not a fingerprint (invalid, 5.2.1); a role's sort or `what` (invalid, 5.10.1); an entry of `relies_on` not a fingerprint (left unread, 5.2.3).
 12. **Required and optional fields** (item 2). Stays, cited to §4.2 and §4.3 (E19, E20); a resolving update carries no `keeper` or `clock`.
-13. **Lists** (item 3). Changes: a report's `relies_on` and `lines` go with the report; the keeper list is new, its order open (E18).
+13. **Lists** (item 3). Changes: a report's `relies_on` and `lines` go with the report; the keeper list is new: always a list, sorted, each keeper once (E18).
 14. **The entries of `parties`** (item 4). Stays (E9, E10, E12, E13).
 15. **Fingerprints** (item 5). Changes: the core's tags in this text are `MOR/act` and `MOR/spec`; `MOR/work` goes with the body's work hash; a set's label would be a tag of its own, open.
 16. **`for` and `under`** (item 6). Stays (E11).
@@ -403,17 +406,17 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 
 1. The spec hash is computed as the core computes a MIR's (E2). **Kept**, for `SPEC_DRAFT_26`.
 2. The report is written under the block's fourth proposal's spec hash. **Dropped**: the report is the MICS's (section 6).
-3. No `objects` and no `acks` (E3). **Kept**.
+3. No `objects` and no `acks` (E3). **Kept**; `refs` and `prev` are knots (5.13.1).
 4. Closed maps: an unknown field is rejected (E4). **Kept**; draft 26 says so (§4).
 5. The body's words are named by work hash (E5). **Dropped**: the words are a Text act, named by its act id (5.2.2; E5, E8).
-6. A place and a clock are named by a 32-byte identifier (E6). **Changed**: the place is the keeper, one or several; what a keeper's identifier is the hash of is **open**; the clock's 32 bytes are kept, and whether key 9 stands is **open** (E6).
+6. A place and a clock are named by a 32-byte identifier (E6). **Changed**: the place is the keeper, one or several, written always as a sorted list; what a keeper's identifier is the hash of is **open**; the clock's 32 bytes are kept, and key 9 stands (E6).
 7. A socket is `[cmip, params]`, `null` for none; an empty socket is the field left out (E7). **Kept**.
 8. The words of the text (kinds, from whom) are written as small numbers; the resolve is kind 3 of a Statement, as `resolves` is kind 3 of a power (E10, E14, E15, E16). **Kept**.
 9. A role is named by its position in `parties`, and carries no label (E10, E12, E13). **Kept**.
 10. A power of sort `replaces` is written (4), and left unread (E14). **Kept** (§4.2, `powers`; 5.2.3).
 11. A K7 kind is a socket, with parameters (E15). **Kept**.
 12. One call per task (E16). **Kept**, with a call's form; draft 26 gives calls to the MICS's report block (§4.2, `calls`), so both stand until the MICS gives a call's bytes. Listed.
-13. Sets are sorted, each entry once; an empty list is never written (E18). **Kept**; whether the keeper list is one of these sets is **open**.
+13. Sets are sorted, each entry once; an empty list is never written (E18). **Kept**; the keeper list is one of these sets.
 14. A Terms act with `resolves` and no `continues` needs parties, authors and body (E19). **No longer a choice**: draft 26 says it (§4.3: "it carries what any Terms act carries").
 15. A contest's content, and a K7 kind's, is any value, by fingerprint or inline (E20). **Kept**.
 16. A report names one call, by `[act]` or `[act, task]` (E21). **Dropped**: the MICS's.
@@ -423,18 +426,21 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 
 **Open in this text, not yet chosen** (listed in the trace, under M8's "Open", by its numbers). None is picked here. Each is for the codemeister, who proposes; where the choice changes a verifier's answer, it is for Nobody, allegedly, too.
 
-1. The set's label. *for the codemeister, who proposes.*
-2. How a set's members are joined. *for the codemeister, who proposes.*
-3. Whether the set's rule is a row of E5 or an E-rule of its own (E26). *for the codemeister, who proposes.*
-4. Which fields may hold a set's value (none in this text, as draft 26, §7, says). *for the codemeister, who proposes, and for Nobody, allegedly.*
-5. The keeper field's form, for one keeper and for several. *for the codemeister, who proposes.*
-6. Whether the keeper list is sorted. *for the codemeister, who proposes.*
-7. What a keeper's identifier is the hash of. *for the codemeister, who proposes.*
-8. Whether key 9 stands as 32 bytes. *for the codemeister, who proposes, and for Nobody, allegedly.*
-9. Whether a `words` act held without its key, or not held, gives a note or nothing. *for the codemeister, who proposes, and for Nobody, allegedly.*
-10. Which spec hashes are `TEXT`. *for the codemeister, who proposes, and for Nobody, allegedly.*
-11. How a cMIP's declared needs are read, and by whom (case 8). *for the codemeister, who proposes, and for Nobody, allegedly.*
+1. The set's label. *Open: for the codemeister, who proposes.* The label, the joining and the empty set are this text's, fixed by the codemeister's proposal and written here before any vector of a set; until written, no verifier conforms to `SPEC_DRAFT_26` on a set (section 3, "Before any vector").
+2. How a set's members are joined, and so the empty set's value. *Open: for the codemeister, who proposes*, as item 1 says.
+3. Whether the set's rule is a row of E5 or an E-rule of its own (E26). *Open: for the codemeister, who proposes.*
+4. Which fields may hold a set's value. *Read*: no grammar field; a cMIP's parameters may (section 3).
+5. The keeper field's form, for one keeper and for several. *Read*: one form, always a list (section 4, key 8).
+6. Whether the keeper list is sorted. *Read*: sorted, each keeper once; empty, E18's fault (E18).
+7. What a keeper's identifier is the hash of. *Open: for the codemeister, who proposes.*
+8. Whether key 9 stands as 32 bytes. *Read*: kept, 32 bytes (E6). Draft 26's §7 still lists how Terms name their clock as open.
+9. Whether a `words` act held without its key, or not held, gives a note or nothing. *Answered by draft 26's 5.2.2*: unchecked, with a note of what is lacking, each act named (E25).
+10. Which spec hashes are `TEXT`. *Read*: every Text draft, listed in E25; the values are the codemeister's to compute; after the change to Development the list goes (E25).
+11. How a checker reads a cMIP's declared needs from the cMIP's own published act (5.8.6), in the form Development fixes, and whether the checker or only the grammar verifier gives case 8. *Open: for the codemeister, who proposes, and for Nobody, allegedly.*
 12. `SPEC_DRAFT_26`: not a choice; computed by M11 once the text was final, and again by N1 after wave four, and given in E2. *For the codemeister, who checks it.*
+13. Whether the checker applies Text's own grammar rules to the act `body` names (E25, "A Text act invalid under Text's own grammar rules is no Text act here", 5.2.2). *Open: for the codemeister, who proposes.*
+
+Items 4, 5, 6, 8 and 10 are read as the MOR lead's readings of 27 November evening (`docs/lead/notes/2026-11-27-draft-26-readings.md`, rows C36/C45/F14, C8/C35/C34 and C33/F15), and the empty keeper list as his answer 1 of 20:41 (`docs/lead/notes/2026-11-27-readings-for-p2.md`); each is the lead's reading, not a decision of Nobody, allegedly (the trace, P2).
 
 ## 12. What changed from encoding 2
 
@@ -464,3 +470,19 @@ Entry by entry; each is draft 26's, or follows from it; the wording is the scrib
 - **Section 9.** Changed: step 6 reads E4 to E20; step 7 follows §4.4's eight cases, with E25 inside case 2 and E23 as case 6; case 7 not given; case 8 open.
 - **Section 10.** Changed: draft 26's encoding tasks, then encoding 2's nineteen items re-read.
 - **Section 11.** Changed: each [lead] choice re-read: 12 kept, 1 changed, 4 dropped, 2 no longer choices; the open points listed.
+
+**Wave five (the scribe's session P2), to draft 26 as P1 left it.** Each line is the MOR lead's reading named, or draft 26's words; the trace gives each row.
+
+- **Head line.** P2 named.
+- **E3.** Changed: `refs` and `prev` are knots, as 5.13.1 now names them; the checker reads `prev` only as E1 says and does not read `refs`; "they are no knot" goes.
+- **The set of acts.** Changed: no grammar field holds a set's value, a cMIP's parameters may; "Before any vector" added: the label, the joining and the empty set fixed by the codemeister's proposal before any vector, and until then no verifier conforms on a set.
+- **E6.** Changed: key 9 stands, 32 bytes; its open point goes, draft 26's §7 still listing the clock.
+- **E8.** Changed: K1's input is the act id in `words` (§6, K1).
+- **E13.** Changed: the signer is the first author, whether or not `authors` names them; no Terms invalid for leaving the signer out; a signer named by no party `[0, signer]` invalid, on the lead's reading 6 of 20:41, at case 5.
+- **E17.** A note added: "Publishing the Terms is the publisher's assent" (the ledger, 20:50); draft 26's §4.3 not yet changed; no byte changes.
+- **E18.** Changed: the keeper field is a set, sorted, each once; a keeper list present and empty is E18's fault.
+- **Section 4.** Changed: key 8, one form, always a list; the two readings go; item 4 (case 5) follows E13; item 5 (case 8) reads the declaration from the cMIP's own act.
+- **E25.** Changed: the act not held, or not opened, is unchecked with a note naming 5.2.2 and each act lacking (5.2.2); a Text act invalid under Text's rules is no Text act, whether the checker applies Text's rules open; the key change case written; `TEXT` is every Text draft, listed, values the codemeister's.
+- **Section 9.** Changed: step 7.1 reads "held, opened"; step 7.4 drops the signer-in-`authors` test and adds the signer who is no party (the lead's reading 6); step 7.7 rewritten on 5.8.6's new words, still open; step 8's E25 note named; "One fault, one rule" gains the empty keeper list (E18), the signer who is no party (5.3.1, case 5) and the notes' rules (5.2.2 for the words, the lead's answer 2).
+- **Section 10.** Items 6, 8, 9 and 13 follow.
+- **Section 11.** The [lead] list's items 3, 6 and 13 follow; the open list: items 4, 5, 6, 8 and 10 read, item 9 answered by 5.2.2, item 11 reworded, item 13 new; items 1, 2, 3, 7 and 11 stay open. The hash lines (E2, item 12) are P3's, unchanged.

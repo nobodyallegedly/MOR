@@ -1543,3 +1543,178 @@ One line each; nothing chosen.
 ## P1: counts
 
 COUNTED (`wc -lc`, `apply.py`, `xref.py`): `draft-26.md` 433 lines, 153,644 bytes (was 429, 147,279); 68 numbered rules, 33 lettered clauses, 32 headings (unchanged); 62 edits; references 928, none bad (899 on the text as N1 left it, by the same script; N1's own script counted 903). Files touched: `draft-26.md`, this trace. Not touched: encoding 3, the companion, the report, draft 25, encoding 2, `spec/README.md`, every other file.
+
+# P2: wave five, the bytes and the companion: encoding 3 and the companion brought to draft 26 as P1 left it
+
+*Added by the scribe's session P2, 27 November 2026, the second of three of wave five. Not a decision, and not part of the hashed text. Nothing above is changed. Marks are M2's: TRACED (to a rule or a ledger entry, cited), COUNTED (by a script, named), INFERRED (P2's reading). The scripts are P2's scratch scripts, outside the repository: `enc.py` holds every edit to `encoding-3.md` and asserts each old wording occurs exactly once; `compA.py` to `compF.py` the same for `draft-26-companion.md` (A: the head, the quotations, section 3; B: section 5; C: section 6; D1 and D2: section 8; E: section 9; F: the last section); `quotes.py` finds every quotation in a file that stands in draft 26 as N1 left it (commit `1f81c2a5`) and not in draft 26 as P1 left it (commit `f7d7c1ce`); `xref_enc.py` checks every rule number and lettered clause of draft 26 cited in a file against the rules that exist, and every quotation against draft 26's words. His words are quoted as the ledger on main has them, typos included. The readings notes are `docs/lead/notes/2026-11-27-draft-26-readings.md` (the fifty rows) and `docs/lead/notes/2026-11-27-readings-for-p2.md` (the readings of 20:41 and 20:55), both on main, every line the lead's. `draft-26.md` and the report are not touched.*
+
+**The wish** (Nobody, allegedly, 26 November, 16:46): "We need to change the current wish to updating the core after the findings". On the order (20 November, 22:58): "Yes, all the work carries. But first the findings and the problems then the changes, the review and the verifications." And (27 November, 14:53): "We finish this rewrite of agreements, then we turn our attention to money, and after that we’ll tackle development."
+
+**In plain words.** The rules changed this evening; the bytes and the companion now follow them. In the bytes: one form for the keeper field, a sorted list; the clock kept; no grammar field for a set's value, and its label, joining and empty set left to the codemeister before any vector; every Text draft listed as `TEXT`; `refs` and `prev` read as knots; the signer the first author, unlisted; a signer who is no party invalid, on the lead's reading; the words note named by 5.2.2; an empty keeper list E18's fault. In the companion: every quotation of a changed rule brought up; his three decisions with his words; the lead's fifty readings, the 18:41 reading and those of 20:41; ten new scenarios and eighteen corrected; the trace tables' rows; and the 26 rules that moved, in one table. What could not be carried without a choice is listed below.
+
+## P2: the edits to encoding 3, one row each
+
+COUNTED (`enc.py`'s log): 30 edits, each old wording found exactly once.
+
+| Edit | Entry | What changed | Rests on | Mark |
+|---|---|---|---|---|
+| P2-E1 | head line | P2 named; the trace's "P2" named | the assignment | TRACED |
+| P2-E2 | E3 | `refs` and `prev` are knots; the checker reads `prev` only as E1 says and not `refs`; "they are no knot of draft 26" goes; a `hint` is no knot | the readings note, row F6/C26 (the lead's: "Knots. Encoding 3's E3 is wrong and follows draft 26"); 5.13.1 (P1-49, P1-50) | TRACED; "a `hint` names no act and is no knot" INFERRED (rows to check, 1) |
+| P2-E3 | E6, the clock | key 9 kept, 32 bytes, and stands; its "Open" goes; draft 26's §7 still lists it | row C8/C35/C34 (the lead's: "key 9 (the clock) kept, 32 bytes") | TRACED; draft 26's §7 not changed (For P3, 3) |
+| P2-E4 | the set of acts, "Which fields" | no grammar field holds a set's value; a cMIP's parameters may | row C36/C45/F14 (the lead's: "No grammar field holds a set's value for now; a cMIP's parameters may") | TRACED |
+| P2-E5 | the set of acts, "Before any vector" (new paragraph) | the label, the joining and the empty set fixed by the codemeister's proposal and written here before any vector; none picked; until written, no verifier conforms on a set | row C36/C45/F14 ("fixed by the codemeister's proposal and written in encoding 3 before any vector; until written, no verifier conforms to `SPEC_DRAFT_26` on a set") | TRACED |
+| P2-E6 | E8 | K1's input is the act id in `words` | row C44 (the lead's: "The act id of the words"); draft 26 §6, K1's row | TRACED |
+| P2-E7 | E13 | the signer is the first author whether or not `authors` names it; `authors` MAY name it; no Terms invalid for leaving it out; "A signer who is no party": invalid at case 5, on the lead's reading 6; a resolving update not asked either test | 5.3.1 (P1-16); the lead's 18:41; row C1/S; the readings of 20:41, reading 6 (the lead's: "A Terms act signed by someone who is not a party is invalid") | TRACED; the resolving update's case INFERRED (For P3, 5) |
+| P2-E8 | E17 | a note: "Publishing the Terms is the publisher's assent" (20:50); §4.3 not yet changed; no byte changes | the ledger, "Publishing the Terms is the publisher's assent" (27 November, 20:49–20:50). He: "Yes, I don’t see the need to have her sign twice"; the readings of 20:55, "What his answer of 20:50 reaches" | TRACED; "no byte of `previous` changes" INFERRED (rows to check, 2) |
+| P2-E9 | E18, the sets | the keeper field joins the sets | row C8/C35/C34 ("One form, always a list, sorted, each once") | TRACED |
+| P2-E10 | E18, the keeper field | always a list, a set; its "Open" goes; a keeper list present and empty rejected under E18 | row C8/C35/C34; the readings of 20:41, for the codemeister, 1 ("A keeper list that is present and empty is E18's fault.") | TRACED |
+| P2-E11 | section 4, key 8 | one form, `[+ hash]`; the two readings go; a bare hash rejected under E6; emptiness, order and repeats under E18 | row C8/C35/C34; "One fault, one rule" (E6 for key 8's form, as N1 had it) | TRACED; "a bare hash under E6" INFERRED from E6's place in "One fault, one rule" (rows to check, 3) |
+| P2-E12 | section 4, after key 8 | "whether a list is sorted is E18's open point" becomes "the list is a set (E18)" | row C8/C35/C34 | TRACED |
+| P2-E13 | the Terms map, key 8's comment | "its form is open" becomes "always a list, sorted" | row C8/C35/C34 | TRACED |
+| P2-E14 | section 4, item 4 (case 5) | the signer-in-`authors` test goes; the signer named by no party added, on reading 6; leaving the signer out is no case | 5.3.1, §4.4 case 5 as P1 left them (P1-13, P1-16); reading 6 of 20:41 | TRACED |
+| P2-E15 | section 4, item 5 (case 8) | the declaration is in the cMIP's own published text, read from that act | 5.8.6 (P1-38); row C21/C22 | TRACED |
+| P2-E16 | E25, a Text act | `TEXT` named as "a Text spec hash (below)"; the payload as that draft's Part three gives it | row C33/F15 | TRACED |
+| P2-E17 | E25, invalid under Text's rules (new item) | 5.2.2's "A Text act invalid under Text's own grammar rules is no Text act here" quoted; whether the checker applies Text's rules open, two readings | 5.2.2 (P1-15); row F11 | TRACED; the two readings INFERRED, none chosen (section 11, item 13) |
+| P2-E18 | E25, not held or not opened | the two "Open" items go: unchecked, with a note naming 5.2.2 and the act lacking, each named where several are checked | 5.2.2 (P1-15); row C16/F11; the readings of 20:41, for the codemeister, 2 | TRACED |
+| P2-E19 | E25, a key change (new item) | the Terms stand, unchecked as to their words; the checker gives no answer about a key change (E1) | 5.2.2 (P1-15); E1 | TRACED; "the checker gives no answer about it" INFERRED (rows to check, 4) |
+| P2-E20 | E25, `TEXT` | every Text draft, listed by file: Text draft 11, MIR Text drafts 6 to 10, MIP Text drafts 6 and 7; values the codemeister's, before any vector; drafts 1 to 5 missing; after the Development change the list goes | row C33/F15 (the lead's: "Every Text draft, listed in encoding 3; after the Development change, the words act is named by id and the list goes"); `ls spec spec/archive` | TRACED; the files COUNTED by `ls`; "the MIP drafts define no Text act" COUNTED by `grep -c "Text act"` (0 in each); the values not computed (For P3, 6) |
+| P2-E21 | section 9, step 7.1 | "held and not a Text act" reads "held, opened, and not a Text act" | 5.2.2 (P1-15) | TRACED |
+| P2-E22 | section 9, step 7.4 | the signer-in-`authors` test goes; the signer named by no party added, citing the note | 5.3.1 (P1-16); reading 6 of 20:41 | TRACED |
+| P2-E23 | section 9, step 7.7 (case 8) | rewritten on 5.8.6's new words; two readings, (a) the cMIP's own act handed to the checker, unchecked where not handed, (b) the grammar verifier's; still open | 5.8.6 (P1-38); row C21/C22 ("read by the grammar verifier from that act; a cMIP not held leaves 5.8.6 unchecked") | TRACED; the readings INFERRED, none chosen |
+| P2-E24 | section 9, step 8 | E25's note named: unchecked, naming 5.2.2 and that act | 5.2.2 (P1-15) | TRACED |
+| P2-E25 | section 9, "One fault, one rule", E6 | "under whichever reading is taken" becomes "a list of identifiers" | row C8/C35/C34 | TRACED |
+| P2-E26 | section 9, "One fault, one rule", E18 and after | the empty keeper list E18's; a signer named by no party, 5.3.1 at case 5; a note names its grammar rule: the words note 5.2.2, the `previous` note 5.7.1 | the readings of 20:41: for the codemeister 1 and 2, the scribe's 6; 5.7.1 | TRACED; "the note on `previous` names 5.7.1" INFERRED as the same habit (rows to check, 5) |
+| P2-E27 | section 10, items 6, 8, 9, 13 | follow P2-E3, E4, E11, E15 | as those rows | TRACED |
+| P2-E28 | section 11, the open list | items 4, 5, 6, 8, 10 read; 9 answered by 5.2.2; 11 reworded; 13 new; 1, 2, 3, 7, 11 open; a closing line naming the rows as the lead's | as those rows | TRACED |
+| P2-E29 | section 11, the [lead] list, items 3, 6, 13 | follow P2-E2, E3, E10 | as those rows | TRACED |
+| P2-E30 | section 12 | "Wave five (P2)" added, one line for each entry this wave changed; the hash lines (E2; section 11, item 12) untouched | the assignment | TRACED |
+
+**The citations checked** (COUNTED, `xref_enc.py` on `encoding-3.md` as P2 left it): every rule number and lettered clause of draft 26 it cites exists (68 rules, 33 lettered clauses; none bad); every quotation of draft 26 in it stands in draft 26 as P1 left it, but for quotations of other texts (Identity, Envelopes, the ledger, the notes) and two whose case differs only by a capital ("every socket holds…", "By fingerprint or inline…"). Before P2, one quotation of draft 26 no longer stood: E13's "Terms whose `authors` do not name their own signer are **invalid**" (P1-16); it is gone. P1 renumbered no rule, so no number needed changing.
+
+## P2: the edits to the companion
+
+COUNTED (`compA.py` to `compF.py`'s logs): A, 25 replacements; B, 1 new subsection, 13 new blocks (43 lines); C, 3 new subsections (50 rows; 1; 7 plus 2 plus 12); D1, 22 replacements (18 scenarios); D2, 10 new scenarios; E, 28 rows of 9.1 and 8 of 9.2 extended, 1 row added; F, 1 table (26 rows), 4 list items, the last subsection replaced, 1 sentence.
+
+**The quotations brought up** (COUNTED, `quotes.py` on the companion as N1 left it: 22 hits; 5 of them are the ledger's heading "The signer of a Terms act is an author", which stands in draft 26 as a phrase and is no stale quotation): 17 quotations stood in N1's draft 26 and not in P1's, each now brought to the rule's words as P1 left them, with the P1 row:
+
+| Line (N1's file) | Rule | P1 row | Edit |
+|---|---|---|---|
+| 134 | §3.2 **Unknown party** | P1-6 | the paragraph "Who she is" rewritten: the new words quoted; the old clause quoted as before; his correction and the lead's line |
+| 141 | 5.10.6 | P1-40, P1-41 | quoted anew, with the power clause |
+| 142 | 5.10.7 | P1-42 | quoted anew; the sources of "in an act of their own" and "counted or not" named |
+| 147 | 5.6.1(c) | P1-56 | "through an unknown party's filling (§3.2)" |
+| 148 | 5.6.2 | P1-57 | the same |
+| 321 | 5.3.1 | P1-16 | *What changed* quoted anew, N1's words kept as before; the lead's line as the ledger now has it; the 18:41 reading; 20:50 named |
+| 327 | 5.4.3 | P1-55 | "an unknown party's filling (§3.2)" |
+| 355 | §3.2 **Known party** | P1-5 | quoted anew |
+| 381 | 5.6.1(b) | P1-29 | quoted anew |
+| 383 | 5.6.1(c) | P1-56 | quoted anew |
+| 385 | 5.6.3 | P1-30 | the sentence P1 added shown, bracketed, inside the quotation |
+| 391 | 5.6.4 | P1-31 | quoted anew; the brief's line re-read |
+| 421 | 5.8.4 | P1-37 | "but where 5.5.1(b) says so" |
+| 437 | 5.10.6 | P1-40, P1-41 | quoted anew |
+| 441 | 5.10.7 | P1-42 | quoted anew |
+| 465 | 5.13.1 | P1-49, P1-50 | quoted anew, with `prev` and `refs` |
+| 473 | 5.13.5 | P1-51 | "given beside the Terms' answer and never in its place" |
+
+Beside them, re-read and brought up as passages that quote no stale words: section 3.3's 5.6.1(b) bullet (quoted whole, P1-29), its "What it protects her from" (the powers her version carries), 5.6.4's brief line, 5.13.5's exchange line (C31/F8), section 6.13's item on "invalid" (marked corrected, 6.15), scenario 8.25 (rewritten). After P2, `quotes.py` finds 10 hits: 3 are the old words quoted as before, on purpose (lines of "Who she is", 5.3.1's entry, 5.6.4's entry), 7 the ledger's heading. TRACED to the P1 rows; COUNTED by `quotes.py`.
+
+**The other edits, by section** (each TRACED to the source named in the text; the readings the lead's):
+
+- *Head*: P2's sections named; "How to read it" names the two notes.
+- *Section 3*: "Two classes" paragraph added (his 18:47, the lead's line; reading 12 of 20:55).
+- *Section 5*: "Wave five: his three decisions of 27 November, evening": each with his words quoted whole from "A filling gives no power" and "A dead keeper", the MOR lead's turns and lines labelled, the rules each shaped (P1's "by rule" list), what the lead's lines say beyond his words; and "Publishing the Terms is the publisher's assent" (20:49–20:50), noted as P3's to write. Under each §5 subsection, one line for each reading row P1 carried, the row named, its reading quoted, its rules and P1 rows; "Wave five: the readings carried outside §5" for §0, §1, §3's rows and the four rows carried into encoding 3 alone. 43 lines: 39 rows P1 carried, 4 P2 carried.
+- *Section 6*: 6.14, the fifty rows by the note's tables, each with its question (the note's label), the reading, what it rests on, the rules it shaped; for the eleven rows P1 could not carry (C9, C7, F13, C11/F20, F21/C40, F22, C37 to C43; C8/C35/C34, C36/C45/F14, C33/F15, C44), the other reading; and the note's last line. 6.15, the 18:41 reading of "by default", with N1's reading as the other. 6.16, the seven readings of 20:41 by the lead's number, each with the scribe's question it answers and the other reading, number 4 marked for him and seen by him (20:50); the two for the codemeister, with the other reading; the twelve readings of 20:55, listed for P3, none carried; and "What his answer of 20:50 reaches".
+- *Section 6.13*: item 2's line on "invalid" marked corrected, pointing to 6.15.
+- *Section 8, corrected* (each change listed): 8.2 (the variant: nothing shown about the term, C27; the declaration read from the cMIP's act, unchecked without it); 8.3 (lateness against the gate, never the pin: F4/C46b, C17/F2); 8.4 (the keepers' disagreement for the answers that rest on it, C46d; the variant re-read on the pin's two halves, the two readings of "needs" given); 8.5 (a note on reading 2: no change of answer); 8.6 (the variant re-read: an update every needed signer signs, through a missing act, unchecked by knots or per keeper, two readings); 8.7 (the resolve **shown**, 5.12.4, C39, no longer the scribe's word); 8.11 (an unknown party's filling); 8.13 (a power given in an act of her own; "counted or not"; the version's powers not hers, 8.27); 8.14 (no field holds a set's value, C36; the vectors wait on the label and joining); 8.15 (against the gate, never the pin); 8.16 (5.2.2's new cases); 8.17 (the pin's halves; lateness per keeper and reading 3); 8.18 (5.6.1(b)'s known party; the keepers' disagreement; the declaration; the agent's binding closed in wave four); 8.20 (the resolve **shown**); 8.21 (the declaration read from the cMIP's act; key 8 a sorted list); 8.22 (the keepers' disagreement; reading 2, no change of answer as told); 8.25 (rewritten: **pass**, not invalid; the vector N1 named withdrawn; 20:50 noted; 8.35 its pair); 8.26 (re-read on 5.6.1(b) and 5.6.3: answers stand). TRACED to the P1 rows and rows named; the expected answers INFERRED, as every scenario's.
+- *Section 8, added*: 8.27 to 8.29, the three decisions; 8.30 to 8.36, the seven readings of 20:41, each written on the reading and cited by path, draft 26's answer beside it where they differ, "For P3" where draft 26's words do not yet give the answer. INFERRED, each on its rules.
+- *Section 9*: 9.1, 28 rows extended (the fourteen P1's "For P2" names, and fourteen more P1 touched: 5.1.4, 5.2.2, 5.4.3, 5.4.5, 5.5.3, 5.6.2, 5.8.6, 5.10.8, 5.11.8, 5.11.9, 5.12.3, 5.12.4, 5.13.1, 5.13.5), the ledger column gaining the entries by their headings as the ledger has them, the reading column the rows of 6.14 to 6.16; 9.2, eight rows extended (Author, Known party, Unknown party, Power, Pin, Late update, Fork, Unchecked) and a row added for **Two classes**. Each heading checked against the ledger by `grep` (COUNTED): "Every refusal states its reason", P1's wording, is no heading: it is the line "Every refusal states its own reason" of "A resolve with nothing to resolve: "not shown", with the reason" (26 November), cited so.
+- *What draft 26 hands to other texts*: the table of the 26 rules that moved (13 to the MICS, 13 to Envelopes), each with draft 25's number, its heading (the bold heading, or its group's, marked), where it went, a one-line summary (the scribe's), and the draft 26 rule that points to it (the scribe's reading, by search of `draft-26.md` for "the MICS" and "Envelopes"; "none" for five of G14). The four lists checked against the text as P1 left it: for the MICS, G9.2 against §3.6 **Unchecked** (P1-11) and §1's constraint (P1-2, F19's one word); for Envelopes, `prev` and `refs` as knots (5.13.1's layers, P1-49, P1-50); for Identity, the keeper's record against 5.10.2 and 5.8.3 (P1-39, P1-35); for Development, 5.8.6's declaration (P1-38, 53, 54). "Left out, for Nobody, allegedly" replaced by a pointer to P3's report. INFERRED, each line so marked in the companion.
+- *Not touched*: the head's hash line ("The text it explains"), P3's.
+
+## P2: the scenarios' vectors, for the codemeister
+
+None is written; each is named in its scenario. INFERRED: the scribe's reading of the rules.
+
+| Scenario | Acts | Rules | Expected | Write when |
+|---|---|---|---|---|
+| 8.25 (corrected) | one Terms act, signer Carla, a party; `authors` Ana and Ben | 5.3.1, E13 | **pass**, no case of invalid (N1's vector, **invalid**, withdrawn) | now |
+| 8.27 | V1 with a power of sort `assent` for S over R's holders; Ana fills; V3; S's assent `for` Ana `under` V1 to V3 | 5.6.1(b), 5.10.7 | S's assent **not shown** as Ana's signature; her filling **shown** under V1, no later version named | now |
+| 8.28 | V1 with K1, K2; K2 silent; V2 naming K1, every known party, each shown after the other | 5.5.1(b), 5.5.5(d), 5.8.3 | V2 **in force**, **as shown**; the variant with a named condition, **not shown** per keeper, on one reading of "needs" | the main case now; the variant once "needs" is settled |
+| 8.29 | S, a known party, fills V1's role | §3.2 **Unknown party** | the filling **shown**, its holder a known party; grammar case 74 kept, renamed; case 64 retired | now |
+| 8.30 | V1 with a condition requiring Ana and Ben, keeper K silent; V2 signed by both, each shown after | 5.5.1(b), 5.5.7 | on reading 1: **in force**, **as shown** | after P3's words |
+| 8.31 | a first version signed by both parties, each after; K2 silent | 5.4.1 | on reading 2: **in force**, **as shown** (as draft 26 stands: **not shown**, per keeper) | after P3's words |
+| 8.32 | O with keeper K silent; F pinned by knots; L shown after F's gate acts | 5.5.4, 5.5.1(b) | on reading 3: L **late**, **as shown**; F **in force** | after P3's words |
+| 8.33 | Ana publishes V1, no assent apart; Ben assents; both act after | 5.4.1 | on his answer of 20:50: **in force**, **as shown** | after P3's words |
+| 8.34 | a holder's Statement in her own name naming S and the sort; S's assent for her | 5.6.1(b), 5.10.7 | on reading 5: **shown** as her signature; without her Statement, **not shown** | after P3's words; a K7 cMIP to give |
+| 8.35 | one Terms act signed by Dana, no party | 5.3.1, E13 | on reading 6: **invalid**, case 5 | encoding 3 gives it now; draft 26's words after P3 |
+| 8.36 | a known party fills its own spot; V2, signed by S alone under a named condition, changes it | §3.2, 5.6.1(c), 5.10.7 | on reading 7: V2 named as changing what Ben's filling earned | after P3's words |
+
+The earlier scenarios' vectors (8.8 to 8.16, 8.22 to 8.24, 8.26) keep their expected answers; 8.14's four set vectors wait on the label and joining (encoding 3, section 11, items 1 and 2).
+
+## P2: For P3
+
+What the whole check must look at, and draft 26's own words each reading of 20:41 needs, rule by rule. Nothing here is chosen.
+
+1. **The quotations P2 changed**: the 17 of the table above, against `draft-26.md` as P3 leaves it, by a script like `quotes.py` (draft 26 as P1 left it as the old text).
+2. **The readings of 20:41, rule by rule** (the note: "Draft 26's own words for them are P3's"):
+   - reading 1: 5.5.1(b), §3.3 **Pin**, 5.5.5(d), 5.8.3, 5.8.4: who an update's "needed" signers are (those the condition's cMIP requires; by default the known parties), and "each shown after the other" as "every needed signer's act is shown after every needed assent"; the reading's "K2's output" against the condition's socket K4 (question 1 for the lead, below);
+   - reading 2: 5.4.1 ("Where it names keepers, only they pin"; "Which keepers"), §3.3 **Pin**, 5.8.4, 5.13.3: a first version every party signs pinned by their knots whatever keeper is named;
+   - reading 3: 5.5.4(a) ("Where O names keepers, knots show L late only as a named keeper's contradiction"), 5.5.4(c) ("Knots against a keeper"), 5.8.4, 5.13.3 ("only they pin ... knots do not order the agreement's acts in their place"): knots alone show lateness with keepers named;
+   - reading 4, his since 20:50: §4.3 **An author's first act**, 5.4.1's default, 5.5.7(e), and every rule that counts the author's assent apart (the note's "What his answer of 20:50 reaches"); encoding 3's E17 note to be removed or rewritten once they change;
+   - reading 5: 5.6.1(b) and 5.10.7: which act is "an act of their own" (a Statement in her own name naming the grantee and the power's sort, read by K3); and 5.6.1(b)'s list, which asks "and they are a known party of that version" beside the clause for a filling's holder (scenario 8.34: read as one list, no holder can give a power);
+   - reading 6: 5.3.1's list of what is invalid and §4.4's case 5: a Terms act signed by one who is no party named as a signer; encoding 3's E13 and step 7.4 already give it, on the reading;
+   - reading 7: 5.10.7 ("A filling has exactly the rights ...", of any filling), 5.10.6, 5.4.3, 5.6.1(c): that 5.10.7 stands for an unknown party's filling only.
+3. **Draft 26's §7** still lists "How Terms name their clock ... and whether the `clock` field stands as written"; encoding 3 now keeps key 9 on the lead's reading C8/C35/C34.
+4. **§4.4's heading**: the lead's reading 15 of 20:55, "One fault, one grammar rule", and "encoding 3 follows": encoding 3's section 9 keeps "One fault, one rule" until draft 26's heading changes.
+5. **A resolving update's signer**: reading 6 speaks of "a Terms act"; a resolving update carries no `parties`, so whether its signer must be a party of the Terms it replaces is not said (encoding 3, E13).
+6. **`TEXT`'s values**: encoding 3's E25 lists the Text drafts by file; the values, by E2's recipe, are the codemeister's. Whether the MIP Text drafts, which define no Text act, belong in the list is not said.
+7. **The rows P2 could not source**: none of its edits lacks a source; the scenarios' expected answers are the scribe's reading (INFERRED), and the table's pointer column is the scribe's search (INFERRED).
+8. **The pin of an update every needed signer signs, not shown so by knots**: whether the keepers named still pin it (scenarios 8.4, 8.6, 8.17). Draft 26's two halves cover "signed by every signer it needs, each shown after the other" and "signed by fewer than all it needs", not an update signed by all and not yet shown each after the other (question 2 for the lead, below).
+9. **5.13.3** still says "Where the Terms name keepers, the order of the agreement's acts is theirs: only they pin (5.5.1(b))", beside 5.5.1(b)'s knots for an update every needed signer signs: the two are to agree (scenario 8.32).
+10. **The hash lines**: the companion's head, encoding 3's E2 and its section 11, item 12, untouched by P2.
+11. **The blind reader's points** (below), where P2 could not fix them in wording: 5.6.3 against 5.6.6 on "the grantor"; 5.5.5(a) and 5.5.7(e)'s "never a signer who fills a role" for a known party's own filling; "each shown after the other", a chain or each after every other.
+
+## P2: questions for the MOR lead, one batch
+
+Each with the scribe's lean; none is his.
+
+1. Reading 1 says the needed signers are "those the condition's cMIP requires (K2's output)". The update condition is K4 (§6); K2 is `in_force`. Is K4's output meant? *Lean*: K4, the update condition's.
+2. An update signed by every signer it needs, whose acts are not (yet) shown each after the other: may the keepers named still pin it (5.5.1(b), 5.5.5(d) "neither it nor the acts its gate counts wait on those keepers")? *Lean*: yes: knots give a second way, not the only one, so a keeper's order still pins it (scenarios 8.6, 8.17).
+3. Reading 1 against the lead's own turn in "A dead keeper", which counts "a majority's update" among what a keeper orders: under a named condition that accepts two of three, is an update the two sign "signed by every signer it needs"? *Lean*: the reading's words make it so; the turn's example then needs re-reading (scenario 8.28's variant). This one may be his: it decides whether a named condition can let a minority of known parties leave a keeper.
+4. Reading 5, "a Statement in her own name, naming the grantee and the power's sort": is the Statement of a kind of its own (a K7 kind), or any Statement whose `content` says so? *Lean*: a K7 kind, so that K3 reads it by its cMIP (scenario 8.34).
+5. Reading 6 for a resolving update, which carries no `parties`: is its signer asked to be a party of the shared Terms? *Lean*: no test from its bytes; the gate already asks who signs it.
+
+## P2: For Nobody, allegedly
+
+New, one at a time; each his.
+
+1. *His*: under an update condition that lets two of three known parties update, may those two, signing a new version each after the other, leave a keeper the Terms named without that keeper ever showing their order? (Scenario 8.28's variant; the lead's reading 1 beside the lead's turn of 18:51.)
+
+The P1 trace's thirteen lines stand; P2 adds none else.
+
+## P2: the blind reader
+
+A subagent that had seen neither the ledger nor this wave's assignment read encoding 3's sections 4, 5 and 9 and draft 26's §3.6 and §4, with P1's case (1) as bytes (V1 carrying a power of sort `assent` for the seller over the role's holders; Ana's assent filling it; V3; the seller's Statement of kind assent, `for` Ana, `under` V1, `terms` V3). Then the companion's 8.27 to 8.29, their sources and vectors removed, with draft 26's §5.5, §5.6 and §5.10.
+
+- **The order, the answer, the bytes** (Part 1): the checker walks section 9's steps 1 to 8; at step 6 it reads keys 0, 1, 2, 4, 5 and 6, `for` and `under` together, no `content`; at step 7 only case 6 (E23), `previous` naming V3, held, the same signer, the same agreement: no case; **pass**, no notes. It said, rightly, that whether the Statement binds Ana is the grammar's (5.6.1(b)), not the checker's. For V1, step 7 finds nothing; 7.4 checks the signer named `[0, h(S)]`; 7.7 gives no case 8. It noted that `terms` (V3) and `under` (V1) differing is tested nowhere in section 9. It could not confirm the codes of E10, E11, E15 from the extract (not given to it).
+- **8.27 to 8.29** (Part 2): the main answers follow from the rules named; it found gaps, fixed in wording: V3's own assent by S lacking from the acts (added: A(S, V3)); 5.6.1(b)'s "which are in force" failing already, V1 being replaced (said); 8.28's acts not naming V1's in-force assents (added); 8.28's first variant read as "not valid" (rewritten: never not valid, per keeper); the second variant's answer of C lacking its qualifier (added); 8.29's second assent's `previous` unsaid (added: no fork of S's line); "the verifier names S as a known party" claiming more than any rule asks (rewritten as the scribe's reading).
+- **Not fixed** (For P3): 5.6.3's "the grantor (5.6.6), who gave the power" against 5.6.6's "the one in whose name it was made", which come apart where a version's known party gave the power (8.27); 5.5.5(a) and 5.5.7(e)'s "never a signer who fills a role", read two ways for a known party who fills its own spot (8.29); "each shown after the other" read as a chain or as each after every other (8.28 gives the acts for both). These are draft 26's words, which P2 does not change.
+- The fixes after it were not read by it again.
+
+## P2: rows to check
+
+1. E3 (P2-E2): "A `hint` names no act and is no knot". INFERRED: 5.13.1 names `prev` and `refs`, not `hint`.
+2. E17 (P2-E8): "No byte of `previous` changes either way". INFERRED.
+3. Key 8 (P2-E11): a bare hash rejected under E6, not E18. INFERRED from E6's place in "One fault, one rule".
+4. E25 (P2-E19): the checker gives no answer about a key change. INFERRED from E1.
+5. "One fault, one rule" (P2-E26): the note on `previous` names 5.7.1. INFERRED.
+6. 6.16: the lead's reading 4 written as his since 20:50, the note itself saying "Number 4 is now his, as the ledger records it". TRACED; the assignment asked it marked "until he has".
+7. 6.16: the twelve readings of 20:55, which the assignment said did not yet exist, listed for P3 and carried nowhere. INFERRED.
+8. Scenarios 8.30 to 8.36: written on readings whose words draft 26 lacks; each expected answer INFERRED.
+9. The table of the 26 rules: the pointer column is the scribe's search; "none" for G14.4, G14.5, G14.5(a), G14.5(c) is a finding of no pointer, not of no link.
+10. Section 9.1: fourteen rows extended beyond the fourteen P1 named. INFERRED as within (e).
+
+## P2: counts
+
+COUNTED (`wc -lc`; the scripts' logs): `encoding-3.md` 30 edits; `draft-26-companion.md`: 17 quotations brought up; section 5, 1 subsection and 43 lines; section 6, 3 subsections (50 rows, 1 reading, 7 + 2 + 12 readings); section 8, 18 scenarios corrected and 10 added (8.27 to 8.36); section 9, 36 rows extended and 1 added; the 26-row table; 4 list items checked and extended; "Left out" replaced by a pointer. Files touched: `encoding-3.md`, `draft-26-companion.md`, this trace. Not touched: `draft-26.md`, the report, draft 25, encoding 2, `spec/README.md`, every other file.
