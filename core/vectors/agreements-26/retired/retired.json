@@ -1,0 +1,394 @@
+{
+  "about": "Verifier 2's checker vectors that the codemeister's sheet retires under draft 26 and encoding 3, each copied whole from core/vectors/agreements-new/ (which stays as it is), with the rule that retires it and the lines of the texts that say so. These answers are encoding 2's; they are kept here as a record, and no checker of encoding 3 is tested against them.",
+  "cases": [
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a60058208fe2da7ab7714a9a72dcd21c15d1f17afce32212fc9a09ddbfa8fbf71f795342015820164a933e6603d63cc2bea2544f1ed6fa674e02d10353906aac54dae3c6cbb02f0258207b3cdab1b42df11d3cca490b4be71bc0ef5aac6221b808efe28c544a2cc48ba80358206ef31ea7de2d16758575906e54857176b5cbc21ae7a31c8747d53aa089e0e19804581813dda45cdbd274587e7324baaa7e522f5adc298934914c99055820e2cc2635e8baa9a59a84f54c9d485e3db3ec8f9f1620f8c027736c733e372bb9590127fdbad0b62a2a2629397d7952b37a363296e377656884f5fa46a25145b8de5cfad03f57f74fd3ac1c77326a17df92ccff96f77d5d9b150aa00b3d6c789b0824b07c34d5a653160cae1d640fe9c4c7c8e0b34b9c511c8c373ca9238d73adfa272bd066a8dee7a8647be68105e2ad6b833d32d8aca2ce419766220c0ca876c68595526b1315fba3a8bcaf73bb6ca107e7abc9d32a84cf2d7e0d6db9340facf6eb490d2fea8788b6037cdcfeaea8f02e973f9f1189f936f77e7ab916fb86f101aecea58ad0bedff12451bc235c679ce7e793b63b8b6e0217b2c30e86dcc72ddcb7ffbb587a8c31044a6bd7cbcec9758f71f8ce3846bdf08ef3659e20bda233a5f1fbb76857014987ea4a1883daea7cefc73ce26132ac9954b22a754fa2fc624928cc8d6021f9f5934d83015820e2b25d558bf1a25efb3581d8afd9e3ba987ae9fd8d74a3a497c1bf148210d2655840273ac0e96eabd92f2fa4b552f51ca1cfd1cda484131114cfbf7c099f07b8558d7020000db4281d51e681399dae59cb0286c7ffb021cfec9a88be6c8ea7dd576b",
+            "id": "494c06cc554392a12384930b708e4e0f06bcdeb42803f83f13cd8e6aab03651c",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": null,
+          "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+          "verdict": "pass"
+        },
+        "name": "report: the receiving side's confirmation of a payment, naming its settlement as the call made by default",
+        "tests": "G11.7; E21, E22 (proposal)"
+      },
+      "from": "core/vectors/agreements-new/valid.json",
+      "index": 34,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258201a0068430b7c1b6dd6667277d3cd94cace53d8ece2b787cce83db176d2e482dc035820071f80b0565738116aacaba31df0ecb0900146d2ac96f4b785462a5fbefa3c94045818dd441cec3a95cf79ac4f8fbe075119b3b5db7799f15046e20558203fa1da43a528f0eab3c35488390cabef37ca3a5bed61e38bf12e1ba8308b36265902c105673da1208efa7e8889b2d20d2e0bdf6422623f988563737abaa0e38c303e23ae4fecedc07e1baeec984a2970af911932673e170217f33bf1abe80bcc8e581a17b561a2294b13440dbad0bc88974439b4737a9f330387c289ea59717bf6a83d4007e3809893e431cb6691eab88c12495b4baf6834377f8cd1ff755c273bd0d18d12a9fba8772648f1efa6a5865989d64f443492476faf6165ca469c5b810d7983704f529a0c50b699e18f8959eb6ff87ff5f63094b37db8f2aa29892ae962a3c2a8322e2071b720a6bfc3d356503675dd03fb4cc465372d178c05d6204c4f3a6af63a1c161a9803e4a06cee723e346b8fda20d797e07ca0fffada030d5c53e3f70d1d889154013167d95e4fdfe78c3a086925914c76f7f6841033ba9ef53cc12ebc9a451bd23f39020b343cc589fb46d56658f5a389a6bdb8775baccd5837215b2af6a1950e726a0fb1033dab0ce94e753213e05f08306e0160ab904616cf46729894aaa50d40d29ed94ffbe16160702c7a40d4ea5c6f130e769be953f1b9701e3adffb15f7e10bdc97e3a30e4354bbbf6ad94df39aa487ca51b40615ef065ac6ce65c0fd90e6ed53b74367ce8a138faff5ee1ae83060599ef61353f05600fa582f9758e05ccfd70ee9050cbf779942d4eef134744e56540cb17dd084bb7d62c57aa9e7353b8376b5888df950ffc56b2b2aa9687000126055f6e28aecf15c9aa3c72c0a15d47f4927b0e0a89271b0b231bb61d8cce597b6218754d6dc4ee2e47e57aa9d85eef2a95e3c25688ddcc5aaf840a17eb6f170eed3ca302c86b4fa8859f3561c9f6de34c2e73f75f190e0c1efd2e608242179765fd066c513b14baf8866e59aeb56b2b43cdd27a9b963312029161057e6f37835d9cb3a89912d18e2d6e10c6a630911045bfddb56501ce94a9c1dff62152ff39e83575973e0c1f6d0acb14ec41a54ca3bc5f21f8cc467770b593cd1ada46f353c37dd408c5eafd2e61368301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584001b1ed0905c7efdbd70d31aa5a872b107201dbd15322df32ae31de840d38f09510cf8e003d269ef954ea77fc00d57dcbdf2a10d138d7d27c499d211d7d5a69fe",
+            "id": "357003de6631cb994c015b9ff2985bcf6100eb2f947fa281fd855735bc1a30b6",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": null,
+          "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+          "verdict": "pass"
+        },
+        "name": "report: a doer's leg report, every kind of line",
+        "tests": "K6's row; E21, E22 (proposal)"
+      },
+      "from": "core/vectors/agreements-new/valid.json",
+      "index": 35,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582081428b8df53070976915a6d3a2587dbe9a6b2d87d3ed1acf5ee3702ea3e6de07035820c880c57c9c147497096cd8f729bbf8cf83166a3fd858e7835f2cf82aa2479b3b04581854fac865bdd535668aa212385b4ca415eed79e963fbb340b05582011bd8515e6ae4e1e34f151366bd29408c1abd2b524ffbad38ddb90e134a1d3b458b9e182b2e24bd6012387cc52d32dcdae383e5067d44fa489d993e90b4801e4f8c7bf490b0398a7818fcaea7b3f3ada2ef0ea3d12e178992e86048558a340d2ea79604bd795cc6dd42d7b64c6965ac71b6d9ddfadf1b6b8e62c0200e5fc2804d2024d19bc85f4d44ab4e4d81dd96b2c40a4ae1228657b3c30d47b1b857144ef8e8945072b719d9dd0ee15ede598a0385ff0c19775be632d97961d1a12c345e4831a16ed25fe92dfb266709fcd0cbcb64a574ee7d15964dbcf8bc58301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584006811e2ccbe032deae1b50fb5304ce73a88e6eabe3d3f4ea3d2cc8cd528ccec75e34c1cd80c2219deab04a6c3ea8e6b93661b6b129d02d531f749d66bbb46bd7",
+            "id": "cceafe0f2647bf59a3a55f58d244c84ae8459af751e316cfdbaaa8a1798820b5",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": null,
+          "says": "a report act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here) (the report is a proposal, as the block is)",
+          "verdict": "pass"
+        },
+        "name": "report: the call it answers, and nothing more",
+        "tests": "the block's R2; E21 (proposal)"
+      },
+      "from": "core/vectors/agreements-new/valid.json",
+      "index": 36,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820ed4afacfd34159309ee97425080948abd502e1046f4a30a98421af6b81a5aafb0358209d7da4e8727d275cff8a98ae8fa583e9146c738a33726e6b7eb45f906873bdb00458185bf88a14cf701864b44ff141af8850b060e7c40a05f82ce305582086996557dc49c696d3710182e2f0304009cca5506ffe82158c4ff84556185c9759012a50666d8671b9810a390ffcf41a205139b561339603763e7855f14aa7c80fd1c00a469a5187e6bed4e008ddef0c49ff95304f8146baa2e7bab190da9a64d9f31bcd2046958b46c2ca92d31c54524129d8d85d80e372b1e8fba20d615b5fdca1d1c2895d6b8bf0e018a286e35572cc419580ca35168fa561d388fd3f9a4abf8ae9b361ca4ffb738b6aafd8466fe948494b3be30376fb2ed6f494c488e0999e91da4cff2474d7461fb5c3f2c63fa8b5c7c388f6d372bd937ef1f1b191169e3a1dbff01ae2f8abd0255949e30445dd6e6f1df00d2ee363ccd0a6b485130a57fadfa7745ce488a9ddbafe042db6b12cbb99e93fd86367284ad02109b1fd1855f6759a11f9d845da598143135b7f64eca3d9f84ed780b46b91a2c71d05f2e9b47b5bff0f1b98567afeb78f760a8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840be458d3abb0bfbb67b8a906707d8b24961ae8d57a620535e8dd73fd522b5b17c7667e07bd6c329561bf2289af05648c597f1d072c5a50ac351a04c678c10c59d",
+            "id": "135be967f63ed8a1525a008db7050715d1b0420fbb56ab89b6d72ec105547a1f",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E4",
+          "says": "a report's payload has no field 3: its map is closed (keys 0 to 2)",
+          "verdict": "rejected"
+        },
+        "name": "report: a key the encoding does not give (3)",
+        "tests": "E4"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 103,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f0258201aa9f679f344301befb046410ae4d6db329805b4fc4c7698b9c83f83fcc5dbd003582079dff40c1c9accab497b3502304bb79fdd7604f67333b7e206796a3770220e0404581861e088047ab5c59ba987ef134218b99d715bb5c8aeb66d16055820180407341c245a322376754de46d806001fe007c9127d45a7b5202e25272736f590104c33481a3f67403ced818cbca241c8ea4bdde1641f0c2839b5aba92f3454681690856564e25867cee6e202ca3319227da38b9e6d5c9f5ef498228e6dfeca3c58e54c7d92cbfd87bafa078abb4905a4d911b68007022476c446faded51fa7b7c2e6d594a199e3c976f3123a216e3b6e8b7f35621aa8b99e9d3b3990a606367f7514f21c8b40a7a988ffe3c63ede6f276c9f0a41e5b925745f3780ec66a01f70a88b86bd77c92f91ddf63f10faef2f45832808c2fbbde68b18fd5ac2083190fbcd0bebb70b7467d81d29f1b4de7cf81cdd5fb6904a2007845005903283d81083dd4e47b27ee946ad41e33640823275aec6293b635ee08f24637a2bf1faa187e44c111f11f838301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840e06544e494705bbdc04c3cc04da88de04db47067a7b02f352ec3ac19a978a74151b62fb60ee5754c0d0e6356d66b8198875364b4c41b83079b233950edc644cd",
+            "id": "9f982ab0b95588655d3d7b386c01a377d69e09bbfb2ccf312878863deadab1a7",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E21",
+          "says": "a report names the call it answers (the block's R2: a report that names no call is no report)",
+          "verdict": "rejected"
+        },
+        "name": "report: no call",
+        "tests": "E21"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 104,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582069b844b1aefee297c6e75707f8dd966ddeb87e4163c1c7466e87648d4fb546e2035820a9f9df75050cd853022570b943539c4a088db6cf38021cfabef9c5632c78d81b0458180633c77917056be5428a0fb5879e09f6e402018d6b59225c055820d8d1002d0864ffe13ec42b958efb09692ced84d2336b4643523eda12873ed5c9590129f71ba9e3a67fd81fe2afce3d0bdb844f97182f436c3106b9e68644392cfbd0312dc04be7da9b39855e4893581425618e078513e5478ae5f54be37931e6d32bba43eed4ca4f29c77d20bc55982669b62f30918d3ac4cf9e92371cb32aa5cfbbfa640c4d5672be2723886f6498390a4fd20c9ad0f2952673cd434f24621462642dc6ff5aeebb07e2e494e600409b59b82a7f93d0b52adbf51e742a6f55ba7b37571d015842fe9866e1acba9857e4bdea657233b9d67cfe6df026128040ee53a4332ab63aab918e22b8e70572d0bd21a7e28410ab37764a5bdb39d79c5201e0f7a2350f488603e15484b2f3e4f87e76e647e729168fbaf953ed4e002d4368000c5c6dde76eab2596d2b1483a17192e68273d173f65a1463f99d3ec207ab6d16b41369767df987e1be2bab8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840603c3c845ff5c4d2e90f966fb43853690c3509b50cc4b393e84c49a0a080c8dbcd0f5233b18cce8fc59d391c7dfdcaf371ba3ebd8ee475d6cfb1903d4609ddce",
+            "id": "ef4acc104bcd6f9cf9a18ca68588c2b2c77568e2e9b8a563bb6efc3dbb79f302",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E21",
+          "says": "the task of a call written in Terms is 1 to 8 (K1 to K8)",
+          "verdict": "rejected"
+        },
+        "name": "report: a call for task 9",
+        "tests": "E21"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 105,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582096ce4b089cb215d9e3472d4c257ec3fbf4b6ff426d7eec186c1ea329ed8c8bc3035820addd05525eddf5bff54f82bad822769d92aaf29c61cc73316a63cf0afaa11c160458180f4117cadc9c9ece827e44d9e0a11842205eae9daf988306055820040140da67bd70741e1e2dd9507abd60095bea6606cbbea7ffe7a9579a5a7a5b5901128dfea211e243e756862f29a5351615518369a0c90d7943af923643f6cab4ee4b6788214437bb01ed14f4262aaf889d297a50a4c9209d74e5962aa84e5dd997f5718741a96974bf9d47359d9a6405dea3b624dcb00aca397f20303161071933a8a15053289f5a0a4ebdabe01df79d8575314f94f93088f6c4b171fca309a75d19bdc753fa12622b22f35c368400083eb3b658ecbecbc345f4b5bb19f893d384857d227ad51c7426fa210f5550bd8f07b034e64aeb120f64dc94b27987c17f6f11aa7c260aafcb09bf50cfb89ca018fd6d650fe609111a54645eef3a566dd1d2911ba60bd281ba8e25e01a5534bf535cd56fcb7c7305977ddacea5adad0f4d4222829f8d0e9ce37c38bc4899fda93dd7ac6ebb8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58409d348c330487f494cbeef72b8e367f3969a498743c5e84f080023336c8f41c27a97d01752cddfd2d67537ec02f6ae518505d6f638693eef36bbc275e4b837a66",
+            "id": "96756c6c7099f0b0afbac83e8e151106885415d8a1fb924fd19bac58306db708",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E21",
+          "says": "the act that holds the call is a fingerprint: a byte string of exactly 32 bytes",
+          "verdict": "rejected"
+        },
+        "name": "report: a call whose act is not a fingerprint",
+        "tests": "E21"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 106,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582009d66d3cbefe1302c397c4a0a7571fdd91edf9412f58540f93742764f62eb33f0358200b26d65133de5c6bea1f9c00e6e95cf6a4c4a68391fb5f6a6c6cec4c0e1f0c52045818338c7d21fd20216d759b80d6b61a924d1e0131b420716530055820e4abee629869ba9f37c156f039f251586a717c32a7ad8654901656028ba01cd759014a671cfc8bbacde6921bdec21529c1c0000c942c741bbaebf666f9ad25aa8287bf89df3eb1f333195132fdae814a6ba4dbdb30c55413a53b5ebc3099be85d0c458a2a8c97b3a65e5b360e8a4b126ff1ced6bfa6443c673c320fc67036df046e124681f4c62edc06a6d106befc7676d3a848213e140c22eb4f96f704b77ebfad1beed199b8d32e9cc9f302b26fe60e54340b4f9657124d8491335d93ac74a082b995a0f10777a151862218c70414a313dc05534e927f23b6023b7e27f0f65f6077b81620a75904b2de94b0b958701ae9db28741a064d270247acaec46473d5c6e4bccbf69d44b1c29bfe7b18fcfbc6c0117fda67a808cfbd23cd4d60660bda2a4a3ddee17ba889cee706404d9972a1f5789cac5161c1bb4163fb1198a1b06cebd6fd3b59a75ecb029d413121777d2b044cd8c1a308dda8e922c00d62c79c973d094cd794d56a2d2489fc1468301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840f7c816f75a195aeefc87673924719b5b5a23b916351fc31273422122fae4ad546b6e4473191aad393e9b562398c7644bcf923a47a6cfb581946efc47adf5ce27",
+            "id": "c6aba2ccdc74300358b75d945df896dedb225519de648df98c658051908b054c",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E18",
+          "says": "a report's relies_on is not in order: its entries are sorted by the bytes of their encodings",
+          "verdict": "rejected"
+        },
+        "name": "report: relies_on out of order",
+        "tests": "E18"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 107,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582088dbe66c2f4142cb18cf3b8151a4ad443bf17213fae011ecd11892ce6b7cbaa0035820ade7f25d4178a8d461f666e2bf13b7b8f66a559b16865b6639f69c839cb9a63c04581841736ee17a4ae87b393d93e56918a9166f76034733b7225605582091f54683c16d7d826ca80dc33cec21e1cdf1a6a009c7ae68bf7f69f4c13f477b58dee946211c0ac1a8311c5eccf5f4df6506ce7d2678253bbb17824d5cc3ccb4c4484ba41a402c1d7b196eee0b1a0c5d211b4f5510b8d1585c1951d6c2cf85294a029e576430c568fdfe89dcc978ea869ec168436948d43b2d9cb495b1a525274036d6ebc0e1304cdeb800f38093b70ef2bfa941afdc38db69aff048c5410e4b53d3cc1637b9a8cb1c18c944ebcf599e8c5675fe2d3415853fb976e0d565889340bbb08c9bc9fc0c2ddb97d7d33ea83bc25b98f1a311be9746b3be9a9af468c6f3dd6f1b3d9312d938cc861c810530894093e4ca9b737c68f9ecbd84233eb0fb8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840fb14b2a0021bbc75381c2e27490c4e232e7618c5c66b5a59f0fef56dff94f32aa611f985a5f842cc94719d70f56fb54172ff899b0c01afda8b6faf9447a9056e",
+            "id": "23eae383aadb59a72e78a4af649eb73861e0cd61db5bcb1b442e8c25068d9c39",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E18",
+          "says": "lines is never an empty list: a list with nothing in it is left out",
+          "verdict": "rejected"
+        },
+        "name": "report: an empty list of lines",
+        "tests": "E18"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 108,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820c6fe0da01578b91690fffe7323c5cd7335300e73c9c516e27485f594488a37ab03582078033cb549ff2556a50401c3ac01f09c07d7ce491927fc1b4957b79b7de600800458185bbc0d6ccd34b8afb960ef028a6ffe32991f0f73a4a936650558204164b029e6a12795c4bd3fa61b890ef392517e0369a3facc82a510acfc5a19ba59010490a2af1ee14eb3d98ba3406945815ba2c0f497db63de8d6774515da103df8b6d20c7f46bd0fe77148867857e3faef48e91570610438cb30ab03f0ff641a03df201f75fc9870d84db59f0f823ad32f6ac2768327cc49b02fcf710c8dfe51832419d1ca4906cbcf7230196d4f76983377b2c11a028ed28ca72f1b10d8720e6fa5ad4e432c05ecfd917a57b4e82a20c92acf34ac894ef01cad0b36b129061a0c7634a69f55d2edc5e941a26673da36e3132a04b154538474f215ed756e8868fc2eb0bfe47ae04c37b737bf424ae7df9fc3e447b18c520d5b868ffdbc0b1a51ed3b127f87181d11d2c21234db2ab614da5e94c4479a1805db537aac7148856db1d7c1625e2498301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840a9ee157ba42edd0ef5713f7d9fbe3cd8f009501f8383f91b4a1fd319c233a5dac64172599882b88ba326261cac66df75c448c8ea59b28213c64713433552f38c",
+            "id": "2f66085f6668d20d99718b02e04de7a4a706e759b1be618d04685f4dfaabf0a0",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E22",
+          "says": "a line is [0, amount, by] (received), [1, amount, to, by, ? closes] (passed on), [2, amount] (own part), [3, amount] (kept) or [4, amount, to] (still owed)",
+          "verdict": "rejected"
+        },
+        "name": "report: a line of an unknown kind (5)",
+        "tests": "E22"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 109,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820fe7d93ae4d49a4c8ff389ca0530d97de9e939bea426479c9984f314a727889c3035820b4d4638027b3e2b8d41a08d1e6a076072049a94968bf9381e0bed09f7bcb904d045818350808427c410f29da033a3bd3011628572920984c004aa4055820e77054812e3523e4cccc9ef192bea25b09781defdabce364aadeb9e37e97c47f58e131506847c566dfbdb19bda2d9d2a260f6fac76d8aa5154e63b50ea853e218913e08d2ea4849baf831a9fb7d5808da3408e82b10fe65659f3827361dd4e3ebdd3b6d3b08e7590386736454230d3703319aa03c89a04f92532599e2a47102f18f1f69f8459c459d13b60e818135c2af62b6f491f91fc2a3772b52d6b277cac29c55517519f1d0f2d8d66eb8dfa16e3d5ddffa0725632852d9af04f1a746403a85d353ee84a1d76352e39d319063905393aaea5d797ee9bc7a1072711a532a20296ac3db9c3c682c5f770f5672fec76ead4ba438ca0aadaf103199b4e7608fd282e0f8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c5840f07286116a71b0261194cd7668a2647ce00ad6c23d5c8334e5bebf42d00e3dfe441a2b4872595783e9c026142e34f49899f197ee4e24c3b48a3cbe9f3b858f76",
+            "id": "a76757ec208c2beb256c8cba695f225048ed4fd1295b64ba939367bb824d63b2",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E22",
+          "says": "an amount is [unit, value], as Money writes one",
+          "verdict": "rejected"
+        },
+        "name": "report: an amount that is not [unit, value]",
+        "tests": "E22"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 110,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f02582042118bc5e0791443a2c0875b875715f67f662269515537ef0a067945e040453603582010b08f236dacea033cb070bc6c037314aa6ee790e718d070356d32235de89cca0458181b7a0413bc4f07e279a2a676ac3a1c9be67b55c8c97ef069055820291d76a981f347fa78fbb10a9889c64da5184471361cb649e2364557b76e707c59014b5867b7e9e452d8d3ce1897fd73712a0fe6456a4abce73bda15534d07cc4e536f0a98ee3cb616e1796d2d99ad57df93b96b1960c748544a922afa587f27dd67a734e4bae595368a96f56ab10cea7cef5238670715c6eca42cdacb7f0d1a5d9332469722a0ff541c17fa4c8251dc828917967e37e819fa8dff5a9bf8156fc6f101cd51667bceb6ef98ac7d85d441c6f9f0b30d5340074736339ab35690af9f9bc3f7aa279cb3e18c48f1fb422a683e78dba657079ff4a714d8d4ffe474af50bc4a8a93eb06a08b38db3e5faf01351a7ef8c957e9b62307eebbdaebce23981699ac90888359eb24a78fcffbae784ed93edde2e29e3533ba1a591ebe18523ad0a266518c47711d3b9da453c1886e74af6eec4df980a083365621520209e21c885f8643fdde43d1b47186e259164c398502541ffa213601918c7d5b1a7ee9f68db8250dc6978a5ea60c1f59eb528301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c58409e85383cc3a64aca55f9e9189f811696e0dced2a18f14c7e2685c4f25768328317a49aca66e422ec06b58536bc3827743eb046484b39c56e357c0e752349fa31",
+            "id": "20d51ab8898018d4391e8856e9427c21c06a2d0cc29a861b3114a34330245599",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": "E22",
+          "says": "a line closed is named [report, line]",
+          "verdict": "rejected"
+        },
+        "name": "report: a passed-on line closing a line named badly",
+        "tests": "E22"
+      },
+      "from": "core/vectors/agreements-new/invalid.json",
+      "index": 111,
+      "retired_by": {
+        "rule": "E2",
+        "says": [
+          "encoding 3, E2: \"*A report is not one of draft 26's act types (draft 26, §4.3: \"one act type, defined once, in the MICS's report block\"): it is written under the MICS's hash and type, by the MICS's bytes, and this checker answers a report **not this encoding**.*\"",
+          "encoding 3, section 6: \"This text gives a report no bytes, and its checker answers an act under the block's hash **not this encoding** (E2).\"",
+          "draft 26, §4.3: \"A report (§3.1) is one act type, defined once, in the MICS's report block; every layer's tasks use that one type, and this text uses it and gives it no fields of its own.\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.3: \"V 34, 35, 36 (E2 and section 6, part 3): three reports that pass: a report is the MICS's act, **not this encoding**.\" and \"I 103 to 111 (E2, part 3): nine reports rejected under E4, E21, E18, E22: the same.\""
+      }
+    },
+    {
+      "case": {
+        "acts": [
+          {
+            "bytes": "83a6005820037f2c782d0f718483a90ce42823cb56a10d76d8d7ac2639185ee4037b29295e015820f061464ec4350f293f651fb6e97c6327af6e04b6d806122ee85e5dcaecc72f2f025820b3593ddeeaa9d277396b131e2c9a616a7402f7882e39748db3ff0a09b9ce4e7503582041a0a3c9c9bcf41cdc0d35a33b9cf91c4574b56b5872a6df81fbc47faf7784390458187299f1625e3de01ac4640aa1c0d4b018d98681264d2c48660558206a90a0d61522357b2344f74b66ffb66fb69244030b418b5f6c7e4ae517e7e0615901550924f299280b29c245ff1bb2690a048c9849b4e7e92f394d0230988892e7ce32392e894d2f41aeffb397fc963037d9755ab6c831fe7998f70b93d99ebcc7d665ee665af1c1c68ccca94912f01abb503426200c2593221b0dc7ef898c0cfa25d1464bede9c9da832e912e1af1a3cba2a1a9ad4376b0395495e5d9ff2d72cee8abaa650de7d9a36d29cfb1190d3eeb9ae4587249100fb28733c2b0e504f95d645391d7d1fe70cf814497461b3881f0c9528ff2e1d0c6fa50384212b7c5330f5ca81422c7599cb7da0d971c2a9c7ff41f29bc4b6cdeef7fec548cac639b586516e8110b732327e087a94327906a2e33dc75c6bd9e8bbf6ff5730543bad04cfcd9cd520e33066e41f7233505ac0574a557ed73d258ad8262ace3bf22f5aec073eabec06c90f05ada92e2a218d6000b1ad8d00ab3cc33c1e765308fff8a3fa9b90896389a21049ca45ececc69004e127c705fa1a5c0e8df8301582085ac583e74ce55cd55a16f92401629fcd705a1ad5f072453fcd06aaef34aff9c584098eb9ad5e4ee214ef3d64a5a0082420c9007c55c7e433948d4a4f45db8806b20b69571476c8db14219eaa37176a2cb2953628399b52570a51074f69ab454f5f5",
+            "id": "0b968bce2613465136ff5987ddc7ae336e6d4887341eef85739588fe713a3504",
+            "key": null
+          }
+        ],
+        "answer": {
+          "notes": [],
+          "rule": null,
+          "says": "a Terms act of this encoding: its shape, fields and signature pass (the signature verifies with the key the act carries; that the key is its signer's is the identity chain's to show, and is not checked here)",
+          "verdict": "pass"
+        },
+        "name": "terms: no party named as a signer, an author named by role",
+        "tests": "G3.1, G4.1, G4.2; E13"
+      },
+      "from": "core/vectors/agreements-new/valid.json",
+      "index": 7,
+      "retired_by": {
+        "rule": "5.3.1",
+        "says": [
+          "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\""
+        ],
+        "sheet": "docs/code/impact-draft-26.md, section 4.1: \"V 7: Terms with no party named as a signer, an author named by role: **pass** → **invalid**, 5.3.1 (then retired as a passing case).\"",
+        "waiting": "5.3.1 is among the rules the scribe's closing pass (pull request 292) changes: this retirement is to confirm once draft 26 is final, and the case's rewrite as invalid is not written (docs/code/verifier-3-build.md, \"Waiting\")."
+      }
+    }
+  ]
+}

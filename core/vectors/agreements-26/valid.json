@@ -1,0 +1,312 @@
+{
+  "about": "Acts of Agreements draft 26, in the bytes of encoding 3, that the checker must pass. Each case lists the acts handed to the checker, in order (each act's label, id, complete bytes in hex, its content key where it is private and given, and its payload's bytes); the answer is about the last act. Every answer is taken from the texts, quoted in `decides`, never from code: no checker of encoding 3 exists yet. `reading` names what the answer rests on. TEST DATA: every identity, key, cMIP, keeper and clock is a stand-in derived from a label; draft 26 is not final, and its spec hash, which every act carries, will change: the bytes are written again then, the answers stay.",
+  "cases": [
+    {
+      "acts": [
+        {
+          "bytes": "83a60058204cd756a80302279a8bd475ca921fae5a37fac30c5b6ae8e46f15e6f0efd90e350158201939a44f82c8515e1fd01d16d550d2b52c9da40a5adcee5e06baeb63aa664e0f025820bcdeb3260a87ab61db7b4c06d47e057cdfc4d6980d6339b0e8780bad816c055f035820daa26b4ae99b21c58d8282257dcece5c05d669bcc1e600b84c7629adcca998bb0458186187b6d241e2e3743ae1d3a007b313a34efaa80d6e116ea50558206ff91e884e5a090995bb0c5728e39855e9ef1bdc531cde8458c2906fe04dd5d4590123a0c69497fb7a76d38e3b3a072335e0920a8321e4dde7d1bfff15f789aec5db6a68ac789c8344294967c804246e2f0b92c4da89debcd8fd45c700196242465efcecf71820e40148efc6a02a01ceb9c80a18b05d828c05c28cd5a8664dff014f9403d29348f312319ea84a4d1d7b5fa52d58f7bce3b70f436c612b23e758962953f81934c1a31f87c47e6181f6c4c00bb13ed9d77293c25b5edb10894409c2499edd272cf951f0d21cb284b9fb2eed8e7b824c908bbb7ae7cbf5c50e53036227988058c171fbadea0579db02977f91d50d4aacab2fba3ec52076190de3a33c854ac637806e16fda1c3dd8bbb430550e68cabcf2b98d1ed38603cb264b232048fec6bbeeaea0537254c00ef31532d765cf605e3a8eb39b5a17d641e11146d48f6572487bc83015820c225e13d5c2176491320fd393f85a1d1da1d5e68c962aac8cd23404737194cea5840c43d005ad1a8875df7de440f27b893a1c393bfdd6609da81eebd750d286dd54017f1a854995020b9cea798643534df0390ec499f0742f9785e3065ccf0d69249",
+          "id": "ffcad559f944ee9a5fb551991d73f1890e4569700a885e3fb35eef91f2975997",
+          "key": null,
+          "label": "statement/a set in relies_on",
+          "payload": "a50058208358dc123f9e1535f2cd143fcb2dde9b929a329a74d535837b11851fb3a83f500158208358dc123f9e1535f2cd143fcb2dde9b929a329a74d535837b11851fb3a83f50020206815820244e2f8cfda52fa09ab0042d831753aab60e538ad33d1a9fd32820e6b0a3022708815820c9650f9e5f88919226e104e3a926cd6cf1b6f29ca23d75dbbfdfd2ec294f3dd6"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, \"The set of acts\": \"*The checker cannot tell a set's value from an act id by its bytes: where one stands in a field that holds act ids (an entry of `relies_on`, say), it is read as an act id, which no act held has.*\"",
+        "encoding 3, section 7: \"A checker handed several acts reads them as the acts a verifier holds. It reads two things among them: what `previous` names (E23), and what `body` names (E25).\" One act is handed here, so neither is read."
+      ],
+      "line": "83",
+      "name": "statement: an entry of relies_on holding a set's value (of the root and its words), nothing else held: read as an act id, which no act held has",
+      "reading": [
+        "the lead's note of 27 November, row C36, C45, F14: \"No grammar field holds a set's value for now; a cMIP's parameters may.\" The lead's reading, resting on the ledger's \"One way to name a set of acts\"",
+        "the set's value computed as the builder computes it (items 1 to 3); the answer does not depend on its bytes",
+        "taken by the codemeister, to check: encoding 3, section 11, item 4"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258208030addcc61d1ff6ffb77deb266a8aca31cd23f90d9dd6ac8cdd837022dfcf54035820f54a1b7e599cdc44183324675bbf64af9611668ed97ca0b5ce85c7ddfafefd60045818ef76ddf1383e8baf0dbb04abd15a8d4659c837e290fc7a170558201965a3420206de1ca98b950cc44fdca7fd009fca9732e345b5949025302cc6c959012af84ef10010eed12ddd73d0ccb0371350718dcff45c4b9272ab7a0b45154a7679c2bc658b41bf076b25b4fa6996d5ab49968c901a66ddd5f375985fa0b1d88eb5c80538d70beeade826fb47a32d37d64dd7a82a8c5138a932a0641074230cb15dbaa6f1331429910a73f6c60cabd7093d658535001390acef374ab8fd9aa1103e99409bb3da44ee018da4cb13f173c5f2856090bfe7d9ef19d42043bf215b349f38b3318799a4dc6123f7364c6316f6664ba9b5a4ddb0897c750d6e02930cb7c4a1f1eb759ad6d7baf462a8165f061c33fd477acfba16d29b1a49ecc162e8a3108e60e40a0932b683f9401ea45278d1ac2f180276decc0fc92d331c55337bec77d0e5c07b14b56b4ab7a6f9d132ba420c531c6b808d0e745992774daf9daf7a12107d701300a0a9ec461b83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584039ebce4273343afb2abcd231f2b22b8467ca63d596ed234122673708cee75aca87b33bc5bc71112c85a4e9c79cc444e5a89ee18235f2660248abf6549ee3d379",
+          "id": "ff0b0c34fe332a906d1ba23e4779834bd4f857882405814fafe222b9bd6ebff5",
+          "key": null,
+          "label": "terms/one keeper",
+          "payload": "a5028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6038100048258204ac20817c9052447142658af382584b58c70d2875ed6323734ec0db072aea3498258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f60881582054bf12204ac8f622e0b28d5cbb7323a00e411d23b6cbe3cf16f2ae29a69a02371380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, section 4, key 8, reading (i): \"keeper = [+ hash]              ; one keeper is a list of one\""
+      ],
+      "line": "85 (1 of 7)",
+      "name": "terms: one keeper, written as a list of one",
+      "reading": [
+        "the lead's note of 27 November (docs/lead/notes/2026-11-27-draft-26-readings.md), row C8, C35, C34: \"One form, always a list, sorted, each once; key 9 (the clock) kept, 32 bytes.\" The lead's reading, resting on the ledger's \"More than one place\" and \"Ana's month ends by the clock\"",
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820d665c4be38930dc5ffc108d21adbd359792573be2d9515102d6e6c8253682bb6035820778d041b06adf160442ac08a05494141f0814ab6287cc3a2c08f71bd387462570458181382ce014ce86d48647f1cb23a939182e11bfc101de4c99105582051ce4fd4249e826fd004c083ee0fe75549f164d6daa3d84a4cfc6b3ce78564a559014c8bfba14db113fc1ff24d090c40db7a67c07f3d8e5284aacd8520b6e172c47a0178b1b14c676b6fafd435db39faecec4b778cc9f51bd16d45752027261f0fe6f35acbd493c94c9819cb46b704d6b93960b8cdb953f0872fa0ba0873b9bfa7e5d4747846de2120056200641c1ee5b4166838b11fc4cb38bf18506f294b01f5dc41eaf9f38bad3ee30308e5b82214680a04c2c3a632ecc6358963ee265c644af73538c287b75b95b37278ed894b5c07e7484a9d99e222f0c3ddeda06a52cd890ae5f85012b29c4d1893669397129aecee61ca17f6d1610dbcd8c480427982b058f48dc4716d346f80119fe1a83a578936cb1ba0fd5d5a05f1ed5082eaf1dfc8923ce1a5c01e6ffcc4a34a67b8133617e6fcb25fa91d8f71b1a6b7cb6d12f613e98f3bc2e5e25992fae49f6c6214fed72efe18d5a7c41744a1b163e5aa256e4c59cb0dc6b3bab06df5a2cf0824e783015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840c430d5941ea8268089151d0bcada1e8a002b6c984dc1e36fb5bf90d53dbf06233133002d46c572c2b4c8de3c430e8a1ff2be1771cbd4a766ad498699db3f9321",
+          "id": "45674d88bb632d4161db6ef8975dad6c46fa930b7d11088ccdda2f6f15f2c67c",
+          "key": null,
+          "label": "terms/two keepers",
+          "payload": "a5028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820e5d2e13348b1f1e983d2d770e5b8bfa00341594ccd1afdba71fe4f3387aefd048258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f60882582054bf12204ac8f622e0b28d5cbb7323a00e411d23b6cbe3cf16f2ae29a69a02375820d58d9cb05375bcfe19ab97d6d835e9196bfa29f98a7852027264bc9fbca344401380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, section 4, key 8, reading (i): \"keeper = [+ hash]              ; one keeper is a list of one\"",
+        "encoding 3, E18: \"**Sets are sorted.** ... their entries are in the bytewise lexicographic order of their deterministic encodings\""
+      ],
+      "line": "85 (3 of 7)",
+      "name": "terms: two keepers, in the bytewise order of their encodings",
+      "reading": [
+        "the lead's note of 27 November (docs/lead/notes/2026-11-27-draft-26-readings.md), row C8, C35, C34: \"One form, always a list, sorted, each once; key 9 (the clock) kept, 32 bytes.\" The lead's reading, resting on the ledger's \"More than one place\" and \"Ana's month ends by the clock\"",
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c702582056b20dfb17144beebc6124a4e5c294e39f15abd188a2e6af26ee26835b20916e035820e388f599f5a4559e8c88f26f46f7fa64c2cb36c029a2e5a5a14b465637b4256a0458185fc16038dd5736096a1841e4fb2e95564760d096abc97cd5055820796383e2beb0a54ebe41aaf6637206a112666700d09b8393fa8b3ec5b13988265901936a5f2fc3d8f0b4e81a2272941606f906a4b68ab65a7088d53ac5f491dafc1c108515328aa4531efa11a173147d1a6ea95e34a4973f0a15020c24cdb169f19ea867f29f6b3c66ef6f7442e0f83a3b01683433601c628c8981593549b8312457b83f6a1fd9f24b61a42ec14517657af12d77d69a1f2f31f9d72adcfd100258d2c27b13a47e21273ebf7d2b7d8cb478c74d6849d82375f02ccdbb8270c398e38a0b84087e9892aedc4ffc6417deebb38735e89f4787419c6a4ebae52f348201c025eb819b9a3f1c09d4571b80a59eba274c302718b81a0ce7cff0fc3ca73f7694519278523637533305a23e434d3e391341f441ebdae36c7822ef2f8df7c75eb30d260d942f5479784b548a9c889c8f418d2a0a4801f3c4dc67909231b080f406f296930a34a0fbaf723865c36926d84792a67421495882418ebf2cfd4f0e6af5577c8e8d4e5ed4faa9071e3695d1f9083ade6406d0c3347908737a8ab227f59b216393831fffcff89193aa041e0a2e0bc49502dee4cedb46a49dfa7f4d3a0a2057dfb253f6c44016325520c2c43af222402c150283015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958408fcb383f2421d2a1fbb7268405c7527082657c9e196f45405189a3196e5ec0c7bfa3807254c1e6f6b65c01b31a69d7772d2612cd08b2ef68d8429e1b94783476",
+          "id": "dd706f292c91e87349365e7639d517b1d986c628d71a08800604e32e8cffd8cb",
+          "key": null,
+          "label": "terms/update with in_force",
+          "payload": "a70058208358dc123f9e1535f2cd143fcb2dde9b929a329a74d535837b11851fb3a83f500158208358dc123f9e1535f2cd143fcb2dde9b929a329a74d535837b11851fb3a83f50028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd60381000482582059d3517da2a76a20c44a2bea1ca3dc58672509e8ec8de6a9a255a95656ab22668258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f606825820e47337c07faf8267349fe5700b6d2695a4a690917c532dd6dcbe14a4c14230f1f6138158208358dc123f9e1535f2cd143fcb2dde9b929a329a74d535837b11851fb3a83f50"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [
+          "5.2.3"
+        ],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, section 4, \"Notes the checker gives\": \"`in_force` in a Terms act that carries `replaces`, its answer on coming into force left unread, still read for who fills a role (5.2.3, 5.4.2)\"",
+        "draft 26, 5.2.3: \"and the answer of `in_force` on coming into force, in a Terms act that carries `replaces` (5.4.2, §5.5). A verifier says of each that it left it unread.\""
+      ],
+      "line": "87",
+      "name": "terms: an update carrying in_force: its answer on coming into force left unread",
+      "reading": [
+        "the text alone: no choice is needed",
+        "the note named 5.2.3, as encoding 3's list of notes cites it first; draft 26's 5.4.2 also points to 5.5.1, which the scribe's closing pass changes (a question in the build log)"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820e7861be96a2ef2eca64bfe72097f6360c6706cb4a29b348d7cbe5c0ebae064210358207143e6dc278df921846093d76a77f6cc918716e0bf3d5d75eef73bff833193b504581855834af6c06113a50d2121eb3ee0dbc94fe4c6ac2541ac33055820fca202fe2ea0ad930e4465d0cf9fac340f05be17963fb5fbad3958ad1f97b66358b934412b905ad0105837fc3a6885b7e525cfccfe92d783b65dfb01ce032ec92bd4e70244e179ce37fe9ed6422c1838ccac9bb2bd28c125d5540c85b3a128654d7cdc069195e8302dd88dc54610029e70d112940b5903998664f7f13305dde42592cdcb702d3ccf4c36640c7b0477b9bc6b4b8223bc7871e9a0a98a92508080f795250bc22d39ccc3b44bf1954f9b5e61af18a525dcfc0e3910f9bdec2c7d702f546cc2936ff79129e8bf761243ea02d2f35de5ea44df292e074383015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958403cc0fdfba99fb127b9448586851952cf19f6762b0c588a46d4236f1ad10427e52855e65f46309f58611dd42b19ab20ac6e06b2936fdb5deb2f6d9d1fa76deaff",
+          "id": "4f8da38240d1dcd0a714fe60851ade0bb4464bbe1883f1c00d7e7d29cff6eccf",
+          "key": null,
+          "label": "words/held, another",
+          "payload": "a100782254686520776f726473206f662068656c642c20616e6f74686572202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820111bde34a773384dd3a42b28de56fe2dbbd9532d81a9b44be80b4a123456e296035820e615a36ce7c4d1015352cb8588563575af7a35716fb085e0b0fd6f9035073e2b04581878a04933acc1f697412dea4889e093256398660eaa28712e055820b2aab19919d07f04812cde4e7a75ecfa8690d8f7c649abfbdc504ac5694dbeb859010744a6218582a53abb7ba748a14e48d9eb9b1a74703cf44a3db8af3fa885730f7a2651e6ec5c4a7a1c20e9e47d4e5467b27d047f80051825d7b7bd5229516aa0c16195929e372679a18631752cdd350b8635ceceb0d5156da63cc039d06d7b15b364aea31c99735623eb2797f13be7a5adaad5630c17a13b86faae18fb6e556c2753b6415027225141b4fa4629382791639b198236e93496b0e30d9f2dba1d8da36984435a9eab8be356d82ef03e9443511b6e5950ae47d5a88d3b0226071430d996cb633145553d3b3094b8a305957dccf0d42e8ed1194fec2af81544a8696630608a52af1743355bd890fd04e7f881b3a996e701723bbc6e82ff8eabb69a269880e9fbdd5fa69583015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840c552349ed5eff08cec38109cbab7e7f2d53dd17e1a832a1aa32eb29965af5388269cc3ba6964bdd6ff3146e4e19daf84385d72710ec2cf95b6a0e4f25bf1fcaa",
+          "id": "ec50483083b4d078b9654d336b4f8b8b710275324a962419927bbe01688b258f",
+          "key": null,
+          "label": "terms/words not held",
+          "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6038100048258202980d2eaa5f7f18aaeda45df78b8f2683a1f76f2a4fd764b52ea00b6836cb5ec8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [
+          "5.2.2"
+        ],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, E25: \"Where the act it names is **not held**, the Terms are not invalid. **Open**, as for the act that cannot be opened: a note (unchecked) or nothing (not read).\"",
+        "draft 26, §3.6: \"**Unchecked**: the verifier lacks something it needs to apply a grammar rule: a cMIP the Terms name, or an act named in a field that it does not hold. A missing act never becomes a yes, and never a no.\""
+      ],
+      "line": "91",
+      "name": "held: Terms, with another Text act held but not the one body names: not invalid, a note (the words unchecked)",
+      "reading": [
+        "the lead's note of 27 November, row C16, F11: \"Unchecked, with a note of what is lacking; several acts checked together, the note names each.\" The lead's reading, resting on the ledger's \"Missing act is always I don't know\" (27 November, \"Knots are knots\")",
+        "the note named 5.2.2, the rule whose test the words act would need, as E23's note is named 5.7.1: taken by the codemeister, to check (encoding 3 names no rule for E25's note)",
+        "taken by the codemeister, to check: encoding 3, section 11, item 9"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820ed6b6d8f7c7107a749f884dc1eaa90c1a7fa651b714f24dda4a46ff78cb2a0ab03582077a26924a01ce659558044d6e145424a0cade1517a974f897db72522a3465f11045818525d682b55877a9bc08f1a28c261c247e5cfda8e69da7591055820e0ccf6be7f2ddc70a950f05d6195a130861ec5c62f5d66feba698c315d5d4a3058b8da515e7771ff1120ea7a96da2a0c4a9821f52fd7120651152f52e2735d74f7924887b2344faecbbecbbb568b1fdacbe92f2d9d4aa0332fe09390c50353366e9e3eca10cd9c41478616b05708a8d872b2e98af8502f74ef44403783fe4c344aec4b6b86dcc96514aa5e4ac005c68b6acc5deb492b25663a5c351e16a6252b7065d2b55c5128d3bca7bcf3b539f9570f26f942e63d7f8ebab625339874f4a16ac36ed77509c743b139509e19f470f417e342327c81ee5fa1b783015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840a713a5f311cc0c3b6e503cd352f1449d9e18e3ef97e0af140ffcec7498cd95ac0c1af490894429cdf8e2a476e4ff6f6505719f7d8092a43ef0779a21bfd9725e",
+          "id": "a1fa03dce3f063a005559d55dc31c0eac19c38b22bbb84516fe126fd1f91a78c",
+          "key": null,
+          "label": "words/held, public",
+          "payload": "a100782154686520776f726473206f662068656c642c207075626c6963202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820b15b77f93177cec2b29d3c2733cbee2b0cec04b0252fff3a33c0bec4236b50c3035820bf2f26c95977ce5c6e300aaa6ab9ee9fa0745846b3815f28ab0988e2e32711c7045818b1822579f055ac666b168c6fa93bd528fada971fb038581505582032c94502b2b7a23c21499e34aff0345e63019663dca3289261c0791eac015d9c5901072608cf48ee332842c340b298eff79e4c993c912a1fb14d1893c8660b8bb8c1f4023a42f42b181cda6e700d52ac21db7abafdeb9f49b4770cb01b91238deb3c569c995a5ecab2530e7ac3c00b8bfcb58eafb1e89848ba0d769d438ebf53ecd152a536c1cb8a51bca3ecf4e395fdabf3898298779a5513e3638e34e57ac8c8d739474ce2793d1062fc69abea0c0673fa99b16b89b47ec832dbed97c2a6ad9d485224b7227cf81960810c636fc81c473f6c84acdc8f7f5212c205596a835fc273a5407f08776cb8fdbc597b4ba24703a581437c826c5b209e7d6da3c2992e564ae452c83b913f4716670b462ff1ea7b6aa23ddf42ae9a723f227ba6a81463e81f1b22d3cf3ded850b83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958404671d7c92939f5f56e92d8aa92f0c74bb871153a224585a0e2c228a63766630bbaa13e91143687c2ee24915261816dc2eee68a76460ee8085164f56071508493",
+          "id": "a4d59df6a611e41dcf523651498729062fe62935729bc18bc742b80247bbea4a",
+          "key": null,
+          "label": "terms/words held",
+          "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd603810004825820a1fa03dce3f063a005559d55dc31c0eac19c38b22bbb84516fe126fd1f91a78c8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, E25: \"Where the act it names is held, opens, and is a **Text act**, nothing is found.\"",
+        "encoding 3, E25: \"A Text act is an act under Text's spec hash, `TEXT`, of type 0, whose payload is as Text's Part three gives it (Text, rule 14 and \"Text act (type 0)\").\""
+      ],
+      "line": "92",
+      "name": "held: Terms, with the Text act their body names held and public",
+      "reading": [
+        "the text alone: no choice is needed",
+        "the Text act under Text draft 11's spec hash, in every reading of item 10"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a5005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820f8279f10fa32fa39e3fa132da9ae60b894850636d3809f4bfd439a3e69e5ba8c035820949d9b954c0240a22f0b579157fe51d31eb18484b45d9810244a097ec75d6eef045818ce8fa5f78e09c65b61ab6cf1fd4753d8bd793c7a47d5aad158ab43cc6b8c0d8b6d3fa00230363d2a3e287f242f3ccabc84dbd1c088a4ba05b9ca4210aa79f9f9e818da729c15588b93f914af00923f945e9a2d2e81d280aca5237ab91acbb44f2a5ac141d73189ab1e7aeeeb7994c8764a804509fb3ab7dca7d5334001976dcbe8a39a6ee41d2ed93d14c01d0cdc88fce15db438247c2c8328c72e68c369c8c6d2775b368f6d6ec8093c3d7487253585ae394f8047589ca339e3eba0d0af59befef513fd1b83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c59584077fb819ef4cff72afa346860c342b4b210338716e58cea3425b8c77b7fd0ae9cfa0e08b475d2d633190640ac38a6cc192aba1b80593aeb6a0930c218eff506b6",
+          "id": "4673cc45414bdf75d60157b742e16b19fe6c885dd73456ff11e13715d1342dbc",
+          "key": null,
+          "label": "words/private",
+          "payload": "a100755072697661746520776f726473202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258204f16d768857ba961ad76357366a1f9bd5836f2da74c4b8e84c87bc7185962f5f035820f6d54088e8f5e5573921be209cfb8de769e09e0e6f37f97b6a811b77f5d9fe4a045818cbb8da4aef97e7e63ac8e8ee7602853789230cd288a837cb0558207ca52ecee180a9688fa67761d7ba5f26185500b928950bc0aaa6bfb6ea45f55a590107d634a5bd684748ccbe829457933d47ed0e82ea55450998878c9938b98b7f7e016cbc133907da0da7bd4420c4b9f3df8192b096f04bcebe004758fc5bce8c5c1e412783e4070a8d2c208b11c76872f16758f369571180a1a7881d78d53234b17055db6b852ddb42fa0907c5570432855883e5a758fd019bda692dad56c2edf2af1df3fea6d282d89c8b92d885d3c562747c32f97a4e3de6efe45db309d224d7e35c37005fa54a079add2e286b0d97c5c07dfd9d6c068bc237bd793bb8b0f6449d82b3b2ad03b35ac633fba47e16d9c07669dbf23b21f7d0cb5eca04d719790c53243e4bd27ad62a123963fc7f24ec4ccee3772d8626e3820c46fccfec84e478ab6101121024649183015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958405022bcb8d18334bf327e4f99306bca148f5a64466ba9007cc7e553ae3436a17c09c22a7631c6b0cabae5573f765d92ca0ef2382b56373bb8ce510447b6a9975a",
+          "id": "866a838f8f1c9894e8b215c1ad86ae82ae760d700a679eb29e09a41b9831e018",
+          "key": null,
+          "label": "terms/words private",
+          "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6038100048258204673cc45414bdf75d60157b742e16b19fe6c885dd73456ff11e13715d1342dbc8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [
+          "5.2.2"
+        ],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, E25: \"Where it is held and **cannot be opened** (a private Text act, held without its key), what it is cannot be read, and the Terms are **not invalid** (§3.6: \"If an act the verifier does not hold could change the answer, the answer is never invalid\").\"",
+        "draft 26, §3.6: \"**Unchecked**: the verifier lacks something it needs to apply a grammar rule: a cMIP the Terms name, or an act named in a field that it does not hold. A missing act never becomes a yes, and never a no.\""
+      ],
+      "line": "95",
+      "name": "held: Terms whose body names a private Text act held without its key: not invalid, a note (the words unchecked)",
+      "reading": [
+        "the lead's note of 27 November, row C16, F11: \"Unchecked, with a note of what is lacking; several acts checked together, the note names each.\" The lead's reading, resting on the ledger's \"Missing act is always I don't know\" (27 November, \"Knots are knots\")",
+        "the note named 5.2.2, the rule whose test the words act would need, as E23's note is named 5.7.1: taken by the codemeister, to check (encoding 3 names no rule for E25's note)",
+        "taken by the codemeister, to check: encoding 3, section 11, item 9"
+      ]
+    },
+    {
+      "acts": [
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c7025820d35be2ab2bb6e520f5067dc772140654a09b7ea68214ed302e13f1e96a1fb945035820cadbe3a9dc66270c6b45c2263fb73d4df744121d0187d743739d1c3adebb344d045818c3903046528f0173a20068899179ed9619592ab9587a5343055820ceeff96128fd1d1f40b5a1ec5682aea45fa775c0185b48bea52281625989cda258b8704fa7a33533c945fc5e29100598026a19aa211bf2459e64150978d67e6aa7d5d2449edcaea9045e190cb94dd0d1d0658c1f289a5b1ae0983668540beb61b2b8a3cab12b23d96dbc6a6cad5454d4b764258f270753f81104d12db8d387e084bfe5dd2fbe9bb65e51ba38e83b6d4b805d3b033444d6e7c8d37c4c907618f65efda0a189c047cd037626b4275cb6357ce3f2c306fbf347ddec886830b03ed34728d6f1618ef3f9c7b871ded6565ceb5e91e78bce44c165bbfc83015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c5958401ed628002fdc8dccf7738f1963fefb4229f0091794e475187d43f7b15db01f398d11296bcfc02a184925daa75c27a9124c74ea8b46986351261267ebc7e8519f",
+          "id": "4259c74773ab3abbca7aa895f92bfd5ee6afaac5c977c5f60d9510074afdcd4b",
+          "key": null,
+          "label": "words/Text draft 10",
+          "payload": "a1007821576f72647320756e6465722054657874206472616674203130202874657374292e"
+        },
+        {
+          "bytes": "83a6005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6015820e663151e6eda315b5cf9d23068292ce0e5edbe88397129ac9f18a90613adc5c70258202b34172a0c4386b26fec2fc65cb446fb7c95abd034f90a12028af2dc72344035035820b42f9e5a8df9bbb5e5bd31d41e78a959002e7cb076544a629ab1d13e3670661d045818e6a6f035e26de7c01896f85b67cbe41be35edda39e67dbb50558205ed00e663558b0a860b6e70a1897fc4b3adfd7f42e3968c910f54acdf7407658590107cb439314c442f5122418b51ba964534a0df07f1fc60e267873cf3ca58b56fba61bbf3ebd4c0b1f7594fa0db53c8f020b22853f3a6256f7325d69531bdda65a6d956054b419e9f89372cf743ec757a9d3b95d8c42b223c8926af6138218dee2dc67870b083966d632ad2e99debef8283b2c9a990ce4b1a61740ccbd5aca4660d6ed98f84ec81b0f71579cddfc672bd8cc4c23dcd4b9f8b0f16fc261b51a78bec91b5cb895c8c7e75a4db4680787a8e57e763820e5253c40bc90efbc4ff50a0a80ec500a46bbc3c45cbc8ffbb75d52d3331cc0f77e3a01e894768015765d954cfc0cc8c130a392f355e7fdc48d941f042d65db13d38ff18bda6312b14c2803e6bafdfb0494acac6883015820791f8bdf5d5c62bef3e864a302e45543ce8fcf23ae273ca43afde97ae9d62c595840876f153014a26634f3e72254da26d745ae7837dd2aef8ea2834908e5a1d23fd810842014676adc92dae5f854845018905a316b61f0997f2a9f976100f61fe399",
+          "id": "dbf2d8f363542c3e4f2d6d1494460171a6f43abf6c14db948cd704a2adaa48a4",
+          "key": null,
+          "label": "terms/words Text draft 10",
+          "payload": "a4028182005820978eda148c7103bb6d644ee999f30a64e5d65685929ae86276704b4acf8b1fd6038100048258204259c74773ab3abbca7aa895f92bfd5ee6afaac5c977c5f60d9510074afdcd4b8258205aaf85eec2c3bf367773f3e4f353e1f0a07cc7f589074e0c00e43913316f1160f61380"
+        }
+      ],
+      "answer": {
+        "invalid": [],
+        "notes": [],
+        "rule": null,
+        "verdict": "pass"
+      },
+      "decides": [
+        "encoding 3, E25: \"**Open**: which spec hashes are `TEXT`: Text draft 11's alone (draft 26, §2, names \"Text, draft 11\"), or any draft of Text. An act under an earlier Text draft's spec hash is a Text act under the second reading, and not one under the first.\"",
+        "encoding 3, E25: \"Where the act it names is held, opens, and is a **Text act**, nothing is found.\""
+      ],
+      "line": "97",
+      "name": "held: Terms whose body names a Text act made under an earlier Text draft's spec hash (Text draft 10)",
+      "reading": [
+        "the lead's note of 27 November, row C33, F15: \"Every Text draft, listed in encoding 3; after the Development change, the words act is named by id and the list goes.\" The lead's reading",
+        "taken by the codemeister, to check: encoding 3, section 11, item 10"
+      ]
+    }
+  ],
+  "spec": {
+    "draft_26": "04bae25cb3416e111e1f65ddca2c99c5769d3945c0751a6846621929c0d29904",
+    "draft_26_file": "docs/agreements-from-scratch/draft-26.md",
+    "draft_26_is_final": false,
+    "not_this_encoding": {
+      "draft_25": "dd90f8af2aa7694b6f5b9924505ad71077e0be7bf578caa007446442ce263b2c",
+      "report_block_4": "7b65c60f7a41d380b017913f1ed5474bf516fdee0cde5035c383c71d8e3d7854"
+    },
+    "set_label": "MOR/act-set",
+    "set_reading": [
+      "taken by the codemeister, to check: encoding 3, section 11, item 1",
+      "taken by the codemeister, to check: encoding 3, section 11, item 2",
+      "taken by the codemeister, to check: encoding 3, section 11, item 3"
+    ],
+    "text": [
+      {
+        "draft": "Text draft 6",
+        "file": "spec/MIR-text-draft-6.md",
+        "spec": "386b80427f227e970946c4fa1b2c6286adc9e2aa8f8f4ebd34427bf030aa6765"
+      },
+      {
+        "draft": "Text draft 7",
+        "file": "spec/MIR-text-draft-7.md",
+        "spec": "c2e3e83e7c6145a3b30f2e8be49b61c4bc8a25ba49f69a9f9e378af321a53179"
+      },
+      {
+        "draft": "Text draft 8",
+        "file": "spec/MIR-text-draft-8.md",
+        "spec": "e03180b4117af068aac8733335ac2dd908d01e731184da0df2020ea522de093a"
+      },
+      {
+        "draft": "Text draft 9",
+        "file": "spec/MIR-text-draft-9.md",
+        "spec": "12de8b8e60aa3b058c48f977759e3a946302a53db3730b90beff3a2fbece8989"
+      },
+      {
+        "draft": "Text draft 10",
+        "file": "spec/MIR-text-draft-10.md",
+        "spec": "20f0289ac20c43163097518db30fbdb544a70e8df62e9abc220543a6dd5d02af"
+      },
+      {
+        "draft": "Text draft 11",
+        "file": "spec/MIR-text-draft-11.md",
+        "spec": "7835d789f6e9cbb3a089620deea1ca73c591617a10a414bc47bb58ed9063b478"
+      }
+    ],
+    "text_reading": "taken by the codemeister, to check: encoding 3, section 11, item 10",
+    "types": {
+      "statement": 1,
+      "terms": 0
+    }
+  }
+}

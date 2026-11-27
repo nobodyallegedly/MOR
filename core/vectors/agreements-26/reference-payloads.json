@@ -1,0 +1,167 @@
+{
+  "about": "Eight reference payloads, for comparing a stranger's encoder with this one: each payload's deterministic CBOR bytes, before signing, without the act around it, and their plain SHA-256. Every fingerprint is the SHA-256 of the ASCII label given (test:ana and so on). TEST DATA. Encoding 3 does not let X4 be written (see `left_out`). A Terms act carries draft 26's spec hash in its inside, not in its payload, so these bytes do not change when draft 26 does.",
+  "labels": [
+    {
+      "label": "test:ana",
+      "sha256": "3d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e132"
+    },
+    {
+      "label": "test:words-1",
+      "sha256": "a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e5072355"
+    },
+    {
+      "label": "test:cmip-in-force",
+      "sha256": "8959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143db"
+    },
+    {
+      "label": "test:keeper-1",
+      "sha256": "dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea"
+    },
+    {
+      "label": "test:keeper-2",
+      "sha256": "92ebad837b7f32a9340656a4e50ba9f99bffc66b3e9d8965783d5f75fb764f7a"
+    },
+    {
+      "label": "test:clock-1",
+      "sha256": "29a0ee8ffc8db695aee7a634619729b862e9167a033b9b6d124f6b73307d5407"
+    },
+    {
+      "label": "test:terms-v1",
+      "sha256": "93a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d"
+    },
+    {
+      "label": "test:act-a",
+      "sha256": "4a9bdede559a76c94491ed7ed98fe66960f464ec3d18f24471210fb22bcd5508"
+    },
+    {
+      "label": "test:act-b",
+      "sha256": "fd3306414e40e85d223e78b2e257bf64837836015e86c640795d01e6fabf7cc8"
+    },
+    {
+      "label": "test:payment-1",
+      "sha256": "6fb6ebacf4363433dfeb08160a0fc660556cdd7ab0bc0443a40a8d6055034e75"
+    }
+  ],
+  "left_out": [
+    {
+      "about": "as X1, with a second party: a role named `buyer`",
+      "name": "X4",
+      "why": "encoding 3, E10, \"How a role is named\": \"by its position in `parties` (E13, E12). A role carries no label.\" A role has no name to write `buyer` in. Its sort, its `what` and its spot socket are not given either (E10), and Terms naming a role and no `in_force` are invalid (5.4.2)."
+    }
+  ],
+  "payloads": [
+    {
+      "about": "first Terms: one party, a signer, test:ana; its authors, that party; the words, act test:words-1; one socket naming cMIP test:cmip-in-force, no parameters (null); one keeper, test:keeper-1; previous []",
+      "name": "X1",
+      "notes": [
+        "the one socket is the body's (key 4: [words, [cmip, null]]): E8 asks every body for a socket, and X1 gives one socket only. Read as key 6 (in_force), as the cMIP's name suggests, X1 cannot be written: its body would lack its socket. The codemeister's reading of the example, to check"
+      ],
+      "payload": "a50281820058203d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e13203810004825820a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e50723558258208959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143dbf608815820dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea1380",
+      "payload_sha256": "298b492fe4cb1a213cc6edb12a43157733cff901b5bf6a2635c2a2db807ea269",
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ],
+      "type": 0
+    },
+    {
+      "about": "as X1, with two keepers, test:keeper-2 then test:keeper-1 as the writer gives them: written sorted",
+      "name": "X2",
+      "notes": [
+        "the one socket is the body's (key 4: [words, [cmip, null]]): E8 asks every body for a socket, and X1 gives one socket only. Read as key 6 (in_force), as the cMIP's name suggests, X1 cannot be written: its body would lack its socket. The codemeister's reading of the example, to check",
+        "test:keeper-2 sorts first: the writer's order is the sorted order, so this example does not tell a sorted list from the writer's order"
+      ],
+      "payload": "a50281820058203d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e13203810004825820a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e50723558258208959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143dbf60882582092ebad837b7f32a9340656a4e50ba9f99bffc66b3e9d8965783d5f75fb764f7a5820dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea1380",
+      "payload_sha256": "abdc664db069d4d94a5ba5f6adb77a04074471174b5e90606c9c7ed29cfc3161",
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ],
+      "type": 0
+    },
+    {
+      "about": "as X1, with a clock, test:clock-1 (key 9, 32 bytes)",
+      "name": "X3",
+      "notes": [
+        "the one socket is the body's (key 4: [words, [cmip, null]]): E8 asks every body for a socket, and X1 gives one socket only. Read as key 6 (in_force), as the cMIP's name suggests, X1 cannot be written: its body would lack its socket. The codemeister's reading of the example, to check"
+      ],
+      "payload": "a60281820058203d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e13203810004825820a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e50723558258208959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143dbf608815820dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea09582029a0ee8ffc8db695aee7a634619729b862e9167a033b9b6d124f6b73307d54071380",
+      "payload_sha256": "e58568c2cf66499dbe8bc2389aa8f63dbef587dce5310401be5899811c15ad7f",
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7",
+        "taken by the codemeister, to check: encoding 3, section 11, item 8"
+      ],
+      "type": 0
+    },
+    {
+      "about": "an update of X1, naming act test:terms-v1 as the version it replaces, otherwise as X1: agreement test:terms-v1 (X1 is the first Terms, the root); previous [test:terms-v1] (the author's next act within the agreement names the Terms act she made, E17)",
+      "name": "X5",
+      "notes": [
+        "the one socket is the body's (key 4: [words, [cmip, null]]): E8 asks every body for a socket, and X1 gives one socket only. Read as key 6 (in_force), as the cMIP's name suggests, X1 cannot be written: its body would lack its socket. The codemeister's reading of the example, to check",
+        "agreement and previous are not given by the example: read so, the codemeister's reading, to check (if Ana made another act within the agreement between them, previous names that one)"
+      ],
+      "payload": "a700582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d01582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d0281820058203d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e13203810004825820a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e50723558258208959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143dbf608815820dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea1381582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d",
+      "payload_sha256": "72fc3929e0249f2c45f04792a4d32a98a2e81888b62409a545659eb302d80062",
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ],
+      "type": 0
+    },
+    {
+      "about": "a Statement assenting to Terms test:terms-v1, signed by their author: agreement test:terms-v1 (the root), previous [test:terms-v1]",
+      "name": "X6 (an author's assent)",
+      "notes": [
+        "the signer is not given by the example: written twice, by the Terms' author (previous names the Terms act) and by a party with no act in the agreement yet (previous [])"
+      ],
+      "payload": "a400582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d01582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d02000681582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d",
+      "payload_sha256": "097b40ddbbb01fd3bb1a12d274ef6402c9df726108467a3abd02a6c61927142c",
+      "reading": [],
+      "type": 1
+    },
+    {
+      "about": "a Statement assenting to Terms test:terms-v1, by a party with no act in the agreement yet: agreement test:terms-v1 (the root), previous []",
+      "name": "X6 (a party's first act)",
+      "notes": [],
+      "payload": "a400582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d01582093a187d18862197d32ff250984369eca0f0019674be35a9d5aa10ad9d78d3b3d02000680",
+      "payload_sha256": "575766cd5d9bb4fd7830359974f4e0c4158b567004305c5ff341f878a0bcd9ea",
+      "reading": [],
+      "type": 1
+    },
+    {
+      "about": "as X1, relying on act test:payment-1 (key 5)",
+      "name": "X8",
+      "notes": [
+        "the one socket is the body's (key 4: [words, [cmip, null]]): E8 asks every body for a socket, and X1 gives one socket only. Read as key 6 (in_force), as the cMIP's name suggests, X1 cannot be written: its body would lack its socket. The codemeister's reading of the example, to check"
+      ],
+      "payload": "a60281820058203d300919d311bae5a1e004bf3f372b510282a66189d429d57e25da77c540e13203810004825820a73c9fc38d0b7df75dbc6d786546fb3013845c1daaf6c16c635e4b16e50723558258208959f782a237b24f0c2318e271ee459c897491c383a898ac43b3283efff143dbf6058158206fb6ebacf4363433dfeb08160a0fc660556cdd7ab0bc0443a40a8d6055034e7508815820dddac84b6e1ab73233013f9d6a6f186e55f6f417de200ddc7574aab756293cea1380",
+      "payload_sha256": "556e66b0bbfdde7ea6bb13776f7f0234596591fbf4a7acb1dbde3b01c78f97a5",
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 5",
+        "taken by the codemeister, to check: encoding 3, section 11, item 6",
+        "taken by the codemeister, to check: encoding 3, section 11, item 7"
+      ],
+      "type": 0
+    },
+    {
+      "about": "the set of the acts test:act-a and test:act-b, and the empty set: their values (no payload: a set's value is no field's, encoding 3, section 11, item 4)",
+      "name": "X7",
+      "notes": [],
+      "reading": [
+        "taken by the codemeister, to check: encoding 3, section 11, item 1",
+        "taken by the codemeister, to check: encoding 3, section 11, item 2",
+        "taken by the codemeister, to check: encoding 3, section 11, item 3",
+        "taken by the codemeister, to check: encoding 3, section 11, item 4"
+      ],
+      "set_ab": "50f2e61a39354776072b14c369ab2feb4d3e95b1512a72b2dac8bb601de77ca8",
+      "set_ab_preimage": "4a9bdede559a76c94491ed7ed98fe66960f464ec3d18f24471210fb22bcd5508fd3306414e40e85d223e78b2e257bf64837836015e86c640795d01e6fabf7cc8",
+      "set_empty": "1649e68b481ade00e03257c25d55115fe3e8838aa8de3498159ee4b378a36001",
+      "type": null
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "about": "The set of acts (encoding 3, \"The set of acts\"; draft 26, §4.1): ids in, value out. The value is tagged_hash(\"MOR/act-set\", the ids sorted bytewise, repeats dropped, concatenated). A set of one id is not that id. Line 82 of the codemeister's sheet (four vectors: two orders, a repeat, one id, the empty set). TEST DATA: the ids are stand-ins.",
+  "cases": [
+    {
+      "ids": [
+        "131c789751b2fe7a3c1908129f885c8f4d85d90204708e70e3229180f2ce5f54",
+        "c35ef59bf28d7b9a47631db080465e9721acdcf002ea11808498f15bb030bf39"
+      ],
+      "name": "two ids, in one order",
+      "same_as": null,
+      "value": "4961411ae174c111eeef83aa5f776450a9a89da2d8bee38af3e5297f479719c5"
+    },
+    {
+      "ids": [
+        "c35ef59bf28d7b9a47631db080465e9721acdcf002ea11808498f15bb030bf39",
+        "131c789751b2fe7a3c1908129f885c8f4d85d90204708e70e3229180f2ce5f54"
+      ],
+      "name": "the same two ids, in the other order: the same value",
+      "same_as": "two ids, in one order",
+      "value": "4961411ae174c111eeef83aa5f776450a9a89da2d8bee38af3e5297f479719c5"
+    },
+    {
+      "ids": [
+        "131c789751b2fe7a3c1908129f885c8f4d85d90204708e70e3229180f2ce5f54"
+      ],
+      "name": "one id",
+      "same_as": null,
+      "value": "c8134e3b20e1b8c798a8382a9ae7fb3722ca09e2d8175919929acef4dae3f776"
+    },
+    {
+      "ids": [
+        "131c789751b2fe7a3c1908129f885c8f4d85d90204708e70e3229180f2ce5f54",
+        "131c789751b2fe7a3c1908129f885c8f4d85d90204708e70e3229180f2ce5f54"
+      ],
+      "name": "one id twice: the same value as once",
+      "same_as": "one id",
+      "value": "c8134e3b20e1b8c798a8382a9ae7fb3722ca09e2d8175919929acef4dae3f776"
+    },
+    {
+      "ids": [],
+      "name": "the empty set: the label over no members",
+      "same_as": null,
+      "value": "1649e68b481ade00e03257c25d55115fe3e8838aa8de3498159ee4b378a36001"
+    }
+  ],
+  "decides": [
+    "draft 26, §4.1: \"The set of acts (§3.1) is a value computed from a list of act ids: the ids sorted, repeats dropped, and hashed with a label for a set of acts.\"",
+    "draft 26, §4.1: \"The same acts give the same value, whoever computes it.\"",
+    "draft 26, §4.1: \"The empty set has the label and no members.\""
+  ],
+  "label": "MOR/act-set",
+  "reading": [
+    "taken by the codemeister, to check: encoding 3, section 11, item 1",
+    "taken by the codemeister, to check: encoding 3, section 11, item 2",
+    "taken by the codemeister, to check: encoding 3, section 11, item 3"
+  ]
+}
