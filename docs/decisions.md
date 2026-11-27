@@ -75,6 +75,9 @@ Asked whether everything from the stint of 20 November carries over (the pow wow
 - Then he (14:53): "We finish this rewrite of agreements, then we turn our attention to money, and after that we’ll tackle development."
 - *Arrived at (to check):* the order of the stint: Agreements (draft 26), then Money, then Development.
 
+**Two keepers named, both needed** (27 November, 16:40–16:44; draft 26 written, pull request 292; the first of five questions from its "needs a choice" list, the brief's item 5). The MOR lead: where the Terms name two keepers and only one has shown an act, with no disagreement, is the act pinned or does it wait for both; leaned that it waits. He: "If the terms stipulate two keepers, both keepers are needed. Sorry can’t do"
+- *Arrived at (to check):* where Terms name several keepers, every keeper named must show an act for its order to count. Until each has, the answer is "not shown", with that reason ("sorry, can't do"). Where they disagree, "not shown, the keepers disagree", as on 26 November.
+
 ## The previous stint, 20 to 26 November: what the simulation taught
 
 **Stint from 20 November 2026: what the simulation taught.**
