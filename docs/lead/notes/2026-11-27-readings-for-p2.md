@@ -75,3 +75,12 @@ The mechanical find: draft 26's head points to draft 25 where it lives, `claude/
 
 1. **The scribe's lean is right; the lead's reading of 22:30 is narrowed.** Read for every update, it would lock the way out of his 21:42. So: the gate waits on the keepers named only for an update that not every known party signs (two of three included); an update every known party signs, each shown after the other, counts its assents by their knots, whatever keeper is named, as 5.5.5(d) has it. His 22:30 case is of the first kind: no update, no fork. The lead's reading, to check.
 2. **P4 writes answer 3 as the lead's reading, to check, and lists it for him.** One question to him after P4.
+
+## After his 22:36 and 22:39, for P5, 22:45
+
+*His two entries, "A dead keeper: the agreement is dead; what follows is a new act" and "No rule for an exception logic covers", withdraw the hatch of 18:51 and the readings built on it: 20:41's 2 and 3, 1's "pinned by knots" half, 21:45's 3, 22:30's 3, and the narrowing of 22:33. The lead's answers to the scribe's four:*
+
+1. **Yes, whole.** With keepers named, the gate of every update counts only the assents every keeper shows; with no hatch it locks nothing, since leaving is a new agreement. Resting on his 22:30: "To be valid the agreement needs to be checked at the keeper."
+2. **Yes to both.** With keepers named, knots do not show an update late (5.5.4(a)); knots still show a keeper whose record contradicts them (5.8.4, 5.5.4(c)): a knot proves after, whoever says otherwise.
+3. **No new field.** A new first act MAY name an earlier agreement; any fingerprint in any field is a knot ("Knots are knots"). Encoding 3 lists which field as an open item for the codemeister; nothing chosen.
+4. **The lead's, resting on "Protect the unknown party" (26 November):** her filling stands as the keeper showed it before it died, bound by her version for as long as its words say, recorded and checkable; nothing reaches it, the new agreement included. P5 lists it for him to check.
