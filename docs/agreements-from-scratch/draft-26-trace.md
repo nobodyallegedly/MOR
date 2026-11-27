@@ -851,3 +851,78 @@ COUNTED by `xref.py` (numbered rules) and by eye against the outline's section 3
 **For Envelopes**: the 13 rules of the baker (G14.1 to G14.5(d)); "uploader" (M4); the holder and the envelope's chain (M6); the act the holder is read at for a contest (M7); the three verbs.
 **For Identity**: rule 34 and the keeper's record (draft 26's own, §3.4; Identity keeps pointing at draft 24's until it is touched); the pair naming draft 24 for a collective's line.
 **For Development**: what a cMIP declares it needs (item 34(b)); N9's client half; the common cMIPs a verifier or client should hold; N10's client reliance and the other client duties (the companion, on the lead's reading).
+
+# M8: the trace of encoding 3
+
+*Added by the scribe's session M8, 27 November 2026. Not a decision, and not part of the hashed text. Nothing above is changed. One line per E-rule of `encoding-3.md` that changed or is new; then M8's "Open", "For the text", rows to check, the blind reader and the counts. Marks as above: TRACED (to a rule or a ledger entry, cited), COUNTED (by a script, named), INFERRED (M8's reading). "The lead's reading" marks the MOR lead's readings of 27 November given to the scribe, none of them in the ledger on main.*
+
+## M8: the E-rules that changed, are new, or went
+
+| E-rule | What changed | Rests on | His words | Mark |
+|---|---|---|---|---|
+| In plain words; §1 | draft 26 named; "rejected" written as draft 26's "not an Agreements act" and kept as the checker's verdict; the left-unread list is 5.2.3's five, the answer of `in_force` on coming into force in an update added | draft 26 §3.6, §4, 5.2.3; SN M5 ("Rejected" is not an answer word: it is the checker's verdict…); SN Q7 | — | TRACED |
+| E1 | stays; a Text act counted in the signer's sequence | Envelopes rule 13; draft 26 5.2.2 | — | INFERRED |
+| E2 | `SPEC_DRAFT_26`, not yet computed (M11); the report's row goes; encoding 2's hashes not this encoding | the outline §5, E2 row; draft 26 §4.3 (the report "defined once, in the MICS's report block") | — | TRACED |
+| E5 | the work-hash row goes; the words are a Text act's act id; a Text act and a payment named by act id; the report-line rows go; a row for the set of acts, as one of two readings | "The words of Terms are a Text act" (26 Nov) and its "Arrived at" ("The hash choice for loose words goes."); draft 26 5.2.2, §4.2 `body`; the outline §5, E5 row | "I think it”s cleaner, it keeps text to text and agreement grammar to agreement grammar, both have their own hashes to verify" | TRACED |
+| The set of acts (E5's row, or E26) | new: recipe written from draft 26 §4.1 (ids, sorted, repeats dropped, hashed with a label; bare 32 bytes; the empty set has the label and no members; no knot by itself; members acts only); label, joining and place open; no field given the set form | "One way to name a set of acts, in Agreements" (26 Nov), its "Arrived at"; SN M21, F12, F13; draft 26 §4.1, §7; the impact sheet, line 16 ("one row of encoding 2's E5 table or one new E-rule"); the lead's 09:47 reading, row 6 (`resolves` not a set) | "You are going to expand what the set of byte is and what it does pls"; "Should it be in envelopes though? It feels like agreements stuff"; "Knots making is core core business, a" | TRACED; reading (a) of the joining TRACED to the MOR lead's recipe in the exchange ("joined"), not to his words |
+| E6 | a keeper's or a clock's identifier in place of a place's; the keeper's preimage open; the clock's 32 bytes kept [lead], key 9's standing open (item 34(a)) | "The place vouches for the chaining only" (26 Nov, 17:47–17:49); draft 26 §3.4, 5.8.1, 5.8.5, §7 | "Yes, vouch for the chaining only"; "Yes, they should. Can we find a better name for “place”?" | TRACED; reading (a) of the preimage INFERRED from §3.4's signed keeper's record |
+| E7 | stays; the defaults cited to 5.4.1, 5.5.5(a), 5.11.2 | draft 26 §3.1 Task, §4.1 | — | TRACED |
+| E8 | `words` is the Text act's act id; its held test moves to E25 | "The words of Terms are a Text act" (26 Nov); draft 26 5.2.2 | as E5 | TRACED |
+| E9 to E12, E14, E15, E17 | stay in bytes; renumbered to draft 26 (5.10.1, 5.10.4, 5.1.2, 5.1.3, 5.1.4, §4.2 `powers`, 5.12.4, 5.12.5, 5.7.1); E11 no longer serves a report line | draft 26 §4.2, §4.3; the outline §5 | — | TRACED; the renumbering INFERRED |
+| E13 | stays in bytes; an author naming a role is invalid too | draft 26 5.3.1; the lead's reading of 09:27 ("Author: a signer the Terms name, never an agreement, as draft 25's G3.1 and E13 have it") | — | TRACED to the lead's reading and 5.3.1. The outline's "E13 stays in bytes" holds; its invalid case widens (rows to check, 1) |
+| E16 | stays in bytes; "a call's form is the MICS block's to give" added; the report's naming of the payer's call goes | draft 26 §4.2 `calls` ("as the MICS's report block gives them"); "Where three rules live" (17 Nov) | "Agreed" | TRACED; keeping the bytes INFERRED, as the outline has it |
+| E18 | a report's `relies_on` and `lines` go; "no keeper" added; the keeper list's order open; a sorted list in a field is not the set of acts | draft 26 §4.1; the lead's 09:47 reading, row 6 | — | TRACED; the keeper point INFERRED |
+| E19, the Terms map | key 8 the keeper field, one or several, form open; key 13's default the known parties; key 6's note on an update; keys 11 and 12 kept; a resolving update carries no keeper or clock; case 4 reaches updates; case 5 includes roles; case 8 listed open; a Terms act with no `replaces` read as a first (added after the blind reader) | "The place vouches for the chaining only" (26 Nov, 17:49); draft 26 §4.2, 5.4.2, 5.5.5(a), 5.8.6; SN Q7, M11; the lead's 09:47 reading, row 3 ("an update with roles carries `in_force` for who fills a role, in every version; only its answer on coming into force is unread for updates") | "Yes, they should." | TRACED; the first-act sentence INFERRED |
+| E20 | stays; `resolves` the list of the tips' ids, `continues` one of them | draft 26 §4.3, 5.12.4; the lead's 09:47 reading, row 6 | — | TRACED to the lead's reading |
+| §6, E21, E22 | gone: the report's bytes to the MICS; section 6 a pointer | "Where three rules live" (17 Nov); draft 26 §3.1 Report, §4.3 | "Agreed" | TRACED |
+| E23 | "the same agreement" written as its test; a payment and a Text act among the acts that make an act invalid when `previous` names them | draft 26 5.7.1; the lead's 10:07 reading, row 5 ("E23's test to encoding 3"); M6's edit (f) above | — | TRACED to the lead's reading |
+| E25 | new: the act `body` names, among the acts held: a Text act, nothing; held and not a Text act, invalid; held and not opened, or not held, not invalid, the note open; which spec hashes are `TEXT` open | draft 26 5.2.2, §4.3 case 2; Text draft 11 rule 14 and "Text act (type 0)" (a Text act is type 0 under `TEXT`, a payload Text gives); the lead's 09:27 reading ("The act `body` names, held and not a Text act: the Terms are invalid"); SN Q24, Q25 | "Text comes first as a rule since agreement needs to point to it" | TRACED; "not invalid" where not opened INFERRED from §3.6's last test |
+| E24 | stays; cited to 5.1.2; the builder paragraph says the library is encoding 2's and no code changes | draft 26 5.1.2 | — | TRACED |
+| §9 | step 6 E4 to E20; step 7 in §4.3's order of cases 2 to 8, E25 inside case 2, E23 as case 6, case 7 not given, case 8 open with two readings | draft 26 §4.3 "One fault, one rule"; 5.8.6; §7; SN Q26 | "Yes, condition is missing, it should be refused" | TRACED; the two readings of case 8 INFERRED |
+| §10 | draft 26's encoding tasks (its four mentions of the encoding and §7), then encoding 2's nineteen items re-read | draft 26 §4.1, §4.3, §7 (COUNTED by `grep -n -i encoding draft-26.md`: five lines, four places and §7's first item) | — | COUNTED; the sort INFERRED |
+| §11 | the nineteen [lead] choices: 12 kept, 1 changed, 4 dropped, 2 no longer choices (draft 26 says them) | encoding 2 §11; draft 26 §4.3 | — | COUNTED by eye against encoding 2's list |
+
+## M8: Open (byte choices nobody has made; listed, none picked)
+
+1. **The set's label**: the tag text for `tagged_hash` (draft 26, §7). INFERRED: a new tag would also be named in Identity's list of the core's tags.
+2. **How a set's members are joined**: (a) the 32-byte ids concatenated (the MOR lead's "joined", in the exchange); (b) a deterministic CBOR array. The empty set's bytes follow.
+3. **Where the set's rule stands**: a row of E5 (i), or an E-rule of its own, E26 (ii) (the impact sheet gives both).
+4. **Which fields may hold a set's value**: none in encoding 3, as draft 26 §7 says ("in this text none does"); the impact sheet's fifth vector (a set's value in `relies_on`) is the codemeister's choice, to check.
+5. **The keeper field's form**: (i) always a list, `[+ hash]`; (ii) `hash` for one, `[2* hash]` for several.
+6. **Whether the keeper list is sorted** (a set, E18) or keeps the writer's order.
+7. **What a keeper's identifier is the hash of**: (a) its identity hash; (b) opaque 32 bytes until the layer that orders acts gives one.
+8. **Whether key 9 stands** as 32 bytes (item 34(a); draft 26 §7, "How Terms name their clock").
+9. **A `words` act held and not opened, or not held**: a note (unchecked) or nothing (not read) (SN Q24 may answer it: the outline's row 11).
+10. **Which spec hashes are `TEXT`**: Text draft 11's alone, or any Text draft's.
+11. **Case 8 (5.8.6)**: how a cMIP's declared needs are read from bytes, and by whom: (a) handed to the checker beside the acts, in a form Development would give; (b) the grammar verifier's alone (item 34(b); draft 26 §7).
+12. **`SPEC_DRAFT_26`**: not a choice; computed at M11 once the text is final.
+
+## M8: For the text (for M11: rules of draft 26 the bytes cannot check)
+
+1. **"In this text none does" (§4.1, §7) cannot be checked from bytes.** A set's value and an act id are both 32 bytes; a set's value written in `relies_on` or `answers` passes as an act id not held, and under 5.13.3 a chain that needs it is unchecked. Draft 26 may want to say how such an entry is read. INFERRED.
+2. **`replaces` "in every Terms act except the first" (§4.2)** cannot be checked from one act: any Terms act without `replaces` reads as a first, the root of an agreement of its own. Encoding 3 says so (E19); the text may want the same sentence. INFERRED.
+3. **Case 8 (5.8.6)** cannot be checked from the act's bytes: no field of Terms says what a cMIP declares. §4.3 places it among the cases a verifier "names" in order; until §7's open value is fixed, no checker of bytes gives it. INFERRED.
+4. **5.2.2's "held and not a Text act"** leaves a held act that cannot be opened unsaid (encoding 3 reads it as not invalid, by §3.6's last test). INFERRED.
+5. **§4.2's `calls` gives a call's form to the MICS's block**, while encoding 3 keeps encoding 2's `[task, from]`: until the MICS gives a call's bytes, the bytes stand without a text that gives them. INFERRED.
+6. **§4.2's `keeper` row** says "each by the identifier the layer that orders acts gives it": no layer gives one, so E6's keeper preimage cannot be fixed from the text. TRACED to 5.8.1.
+
+## M8: rows to check
+
+1. **The outline's "E13 stays in bytes"** is right in bytes; its invalid case widens with 5.3.1 (an author named by role is now invalid). Followed the outline; the widening written. TRACED.
+2. **The outline puts E23 "HELD with G6.1"**; the lead's 10:07 reading (row 5) and the assignment put E23 in encoding 3 with 5.7.1's test. Followed the reading. TRACED.
+3. **The outline's E9 to E12 "stay"**: E11 loses the report line's `to`, which went with the report. INFERRED.
+4. **E25 is not in the outline's list** of what is new in encoding 3; draft 26's §4.3 case 2 asks for it ("the act `body` names, held and not a Text act"), and the checker's order needs a rule to name. Written as new. INFERRED.
+5. **The lead's 09:27 reading** put `resolves` among the set form's fields; withdrawn at 09:47 (row 6). Encoding 3 follows 09:47: `resolves` is the sorted list of ids. TRACED to the lead's readings.
+6. **E16 kept although §4.2 gives calls to the MICS's block**: kept as the outline has it ("E16 … stay"), listed in section 11 item 12. INFERRED.
+
+## M8: the blind reader
+
+A subagent that had seen neither the ledger nor the assignment was given encoding 3's section 4 (the Terms map) and section 9, with draft 26's §3.6 and §4, and the case: a Terms act whose `body` names an act id the verifier holds and which is a Text act, whose keeper field names two keepers, whose `clock` is absent, naming a K1 cMIP that declares it needs a clock. Asked "in what order does the checker test it, what does it answer, and from which bytes?", it went through steps 1 to 8 in order: key 8 passes under both forms if written as a list of two hashes; case 2 finds nothing (the words a fingerprint, the held act a Text act, by E25); case 8 is open, "Until one is chosen, the checker gives no case 8"; verdict **pass**, no invalid list (about 65% sure). It noted that under reading (a) the answer would be **invalid**, 5.8.6, naming the body's socket.
+
+Fixed after its reading: that an act id is a fingerprint (section 4, item 1); that a Terms act with no `replaces` is read as a first (E19); that §4.3's case 8 is 5.8.6's test, quoted in step 7 (it read the two wordings as different); which notes E23 and E25 give (step 8).
+
+Not fixed, since each is an open byte choice: whether case 8 is given at all (Open 11); whether two keepers written out of order are rejected (Open 6). It also could not see E6, E18, E23, E25, 5.8.6 and §7, which lie outside what it was given.
+
+## M8: counts
+
+COUNTED by `wc -lc`: `encoding-3.md` is 453 lines and 56222 bytes. COUNTED by `grep -o '^\*\*E[0-9]*\.'` (distinct rule heads, 23): E-rules E1 to E20, E23, E24, E25 (23 rules), E21 and E22 gone, E26 reserved for reading (ii) of the set. Changed or new: E2, E5, E6, E8, E13, E16, E18, E19, E23, the set of acts, E25; gone: E21, E22; the rest stay, renumbered to draft 26.
