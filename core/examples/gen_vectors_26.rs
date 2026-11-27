@@ -10,9 +10,16 @@
 
 #[path = "support/agreements_26.rs"]
 mod agreements_26;
+#[path = "support/agreements_26_grammar.rs"]
+mod agreements_26_grammar;
 
 fn main() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("vectors");
+    // An optional first argument writes the files under another directory
+    // (for a check), instead of `core/vectors/`.
+    let dir = match std::env::args().nth(1) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("vectors"),
+    };
     agreements_26::write(&dir);
-    println!("wrote core/vectors/agreements-26/");
+    println!("wrote {}", dir.join("agreements-26").display());
 }

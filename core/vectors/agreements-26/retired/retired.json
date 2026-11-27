@@ -382,12 +382,12 @@
       "from": "core/vectors/agreements-new/valid.json",
       "index": 7,
       "retired_by": {
+        "confirmed": "draft 26 at b58e417 (the scribe's P7): 5.3.1 reads as quoted; the case is rewritten in encoding 3's bytes as invalid, 5.3.1 (invalid.json, line \"V 7 (section 4.1)\").",
         "rule": "5.3.1",
         "says": [
           "draft 26, 5.3.1: \"`authors` MUST name one or more of the parties these Terms name, each named as a signer: an author is never a party named by role, and never one named as an agreement (§3.2).\""
         ],
-        "sheet": "docs/code/impact-draft-26.md, section 4.1: \"V 7: Terms with no party named as a signer, an author named by role: **pass** → **invalid**, 5.3.1 (then retired as a passing case).\"",
-        "waiting": "5.3.1 is among the rules the scribe's closing pass (pull request 292) changes: this retirement is to confirm once draft 26 is final, and the case's rewrite as invalid is not written (docs/code/verifier-3-build.md, \"Waiting\")."
+        "sheet": "docs/code/impact-draft-26.md, section 4.1: \"V 7: Terms with no party named as a signer, an author named by role: **pass** → **invalid**, 5.3.1 (then retired as a passing case).\""
       }
     }
   ]

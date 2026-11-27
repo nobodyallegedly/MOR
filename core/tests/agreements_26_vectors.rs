@@ -5,6 +5,8 @@
 
 #[path = "../examples/support/agreements_26.rs"]
 mod agreements_26;
+#[path = "../examples/support/agreements_26_grammar.rs"]
+mod agreements_26_grammar;
 
 use agreements_26 as v;
 
@@ -37,7 +39,7 @@ fn the_files_are_the_builders() {
     let tmp = std::env::temp_dir().join(format!("agreements-26-{}", std::process::id()));
     v::write(&tmp);
     let ours = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("vectors/agreements-26");
-    for f in ["valid.json", "invalid.json", "sets.json", "reference-payloads.json", "retired/retired.json"] {
+    for f in ["valid.json", "invalid.json", "sets.json", "reference-payloads.json", "retired/retired.json", "grammar.json", "retired/grammar-retired.json"] {
         let a = std::fs::read(tmp.join("agreements-26").join(f)).unwrap();
         let b = std::fs::read(ours.join(f)).unwrap_or_default();
         assert!(a == b, "{f} differs from what the builder writes: run `cargo run -q -p mor-core --example gen_vectors_26 --locked`");
