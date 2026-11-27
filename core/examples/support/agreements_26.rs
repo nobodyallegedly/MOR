@@ -74,14 +74,13 @@ const fn h32(s: &str) -> Hash {
 }
 
 /// Draft 26's spec hash (encoding 3, E2): `Spec::mir_file_hash` of
-/// `docs/agreements-from-scratch/draft-26.md`, as the scribe's session N1
-/// left it on branch `claude/draft-26-outline-vbtvu7` (commit 1f81c2a; 429
-/// lines, 147,279 bytes). The value encoding 3, E2, gives. Taken by the
-/// codemeister, to check: encoding 3, section 11, item 12 (`SPEC_DRAFT_26`
-/// computed from the file, with a test). It changes when the scribe's
-/// closing pass changes the file: change it here, and write the vectors
-/// again.
-pub const SPEC_DRAFT_26: Hash = h32("04bae25cb3416e111e1f65ddca2c99c5769d3945c0751a6846621929c0d29904");
+/// `docs/agreements-from-scratch/draft-26.md`, as the scribe's session P7
+/// left it on branch `claude/draft-26-outline-vbtvu7` (commit b58e417; 436
+/// lines, 158,140 bytes; plain sha256 `afadb7d5…4307`). The value encoding
+/// 3, E2, gives. Taken by the codemeister, to check: encoding 3, section 11,
+/// item 12 (`SPEC_DRAFT_26` computed from the file, with a test). If the file
+/// changes again: change it here, and write the vectors again.
+pub const SPEC_DRAFT_26: Hash = h32("eb8bfb8735a73517f44679d532098bb9779d0e1cc2092a0d3472f5ff223b6fcc");
 
 /// The file [`SPEC_DRAFT_26`] is the hash of, from the repository root.
 pub const DRAFT_26_FILE: &str = "docs/agreements-from-scratch/draft-26.md";
