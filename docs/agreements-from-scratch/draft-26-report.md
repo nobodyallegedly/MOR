@@ -41,8 +41,8 @@ COUNTED (`wc -lc`, the final files on `claude/draft-26-outline-vbtvu7`):
 | `draft-26.md` (the hashed text) | 433 | 155,996 |
 | `encoding-3.md` (its bytes) | 500 | 68,020 |
 | `draft-26-companion.md` | 2257 | 463,742 |
-| `draft-26-trace.md` | 1840 | 402,016 |
-| `draft-26-report.md` (this file) | 199 | 27,007 |
+| `draft-26-trace.md` | 1840 | 402,077 |
+| `draft-26-report.md` (this file) | 199 | 27,127 |
 
 **The hashes** of the final `draft-26.md`, computed last, after every other edit of it:
 - E2's tagged hash, `SPEC_DRAFT_26`: `60c0b84ed81a48e9e869bb6d0d813358f92019faa48a97115400736030bc9f12`, by the core library's `Spec::mir_file_hash`, run from a scratch crate on the file (the same binary gives N1's `04bae25c…` on the file as N1 left it).
@@ -70,7 +70,7 @@ Eight checks, by script; each script and result is in the trace under P3.
 4. **The bytes against the rules.** 20 Terms fields and 12 Statement fields, each with its key; E3, E13 and step 7.4 ask what 5.13.1, 5.3.1 and §4.4 give.
 5. **The companion's trace.** 68 rows for 68 rules; every draft 25 number of 9.1 in section 10; 250 ledger headings, all word for word.
 6. **Quotations.** As counted above; P3's companion edits brought 11 quotations to the rules' words.
-7. **The head.** Says what it rewrites, not merged, not LATEST, where the companion and encoding 3 are. Found: `draft-25.md`, named beside it, is not on this branch or on main.
+7. **The head.** Says what it rewrites, not merged, not LATEST, where the companion and encoding 3 are. Found: `draft-25.md`, named beside it, is not on this branch or on main (the pull request names its branch).
 8. **What the files must not hold.** Nothing: no key, address, port, access detail or personal name; no line ends in a space.
 
 **The stranger** (one subagent, draft 26 alone). Its four answers matched the text. The three cases: (1) the seller's act for Ana under a power written into the offer is not her signature, and V3 does not change what her filling earned; she could have given the power by a Statement of her own while V1 was in force (90%, 70%). (2) With the keeper dead, a version all three sign, each after the others, is **in force**, **as shown**; one two of three sign under a named condition is **valid** and **not shown** as in force, and a fresh version all three sign beside it risks a fork (85%, 80%). (3) A known party's own filling is no unknown party's, and the update binds him; whether it reaches what the filling earned has "no single answer" (55%). The five sentences it understood least: 5.5.4(a)'s "no choice of acts enough for L to pass O's gate avoids an act so shown. Each such choice is read whole"; 5.5.1(b)'s "It is shown after them where it, or an act that put it through the gate, is" (fixed, its pronouns named); 5.12.2's "signed by all the parties that needed to sign it"; 5.6.1(b)'s Statement (which field names the grantee); 5.10.8's "anchoring of the purchase". The rest is listed below.
@@ -104,7 +104,7 @@ One line each; nothing chosen. Where a reading of the lead's now answers a line,
 - 5.6.3's "the grantor (5.6.6), who gave the power" against 5.6.6's "the one in whose name it was made", which come apart where a known party gave the power (P2's blind reader).
 - 5.5.5(a) and 5.5.7(e)'s "never a signer who fills a role", for a known party who fills its own spot (P2's blind reader).
 - 5.5.4(a)'s "Each such choice is read whole" and 5.12.2's "signed by all the parties that needed to sign it" (the stranger).
-- `draft-25.md`, named in the head, is not on this branch or on main.
+- `draft-25.md`, named in the head as beside it, is not on this branch or on main; the pull request names its branch, `claude/agreements-clean-1-hahuwn`.
 
 ## The MOR lead's readings, for him to check
 
