@@ -74,7 +74,7 @@ pub mod stub {
     pub const K2: &str = "K2 in force: the names its parameters list must each have an assent counted";
     pub const K3: &str = "K3 power: yes for an act signed by one of the signers its parameters list";
     pub const K4: &str = "K4 update condition: valid when k of the original's known parties sign (k its parameter), never, or always";
-    pub const K5: &str = "K5 spot: the fillings its parameters list, and whether the spot takes new identities";
+    pub const K5: &str = "K5 spot: a filling for each assent, to a version naming the role, by a signer its parameters list";
     pub const K6: &str = "K6 control: always yes";
     pub const K7: &str = "K7 kind: a note, stating nothing these grammar rules read";
     pub const K8: &str = "K8 data: yes for the readers its parameters list";
@@ -84,7 +84,7 @@ pub mod stub {
         ("K2", K2, "params: a list of who (`[0, signer]` or `[2, root]`): yes where an assent is counted in each of those names; it names those assents as the ones it requires"),
         ("K3", K3, "params: a list of identity hashes: yes for an act whose signer is one of them"),
         ("K4", K4, "params: `[0, k]`: valid where assents of k of the original's known parties to the update are among those that count; `[1]`: never valid; `[2]`: always valid"),
-        ("K5", K5, "params: `[fillings, takes_new]`, each filling `[signer, [proof act ids], version]`"),
+        ("K5", K5, "params: `[signers, takes_new]`: a list of identity hashes, and true or false. Each assent held, by one of those signers, to a version naming this role, is a filling: its proof is that assent, and the version it was earned under the one it names. One filling or many: many. Takes new identities where takes_new is true (a version's own parameters say it). Its parameters never name an act, so a version can name its own fillings' signers before they assent"),
         ("K6", K6, "params: null"),
         ("K7", K7, "params: null; its content is not read"),
         ("K8", K8, "params: a list of who: yes for those readers, no for any other"),
