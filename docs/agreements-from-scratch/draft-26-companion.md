@@ -561,28 +561,1245 @@ The brief read fifteen rules two ways. The lead read each one way; draft 26 is w
 
 Every row of the settled note is the lead's reading. Those draft 26 rests on, with the rule each shaped: **M5** (the answer words; "Rejected" is not one): §3.6, 5.5.4(c). **M11, Q7** (an update's `in_force`, narrowed at 09:47): 5.4.2, 5.2.3. **M12**, against the ledger's 17:49 line, not used: 5.8.3 (item 25). **M15** (a filling is any filling of a role, whenever made; an assent to a replaced version shown, its version named): §3.2 Unknown party, 5.4.3. **M20** (a reader's chosen keeper or anchoring only labelled as the reader's): 5.5.3, 5.13.5. **M21, F12, F13** (the set of acts: the empty set, no knot by itself, no order, acts only): §3.1, §4.1, §7. **M22** (an assent under a power she gave is her signing): 5.10.7, 5.6.5(f). **M24** (the MICS is rewritten after draft 26): §2. **M28** (words that renew on the terms then current, bought knowingly): not written (item 14). **Q22** (the warning is the introduction's): §0. **Q24, Q25** (the verifier need not hold the words; naming the Text act asks nothing more): 5.2.2, K1. **Q26** (a cMIP declares its needs; for Development): 5.8.6, §7. **F16** (G10.6(a) a guarantee no module may break): section 3.
 
+### 6.10 The reading of 14:33, on M7's question and rows
+
+*Added by M10, as the others are written: the lead's words, the rules each shaped, and the other reading.*
+
+1. "Item 9: a known party who assents to both rival updates forks her own line (5.7.2), and in a fork neither tip takes effect ("A fork is a fork", 27 November; draft 25's G12.2, both tips stop). Neither assent counts for either gate until her line is resolved, by a resolving act in her line as §5.12 says. The lead's reading, marked so; it keeps one signer from putting two rivals through the gate." *Shaped*: 5.5.5(a), 5.7.2 (M10's edit (a)); scenarios 8.4 and 8.7. *The other reading* (M7's rows to check, 4, the question the reading answers: "5.12.3 spares an assent to a tip of Terms, but not an assent that is also a tip of its signer's line. Whether such an assent still counts for whether the Terms tip was signed is not said"): 5.12.3's "one thing an assent to a tip still counts for" reaches it, each assent counting for whether its Terms tip was signed. The scribe's lean on it, not taken, is not recorded in the trace in its own words; read so, a verifier would answer **fork** of Terms where one known party's double assent puts two rivals through the gate, V1 staying in force; on the reading, neither rival passes the gate on her assent, and the fork is in her line alone (scenario 8.7).
+2. "Edit (f): the holder is read at the act the contest cites: a contest names the original envelope and the act of its chain it relies on, and the holder is read there, not from the contested Terms. The lead's reading." *Shaped*: 5.11.9 (M10's edit (b)). "The original envelope" is written there "its own envelope, whose baker's rights its signer holds", since draft 26's §3.3 gives "the original" to an update. *The other reading* (M7's edit (f), and M7's rows to check, 9): the holder read at the act the contested Terms cite (their `envelope_at`), which names an act of their envelope, not the baker's.
+3. "M7's rows: 5.5.4(c) reads "nothing built on L counts: a late update is no tip and gives no previous" (own words, no pointer); the colon in 5.5.1(b) goes so the two parts read for every Terms; 5.11.6 and 5.11.7 each their heading; 5.10.8 adds "where the version names no clock, no term in time can be read from it (5.8.6)"; the one-fault list under its own heading, §4.4. 5.12.4 and §7's sixth value: keep, marked added by M7, to check." *Shaped*: 5.5.4(c), 5.5.1(b), 5.11.6, 5.10.8, §4.4 (M10's edits (c) to (g)); 5.12.4's added clause and §7's "How far a verifier follows" stand, still marked added by M7, to check, in the trace. *The other reading*: for 5.5.1(b), the pin's two parts read only where keepers are named (M7's "for earlier words", 2): for Terms naming no keeper, an update would then be pinned with no order shown against its rivals; on the reading, every update's pin has both parts. The other rows change no answer of a verifier: they are words and headings (the scribe's reading).
+
 ---
 
 ## 7. The stated costs
 
-written by M10
+**In plain words.** A stated cost is a case the grammar does not fit, said plainly: what a rule trades away, and who carries it. None is closed by a grammar rule. Draft 25 kept thirty-eight of them in its own section 7; draft 26 keeps only rules ("Only rules in the hashed text", 17 November: "Yes, the text should be just that. Everything else goes into companion documents for the few who might be interested."), so they are here, each marked as its rule went.
+
+**How to read it.** Each cost has its draft 25 title, then a mark: *kept* (its rule stayed, and draft 25's words stand, quoted unchanged, its rule numbers draft 25's); *reworded* (its rule changed, and the words are the scribe's, in draft 26's terms, saying what the cost now is and nothing more; draft 25's words stay in draft 25); *left with its rule* (its rule moved to another text, and the cost with it, quoted unchanged here for the record); *dropped* (its rule went). Then the draft 26 rules it concerns, and the ledger entry that reaches it, where one does (the outline's item 7 names them; the sort of each cost is the scribe's reading). Where a kept cost has a word that changed (place, keeper), the change is said in one line.
+
+### 7.1 Draft 25's thirty-eight
+
+**1. Minds.** *Kept.* Draft 26: 5.3.2; §6.1 (Assurance).
+
+> Whether a party was able (#3) or free (#5) cannot be shown by any act. Assurance (section 5.3) can make it more likely and record what was done; nothing assigns its failure. Only Align is assigned (G3).
+
+**2. Conceal (#39).** *Kept.* Draft 26: §3.5 (Lodge); 5.8.2.
+
+> Terms can be kept private and their fingerprint lodged in a place; nothing can show the words were not told to someone, and telling cannot be undone.
+
+"lodged in a place" now reads "lodged at a relay" (§3.5); nothing else changes.
+
+**3. Enforce beyond what was posted (#45).** *Kept.* Draft 26: §5.7 (a signer's line, D25's G6); §6.1 (Standing).
+
+> Words can order a release; something must obey. Against value not under Control, force lies outside the protocol. A proven liar (G6) loses only what they posted and their standing with those who see the proof (standing, section 5.3). Against a stranger who vanishes, the proof is worth nothing.
+
+**4. Deeds lean on witnesses.** *Kept.* Draft 26: §6.1 (Witness).
+
+> The more an agreement is about services and acts in the world instead of value under Control, the more it rests on witnesses (section 5.3), whose statements prove only that the witness said them.
+
+**5. Spots lean on their confirmers.** *Reworded.* Draft 26: 5.10.1, 5.10.2; K5 (§6). Reached by "How a reader answers goes to the MICS" (18 November), which moves G8.4.
+
+Each kind of spot has its own recorded fraud (`late-roles.md`): doing is faked "by simulating the act or stealing credit"; receiving "by forging the chain"; holding "by forging the object or issuing more than exists"; being "by false or multiplied identities". Draft 26 fixes the test in advance (5.10.1) and answers each filling with its proof, each act reported by who signed it (5.10.2, the MICS); neither makes the confirmer honest.
+
+**6. Future spots are the authors' word.** *Kept.* Draft 26: 5.10.4, 5.3.2.
+
+> Whether a future spot was used only for participants no one could anticipate cannot be checked (G10.4). Authors who use one for an ordinary participant, to escape the four kinds' clearer tests, are not stopped by the grammar.
+
+**7. Counted attention leans on whoever counts, and the grammar names no one.** *Kept.* Draft 26: K5 (§6); section 4.3 of this companion (draft 25's §5.1).
+
+> Being seen is counted by whoever a spot's cMIP names (section 5.1). The grammar itself no longer requires an agreed witness: an agreement whose cMIP names none, or names the payer, has counts that rest on whoever states them, and inflated attention (`late-roles.md`: "Roles counted by attention suffered fabrication of the event itself") is then exposed only as far as that cMIP goes. A rule that counts only what led to a settlement leaves out someone truly seen whom no payment yet stands behind; a rule that rewards pure attention rests every count on the one who counts.
+
+**8. "Now" is what was read, and no more.** *Reworded.* Draft 26: 5.13.2, 5.1.4, 5.5.3, 5.13.5. Reached by "Whose place counts; protect the unknown party, as a principle" (26 November), with the lead's reading on G1.4 (section 6.3).
+
+Under 5.13.2, a payer who names the version they read has paid as that version says, even if the agreement had already changed without their being able to know. That protects the payer; it also means the owners under a later version can see money go by an earlier one. Whether the version named was still the last is answered only per the keepers the Terms name, or as shown (5.5.3, 5.13.5): a reader's own anchoring gives only that reader's answer. The climb up a sequence gets less certain at each agreement that names no keeper.
+
+**9. A work that points nowhere cannot be paid.** *Kept.* Draft 26: 5.1.4.
+
+> Under G1, what is owed to an agreement whose version names no receiver has nowhere to go, and is not shown.
+
+**10. A deal is as complete as its words.** *Kept.* Draft 26: §3.2 (Service, deal); K6.
+
+> Who bears a service's fee, and what becomes of a payment that arrives after the work has named another receiver, are whatever the deal states, read by its cMIP. A deal that says nothing on them leaves them unsaid; the grammar supplies no answer.
+
+**11. A service is a hand.** *Reworded.* Draft 26: 5.11.3, K6 (§6). Reached by "Where three rules live" (17 November), with the lead's reading on G11.3 and K6 (section 6.3).
+
+Nothing in the grammar makes a service divide as the shares say, or pay at all. Draft 26 asks of a leg report what it carries: what was received, passed on, kept and still owed (K6's row), and only where the deal called for it (5.11.2, 5.11.3). How two reports that state different amounts for one settlement are read (draft 25's G11.4(c): shown side by side, neither chosen) is now the MICS's report block's. Getting the money is another matter ("Enforce beyond what was posted"). An owner who receives for the others is a hand in the same way (5.11.2): nothing makes them pass it on.
+
+**12. A sequence is readable only as far as its agreements call for reports, and are answered.** *Kept.* Draft 26: 5.11.2, 5.11.4, 5.11.7.
+
+> G11 makes no Terms carry a call for reports, and makes nobody answer a call. From a leg whose call is unanswered, or which has none, nothing ties what lies beyond it to the click: the people beyond are not shown, though they never chose that leg (in the click test, one silent service hid a producer and a whole band). And a call binds only the signers of the Terms that carry it: a work cannot make the works it stands on, or their services, report. What a buyer has is this: before paying, which agreements carry a call for reports, and from whom, read from their signed Terms; afterwards, the receiving side's confirmation of their own payment, and then access to what they bought (G11.7). Which further calls were answered is seen by the two sides of each leg. And a report is its signer's word: it makes the whole readable, not true.
+
+**13. One leg, and no further.** *Kept.* Draft 26: 5.11.5, 5.11.6, 5.11.7; K8.
+
+> By the grammar each report goes to the other side of its own leg, and nowhere else (G11.6). The buyer is shown that their payment was received, and by default no more (G11.7): not whether the money reached every member. The buyer's own leg is read beyond it only as the data cMIP of the offer the buyer signed says (G11.6(b)): a buyer who signs an offer whose Terms name one has agreed to it, as any signer has. And nothing makes the receiving side confirm: a payment nobody confirmed is shown as one side only. A buyer, or a partner, who wants to know whether a split among people at the far end was carried out reads it only where the people of every leg on the way agreed, with their signature, to a data cMIP that gives it. No call gives it. Terms name such a cMIP in `data` (K8), and this text does not say what it is beyond that socket (section 8.4): until one is written and signed for, nobody reads further than their own leg. Where one leg did not agree, the far end is not shown to that reader, whatever was reported there; and the one who received is the only one who says it was passed on. That is the price of not making surveillance cheap. The other side of it: where the people of a leg did sign for such a cMIP, they are read as far as they signed; and where they signed a rule by which the majority decides, a member who was outvoted is read as the majority decided. The grammar reads their signature, not whether they were free to refuse it ("Minds").
+
+Draft 25's "(section 8.4)" is its open list, now in section 11 of this companion; draft 25's G11.6 ("each report goes to the other side of its own leg") is the MICS's (§3.1, Report).
+
+**14. A contest reaches one agreement.** *Kept.* Draft 26: 5.11.8.
+
+> A buyer who paid and was not delivered to contests the signers of the offer or vow they bought under, and nobody else (G11.8). If the fault lies with a service those signers picked, the buyer depends on them to contest the service in turn; nothing makes them, and the buyer is not shown whether they did. A contest is a word on the record, the buyer's; it moves no money.
+
+**15. Paid, and the author gone.** *Kept.* Draft 26: 5.11.8; §6.1 (Standing).
+
+> An open offer whose only author goes absent, with nothing that delivers by itself: whoever paid and got nothing can contest. The contest reaches the signers of the agreement they bought under (G11.8), and here that is the author, who is gone. It stays on the record for anyone to read (standing, section 5.3). The record cannot give the money back, since nobody is left to sign. A buyer who wants that pays through an escrow service: a hand, under its deal, for a fee. Without one, the loss is the buyer's. Nothing in the grammar prevents an author from vanishing with what was paid; that is dealt with, if at all, in how services are built. In the words of Nobody, allegedly: "MOR only offers ways to ring the alarm", and "MOR just tracks receipts".
+
+**16. Order without an anchoring is partial.** *Reworded.* Draft 26: 5.13.3, 5.13.4, 5.13.5, 5.5.4, 5.8.5. Reached by "Knots are knots: one reading, "shown after"" (27 November); "Whose place counts; protect the unknown party, as a principle" (26 November).
+
+Naming shows only "after" (5.13.3, 5.13.4). Two acts that never name each other have no order from the acts alone, and nothing shows "nothing later". Where an agreement names no keeper, its order comes from knots alone: a reader that accepts an anchoring of its own gets an answer only as that reader's, named so, never the Terms' (5.5.3, 5.13.5). So a late update is seen as late only as far as the acts name one another (5.5.4(a)): the bytes alone cannot tell late from simultaneous, and a late update whose signers named nothing that shows the replacement is a fork. Where the Terms name keepers and a clock, every reader uses them (5.8.5), and the answers are as good as those keepers and that clock.
+
+**17. Valid is as sure as the update condition's cMIP.** *Reworded.* Draft 26: 5.5.7(c), 5.5.7(h), 5.5.7(i), 5.8.6, 5.10.6, 5.10.8. Reached by "A condition in time with no anchor is refused" (26 November); "Ana's month ends by the clock the agreement names" and "For the unknown party there is no update, only the agreement she signed" (27 November).
+
+An update condition that reads someone's statement rests on whoever made the statement (the MICS); one that reads a time rests on the clock the Terms name (5.5.7(c)), and Terms that do not supply what the condition's cMIP declares it needs (a clock, a keeper) are invalid (5.8.6): no reader's anchoring answers for them. A reader who lacks that cMIP cannot tell whether any update passed the gate: from there on, which Terms are in force is unchecked for them (5.5.7(h)). A condition is as wide or as narrow as people wrote it: one that answers valid for everything protects no part of the agreement, and one that answers valid for nothing leaves an agreement that even all its parties together cannot update (5.5.7(i)). What changed: a filling is no longer at the update condition's mercy. No update reaches it (5.10.6); what it gave lasts as long as its version's words say, on the clock that version names, as the cMIP that reads the words answers (5.10.8). Its cost is the next one's ("Bound by an update one did not sign") and N5's, below.
+
+**18. Reputation is as wide as the acts one holds.** *Kept.* Draft 26: §6.1 (Standing); 5.12.2.
+
+> Standing (section 5.3) answers only from what the one asking holds, per place or as shown. Two people holding different acts compute different standing for the same signer, and honest forks (below) count against honest people.
+
+"per place" reads "per keeper".
+
+**19. Without a place, no scarcity and no freshness.** *Reworded.* Draft 26: 5.8.1, 5.8.4, 5.13.5. Reached by "The place vouches for the chaining only" (26 November); "How a reader answers goes to the MICS" (18 November), which moves G7.3.
+
+Without a keeper, no scarcity and no freshness. The same thing can be given twice in two branches, the latest act can be withheld, silence cannot be counted. Draft 25's G7.3 (every such answer qualified as shown where no place is named) made this visible; its qualifier is now §3.6's **as shown**, and the rule itself the MICS's. Naming a keeper does not cure it either: a keeper vouches for the chaining only (5.8.1), not for what was left out of it.
+
+**20. Ownership is as wide as its place.** *Reworded.* Draft 26: 5.8.1; 5.11.9; Envelopes (G14). Reached by "The place vouches for the chaining only" (26 November); "Where three rules live" and "The holder at the act cited" (17 November).
+
+Ownership is as wide as its keeper. Two parties who accept different keepers cannot settle who holds a thing between them. The same thing sold in two separate agreements is seen by neither agreement's rules. What draft 25 said here of a baked work (Terms for an envelope count only with the holder of the baker's rights at the act cited; a second sale of the baker's rights a fork in the envelope's chain; a late Terms citing a point before a transfer) rests on G14, which now is Envelopes' (§2, `envelope_at`); its text stays in draft 25, and is listed for Envelopes below.
+
+**21. The baker is as the envelope says.** *Left with its rule.* Draft 26: Envelopes (G14.4); 5.11.9. Reached by "Where three rules live" (17 November).
+
+> G14 rests on the envelope and on whoever it names as baker, as the core gives them. It does not stop anyone from editing a work and baking it again under their own name: that is another envelope, and whether it owes anything to the first is not read by this grammar. It reads only Terms that name an envelope (P18).
+
+Its rule left for Envelopes with the baker's rules; listed there, below.
+
+**22. A copy is made legible, not forbidden.** *Left with its rule.* Draft 26: Envelopes (G14.5); 5.11.9. Reached by "Where three rules live" (17 November).
+
+> Anyone may bake the same bytes again, unedited, and sell them under Terms of their own: those Terms count (G14.5). The bytes say who uploaded and when, not who made it, so the grammar never picks between bakes of the same work. A buyer is shown the other bakes only as far as the verifier holds them. Which is the original is a ranking a client may make, a judgment a cMIP or an arbiter may give, and a contest its maker may raise; none of them is a verifier's answer, and a contest moves no money.
+
+Its rule left for Envelopes with the baker's rules; listed there, below.
+
+**23. Closed world hurts the one who did not lodge.** *Reworded.* Draft 26: 5.8.4, 5.7.2. Reached by "The place vouches for the chaining only" (26 November); the lead's reading of 10:07 (section 6.7).
+
+Under 5.8.4, where the Terms name keepers, a party's own act that the keepers never show counts for no answer about order, even if it is genuine; an act the keepers do not yet show is not yet in force (5.4.1, 5.5.1(b)). It still counts as a tip of a fork in its signer's own line (5.7.2): hiding an act from the keepers does not hide a fork.
+
+**24. Honest forks.** *Kept.* Draft 26: 5.7.2, 5.12.3, 5.12.4, 5.12.6. Reached by "A fork is a fork" (27 November).
+
+> A signer who loses track of their last act (a lost device, a restored backup) and signs again produces a fork that looks exactly like a lie. Honest drift and lying look the same from outside. Both tips stop, with everything that signer built on either, until the signer resolves the fork (G12.3), if they still hold their key; what others relied on in the tip set aside stands, shown as disputed (G12.5).
+
+**25. A fork of Terms holds the agreement where it was.** *Reworded.* Draft 26: 5.5.4, 5.5.4(e), 5.5.5(a), 5.12.3, 5.12.5, 5.12.8. Reached by "A fork is a fork" (27 November); "The gate and the pin; a fork, not a race" (26 November); the lead's reading of 14:33 (section 6.10).
+
+While two updates of the same Terms both stand, the Terms before them stay in force: neither tip's change takes effect, including a new receiver (5.1.4), and nothing built on either counts (5.12.3). If the agreement gave no power to resolve (5.12.5), and those whose signatures a resolving update needs will not sign one, it stays there; the grammar shows it and picks no tip. Where the update condition lets fewer than all update the Terms, any group it accepts can hold the agreement where it was: by signing a rival update, and then, against a resolving update, a rival one (5.12.8). A fork is then a veto; the lead called it the forced deadlock, "to push them to resolve it" (the lead's line). One signer alone cannot make it: a known party who assents to both rivals forks their own line, and neither assent counts for either gate until that line is resolved (5.5.5(a), 5.7.2; the lead's reading of 14:33). It can reach back: a rival to a version long since replaced, which the version's update condition answers valid, is a fork where nothing shows that it came after that version was replaced (per keeper, or by knots), and every version made since then stops with the first tip (5.5.4). Where it is shown late, it replaces nothing. The way out can be said in the language: a power to resolve whose rule accepts only the one resolving update it computes from the acts and the keepers' answers (5.12.5). That is a cMIP's.
+
+**26. Resolving does not undo.** *Kept.* Draft 26: 5.12.6.
+
+> What others relied on in a tip set aside stands, shown as disputed (G12.5). A resolving update settles which tip goes on; it cannot take back what a stranger did relying on the other.
+
+**27. Withdrawing before in force.** *Reworded.* Draft 26: 5.4.1, 5.4.5, 5.12.2. Reached by "In force once pinned" (18 November); "A fork is a fork" (27 November); the ruling on item 1 and the lead's reading of 10:07 (sections 6.1, 6.7).
+
+Between a first assent and the last, the first signer holds an open option against themselves. They can close it: an assent may be cancelled, by a counter signature, until the assents that put the Terms in force are shown before it (5.4.5). Where nothing orders the counter signature against the completing assent, the two are a fork: neither takes effect, and the Terms are not in force until it is resolved (5.4.5, 5.12.2). Only keepers the Terms name, or an `in_force` rule with a deadline read from a keeper or a clock the Terms name, settle it in advance. Once the Terms are pinned (5.4.1), no counter signature changes anything ("no signature taken back after it", the lead's line of 18 November).
+
+**28. An offer that stops taking new people.** *Reworded.* Draft 26: 5.10.5, 5.10.6, 5.10.7. Reached by "For the unknown party there is no update, only the agreement she signed" (27 November); item 29 (left out).
+
+The same question, between whatever stops the offer (a new version coming into force, a date, the hundredth buyer) and a stranger's filling the spot. Who came in time is answered by the spot's cMIP, per the keepers and the clock the Terms name, and without them only as shown (5.10.5); where the two are not ordered, the order is not shown. Whatever that answer, a filling already earned keeps its version (5.10.6, 5.10.7). What the known parties may still do to the offer for newcomers (the line's "close the offer, or dissolve it among themselves") is item 29, left out.
+
+**29. Secret votes need a teller.** *Kept.* Draft 26: §6.1 (Tally).
+
+> A tally (section 5.3) requires trusting whoever counts.
+
+**30. Identity ends in acquaintance.** *Kept.* Draft 26: §6.1 (Identity); 5.10.1 (fits).
+
+> Who vouches for the voucher (identity, section 5.3) ends in someone knowing someone; the grammar cannot express that. Spots of kind fits rest on it.
+
+**31. The record holds no value.** *Kept.* Draft 26: §6.1 (Witness); K6.
+
+> Every act about value is a claim or an instruction. The gap between "the record says 100" and "there are 60" must be checked continuously (a witness, section 5.3; K6), not once.
+
+**32. Those who cannot sign.** *Kept.* Draft 26: §3.2 (Party).
+
+> A contributor who has no key (the long dead, the unknowing) can be named in words but is no party, and nothing can arrive for them.
+
+**33. No default way out.** *Reworded.* Draft 26: 5.5.5(a), 5.5.6, 5.5.7(e). Reached by "Who signs an update by default: the known parties" (26 November); "Delegation is a leftover" (18 November).
+
+By 5.5.7(e), an agreement that names no update condition changes only by the assent of every known party. And since no agreement ends (5.5.6), none can be left by ending it: the last version keeps binding until those its Terms require sign a new one. If a known party is gone and no successor was named in advance (#37, #38), it is stuck. The way out is designed in advance or not at all: for a party who wants to leave, an update condition that answers valid for an update that party alone signed, only where it takes its own signer out (section 4.3 of this companion). Draft 25's one exception (a delegation ends by its delegator alone, G5.5) goes with delegation. A filling is not stuck in the same way: no update reaches it, and what it gave lasts only as its version's words say (5.10.6, 5.10.8).
+
+**34. A judge is as hard to change as the Terms.** *Kept.* Draft 26: 5.6.5(d).
+
+> A judge named in the Terms, and a power to resolve, change only by an update (G5.6). Where the update condition asks everyone, and the judge is gone, or one party will not sign, the judge stays named and nothing a power does can put another in their place. People who want a judge that can be replaced say how in their update condition, in advance.
+
+**35. Bound by an update one did not sign.** *Reworded.* Draft 26: 5.6.1(c), 5.6.2, 5.10.6. Reached by "Who signs an update by default: the known parties" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November).
+
+Where Terms name an update condition that fewer than all can meet, a known party is bound by an update it never signed (5.6.1(c)). It signed for that when it signed Terms that name the condition; the grammar shows the condition's fingerprint, and reads nothing of whether that party understood it ("Minds"). No longer a filling: whoever holds one is bound by the version its proof names and by no update (5.10.6, N5).
+
+**36. Ordering and lines show patterns.** *Kept.* Draft 26: §5.7, §5.8; §6.1 (Standing).
+
+> G6 and G7 make the shape of an agreement (who acted, how often, in what order) visible to whoever sees the acts or the place, even when the words are concealed. Standing (section 5.3) reads exactly those patterns.
+
+"the place" reads "the keepers".
+
+**37. What an agent signed stays signed.** *Kept.* Draft 26: 5.6.6. Reached by "Delegation is a leftover" (18 November).
+
+> A grantor who regrets an agent's act cannot set it aside (G5.7): once the Terms are in force, it changes what was made only by an update, which those who agreed to it may have to sign, as the update condition asks. Whoever hands an agent a power carries what the agent made with it.
+
+**38. An agent has what was signed, and no more.** *Dropped.* Draft 26: none: G5.5 goes. Reached by "Delegation is a leftover" (18 November).
+
+Draft 25: "By default a delegator ends a delegation at any time, and the grammar gives the agent no notice and no pay (G5.5)." Draft 26 has no delegation and no delegator's default ("Delegation is a leftover", 18 November: "I think it's best. It's a leftover of the old ways"); an agent holds a power, which ends as the power's own rule or a version of its Terms says (5.6.6(a)). Its words, with his "we’re not Law.", stay in draft 25.
+
+COUNTED (`costs10.py`, M10's scratch script): 38 costs, as in draft 25's section 7: kept 22, reworded 13, left with its rule 2, dropped 1.
+
+### 7.2 The costs of the new rules
+
+One line each. Where a line of the ledger gives the cost, it is quoted and labelled (his, or the lead's); where none does, the line is the scribe's.
+
+- **N1, the gate and the pin (5.5.1).** One more round of signatures for a bare agreement: an update, like a first version, counts only once its order is shown, and where the Terms name no keeper that means every needed signer acting again after the completion. *Source*: the lead's, "In force once pinned" (18 November): "one more round of signatures for a bare agreement".
+- **N2, the keeper, one or several (5.8.1 to 5.8.4).** Two keepers, two dependencies: where they disagree there is no order ("not shown"), a forced deadlock like a fork. *Source*: the lead's, "The place vouches for the chaining only" (26 November, 17:49): "the cost, two dependencies".
+- **N3, the set of acts (§4.1).** A set's value names no act a verifier can read without the list it was computed from: it shows nothing of order, completeness or meaning, and anyone holding only the value learns nothing from it. *Source*: the scribe's, from §4.1.
+- **N4, the words are a Text act (5.2.2).** One more act per agreement: the words are lodged first, as a Text act, and the Terms name it; where the Text act's signer later leaves it out by a change of key, only those who relied on it keep it standing (N10). *Source*: the lead's, "The words of Terms are a Text act" (26 November).
+- **N5, no update reaches a filling (5.10.6).** The seller is bound to each filling for as long as its version's words say: changing the deal for those already in is not possible by update. *Source*: his, "Ana's month ends by the clock the agreement names" (27 November, 07:53): "It’s a problem that really only impacts subscriptions models I think".
+- **N6, how long, on the version's clock (5.10.8).** A filling whose version names no clock has no term in time that can be read from it (5.8.6); one whose words state no term has none a verifier can show (item 11, left out). *Source*: the scribe's, from 5.10.8 and item 11.
+- **N7, "shown after" (5.13.3).** The stall: where an act a chain needs is named and not held, the answer stays unchecked, with no door around it; a keeper prevents it in advance. *Source*: the lead's, "A missing act stays unchecked: no door around it" (26 November): "The stall is the forced deadlock: only someone the update condition accepts can make it, the agreement resolves it as a fork, and a keeper prevents it in advance".
+- **N8, a fork is a fork (5.12.1).** One signer's withdrawal against a completing assent stops the Terms from coming into force until the fork is resolved, and draft 26 gives no form for resolving that fork in bytes (item 7). *Source*: his, "What a race stops" (18 November): "Agreed, Carla is the monkey wrench that gets it all stuck"; the gap is the scribe's, from item 7.
+- **N9, no stated anchor, no condition in time (5.8.6).** Where only the words speak of a time, no verifier answers about it: a seller who sells time names a clock, and tools that check words against fields are needed above the core. *Source*: his, "A condition in time with no anchor is refused" (26 November): "Tools that verify that text and agreement state the same thing will be needed".
+
+Draft 26's keeper costs one more thing, said by none of these: Terms that name keepers are in force only once those keepers show them, so a keeper that stops answering stops the agreement's order (5.4.1, 5.8.4). The scribe's, from 5.8.4.
 
 ## 8. The scenarios
 
-written by M10
+**In plain words.** Each scenario is a short story told in acts, in the order they are signed, with what a verifier answers under draft 26 at each step and which rule gives it. A verifier can be run on each: the acts are the input, the answers the expected output. Where an answer turns on something draft 26 leaves out, the scenario is told up to that point and says where it stops; nothing is chosen.
+
+**How to read it.** *V1, V2, V3* are versions (Terms acts) of one agreement; *U1, U2* updates of one version; *A(x, V)* is x's assent to V; *CS(x)* x's counter signature. "Names" means a fingerprint in a field (a knot, 5.13.1). Each answer is given with its word in bold, its rule, and its qualifier (**as shown**, **per keeper**, **per clock**). Unless a scenario says otherwise: the Terms name no keeper, no clock and no update condition; the parties named as signers are the known parties (§3.2); each assent names in `previous` its signer's last act within the agreement (5.7.1); the verifier holds every act listed and every cMIP named. The names (Ana, Ben, Carla) are the ledger's. The expected answers are the scribe's reading of draft 26's rules (INFERRED, each with its rules); none is a vector, and none changes one.
+
+The scenarios are of three sources: the ledger's (8.1 to 8.7), the impact sheet's twenty-two new vectors by its line (8.8 to 8.16), and the five blind readers' cases, M4 to M8 (8.17 to 8.21). The impact sheet was written before draft 26 and covers the exchanges up to "Wave two: check, then attack, then draft 26" (26 November); each of its expected answers is re-read here against draft 26, and where draft 26's answer differs from the sheet's, both are given.
+
+### 8.1 Ana, Ben and Carla: a withdrawal against the completing assent
+
+*Source*: "What a race stops" (18 November: "Ben's signature completing Terms while Carla takes back hers, with nothing ordering the two"; he: "Agreed, Carla is the monkey wrench that gets it all stuck"); "In force once pinned" (18 November); "A fork is a fork" (27 November). The ledger records that the MOR lead "retold it with Ana, Ben and Carla" in "The gate and the pin; a fork, not a race" (26 November); the retelling's own acts are not in the ledger, so the acts below are the 18 November case's.
+
+*Acts*: (1) V1, a first version: parties Ana, Ben and Carla, each named as a signer; author Ana; no `in_force`. (2) A(Ana, V1). (3) A(Carla, V1). (4) A(Ben, V1), naming none of Carla's acts. (5) CS(Carla), `terms` V1, its `previous` naming (3); it names nothing of Ben's.
+
+*Answers*:
+- After (4): the assents V1's default asks for are present (5.4.1, first sentence: every party named as a signer); V1 is not yet in force: **not shown**, no order being shown, since no party has acted after the completion (5.4.1, the pin), **as shown**.
+- After (5): with no keeper, only knots order (5.4.5, The order). (5) is not shown after (4), so it is not late. Counting every act but those shown after (5), (4) is still counted and V1 would come into force, so (5) is not shown to have come first. With every act counted, V1 would come into force. So (5) and the completion are a **fork** (5.4.5; 5.12.2: "Terms coming into force against a counter signature"): neither takes effect, V1 is not in force, and the verifier shows both and chooses neither (5.12.1).
+- *Variant*: (5) names (4) (Carla had seen Ben's assent). Then (5) is shown after the completion: it is **late**, cancels nothing, and pins for Carla (5.4.1: "a counter signature so shown is late, and cancels nothing"); V1 is in force once Ana and Ben have also acted after the completion (5.4.1), **as shown**.
+- *Variant*: V1 names a keeper K. Then K's positions settle it: (5) changes nothing where K places it after the completion, and cancels where before (5.4.5, The order), **per keeper**; V1 is in force once K shows the completing assents (5.4.1).
+
+*Stops*: how the fork of step (5) is resolved in bytes is not given: 5.12.4 gives the form of a resolving update "for a fork of a line only" (item 7, left out). Whether Carla's counter signature cancels once such a fork is resolved is "as the resolver decides" (the lead's reading of 09:47, section 6.6, item 6); draft 26 has no rule for it.
+
+### 8.2 Ana's month
+
+*Source*: "Ana's month ends by the clock the agreement names" (27 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November: "If she bought for a month of service to an LLM for example, the deal is valid a month.").
+
+*Acts*: (1) V1, a first version by the seller S, named as a signer and author; a role (say of kind fits, its `what` and its K5 cMIP); `in_force` (required, 5.4.2); `clock` C; a K1 cMIP whose words give a buyer one month. (2) A(S, V1), and acts that put V1 in force and pin it (5.4.1). (3) A(Ana, V1), which earns a filling by the K5 cMIP's proof. (4) V2, `replaces` V1, signed by S alone, naming clock C2 and dropping the role. (5) Acts of S that pin V2.
+
+*Answers*:
+- (3): Ana's filling is **shown**, with its proof and V1 named (5.10.2, 5.10.7), **as shown**; her assent binds her, and binds S to her, as V1 says (5.4.3).
+- (4) and (5): V2 is **valid**, by default: its only known party, S, signed (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1), **as shown**. Ana is not asked (5.5.5(a)).
+- V2 does not reach Ana's filling: for a filling no later update exists; V2 exists for the agreement (5.10.6). Her filling is still read from V1, its role and its cMIP as V1 states them, though V2 drops the role (5.10.2).
+- Whether her month still applies is the K1 cMIP's answer, on V1's clock C, never V2's C2 (5.10.8, 5.8.5; the lead's reading of 13:20, section 6.8): the verifier shows it as that cMIP's, with its ground, **per clock**; without that cMIP, **unchecked** (5.10.8).
+- *Variant*: V1 names no clock. Then no term in time can be read from V1 (5.10.8, 5.8.6); and where V1's K1 cMIP declares that it needs a clock, V1 is **invalid** (5.8.6; §4.4, case 8).
+
+*Stops*: which act the month counts from ("the anchoring of the purchase": the assent, the payment, the proof) is item 12, left out; the cMIP that reads the words answers it, and draft 26 names no act.
+
+### 8.3 Version 3 naming version 1
+
+*Source*: "A late version 3 is rejected" (26 November: "Version 3 is the one the network needs to reject"; the lead's line: "a version 3 that names a version already replaced is rejected once the replacing version is in force").
+
+*Acts*: (1) V1, in force and pinned, parties Ana and Ben. (2) V2, `replaces` V1; A(Ana, V2), A(Ben, V2). (3) Acts of Ana and Ben after (2), pinning V2 (5.5.1(b)). (4) V3, `replaces` V1; A(Ana, V3) and A(Ben, V3), each naming in `previous` its signer's act of (3), as in the rerun ("each maker signed version 2 and then version 3 in their own line", the lead's line).
+
+*Answers*:
+- V2: **valid**, by default (5.5.7(e)), and in force (5.5.1), **as shown**.
+- V3: it passes V1's gate (5.5.4: L passes O's gate), and the acts without which it does not pass are shown after the acts that put V2 through V1's gate and pin (5.5.4(a)): V3 is a **late update**, answered **late**, naming 5.5.4 and the acts that show it, **as shown** (5.5.4(c)). It replaces nothing and is no tip; which Terms are in force is answered as if V3 were not there: V2 (5.5.4(c)). An assent to V3 binds no one; nothing built on V3 counts: a late update is no tip and gives no previous (5.5.4(c)).
+- "Rejected" is not the answer: draft 26's word is **late** (§3.6; the settled note's M5). Whether "rejected" is a verifier's answer for a late update is item 24, left out.
+- *Variant*: V1 names a keeper K. Lateness is read per K, from the positions at which each passes V1's gate (5.5.4(b)), **per keeper**; knots show V3 late against K only as K's contradiction (5.5.4(c), 5.8.4).
+- *Variant*: the chain that would show V3 late needs an act named in a field and not held. Whether V3 is late is **unchecked**, and so is which Terms are in force from V1 on (5.5.4(c), 5.13.3).
+- *Variant*: nothing shows V3 after V2's acts (Ana and Ben signed V3 naming only their V1 acts). V2 and V3 are a **fork** whose shared act is V1 (5.5.4), and V1 stays in force (5.5.4(e)).
+
+### 8.4 Two keepers that disagree
+
+*Source*: "The place vouches for the chaining only" (26 November, 17:49: he, "Two disagreeing has its value though"; the lead's line: "where they disagree there is none ("not shown", with that reason), and the disagreement is kept as evidence"; "a forced deadlock like a fork", the lead's).
+
+*Acts*: (1) V1 in force, naming keepers K1 and K2, and an update condition "any two of three known parties" (Ana, Ben, Carla). (2) U1, `replaces` V1, with A(Ana, U1), A(Ben, U1). (3) U2, `replaces` V1, with A(Carla, U2) and A(Ben, U2), Ben's naming his own last act before (2): Ben's two assents name the same `previous`. (4) K1's records place (2) before (3); K2's place (3) before (2).
+
+*Answers*:
+- About the order of U1 and U2: **not shown**, the keepers the Terms name disagreeing; both keepers named and each one's records shown as evidence (5.8.3, 5.5.5(d)).
+- Ben's two assents name the same `previous`: a **fork** in Ben's line, whatever the keepers show (5.7.2). He is a known party who assents to two rival updates of one version, so neither of his assents counts for either gate until his line is resolved (5.5.5(a), 5.7.2; the lead's reading of 14:33, section 6.10). U1 then has Ana's assent and U2 Carla's: neither has two of three counted, the condition answers **not valid** for each, on the assents counted (5.5.7(c)), and neither passes the gate. V1 stays in force, **per keeper** (5.5.1, 5.5.3).
+- *Variant* without Ben's double assent: the update condition asks any one of the three, and Ben signs U1 only. U1 (Ana, Ben) and U2 (Carla) both pass V1's gate; neither is shown after the other, the keepers disagreeing, so they are a **fork** (5.5.4), shown with the keepers' disagreement; V1 stays in force (5.5.4(e)).
+- *Variant*: K1 shows U1's assents and K2 shows nothing yet. Whether the pin needs every keeper to show the order, or those that show it where none disagrees, is item 5, left out. The scenario stops there.
+
+*Stops*: how a verifier hands a cMIP that counts signatures the assents that count, leaving out Ben's forked ones, is not said (For M11, below).
+
+### 8.5 The silent signer
+
+*Source*: "The gate and the pin; a fork, not a race" (26 November): the lead's answer to "How is this then enforced?": a malicious client can "withhold its knot (the silent signer: not shown, cured by naming a place)". Its "Not answered" line: "whether draft 26's warning says plainly that Terms naming no place depend on every needed signer's knots".
+
+*Acts*: (1) V1, a first version, Ana, Ben and Carla named as signers, no keeper. (2) A(Ana, V1), A(Ben, V1), A(Carla, V1). (3) Later acts of Ana and of Ben within the agreement, each naming its own assent and, by `answers` or `relies_on`, the other two assents. (4) Nothing more from Carla.
+
+*Answers*:
+- V1's assents are present (5.4.1, first sentence), and it is **not shown** as in force: no order is shown, since Carla, in whose name an assent is counted, has made no act shown after every one of those assents (5.4.1), **as shown**. A missing act never becomes a yes (5.13.3).
+- *Variant*: V1 names a keeper K. V1 is in force once K shows the three assents, at the positions K gives (5.4.1), **per keeper**; Carla's silence changes nothing. Where keepers are named, only they pin (5.4.1).
+
+### 8.6 The stall
+
+*Source*: "A missing act stays unchecked: no door around it" (26 November; Fable 5.1's break 4, "a `previous` nobody holds"). He: "I think yes. I don’t see the need to open a door around it. But feel a risk", and "No, I meant a risk of opening a door". The lead's line: "The stall is the forced deadlock: only someone the update condition accepts can make it, the agreement resolves it as a fork, and a keeper prevents it in advance."
+
+*Acts*: (1) V1 in force, Ana and Ben, no keeper. (2) U, `replaces` V1, A(Ana, U), A(Ben, U); Ben's assent names in `previous` an act the verifier does not hold. (3) Later acts of Ana and Ben that would pin U, Ben's chain running through the act not held.
+
+*Answers*:
+- Ben's assent counts, and his line is **unchecked** before it (5.7.1). U is **valid**, by default, where both assents are held (5.5.7(e)).
+- Whether U is pinned needs a chain through the act not held: **unchecked** (5.13.3: "never a yes, and never a no. No grammar rule goes around it"), and so is which Terms are in force from V1 on, the verifier naming V1 as the last version it has established (5.5.4(c), 5.5.5(e)).
+- *Variant*: V1 names a keeper K. U is pinned once K shows its order (5.5.1(b)); the missing act stops nothing K shows, **per keeper**.
+
+### 8.7 The double assent
+
+*Source*: the lead's reading of 14:33 on item 9 (section 6.10): "a known party who assents to both rival updates forks her own line (5.7.2), and in a fork neither tip takes effect ("A fork is a fork", 27 November; draft 25's G12.2, both tips stop). Neither assent counts for either gate until her line is resolved, by a resolving act in her line as §5.12 says." It answers M7's blind reader's first point (the trace, M7's rows to check, 4).
+
+*Acts*: (1) V1 in force, known parties Ana, Ben and Carla, no keeper, an update condition C2 "any two of three" (its cMIP held). (2) U1, `replaces` V1; A(Ben, U1). (3) U2, `replaces` V1; A(Carla, U2). (4) A(Ana, U1) and A(Ana, U2), both naming in `previous` Ana's last act before them. (5) R, a Statement of kind `resolve` by Ana, `previous` that same act, `resolves` both her assents, `continues` A(Ana, U1). (6) Acts that pin U1 (5.5.1(b)).
+
+*Answers*:
+- After (4): Ana's line has two acts naming the same `previous`: a **fork** for Ana (5.7.2), **as shown**; both tips stop (5.12.3). Neither of her assents counts for either gate until her line is resolved (5.5.5(a), 5.7.2). So U1 has Ben's assent counted, U2 Carla's: C2 answers **not valid** for each, on the assents counted (5.5.7(c)), so neither passes the gate, and neither is a tip of a fork of Terms; V1 stays in force (5.5.1, 5.5.3), **as shown**.
+- After (5): R is an update of the shared act, signed by Ana, naming every tip and one in `continues`: it resolves her line (5.12.4), **shown** (the scribe's word: 5.12.4 names no answer word for a resolving update that resolves; 5.12.5 gives **shown** for one under a power). A(Ana, U1) counts as the next act of her line; A(Ana, U2) is **set aside** (5.12.4). Now U1 has Ana's and Ben's assents: C2 answers **valid** for it (5.5.7(d)), named with its ground; U2 has Carla's only: **not valid** (5.5.7(c)).
+- After (6): U1 is in force once its order is shown (5.5.1(b)), **as shown**; until then **valid**, and **not shown** as in force, no order being shown.
+- *Without the ruling* (the other reading, section 6.10): each of Ana's assents would count for whether its Terms tip was signed (5.12.3's one thing), both updates would pass C2's gate, and U1 and U2 would be a **fork** of Terms (5.5.4), V1 staying in force until a resolving update of Terms.
+
+*Stops*: where Ana's second assent names her first in `previous` (no shared `previous`), 5.7.2's test sees no fork in her line, while the ruling reads every double assent as one; and how the verifier leaves her forked assents out of what C2's cMIP is given is not said. Both are listed for M11.
+
+### 8.8 The impact sheet's line 1: a late version 3, three vectors
+
+*Source*: the impact sheet, line 1 ("Only a lacking act that could carry a knot leaves "late" unchecked"); "A late version 3 is rejected" (26 November). The acts are 8.3's, with one more entry in V3's `relies_on`.
+
+1. *V3's `relies_on` names a Text act held beside it.* The sheet: **late**, as shown, where verifier 2 gives unchecked. Draft 26: **late**, **as shown** (5.5.4(a), (c)). The Text act is held and is a knot (5.13.1); nothing a chain needs is missing.
+2. *The same with the work declared as a piece* (a fingerprint the verifier holds as no act). The sheet: **late**, as shown. Draft 26: **late**, **as shown**, where the makers' own lines show it: the chain that shows V3 late does not run through the piece (5.5.4(a)), and "shown after" proves after whatever is missing (5.13.3). Draft 26 gives a verifier no way to be told that a fingerprint is no act (the impact sheet's Q1); no answer here turns on it.
+3. *The same with a private act held without its key in `relies_on`.* The sheet: **unchecked**, "since it could carry a knot". Draft 26: **late**, **as shown**, where the makers' own lines show it, since no act left unread can undo an "after" already shown (5.13.3); **unchecked** only where the one chain that could show it runs through the private act (5.5.4(c)). The two answers differ; listed under rows to check.
+
+### 8.9 Line 6: a resolve with nothing to resolve, two vectors
+
+*Source*: "A resolve with nothing to resolve: "not shown", with the reason" (26 November). He: "Agreed. It’s a different reason for a “sorry can’t do” and it’s always good to state why".
+
+1. *A Statement of kind `resolve` in an unforked line*: its `resolves` names one act of the signer and no rival. **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4). It is an act of the signer's line like any other, and may itself be a tip (5.12.4).
+2. *A Terms act written as a resolving update where there is no fork* (`replaces` V1, `resolves` naming U1 and nothing rival, `continues` U1). **Not shown** as a resolving update, with the reason: nothing to resolve (5.12.4: what it names "are not the tips of a fork in its own line"). Since it names V1 in `replaces`, it is an update of V1 beside U1, and where both pass V1's gate and neither is shown after the other, the two are a **fork** (5.12.4: "a fork is not hidden by adding the field"). This answers the sheet's Q10.
+
+### 8.10 Line 7: a buyer's assent to a replaced version, two vectors
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November). He: "What are the terms of version 2? Would be my answer".
+
+*Acts*: V2, an offer with a role, in force; A(Ana, V2), earning a filling; V3 replaces V2, pinned.
+
+1. *With the buyer's K5 cMIP held*: her assent is **shown**, as one that earned a filling under a version since replaced, V2 named (5.4.3); her filling **shown** with its proof, V2 named (5.10.2, 5.10.7).
+2. *Without it*: who fills the spot is the K5 cMIP's; the verifier lacks it: **unchecked** (§3.6, 5.10.2).
+
+### 8.11 Line 8: protect the unknown parties, three vectors
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November: "Protect the unknown parties."); "Who signs an update by default: the known parties" (26 November).
+
+1. *An offer with a filled role and no update condition, updated by its maker alone*: **valid**, by default: the maker is the only known party (5.5.5(a), 5.5.7(e)); in force once pinned (5.5.1).
+2. *The filler, after a later version that a named update condition let through*: she is **not shown** as bound by it: no update binds anyone through a filling (5.6.1(c), 5.10.6); her filling stays **shown** under its own version (5.10.7).
+3. *An offer whose K5 cMIP is lacking, an outsider's assent to an update held, no update condition*: **valid**, by default, once the maker's assent is held, where verifier 2 answers unchecked: the default asks the known parties only, and who fills a role does not enter it (5.5.5(a)). The outsider's assent makes no one a party (5.5.5(a)).
+
+### 8.12 Line 9: G10.6(b) goes, one vector
+
+*Source*: "A buyer under a replaced version: what version 2 says" (26 November), its line "G10.6(b) goes"; he: "Yes, it was a bad idea. It’s the “let me drown you in terms updatable unilaterally” nightmare we already live under".
+
+1. *A version whose update condition answers valid for a later version that changes what buyers bought*: the later version is **valid** under that condition (5.5.7(d)) and replaces once pinned, for the agreement; for the buyer's filling no later update exists (5.10.6), and the update condition is never asked about a filling (5.5.7). Her filling: **shown**, with the version it was earned under, and no later version named as changing it (5.10.7).
+
+### 8.13 Line 10: her own assent on a later version, one vector
+
+*Source*: the same entry, its line "G10.6 comes back with (a) only"; "A power given binds its giver" (18 November) and the ruling on G5.6(f) (section 6.3).
+
+1. *The holder of a filling assents, in her own name, to a later version that changes what she earned*: **shown**: the verifier names, with her filling, the version it was earned under and that later version, with her assent (5.10.7). Each later version exists for the agreement; it binds her by her own assent (5.6.1(a); 5.10.6). Made for her by an agent under a power she gave, the same, with that power named (5.10.7, 5.6.5(f)).
+
+### 8.14 Line 16: the set of acts, five vectors
+
+*Source*: "One way to name a set of acts, in Agreements" (26 November); the settled note's M21, F12, F13 (the lead's readings). The bytes are encoding 3's, whose label and joining are open (encoding 3, section 11, items 1 and 2).
+
+1. *Two ids in either order*: one value (§4.1: "sorted").
+2. *An id given twice*: the same value as once (§4.1: "repeats dropped").
+3. *One id*: a value that is not the id itself (§4.1: "hashed with a label for a set of acts").
+4. *The empty set*: "the label and no members" (§3.1, §4.1); how its value is written is open (§7, "The empty set").
+5. *An act with a set's value in `relies_on`*: draft 26 gives no field the set form ("in this text none does", §7). A set's value and an act id are both 32 bytes, so the act passes as an Agreements act, and the entry reads as the fingerprint of an act not held; a chain that needs it is **unchecked** (5.13.3). The scenario stops there: whether a field may hold a set's value is open (§7; encoding 3, section 11, item 4, for the codemeister and for Nobody, allegedly), and how such an entry is read is listed for M11 (M8's "For the text", 1).
+
+### 8.15 Line 18: one gate for an update, three vectors
+
+*Source*: "Valid means in force: one gate for an update" (26 November), as "The gate and the pin; a fork, not a race" (26 November) and "Valid and in force, two words, two jobs" (26 November) changed it: the pin is back.
+
+1. *V2, valid by a named update condition, its own `in_force` answering no*: the `in_force` answer is left unread in an update, and the verifier says so (5.2.3, 5.4.2); V2 is **valid** (5.5.7(d)) and replaces once its order is shown (5.5.1); until then **valid**, and **not shown** as in force. The sheet's "it replaces" is draft 26's only with the pin.
+2. *A late update shown by knots, where the update that came first is valid and not in force by its own rule*: **late**, **as shown**, where the acts that put the first through V1's gate and pin are shown before it (5.5.4(a)); its own `in_force` is not read (5.2.3).
+3. *An update carrying its own `in_force`*: its answer on coming into force is left unread, the verifier saying so (5.2.3); where the update names a role, the field is required and read for who fills it (5.4.2). This answers the sheet's Q7 as the settled note's M11 and Q7 narrowed it (the lead's reading of 09:47, section 6.6).
+
+### 8.16 Line 19: the words of Terms, two vectors
+
+*Source*: "The words of Terms are a Text act" (26 November). He: "Text comes first as a rule since agreement needs to point to it".
+
+1. *Terms whose `body` names a Text act handed beside them*: the words are a Text act; nothing is found against the Terms under 5.2.2. Were the act `body` names held and not a Text act, the Terms would be **invalid** (5.2.2; §4.4, case 2).
+2. *With 8.8, that Text act named also in a late update's `relies_on`*: **late**, **as shown** (5.5.4); the Text act is one more knot (5.13.1), older than every act of the case, and changes no order.
+
+### 8.17 M4's blind reader: one keeper, a buyer, a late version 3
+
+*Acts* (the trace, M4's blind reader): V1 signed by two known parties, naming keeper K and no update condition, a buyer having filled a role under it; V2 signed by the two known parties only, lodged at K and shown there after V1's coming into force; V3, naming V1, shown by K later than V2.
+
+*Answers*: V2 **valid**, by default (5.5.7(e)), pinned per K (5.5.1(b), 5.5.5(d)), **per keeper**, K named. The buyer is not asked (5.5.5(a)); V2 does not reach her filling (5.10.6), which stays **shown** under V1 (5.10.7). V3 is a late update: **late**, **per keeper** (5.5.4(b), (c)). These are the blind reader's answers; draft 26, as edited, gives the same.
+
+### 8.18 M5's blind reader: two keepers, a power, a month in the words
+
+*Acts*: Terms in force name two keepers and no clock; P gave A a power to sign for her; the two keepers give different orders for two acts; the words say "open for one month".
+
+*Answers*: P is bound by what A signed where P's own signature is on the version that gives the power and its rule says yes (5.6.1(b)); **unchecked** where the rule's cMIP is lacking (§3.6). About the order: **not shown**, the keepers disagreeing, both named, each one's records shown as evidence (5.8.3). About the month: where no cMIP the Terms name declares that it needs a clock, the time is only in the words, and the verifier gives no answer of these grammar rules about it (5.8.6); a reader's own clock gives only that reader's answer (5.8.5). Where one such cMIP declares the need, the Terms are **invalid**: they name a keeper and no clock, and a keeper is not a clock (5.8.6).
+
+*Stops*: whether A, who signed for P, is bound by that act is left out, carried for Nobody, allegedly (below); whether the two acts the keepers order differently are a fork is item 8.
+
+### 8.19 M6's blind reader: Ana's month, her role dropped
+
+*Acts*: Terms in force name a clock; Ana fills a role under V1, whose words give her a month; the known parties sign V2, in force, which drops her role; three weeks have passed on the clock.
+
+*Answers*: Ana's filling is **shown**, tied to its proof and to V1, with exactly V1's rights; whether it still applies is the K1 cMIP's answer, **per clock** on V1's clock, **unchecked** without that cMIP (5.10.7, 5.10.8). V2 does not reach it (5.10.6); her filling is still read from V1's role and cMIP (5.10.2). The known parties are bound to her by V1, for as long as its words say (5.4.3, 5.10.6).
+
+*Stops*: whether her spot still takes new identities once V2 has no role ("asks nothing" or unchecked) is item 29; from which act the month counts is item 12.
+
+### 8.20 M7's blind reader: two rival updates, and a resolve Statement
+
+*Acts*: V1 in force, no keeper, no update condition; U1 and U2, each naming V1, each signed by every known party, neither naming the other; a buyer filled a role under V1 before; then a Statement of kind `resolve` by one known party naming both, U1 continuing.
+
+*Answers*: as M7's blind reader read it, before the 14:33 reading: a **fork** of Terms, both tips stopped, V1 in force (5.5.4(e), 5.12.3); the resolve Statement resolves nothing (a fork of Terms is resolved only by a Terms act naming V1 in `replaces`, signed by every known party by default, 5.12.4): **not shown** as a resolving update, with the reason, and the fork stands (5.12.7); the buyer's filling **shown** under V1 (5.10.2, 5.10.6). *Under draft 26 as edited*: each known party assented to both rivals; where each one's two assents name the same `previous`, each one's line forks (5.7.2; see 8.7's stop), and neither of their assents counts for either gate until their line is resolved (5.5.5(a)): neither U1 nor U2 passes the gate, and there is **no fork of Terms**; V1 stays in force. The resolve Statement, signed by one known party, resolves that party's own line if its `previous` is the act both their assents name (5.12.4); the other parties' lines stay forked, and U1 still lacks their counted assents. The answer word changes from **fork** (of Terms) to **fork** (of each signer's line), and V1 is in force under both.
+
+*Stops*: the case did not give the resolve Statement's `previous`, on which whether it resolves its signer's line turns (M7's note).
+
+### 8.21 M8's blind reader: a Terms act the checker reads
+
+*Acts*: a Terms act whose `body` names an act id the verifier holds, which is a Text act; whose keeper field names two keepers; with no `clock`; naming a K1 cMIP that declares it needs a clock.
+
+*Answers*: §4.4's case 2 finds nothing (the words named by fingerprint, the act held a Text act, 5.2.2). By 5.8.6 the Terms are **invalid**: they do not supply what a cMIP they name declares it needs, and a keeper is not a clock (§4.4, case 8). The checker of encoding 3 does not give case 8 until the open choice on how a cMIP's declared needs are read is made (encoding 3, section 9, step 7, and section 11, item 11, for the codemeister and for Nobody, allegedly); the grammar verifier, which holds the cMIP, answers **invalid** (5.8.6). The blind reader answered **pass** for the checker, and noted **invalid** under the open choice's first reading.
+
+COUNTED (`scen10.py`, M10's scratch script): 21 scenarios (7 from the ledger, 9 from the impact sheet's lines, 5 from the blind readers), holding the impact sheet's 22 new vectors (line 1: 3; line 6: 2; line 7: 2; line 8: 3; line 9: 1; line 10: 1; line 16: 5; line 18: 3; line 19: 2), 34 cases in all (7, 22 and 5), variants not counted.
 
 ## 9. The trace, rule by rule
 
-written by M10
+**In plain words.** One row for each rule of draft 26, so that a reader can follow any rule back to where it came from: the draft 25 rule it was written from, how the brief sorted that rule, the exchange of the ledger that shaped it, the settled note's row where one carries it, and the reading of the MOR lead's where one shaped it. Nothing here is a decision.
+
+**How to read it.** Built by script (`trace10.py`, M10's scratch script) from the trace file's rows (M2 to M7), the brief's sort (its section 2), the ledger's own headings on main, and the "Shaped" lists of section 6 above, then read by eye. *Draft 25*: the rule or rules each trace row names (a lettered clause of draft 26 is in its rule's row); **N1** to **N9** are the brief's new rules. *The brief's sort*: as the brief has it; where the brief read a rule two ways, the way the lead's reading settled it is added (section 6.3). *The ledger*: each exchange by its heading as the ledger on main has it, with its date; "no entry (the brief)" where the brief found none. *Settled note*: its rows, as the trace cites them (every row of it is the lead's reading). *The lead's reading*: the entry of section 6 that shaped the rule, by its number there; "14:59" is the lead's reading of 27 November, 14:59, which shaped edits (i) and (j) of M10 (the trace, M10's part) and is not yet in section 6. A rule's *Rests on* and *His words* in full are in the trace file.
+
+### 9.1 The numbered rules of §5
+
+| draft 26 | draft 25 | the brief's sort | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|---|
+| 5.1.1 | G1.1 | G1.1: stays | no entry (the brief) | — | — |
+| 5.1.2 | G1.2 | G1.2: changes | "Nothing about me without my signature" (18 November); "Delegation is a leftover" (18 November) | — | — |
+| 5.1.3 | G1.3 | G1.3: stays | no entry (the brief) | — | — |
+| 5.1.4 | G1.4 | G1.4: two ways, read "changes" by the lead (6.3) | "Whose place counts; protect the unknown party, as a principle" (26 November); "A condition in time with no anchor is refused" (26 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
+| 5.1.5 | G1.5 | G1.5: stays | no entry (the brief) | — | — |
+| 5.2.1 | G2.1 | G2.1: stays | "The words of Terms are a Text act" (26 November) | — | — |
+| 5.2.2 | N4 | N4: new | "The words of Terms are a Text act" (26 November) | Q25, Q24 | 6.5 row 3 |
+| 5.2.3 | G2.2 | G2.2: stays | no entry (the brief) | Q7 | 6.6 row 3 |
+| 5.3.1 | G3.1 | G3.1: two ways, read "changes" by the lead (6.3) | "There is no unsigned act: the author is a known party" (27 November) | — | 6.5 row 1 |
+| 5.3.2 | G3.2 | G3.2: stays | no entry (the brief) | — | — |
+| 5.4.1 | G4.1, G4.6 | G4.1: two ways, read "changes" by the lead (6.3); G4.6: changes | "Valid means in force: one gate for an update" (26 November); "In force once pinned" (18 November); "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November) | Q7, M19 | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1; 14:59, M8 (edit (i); the trace, M10) |
+| 5.4.2 | G4.2 | G4.2: stays | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3 |
+| 5.4.3 | G4.3 | G4.3: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November) | M15 | 6.8 row 1 |
+| 5.4.4 | G4.4 | G4.4: stays | no entry (the brief) | — | — |
+| 5.4.5 | G4.10 | G4.10: changes | "In force once pinned" (18 November); "A fork is a fork" (27 November); "What a race stops" (18 November); "The place vouches for the chaining only" (26 November) | — | 6.1 Item 1: the pin for a first version; 6.1 Item 28: "shown after"; 6.6 row 2; 6.7 row 1 |
+| 5.5.1 | G4.8, N1 | G4.8: changes; N1: new | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "The two gates" (17 November) | Q7 | 6.1 Item 28: "shown after"; 6.7 row 1; 6.1 row 3; 6.2 Item 31: the wording of the gate and the pin; 6.10 row 3 (the colon) |
+| 5.5.2 | G4.5 | G4.5: changes | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Who signs an update by default: the known parties" (26 November) | — | — |
+| 5.5.3 | G4.6 | G4.6: changes | "The place vouches for the chaining only" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
+| 5.5.4 | G4.7, G4.7(a), G4.7(b), G4.7(c), G4.7(d), G4.7(e) | G4.7: changes; G4.7(a): changes; G4.7(b): changes; G4.7(c): changes; G4.7(d): stays; G4.7(e): stays | "The gate and the pin; a fork, not a race" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November); "The place vouches for the chaining only" (26 November); "Ana's month ends by the clock the agreement names" (27 November); "Whose place counts; protect the unknown party, as a principle" (26 November); "A missing act stays unchecked: no door around it" (26 November); "A late version 3 is rejected" (26 November) | M20, M5 | 6.1 Item 28: "shown after"; 6.2 Item 31: the wording of the gate and the pin; 6.6 row 4; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.3 G13.1; 6.7 row 1; 6.1 row 3; 6.10 row 3 (5.5.4(c)) |
+| 5.5.5 | G4.8, G4.8(a), G4.8(b), G4.8(c), G4.8(d), G4.8(e) | G4.8: changes; G4.8(a): changes; G4.8(b): stays; G4.8(c): stays; G4.8(d): changes; G4.8(e): stays | "The gate and the pin; a fork, not a race" (26 November); "Valid and in force, two words, two jobs" (26 November); "Valid means in force: one gate for an update" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "The place vouches for the chaining only" (26 November); "A missing act stays unchecked: no door around it" (26 November) | M11 | 6.2 Item 33: the default signers; 6.6 row 5; 6.1 row 1; 6.10 row 1 |
+| 5.5.6 | G4.9 | G4.9: changes | "What a dissolution is" (18 November); "Leaving takes two acts" (18 November); "The gate and the pin; a fork, not a race" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November) | — | 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
+| 5.5.7 | G4.11, G4.11(a), G4.11(b), G4.11(c), G4.11(d), G4.11(e), G4.11(f), G4.11(g), G4.11(h), G4.11(i) | G4.11: stays; G4.11(a): changes; G4.11(b): stays; G4.11(c): changes; G4.11(d): changes; G4.11(e): changes; G4.11(f): changes; G4.11(g): changes; G4.11(h): stays; G4.11(i): changes | "Valid and in force, two words, two jobs" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "A condition in time with no anchor is refused" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Who signs an update by default: the known parties" (26 November); "There is no unsigned act: the author is a known party" (27 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November); "A hand count is the client's choice" (26 November); "What a dissolution is" (18 November) | — | 6.2 Item 33: the default signers; 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4; 6.7 row 2; 6.8 row 1 |
+| 5.6.1 | G5.1, G5.1(a), G5.1(b), G5.1(c) | G5.1: stays; G5.1(a): stays; G5.1(b): changes; G5.1(c): changes | "Nothing about me without my signature" (18 November); "A power given binds its giver" (18 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "A buyer under a replaced version: what version 2 says" (26 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.3 G5.6(f) and G10.6(a) |
+| 5.6.2 | G5.2 | G5.2: changes | "For the unknown party there is no update, only the agreement she signed" (27 November); "Only rules in the hashed text" (17 November); "Who signs an update by default: the known parties" (26 November) | — | — |
+| 5.6.3 | G5.3 | G5.3: stays | no entry (the brief) | — | — |
+| 5.6.4 | G5.4 | G5.4: changes | "The gate and the pin; a fork, not a race" (26 November); "The place vouches for the chaining only" (26 November); "A fork is a fork" (27 November); "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 Item 28: "shown after" |
+| 5.6.5 | G5.6, G5.6(a), G5.6(b), G5.6(c), G5.6(d), G5.6(e), G5.6(f) | G5.6: stays; G5.6(a): changes; G5.6(b): stays; G5.6(c): stays; G5.6(d): stays; G5.6(e): stays; G5.6(f): two ways, read "stays" by the lead (6.3) | "Who signs an update by default: the known parties" (26 November); "The gate and the pin; a fork, not a race" (26 November); "Only rules in the hashed text" (17 November); "A power given binds its giver" (18 November); "Nothing about me without my signature" (18 November) | M22 | 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a) |
+| 5.6.6 | G5.7, G5.7(a), G5.7(b), G5.7(c) | G5.7: changes; G5.7(a): changes; G5.7(b): changes; G5.7(c): changes | "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Firing an employee" (18 November); "There is no unsigned act: the author is a known party" (27 November); "In force once pinned" (18 November); "A fork is a fork" (27 November) | — | 6.1 Item 1: the pin for a first version; 6.2 Item 33: the default signers; 6.3 G5.6(f) and G10.6(a); 6.3 G4.9 and G4.11(i), reaching G5.7(a) and K4 |
+| 5.7.1 | G6.1 | G6.1: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November) | — | 6.3 G6.1 and G6.2, with E23 |
+| 5.7.2 | G6.2 | G6.2: two ways, read "stays" by the lead (6.3) | "Two threads, two owners" (17 November) | — | 6.3 G6.1 and G6.2, with E23; 6.1 row 1; 6.10 row 1 |
+| 5.8.1 | G7.1, N2 | G7.1: changes; N2: new | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November) | — | 6.1 Item 4: a keeper's record, and Identity's rule 34; 6.4 row 2 |
+| 5.8.2 | N2 | N2: new | "The place vouches for the chaining only" (26 November) | — | — |
+| 5.8.3 | G7.2, N2 | G7.2: changes; N2: new | "The place vouches for the chaining only" (26 November) | M12 | — |
+| 5.8.4 | G7.2 | G7.2: changes | "The place vouches for the chaining only" (26 November); "The place is a pointer" (17 November) | — | 6.7 row 1 |
+| 5.8.5 | G7.4 | G7.4: changes | "Whose anchoring wins" (an earlier exchange, headed by draft 7); "Whose place counts; protect the unknown party, as a principle" (26 November); "Ana's month ends by the clock the agreement names" (27 November) | M20 | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4; 6.8 row 1 (edit (h)) |
+| 5.8.6 | N9 | N9: new | "A condition in time with no anchor is refused" (26 November) | Q26 | 6.7 row 2 |
+| 5.9.1 | G8.5 | G8.5: stays | no entry (the brief) | — | — |
+| 5.10.1 | G10.1 | G10.1: stays | no entry (the brief) | — | — |
+| 5.10.2 | G10.2 | G10.2: stays | "For the unknown party there is no update, only the agreement she signed" (27 November) | — | 6.8 row 1; 6.8 row 1 (edit (h)) |
+| 5.10.3 | G10.3 | G10.3: stays | "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
+| 5.10.4 | G10.4 | G10.4: stays | no entry (the brief) | — | — |
+| 5.10.5 | G10.5 | G10.5: changes | "A condition in time with no anchor is refused" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
+| 5.10.6 | N5 | N5: new | "A buyer under a replaced version: what version 2 says" (26 November); "Protect the unknown party is an Agreements principle" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November); "Who signs an update by default: the known parties" (26 November) | — | 6.8 row 1; 14:59, M9 (edit (j); the trace, M10) |
+| 5.10.7 | G10.6, G10.6(a) | G10.6: changes; G10.6(a): two ways, read "stays" by the lead (6.3) | "A buyer under a replaced version: what version 2 says" (26 November); "A power given binds its giver" (18 November); "Ana's month ends by the clock the agreement names" (27 November) | M22 | 6.3 G5.6(f) and G10.6(a) |
+| 5.10.8 | G10.7, N6 | G10.7: changes; N6: new | "Ana's month ends by the clock the agreement names" (27 November); "Only rules in the hashed text" (17 November) | — | 6.8 row 1; 6.1 row 3; 6.10 row 3 (no clock) |
+| 5.11.1 | G11.1 | G11.1: stays | no entry (the brief) | — | — |
+| 5.11.2 | G11.2 | G11.2: stays | "Where three rules live" (17 November) | — | — |
+| 5.11.3 | G11.3 | G11.3: two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
+| 5.11.4 | G11.4(e) | G11.4(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November) | — | 6.3 G11.4(e) |
+| 5.11.5 | G11.6(a) | G11.6(a): stays | "Where three rules live" (17 November); "Seeing and being told" (18 November) | — | — |
+| 5.11.6 | G11.6(b) | G11.6(b): two ways, read "stays" by the lead (6.3) | "Seeing and being told" (18 November) | — | 6.3 G11.6(b); 6.1 row 3; 6.10 row 3 (headings) |
+| 5.11.7 | G11.7 | G11.7: stays | "Where three rules live" (17 November) | — | 6.10 row 3 (headings) |
+| 5.11.8 | G11.8 | G11.8: stays | "Where three rules live" (17 November); "The contest" (15 November) | — | — |
+| 5.11.9 | G14.5(e) | G14.5(e): two ways, read "stays" by the lead (6.3) | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | 6.3 G14.5(e); 6.8 row 2; 6.1 row 2; 6.10 row 2 |
+| 5.12.1 | N8 | N8: new | "A fork is a fork" (27 November); "What a race stops" (18 November) | — | — |
+| 5.12.2 | G12.1 | G12.1: changes | "A fork is a fork" (27 November); "Delegation is a leftover" (18 November); "Who signs an update by default: the known parties" (26 November) | — | — |
+| 5.12.3 | G12.2 | G12.2: stays | "No release by a fork or a key" (18 November); "A fork is a fork" (27 November) | — | — |
+| 5.12.4 | G12.3 | G12.3: changes | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "Who signs an update by default: the known parties" (26 November); "A fork is a fork" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.2 Item 33: the default signers; 6.6 row 1; 6.1 row 3; 6.10 row 3 (kept, to check) |
+| 5.12.5 | G12.4 | G12.4: stays | "The gate and the pin; a fork, not a race" (26 November) | — | — |
+| 5.12.6 | G12.5 | G12.5: stays | "A fork is a fork" (27 November); "A missing act stays unchecked: no door around it" (26 November) | — | — |
+| 5.12.7 | G12.6 | G12.6: stays | no entry (the brief) | — | — |
+| 5.12.8 | G12.7 | G12.7: stays | "Whose place counts; protect the unknown party, as a principle" (26 November) | — | — |
+| 5.12.9 | G12.8 | G12.8: stays | no entry (the brief) | — | 6.4 row 4 |
+| 5.13.1 | G13.1 | G13.1: two ways, read "changes" by the lead (6.3) | "Knots are knots: one reading, "shown after"" (27 November); "The words of Terms are a Text act" (26 November) | — | 6.3 G13.1 |
+| 5.13.2 | G13.2 | G13.2: stays | no entry (the brief) | — | — |
+| 5.13.3 | N7 | N7: new | "Knots are knots: one reading, "shown after"" (27 November); "A missing act stays unchecked: no door around it" (26 November); "The place is a pointer" (17 November) | — | 6.1 Item 28: "shown after"; 6.2 Item 32: the stall; 6.7 row 1 |
+| 5.13.4 | G13.3 | G13.3: changes | "Knots are knots: one reading, "shown after"" (27 November); "The gate and the pin; a fork, not a race" (26 November) | — | 6.7 row 1 |
+| 5.13.5 | G13.4, G1.4 | G13.4: changes; G1.4: two ways, read "changes" by the lead (6.3) | "A condition in time with no anchor is refused" (26 November); "Whose place counts; protect the unknown party, as a principle" (26 November) | — | 6.1 Item 28: "shown after"; 6.3 G1.4, reaching G4.6, G4.7(b), G7.4, G10.5 and G13.4 |
+
+5.7.3, written by M5 (a signer's line and the agreement's chain, both knots), is not in draft 26: the lead's reading of 10:07 sent it to this companion (section 6.7, item 3), where section 5 gives it under §5.7.
+
+### 9.2 The definitions of §3 that changed or are new
+
+Definitions that draft 26 keeps as draft 25 has them ("D25, stays" in the trace, with "place" read as keeper and cross-references moved) are not listed. *Draft 25* is "new" where draft 25 had no such word.
+
+| draft 26, §3 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| Terms (3.1) | Terms | "There is no unsigned act: the author is a known party" (27 November) | — | — |
+| Agreement (3.1) | Agreement | "There is no unsigned act: the author is a known party" (27 November) | — | — |
+| Counter signature (3.1) | Counter signature | "In force once pinned" (18 November) | — | 6.1 item 1; 6.7 row 1 |
+| The words (3.1) | new (N4) | "The words of Terms are a Text act" (26 November) | Q24 | — |
+| The set of acts (3.1) | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21 | 6.5 row 2; 6.6 row 1 |
+| Report, call (3.1) | Report, call | "Where three rules live" (17 November) | — | — |
+| Author (3.2) | Author | "There is no unsigned act: the author is a known party" (27 November) | — | 6.5 row 1 |
+| Known party (3.2) | new | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | 6.2 item 33 |
+| Unknown party (3.2) | new | "A buyer under a replaced version: what version 2 says" (26 November); "For the unknown party there is no update, only the agreement she signed" (27 November) | M15 | — |
+| Fill, filling (3.2) | Fill, filling | "For the unknown party there is no update, only the agreement she signed" (27 November) | M15 | — |
+| Power (3.2) | Power | "Delegation is a leftover" (18 November) | — | — |
+| Delegation | Delegation: gone | "Delegation is a leftover" (18 November) | — | — |
+| Version (3.3) | Version | "Who signs an update by default: the known parties" (26 November) | — | — |
+| Update (3.3) | Update | "Valid means in force: one gate for an update" (26 November); "The gate and the pin; a fork, not a race" (26 November) | — | — |
+| Gate (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November) | — | 6.2 item 31 |
+| Pin (3.3) | new (N1) | "The gate and the pin; a fork, not a race" (26 November); "In force once pinned" (18 November) | — | 6.1 item 1; 6.6 row 4; 6.7 row 1 |
+| Valid, not valid (3.3) | Valid; Answers | "Valid and in force, two words, two jobs" (26 November) | — | — |
+| In force (3.3) | In force | "Valid and in force, two words, two jobs" (26 November) | — | 6.1 item 1 |
+| Fork (3.3) | Fork | "A fork is a fork" (27 November) | — | — |
+| Late update, late (3.3) | Late update | "Knots are knots: one reading, "shown after"" (27 November) | M5 | 6.6 row 4 |
+| Never ended (3.3) | Never ended | "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
+| Apply, no longer applies (3.3) | Apply | "Ana's month ends by the clock the agreement names" (27 November) | — | 6.8 row 1 |
+| Resolve, resolving update (3.3) | Resolve | "A fork is a fork" (27 November) | — | — |
+| Condition (3.3) | Condition | "Who signs an update by default: the known parties" (26 November); "A buyer under a replaced version: what version 2 says" (26 November) | — | — |
+| Triggered; join | no longer terms: gone (their notes in section 11) | "Only rules in the hashed text" (17 November) | — | — |
+| Knot (3.4) | Knot | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.3 G13.1 |
+| Shown after (3.4) | new (N7) | "Knots are knots: one reading, "shown after"" (27 November) | — | 6.1 item 28 |
+| Keeper (3.4) | `place`, renamed (N2) | "The place vouches for the chaining only" (26 November); "Agreements gets an introduction" (27 November) | — | 6.1 item 4 |
+| Keeper's record (3.4) | new | — | — | 6.4 row 2 |
+| Clock (3.4) | Clock | "Ana's month ends by the clock the agreement names" (27 November) | — | — |
+| Anchoring (3.4) | Anchoring | "Whose place counts; protect the unknown party, as a principle" (26 November) | M20 | 6.3 G1.4 |
+| Lodge, relay, fetch (3.5) | new | "Agreements gets an introduction" (27 November) | — | 6.4 row 3 (uploader) |
+| Client (3.6) | Client | "Signing an agreement relies on its words" (26 November) | — | 6.4 row 4 |
+| Answers (3.6) | Answers | "A fork is a fork" (27 November) | M5 | — |
+| Not shown (3.6) | Not shown | "A resolve with nothing to resolve: "not shown", with the reason" (26 November); "The place vouches for the chaining only" (26 November) | — | 6.7 row 1 |
+| Unchecked (3.6) | Unchecked | "A missing act stays unchecked: no door around it" (26 November); "A hand count is the client's choice" (26 November) | — | — |
+| Invalid (3.6) | Invalid | "A condition in time with no anchor is refused" (26 November) | — | — |
+| Rejected | not an answer word | — | M5 | — |
+
+### 9.3 The fields of §4 that changed
+
+| draft 26, §4 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| 4.1 the kinds of value | §3, "Each field holds one kind of value" | "The place vouches for the chaining only" (26 November) | — | — |
+| 4.1 the set of acts | new (N3) | "One way to name a set of acts, in Agreements" (26 November) | M21, F12, F13 | 6.5 row 2; 6.6 row 1 |
+| 4.2 `authors` | §3.1 `authors` | "There is no unsigned act: the author is a known party" (27 November) | — | 6.5 row 1 |
+| 4.2 `body` | §3.1 `body` (the words' bytes) | "The words of Terms are a Text act" (26 November) | Q24, Q25 | 6.5 row 3 |
+| 4.2 `in_force` | §3.1 `in_force` | "Who signs an update by default: the known parties" (26 November) | M11, Q7 | 6.6 row 3 |
+| 4.2 `keeper` | §3.1 `place` | "The place vouches for the chaining only" (26 November) | — | — |
+| 4.2 `condition` | §3.1 `condition` | "Who signs an update by default: the known parties" (26 November) | — | — |
+| 4.2 `calls` | §3.1 `calls` | "Where three rules live" (17 November) | — | — |
+| 4.2 `envelope`, `envelope_at` | §3.1, the same fields; their rules to Envelopes | "Where three rules live" (17 November); "The holder at the act cited" (17 November) | — | — |
+| 4.2, 4.3 `resolves`, `continues` | §3.1, §3.2 | "A resolve with nothing to resolve: "not shown", with the reason" (26 November) | — | 6.6 row 1 |
+| 4.3 the report paragraph | §3.2 | "Where three rules live" (17 November) | — | — |
+| 4.4 One fault, one rule | §2's list of the cases of invalid, and §3's "One fault, one rule" | "A condition in time with no anchor is refused" (26 November) for case 8 | — | 6.5 rows 1 and 3 (cases 5 and 2); 6.10 row 3 (its own heading) |
+
+### 9.4 The tasks of §6
+
+| draft 26, §6 | draft 25 | the ledger entry, heading and date | settled note | the lead's reading |
+|---|---|---|---|---|
+| the opening | §5's opening, cut | "Only rules in the hashed text" (17 November) | Q26 | 6.7 row 2 |
+| K1 Body | K1, changed | "The words of Terms are a Text act" (26 November); "Delegation is a leftover" (18 November); "Ana's month ends by the clock the agreement names" (27 November) | Q24, Q25 | — |
+| K2 In force | K2 | "Who signs an update by default: the known parties" (26 November) | M11 | 6.6 row 3 |
+| K3 Power | K3 | no entry (the brief) | — | — |
+| K4 Update condition | K4, changed | "A buyer under a replaced version: what version 2 says" (26 November); "Who signs an update by default: the known parties" (26 November); "What a dissolution is" (18 November) | — | 6.3 G4.9 and G4.11(i) |
+| K5 Spot | K5 | no entry (the brief) | — | 6.8 row 1 |
+| K6 Control | K6, cut | "Where three rules live" (17 November) | — | 6.3 G11.3 and K6 |
+| K7 Kind | K7 | no entry (the brief) | — | — |
+| K8 Data | K8 | no entry (the brief) | — | — |
+| 6.1 Modules | §5.3, its history and "Was" column out (section 11) | "Only rules in the hashed text" (17 November) | — | — |
+
+COUNTED (`trace10.py`): 68 rows in 9.1, one for each numbered rule of draft 26, as M7's closing count has them (§5.1: 5; §5.2: 3; §5.3: 2; §5.4: 5; §5.5: 7; §5.6: 6; §5.7: 2; §5.8: 6; §5.9: 1; §5.10: 8; §5.11: 9; §5.12: 9; §5.13: 5); 38 rows in 9.2; 12 in 9.3; 10 in 9.4; 128 in all. Every heading in the ledger column was matched by the script against the ledger's own bold headings on main.
 
 ## 10. The table from draft 25's numbers to draft 26's
 
-written by M10
+**In plain words.** Every one of draft 25's 124 rules (its 72 numbered clauses and 52 lettered ones, as the brief counts them), and where it now is: a rule of draft 26, another text, this companion, or nowhere. Then the 29 that left draft 26 altogether, each with draft 25's text and where it went.
+
+**How to read it.** Built by script (`map10.py`, M10's scratch script) from the trace's rows (each names the draft 25 rule it was written from) and the brief's sort, then read by eye; where one draft 25 rule is written in two places, both are given. Draft 26's new rules (N1 to N9) have no draft 25 number and are in section 9.
+
+### 10.1 All 124
+
+| draft 25 | the brief's sort | draft 26 |
+|---|---|---|
+| G1.1 | stays | 5.1.1 |
+| G1.2 | changes | 5.1.2 |
+| G1.3 | stays | 5.1.3 |
+| G1.4 | two ways: stays / changes; read "changes" by the lead (6.3) | 5.1.4 |
+| G1.5 | stays | 5.1.5 |
+| G2.1 | stays | 5.2.1 |
+| G2.2 | stays | 5.2.3 |
+| G3.1 | two ways: stays / changes; read "changes" by the lead (6.3) | 5.3.1 |
+| G3.2 | stays | 5.3.2 |
+| G4.1 | two ways: stays / changes; read "changes" by the lead (6.3) | 5.4.1 |
+| G4.2 | stays | 5.4.2 |
+| G4.3 | changes | 5.4.3 |
+| G4.4 | stays | 5.4.4 |
+| G4.5 | changes | 5.5.2 |
+| G4.6 | changes | 5.5.3 (its first sentence also in 5.4.1, "Which keepers") |
+| G4.7 | changes | 5.5.4 |
+| G4.7(a) | changes | 5.5.4(a) |
+| G4.7(b) | changes | 5.5.4(b) |
+| G4.7(c) | changes | 5.5.4(c) |
+| G4.7(d) | stays | 5.5.4(d) |
+| G4.7(e) | stays | 5.5.4(e) |
+| G4.8 | changes | 5.5.5 (its wording of the gate and the pin also in 5.5.1) |
+| G4.8(a) | changes | 5.5.5(a) |
+| G4.8(b) | stays | 5.5.5(b) |
+| G4.8(c) | stays | 5.5.5(c) |
+| G4.8(d) | changes | 5.5.5(d) |
+| G4.8(e) | stays | 5.5.5(e) |
+| G4.8(f) | goes | left: gone |
+| G4.8(g) | two ways: moves / changes | not carried: to this companion (section 11), on the lead's reading (6.3) |
+| G4.9 | changes | 5.5.6 |
+| G4.10 | changes | 5.4.5 |
+| G4.11 | stays | 5.5.7 |
+| G4.11(a) | changes | 5.5.7(a) |
+| G4.11(b) | stays | 5.5.7(b) |
+| G4.11(c) | changes | 5.5.7(c) |
+| G4.11(d) | changes | 5.5.7(d) |
+| G4.11(e) | changes | 5.5.7(e) |
+| G4.11(f) | changes | 5.5.7(f) |
+| G4.11(g) | changes | 5.5.7(g) |
+| G4.11(h) | stays | 5.5.7(h) |
+| G4.11(i) | changes | 5.5.7(i) |
+| G5.1 | stays | 5.6.1 |
+| G5.1(a) | stays | 5.6.1(a) |
+| G5.1(b) | changes | 5.6.1(b) |
+| G5.1(c) | changes | 5.6.1(c) |
+| G5.2 | changes | 5.6.2 |
+| G5.3 | stays | 5.6.3 |
+| G5.4 | changes | 5.6.4 |
+| G5.5 | goes | left: gone |
+| G5.6 | stays | 5.6.5 |
+| G5.6(a) | changes | 5.6.5(a) |
+| G5.6(b) | stays | 5.6.5(b) |
+| G5.6(c) | stays | 5.6.5(c) |
+| G5.6(d) | stays | 5.6.5(d) |
+| G5.6(e) | stays | 5.6.5(e) |
+| G5.6(f) | two ways: stays / changes; read "stays" by the lead (6.3) | 5.6.5(f) |
+| G5.7 | changes | 5.6.6 (with its paragraph "Who is covered") |
+| G5.7(a) | changes | 5.6.6(a) |
+| G5.7(b) | changes | 5.6.6(b) |
+| G5.7(c) | changes | 5.6.6(c) |
+| G6.1 | two ways: stays / moves; read "stays" by the lead (6.3) | 5.7.1 |
+| G6.2 | two ways: stays / moves; read "stays" by the lead (6.3) | 5.7.2 |
+| G7.1 | changes | 5.8.1 |
+| G7.2 | changes | 5.8.4 (its last sentence, for one keeper, in 5.8.3) |
+| G7.3 | moves | left: to the MICS |
+| G7.4 | changes | 5.8.5 |
+| G8.1 | moves | left: to the MICS |
+| G8.2 | moves | left: to the MICS |
+| G8.3 | moves | left: to the MICS |
+| G8.4 | moves | left: to the MICS |
+| G8.5 | stays | 5.9.1 |
+| G9.1 | moves | left: to the MICS |
+| G9.2 | moves | left: to the MICS |
+| G10.1 | stays | 5.10.1 |
+| G10.2 | stays | 5.10.2 |
+| G10.3 | stays | 5.10.3 |
+| G10.4 | stays | 5.10.4 |
+| G10.5 | changes | 5.10.5 |
+| G10.6 | changes | 5.10.7 |
+| G10.6(a) | two ways: stays / changes; read "stays" by the lead (6.3) | 5.10.7 (folded into one sentence) |
+| G10.6(b) | goes | left: gone |
+| G10.7 | changes | 5.10.8 |
+| G11.1 | stays | 5.11.1 |
+| G11.2 | stays | 5.11.2 |
+| G11.3 | two ways: stays / moves; read "stays" by the lead (6.3) | 5.11.3 |
+| G11.4 | moves | left: to the MICS |
+| G11.4(a) | moves | left: to the MICS |
+| G11.4(b) | moves | left: to the MICS |
+| G11.4(c) | moves | left: to the MICS |
+| G11.4(d) | moves | left: to the MICS |
+| G11.4(e) | two ways: stays / moves; read "stays" by the lead (6.3) | 5.11.4 |
+| G11.5 | two ways: stays / moves | not carried: to the MICS, on the lead's reading (6.3) |
+| G11.6 | moves | left: to the MICS |
+| G11.6(a) | stays | 5.11.5 |
+| G11.6(b) | two ways: stays / changes; read "stays" by the lead (6.3) | 5.11.6 |
+| G11.6(c) | two ways: stays / moves | not carried: to the MICS, on the lead's reading (6.3) |
+| G11.7 | stays | 5.11.7 |
+| G11.8 | stays | 5.11.8 |
+| G12.1 | changes | 5.12.2 |
+| G12.2 | stays | 5.12.3 |
+| G12.3 | changes | 5.12.4 |
+| G12.4 | stays | 5.12.5 |
+| G12.5 | stays | 5.12.6 |
+| G12.6 | stays | 5.12.7 |
+| G12.7 | stays | 5.12.8 |
+| G12.8 | stays | 5.12.9 |
+| G13.1 | two ways: stays / changes; read "changes" by the lead (6.3) | 5.13.1 |
+| G13.2 | stays | 5.13.2 |
+| G13.3 | changes | 5.13.4 |
+| G13.4 | changes | 5.13.5 |
+| G14.1 | moves | left: to Envelopes |
+| G14.2 | moves | left: to Envelopes |
+| G14.3 | moves | left: to Envelopes |
+| G14.3(a) | moves | left: to Envelopes |
+| G14.3(b) | moves | left: to Envelopes |
+| G14.3(c) | moves | left: to Envelopes |
+| G14.3(d) | moves | left: to Envelopes |
+| G14.4 | moves | left: to Envelopes |
+| G14.5 | moves | left: to Envelopes |
+| G14.5(a) | moves | left: to Envelopes |
+| G14.5(b) | moves | left: to Envelopes |
+| G14.5(c) | moves | left: to Envelopes |
+| G14.5(d) | moves | left: to Envelopes |
+| G14.5(e) | two ways: moves / stays; read "stays" by the lead (6.3) | 5.11.9 |
+
+COUNTED (`map10.py`): 124 rows; 92 carried into draft 26 (some into two rules), 29 left (3 gone, 13 to the MICS, 13 to Envelopes), 3 not carried by the lead's readings (G4.8(g), G11.5, G11.6(c)).
+
+### 10.2 The 29 rules that left
+
+Each with where it went, the entry that sent it, draft 25's text unchanged (its numbers draft 25's), and, for the rules of G8, G9 and G14, which moved whole, draft 25's *lie exposed / protects* lines (M9's row 4). The other rules that left belong to groups whose lines stay with the rules that stayed, rewritten in section 5 (G4, G5, G7, G10, G11); those lines are not repeated here.
+
+#### Gone (3): written nowhere
+
+- **G4.8(f)**, gone, by "Delegation is a leftover" (18 November). Draft 25: "(f) For a delegation whose Terms name no update condition, what the default asks of a version that ends or narrows it is said by G5.5."
+- **G5.5**, gone, by "Delegation is a leftover" (18 November). Draft 25: "G5.5 **Delegation.** Terms in which one party, the **delegator**, gives another, the **agent**, a power to make acts for it are a delegation. No field says so: that Terms are a delegation, who the delegator and the agent are, and what conditions the Terms put on ending it, are read from their words, as the body's cMIP gives them (task K1). Where a verifier cannot read the body of Terms that carry `powers` (it lacks the words or their cMIP), it cannot tell whether this clause applies, and whether a version that lacks signatures replaces them is **unchecked** (G9), not **not shown**. The delegator may be named as a signer or as an agreement (G1.1): these grammar rules read the two as the same delegation. By default the delegator can end it at any time: where those Terms name no update condition, a version of them that removes or narrows the power is valid, and replaces them (G4.8, G4.11(e)), when it carries the delegator's part alone, without the agent's. Where they name an update condition, its cMIP answers, as for any update (G4.11; section 8.4). A version removes or narrows the power when its `powers` are those of the version before less one entry or more; whether an entry whose rule was changed is narrower is not read by these grammar rules (section 8.4). The delegator's part alone is then all that the default of G4.8 and G4.1 ask of that version: it replaces, and is in force, without the agent's assent, however it lists its parties and whatever its own `in_force` says; the same holds for the agent's part alone under a condition that leaves ending to the agent. For a delegator named as a signer, that is its own assent. For a delegator named as an agreement, it is that agreement's signature (G1.2). The Terms of a delegation MAY state conditions on that ability (a notice, a term, a cause); such a version then replaces them only as those conditions say. A verifier reads them from those Terms, in the form their cMIP gives (G2, task K1); where it cannot, the answer is **unchecked** (G9). These grammar rules put no limit on what such a condition may say, and a verifier reads every one alike. Under a condition that leaves ending to the agent alone, a version carrying the delegator's part alone replaces nothing (G4.8). A verifier MUST NOT answer that such a delegation can never be ended: whether the agent will end it is **not shown**, and the verifier shows the condition as the Terms the delegator signed state it. These grammar rules give an agent no protection of their own: pay, notice, severance and the like are cMIPs the parties choose. Once a delegation has been so ended, G5.4 says how an act made under it is read. **In which order a verifier reads it.** "Terms that carry `powers`" are Terms with at least one entry in `powers`, of any kind. For a version that would replace them: (i) where those Terms name an update condition, its answer is the whole answer (G4.8), and the conditions their words state are not read for it: the cMIP in `condition` says whether they count; (ii) where they name none, and everyone who signed them has signed the version, it is valid by the default (G4.11(e)), and the body is not needed; (iii) otherwise the body is read: where it cannot be, the answer is **unchecked**; where it shows no delegation, the default answers (G4.8(c)); where it shows a delegation and the version's `powers` are the old ones less one entry or more, the delegator's part alone makes the version valid and in force, unless the conditions the words state ask more (or, under a condition that leaves ending to the agent, the agent's part alone does); a stated condition that the verifier cannot apply in the form the body cMIP gives it is **unchecked** (G9)."
+- **G10.6(b)**, gone, by "A buyer under a replaced version: what version 2 says" (26 November), its line "G10.6(b) goes". Draft 25: "(b) the version the filling was earned under names an update condition, and that condition's cMIP, given that version and the later one, answers valid (G4.11)."
+
+#### To the MICS (13)
+
+- **G7.3**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G8.1**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G8.2**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G8.3**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G8.4**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G9.1**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G9.2**, to the MICS, by "How a reader answers goes to the MICS" (18 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.4**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.4(a)**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.4(b)**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.4(c)**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.4(d)**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+- **G11.6**, to the MICS, by "Where three rules live" (17 November). Its text, as draft 25 has it: under "For the MICS", in the last section.
+
+*G8's lines, draft 25*:
+
+> **Lie exposed.** A claim passed off as a fact: "it was delivered", "you were paid", on the word of the one who gains by it.
+>
+> **Protects.** The receiving side, who did not choose to be declared paid or served, and every reader of a verifier's answer.
+
+*G9's lines, draft 25*:
+
+> **Lie exposed.** "My software says it checks out", from software that could not check.
+>
+> **Protects.** Anyone relying on someone else's verification.
+
+#### To Envelopes (13)
+
+- **G14.1**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "G14.1 Terms MAY name an `envelope`: the fingerprint of the envelope of a baked work those Terms are for (G2). What an envelope is, and who it says baked it, are read as the layer below gives them (section 8.1). The baker is reported as the envelope states it (G8). **The envelope's chain.** In the words of Nobody, allegedly: "the chain in question is the one (or should be) of the envelope, not the one of the baker. The envelope tracks its baker and if that is transferred the envelope is updated with a new ID for those rights". So the holder of the baker's rights is read from the envelope's own chain, and from nothing in any agreement: the bake names the baker, who holds them first; each **transfer** of those rights is an act of that chain, signed by the holder of the moment and naming the next. These grammar rules define none of it: the chain, the transfer, who may sign it, how a reader gets the holder at an act, and what a fork there shows are the layer below's, and section 8.1 lists what this text needs of them. **The holder at the time.** Terms that name an `envelope` MUST name, in `envelope_at`, the act of that envelope's chain they relied on: the bake, or a transfer (G13.2; section 3.1). The holder of the baker's rights, for those Terms, is the **holder at that act**: the baker, where it is the bake; otherwise the one named by the last transfer at or before that act, in the chain as that act follows it. It is read at that act, not as the chain stands now: now is what an act cites (G13). It rests only on that act and the acts of the chain it follows, all fixed by fingerprint, so it is not an answer about what is latest, and carries no qualifier but what a fork gives it (G14.2)."
+- **G14.2**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "G14.2 Terms that name an envelope count, for that work and for anything else, only if the holder at the act they cite (G14.1) is one of their parties, bound by them (G5.1), and they are not late (below). In the words of Nobody, allegedly: "that is the cleanest approach and flips ownership to the thing being owned stating it". Nothing in an agreement passes the baker's rights: these grammar rules read no succession of agreements, and no reading of a body (K1) passes them. **After a sale.** Terms made with the holder of the moment keep counting after a later transfer: it takes nothing from them, and a payment that names a version of them keeps its receiver (G1.4, G13.1). The one a transfer names holds the baker's rights from that transfer on: Terms that cite that transfer, or a later act of the chain, need that holder, and not the baker. Draft 23 read the current holder, as the chain stands now; that reading is gone."
+- **G14.3**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "G14.3 **Without the holder, nothing.** A verifier asked anything that rests on Terms that name an envelope (a receiver, which Terms are in force, a filling, a call, a power, a leg report, or whether they count as an agreement for that work) MUST first read the envelope, the baker it states, the act of its chain the Terms cite, the holder at that act (G14.1), and whether the Terms are late (G14.2). Of a thief's attempt, Nobody, allegedly: "We cannot stop the attempt." So such Terms stay acts, readable as any are, and what follows is what they count for."
+- **G14.3(a)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(a) **Invalid.** Where the verifier holds the envelope, the act the Terms cite and the acts of the chain between them, and the holder at that act is not among the Terms' parties, and they reach that holder through no role, and nothing they name is lacking, they are **invalid** (section 2); so are Terms whose `envelope_at` names an act, held, that is not an act of the chain of the envelope they name. They never count, for anything, their receiver included. No one receives by them (G1.4); they replace nothing, and are no tip of a fork (G4.7, G4.8); no assent to them binds anyone (G4.3); no spot of theirs is filled under them (G10.2); no call, power, update condition or data cMIP of theirs is read (G5, G11); and no act made within or under them, and no payment that names them, counts through them. A verifier shows them, and every act it holds that names them, with the answer **invalid** and G14.3 named. A thief's Terms cite a point of the chain where he held nothing: they are invalid for good, and no later transfer, to him or to anyone, makes them count; Terms that cite the transfer to him are other Terms."
+- **G14.3(b)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(b) **Not shown.** Where they name the holder at the act they cite, or reach that holder through a role, and the acts held do not establish that the holder is bound by them, as G14.2 reads "bound by them", the answer is **not shown**, and every answer that rests on them is **not shown** with it, G14.3 named: they count for nothing until it is shown. A holder who fills a role of those Terms is one of their parties from then on (G10.3): where the role's cMIP names the holder at that act as filling it and that holder is bound by those Terms, G14.2 is met; where the acts held do not show that, the answer is **not shown**. So it is too where that act lies in a fork of the envelope's chain for which that layer gives no holder (G14.2)."
+- **G14.3(c)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(c) **Unchecked.** Where the verifier lacks the envelope, the act the Terms cite, an act of the chain between them, or that layer's answer where a fork lies on the way (the holder is then not known), the answer is **unchecked** (G9), and so is every answer that rests on those Terms. So it is where whether they are late is unchecked (G14.2)."
+- **G14.3(d)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(d) **Shown.** Where the acts held establish G14.2, the Terms count, for the work and for everything else, and are read by every other grammar rule as any Terms are."
+- **G14.4**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "G14.4 A work edited and baked again has another envelope and another baker. These grammar rules read it as any baked work, and do not read it as the first."
+- **G14.5**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "G14.5 **The same work, baked again.** Anyone may bake the same bytes, unedited; that is another envelope, with its own baker, and Terms that name it and its baker, and cite its bake, meet G14.2, and keep meeting it after a later transfer, unless they are late. These grammar rules do not forbid it. They make it legible."
+- **G14.5(a)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(a) **Shown beside a bake.** Where a verifier holds two or more envelopes that carry the same work, as the core says of their bytes (section 8.1), it MUST show, beside each of them and beside every answer of G14.3 about Terms for one of them, that the same work is baked by others too, with each other envelope it holds and the baker each states (G8). The answer is given **as shown**: an envelope the verifier does not hold may exist."
+- **G14.5(b)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(b) **Never picks.** A verifier MUST NOT choose between bakes that carry the same work: not the first, by position, by time or in any other way, and it MUST NOT answer which baker made the work. The reasoning is given with the answer: the bytes say who uploaded and when, not who made it. First is not author (a leak, a fast copier), and which is first depends on the anchoring a reader accepts (G13.4)."
+- **G14.5(c)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(c) **A client may rank.** A client MAY rank such bakes for the person it serves: by knots, the order acts give by citing (G13.3), even where no anchoring is named; or by an anchoring (G13.4). A ranking is the client's, shown as the client's, and is not an answer of a verifier."
+- **G14.5(d)**, to Envelopes, by "Where three rules live" (17 November); "The holder at the act cited" (17 November). Draft 25: "(d) **Judging is a cMIP's, or an arbiter's.** Whether one bake has a better claim to the work than another needs judgment. A cMIP that people name may give it, or a judge they name in their Terms (G5.6; section 5.3); a verifier reports such an answer with whoever it rests on (G8), and never as its own."
+
+*G14's lines, draft 25*:
+
+> **Lie exposed.** "This work is mine to sell", and "pay me for it", said by someone who copied its bytes and names another's envelope, or by a baker under Terms that cite a point of the chain after she transferred her rights, or made after it and citing a point before; "I bought the baker's rights", said by someone the envelope's chain does not name as their holder at the act cited; "the sale ended our agreement", said to those who agreed with the holder of the moment; and "nobody else baked this", said of bytes that others baked too.
+>
+> **Protects.** The baker, and whoever holds the baker's rights after her, as the envelope's chain gives it, whose work no stranger's Terms can rule; whoever agreed with the holder of the moment, and every payer under those Terms, whom a later sale does not undo; whoever bought the baker's rights, whom the envelope itself names as their holder, and who needs her for nothing in Terms that cite the transfer, and for no update the update condition she signed answers valid without her; whoever is sold rights already sold, who is shown the second sale as a fork in the envelope's chain; the buyer, who can check before paying, and is shown every bake of the same work the verifier holds; and whoever made the work, who can contest a copy and is not outranked by software that picked.
+
 
 ## 11. Archaeology
 
-written by M10
+"Those old drafts should be buried deep, only for people who wish to do some archeology…" (he, "The place vouches for the chaining only", 26 November, after the renaming of "place" to keeper; the lead's line: "The old drafts are archaeology: kept, buried deep, not read for what words mean now.")
+
+**In plain words.** What draft 25 said about its own past, and what it still had open, kept here for anyone who digs. None of it is read for what words mean in draft 26: draft 25's "place" is draft 26's keeper, its rule numbers are its own, and its open lists were written before the stint of 26 November. Each piece is quoted unchanged from `draft-25.md` (branch `claude/agreements-clean-1-hahuwn`), with where it came from.
+
+### 11.1 Draft 25's front matter on drafts 18 to 25
+
+From draft 25's opening, the paragraph "What draft 25 is", with "What draft 24 was" and what follows it, and the paragraph on the report block:
+
+> **What draft 25 is.** Draft 24 cleaned up before the players' round, so that two honest writers cannot write the same act two ways, and housekeeping, and nothing else (`history.md`, Part R). Its changes are the MOR lead's, as technical wording, from the questions the first encoding raised (`encoding-1-report.md`) and Fable's review of it (`docs/reviews/fable-encoding-1.md`, branch `claude/fable-encoding-1`); none changes anything Nobody, allegedly, decided (`docs/decisions.md`). In plain words: a field this text does not give makes an act rejected, and is never left unread (section 3, G2.2); a resolving update carries only what resolving needs (section 3); a resolving update in one signer's line is a Statement of a kind of its own, `resolve` (section 3.2, G12.4); a call made by default, a confirmation, the tie between two halves and a buyer's contest name a payment's settlement, the act both sides can see, and never the payment itself (G11.7, G11.8); the receiver names a party by its position and an agreement by its root, told apart in the bytes (G1.3); two powers of one kind bind where either says yes (G5.1(b)); a line before a private act held without its key is unchecked, not invalid (G6.1); the cases of invalid are listed in one order, and a fault that fits two rules is answered under one (section 2, section 3); an author who signed the Terms names them in the `previous` of their assent (section 3.2); and this text's spec hash is said aloud (below). The bytes are `encoding-2.md`. **Its spec hash.** Acts of Agreements are written under this text's spec hash: the hash of this file as published on its branch (`claude/agreements-clean-1-hahuwn`), computed as the core computes a MIR's (`encoding-2.md`, E2). Acts written under it stay this text's, whatever is written later: a later draft is a new specification, with a hash of its own, and nothing written under this one is updated. **What draft 24 was.** Draft 23 with one change, and housekeeping (`history.md`, Part Q). One exchange of the ledger is brought in, read as a whole: "The holder at the time". It answers draft 23's section 8.2, items 1 and 2. In plain words: Terms that name an envelope also name the act of the envelope's chain they relied on (the bake, or a transfer), in a new field, `envelope_at`; and the holder of the baker's rights is read at that act, not as the chain stands now, since now is what an act cites (G13). So Terms made with the holder of the moment keep counting after a sale, and payments under them keep their receiver; the buyer of the rights holds them from the transfer on. Where the knots or an anchoring show that Terms were made after a later transfer than the act they cite, they count for nothing, as a late update replaces nothing (G4.7). A thief's Terms cite a point where he held nothing, so they are invalid for good, and "invalid" stays an act that never counted (G14.2, G14.3). The exchange is the MOR lead's lean, which Nobody, allegedly, answered: "Agreed". **What draft 23 was.** Draft 22 with one change (`history.md`, Part P): the holder of the baker's rights is read from the envelope's own chain, the layer below's, and not from agreements; the succession and the body's part for those rights went; a double sale is a fork in the envelope's chain. That stands; only the moment at which the holder is read changes. **What draft 22 was.** Draft 21 with one change (`history.md`, Part O): in G14.2, the baker, or whoever holds the baker's rights, is "bound by" Terms in any way G5.1 allows, an update condition they signed into the original included, and not only by an assent in their own name. That reading of "bound" stands; the rights cMIP in the body's socket by which draft 22 passed the baker's rights does not. **What draft 21 was.** Draft 20 with five changes, and nothing else (`history.md`, Part N), and that stands. Four exchanges of the ledger are brought in, each read as a whole: "A late rival", "Setting aside what an agent made", "The buyer signs the offer" and "A thief's Terms". They answer draft 20's section 8.2, items 10 to 13, the four readings it put before Nobody, allegedly. In plain words: an update made after the version it names was already replaced replaces nothing, where the knots or an anchoring show it (G4.7); nothing an agent made is ever set aside: the one it acted for changes it only by an update (G5.7, new); a buyer signs the offer's Terms, and paying is what those Terms require, so a path beyond the buyer's leg is whatever the offer's own data socket names (G11.6(b), G11.7); and Terms that point to an envelope without the baker, or the holder of the baker's rights, as a party are invalid, and count for nothing (G14.3). The fifth change was housekeeping. Draft 20 was draft 19 with the second C session's 33 questions answered in the text (`history.md`, Part M), and that stands. **What it is for**: in the words of the ledger's exchange "After box 2", this is the text the encoding and the vectors are written from, and no further text-only box follows it ("The encoding first": "I think it’s best to do this properly first."). Two principles of Nobody, allegedly, stand over every choice in it: "this one supports and specifies the language for creating solutions", and "We need to think more in « tasks » and output. We need to think like MOR." Section 9 lists what a builder needs that is not in this text, and section 10 every place where this text leaves a choice to the bytes.
+
+> **One block used here is not this text's.** The report belongs to the language all of MOR shares. It is proposed by the MOR lead in `docs/lead/proposals/report-block-2.md` (branch `claude/lead-records-2`): a proposal, not a decision, and not yet written into any spec. It is one act type, defined once in the shared language. This text uses it (G11, task K6), does not define it, and lists in section 8.1 what it needs from it. What the block would need to say for this text to be read as written is proposed, for the MOR lead to take or change, in `docs/lead/proposals/report-block-3.md`: proposal 2 published again with only those changes. Drafts 21 to 24 touched nothing the block says. Draft 25 changes one thing it reads: a call made by default is named by the act that stands for it, for a payment always its settlement (G11.7). So the proposal is published again as `docs/lead/proposals/report-block-4.md`, with only that change, the MOR lead's (section 8.1).
+
+### 11.2 Its history paragraphs
+
+Each from the rule named, the sentence or clause that tells of an earlier draft; draft 26 does not carry it (the trace, each session's row for that rule).
+
+- **G4.8(g)**, the whole clause (the lead's reading: "the clause restating the default goes to the companion", section 6.3): "(g) **What is left of the signatures.** Draft 18 asked two things of a replacing Terms act: the signatures the original required (everyone's, or what a power for replacement required), and the update condition's answer. One thing is left: the update condition's answer, or the default's. "Everyone who signed the original" is kept, as the default (a)."
+- **G4.11(g)**, its last sentence: "Draft 18 did not ask the condition of a resolving update, and took its signatures from G4.8; that those signatures are now the condition's answer is Claude's reading (section 8.4)."
+- **G5.2**, its two sentences on draft 18: "What is left here of draft 18's power for replacement is nothing: what its rule answered, which signatures are enough, is the update condition's, with the rest of the answer about an update, in one place (G4.11). An assent to a replacing Terms act MAY be made for a party under a power of kind `assent`, as any assent may (G5.1(b)): that is acting for someone, and it is counted as that party's signing, as draft 18 has it (section 8.4)."
+- **G5.6(e)**, the whole clause, for its "as draft 18 has it": "(e) **Using it is not changing it.** A judge's decision binds only through a power (G5.1(b); section 5.3), as draft 18 has it. A resolving update signed under a power to resolve is that power used (G12.4). A contest made for someone under a power of kind `contest` is that person's contest. Each of these acts under what the Terms set, and changes none of it."
+- **G10.7**, the whole rule, "What is left of the condition", whose opening is history (the trace, 5.10.8): "G10.7 **What is left of the condition.** The field `condition` names the update condition, and it is read in one place (G4.11). Nothing of it is read here but its answer about an update. No condition triggers: these grammar rules have no answer **triggered**, and none that a filling's rights **no longer apply**, and a verifier MUST NOT give either. What a version offers changes, and the rights of a filling earned under it stop applying or change, only through an update which the update condition answers valid (G4.8, G4.11); for a filling, only as G10.6 says. A filling whose rights an update has so changed stays a filling, shown with its proof (G10.2): nothing is undone. What the update says of those rights, whether the holder is still a party in the spot (G10.3), and whatever else follows, are as that update and the version the filling was earned under state; a verifier reads them from there (G2) and MUST NOT answer them of itself. Whether a spot still takes new identities under the version in force is G10.5's. Nothing stops a later version: one made as G4.8 says MAY offer again, and MAY rest what it offers on values already in the chain, named by fingerprint (G2, G13.2), or on none. Who fills a spot under it is said by its own K5 cMIP (G10.2), and a filling under it has the rights that version offers (G10.6)."
+- **G12.4**, its history sentence: "Draft 18 read it as a power for replacement that a rule might limit to resolving updates; that power is gone (G5.2)."
+- **G11.6(b)**, its history sentence (the trace, 5.11.6): "Draft 20 read a buyer as signing a payment and no Terms, and so answered no for every buyer; that reading is gone."
+- **G14.2**, its history sentence; the rule itself went to Envelopes: "Draft 23 read the current holder, as the chain stands now; that reading is gone."
+
+### 11.3 Its notes "no longer a term"
+
+From draft 25's section 2 (Definitions):
+
+> **Succession**: no longer a term of this text. Drafts 15 to 22 called so the agreements for one baked work by which the baker's rights passed from holder to holder. From draft 23 those rights pass by transfers in the envelope's chain, and no agreement passes them (G14.2).
+
+> **Join**: no longer a term of this text. What earlier drafts called a join that says which branch continues is the resolving update. A join that merged the branches is not kept (G12.3; section 8.4).
+
+> **Triggered**: no longer a term of this text. Draft 16 gave it as an answer, said of a condition. The condition now answers valid or not valid, of an update (G4.11; section 8.4).
+
+Draft 26 keeps **Succession** as "not a term of this text", without its history (§3.3); it has no **Join** and no **Triggered** (5.10.8: "these grammar rules have no answer **triggered**").
+
+### 11.4 Its explanations of the tasks, that no longer hold
+
+Draft 25's section 5 opened with his words and a list of six points that draft 26 says once each in §3.1 (the trace, M7, §6: "His quotation, "One cMIP per socket" and the other bullets … go"). Its section 5.3 opened with the history of the tasks, and its table of modules had a column "Was". Its sections 5.1 and 5.2 are carried in section 4.3 of this companion, renumbered; the rows of them that no longer hold (delegation, the baker), which M9's row 3 points here, are these.
+
+From section 5, its first paragraph:
+
+> In the words of Nobody, allegedly: "task has always been the socket in my mind. One cMIP per socket, multiple modules where needed, possibly multiple sockets in one cMIP." A task is a socket: a field of an act where a cMIP plugs in and answers one question (section 2). Every field of an act that names a cMIP is a task, and the table below lists them all. Each asks its one question, and one cMIP answers it. These grammar rules take the output and use it where the last column but one says; they never compute it.
+
+From section 5.3, its opening and the column "Was" (each module with the task number it had until draft 17):
+
+> Drafts 8 to 17 listed thirteen "tasks" that were kinds of computation. Three of them were sockets all along (Body, Spot, Kind). One stood for three sockets (Rule: `in_force`, a power, `condition`). One was a socket with no field (Control). Those are the first seven tasks above; the eighth, Data, is new in draft 19. The others, and Rule itself as a kind of computation, are kinds of answer that a cMIP in a socket may use, as modules. They are not tasks: no field of an act names them. They are kept here because each says whom an answer makes you trust, and a verifier reports that with every answer (G8). The right-hand column gives the number each had until draft 17.
+
+> Was: Rule, K4; Identity, K2; Assurance, K3; Witness, K5; Tally, K7; Delivery, K9; Judge, K10.
+
+> - **The place** (`place`) and **the clock** (`clock`) are named by Terms by an identifier, not as cMIPs. Their answers are another layer's (G7; section 8.1), and are given to every cMIP in a socket. The place was K6 until draft 17. Whether a clock is itself a module under a cMIP of another layer is that layer's to say (section 9).
+>
+> - **Standing** (K13 until draft 17): what one signer's acts show about them, to anyone who looks. A reader chooses the cMIP; no act names it, so it is no task of an act. It computes from signed acts and place answers only, qualified per place or as shown; anyone can recompute it, and nobody keeps it.
+
+From section 5.1, the paragraph on the four things kept in the grammar (the baker and the delegator's default among them):
+
+> Four things a cMIP could perhaps also build are kept in the grammar, for the reason given under each grammar rule in `reasons-25.md`: the four named kinds of spot beside the open fifth (G10), the baker (G14), the delegator's default (G5.5), and the counter signature (G4.10). Two more were put to Nobody, allegedly, as questions by draft 15, and stay, by his words. The contest is an act of the grammar (G11.8): "Making greed legible does not work without contest, it makes it core." The condition stays, as one simple field, and from draft 17 the grammar reads of it only whether a proposed update is valid or not valid (G4.11): "It answers wether it can be updated or not. Because agreements make these conditions potentially complex the core still needs a simple field the cMIP can then specify in details."
+
+From section 5.2, the rows that rest on delegation or on the baker's rules, which left:
+
+> | What was found | How it can be said |
+> |---|---|
+> | A delegation only the agent may end | what the delegation's Terms say (G5.5); a body cMIP (K1) that shows it to whoever reads |
+> | The same work, baked by a copier | shown beside each bake, never picked (G14.5); judging it is a cMIP's or an arbiter's, and ranking a client's |
+> | The baker sells her rights, and is not needed for later updates | a transfer in the envelope's chain, signed by her as the holder of the moment and naming the buyer: the layer below's act, not this text's (G14.1, G14.2). From then on Terms that cite that transfer need the buyer, and not her; Terms made with her before it keep counting (G14.2). For a later version of Terms that still name her, an update condition the parties signed (K4) that answers valid without her; the holder is then bound by it, as G14.2 reads "bound by them" (G5.1(c)). Draft 22's rights cMIP in the body's socket (K1) passes nothing now |
+
+### 11.5 Its open parameters (section 6)
+
+Draft 26's §7 keeps the short list of values it does not fix. Draft 25's P1 to P21, with their history, are here, as M7 sent them (the trace, M7, §7: "What the other reading (ii) would have put here"). Of these, only the clock (P11, P16) and the depth (P8, P2, in part) stand in draft 26's §7.
+
+#### Draft 25, section 6: Open parameters
+
+These are values the grammar rules depend on and this draft does not fix. The numbers are kept from earlier drafts so that the records still point at them; P3, P10, P13 and P14 were answered there and are not listed (`history.md`).
+
+- **P1. Default for `in_force`.** G4.1 sets it to "every party named as a signer". Whether a different default is wanted is open.
+- **P2. Depth of powers through powers.** G5 lets Terms named in `under` themselves be bound through other Terms (an agent of an agent; a group within a group). Whether a verifier must follow any depth, or a limit applies, is open. *Said in draft 18:* a verifier that stops answers **unchecked** beyond where it stopped, and says how far it followed (G9.2). The number is not fixed; both C sessions' verifiers follow eight levels.
+- **P4. One place or several.** G7 names one place. Whether Terms may name several places with a rule over their answers (plural witnesses of order) is open.
+- **P5. What a verifier holds.** G6 and G9 depend on which acts the verifier holds. Whether a verifier answers from a set it is given, or must also ask the place for more, is open. Standing (section 5.3) depends on it most.
+- **P6. Pools.** In plain words: some ways of paying cannot pay each share at the moment it is earned. Money must first gather in one pot, and be divided later. Nobody, allegedly: "Sadly some rails will need pools… this headache won’t be easy." This draft does not solve it. What is open, all of it:
+  - who holds a pool, and on whose word it is said to hold what it holds (G8.3: only the holder's or controller's word);
+  - when a pool is divided, and by which rule;
+  - how a claim on a pool is counted when each false claim takes from the real claimants (`late-roles.md`: "each fake claim takes from real claimants, and the payer has little reason to resist");
+  - what "tied to a settlement" (G8.5) means for a count paid out of a pool, where one settlement covers many counts;
+  - what a leg report (G11.3) names as received where what it passes on comes out of a pool;
+  - what happens to a pool's share that no one has yet claimed (the owed but unfindable).
+
+  **What the click test showed** (`docs/click-sketch-report.md`, branch `claude/click-sketch`, its 3e; a test built on draft 10): one report for a batch of payments works, since it names them all as received. But "how much of *my* click reached the band" is then arithmetic the reader does pro rata, which nobody states; the sketch marks it "not stated". Left open. Whether one report may answer several calls at once is open in the block as well (section 8.1). *From draft 20:* these grammar rules read a report as answering one call (section 3.2); what would settle pools is listed in section 8.2, item 16.
+- **P7. What happens to a filling.** A spot may be filled many times, each filling tied to its proof (G10.2). Still open: whether a filled spot can pass to another, and whether a later claimant can displace an earlier one.
+- **P8. A receiver that is an agreement.** *Answered in draft 15, as far as the grammar goes:* these grammar rules never follow a receiver beyond one leg (G11.6). G1.4 reads a receiver, through any agreement it names, only until one of an agreement's own parties is reached: that finds the receiving side of one leg. What that party then passes on, through how many further legs, and whether it comes round again, is for whoever follows further: a data cMIP (G11.6(a)). **What the click tests showed:** when a song names as a party the film that stands on it, money goes round until fees and rounding eat it (`docs/click-sketch-report.md`, its 3f); and since nobody walks past one leg, such a loop matters only to a reader who puts several legs together (`docs/click-sketch-12-report.md`, its 3f). *Still open, inside one leg:* G1.4 sets no limit on how many agreements a receiver may point through before a party is reached, and answers **not shown** where an agreement is met a second time, since then no one receives. Both are Claude's least reading, for the MOR lead to confirm (section 8.4). *Said in draft 18:* a verifier that stops following receivers answers **unchecked** (G1.4, G9.2); a receiver that is a spot filled more than once, or that is no party, is **not shown** (G1.4).
+- **P9. What a fork removes.** *Answered in draft 16, from the exchange "A fork, from MOR's side":* both tips stop. Nothing built on either counts until the fork is resolved, and the shared act stays the last act of its line that counts; for Terms, the last shared version stays in force (G4.7, G12.2). Two rival resolving updates are themselves a fork (G12.7). Draft 15's proposal (both branches bind their signer) is not taken. *Still open, for one signer's own line:* the exchange speaks of updates and of versions. Read for one signer's own line, as G12.2 reads it, an assent that is a tip, or follows one, is not counted while the fork stands; so a signer can hold back their own assent by forking, until they resolve the fork themselves. Before the Terms are in force, that gives a signer nothing the counter signature does not already give (G4.10). Once Terms are in force they stop only by replacement (G4.9), so a fork takes no Terms out of force; whether the signer of such an assent is bound meanwhile is not said (section 8.4). *Said in draft 18, for a fork of Terms:* an assent to a tip counts for whether that tip was signed, and for nothing else (G12.2); that is the reading of Nobody, allegedly, as the brief gives it.
+- **P11. Dates.** A place gives positions, not dates. Terms may name a `clock`, and every reader uses it for that agreement (G7.4, G13.4). Still open: what a clock is and who gives it (P16).
+- **P12. One act for many.** `for` names one person, or one agreement. An act made for an agreement binds that agreement's parties by one act (G1.2). Whether one decision or judgment binding many who are not the parties of one agreement is one act or one per person is open.
+- **P15. Rights outside fillings.** G10.6 is about fillings. *Answered in draft 15, from the exchange "What the grammar is for":* the grammar gives a party named as a signer, or an agreement named as a party, no default of its own against a later version made under a power. What an update made under such a power may change was, in drafts 15 and 16, its rule's to say (allowed or not). *From draft 17* it is the update condition's: given the version in force and the proposed update, valid or not valid (G4.11; section 5.2). Where Terms name no update condition, draft 18 let a power reach the whole agreement, but for the rights of fillings already earned (G10.6). *From draft 19* no power makes an update (G5.2). An update that fewer than all signed is valid only where a named update condition answers so, and it then reaches what that condition lets it reach; with none named, the default asks everyone who signed the original (G4.11(e)).
+- **P16. The clock.** Not said: what a clock is and which layer gives it; whether the place may also be the clock; and, where two versions of one agreement name different clocks, which one the update condition (G4.11) reads. This text says "the Terms in force", as G7.2 does for the place.
+- **P17. An agreement that acts, or signs.** *Settled in draft 12:* an agreement named as a party signs, where it signs, as its own Terms require; a deal between a work and a service is signed by both, and a call in it is made by both (G1.2, G4.4, G11.2). *Settled in draft 13,* by the MOR lead as technical wording: signing is one level (G1.2). *Settled in draft 15,* from the exchange "The two sides of a leg": `for` may name an agreement; an act made in an agreement's name, under a power its own Terms give, is that agreement's signature, and binds its parties as its Terms say (G1.2, G5.1(b)). *Still not said:*
+  - *written in draft 18 (G1.2), as the least reading, taken from the C session's Q11:* an agreement whose Terms give no power for it signs by one act of each of its signers, its `for` naming the agreement and its `under` its Terms in force; and an act made for an agreement under Terms that are not its own is not its signature. Both are for the MOR lead and for Nobody, allegedly, to confirm;
+  - whether the default of G4.1 should count a party named as an agreement. It does not, as before: a work that only points at the works it stands on needs none of them to sign ("no collective involved"). So Terms that need an agreement's signing must say so in their own `in_force` rule, and nothing else in the grammar tells a party that must sign from one that is only pointed at. That is one deal people may make and not the only one: a group that wants a say signs Terms whose rule counts it (section 5.2);
+  - whether someone who fills a role of an agreement is one of its signers when it signs as a party; G1.2 counts only the parties its Terms name as signers. And how Terms "say otherwise";
+  - whether such a party can itself make a counter signature (G4.10). *Written in draft 20,* from the second C session's A14 and A15: which acts of an agreement's several signers are one signing (G1.2), and that such a party makes a counter signature by the same act as its assent (G4.10). Both are Claude's reading (draft 20's section 8.2, kept in `history.md`, section N.4). *Written in draft 21,* from the exchange "Setting aside what an agent made": nothing an agent made is set aside; before Terms are in force, an assent made for a party by an agent is cancelled as the party's own is, by a counter signature in that party's name, which the party itself may make (G4.10, G5.7). That the party itself may make it is Claude's reading of what follows (section 8.2).
+- **P18. The baker's rights.** *Said in drafts 18 to 22:* the baker's rights passed through a succession of agreements, as each one's words said, read by its body cMIP (K1); "bound by them" (G14.2; from draft 22, bound in any way G5.1 allows); invalid, not shown and unchecked (G14.3); the same work baked again is shown beside each bake, never picked (G14.5). *Said in draft 23,* from the exchange "The envelope states its owner": the holder of the baker's rights is read from the envelope's own chain, the layer below's; Terms that name an envelope count only where its current holder is one of their parties, bound by them, as draft 22 reads "bound"; the succession and the body's part for the baker's rights are gone; a double sale is a fork in the envelope's chain, read as that layer reads forks (G14.1, G14.2). *Said in draft 24,* from the exchange "The holder at the time": Terms name the act of the envelope's chain they relied on, in `envelope_at`, and the holder is read at that act; Terms made after a later transfer, where knots or an anchoring show it, count for nothing; a thief's Terms are invalid for good (G14.1 to G14.3). Of draft 22's points, "what in an agreement counts as passing them" is answered: nothing in an agreement; a transfer of the envelope's chain does. *Still not said:* whether a transfer, or the sale it carries out, calls for reports (G11; a transfer is not an act of this text); what is read where one envelope has several bakers, or a transfer names several holders; how Terms that sell a baked work's bytes without naming its envelope are read (G14 reads only Terms that name one); how Terms of a sale stand beside the transfer that carries it out; what a fork resolved by that layer does to Terms that cite the branch it sets aside; and whether an anchoring of the envelope's own layer may show Terms late (section 8.2).
+- **P19. Where "invalid" stops and "not shown" starts.** "Invalid" is meant as one word across the layers. This text draws one line (section 2): **invalid**, where the act itself shows that it cannot count, whatever other acts exist; **not shown**, wherever an act the verifier does not hold could change the answer. Whether that is the line the other layers draw is not known to this text (section 8.1). A replacement that lacks a signature is, by that line, not shown (G4.8); his word for such a case was "invalid" (section 8.4). From draft 17 there is also **not valid**, the update condition's answer about an update (G4.11). It is kept apart from **invalid**: it is a cMIP's answer, and may rest on a time or on the acts held. Whether the two should be one word is not said. *Said in draft 18:* **valid** and **disputed** each have one meaning in this text, and section 2 says how each differs from the core's word of the same spelling; and the cases of **invalid** are listed there. *Said in draft 21:* Terms that point to an envelope and name neither its baker among their parties nor a succession are one of those cases, an invalid act like the others, and no longer an answer about the work alone (G14.3).
+- **P20. What a leg report carries.** K6's row says what a leg report carries beyond what every report carries: what was received, what was passed on and to whom, the doer's own part, what was kept, and, apart from those, what is still owed, each with its amount (G11.3). Not said: how an amount is written so that every reader reads it alike (an amount on a way of paying is the Money layer's to give; a right is something else); whether money shown as still owed is later shown as paid, and by what (what would settle it: section 8.2, item 15); and whether one report may cover many payments (P6). **A person who receives for others**, what the click test showed (its 3g): a work whose receiver is one of its owners passes no report, and none is asked. That owner then holds the others' money, unseen: in the sketch a library's first owner received for both owners, and the second was shown in no run. *Answered in draft 12* (G11.2, G11.5): every leg is the same exchange. Whoever paid that owner reports that they did; the owner confirms by a report of their own; then the owner has the next obligation, within the work's own agreement, and reports there as the doer, each other owner confirming. No call is attached to a receiving side. *Answered in draft 13* (K6's row; G11.5): such an owner's own share has a line of its own, the doer's own part, and is not read as a fee kept (the second click test's 2c). *Still not said:* by which act a doer's own part is named, since nothing moves when a holder keeps their share; how a receiving side's report is "automatic" on some ways of paying (who signs it, and whether a settlement can itself stand as the confirmation: the Money layer's, section 8.1); and whether a work whose owner receives for the others holds the Control task with its socket empty, as G11.2 reads it (section 8.4).
+- **P21. One condition.** A version names one cMIP in `condition`: its update condition (G4.11). Not said: whether a version may name several (one for each part of an agreement), or whether the one cMIP's parameters must carry all of it. *Answered in draft 18, from the exchange "The default update condition":* an update that everyone signed still needs the output of a named condition; the core takes that output and has no notion of overruling or locking (G4.11(i)); with no condition named, the default is everyone who signed the original (G4.11(e)). Not said, and written in draft 18 by the least reading: whether the condition is asked of a resolving update (as draft 18 wrote it, it was not); and which condition is asked about a filling where several versions lie between (as written, the one named by the version the filling was earned under; G10.6). *Changed in draft 19:* the condition is asked of a resolving update, since who must sign an update is now part of its answer (G4.11(g); section 8.4).
+
+### 11.6 Its open lists (sections 8 to 10)
+
+Draft 25's sections 8 ("What is still open"), 9 ("What a builder needs that is not in this text") and 10 ("What the encoding must fix"), whole. What of them draft 26 answers, or leaves out again, is in section 6 and in the trace's "left out" lists; what of them is the other texts' is in the last section. Their headings are lowered two levels so that they sit under this one.
+
+#### Draft 25, section 8. What is still open
+
+Nothing in this section is decided. Sections 6 and 7 are part of what is open too: the parameters this text does not fix, and the costs it does not close.
+
+##### 8.1 What this text needs from the other layers, and does not have
+
+- The core's act format: whether it already gives fingerprints, a per-signer line of acts (which would make G6 redundant), acts signed by several people at once, and field names.
+- **A place, from the layer that orders acts.** G7 reads a place as that layer gives it, and no current lower text gives one (the seams, N2 and X5). What that layer must provide, for the later rewrite (from the seams' proposal A2; a list of needs, not a design): (1) a way to name a place without a server address, which Terms can carry in `place`; (2) one line of the acts the place was shown, in the order it was shown them; (3) a signed answer, by the place, that says of an act, or of an agreement's root, whether it is in that line and at which position; (4) in the same answer, whether anything of the same agreement comes after it, said as of the answer's own position, since nobody can sign "nothing later" as a fact; (5) a way for a verifier to tell that two answers of one place contradict each other (G7.2). Until this exists, every "per place" in this text has nothing under it that can be built.
+- What the Sign layer does when a key is replaced or lost, since that decides whether G6 sees a fork.
+- How cMIPs are identified in practice, so that "named by fingerprint" in G2 can be met.
+- **The report, a block of the shared language** (proposed in `docs/lead/proposals/report-block-2.md`, branch `claude/lead-records-2`: the MOR lead's proposal, not a decision, not yet written into any spec, its wording his to change). This text uses it (G11, task K6) and does not define it. What it needs from it: that a task may carry a call for a report, or not; that the call says from whom, and names no place and no reader (its R1 and R3); that only the signers of the act holding the task can make it; that a report carries the call it answers, the acts it relied on and its signer; that a report is addressed to the other side of its own leg, and to no one else, in every layer (its R3); that two halves are tied by an act both name, or, where the layer that holds value records one payment as two acts, by that layer's answer to "the same payment" (G11.4(b)); that a report is one act type, defined once in the shared language, which every layer's tasks use; and that "unanswered" and "no report called for" are shown as such. What the block has not yet said: how a call is written, where it sits in the act that holds the task, and how a report names it by fingerprint; how "where that side receives" is found without a server address (the Deliver layer's, and the security rules'); how a report is written as an act, and which text holds that one definition; whether a call is per task, or per act holding several tasks; whether one report can answer several calls at once (P6); whether "unanswered" ever ends; and its words, which are the MOR lead's, as technical wording, but for "leg".
+- **The seams between this text and the block, and what the block would need.** `report-block-2.md` is not changed by this draft. The second C session found four places where it and this text do not read alike (`QUESTIONS.md`, "Where the text and the block do not read alike"). Each is closed on this text's side, as far as this text can close it. What the block would need is proposed in `docs/lead/proposals/report-block-3.md`: proposal 2 published again with only those changes, the MOR lead's to take or change. *Draft 21* changes nothing the block reads: a buyer now signs the offer's Terms, but the payment still holds the task of paying and carries the payer's call by default (G11.7), which is what the block's R1, R2 and R4 read; and a path beyond the buyer's leg is a data cMIP's, which the block leaves to data cMIPs. So `report-block-3.md` stands, and no fourth proposal is written. *Draft 25* changes one thing the block reads: a call made by default is named by the act that stands for it, and for a payment that is always its settlement, the act both sides can see, never the payment (G11.7). The block's R2 is written so in `report-block-4.md`: proposal 3 published again with only that change, the MOR lead's to take or change.
+  - *A confirmation with no call written* (G11.7, against the block's R2: "A report that names no call is no report"). *This text:* a payment is the act that holds the task of paying; the payer's call for the receiving side's confirmation is made by default; a report names the call it answers by naming the act that holds it, or the act that stands for it, so a confirmation names the settlement the payment names (from draft 25, never the payment itself); a report that names nothing as its call is rejected, as R2 has it (G11.7). *The block would need:* that a task may define a call as made by default by the act that holds it (R1, R5); and that a report may name the call it answers by naming the act that holds it, or the act the task says stands for it (for a payment, its settlement), since a call made by default has no bytes of its own (R2).
+  - *"two sides who both signed"* (the block's plain words, against G11.1). *This text:* the two sides of a leg are whoever carries out the obligation and whoever receives it, whether or not they signed anything together (G11.1); a side that signed nothing is still a side, and the path to it is not a signed one (G11.2). *The block would need* to drop "who both signed" from its plain words and say the two sides as G11.1 does.
+  - *Halves where the call expects one side* (R4, against G11.7). *This text:* matched, mismatched and one side only are answered where the call expects both sides, or where the act that holds the call is itself one side's signed word of the act both name: a payment, signed by the buyer and naming its settlement, is the doer's half of the buyer's leg; where a call expects one side only, each report is shown as stated and no tie is answered (G11.4(b)). *The block would need* R4 to say the second case.
+  - *One report, several calls* (the block's open point 3). *This text* reads a report as answering one call (section 3.2). *The block would need* to say that a report names one call, until its open point 3 is answered.
+  - *Which lines each side receives* (draft 19's third seam): unchanged. Where one report speaks of several legs (a payout to several), this text leaves to the task's cMIP which lines each receiving side receives (G11.3); the block would need to allow a task to say so. It is not one of the second C session's four, and `report-block-3.md` does not take it up.
+- **Seeing beyond one leg: an agreed path** (G11.6). In plain words: no layer of MOR carries a report further than its leg. That is now the block's own rule (its R3), and no longer something only this text says. What this text needs from the shared language and from every other layer: that none of them carries a report further than its leg; that none lets a call name a place or a reader; that none lets anyone who did not sign an act call for reports on it; and that none gives, for its own tasks, a path for a report that the people it concerns did not sign for. In the words of Nobody, allegedly: "Data needs to move along paths that people agree, with signature." And, earlier: "Never extended to the other layers. Or surveillance become cheap and omnipresent." Draft 13 asked the block whether a call's "where" may name a place outside the leg, in every layer or in Agreements only. That is answered: in none. *From draft 19* Terms name such a cMIP in `data`, and it answers the task K8. What this text still does not have: what a data cMIP focused on agreements is beyond that socket, and whether such a cMIP belongs to Agreements alone (section 8.4).
+- **"The same payment", and Money's counting.** Where the layer that holds value records one payment as two acts (a claim and a receipt), this text needs its answer to whether two such acts are of the same payment (G11.4(b)). And where that layer counts one of two differing amounts toward a debt, that counting is Money's: this text shows both halves and chooses neither (G11.4(c)).
+- What a settlement is, as the layer that holds value gives it, so that the `settlement` field (G8.5) names the right thing; and what a payment is there: how it names the version of the work agreement it read (G13.2; that is Money's to say, and this text only reads the name).
+- How that layer writes an amount, so that the amounts in a leg report (task K6) can be read by everyone alike (P20).
+- The research's own open question: how much a proven liar must stand to lose, and where it is kept, for an evidence-only record to be enough. G6 depends on the answer for its force; standing (section 5.3) is where that loss would be read.
+- Whether the verifier's answers (shown, not shown, fork, valid and not valid, invalid, unchecked) are already named in another layer, so that the words match; in particular where "invalid" stops there (P19). Two words are known to differ, and section 2 says how: the core's "valid" (said of an act) and "disputed" (said of an act a change of key would have made void). The core's "unknown", "void" and "pending" have no word here (section 9).
+- **The envelope's chain, from the layer below** (G14). In plain words: from draft 23, who holds the baker's rights is read from the envelope itself, and from draft 24 at the act of its chain that Terms cite, and no current lower text says how. In the words of Nobody, allegedly: "the chain in question is the one (or should be) of the envelope, not the one of the baker." What this text needs of that layer, for the later rewrite of it (a list of needs, not a design; none of it is defined here): (1) **the bake names the baker**: an envelope with a fingerprint of its own, which states who baked it, so that the baker is the first holder of the baker's rights; (2) **a transfer act**: an act of the envelope's chain that names the envelope, follows the act of that chain before it, and names the next holder by an identifier (his "a new ID for those rights"); whether that identifier may be an agreement's root (G1.1), and whether one transfer may name several holders, is that layer's to say, and this text needs to be told; (3) **who may sign it**: the holder of the moment, and how a verifier tells that the signer was the holder of the moment; whether a holder may sign it through an agent, or, for an agreement, as that agreement's signature (G1.2), is that layer's; (4) **how a reader gets the holder at an act**: from that act and the acts of the chain it follows, back to the bake, who held the baker's rights at it (G14.1); how a verifier tells that an act is of a given envelope's chain, so that `envelope_at` can be checked (G14.3(a)); and whether that layer gives an anchoring of its own that orders Terms against its transfers (G14.2; section 8.2); draft 23 asked here for the current holder, which from draft 24 is not read; (5) **what a fork there shows**: two transfers signed by the holder of the moment that follow the same act of the chain (a double sale), shown as a fork; whether and how that layer resolves one; what it answers of the holder at an act that is a tip of one, or follows one, while it stands and once resolved, or that it answers none (G14.2). Also, as before: how a verifier tells that two envelopes carry the same work (G14.5). Until this exists, G14 has nothing under it that can be built.
+- What a clock is, which layer gives it, and how it is identified without a server address (G7.4).
+- Whether the core has an act signed by several people at once, for an agreement that signs by every one of its signers (G1.2; P17); and whether the core's `for`, if it has one, can hold an agreement's root.
+- What a receiving side's "automatic" report is on a way of paying, as the layer that holds value gives it: who signs it, and whether a settlement can itself be the confirmation (G11.5, G11.7; P20).
+- What a payment is as an act, in the layer that holds value: where the payer's call sits in it, and whether a payer can state that no confirmation is called for (G11.7).
+- What access to what was bought is, who gives it, and what shows that it was given or was not (G11.7, G11.8): the Deliver layer's evidence, or a recipient's acknowledgment (delivery, section 5.3).
+- Whether the core already has a contest. His words: "Contest is MOR act though. It is just extended." This text writes the contest as a Statement with a kind of its own (G11.8), and was written without reading the core's spec. If the core has a contest act, this text should name it and say only what is extended: that it is made against an offer or a vow.
+- What a client is, where the duties of clients are kept, and how a client is tested against them, since no verifier can check G12.8.
+
+##### 8.2 For Nobody, allegedly
+
+**Draft 25 adds nothing to this list.** Its changes are the MOR lead's, as technical wording, and none changes anything Nobody, allegedly, decided (`history.md`, Part R). Sections 8.2 and 8.3 below are draft 24's, as they stand: "draft 24" there means draft 24, and draft 25 changes nothing in them but item 6 of section 8.3.
+
+Draft 24 is draft 23 with one change, and housekeeping (`history.md`, Part Q). One exchange of the ledger is brought in, read as a whole: "The holder at the time". In plain words:
+
+- **The holder at the time.** Draft 23 read the holder of the baker's rights as the envelope's chain stands now. So a sale made every earlier agreement for the work stop counting, payments under them lost their receiver, and a thief's Terms were "invalid" only as long as no later transfer reached one of their parties. Now Terms name the act of the envelope's chain they relied on, and the holder is read at that act: now is what an act cites (G13). Agreements made with the holder of the moment keep counting after a sale; the buyer holds the rights from the transfer on; Terms that the knots or an anchoring show were made after a later transfer than the act they cite count for nothing, as a late update replaces nothing; and a thief's Terms, which cite a point where he held nothing, are invalid for good (G14.1 to G14.3). The words are the MOR lead's lean; Nobody, allegedly, answered: "Agreed".
+
+**What the exchange answers, of draft 23's list.** Its 8.2, item 1 ("current", read as it stands): answered: the holder is read at the act the Terms cite (G14.1, G14.2). Item 2 (invalid, read on the envelope's chain): answered: the act cited is fixed, so "invalid" sits on section 2's line again (G14.3(a)). Item 3 (a fork in the envelope's chain): kept, the MOR lead's settlement (section 8.3, item 3). Item 4 (the current holder as an answer about what is latest): overtaken: the holder at an act is no such answer. Items 5 to 9: stand. Draft 23's 8.2 and 8.3 are kept, unchanged, in `history.md`, section Q.4; its items 14 to 17 are still open, and are kept below under their numbers, since other sections point to them.
+
+**What follows, and is Claude's.** Each is written in the text as what the exchange asks of a verifier, as precisely as a verifier needs. None is decided; each is for the MOR lead and for Nobody, allegedly, to take, change or refuse.
+
+1. **The field** (section 3.1). The exchange says that Terms "name the envelope act they relied on", and names no field. Draft 24 gives a new field, `envelope_at`, required exactly when `envelope` is, holding one fingerprint, so that a builder never has to pick, among `relies_on`, which entry is the act of the chain. G13.2 would allow `relies_on` instead; a field of its own is Claude's choice, and its name is the MOR lead's to change. An act with one of the two fields and not the other is rejected; one whose `envelope_at` names an act, held, of another envelope's chain is invalid (G14.3(a)), as `previous` naming another signer's act is (G6.1).
+2. **The holder at an act** (G14.1). Read as: the baker at the bake; otherwise the one the last transfer at or before that act names, in the chain as that act follows it. Fixed by fingerprints, so no qualifier.
+3. **Which knots, and which anchoring, show Terms late** (G14.2). The knots as G4.7(a) reads them: the Terms, or an assent they need, name the later transfer, directly or through acts that name it. The anchoring as G4.7(b) reads it: the place or the clock the agreement names, or, where it names none, the reader's own. Whether the envelope's own layer may give an anchoring that counts too is not in the exchange (section 8.1, item (4)).
+4. **Where nothing shows them late** (G14.2; section 7). The Terms count by the act they cite. That is the late rival's reading carried over ("as with a late rival"); for a late update it gives a fork, and here no fork arises, since the Terms are not two updates of one act. A seller who has sold can so still make Terms citing a point before the sale, which count where nothing shows them late: a stated cost.
+5. **The answer about late Terms** (G14.2(c)). No new answer word, as for a late update: shown as late, G14.2 named, with what shows it.
+6. **A new version after a sale** (G14.2). A version is Terms, and cites its own act of the chain. A version made after a transfer, which the knots or an anchoring show so, counts only if it cites that transfer, or a later act, and names the holder there. So the old version stays in force after a sale, and a later update of it needs the buyer, as G14.2 asks, an update condition included (G5.1(c)).
+7. **A fork resolved in the envelope's chain** (G14.2). Where that layer resolves a fork and sets aside the branch an act cited lies in, what that does to Terms that cite it is not in the exchange, and not said; the holder at that act is still read as that layer gives it.
+
+**Where the ledger's arrived-at line says more than the exchange.** The arrived-at line is the MOR lead's reading, marked "to check". Draft 24 follows the exchange where the line says more. The full list is in `history.md`, section Q.2; the ones that touch what a rule says:
+
+8. **"to dodge a later transfer".** The MOR lead's lean, which "Agreed" answers, speaks of Terms that "cite an old point of the envelope's chain to dodge a later transfer"; the arrived-at line says "made after a later transfer than the act they cite". The grammar reads acts, not intent: Terms are late where the acts or an anchoring show the order, whatever their makers meant. Draft 24 follows the line's wording, which is the lean without the intent.
+9. **"the buyer holds the rights from then on"**: in the lean, not in the line. Taken (G14.2, "After a sale").
+10. **"so 'invalid' stays an act that never counted"**: the line's, and the brief's; the lean says "a thief's Terms stay invalid for good". Taken: the two say the same of a thief's Terms, and section 2's line is kept.
+
+**What could not be decided from the text at all.** Kept from draft 23, unchanged, under its numbers.
+
+14. **A payment that is pending** (section 9, item 7). No answer word exists for it here. *To settle it:* the Money layer's encoding says whether a payment or a settlement has a pending state, as which act, and what it names; then a cMIP of K6, or the encoding of the answer words (section 10), says what a verifier shows while it lasts. The least reading until then is unchecked (G9).
+15. **Money shown as still owed, and later paid** (P20). *To settle it:* the encoding of a leg report's lines (K6's row) gives a "still owed" line something a later line can name (the report it was stated in, and the amount and to whom); then a cMIP of K6 says whether a later report's "passed on" line, naming it, closes it. Until then a "still owed" line is shown as stated and tied to nothing.
+16. **Pools** (P6). *To settle it:* a cMIP of K6 for the pool, with a rule as its module, says when it is divided and how a claim is counted; and the encoding of a leg report says how one line names several settlements, or one settlement covers many counts, and whether one report answers several calls (the block's open point 3). Until then one report line names one settlement.
+17. **The modules** (a judge, a tally, identity, assurance, delivery, standing; section 5.3). None is a socket. *To settle each:* a cMIP in a socket that names it as a module, and the encoding of what that cMIP is handed and gives back (section 10); for the judge, also where in the Terms it is named (G5.6(c)). Nothing in the grammar needs to change for any of them.
+
+##### 8.3 Left as draft 23 has it
+
+Each item is where the change touches something the exchange does not cover, or something the brief asks kept. Each is left as draft 23 has it, or says the least that lets the text be read, and says so.
+
+1. **Terms where the holder's place is not yet shown** (G14.3(b)). They count for nothing until it is shown: the MOR lead's settlement, from draft 21's section 8.3 ("unchecked is not passed"). What "shown" asks now reaches the holder at the act cited.
+2. **The new version's own `in_force`** (G4.1, G4.8). Still open, as draft 23 has it: a version that names the baker as a signer and carries no `in_force` is in force, by G4.1's default, only with an assent in her name.
+3. **A fork in the envelope's chain, where that layer gives no holder** (G14.2, G14.3(b)). Answered **not shown**, as draft 23 has it: the MOR lead's settlement, which the brief asks kept. What changes is only where it applies: where the act the Terms cite is a tip of a fork, or follows one.
+4. **Who is bound by an update that does not name them** (G5.1(c)). Unchanged: G14.2 reads that binding only for a party the version names, now the holder at the act it cites.
+5. **What the exchange does not cover, left as draft 23 has it, and listed in P18:** one envelope with several bakers; Terms that sell a baked work's bytes without naming its envelope; whether a transfer, or the sale it carries out, calls for reports; how Terms of a sale stand beside the transfer; whether a holder may be an agreement; a baker's contest against Terms that name her own envelope without her.
+6. **The report block** (`report-block-3.md`): not changed by draft 24. Draft 25 publishes it again as `report-block-4.md`, with one change (section 8.1).
+7. **Everything draft 23 listed as open** in its sections 8.2 and 8.3 is still open, but for what is noted in `history.md`, section Q.4. It is summed up in section 8.4.
+8. **Nothing was tested against draft 24.** The next step is the encoding and vectors.
+
+##### 8.4 Still open from earlier drafts
+
+The lists of open questions of drafts 3 to 23 are kept, unchanged, in `history.md` (its sections 9.3 to 9.13 for drafts 3 to 9, D.4 for draft 10, E.4 for draft 11, F.5 for draft 12, G.4 for draft 13, H.5 for draft 14, I.5 for draft 15, J.5 for draft 16, K.6 for draft 17, L.5 for draft 18, M.5 for draft 19, N.4 for draft 20, O.4 for draft 21, P.4 for draft 22, and Q.4 for draft 23), with what each later draft answered. The ones a reader of this text meets directly:
+
+From draft 23's list (its sections 8.2 and 8.3; `history.md`, section Q.4):
+
+- what followed from "The envelope states its owner", and was Claude's: "current" read as it stands, and invalid on the chain as held (its 8.2, items 1 and 2: answered in draft 24); a fork in the envelope's chain (item 3: kept); the current holder as an answer about what is latest (item 4: overtaken); "chain" said of the envelope, who must be named (items 5 and 6: stand);
+- where the ledger's line said more than the exchange: "ownership", "naming the new one", "(or should be)" (items 7 to 9: stand);
+- what was left as draft 22 had it (its 8.3, items 1, 2 and 5 to 7; still open).
+
+From draft 22's list (its sections 8.2 and 8.3; `history.md`, section P.4):
+
+- what follows from "The baker's rights after a sale", and is Claude's: "bound by them" as G5.1, the party still named, the Terms replaced asked too, "before and apart from G14.3", the protects line (its 8.2, items 1 to 4 and 6; they stand, read of the current holder); the rights cMIP's two sockets (item 5: overtaken in draft 23);
+- where the ledger's line said more than the exchange (items 7 to 9; items 8 and 9 overtaken in draft 23);
+- what was left as draft 21 had it: Terms where the baker's place is not yet shown, the new version's own `in_force`, who is bound by an update that does not name them (its 8.3, items 1, 2 and 5; still open); a succession within one agreement's versions and the baker after a sale (items 3 and 4: answered in draft 23).
+
+From draft 21's list (its sections 8.2 and 8.3; `history.md`, section O.4):
+
+- what follows from the four exchanges, and is Claude's: which knots and which anchoring count, the answer about a late update, a late resolving update, the counter signature before Terms are in force, the buyer's Terms for data, a thief's Terms not shown and unchecked, a later version that drops the baker (its 8.2, items 1 to 8; item 8 is kept in section 8.3, item 3);
+- where the ledger's lines say more than the four exchanges (its 8.2, items 9 to 13; item 12's "an assent counting in their name" is overtaken by draft 22, G14.2);
+- a payment that is pending, money still owed and later paid, pools, and the modules (items 14 to 17, kept in section 8.2 above);
+- what is left as draft 20 has it: a late act in one signer's own line, knots and an anchoring that disagree, a clock, the update condition beside a late update, an agent's act that is a tip, a payer whose assent is not held, how a buyer's assent stands beside the payment, a succession that is held and passes nothing, a contest against a thief's Terms (its 8.3, items 1 to 7 and 9 to 13; item 8, "bound by them" for the baker, is answered in draft 22).
+
+From draft 20's list (its sections 8.2 and 8.3; `history.md`, section N.4):
+
+- where draft 20 did not take the second C session's reading: "built on a tip" as far as the naming goes, the counter signature under an `in_force` cMIP, when replacing Terms came into force, one signing, `previous` that names no act, a baker who fills a role, a payment along a branch set aside (its 8.2, items 1 to 9);
+- a payment that is pending, money still owed and later paid, pools, and the modules (items 14 to 17, kept in section 8.2 above);
+- where the ledger's lines say more than "An agent and the judicial", "The encoding first" and "After box 2" (items 18 to 20);
+- what is left as draft 19 has it: how a role is named, the new version's own `in_force`, Terms nobody signed, an assent that is a tip, the numbers a verifier stops at, a report in no line, who the judge is, duties of cMIPs and clients, a delegation's conditions beside its `condition`, a filling in a branch set aside (its 8.3, items 1 to 13).
+
+
+From draft 19's list (its sections 8.2 and 8.3; `history.md`, section M.5):
+
+- the update condition alone, and bound by an update one did not sign (G4.8, G5.1(c); its 8.2, items 1 and 17 to 19);
+- an entry of kind `replaces` left unread; not valid and not shown for one situation; the condition asked of a resolving update (G5.2, G4.11; items 2 to 4);
+- the delegator's default under a named condition (G5.5; item 5);
+- where the judicial is said, and what is set in the Terms: the contest, a judge, a power to resolve (G5.6; items 6 to 9 and 20 to 23);
+- K8's one question, two sides under two Terms, empty `data`, and a buyer (G11.6(a); items 11 to 14; a buyer is answered in draft 21: G11.6(b));
+- words, and what "so many processes" covers (items 16 and 24 to 26);
+- what is left as draft 18 has it: the new version's own `in_force`, Terms nobody signed, a delegation's conditions beside its `condition`, a judge named inside a cMIP's text, what a data cMIP is, data that is not a report (its 8.3, items 1 to 13).
+
+From draft 18's list (its sections 8.2 and 8.3; `history.md`, section L.5):
+
+- seven sockets read off the fields; what a module is; no socket for a dividing rule; the field `control` and its name (section 5; its 8.2, items 1 to 4);
+- "the original", read as the version an update would replace; and Terms that no one signed (G4.8(a); items 5 and 6);
+- "locked": no such value (G4.11(i); item 8);
+- which baker may contest, and how two bakes are known to carry the same work (G14.5; items 9 and 10);
+- a contest read against any version alike (G11.8; item 11);
+- delegations read from the body; numbers a verifier stops at; the position at which replacing Terms came into force (G5.5, G9.2, G5.4; items 12 to 14);
+- where the ledger's lines say more than the exchanges on sockets, bakes and the default (items 16 to 22);
+- the task of paying in a payment; the Control task with its socket empty; a power narrowed by changing its rule; which act a next version names after a resolving update; what passes the baker's rights; a settlement answered "pending"; the core's names (its 8.3, items 5 to 12);
+- three of the C session's questions listed and not fixed (its 8.3, item 14).
+
+From draft 17's list (its sections 8.2 and 8.3; `history.md`, section K.6):
+
+- a filling's rights under the update condition of the version it was earned under, and several versions between (G10.6; its 8.2, items 3 and 4);
+- "it should be able to run": whether rights can stop with no update at all (G4.11(b); item 5);
+- what the update condition's cMIP may read; that it is not asked of a resolving update (G4.11; items 6 and 8);
+- whether a spot still takes new identities, with the spot's own cMIP (G10.5; its 8.3, item 1);
+- a delegation's signed conditions, and a power to resolve, beside the update condition (G5.5, G12.4; items 2 and 3); from draft 19 a power to resolve is of kind `resolves` only, and changes only by an update (G5.6);
+- changing the condition (item 8).
+
+From draft 16's list (its sections 8.2 and 8.3; `history.md`, section J.5):
+
+- "vow", and what "bytes attached" means; "offer", read as Terms that name a party by role; what "It is just extended" points at; who contests besides a buyer, and when (G11.8; its 8.2, items 3 to 6);
+- a fork in one signer's own line; merging, which is not kept; which Terms say how a resolving update is signed; "should not", written MUST NOT; a payment made under a tip; two resolving updates that continue the same tip (G12; P9; items 7 to 12);
+- words chosen by Claude: "resolving update", "set aside", "built on", `resolves` (item 13);
+- where the ledger's lines say more than the exchanges on the contest and on forks (items 14, 15 and 19 to 24);
+- the signers' contest of their service, and whether a deal is an offer or a vow; "at first" (G11.8; its 8.3, items 1 to 4);
+- forks: a power to resolve, what those who signed a branch had built on it, more than two tips, how a resolving update signed under a power sits in another signer's line, and since when a continued tip counts (G12; items 8 to 13).
+
+From draft 15's list (its sections 8.2 and 8.3; `history.md`, section I.5):
+
+- "a collective signature of sorts": an agreement's signature rests on a question of his, and on "I think it is" (G1.2; its 8.2, items 5 and 6);
+- "has to inform": a member who tells her own agreement that she was paid has no grammar rule (section 5.2; item 7);
+- no default for a party's own part or its leaving; his "task" against this text's "version" (from draft 17 G4.11; P15; items 8 and 9);
+- which lines of a report each side receives, left to the task's cMIP (G11.3; item 10);
+- "invalid", his word for a replacement that lacks a signature, answered **not shown** (G4.8; P19; item 11);
+- how an agreement signs where its Terms give no power, or under other Terms, and whether it can take a signature back (P17; its 8.3, items 1 to 4);
+- a receiving side that signed nothing, and what a doer's report carries (G11.2, K6's row; items 6 and 7);
+- "by default": whether a payer can state that no confirmation is called for; the block is still unchanged (G11.7; items 10 and 11);
+- receivers that point onward inside one leg (G1.4; P8; items 12 and 13);
+- words chosen by Claude: "succession", "receiver for an act", "receiving side", "applies", "own line" (items 14 and 15);
+- six things from Fable's review that were left untouched (items 16 to 21);
+- what a data cMIP is (item 22); from draft 19 its socket is `data` (K8).
+
+From draft 14's list:
+
+- "only", after "by default": whether "Leg by leg only." means that no further path should exist at all (G11.6(a); item 8);
+- "where that side receives", and where a buyer receives (G11.6; item 10);
+- whether a call that a leg's people signed could name a reader (G11.6; items 11 and 12);
+- reading across legs: whether it should leave the grammar altogether, for data cMIPs (G11.4; item 14);
+- whose signature a path for data needs (G11.6(a); item 16);
+- data that is not a report: Terms and their calls, what a payer learns of a work, standing (item 20);
+- what is still "Agreements only" (G11.6(c); items 1 and 21).
+
+From draft 13's list:
+
+- the buyer's leg: whose leg it is, may or must, who confirms, and what access is (G11.7; items 1 to 3 and 5); a confirmation with no call written is now read as the payer's call, made by default (G11.7; section 8.1);
+- whether seeing one's own leg is enough for the wish (item 7);
+- the contest: a leaning ("maybe"); what a contest is and does; who is contested "at first"; whether a service contests further; what "only" rules out (G11.8; items 8 to 14); that the contest is an act of the grammar is answered in draft 16;
+- an outvoted member: "at inception", what the cMIP decides, and how wide a majority rule must be (G11.6(b); items 16 to 18);
+- one level, and someone who fills a role (P17; item 19);
+- by which act a holder's own part is named (P20; item 20);
+- what a data cMIP is (G11.6(a); item 22).
+
+From draft 12's list:
+
+- which deal is meant where a service pays people who signed nothing with it (item 1); by which acts a work's signing is shown is answered for a signature under a power (G1.2), and open for a work that signs by all its owners (P17; item 5);
+- pointed at, or signing: nothing in the grammar tells a party that must sign from one that is only pointed at (P17; item 4);
+- "the report about the payment only comes from the receiver", read as: of the work's people (G11.2; item 6);
+- may, or must: whether a leg in which someone holds for others must report (G11.5; item 8);
+- a work with no service that holds the Control task (G11.2; item 9);
+- a receiving side's "automatic" report (P20; item 10);
+- what "one leg" covers, and "not shown" for a reader beyond the leg (G11.6, G11.4(d); items 12 and 13);
+- what a data cMIP focused on agreements is, and which task it answers (G11.6(a); item 14);
+- "the grammar to support it should be there, in agreements only", and requests from further upstream (items 16 to 18);
+- the link by a shared act, amounts, and kept-or-owed are the MOR lead's proposals, still to check (item 19).
+
+From draft 11's list:
+
+- the report block is a proposal of the MOR lead, in no spec; G11 and K6's row follow it if it changes (item 1);
+- the field `calls`, and where a call sits (item 3);
+- who the doer and the receiving side are for K6 (item 5);
+- what "match" means for K6, and whether two honest reports can state different amounts for one settlement (P20; item 7);
+- what lies beyond a silent leg (G11.4(d); item 8);
+- a leg report readable without the leg's cMIP (G11.3; item 9);
+- whether money shown as still owed is later shown as paid (item 10);
+- whether reports that do not agree are a fork (item 11);
+- pools (P6; item 12);
+- whether a baker's succession calls for reports (P18; item 13);
+- whether a report is a Statement of this text, and stands in its signer's line (item 14).
+
+From draft 10's list:
+
+- whether "a payment is divided by the version it was made under" should itself stand in the grammar, for every leg whatever its cMIP (G10.6, G13.1, G13.2; item 1);
+- a work that names a service's public offer, and not its own deal, as its receiver is not stopped by the grammar (G1; item 2);
+- the agreed witness is no longer required by the grammar (section 5.1; cost "Counted attention leans on whoever counts"; item 8);
+- how a new version says that a spot takes no new identities, and whether a role's cMIP takes parameters (G10.5; item 9);
+- one condition, and whether it sits on the version or on the role (P21; item 10);
+- how a resolving update (then called a join) signed under a power sits in another signer's line (G6.1, G12.4; item 11);
+- G11 is a newer grammar rule under an older number (item 13).
+
+From drafts 3 to 9:
+
+- an agreement as a party that signs: settled in part in draft 12 (G1.2), in draft 13 for the level at which it signs, and in draft 15 for its signature under a power; what is still not said is P17 (`history.md`, section 9.13, item 1);
+- whether "once all parties have signed" means "once the Terms are in force" where Terms come into force on fewer signatures than everyone's (G4.10; section 9.13, item 2);
+- whether "no limit" on signed conditions holds beyond ending a delegation (G5.5; section 9.13, item 5);
+- whether rights that stopped can apply again within the same signed condition, with no new version (G10.7; section 9.13, item 6): from draft 17 nothing stops or applies again by itself, and a later version may offer again (G10.7);
+- who must sign a renewed offer (G10.7; section 9.13, item 8);
+- "I lean a.": the delegator's default rests on a leaning (G5.5; section 9.11, item 5).
+
+---
+
+#### Draft 25, section 9. What a builder needs that is not in this text
+
+For the box. This text can be built as far as a stranger is handed stand-ins for what lies below it: two C sessions did so, each with sixteen stand-ins (`STANDINS.md`, in the repository `MOR-CBOX`, branches `claude/agreements-c-1` and `claude/agreements-c-2`). The list below says what is still missing below Agreements, in the order in which each thing unblocks the next. It is drawn from the seams (`seams-1.md`) and from those stand-ins. Nothing here is a grammar rule, and nothing is decided. *From draft 20* the next step is the ledger's ("The encoding first", "After box 2"): the byte encoding of Terms and Statements, defined properly, with its checker and vectors, before any further box. Section 10 lists what that encoding must fix.
+
+1. **The act, as bytes.** Terms and Statement written as acts of the core: how `agreement`, `replaces` and `previous` are carried (the seams' A1), how `for` and `under` are (A4), and what each "fingerprint" of this text is a fingerprint of: an act, a cMIP, a signer or a work, which the core names apart. Both C sessions used text records and one hash for all four. *From draft 20:* this is the encoding's, next, in the existing act format, with a checker for shape, signatures and fields; section 10 lists every choice it must make.
+2. **The signer.** In the core a signer is an identity that outlives its keys. This text says "signer" and does not say what a change of key does to a line (G6): whether an act the core calls void is still a tip. Both C sessions' signers never change, and their signatures prove nothing.
+3. **A cMIP in a socket.** How a cMIP is named with its parameters, what exactly each socket hands it and gets back as data, and a few stub cMIPs that every builder shares (always yes, always no, absent). The update condition's cMIP also answers who must sign, so its stubs need one that counts signatures (two of three). The seams' part 3 drafts the shapes for draft 17's thirteen tasks; they are to be redone for the eight sockets. The second C session handed its stubs a document with one behaviour line (its S6).
+4. **The place.** Nothing below gives one. What it must provide is listed in section 8.1. Both C sessions' places are a signed list.
+5. **The clock.** The core names clocks under its anchoring task, and they answer "existed by", never "nothing later". How `clock` holds one, and what a verifier answers for an act nobody anchored, is not said. Both C sessions' clocks are one signed number.
+6. **The report, written into the shared language.** One act type, defined once: how a call is written and where it sits, how a report names its call, and the open points of section 8.1. Until then a report has no fields. Both C sessions made the report a record of its own. *From draft 20:* what this text reads of it is fixed (it answers one call; it names its call by naming the act that holds it; it stands in no line; section 3.2, G11.7), and what the block would need is proposed in `report-block-3.md`; from draft 25, in `report-block-4.md`.
+7. **Money's side.** What a payment and a settlement are as acts (a claim, a receipt), how a payment names the version it read, the answer to "the same payment", how an amount is written, where the payer's default call sits, and what a verifier answers while a payment is pending (section 8.2, item 14). The C sessions' payments and settlements are opaque records, and their amounts a whole number and a unit.
+8. **The bake, and the envelope's chain.** What this text calls an envelope the core calls a bake, and its baker an uploader; how two bakes are known to carry the same work (G14.5); and, from draft 23, the envelope's chain: the transfer of the baker's rights, who may sign it, the holder at an act and a fork there (section 8.1). The second C session's envelope names a baker and a work; nothing below gives the envelope's chain yet.
+9. **Delivery.** What shows that what was bought was handed over, or acknowledged (G11.7, G11.8). Neither C session built anything for it: the grammar does not read it.
+10. **The words of a body.** How the fixed words of Terms are held, and the shape of the "parts for machines" the body task gives: shares, what makes Terms a delegation and what conditions it puts on ending (K1; G5.5). Drafts 20 to 22 also read from the body to whom Terms of a baked work pass the baker's rights; from draft 23 that is the envelope's chain's (G14.2). The second C session invented lines for all three (its S10).
+11. **Who is reading.** A verifier must be told on whose behalf it reads, and which anchoring that reader accepts (G11.4(d), G13.4). No layer says how. Both C sessions made them options of their tools.
+12. **The data cMIP.** The socket by which Terms name one is `data` (K8). Still missing: what a data cMIP is as a document, how a verifier hands it a reader and a report (or, for silence, a call) and takes back yes or no, and a stub that every builder shares (G11.6(a)). The second C session gave it stubs (yes, no, a list of readers).
+13. **The answer words.** This text's answers beside the core's (unknown, void, pending), so that a builder of both layers shows one vocabulary (section 8.1).
+14. **The lower texts' words.** The lower layers still speak of the earlier Agreements (publications, split services, collectives with keys, keepers, grants). A builder handed them with this text needs either their rewrite or a table of which of their sentences to pass over (the seams' part 4).
+15. **Vectors.** Test cases whose expected answers are written from this text before any code runs (the seams' section 5.2). None exist. The first C session's 69 tests were built from draft 17; the second's 78 cases, 959 checks, from draft 19. Each was written by the same reader who wrote the code, and fixes that reader's reading. Draft 20 answers the second session's 33 readings in the text; where it does not take that session's reading (draft 20's section 8.2, items 1 to 8, kept in `history.md`, section N.4), its tests answer otherwise; and draft 21 changes four more of its answers (A2, A6, A15, A26: section 8.2). In the ledger's order, the vectors are written with the encoding, from this text ("After box 2").
+
+#### Draft 25, section 10. What the encoding must fix
+
+For the encoding session. In plain words: this text says what each field means and when an act is rejected, invalid or read; it does not say how any of it is written as bytes. Every place below is one where the bytes must choose, and where two builders would otherwise choose differently. Nothing here is a grammar rule; where the text already says what follows from a choice, it is named.
+
+1. **Each field's kind** (section 3). How each kind is written: a fingerprint; a list of fingerprints; an identifier of a signer, a place or a clock; a socket (a cMIP's fingerprint with its parameters, whose bytes only that cMIP reads); and the fields whose value is one of a set of words: a Statement's `kind` (`assent`, `counter_signature`, `contest`, or a fingerprint), a power's kind (a kind of Statement, or `resolves`), a role's kind (done, received, holding, fits, future), a call's "from whom" (the doer, the receiving side, or both). Which of these a checker refuses as shape (rejected), and which reach the grammar rules (section 3: a `body` or socket not named by fingerprint, a role's kind or `what`, which are invalid; an entry of `relies_on` that is not a fingerprint, which is left unread).
+2. **Required and optional fields** (sections 3.1 and 3.2). Which are required always (`previous`; a Statement's `agreement`, `terms`, `kind`); which except in a resolving update (`parties`, `authors`, `body`); which exactly when another is present (`agreement` with `replaces`; `for` with `under`); which only beside another (`continues` with `resolves`: alone, rejected; `resolves` without `continues` is read); which "as the kind requires" (`content`); and which "if anything else is used" (`relies_on`). How "none" is written for a first act's `previous`. What a checker does with a field section 3 does not give: from draft 25, it rejects the act (section 3, G2.2), and the bytes say that they do not allow such a field.
+3. **Lists.** Which fields are lists (`parties`, `authors`, `powers`, `calls`, `relies_on`, `answers`, `resolves`); whether order matters in any of them; whether duplicates are rejected, read once, or kept; and whether an empty list is the same as an absent field (an empty `powers` is "no power"; an empty `data` socket is "one leg").
+4. **The entries of `parties`.** The three ways a party is named (a signer; a role, with its kind, its `what` and its spot socket; an agreement, by its root), written so that a verifier cannot mistake one for another. **How a role is named** by `authors` and `receiver` (draft 20's section 8.3, item 1): the text lets both point at a role and gives no way to do it; the second C session gave each role a label.
+5. **Fingerprints.** What each fingerprint is of, and over which bytes: an act (all its signed bytes, or the bytes before its signature), a cMIP document, a body's words, an envelope, a settlement, a root (the first Terms act's own fingerprint). Whether one hash serves all, or the core names them apart (section 9, item 1). How a verifier tells a fingerprint from anything else (section 3: a field of the wrong kind is rejected).
+6. **`for` and `under`.** How `for` holds a signer or an agreement's root, so that the two are told apart (G1.2, G5.1(b)); and whether the core's own `for`, if it has one, can carry a root (section 8.1).
+7. **A call** (section 3.1, `calls`; G11.2). How a call is written in Terms: the task it is attached to and from whom; whether a call carries anything more, and what a verifier does with tokens it does not know on a call (the second C session left them unread); whether a call is per task or per act (the block's open point 1). How the payer's call made by default is written, or that it is not written at all (G11.7).
+8. **A report** (section 3.2; G11.3; the block). How a report is written as an act: the call it answers (by naming the act that holds it, or for a payment its settlement, G11.7), its `relies_on`, and its signer; that it names one call; that it carries no `previous`. The lines of K6's row (received, passed on, the doer's own part, kept, still owed), each with its amount and the act it came or went by, and how "still owed" is written so that a later line could name it (section 8.2, item 15). Whether a report is the block's act, written in the shared language, so that the encoding of Agreements only refers to it.
+9. **An amount** (K6's row; P20). Money's to write; the encoding must at least say how a leg report carries one and how two are compared ("match where they state the same amount", G11.4(c)).
+10. **A payment and a settlement** (G11.7, G8.5, G13.2). Money's acts; the encoding must say how a payment names the version it read, how a confirmation names the settlement (from draft 25, always the settlement the payment names, never the payment: G11.7), and how two settlements are known to be "of the same payment" (G11.4(b)). *From draft 21:* a buyer signs the offer's Terms by an assent, beside the payment (G11.6(b), G11.7); the encoding must say whether those are two acts, or one act can be both, and how a verifier finds the payer's assent to the version the payment names (section 8.3, items 6 and 7).
+11. **Signatures by several people.** Whether the core has an act signed by several at once (section 8.1); if not, one act by each signer, matched as G1.2 now says (which fields must be equal).
+12. **The parts for machines of a body** (K1; section 9, item 10). The shape the body task hands back: the part each party is given; that Terms are a delegation, the delegator and the agent, and the conditions on ending. These are a cMIP's output, not fields of an act; the encoding of what a socket hands back is needed for every task (section 9, item 3). *From draft 23:* no part for the baker's rights. Drafts 20 to 22 read to whom they pass from the body; they are now read from the envelope's chain (G14.2; item 13).
+13. **The place's answer, the clock's answer, an envelope and its chain** (G7, G14). Not fields of an act of this text; the encoding must say how a verifier is handed them, or say that they are another layer's (section 8.1). *From draft 23:* for an envelope, that includes a fork in the envelope's chain (G14.2). *From draft 24:* the holder at the act Terms cite, read from that act and the acts of the chain it follows, in place of draft 23's current holder (G14.1); see item 19 for `envelope_at`. The field `envelope` is unchanged, and `relies_on` is no longer read for a succession.
+14. **What a verifier is told** (section 9, item 11): on whose behalf it reads, and which anchoring that reader accepts.
+15. **The answer words** (section 2): how a verifier's answer is written (the answer, its qualifiers per place, per clock, per anchoring, as shown, disputed; the block's words; rejected; the grammar rule named; who said it), so that vectors can state expected answers that two builders compare byte for byte. *From draft 21:* the answer about a late update ("replaces nothing, and is no tip", G4.7 named, with what shows it late: the act whose namings reach the replacing version's acts, or the anchoring and its positions), for which no new word is given; invalid with G14.3 named, given beside every act that names such Terms; and not shown or unchecked with G14.3 named, given with every answer that rests on Terms that name an envelope.
+16. **Limits on untrusted input.** Sizes of an act, of a field, of a list; the depths at which a verifier stops (G9.2; P2, P8), which the vectors must state if they rely on them. *From draft 21:* whether an update is late is read through namings as far as they go (G4.7(a)), among every act held; the vectors must state the sets of acts they rely on, and a builder that bounds that walk says so.
+17. **Vectors for a late update** (G4.7). No new field: lateness is read from the namings already in the bytes. The vectors must hold, for the same two updates, sets of acts that show the order by knots, by the place, and by neither, so that one builder's "late" and another's "fork" are compared on the same acts.
+18. **Vectors for the baker's rights** (G14.2). The holder at the act Terms cite is read from the acts of the envelope's chain handed to the verifier (item 13), and "bound by them" from the assents and the update condition already in the bytes. The vectors must hold, for Terms that name an envelope: Terms that cite the bake, with the baker as a party, before and after a transfer is held; Terms that cite the transfer, with the new holder, with the baker named and with her dropped; a version made without the holder's assent that the update condition the holder signed answers valid; Terms that cite the bake and are made after a transfer, late by knots, late per place, and late by neither; a thief's Terms that cite a point where he held nothing, before and after a later transfer to him; an `envelope_at` that names an act of another envelope's chain; a double sale, a fork in the envelope's chain, with that layer's answer of a holder and with none; and a verifier that lacks an act of the chain; each with the answer it should give (shown, late, not shown, invalid, unchecked), so that two builders read the holder at the time and "bound by them" alike. Draft 23's vectors for the current holder are not needed.
+19. **The field `envelope_at`** (section 3.1; G14.1). New in draft 24. How it is written: one fingerprint, of an act of another layer (the envelope's chain), so the encoding must say over which bytes that fingerprint is taken, as for an envelope (item 5); that it is required exactly when `envelope` is present, and that an act with one and not the other is rejected; how a verifier tells that the act it names is of the chain of the envelope named (section 8.1, item (4)), since one that is not makes the Terms invalid; and its name, which is the MOR lead's to change.
 
 ## What draft 26 hands to other texts
 
-written by M10
+**In plain words.** What draft 26 leaves for another text to write, each item in one line with the rule or definition of draft 26 it comes from. Listed, not written: none of these texts is changed here. Then what draft 26 leaves out for Nobody, allegedly. Nothing is chosen.
+
+### For the MICS
+
+Draft 26's §2 says that the rules it leaves to the MICS "are listed in this text's companion, under "for the MICS", as the earlier text had them, for the version written after this one" (the lead's reading of 09:16, section 6.4). The MICS's current version, 37, was written for Agreements draft 24.
+
+- **The thirteen rules**, with draft 25's text below: G7.3, G8.1 to G8.4, G9.1, G9.2 ("How a reader answers goes to the MICS", 18 November, with its condition: "the scribe checks, when the MICS is rewritten, that each of the seven holds outside Agreements, and brings back any that does not", the lead's line); G11.4, G11.4(a) to (d), G11.6 ("Where three rules live", 17 November). From draft 26's §2 and §3.6.
+- **G11.5 and G11.6(c)**, which the lead's reading moves with the report block ("they speak of every layer", section 6.3). From 5.11.3, 5.11.7.
+- **The report block** (one act type, defined once; encoding 2's E21 and E22 with it), and **the sentences on how a report is read** cut from G11.2, G11.3, G11.7 (M6) and from K6's row ("Two reports that name the same settlement match where they state the same amount for it (G11.4)", M7), as the lead's reading on G11.3 and K6 has them. From §3.1 Report, §4.3, 5.11.3, 5.11.7, K6.
+- **How a payment and its confirmation are read together**, and what a verifier shows of reports in the block's words. From 5.11.7, §3.6.
+- **The report of who a resolving update rests on** (draft 25's G12.4, "(G5.1, G8)"). From 5.12.5.
+- **K8's inputs drawn from G11.4(d)**: the reader as the verifier is told; the call no report answers. From K8 (§6).
+- **Where counter signatures lean on one another so that the reading does not settle**, what a verifier answers. From 5.4.5.
+- **The evidence-and-accounting line**, placed beside MOR's opening definition when the MICS is rewritten ("An evidence and accounting layer", 17 November: he, "That bit has to complement the opening definition of MOR"; section 2 above). From §1.
+- **The MICS v37's "another way to the result"** for a collective's way out does not outlive draft 25; the MICS is rewritten after draft 26 (the settled note's M24). From §2.
+- **The answer words across layers**: where "invalid" stops (draft 25's P19); "rejected" as a checker's verdict, not an answer word (the settled note's M5; item 24, left out). From §3.6. INFERRED (the outline, section 8).
+
+**The thirteen rules, as draft 25 has them** (its rule numbers and references are draft 25's):
+
+- **G7.3** Where no place is named, a verifier MUST qualify every such answer **as shown**, or **per anchoring** where the reader accepts one, with it named (G13.4). It MUST NOT give such an answer as latest or whole without saying what it stands on.
+- **G8.1** For any answer about the world (a deed done, a thing's quality or quantity, an event, a person's presence or absence), about time, or about value under Control, a verifier MUST report who stated it: the one who performed, the one who received, a named witness, the controller, or the place.
+- **G8.2** A time written inside an act is reported as its signer's claim. No field of section 3 holds a time; one written in a `content` or in the words of a body is read only by the cMIP of that socket, and is its signer's claim there too. Only a place gives a position. What time it was is answered per the clock the agreement names (G7.4); where it names none, only per an anchoring the reader accepts, with it named (G13.4).
+- **G8.3** A verifier MUST NOT report value as moved on the strength of an Agreements act alone. An act can instruct Control; whether Control obeyed is the controller's or the receiver's signed word.
+- **G8.4** Who fills a spot (G10) and what a leg received and passed on (G11) are answers about the world. A verifier MUST report them with whoever confirmed them.
+- **G9.1** Where a verifier cannot apply a rule it needs, because it lacks a cMIP named by fingerprint, lacks an act named by fingerprint, lacks the acts of an agreement named as a party, or cannot get an answer from a named place, it MUST answer **unchecked** for every answer that depends on it.
+- **G9.2** **Where a verifier stops.** A verifier that stops following (powers through powers, G5; receivers from agreement to agreement, G1.4; the versions of a long chain) answers **unchecked** for what lies beyond where it stopped, and says how far it followed. It MUST NOT answer **not shown** or **invalid** because it stopped. A verifier MAY also stop following counter signatures that lean on one another (G4.10): where a signer assents and cancels many times and nothing names anything, the reading of one counter signature asks about the others, and past a number of such readings it answers **unchecked**, and says that it stopped. How far a verifier must follow is not fixed (P2, P8). Where forks, and powers to resolve them, lean on one another so that a verifier's reading of a set of acts does not settle, every answer that rests on a fork in that set is **unchecked**, and the verifier says so.
+- **G11.4** **Reading across legs.** A verifier asked about a result that depends on a sequence MUST read it leg by leg, from the reports it holds (G11.6), and give each leg's part with who signed it (G8.4).
+- **G11.4(a)** **Where to look.** The verifier reads, from the Terms that hold a Control task, whether they carry a call, and from whom it expects reports. No call says where: a leg's reports are with the two sides of that leg (G11.6), and a verifier reads those it holds. Where a leg report states something as passed on to an agreement, the receiving side is that agreement's receiver for the act (G1.4). Where that party is a service under a deal, or holds for others, it is the doer of the legs that follow, under the Terms that name it as `receiver` and hold its task (G11.2, G11.5). The reports of those legs are the ones that answer the call of those Terms, between their own sides; they are not looked for within the agreement the first report names.
+- **G11.4(b)** **The tie.** Two halves are tied by the act both name. Neither report names the other. Where the layer that holds value records one payment as two acts (a claim by the one who paid, a receipt by the one who received), the two halves are tied by that layer's answer to "the same payment", as it gives it: a report that names the claim and a report that names the receipt are then tied, where that layer answers that the two are of the same payment. This text calls what a report names for a payment its settlement (G8.5), and reads "the same settlement" so. At each leg the two halves are the doer's report and the receiving side's confirmation, which answer the same call (G11.5). As the block asks, the verifier shows, for each such act, **matched**, **mismatched** (both shown, neither chosen), or **one side only**. Where the verifier does not hold the settlement two reports name, or cannot get that layer's answer, the tie is **unchecked** (G9), and what each side states is still shown. A report ties only where its signer is a side of the leg: a doer's report where its signer is the doer the Terms name (G11.2), a confirmation where its signer is the receiving side as G1.4 reads it. A report by anyone else is listed, as its signer's word (G8), and ties nothing. **Who received.** Who something was passed on to is known only from reports. A doer's line that states something passed on to X makes X, or, where X is an agreement, X's receiver for the act (G1.4), the receiving side of that line, and only that signer's confirmation ties to it. A confirmation by a party those Terms name as a signer, of which no doer's report held speaks, is shown as **one side only**. A confirmation by anyone else is listed, and ties nothing. **When halves are compared.** Matched, mismatched and one side only are answered only where the call expects reports from both sides, or where the act that holds the call is itself one side's signed word of the act both name: a payment, signed by the buyer and naming its settlement, is the doer's half of the buyer's leg (G11.7). Where a call expects one side only, each report held is shown as stated, and no tie is answered.
+- **G11.4(c)** **Amounts.** Two leg reports that name the same settlement match where they state the same amount for it (K6's row). Where they do not, the verifier MUST show both, with the amount each states, and MUST NOT choose between them. What the layer that holds value counts toward a debt, and what a reader of reports is shown, are two questions. This text answers the second: it shows both halves and chooses neither. The first is Money's: where that layer counts one of two amounts as received, that counting is Money's, and a verifier that gives it says that it is Money's answer and not this text's.
+- **G11.4(d)** **Silence.** As the block asks, the verifier shows a call with no report as **unanswered**, and Terms that hold the Control task and carry no call as **no report called for**. Neither is read as anything else: not as kept, not as failed. From such a leg, nothing ties what lies beyond it to what reached it: as part of this result, the legs beyond are **not shown**, though their own reports are read as any are. **Unanswered** is said only by a verifier that reads as a side of that leg, or along a path the people of that leg signed for (G11.6(a)). **Who is a side, for silence.** With no report, no line says who received. A reader is then a side of a leg carried out under Terms that hold the Control task where it is the doer those Terms name (G11.2), or a party they name as a signer, or, for a party they name as an agreement, that agreement's receiver for the act (G1.4). It reads along a signed path where the data cMIP of those Terms answers yes for that reader, asked about the call that no report answers (K8's row). On whose behalf a verifier reads is not in the acts: whoever asks tells it. A verifier told nothing reads as no side of any leg. The reports a verifier holds are read whoever is reading: it does not ask how they reached it. A verifier that does not, because that leg's reports travel no further than the leg (G11.6), MUST NOT show the call as unanswered: for it, that leg's reports are **not shown**. Where the verifier lacks an act a report names, or the Terms that hold a leg's task, that part is **unchecked** (G9).
+- **G11.6** **One leg.** A report answers the call of its own leg (G11.2, G11.7) and is addressed to the other side of that leg, where that side receives, and to no one else. That is the report block's, for every layer of MOR (section 8.1); these grammar rules add nothing to it. A call MUST NOT be read as naming a place, or a reader. A call MUST NOT be read as expecting a report on a task held by other Terms than the ones that carry it. No one who did not sign the act that holds a leg's task can call for that leg's reports (G11.2), however far upstream of the payment they stand. No report is read as carrying another leg's reports onward. **These grammar rules never follow a receiver beyond one leg.** G1.4 finds who receives, which is the receiving side of one leg, and stops there. What that side then passes on, to whom, through how many further legs, and whether it comes round to an agreement already passed (a loop), are not read by these grammar rules: they are for whoever follows further, along a path of (a), and are that data cMIP's to answer (P8).
+
+### For Envelopes
+
+- **The thirteen rules of the baker**: G14.1, G14.2 (changing there: "The holder at the act cited", 17 November), G14.3, G14.3(a) to (d), G14.4, G14.5, G14.5(a) to (d) ("Where three rules live", 17 November). Their text is in section 10.2. From §2 and §4.2 (`envelope`, `envelope_at`).
+- **The baker's rule for a contest**: who holds the baker's rights, read at the act the contest cites: the contest names its own envelope and the act of that envelope's chain it relies on (the lead's reading of 14:33, section 6.10). Draft 26 keeps the contest; what follows from the holder is Envelopes'. From 5.11.9.
+- **What Agreements still asks of Envelopes**: "Agreements asking only whether the current holder is a party" ("Where three rules live", 17 November), as the outline carries it. From §4.2 `envelope_at`.
+- **The three verbs**, lodge, relay and fetch, in place of "store and pass on" and the other words for what relays do, when Envelopes is next touched ("Agreements gets an introduction", 27 November). From §3.5.
+- **"Uploader"**, his word, wider than Envelopes draft 12's (a bake's signer): draft 26 uses it as he said it (the lead's reading of 09:16, section 6.4). From §3.5, Lodge.
+- **The two stated costs that left with G14**, "The baker is as the envelope says" and "A copy is made legible, not forbidden" (section 7.1, 21 and 22), and the part of "Ownership is as wide as its place" that rests on G14 (section 7.1, 20). From section 7.
+
+### For Identity
+
+- **Rule 34 and the keeper's record.** Identity draft 16 gives an act standing where a named keeper recorded it, says "Keepers MUST (see Agreements)", and has "Agreements' exception for a keeper's record", all reading Agreements draft 24's keeper. Draft 26 defines a keeper's record for its own use ("what a keeper lodges in its chain for an act: the act's id and its position"); Identity's rule 34 keeps pointing at draft 24's until Identity is touched (the ruling on item 4 and the lead's reading of 09:16, sections 6.1 and 6.4). From §3.4, Keeper's record; 5.8.1.
+- **The pair to renumber**: Identity draft 16's "*Its pair is in Agreements (Agreements rule 6, and "Made before, made after", 4)*", on a collective's line, names draft 24; draft 26's nearest rules are 5.1.2 (an agreement's signature, in its signer's own line) and 5.13.3, 5.13.4 (order from naming). Which of them is the pair is Identity's to say. From 5.1.2, §5.13.
+- **A key change continues the signer's line**, never starting a fresh one; the life-long line (`prev`) is the layer below's, the agreement's thread (`previous`) Agreements' ("Two threads, two owners", 17 November; the lead's reading on G6.1 and G6.2, section 6.3). From §2, §3.3 Line, 5.7.1.
+- **Nothing added for N10**: the witness act (rule 10) is the client's tool ("Signing an agreement relies on its words", 26 November). From section 5, N10.
+
+### For Development
+
+- **What a cMIP declares it needs** (a clock, a keeper), and how it declares it: "a line for Development to carry" (the settled note's Q26); whether it is written in Development or in each cMIP's text is item 34(b), sent back to him. From 5.8.6, §6's opening, §7.
+- **N9's client half**: a client refuses to sign Terms whose words speak of a time with no anchor the Terms state (client conformance, "A condition in time with no anchor is refused", 26 November); and tools that check the words against the fields, built above the core (he: "Tools that verify that text and agreement state the same thing will be needed"). From 5.8.6.
+- **N10, as client conformance**: when a party signs an agreement, its client also signs a witness act relying on the words' Text act (the lead's reading of 09:16: "N10 (the client's reliance) is client conformance in the companion, not a rule"); whether it relies on the other parties' assents too is item 21, and that private words' key is delivered to each party first is item 22. From §3.6 Client; section 5, N10.
+- **The client duty draft 26 keeps** (5.12.9: a client shows a fork as unresolved), beside the others, wherever client duties are written. From 5.12.9.
+- **The common cMIPs a verifier or client should hold** ("Named signers and buyer by assent stay cMIPs", 26 November: "the MOR lead's wording, for Development, not yet asked"). From §6.
+- **The two Development items of M5** (the lead's reading of 10:07, row 5: "list them under "for Development""): what a cMIP declares (above) and K1 among the tasks whose answer a verifier passes on (§3.6, 5.10.8). From §3.6.
+
+### Left out, for Nobody, allegedly
+
+Every item of the brief's list of what the sources leave unsaid (its section 7) that draft 26 does not carry, by the brief's number, as the outline's section 7 and each session's "left out" list have them; where a reading of the lead's has since answered one, that is said, and the item is listed still, for him to see. Nothing is chosen.
+
+- **2.** Which Terms "when made" fix the known parties, and whether a party a later version adds is known (5.5.5(a); §3.2 Known party).
+- **3.** Whether an author named by role is a known party: answered by the lead's reading of 09:27 (an author is named as a signer, 5.3.1; section 6.5).
+- **5.** With several keepers, whether the pin needs every keeper to show the order, or those that show it where none disagrees (5.8.3, 5.5.1(b)).
+- **6.** What a keeper answers beyond order (draft 25's G7.2: "what is whole, who holds what, whether a period has passed, or whether something was made public") (5.8.4).
+- **7.** How a fork that is not of a line (a completing assent against a counter signature) is resolved in bytes (5.4.5, 5.12.4).
+- **8.** Which acts compete "to change the same state": a list or a test; whether an agent's act against the end of its power is one (5.12.2, 5.6.4).
+- **10.** Whether a resolving update must itself be pinned (5.12.4, 5.12.8).
+- **11.** How long a version binds a filling whose words state no term (5.10.8).
+- **12.** Which act "the anchoring of the purchase" anchors: the assent, the payment, the proof (5.10.8).
+- **13.** What a verifier shows of an agreement the known parties dissolved among themselves while a filling's version still binds, against 5.5.6's "MUST NOT answer that Terms or an agreement have ended" (5.5.6, 5.10.6).
+- **14.** Whether "renewed on the terms then current" (the settled note's M28) is a later version reaching her: not written (section 6.9) (5.10.6).
+- **16.** Whether the principle binds a verifier beyond the rules that apply it: unsaid (section 3) (5.10.6, 5.6.1(c)).
+- **17.** Where N10's client reliance is written: answered by the lead's reading of 09:16 (client conformance, in this companion; section 6.4).
+- **18.** Whether an assent made for her under a power she gave counts as hers: answered by the lead's reading on G5.6(f) and G10.6(a) (it does; section 6.3) (5.10.7).
+- **21.** Whether her client relies on the other parties' assents too (the settled note's F4), or on the words' Text act only (N10).
+- **22.** That private words' key is delivered to each party first (the settled note's F10) (N10).
+- **24.** Whether "rejected" is a verifier's answer for a late update (his "Version 3 is the one the network needs to reject") or only the checker's word (§3.6, 5.5.4(c)).
+- **29.** The line's list of what the known parties may still do ("close the offer, or dissolve it among themselves"), beyond his "There is no valid update for her anymore. Only a valid agreement" (5.10.6, 5.10.5).
+- **30.** The line's "Terms state their anchors (a keeper, a clock to anchor to, or both)" as a rule for all Terms, beyond his "valid update does not apply in the same way" (5.8.5, 5.8.6).
+- **34.** (a) How Terms name their clock: whether the `clock` field stands against the 17 November cut of G7; (b) whether a cMIP's declared needs are written in Development or in each cMIP's text (§4.2 `clock`, 5.8.6, §7).
+- **35.** The six places where the two copies of "A condition in time with no anchor is refused" differ (5.8.6).
+
+**Carried to the end of the stage** (the lead's readings of 09:27 and 13:20: "Carry the two for Nobody, allegedly, to the end of the stage"):
+
+- Whether the Terms act's signer must be among its `authors` (§3.2 Author, 5.3.1).
+- Whether an agent who signs for another is bound by that act (5.6.1(a), 5.6.3; the blind reader's gap, M5).

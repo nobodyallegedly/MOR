@@ -421,7 +421,20 @@ Each was encoding 2's, the simplest that fits the act format in force, and the M
 18. The receiver's two forms are `[0, position]` and `[2, root]`, E11's first items (E12). **Kept**; draft 26 says the two forms are "told apart in the bytes, not by guessing" (5.1.3).
 19. A resolving update of Terms may carry `relies_on` (E19). **No longer a choice**: draft 26 says it (§4.3: "MAY carry `relies_on`").
 
-**Open in this text, not yet chosen** (listed in the trace, under M8's "Open"): the set's label; how its members are joined; whether its rule is a row of E5 or an E-rule of its own; the keeper field's form for one and for several; whether the keeper list is sorted; what a keeper's identifier is the hash of; whether key 9 stands; whether a `words` act held without its key, or not held, gives a note or nothing; which spec hashes are `TEXT`; how a cMIP's declared needs are read, and by whom (case 8).
+**Open in this text, not yet chosen** (listed in the trace, under M8's "Open", by its numbers). None is picked here. Each is for the codemeister, who proposes; where the choice changes a verifier's answer, it is for Nobody, allegedly, too.
+
+1. The set's label. *for the codemeister, who proposes.*
+2. How a set's members are joined. *for the codemeister, who proposes.*
+3. Whether the set's rule is a row of E5 or an E-rule of its own (E26). *for the codemeister, who proposes.*
+4. Which fields may hold a set's value (none in this text, as draft 26, §7, says). *for the codemeister, who proposes, and for Nobody, allegedly.*
+5. The keeper field's form, for one keeper and for several. *for the codemeister, who proposes.*
+6. Whether the keeper list is sorted. *for the codemeister, who proposes.*
+7. What a keeper's identifier is the hash of. *for the codemeister, who proposes.*
+8. Whether key 9 stands as 32 bytes. *for the codemeister, who proposes, and for Nobody, allegedly.*
+9. Whether a `words` act held without its key, or not held, gives a note or nothing. *for the codemeister, who proposes, and for Nobody, allegedly.*
+10. Which spec hashes are `TEXT`. *for the codemeister, who proposes, and for Nobody, allegedly.*
+11. How a cMIP's declared needs are read, and by whom (case 8). *for the codemeister, who proposes, and for Nobody, allegedly.*
+12. `SPEC_DRAFT_26`: not a choice; computed at M11 once the text is final. *For the codemeister, who computes it.*
 
 ## 12. What changed from encoding 2
 
